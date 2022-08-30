@@ -250,10 +250,7 @@ typedef struct odp_pool_capability_t {
 		 * memory size for the pool. */
 		uint32_t max_seg_len;
 
-		/** Maximum user area size in bytes
-		 *
-		 * The value of zero means that limited only by the available
-		 * memory size for the pool. */
+		/** Maximum user area size in bytes */
 		uint32_t max_uarea_size;
 
 		/** Maximum number of subparameters
@@ -454,9 +451,9 @@ typedef struct odp_pool_param_t {
 		 */
 		uint32_t seg_len;
 
-		/** User area size in bytes. The maximum value is defined by
+		/** Minimum user area size in bytes. The maximum value is defined by
 		 *  pool capability pkt.max_uarea_size. Specify as 0 if no user
-		 *  area is needed.
+		 *  area is needed. The default value is 0.
 		 */
 		uint32_t uarea_size;
 
