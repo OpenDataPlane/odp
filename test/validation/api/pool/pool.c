@@ -51,17 +51,21 @@ static void test_param_init(uint8_t fill)
 	memset(&param, fill, sizeof(param));
 	odp_pool_param_init(&param);
 
+	CU_ASSERT(param.buf.uarea_size == 0);
 	CU_ASSERT(param.buf.cache_size >= global_pool_capa.buf.min_cache_size &&
 		  param.buf.cache_size <= global_pool_capa.buf.max_cache_size);
 
 	CU_ASSERT(param.pkt.max_num == 0);
 	CU_ASSERT(param.pkt.num_subparam == 0);
+	CU_ASSERT(param.pkt.uarea_size == 0);
 	CU_ASSERT(param.pkt.cache_size >= global_pool_capa.pkt.min_cache_size &&
 		  param.pkt.cache_size <= global_pool_capa.pkt.max_cache_size);
 
+	CU_ASSERT(param.tmo.uarea_size == 0);
 	CU_ASSERT(param.tmo.cache_size >= global_pool_capa.tmo.min_cache_size &&
 		  param.tmo.cache_size <= global_pool_capa.tmo.max_cache_size);
 
+	CU_ASSERT(param.vector.uarea_size == 0);
 	CU_ASSERT(param.vector.cache_size >= global_pool_capa.vector.min_cache_size &&
 		  param.vector.cache_size <= global_pool_capa.vector.max_cache_size);
 }
