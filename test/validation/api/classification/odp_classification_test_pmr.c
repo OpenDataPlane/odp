@@ -1873,6 +1873,98 @@ static void classification_test_pmr_term_custom_l3(void)
 	test_pmr_term_custom(1);
 }
 
+static void test_pmr_term_ipsec_spi_ah(odp_bool_t is_ipv6)
+{
+	uint32_t val;
+	uint32_t mask;
+	odp_pmr_param_t pmr_param;
+	cls_packet_info_t pkt_info;
+	odp_packet_t pkt;
+	odph_ahhdr_t *ah;
+
+	val = odp_cpu_to_be_32(0x11223344);
+	mask = odp_cpu_to_be_32(0xffffffff);
+
+	odp_cls_pmr_param_init(&pmr_param);
+	pmr_param.term = ODP_PMR_IPSEC_SPI;
+	pmr_param.match.value = &val;
+	pmr_param.match.mask = &mask;
+	pmr_param.val_sz = sizeof(val);
+
+	pkt_info = default_pkt_info;
+	pkt_info.l4_type = CLS_PKT_L4_AH;
+	pkt_info.ipv6 = is_ipv6;
+	pkt = create_packet(pkt_info);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+	ah = (odph_ahhdr_t *)odp_packet_l4_ptr(pkt, NULL);
+	ah->spi = val;
+
+	test_pmr(&pmr_param, pkt, MATCH);
+
+	pkt = create_packet(pkt_info);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+	ah = (odph_ahhdr_t *)odp_packet_l4_ptr(pkt, NULL);
+	ah->spi = val + 1;
+
+	test_pmr(&pmr_param, pkt, NO_MATCH);
+}
+
+static void classification_test_pmr_term_ipsec_spi_ah_ipv4(void)
+{
+	test_pmr_term_ipsec_spi_ah(TEST_IPV4);
+}
+
+static void test_pmr_term_ipsec_spi_esp(odp_bool_t is_ipv6)
+{
+	uint32_t val;
+	uint32_t mask;
+	odp_pmr_param_t pmr_param;
+	cls_packet_info_t pkt_info;
+	odp_packet_t pkt;
+	odph_esphdr_t *esp;
+
+	val = odp_cpu_to_be_32(0x11223344);
+	mask = odp_cpu_to_be_32(0xffffffff);
+
+	odp_cls_pmr_param_init(&pmr_param);
+	pmr_param.term = ODP_PMR_IPSEC_SPI;
+	pmr_param.match.value = &val;
+	pmr_param.match.mask = &mask;
+	pmr_param.val_sz = sizeof(val);
+
+	pkt_info = default_pkt_info;
+	pkt_info.l4_type = CLS_PKT_L4_ESP;
+	pkt_info.ipv6 = is_ipv6;
+	pkt = create_packet(pkt_info);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+	esp = (odph_esphdr_t *)odp_packet_l4_ptr(pkt, NULL);
+	esp->spi = val;
+
+	test_pmr(&pmr_param, pkt, MATCH);
+
+	pkt = create_packet(pkt_info);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+	esp = (odph_esphdr_t *)odp_packet_l4_ptr(pkt, NULL);
+	esp->spi = val + 1;
+
+	test_pmr(&pmr_param, pkt, NO_MATCH);
+}
+
+static void classification_test_pmr_term_ipsec_spi_esp_ipv4(void)
+{
+	test_pmr_term_ipsec_spi_esp(TEST_IPV4);
+}
+
+static void classification_test_pmr_term_ipsec_spi_ah_ipv6(void)
+{
+	test_pmr_term_ipsec_spi_ah(TEST_IPV6);
+}
+
+static void classification_test_pmr_term_ipsec_spi_esp_ipv6(void)
+{
+	test_pmr_term_ipsec_spi_esp(TEST_IPV6);
+}
+
 static int check_capa_tcp_dport(void)
 {
 	return cls_capa.supported_terms.bit.tcp_dport;
@@ -1966,6 +2058,11 @@ static int check_capa_custom_frame(void)
 static int check_capa_custom_l3(void)
 {
 	return cls_capa.supported_terms.bit.custom_l3;
+}
+
+static int check_capa_ipsec_spi(void)
+{
+	return cls_capa.supported_terms.bit.ipsec_spi;
 }
 
 static int check_capa_pmr_series(void)
@@ -2088,6 +2185,14 @@ odp_testinfo_t classification_suite_pmr[] = {
 				  check_capa_custom_frame),
 	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_term_custom_l3,
 				  check_capa_custom_l3),
+	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_term_ipsec_spi_ah_ipv4,
+				  check_capa_ipsec_spi),
+	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_term_ipsec_spi_esp_ipv4,
+				  check_capa_ipsec_spi),
+	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_term_ipsec_spi_ah_ipv6,
+				  check_capa_ipsec_spi),
+	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_term_ipsec_spi_esp_ipv6,
+				  check_capa_ipsec_spi),
 	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_serial,
 				  check_capa_pmr_series),
 	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_parallel,
