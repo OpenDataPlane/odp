@@ -1,4 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
+ * Copyright (c) 2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -76,6 +77,19 @@ void *odp_buffer_addr(odp_buffer_t buf);
  * @return Buffer maximum data size
  */
 uint32_t odp_buffer_size(odp_buffer_t buf);
+
+/**
+ * Buffer user area
+ *
+ * Returns pointer to the user area associated with the buffer. Size of the area is fixed
+ * and defined in buffer pool parameters.
+ *
+ * @param buf      Buffer handle
+ *
+ * @return       Pointer to the user area of the buffer
+ * @retval NULL  The buffer does not have user area
+ */
+void *odp_buffer_user_area(odp_buffer_t buf);
 
 /**
  * Check that buffer is valid
