@@ -19,6 +19,8 @@ typedef enum cls_packet_l4_info {
 	CLS_PKT_L4_ICMP,
 	CLS_PKT_L4_GTP,
 	CLS_PKT_L4_IGMP,
+	CLS_PKT_L4_AH,
+	CLS_PKT_L4_ESP
 } cls_packet_l4_info;
 
 typedef struct cls_packet_info {

@@ -26,6 +26,7 @@ static uint8_t IPV6_DST_ADDR[ODPH_IPV6ADDR_LEN] = {
 };
 
 #define ODP_GTPU_UDP_PORT 2152
+#define AH_HDR_LEN 24
 
 odp_pktio_t create_pktio(odp_queue_type_t q_type, odp_pool_t pool,
 			 odp_bool_t cls_enable)
@@ -306,6 +307,8 @@ odp_packet_t create_packet(cls_packet_info_t pkt_info)
 	odph_ipv6hdr_t *ipv6;
 	odph_gtphdr_t *gtpu;
 	odph_igmphdr_t *igmp;
+	odph_ahhdr_t *ah;
+	odph_esphdr_t *esp;
 	uint8_t *hlen = 0;
 	uint16_t payload_len;
 	uint32_t addr = 0;
@@ -358,6 +361,14 @@ odp_packet_t create_packet(cls_packet_info_t pkt_info)
 	case CLS_PKT_L4_IGMP:
 		next_hdr = ODPH_IPPROTO_IGMP;
 		l4_hdr_len = ODP_IGMP_HLEN;
+		break;
+	case CLS_PKT_L4_AH:
+		next_hdr = ODPH_IPPROTO_AH;
+		l4_hdr_len = AH_HDR_LEN;
+		break;
+	case CLS_PKT_L4_ESP:
+		next_hdr = ODPH_IPPROTO_ESP;
+		l4_hdr_len = ODPH_ESPHDR_LEN;
 		break;
 	default:
 		ODPH_ASSERT(0);
@@ -444,9 +455,11 @@ odp_packet_t create_packet(cls_packet_info_t pkt_info)
 	udp = (odph_udphdr_t *)(buf + l4_offset);
 	sctp = (odph_sctphdr_t *)(buf + l4_offset);
 	icmp = (odph_icmphdr_t *)(buf + l4_offset);
+	igmp = (odph_igmphdr_t *)(buf + l4_offset);
+	ah = (odph_ahhdr_t *)(buf + l4_offset);
+	esp = (odph_esphdr_t *)(buf + l4_offset);
 
 	if (pkt_info.l4_type == CLS_PKT_L4_IGMP) {
-		igmp = (odph_igmphdr_t *)odp_packet_l4_ptr(pkt, NULL);
 		igmp->group = odp_cpu_to_be_32(CLS_MAGIC_VAL);
 		igmp->type = 0x12;
 		igmp->code = 0;
@@ -496,6 +509,15 @@ odp_packet_t create_packet(cls_packet_info_t pkt_info)
 			ODPH_ERR("odph_udp_tcp_chksum failed\n");
 			return ODP_PACKET_INVALID;
 		}
+	} else if (pkt_info.l4_type == CLS_PKT_L4_AH) {
+		ah->next_header = ODPH_IPV4;
+		ah->ah_len = AH_HDR_LEN / 4 - 2;
+		ah->pad = 0;
+		ah->spi = 256;
+		ah->seq_no = 1;
+	} else if (pkt_info.l4_type == CLS_PKT_L4_ESP) {
+		esp->spi = 256;
+		esp->seq_no = 1;
 	} else {
 		tcp->src_port = odp_cpu_to_be_16(CLS_DEFAULT_SPORT);
 		tcp->dst_port = odp_cpu_to_be_16(CLS_DEFAULT_DPORT);
