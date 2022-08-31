@@ -2213,6 +2213,19 @@ uint32_t odp_packet_vector_size(odp_packet_vector_t pktv);
 void odp_packet_vector_size_set(odp_packet_vector_t pktv, uint32_t size);
 
 /**
+ * Packet vector user area
+ *
+ * Returns pointer to the user area associated with the packet vector. Size of the area is fixed
+ * and defined in vector pool parameters.
+ *
+ * @param  pktv  Packet vector handle
+ *
+ * @return       Pointer to the user area of the packet vector
+ * @retval NULL  The packet vector does not have user area
+ */
+void *odp_packet_vector_user_area(odp_packet_vector_t pktv);
+
+/**
  * Check that packet vector is valid
  *
  * This function can be used for debugging purposes to check if a packet vector handle represents
