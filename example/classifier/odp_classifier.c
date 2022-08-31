@@ -287,11 +287,17 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool)
 		}
 	}
 
-	printf("  created pktio:%02" PRIu64
-			", dev:%s, queue mode (ATOMIC queues)\n"
-			"  \tdefault pktio%02" PRIu64 "\n",
-			odp_pktio_to_u64(pktio), dev,
-			odp_pktio_to_u64(pktio));
+	printf("created pktio:%" PRIu64 ", dev:%s", odp_pktio_to_u64(pktio), dev);
+
+	odph_ethaddr_t mac;
+
+	if (odp_pktio_mac_addr(pktio, &mac, sizeof(mac)) == sizeof(mac)) {
+		printf(", mac");
+		for (int c = 0; c < (int)sizeof(mac); c++)
+			printf(":%02x", mac.addr[c]);
+	}
+
+	printf("\n");
 
 	odp_pktio_config_init(&cfg);
 	cfg.parser.layer = appl_args_gbl->parse_layer;
