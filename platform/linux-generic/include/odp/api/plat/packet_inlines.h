@@ -442,8 +442,8 @@ _ODP_INLINE void *odp_packet_buf_head(odp_packet_buf_t pkt_buf)
 
 _ODP_INLINE uint32_t odp_packet_buf_data_offset(odp_packet_buf_t pkt_buf)
 {
-	return (uintptr_t)_odp_pkt_get(pkt_buf, void *, seg_data) -
-			(uintptr_t)odp_packet_buf_head(pkt_buf);
+	return (uint32_t)((uintptr_t)_odp_pkt_get(pkt_buf, void *, seg_data) -
+				(uintptr_t)odp_packet_buf_head(pkt_buf));
 }
 
 _ODP_INLINE void odp_packet_buf_data_set(odp_packet_buf_t pkt_buf, uint32_t data_offset,
