@@ -505,6 +505,19 @@ uint64_t odp_timeout_tick(odp_timeout_t tmo);
 void *odp_timeout_user_ptr(odp_timeout_t tmo);
 
 /**
+ * Timeout user area
+ *
+ * Returns pointer to the user area associated with the timeout. Size of the area is fixed
+ * and defined in timeout pool parameters.
+ *
+ * @param tmo    Timeout handle
+ *
+ * @return       Pointer to the user area of the timeout
+ * @retval NULL  The timeout does not have user area
+ */
+void *odp_timeout_user_area(odp_timeout_t tmo);
+
+/**
  * Timeout alloc
  *
  * Allocates timeout from pool. Pool must be created with ODP_POOL_TIMEOUT type.
