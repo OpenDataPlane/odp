@@ -1492,6 +1492,31 @@ void *odp_packet_user_area(odp_packet_t pkt);
 uint32_t odp_packet_user_area_size(odp_packet_t pkt);
 
 /**
+ * Check user flag
+ *
+ * Implementation clears user flag during new packet creation (e.g. alloc and packet input)
+ * and reset. User may set the flag with odp_packet_user_flag_set(). Implementation never
+ * sets the flag, only clears it. The flag may be useful e.g. to mark when the user area
+ * content is valid.
+ *
+ * @param pkt   Packet handle
+ *
+ * @retval 0    User flag is clear
+ * @retval !0   User flag is set
+ */
+int odp_packet_user_flag(odp_packet_t pkt);
+
+/**
+ * Set user flag
+ *
+ * Set (or clear) the user flag.
+ *
+ * @param pkt   Packet handle
+ * @param val   New value for the flag. Zero clears the flag, other values set the flag.
+ */
+void odp_packet_user_flag_set(odp_packet_t pkt, int val);
+
+/**
  * Layer 2 start pointer
  *
  * Returns pointer to the start of layer 2. Optionally, outputs number of data
@@ -2224,6 +2249,31 @@ void odp_packet_vector_size_set(odp_packet_vector_t pktv, uint32_t size);
  * @retval NULL  The packet vector does not have user area
  */
 void *odp_packet_vector_user_area(odp_packet_vector_t pktv);
+
+/**
+ * Check user flag
+ *
+ * Implementation clears user flag during new packet vector creation (e.g. alloc and packet input)
+ * and reset. User may set the flag with odp_packet_vector_user_flag_set(). Implementation never
+ * sets the flag, only clears it. The flag may be useful e.g. to mark when the user area
+ * content is valid.
+ *
+ * @param pktv  Packet vector handle
+ *
+ * @retval 0    User flag is clear
+ * @retval !0   User flag is set
+ */
+int odp_packet_vector_user_flag(odp_packet_vector_t pktv);
+
+/**
+ * Set user flag
+ *
+ * Set (or clear) the user flag.
+ *
+ * @param pktv  Packet vector handle
+ * @param val   New value for the flag. Zero clears the flag, other values set the flag.
+ */
+void odp_packet_vector_user_flag_set(odp_packet_vector_t pktv, int val);
 
 /**
  * Check that packet vector is valid
