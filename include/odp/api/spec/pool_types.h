@@ -174,6 +174,9 @@ typedef struct odp_pool_capability_t {
 		 * memory size for the pool. */
 		uint32_t max_num;
 
+		/** Maximum user area size in bytes */
+		uint32_t max_uarea_size;
+
 		/** Minimum size of thread local cache */
 		uint32_t min_cache_size;
 
@@ -280,6 +283,9 @@ typedef struct odp_pool_capability_t {
 		 * memory size for the pool. */
 		uint32_t max_num;
 
+		/** Maximum user area size in bytes */
+		uint32_t max_uarea_size;
+
 		/** Minimum size of thread local cache */
 		uint32_t min_cache_size;
 
@@ -303,6 +309,9 @@ typedef struct odp_pool_capability_t {
 
 		/** Maximum number of handles (such as odp_packet_t) in a vector. */
 		uint32_t max_size;
+
+		/** Maximum user area size in bytes */
+		uint32_t max_uarea_size;
 
 		/** Minimum size of thread local cache */
 		uint32_t min_cache_size;
@@ -376,6 +385,12 @@ typedef struct odp_pool_param_t {
 		 *  Default will always be a multiple of 8.
 		 */
 		uint32_t align;
+
+		/** Minimum user area size in bytes. The maximum value is defined by
+		 *  pool capability buf.max_uarea_size. Specify as 0 if no user
+		 *  area is needed. The default value is 0.
+		 */
+		uint32_t uarea_size;
 
 		/** Maximum number of buffers cached locally per thread
 		 *
@@ -500,6 +515,12 @@ typedef struct odp_pool_param_t {
 		/** Number of timeouts in the pool */
 		uint32_t num;
 
+		/** Minimum user area size in bytes. The maximum value is defined by
+		 *  pool capability tmo.max_uarea_size. Specify as 0 if no user
+		 *  area is needed. The default value is 0.
+		 */
+		uint32_t uarea_size;
+
 		/** Maximum number of timeouts cached locally per thread
 		 *
 		 *  See buf.cache_size documentation for details.
@@ -514,6 +535,12 @@ typedef struct odp_pool_param_t {
 
 		/** Maximum number of handles (such as odp_packet_t) in a vector. */
 		uint32_t max_size;
+
+		/** Minimum user area size in bytes. The maximum value is defined by
+		 *  pool capability vector.max_uarea_size. Specify as 0 if no user
+		 *  area is needed. The default value is 0.
+		 */
+		uint32_t uarea_size;
 
 		/** Maximum number of vectors cached locally per thread
 		 *
