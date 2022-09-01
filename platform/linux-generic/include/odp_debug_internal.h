@@ -37,15 +37,8 @@ extern "C" {
  * level 0 to N. */
 #define CONFIG_DEBUG_LEVEL 0
 
-ODP_PRINTF_FORMAT(1, 2)
-static inline void check_printf_format(const char *fmt, ...)
-{
-	(void)fmt;
-}
-
 #define _ODP_LOG_FN(level, fmt, ...) \
 	do { \
-		check_printf_format(fmt, ##__VA_ARGS__); \
 		if (_odp_this_thread && _odp_this_thread->log_fn) \
 			_odp_this_thread->log_fn(level, fmt, ##__VA_ARGS__); \
 		else \
