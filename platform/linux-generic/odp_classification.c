@@ -189,6 +189,12 @@ int odp_cls_capability(odp_cls_capability_t *capability)
 	capability->threshold_red.all_bits = 0;
 	capability->threshold_bp.all_bits = 0;
 	capability->max_hash_queues = CLS_COS_QUEUE_MAX;
+	capability->hash_protocols.proto.ipv4_udp = 1;
+	capability->hash_protocols.proto.ipv4_tcp = 1;
+	capability->hash_protocols.proto.ipv4 = 1;
+	capability->hash_protocols.proto.ipv6_udp = 1;
+	capability->hash_protocols.proto.ipv6_tcp = 1;
+	capability->hash_protocols.proto.ipv6 = 1;
 	capability->max_mark = MAX_MARK;
 	capability->stats.cos.counter.discards = 1;
 	capability->stats.cos.counter.packets = 1;
