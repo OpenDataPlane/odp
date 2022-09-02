@@ -206,7 +206,7 @@ static int cli_log_va(odp_log_level_t level, const char *fmt, va_list in_args)
 	(void)level;
 
 	va_list args;
-	char *str, *p, *last;
+	char *str = NULL, *p, *last;
 	int len;
 
 	/*
@@ -221,8 +221,15 @@ static int cli_log_va(odp_log_level_t level, const char *fmt, va_list in_args)
 	 * string after the last newline and use it the next time we're called.
 	 */
 	va_copy(args, in_args);
-	len = vsnprintf(NULL, 0, fmt, args) + 1;
+	len = vsnprintf(NULL, 0, fmt, args);
 	va_end(args);
+
+	if (len < 0) {
+		ODPH_ERR("vsnprintf failed\n");
+		goto out;
+	}
+
+	len++;
 	str = malloc(len);
 
 	if (!str) {
@@ -231,8 +238,14 @@ static int cli_log_va(odp_log_level_t level, const char *fmt, va_list in_args)
 	}
 
 	va_copy(args, in_args);
-	vsnprintf(str, len, fmt, args);
+	len = vsnprintf(str, len, fmt, args);
 	va_end(args);
+
+	if (len < 0) {
+		ODPH_ERR("vsnprintf failed\n");
+		goto out;
+	}
+
 	p = str;
 	last = strrchr(p, '\n');
 
