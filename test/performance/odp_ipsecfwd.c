@@ -27,11 +27,12 @@
 #define MIN(a, b)  (((a) <= (b)) ? (a) : (b))
 
 #define MAX_IFS 2U
-#define MAX_SAS 64U
+#define MAX_SAS 4000U
 #define MAX_FWDS 64U
 #define MAX_SPIS (UINT16_MAX + 1U)
 #define MAX_WORKERS (ODP_THREAD_COUNT_MAX - 1)
 #define MAX_QUEUES 64U
+#define MAX_SA_QUEUES 1024U
 #define PKT_SIZE 1024U
 #define PKT_CNT 32768U
 #define NUM_EVS 32U
@@ -105,7 +106,7 @@ typedef struct prog_config_s {
 	thread_config_t thread_config[MAX_WORKERS];
 	odp_ipsec_sa_t sas[MAX_SAS];
 	fwd_entry_t fwd_entries[MAX_FWDS];
-	odp_queue_t ev_qs[MAX_SAS];
+	odp_queue_t sa_qs[MAX_SA_QUEUES];
 	pktio_t pktios[MAX_IFS];
 	char *sa_conf_file;
 	char *fwd_conf_file;
@@ -369,10 +370,11 @@ static odp_bool_t create_sa_dest_queues(odp_ipsec_capability_t *ipsec_capa,
 					prog_config_t *config)
 {
 	odp_queue_param_t q_param;
+	const uint32_t max_sa_qs = MIN(MAX_SA_QUEUES, ipsec_capa->max_queues);
 
-	if (config->num_sa_qs == 0U || config->num_sa_qs > ipsec_capa->max_queues) {
+	if (config->num_sa_qs == 0U || config->num_sa_qs > max_sa_qs) {
 		ODPH_ERR("Invalid number of SA queues: %u (min: 1, max: %u)\n", config->num_sa_qs,
-			 ipsec_capa->max_queues);
+			 max_sa_qs);
 		config->num_sa_qs = 0U;
 		return false;
 	}
@@ -387,9 +389,9 @@ static odp_bool_t create_sa_dest_queues(odp_ipsec_capability_t *ipsec_capa,
 		q_param.sched.sync = config->mode == ORDERED ? ODP_SCHED_SYNC_ORDERED :
 							       ODP_SCHED_SYNC_PARALLEL;
 		q_param.sched.group = ODP_SCHED_GROUP_ALL;
-		config->ev_qs[i] = odp_queue_create(q_name, &q_param);
+		config->sa_qs[i] = odp_queue_create(q_name, &q_param);
 
-		if (config->ev_qs[i] == ODP_QUEUE_INVALID) {
+		if (config->sa_qs[i] == ODP_QUEUE_INVALID) {
 			ODPH_ERR("Error creating SA destination queue (created count: %u)\n", i);
 			config->num_sa_qs = i;
 			return false;
@@ -437,7 +439,7 @@ static void create_sa_entry(uint32_t dir, uint32_t spi, const char *src_ip_str,
 	sa_param.proto = ODP_IPSEC_ESP;
 	sa_param.mode = ODP_IPSEC_MODE_TUNNEL;
 	sa_param.spi = spi;
-	sa_param.dest_queue = config->ev_qs[config->num_sas % config->num_sa_qs];
+	sa_param.dest_queue = config->sa_qs[config->num_sas % config->num_sa_qs];
 
 	if (dir > 0U) {
 		sa_param.dir = ODP_IPSEC_DIR_OUTBOUND;
@@ -632,7 +634,7 @@ static parse_result_t check_options(prog_config_t *config)
 		config->pkt_len = MIN(pool_capa.pkt.max_len, PKT_SIZE);
 
 	if (config->num_thrs <= 0 || config->num_thrs > MAX_WORKERS) {
-		ODPH_ERR("Invalid CPU count: %d (min: 1, max: %d)\n", config->num_thrs,
+		ODPH_ERR("Invalid thread count: %d (min: 1, max: %d)\n", config->num_thrs,
 			 MAX_WORKERS);
 		return PRS_NOK;
 	}
@@ -1274,7 +1276,7 @@ static void teardown_test(const prog_config_t *config)
 		(void)odp_ipsec_sa_destroy(config->sas[i]);
 
 	for (uint32_t i = 0U; i < config->num_sa_qs; ++i)
-		(void)odp_queue_destroy(config->ev_qs[i]);
+		(void)odp_queue_destroy(config->sa_qs[i]);
 
 	if (config->compl_q != ODP_QUEUE_INVALID)
 		(void)odp_queue_destroy(config->compl_q);
