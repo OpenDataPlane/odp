@@ -1,5 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
- * Copyright (c) 2019-2021, Nokia
+ * Copyright (c) 2019-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -241,9 +241,10 @@ void odph_thread_common_param_init(odph_thread_common_param_t *param);
  * Use odph_thread_common_param_init() and odph_thread_param_init() to
  * initialize parameters with default values.
  *
- * Thread table must be large enough to hold 'num' elements. Also the cpumask
+ * Thread table must be large enough to hold 'num' elements. Also, the cpumask
  * must contain 'num' CPUs. Threads are pinned to CPUs in order - the first
- * thread goes to the smallest CPU number of the mask, etc.
+ * thread goes to the smallest CPU number of the mask, etc. When creating Linux
+ * processes, memory for the output thread table must be allocated from ODP SHM.
  *
  * Launched threads may be waited for exit with odph_thread_join(), or with
  * direct Linux system calls.
