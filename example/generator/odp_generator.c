@@ -143,6 +143,8 @@ typedef struct {
 	appl_args_t appl;
 	/** Thread specific arguments */
 	thread_args_t thread[MAX_WORKERS];
+	/** Thread states for odph_thread_create() and odph_thread_join() */
+	odph_thread_t thread_tbl[MAX_WORKERS];
 	/** Global arguments */
 	int thread_cnt;
 	int tx_burst_size;
@@ -1101,7 +1103,6 @@ static void print_global_stats(int num_workers)
 int main(int argc, char *argv[])
 {
 	odph_helper_options_t helper_options;
-	odph_thread_t thread_tbl[MAX_WORKERS];
 	odp_pool_t pool;
 	int num_workers;
 	uint32_t num_rx_queues, num_tx_queues;
@@ -1252,7 +1253,6 @@ int main(int argc, char *argv[])
 	}
 
 	/* Create and init worker threads */
-	memset(thread_tbl, 0, sizeof(thread_tbl));
 
 	/* Init threads params */
 	odph_thread_param_init(&thr_param);
@@ -1288,7 +1288,7 @@ int main(int argc, char *argv[])
 
 		thr_common.cpumask = &cpu_mask;
 
-		odph_thread_create(&thread_tbl[PING_THR_RX], &thr_common,
+		odph_thread_create(&args->thread_tbl[PING_THR_RX], &thr_common,
 				   &thr_param, 1);
 
 		thr_args = &args->thread[PING_THR_TX];
@@ -1303,7 +1303,7 @@ int main(int argc, char *argv[])
 		thr_param.start = gen_send_thread;
 		thr_param.arg   = thr_args;
 
-		odph_thread_create(&thread_tbl[PING_THR_TX], &thr_common,
+		odph_thread_create(&args->thread_tbl[PING_THR_TX], &thr_common,
 				   &thr_param, 1);
 
 	} else {
@@ -1390,7 +1390,7 @@ int main(int argc, char *argv[])
 
 			thr_common.cpumask = &thd_mask;
 
-			odph_thread_create(&thread_tbl[i], &thr_common,
+			odph_thread_create(&args->thread_tbl[i], &thr_common,
 					   &thr_param, 1);
 			cpu = odp_cpumask_next(&cpumask, cpu);
 		}
@@ -1399,7 +1399,7 @@ int main(int argc, char *argv[])
 	print_global_stats(num_workers);
 
 	/* Master thread waits for other threads to exit */
-	odph_thread_join(thread_tbl, num_workers);
+	odph_thread_join(args->thread_tbl, num_workers);
 
 	for (i = 0; i < args->appl.if_count; ++i)
 		odp_pktio_stop(ifs[i].pktio);

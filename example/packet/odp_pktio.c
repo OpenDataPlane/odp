@@ -87,6 +87,8 @@ typedef struct {
 	odp_shm_t shm;
 	/** Thread specific arguments */
 	thread_args_t thread[MAX_WORKERS];
+	/** Thread states for odph_thread_create() and odph_thread_join() */
+	odph_thread_t thread_tbl[MAX_WORKERS];
 	/** Flag to exit worker threads */
 	odp_atomic_u32_t exit_threads;
 } args_t;
@@ -342,7 +344,6 @@ static int pktio_ifburst_thread(void *arg)
 int main(int argc, char *argv[])
 {
 	odph_helper_options_t helper_options;
-	odph_thread_t thread_tbl[MAX_WORKERS];
 	odph_thread_common_param_t thr_common;
 	odph_thread_param_t thr_param[MAX_WORKERS];
 	odp_pool_t pool;
@@ -460,8 +461,7 @@ int main(int argc, char *argv[])
 		thr_param[i].thr_type = ODP_THREAD_WORKER;
 	}
 
-	memset(thread_tbl, 0, sizeof(thread_tbl));
-	odph_thread_create(thread_tbl, &thr_common, thr_param, num_workers);
+	odph_thread_create(args->thread_tbl, &thr_common, thr_param, num_workers);
 
 	if (args->appl.time) {
 		odp_time_wait_ns(args->appl.time *
@@ -478,7 +478,7 @@ int main(int argc, char *argv[])
 	}
 
 	/* Master thread waits for other threads to exit */
-	odph_thread_join(thread_tbl, num_workers);
+	odph_thread_join(args->thread_tbl, num_workers);
 
 	for (i = 0; i < args->appl.if_count; ++i)
 		odp_pktio_close(odp_pktio_lookup(args->thread[i].pktio_dev));

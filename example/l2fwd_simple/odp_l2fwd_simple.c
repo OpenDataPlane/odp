@@ -25,6 +25,8 @@ typedef struct {
 	odp_shm_t shm;
 	odp_atomic_u32_t exit_thr;
 	int wait_sec;
+	odph_thread_t thd[MAX_WORKERS];
+
 } global_data_t;
 
 static global_data_t *global;
@@ -145,7 +147,6 @@ int main(int argc, char **argv)
 	odp_pool_t pool;
 	odp_pool_param_t params;
 	odp_cpumask_t cpumask;
-	odph_thread_t thd[MAX_WORKERS];
 	odp_instance_t instance;
 	odp_init_t init_param;
 	odph_thread_common_param_t thr_common;
@@ -259,13 +260,13 @@ int main(int argc, char **argv)
 
 	signal(SIGINT, sig_handler);
 
-	if (odph_thread_create(thd, &thr_common, &thr_param, MAX_WORKERS) !=
+	if (odph_thread_create(global->thd, &thr_common, &thr_param, MAX_WORKERS) !=
 	    MAX_WORKERS) {
 		printf("Error: failed to create threads\n");
 		exit(EXIT_FAILURE);
 	}
 
-	if (odph_thread_join(thd, MAX_WORKERS) != MAX_WORKERS) {
+	if (odph_thread_join(global->thd, MAX_WORKERS) != MAX_WORKERS) {
 		printf("Error: failed to join threads\n");
 		exit(EXIT_FAILURE);
 	}

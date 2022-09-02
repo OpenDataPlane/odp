@@ -82,6 +82,7 @@ typedef struct {
 typedef struct {
 	app_args_t		cmd_args;
 	struct l3fwd_pktio_s	l3fwd_pktios[MAX_NB_PKTIO];
+	odph_thread_t		thread_tbl[MAX_NB_WORKER];
 	struct thread_arg_s	worker_args[MAX_NB_WORKER];
 	odph_ethaddr_t		eth_dest_mac[MAX_NB_PKTIO];
 	/** Global barrier to synchronize main and workers */
@@ -936,7 +937,6 @@ static int print_speed_stats(int num_workers, int duration, int timeout)
 
 int main(int argc, char **argv)
 {
-	odph_thread_t thread_tbl[MAX_NB_WORKER];
 	odph_thread_common_param_t thr_common;
 	odph_thread_param_t thr_param[MAX_NB_WORKER];
 	odp_pool_t pool;
@@ -1112,14 +1112,13 @@ int main(int argc, char **argv)
 		thr_param[i].thr_type = ODP_THREAD_WORKER;
 	}
 
-	memset(thread_tbl, 0, sizeof(thread_tbl));
-	odph_thread_create(thread_tbl, &thr_common, thr_param, nb_worker);
+	odph_thread_create(global->thread_tbl, &thr_common, thr_param, nb_worker);
 
 	print_speed_stats(nb_worker, args->duration, PRINT_INTERVAL);
 	odp_atomic_store_u32(&global->exit_threads, 1);
 
 	/* wait for other threads to join */
-	odph_thread_join(thread_tbl, nb_worker);
+	odph_thread_join(global->thread_tbl, nb_worker);
 
 	/* Stop and close used pktio devices */
 	for (i = 0; i < args->if_count; i++) {

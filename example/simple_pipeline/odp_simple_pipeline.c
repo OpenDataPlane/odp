@@ -65,6 +65,8 @@ typedef struct {
 	odp_queue_t queue[ODP_THREAD_COUNT_MAX];
 	/* Thread specific arguments */
 	thread_args_t thread[ODP_THREAD_COUNT_MAX];
+	/* Thread states for odph_thread_create() and odph_thread_join() */
+	odph_thread_t thread_tbl[ODP_THREAD_COUNT_MAX];
 	/* Barriers to synchronize main and workers */
 	odp_barrier_t init_barrier;
 	odp_barrier_t term_barrier;
@@ -690,7 +692,6 @@ int main(int argc, char **argv)
 	odp_queue_param_t queue_param;
 	odp_shm_t shm;
 	odph_helper_options_t helper_options;
-	odph_thread_t thr_tbl[ODP_THREAD_COUNT_MAX];
 	odph_thread_param_t thr_param[ODP_THREAD_COUNT_MAX];
 	odph_thread_common_param_t thr_common;
 	odph_ethaddr_t new_addr;
@@ -852,7 +853,6 @@ int main(int argc, char **argv)
 	for (i = 0; i < num_threads; i++)
 		stats[i] = &global->thread[i].stats;
 
-	memset(thr_tbl, 0, sizeof(thr_tbl));
 	odph_thread_common_param_init(&thr_common);
 
 	thr_common.instance = instance;
@@ -865,7 +865,7 @@ int main(int argc, char **argv)
 	thr_param[0].arg = thr_args;
 	thr_param[0].thr_type = ODP_THREAD_WORKER;
 	thr_common.cpumask = &thr_mask_rx;
-	odph_thread_create(thr_tbl, &thr_common, thr_param, 1);
+	odph_thread_create(global->thread_tbl, &thr_common, thr_param, 1);
 
 	/* Worker threads */
 	for (i = 0; i < num_workers; i++) {
@@ -881,7 +881,7 @@ int main(int argc, char **argv)
 
 	if (num_workers) {
 		thr_common.cpumask = &thr_mask_worker;
-		odph_thread_create(&thr_tbl[1], &thr_common, thr_param,
+		odph_thread_create(&global->thread_tbl[1], &thr_common, thr_param,
 				   num_workers);
 	}
 
@@ -893,7 +893,7 @@ int main(int argc, char **argv)
 	thr_param[0].arg = thr_args;
 	thr_param[0].thr_type = ODP_THREAD_WORKER;
 	thr_common.cpumask = &thr_mask_tx;
-	odph_thread_create(&thr_tbl[num_threads - 1], &thr_common, thr_param,
+	odph_thread_create(&global->thread_tbl[num_threads - 1], &thr_common, thr_param,
 			   1);
 
 	ret = print_speed_stats(num_threads, stats, global->appl.time,
@@ -911,7 +911,7 @@ int main(int argc, char **argv)
 	odp_atomic_store_u32(&global->exit_threads, 1);
 	odp_barrier_wait(&global->term_barrier);
 
-	odph_thread_join(thr_tbl, num_threads);
+	odph_thread_join(global->thread_tbl, num_threads);
 
 	if (odp_pktio_close(global->if0)) {
 		printf("Error: failed to close interface %s\n", argv[1]);

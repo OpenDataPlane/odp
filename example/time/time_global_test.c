@@ -40,6 +40,8 @@ typedef struct {
 	int thread_num;
 	log_entry_t *log;
 	int log_enries_num;
+	odph_thread_t thread_tbl[MAX_WORKERS];
+
 } test_globals_t;
 
 static void print_log(test_globals_t *gbls)
@@ -257,7 +259,6 @@ int main(int argc, char *argv[])
 	odp_shm_t shm_log = ODP_SHM_INVALID;
 	int log_size, log_enries_num;
 	odph_helper_options_t helper_options;
-	odph_thread_t thread_tbl[MAX_WORKERS];
 	odp_instance_t instance;
 	odp_init_t init_param;
 	odph_thread_common_param_t thr_common;
@@ -355,10 +356,10 @@ int main(int argc, char *argv[])
 	thr_common.share_param = 1;
 
 	/* Create and launch worker threads */
-	odph_thread_create(thread_tbl, &thr_common, &thr_param, num_workers);
+	odph_thread_create(gbls->thread_tbl, &thr_common, &thr_param, num_workers);
 
 	/* Wait for worker threads to exit */
-	odph_thread_join(thread_tbl, num_workers);
+	odph_thread_join(gbls->thread_tbl, num_workers);
 
 	print_log(gbls);
 

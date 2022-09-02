@@ -48,6 +48,9 @@ typedef struct {
 	odp_atomic_u32_t remain;	/**< Number of timeouts to receive*/
 	struct test_timer tt[256];	/**< Array of all timer helper structs*/
 	uint32_t num_workers;		/**< Number of threads */
+	/** Thread states for odph_thread_create() and odph_thread_join() */
+	odph_thread_t thread_tbl[MAX_WORKERS];
+
 } test_globals_t;
 
 /** @private Timer set status ASCII strings */
@@ -332,7 +335,6 @@ static int parse_args(int argc, char *argv[], test_args_t *args)
 int main(int argc, char *argv[])
 {
 	odph_helper_options_t helper_options;
-	odph_thread_t thread_tbl[MAX_WORKERS];
 	odph_thread_common_param_t thr_common;
 	odph_thread_param_t thr_param;
 	int num_workers;
@@ -401,8 +403,6 @@ int main(int argc, char *argv[])
 		ODPH_ERR("Parse args failed.\n");
 		goto err;
 	}
-
-	memset(thread_tbl, 0, sizeof(thread_tbl));
 
 	num_workers = MAX_WORKERS;
 	if (gbls->args.cpu_count && gbls->args.cpu_count < MAX_WORKERS)
@@ -522,10 +522,10 @@ int main(int argc, char *argv[])
 	thr_param.arg = gbls;
 	thr_param.thr_type = ODP_THREAD_WORKER;
 
-	odph_thread_create(thread_tbl, &thr_common, &thr_param, num_workers);
+	odph_thread_create(gbls->thread_tbl, &thr_common, &thr_param, num_workers);
 
 	/* Wait for worker threads to exit */
-	odph_thread_join(thread_tbl, num_workers);
+	odph_thread_join(gbls->thread_tbl, num_workers);
 
 	/* free resources */
 	if (odp_queue_destroy(queue))

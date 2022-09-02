@@ -127,6 +127,8 @@ typedef struct {
 	stats_t stats[MAX_WORKERS][MAX_PKTIOS];
 	appl_args_t appl;		   /**< Parsed application arguments */
 	thread_args_t thread[MAX_WORKERS]; /**< Thread specific arguments */
+	/** Thread states for odph_thread_create() and odph_thread_join() */
+	odph_thread_t thread_tbl[MAX_WORKERS];
 	odp_pool_t pool;		   /**< Packet pool */
 	/** Global barrier to synchronize main and workers */
 	odp_barrier_t barrier;
@@ -971,7 +973,6 @@ static void gbl_args_init(args_t *args)
 int main(int argc, char **argv)
 {
 	odph_helper_options_t helper_options;
-	odph_thread_t thread_tbl[MAX_WORKERS];
 	odph_thread_common_param_t thr_common;
 	odph_thread_param_t thr_param[MAX_WORKERS];
 	int i, j;
@@ -1091,8 +1092,6 @@ int main(int argc, char **argv)
 
 	print_port_mapping();
 
-	memset(thread_tbl, 0, sizeof(thread_tbl));
-
 	odp_barrier_init(&gbl_args->barrier, num_workers + 1);
 
 	stats = gbl_args->stats;
@@ -1112,7 +1111,7 @@ int main(int argc, char **argv)
 		thr_param[i].thr_type = ODP_THREAD_WORKER;
 	}
 
-	odph_thread_create(thread_tbl, &thr_common, thr_param, num_workers);
+	odph_thread_create(gbl_args->thread_tbl, &thr_common, thr_param, num_workers);
 
 	/* Start packet receive and transmit */
 	for (i = 0; i < if_count; ++i) {
@@ -1132,7 +1131,7 @@ int main(int argc, char **argv)
 	odp_atomic_store_u32(&gbl_args->exit_threads, 1);
 
 	/* Master thread waits for other threads to exit */
-	odph_thread_join(thread_tbl, num_workers);
+	odph_thread_join(gbl_args->thread_tbl, num_workers);
 
 	/* Stop and close used pktio devices */
 	for (i = 0; i < if_count; i++) {

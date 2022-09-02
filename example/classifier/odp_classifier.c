@@ -93,6 +93,9 @@ typedef struct {
 	int shutdown_sig;
 	int verbose;
 	int promisc_mode;	/**< Promiscuous mode enabled */
+	/** Thread states for odph_thread_create() and odph_thread_join() */
+	odph_thread_t thread_tbl[MAX_WORKERS];
+
 } appl_args_t;
 
 enum packet_mode {
@@ -566,7 +569,6 @@ static void sig_handler(int signo)
 int main(int argc, char *argv[])
 {
 	odph_helper_options_t helper_options;
-	odph_thread_t thread_tbl[MAX_WORKERS];
 	odp_pool_t pool;
 	int num_workers;
 	int i;
@@ -681,7 +683,6 @@ int main(int argc, char *argv[])
 	}
 
 	/* Create and init worker threads */
-	memset(thread_tbl, 0, sizeof(thread_tbl));
 	odph_thread_common_param_init(&thr_common);
 	odph_thread_param_init(&thr_param);
 
@@ -693,7 +694,7 @@ int main(int argc, char *argv[])
 	thr_common.cpumask     = &cpumask;
 	thr_common.share_param = 1;
 
-	odph_thread_create(thread_tbl, &thr_common, &thr_param, num_workers);
+	odph_thread_create(args->thread_tbl, &thr_common, &thr_param, num_workers);
 
 	if (args->verbose == 0) {
 		print_cls_statistics(args);
@@ -710,7 +711,7 @@ int main(int argc, char *argv[])
 
 	odp_pktio_stop(pktio);
 	args->shutdown = 1;
-	odph_thread_join(thread_tbl, num_workers);
+	odph_thread_join(args->thread_tbl, num_workers);
 
 	if (check_ci_pass_count(args)) {
 		ODPH_ERR("Error: Packet count verification failed\n");

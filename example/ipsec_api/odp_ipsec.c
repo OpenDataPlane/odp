@@ -97,6 +97,8 @@ typedef struct {
 	int num_polled_queues;
 	/* Stop workers if set to 1 */
 	odp_atomic_u32_t exit_threads;
+	odph_thread_t thread_tbl[MAX_WORKERS];
+
 } global_data_t;
 
 /* helper funcs */
@@ -914,7 +916,6 @@ int
 main(int argc, char *argv[])
 {
 	odph_helper_options_t helper_options;
-	odph_thread_t thread_tbl[MAX_WORKERS];
 	odph_thread_common_param_t thr_common;
 	odph_thread_param_t thr_param;
 	int num_workers;
@@ -1089,8 +1090,7 @@ main(int argc, char *argv[])
 	thr_param.arg = NULL;
 	thr_param.thr_type = ODP_THREAD_WORKER;
 
-	memset(thread_tbl, 0, sizeof(thread_tbl));
-	odph_thread_create(thread_tbl, &thr_common, &thr_param, num_workers);
+	odph_thread_create(global->thread_tbl, &thr_common, &thr_param, num_workers);
 
 	/* If there are streams attempt to verify them. Otherwise, run until
 	 * SIGINT is received. */
@@ -1104,7 +1104,7 @@ main(int argc, char *argv[])
 		printf("All received\n");
 		odp_atomic_store_u32(&global->exit_threads, 1);
 	}
-	odph_thread_join(thread_tbl, num_workers);
+	odph_thread_join(global->thread_tbl, num_workers);
 
 	/* Stop and close used pktio devices */
 	for (i = 0; i < global->appl.if_count; i++) {

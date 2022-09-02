@@ -232,9 +232,9 @@ int main(void)
 {
 	odp_instance_t instance;
 	odp_pool_t fragment_pool;
-	odp_shm_t shm;
+	odp_shm_t shm, thread_shm;
 	odp_cpumask_t cpumask;
-	odph_thread_t thread_tbl[MAX_WORKERS];
+	odph_thread_t *thread_tbl;
 	odph_thread_common_param_t thr_common;
 	odph_thread_param_t thr_param;
 	odp_packet_t dequeued_pkts[NUM_PACKETS];
@@ -248,6 +248,19 @@ int main(void)
 	int reassembled;
 
 	init(&instance, &fragment_pool, &shm, &cpumask, &num_workers);
+
+	thread_shm = odp_shm_reserve("thread_shm",
+				     sizeof(odph_thread_t) * MAX_WORKERS, 0, 0);
+	if (thread_shm == ODP_SHM_INVALID) {
+		ODPH_ERR("Shared mem reserve failed.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	thread_tbl = odp_shm_addr(thread_shm);
+	if (thread_tbl == NULL) {
+		ODPH_ERR("Shared mem addr failed.\n");
+		exit(EXIT_FAILURE);
+	}
 
 	/* Packet generation & fragmentation */
 	printf("\n= Fragmenting %d packets...\n", NUM_PACKETS);
@@ -304,7 +317,6 @@ int main(void)
 	thr_param.arg = 0;
 	thr_param.thr_type = ODP_THREAD_WORKER;
 
-	memset(thread_tbl, 0, sizeof(thread_tbl));
 	odph_thread_create(thread_tbl, &thr_common, &thr_param, num_workers);
 
 	/* Go! */
@@ -368,6 +380,7 @@ int main(void)
 	assert(!odp_queue_destroy(fragments));
 	assert(!odp_queue_destroy(reassembled_pkts));
 	assert(!odp_shm_free(shm));
+	assert(!odp_shm_free(thread_shm));
 	if (odp_pool_destroy(fragment_pool)) {
 		fprintf(stderr,
 			"ERROR: fragment_pool destruction failed\n");

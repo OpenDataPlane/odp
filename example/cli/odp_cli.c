@@ -109,6 +109,9 @@ static int cli_server(void *arg ODP_UNUSED)
 
 int main(int argc, char *argv[])
 {
+	odp_shm_t shm;
+	odph_thread_t *thr_server;
+
 	signal(SIGINT, sig_handler);
 
 	odph_helper_options_t helper_options;
@@ -147,6 +150,18 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
+	shm = odp_shm_reserve("cli_shm", sizeof(odph_thread_t), 0, 0);
+	if (shm == ODP_SHM_INVALID) {
+		ODPH_ERR("Shared mem reserve failed.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	thr_server = odp_shm_addr(shm);
+	if (thr_server == NULL) {
+		ODPH_ERR("Shared mem addr failed.\n");
+		exit(EXIT_FAILURE);
+	}
+
 	/* Prepare CLI parameters. */
 
 	odph_cli_param_t cli_param;
@@ -177,7 +192,6 @@ int main(int argc, char *argv[])
 	odp_cpumask_t cpumask;
 	odph_thread_common_param_t thr_common;
 	odph_thread_param_t thr_param;
-	odph_thread_t thr_server;
 
 	if (odp_cpumask_default_control(&cpumask, 1) != 1) {
 		ODPH_ERR("Failed to get default CPU mask.\n");
@@ -192,9 +206,7 @@ int main(int argc, char *argv[])
 	thr_param.thr_type = ODP_THREAD_CONTROL;
 	thr_param.start = cli_server;
 
-	memset(&thr_server, 0, sizeof(thr_server));
-
-	if (odph_thread_create(&thr_server, &thr_common, &thr_param, 1) != 1) {
+	if (odph_thread_create(thr_server, &thr_common, &thr_param, 1) != 1) {
 		ODPH_ERR("Failed to create server thread.\n");
 		exit(EXIT_FAILURE);
 	}
@@ -215,7 +227,7 @@ int main(int argc, char *argv[])
 	}
 
 	/* Wait for server thread to exit. */
-	if (odph_thread_join(&thr_server, 1) != 1) {
+	if (odph_thread_join(thr_server, 1) != 1) {
 		ODPH_ERR("Failed to join server thread.\n");
 		exit(EXIT_FAILURE);
 	}
@@ -227,6 +239,11 @@ int main(int argc, char *argv[])
 	}
 
 	/* Terminate ODP. */
+
+	if (odp_shm_free(shm)) {
+		ODPH_ERR("Shm free failed.\n");
+		exit(EXIT_FAILURE);
+	}
 
 	if (odp_term_local()) {
 		ODPH_ERR("Local term failed.\n");
