@@ -68,11 +68,12 @@ static int worker_fn(void *arg ODP_UNUSED)
 int main(int argc, char *argv[])
 {
 	odph_helper_options_t helper_options;
-	odph_thread_t thread_tbl[NUMBER_WORKERS];
+	odph_thread_t *thread_tbl;
 	odph_thread_common_param_t thr_common;
 	odph_thread_param_t thr_param;
 	odp_cpumask_t cpu_mask;
 	odp_init_t init_param;
+	odp_shm_t shm;
 	int num_workers;
 	int cpu, affinity;
 	int ret;
@@ -98,6 +99,18 @@ int main(int argc, char *argv[])
 
 	if (odp_init_local(instance, ODP_THREAD_CONTROL)) {
 		ODPH_ERR("Error: ODP local init failed.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	shm = odp_shm_reserve("thread_tbl_shm", sizeof(odph_thread_t) * NUMBER_WORKERS, 0, 0);
+	if (shm == ODP_SHM_INVALID) {
+		ODPH_ERR("Error: shared mem reserve failed.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	thread_tbl = odp_shm_addr(shm);
+	if (thread_tbl == NULL) {
+		ODPH_ERR("Error: shared mem addr failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -202,6 +215,11 @@ int main(int argc, char *argv[])
 
 	if (odph_thread_join(thread_tbl, num_workers) != num_workers)
 		exit(EXIT_FAILURE);
+
+	if (odp_shm_free(shm)) {
+		ODPH_ERR("Error: shm free failed.\n");
+		exit(EXIT_FAILURE);
+	}
 
 	return 0;
 }
