@@ -223,6 +223,8 @@ typedef struct {
 	appl_args_t appl;
 	/** Thread specific arguments */
 	thread_args_t thread[MAX_WORKERS];
+	/** Thread states for odph_thread_create() and odph_thread_join() */
+	odph_thread_t thread_tbl[MAX_WORKERS];
 	/** Table of port ethernet addresses */
 	odph_ethaddr_t port_eth_addr[MAX_PKTIOS];
 	/** Table of dst ethernet addresses */
@@ -1091,7 +1093,6 @@ int main(int argc, char *argv[])
 	odp_pool_capability_t pool_capa;
 	odph_ethaddr_t new_addr;
 	odph_helper_options_t helper_options;
-	odph_thread_t thread_tbl[MAX_WORKERS];
 	odph_thread_common_param_t thr_common;
 	odph_thread_param_t thr_param[MAX_WORKERS];
 	stats_t *stats;
@@ -1293,8 +1294,6 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	memset(thread_tbl, 0, sizeof(thread_tbl));
-
 	stats = gbl_args->stats;
 
 	odp_barrier_init(&gbl_args->barrier, num_workers + 1);
@@ -1313,7 +1312,7 @@ int main(int argc, char *argv[])
 		thr_param[i].thr_type = ODP_THREAD_WORKER;
 	}
 
-	odph_thread_create(thread_tbl, &thr_common, thr_param, num_workers);
+	odph_thread_create(gbl_args->thread_tbl, &thr_common, thr_param, num_workers);
 
 	/* Start packet receive and transmit */
 	for (i = 0; i < if_count; ++i) {
@@ -1338,7 +1337,7 @@ int main(int argc, char *argv[])
 	odp_atomic_store_u32(&gbl_args->exit_threads, 1);
 
 	/* Master thread waits for other threads to exit */
-	odph_thread_join(thread_tbl, num_workers);
+	odph_thread_join(gbl_args->thread_tbl, num_workers);
 
 	for (i = 0; i < if_count; i++) {
 		odp_pktio_close(gbl_args->pktios[i].pktio);

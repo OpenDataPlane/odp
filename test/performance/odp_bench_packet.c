@@ -160,6 +160,9 @@ typedef struct {
 	uint8_t data_tbl[TEST_REPEAT_COUNT][TEST_MAX_PKT_SIZE];
 	/** Benchmark run failed */
 	uint8_t bench_failed;
+	/** Thread state for odph_thread_create() and odph_thread_join() */
+	odph_thread_t worker_thread;
+
 } args_t;
 
 /** Global pointer to args */
@@ -1739,7 +1742,6 @@ bench_info_t test_suite[] = {
 int main(int argc, char *argv[])
 {
 	odph_helper_options_t helper_options;
-	odph_thread_t worker_thread;
 	odph_thread_common_param_t thr_common;
 	odph_thread_param_t thr_param;
 	int cpu;
@@ -1866,8 +1868,6 @@ int main(int argc, char *argv[])
 
 	odp_pool_print(gbl_args->pool);
 
-	memset(&worker_thread, 0, sizeof(odph_thread_t));
-
 	signal(SIGINT, sig_handler);
 
 	/* Create worker threads */
@@ -1888,9 +1888,9 @@ int main(int argc, char *argv[])
 	thr_param.arg = gbl_args;
 	thr_param.thr_type = ODP_THREAD_WORKER;
 
-	odph_thread_create(&worker_thread, &thr_common, &thr_param, 1);
+	odph_thread_create(&gbl_args->worker_thread, &thr_common, &thr_param, 1);
 
-	odph_thread_join(&worker_thread, 1);
+	odph_thread_join(&gbl_args->worker_thread, 1);
 
 	ret = gbl_args->bench_failed;
 

@@ -34,6 +34,7 @@ struct test_global_t {
 	uint32_t rounds;
 
 	thread_arg_t thread_arg[ODP_THREAD_COUNT_MAX];
+	odph_thread_t thread_worker[ODP_THREAD_COUNT_MAX];
 
 	struct {
 		uint64_t nsec[ODP_THREAD_COUNT_MAX];
@@ -342,7 +343,6 @@ static void test_type(odp_instance_t instance, test_global_t *global, odp_random
 	odp_cpumask_t cpumask;
 	odph_thread_common_param_t thr_common;
 	odph_thread_param_t thr_param[num_threads];
-	odph_thread_t thr_worker[num_threads];
 
 	if (odp_cpumask_default_worker(&cpumask, num_threads) != num_threads) {
 		ODPH_ERR("Failed to get default CPU mask.\n");
@@ -364,14 +364,13 @@ static void test_type(odp_instance_t instance, test_global_t *global, odp_random
 			thr_param[i].start = test_random_latency;
 	}
 
-	memset(&thr_worker, 0, sizeof(thr_worker));
-
-	if (odph_thread_create(thr_worker, &thr_common, thr_param, num_threads) != num_threads) {
+	if (odph_thread_create(global->thread_worker, &thr_common, thr_param,
+			       num_threads) != num_threads) {
 		ODPH_ERR("Failed to create worker threads.\n");
 		exit(EXIT_FAILURE);
 	}
 
-	if (odph_thread_join(thr_worker, num_threads) != num_threads) {
+	if (odph_thread_join(global->thread_worker, num_threads) != num_threads) {
 		ODPH_ERR("Failed to join worker threads.\n");
 		exit(EXIT_FAILURE);
 	}

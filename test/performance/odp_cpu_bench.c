@@ -82,6 +82,8 @@ typedef struct thread_args_t {
 typedef struct {
 	/* Thread specific arguments */
 	thread_args_t thread[MAX_WORKERS];
+	/* Thread states for odph_thread_create() and odph_thread_join() */
+	odph_thread_t thread_tbl[MAX_WORKERS];
 	/* Barriers to synchronize main and workers */
 	odp_barrier_t init_barrier;
 	odp_barrier_t term_barrier;
@@ -521,7 +523,6 @@ int main(int argc, char *argv[])
 {
 	stats_t *stats[MAX_WORKERS];
 	odph_helper_options_t helper_options;
-	odph_thread_t thread_tbl[MAX_WORKERS];
 	odph_thread_common_param_t thr_common;
 	odph_thread_param_t thr_param[MAX_WORKERS];
 	odp_cpumask_t cpumask;
@@ -776,14 +777,13 @@ int main(int argc, char *argv[])
 		thr_param[i].thr_type = ODP_THREAD_WORKER;
 	}
 
-	memset(thread_tbl, 0, sizeof(thread_tbl));
-	odph_thread_create(thread_tbl, &thr_common, thr_param, num_workers);
+	odph_thread_create(gbl_args->thread_tbl, &thr_common, thr_param, num_workers);
 
 	ret = print_stats(num_workers, stats, gbl_args->appl.time,
 			  gbl_args->appl.accuracy);
 
 	/* Master thread waits for other threads to exit */
-	odph_thread_join(thread_tbl, num_workers);
+	odph_thread_join(gbl_args->thread_tbl, num_workers);
 
 	for (i = 0; i < num_groups; i++) {
 		for (j = 0; j < QUEUES_PER_GROUP; j++) {

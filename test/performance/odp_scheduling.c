@@ -65,6 +65,8 @@ typedef struct {
 	test_args_t      args;
 	odp_queue_t      queue[NUM_PRIOS][QUEUES_PER_PRIO];
 	queue_context_t  queue_ctx[NUM_PRIOS][QUEUES_PER_PRIO];
+	odph_thread_t    thread_tbl[ODP_THREAD_COUNT_MAX];
+
 } test_globals_t;
 
 /* Prints and initializes queue statistics */
@@ -792,7 +794,6 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 int main(int argc, char *argv[])
 {
 	odph_helper_options_t helper_options;
-	odph_thread_t *thread_tbl;
 	test_args_t args;
 	int num_workers;
 	odp_cpumask_t cpumask;
@@ -853,12 +854,6 @@ int main(int argc, char *argv[])
 	printf("num worker threads: %i\n", num_workers);
 	printf("first CPU:          %i\n", odp_cpumask_first(&cpumask));
 	printf("cpu mask:           %s\n", cpumaskstr);
-
-	thread_tbl = calloc(sizeof(odph_thread_t), num_workers);
-	if (!thread_tbl) {
-		ODPH_ERR("no memory for thread_tbl\n");
-		return -1;
-	}
 
 	/* Test cycle count frequency */
 	test_cpu_freq();
@@ -1005,11 +1000,10 @@ int main(int argc, char *argv[])
 	thr_param.start    = run_thread;
 	thr_param.arg      = NULL;
 
-	odph_thread_create(thread_tbl, &thr_common, &thr_param, num_workers);
+	odph_thread_create(globals->thread_tbl, &thr_common, &thr_param, num_workers);
 
 	/* Wait for worker threads to terminate */
-	odph_thread_join(thread_tbl, num_workers);
-	free(thread_tbl);
+	odph_thread_join(globals->thread_tbl, num_workers);
 
 	printf("ODP example complete\n\n");
 

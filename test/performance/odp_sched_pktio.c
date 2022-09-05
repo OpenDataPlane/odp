@@ -128,6 +128,7 @@ typedef struct {
 	uint64_t tx_pkt_sum;
 
 	odp_schedule_config_t schedule_config;
+	odph_thread_t thread[MAX_WORKERS];
 
 } test_global_t;
 
@@ -1447,7 +1448,6 @@ int main(int argc, char *argv[])
 	odp_shm_t shm;
 	odp_time_t t1 = ODP_TIME_NULL, t2 = ODP_TIME_NULL;
 	odph_helper_options_t helper_options;
-	odph_thread_t thread[MAX_WORKERS];
 	test_options_t test_options;
 	int ret = 0;
 
@@ -1530,7 +1530,7 @@ int main(int argc, char *argv[])
 	odp_barrier_init(&test_global->worker_start,
 			 test_global->opt.num_worker + 1);
 
-	start_workers(thread, test_global);
+	start_workers(test_global->thread, test_global);
 
 	/* Synchronize pktio configuration with workers. Worker are now ready
 	 * to process packets. */
@@ -1543,7 +1543,7 @@ int main(int argc, char *argv[])
 
 	t1 = odp_time_local();
 
-	wait_workers(thread, test_global);
+	wait_workers(test_global->thread, test_global);
 
 	t2 = odp_time_local();
 

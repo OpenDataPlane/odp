@@ -123,6 +123,9 @@ typedef struct {
 	odp_atomic_u32_t shutdown;
 	/* Sequence number of IP packets */
 	odp_atomic_u32_t ip_seq ODP_ALIGNED_CACHE;
+	/* Thread states for odph_thread_create() and odph_thread_join() */
+	odph_thread_t thread_tbl[MAX_WORKERS];
+
 } test_globals_t;
 
 /* Status of max rate search */
@@ -593,7 +596,6 @@ static int run_test_single(odp_cpumask_t *thd_mask_tx,
 			   odp_cpumask_t *thd_mask_rx,
 			   test_status_t *status)
 {
-	odph_thread_t thread_tbl[MAX_WORKERS];
 	odph_thread_common_param_t thr_common;
 	odph_thread_param_t thr_param;
 	thread_args_t args_tx, args_rx;
@@ -602,7 +604,6 @@ static int run_test_single(odp_cpumask_t *thd_mask_tx,
 
 	odp_atomic_store_u32(&gbl_args->shutdown, 0);
 
-	memset(thread_tbl, 0, sizeof(thread_tbl));
 	memset(gbl_args->rx_stats, 0, gbl_args->rx_stats_size);
 	memset(gbl_args->tx_stats, 0, gbl_args->tx_stats_size);
 
@@ -623,7 +624,7 @@ static int run_test_single(odp_cpumask_t *thd_mask_tx,
 	thr_param.arg = &args_rx;
 	thr_param.thr_type = ODP_THREAD_WORKER;
 
-	odph_thread_create(thread_tbl, &thr_common, &thr_param, num_rx_workers);
+	odph_thread_create(gbl_args->thread_tbl, &thr_common, &thr_param, num_rx_workers);
 	odp_barrier_wait(&gbl_args->rx_barrier);
 
 	/* then start transmitters */
@@ -643,11 +644,12 @@ static int run_test_single(odp_cpumask_t *thd_mask_tx,
 	thr_param.arg = &args_tx;
 	thr_param.thr_type = ODP_THREAD_WORKER;
 
-	odph_thread_create(&thread_tbl[num_rx_workers], &thr_common, &thr_param, num_tx_workers);
+	odph_thread_create(&gbl_args->thread_tbl[num_rx_workers], &thr_common, &thr_param,
+			   num_tx_workers);
 	odp_barrier_wait(&gbl_args->tx_barrier);
 
 	/* wait for transmitter threads to terminate */
-	odph_thread_join(&thread_tbl[num_rx_workers], num_tx_workers);
+	odph_thread_join(&gbl_args->thread_tbl[num_rx_workers], num_tx_workers);
 
 	/* delay to allow transmitted packets to reach the receivers */
 	odp_time_wait_ns(SHUTDOWN_DELAY_NS);
@@ -656,7 +658,7 @@ static int run_test_single(odp_cpumask_t *thd_mask_tx,
 	odp_atomic_store_u32(&gbl_args->shutdown, 1);
 
 	/* wait for receivers */
-	odph_thread_join(thread_tbl, num_rx_workers);
+	odph_thread_join(gbl_args->thread_tbl, num_rx_workers);
 
 	if (!status->warmup)
 		return process_results(expected_tx_cnt, status);

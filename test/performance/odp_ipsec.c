@@ -1176,7 +1176,7 @@ int main(int argc, char *argv[])
 	char cpumaskstr[ODP_CPUMASK_STR_SIZE];
 	int num_workers = 1;
 	odph_helper_options_t helper_options;
-	odph_thread_t thread_tbl[num_workers];
+	odph_thread_t *thread_tbl;
 	odph_thread_common_param_t thr_common;
 	odph_thread_param_t thr_param;
 	odp_instance_t instance;
@@ -1184,6 +1184,7 @@ int main(int argc, char *argv[])
 	odp_ipsec_capability_t ipsec_capa;
 	odp_pool_capability_t capa;
 	odp_ipsec_config_t config;
+	odp_shm_t shm;
 	uint32_t max_seg_len;
 	unsigned int i;
 
@@ -1211,6 +1212,18 @@ int main(int argc, char *argv[])
 	/* Init this thread */
 	if (odp_init_local(instance, ODP_THREAD_WORKER)) {
 		ODPH_ERR("ODP local init failed.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	shm = odp_shm_reserve("thread_tbl_shm", sizeof(odph_thread_t) * num_workers, 0, 0);
+	if (shm == ODP_SHM_INVALID) {
+		ODPH_ERR("Shared mem reserve failed.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	thread_tbl = odp_shm_addr(shm);
+	if (thread_tbl == NULL) {
+		ODPH_ERR("Shared mem addr failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -1370,7 +1383,6 @@ int main(int argc, char *argv[])
 			thr_param.arg = &thr_arg;
 			thr_param.thr_type = ODP_THREAD_WORKER;
 
-			memset(thread_tbl, 0, sizeof(thread_tbl));
 			odph_thread_create(thread_tbl, &thr_common, &thr_param, num_workers);
 
 			odph_thread_join(thread_tbl, num_workers);
@@ -1403,6 +1415,11 @@ int main(int argc, char *argv[])
 
 	if (odp_pool_destroy(pool)) {
 		ODPH_ERR("Error: pool destroy\n");
+		exit(EXIT_FAILURE);
+	}
+
+	if (odp_shm_free(shm)) {
+		ODPH_ERR("Error: shm free failed\n");
 		exit(EXIT_FAILURE);
 	}
 

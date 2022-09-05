@@ -120,6 +120,7 @@ typedef struct {
 	odp_queue_t      queue[NUM_PRIOS][MAX_QUEUES]; /**< Scheduled queues */
 
 	odp_schedule_group_t group[NUM_PRIOS][MAX_GROUPS];
+	odph_thread_t thread_tbl[ODP_THREAD_COUNT_MAX];
 
 } test_globals_t;
 
@@ -840,7 +841,6 @@ int main(int argc, char *argv[])
 	int i, j, ret;
 	int num_group, tot_group;
 	odp_schedule_group_t group[2 * MAX_GROUPS];
-	odph_thread_t thread_tbl[ODP_THREAD_COUNT_MAX];
 	int err = 0;
 	int num_workers = 0;
 	odp_shm_t shm = ODP_SHM_INVALID;
@@ -1011,7 +1011,6 @@ int main(int argc, char *argv[])
 	odp_barrier_init(&globals->barrier, num_workers);
 
 	/* Create and launch worker threads */
-	memset(thread_tbl, 0, sizeof(thread_tbl));
 
 	odph_thread_common_param_init(&thr_common);
 	thr_common.instance = instance;
@@ -1023,10 +1022,10 @@ int main(int argc, char *argv[])
 	thr_param.arg = NULL;
 	thr_param.thr_type = ODP_THREAD_WORKER;
 
-	odph_thread_create(thread_tbl, &thr_common, &thr_param, num_workers);
+	odph_thread_create(globals->thread_tbl, &thr_common, &thr_param, num_workers);
 
 	/* Wait for worker threads to terminate */
-	odph_thread_join(thread_tbl, num_workers);
+	odph_thread_join(globals->thread_tbl, num_workers);
 
 	printf("ODP scheduling latency test complete\n\n");
 
