@@ -1,5 +1,5 @@
 /* Copyright (c) 2014-2018, Linaro Limited
- * Copyright (c) 2019-2021, Nokia
+ * Copyright (c) 2019-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -297,14 +297,17 @@ odp_cos_t odp_cls_cos_create(const char *name, const odp_cls_cos_param_t *param_
 			cos->num_queue = param.num_queue;
 
 			if (param.num_queue > 1) {
-				odp_queue_param_init(&cos->queue_param);
+				cos->queue_param = param.queue_param;
 				cos->queue_group = true;
 				cos->queue = ODP_QUEUE_INVALID;
 				_odp_cls_update_hash_proto(cos,
 							   param.hash_proto);
 				tbl_index = i * CLS_COS_QUEUE_MAX;
 				for (j = 0; j < param.num_queue; j++) {
-					queue = odp_queue_create(NULL, &cos->queue_param);
+					char name[ODP_QUEUE_NAME_LEN];
+
+					snprintf(name, sizeof(name), "_odp_cos_hq_%u_%u", i, j);
+					queue = odp_queue_create(name, &cos->queue_param);
 					if (queue == ODP_QUEUE_INVALID) {
 						/* unwind the queues */
 						_cls_queue_unwind(tbl_index, j);
@@ -316,6 +319,7 @@ odp_cos_t odp_cls_cos_create(const char *name, const odp_cls_cos_param_t *param_
 				}
 
 			} else {
+				cos->queue_group = false;
 				cos->queue = param.queue;
 			}
 
@@ -404,6 +408,9 @@ int odp_cos_destroy(odp_cos_t cos_id)
 		ODP_ERR("Invalid odp_cos_t handle\n");
 		return -1;
 	}
+
+	if (cos->queue_group)
+		_cls_queue_unwind(cos->index * CLS_COS_QUEUE_MAX, cos->num_queue);
 
 	cos->valid = 0;
 	return 0;
@@ -1961,11 +1968,9 @@ void print_queue_ident(odp_queue_t q)
 	odp_queue_info_t info;
 
 	if (!odp_queue_info(q, &info) && strlen(info.name))
-		ODP_PRINT("%s", info.name);
+		ODP_PRINT("        %s\n", info.name);
 	else
-		ODP_PRINT("%" PRIx64, odp_queue_to_u64(q));
-
-	ODP_PRINT("\n");
+		ODP_PRINT("        %" PRIx64 "\n", odp_queue_to_u64(q));
 }
 
 static
@@ -1980,13 +1985,20 @@ void print_hex(const void *vp, int len)
 static
 void cls_print_cos(cos_t *cos)
 {
+	uint32_t tbl_index = cos->index * CLS_COS_QUEUE_MAX;
 	uint32_t num_rule = odp_atomic_load_u32(&cos->num_rule);
 	bool first = true;
 
 	ODP_PRINT("cos: ");
 	print_cos_ident(cos);
-	ODP_PRINT("    queue: ");
-	print_queue_ident(cos->queue);
+	ODP_PRINT("    queues:\n");
+
+	if (!cos->queue_group) {
+		print_queue_ident(cos->queue);
+	} else {
+		for (uint32_t i = 0; i < cos->num_queue; i++)
+			print_queue_ident(queue_grp_tbl->queue[tbl_index + i]);
+	}
 
 	for (uint32_t j = 0; j < num_rule; j++) {
 		pmr_t *pmr = cos->pmr[j];
