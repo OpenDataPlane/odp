@@ -50,6 +50,8 @@
 	#define odp_packet_user_ptr __odp_packet_user_ptr
 	#define odp_packet_user_area __odp_packet_user_area
 	#define odp_packet_user_area_size __odp_packet_user_area_size
+	#define odp_packet_user_flag __odp_packet_user_flag
+	#define odp_packet_user_flag_set __odp_packet_user_flag_set
 	#define odp_packet_l2_offset __odp_packet_l2_offset
 	#define odp_packet_l3_offset __odp_packet_l3_offset
 	#define odp_packet_l4_offset __odp_packet_l4_offset
@@ -184,6 +186,22 @@ _ODP_INLINE uint32_t odp_packet_user_area_size(odp_packet_t pkt)
 	void *pool = _odp_pkt_get(pkt, void *, pool);
 
 	return _odp_pool_get(pool, uint32_t, uarea_size);
+}
+
+_ODP_INLINE int odp_packet_user_flag(odp_packet_t pkt)
+{
+	_odp_packet_flags_t flags;
+
+	flags.all_flags = _odp_pkt_get(pkt, uint32_t, flags);
+
+	return flags.user_flag;
+}
+
+_ODP_INLINE void odp_packet_user_flag_set(odp_packet_t pkt, int val)
+{
+	_odp_packet_flags_t *flags = _odp_pkt_get_ptr(pkt, _odp_packet_flags_t, flags);
+
+	flags->user_flag = !!val;
 }
 
 _ODP_INLINE uint32_t odp_packet_l2_offset(odp_packet_t pkt)
