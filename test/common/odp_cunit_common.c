@@ -33,7 +33,8 @@
 
 /* Globals */
 static int allow_skip_result;
-static odph_thread_t thread_tbl[ODP_THREAD_COUNT_MAX];
+static odph_thread_t *thread_tbl;
+static odp_shm_t thread_tbl_shm = ODP_SHM_INVALID;
 static int threads_running;
 static odp_instance_t instance;
 static char *progname;
@@ -203,6 +204,22 @@ int odp_cunit_thread_create(int num, int func_ptr(void *), void *const arg[], in
 
 	thread_func = func_ptr;
 
+	if (thread_tbl_shm == ODP_SHM_INVALID) {
+		thread_tbl_shm = odp_shm_reserve("_odp_cunit_thread_tbl",
+						 sizeof(odph_thread_t) * ODP_THREAD_COUNT_MAX,
+						 0, 0);
+		if (thread_tbl_shm == ODP_SHM_INVALID) {
+			ODPH_ERR("error: %s: shared mem reserve failed.\n", __func__);
+			exit(EXIT_FAILURE);
+		}
+	}
+
+	thread_tbl = odp_shm_addr(thread_tbl_shm);
+	if (thread_tbl == NULL) {
+		ODPH_ERR("error: %s: shared mem addr failed.\n", __func__);
+		exit(EXIT_FAILURE);
+	}
+
 	odph_thread_common_param_init(&thr_common);
 
 	if (arg == NULL)
@@ -242,13 +259,26 @@ int odp_cunit_thread_create(int num, int func_ptr(void *), void *const arg[], in
 
 int odp_cunit_thread_join(int num)
 {
+	if (thread_tbl == NULL) {
+		fprintf(stderr, "error: thread table not available.\n");
+		return -1;
+	}
+
 	/* Wait for threads to exit */
 	if (odph_thread_join(thread_tbl, num) != num) {
 		fprintf(stderr, "error: odph_thread_join() failed.\n");
 		return -1;
 	}
+
+	if (odp_shm_free(thread_tbl_shm)) {
+		ODPH_ERR("error: odp_shm_free() failed.\n");
+		return -1;
+	}
+
 	threads_running = 0;
 	thread_func = 0;
+	thread_tbl = NULL;
+	thread_tbl_shm = ODP_SHM_INVALID;
 
 	handle_postponed_asserts();
 
