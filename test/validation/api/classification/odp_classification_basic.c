@@ -395,6 +395,49 @@ static void classification_test_pmr_composite_create(void)
 	odp_pktio_close(pktio);
 }
 
+static void classification_test_create_cos_with_hash_queues(void)
+{
+	odp_pool_t pool;
+	odp_cls_capability_t capa;
+	int ret;
+	odp_queue_param_t q_param;
+	odp_cls_cos_param_t cls_param;
+	odp_cos_t cos;
+
+	pool = pool_create("cls_basic_pool");
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+
+	ret = odp_cls_capability(&capa);
+	CU_ASSERT_FATAL(ret == 0);
+	CU_ASSERT_FATAL(capa.hash_protocols.all_bits != 0);
+
+	odp_queue_param_init(&q_param);
+	q_param.type = ODP_QUEUE_TYPE_SCHED;
+	odp_cls_cos_param_init(&cls_param);
+	cls_param.num_queue = capa.max_hash_queues;
+	cls_param.queue_param = q_param;
+	cls_param.hash_proto.all_bits = capa.hash_protocols.all_bits;
+	cls_param.pool = pool;
+
+	cos = odp_cls_cos_create(NULL, &cls_param);
+	CU_ASSERT_FATAL(cos != ODP_COS_INVALID);
+
+	ret = odp_cos_destroy(cos);
+	CU_ASSERT(ret == 0);
+
+	odp_pool_destroy(pool);
+}
+
+static int check_capa_cos_hashing(void)
+{
+	odp_cls_capability_t capa;
+
+	if (odp_cls_capability(&capa) < 0)
+		return ODP_TEST_INACTIVE;
+
+	return capa.max_hash_queues > 1 ? ODP_TEST_ACTIVE : ODP_TEST_INACTIVE;
+}
+
 odp_testinfo_t classification_suite_basic[] = {
 	ODP_TEST_INFO(classification_test_default_values),
 	ODP_TEST_INFO(classification_test_create_cos),
@@ -406,5 +449,7 @@ odp_testinfo_t classification_suite_basic[] = {
 	ODP_TEST_INFO(classification_test_cos_set_drop),
 	ODP_TEST_INFO(classification_test_cos_set_pool),
 	ODP_TEST_INFO(classification_test_pmr_composite_create),
+	ODP_TEST_INFO_CONDITIONAL(classification_test_create_cos_with_hash_queues,
+				  check_capa_cos_hashing),
 	ODP_TEST_INFO_NULL,
 };
