@@ -26,6 +26,8 @@ typedef struct _odp_event_vector_inline_offset_t {
 	uint16_t packet;
 	uint16_t pool;
 	uint16_t size;
+	uint16_t uarea_addr;
+
 } _odp_event_vector_inline_offset_t;
 
 /** @endcond */
