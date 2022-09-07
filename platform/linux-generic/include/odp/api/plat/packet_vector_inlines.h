@@ -33,6 +33,7 @@
 	#define odp_packet_vector_pool __odp_packet_vector_pool
 	#define odp_packet_vector_size __odp_packet_vector_size
 	#define odp_packet_vector_size_set __odp_packet_vector_size_set
+	#define odp_packet_vector_user_area __odp_packet_vector_user_area
 #else
 	#undef _ODP_INLINE
 	#define _ODP_INLINE
@@ -72,6 +73,11 @@ _ODP_INLINE void odp_packet_vector_size_set(odp_packet_vector_t pktv, uint32_t s
 	uint32_t *vector_size = _odp_event_vect_get_ptr(pktv, uint32_t, size);
 
 	*vector_size = size;
+}
+
+_ODP_INLINE void *odp_packet_vector_user_area(odp_packet_vector_t pktv)
+{
+	return _odp_event_vect_get(pktv, void *, uarea_addr);
 }
 
 /** @endcond */

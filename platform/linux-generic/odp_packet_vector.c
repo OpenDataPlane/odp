@@ -24,7 +24,8 @@
 const _odp_event_vector_inline_offset_t _odp_event_vector_inline ODP_ALIGNED_CACHE = {
 	.packet    = offsetof(odp_event_vector_hdr_t, packet),
 	.pool      = offsetof(odp_event_vector_hdr_t, event_hdr.pool),
-	.size      = offsetof(odp_event_vector_hdr_t, size)
+	.size      = offsetof(odp_event_vector_hdr_t, size),
+	.uarea_addr = offsetof(odp_event_vector_hdr_t, uarea_addr)
 };
 
 #include <odp/visibility_end.h>
