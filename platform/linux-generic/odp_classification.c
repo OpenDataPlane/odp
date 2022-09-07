@@ -1155,17 +1155,12 @@ static inline int verify_pmr_ipsec_spi(const uint8_t *pkt_addr,
 
 	pkt_addr += pkt_hdr->p.l4_offset;
 
-	if (pkt_hdr->p.input_flags.ipsec_ah) {
-		const _odp_ahhdr_t *ahhdr = (const _odp_ahhdr_t *)pkt_addr;
-
-		spi = odp_be_to_cpu_32(ahhdr->spi);
-	} else if (pkt_hdr->p.input_flags.ipsec_esp) {
-		const _odp_esphdr_t *esphdr = (const _odp_esphdr_t *)pkt_addr;
-
-		spi = odp_be_to_cpu_32(esphdr->spi);
-	} else {
+	if (pkt_hdr->p.input_flags.ipsec_ah)
+		spi = ((const _odp_ahhdr_t *)pkt_addr)->spi;
+	else if (pkt_hdr->p.input_flags.ipsec_esp)
+		spi = ((const _odp_esphdr_t *)pkt_addr)->spi;
+	else
 		return 0;
-	}
 
 	if (term_value->match.value == (spi & term_value->match.mask))
 		return 1;
