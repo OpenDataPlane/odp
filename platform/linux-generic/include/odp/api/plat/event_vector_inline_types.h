@@ -15,6 +15,15 @@ extern "C" {
 
 /** @cond _ODP_HIDE_FROM_DOXYGEN_ */
 
+typedef union {
+	uint32_t all_flags;
+
+	struct {
+		uint32_t user_flag : 1;
+	};
+
+} _odp_event_vector_flags_t;
+
 /* Event vector field accessors */
 #define _odp_event_vect_get(vect, cast, field) \
 	(*(cast *)(uintptr_t)((uint8_t *)vect + _odp_event_vector_inline.field))
@@ -27,6 +36,7 @@ typedef struct _odp_event_vector_inline_offset_t {
 	uint16_t pool;
 	uint16_t size;
 	uint16_t uarea_addr;
+	uint16_t flags;
 
 } _odp_event_vector_inline_offset_t;
 
