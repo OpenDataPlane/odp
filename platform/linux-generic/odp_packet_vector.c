@@ -25,7 +25,8 @@ const _odp_event_vector_inline_offset_t _odp_event_vector_inline ODP_ALIGNED_CAC
 	.packet    = offsetof(odp_event_vector_hdr_t, packet),
 	.pool      = offsetof(odp_event_vector_hdr_t, event_hdr.pool),
 	.size      = offsetof(odp_event_vector_hdr_t, size),
-	.uarea_addr = offsetof(odp_event_vector_hdr_t, uarea_addr)
+	.uarea_addr = offsetof(odp_event_vector_hdr_t, uarea_addr),
+	.flags     = offsetof(odp_event_vector_hdr_t, flags)
 };
 
 #include <odp/visibility_end.h>
@@ -60,6 +61,7 @@ void odp_packet_vector_free(odp_packet_vector_t pktv)
 	odp_event_vector_hdr_t *pktv_hdr = _odp_packet_vector_hdr(pktv);
 
 	pktv_hdr->size = 0;
+	pktv_hdr->flags.all_flags = 0;
 
 	_odp_event_free(odp_packet_vector_to_event(pktv));
 }
