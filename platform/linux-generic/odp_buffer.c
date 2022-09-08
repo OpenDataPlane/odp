@@ -23,6 +23,13 @@ uint32_t odp_buffer_size(odp_buffer_t buf)
 	return pool->seg_len;
 }
 
+void *odp_buffer_user_area(odp_buffer_t buf)
+{
+	odp_buffer_hdr_t *hdr = _odp_buf_hdr(buf);
+
+	return hdr->uarea_addr;
+}
+
 void odp_buffer_print(odp_buffer_t buf)
 {
 	odp_buffer_hdr_t *hdr;
