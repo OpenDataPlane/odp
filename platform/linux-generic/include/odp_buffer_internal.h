@@ -36,6 +36,9 @@ typedef struct ODP_ALIGNED_CACHE odp_buffer_hdr_t {
 	/* Common event header */
 	_odp_event_hdr_t event_hdr;
 
+	/* User area pointer */
+	void *uarea_addr;
+
 	/* Data */
 	uint8_t data[];
 } odp_buffer_hdr_t;
