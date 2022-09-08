@@ -112,7 +112,8 @@ const _odp_timeout_inline_offset_t
 _odp_timeout_inline_offset ODP_ALIGNED_CACHE = {
 	.expiration = offsetof(odp_timeout_hdr_t, expiration),
 	.timer = offsetof(odp_timeout_hdr_t, timer),
-	.user_ptr = offsetof(odp_timeout_hdr_t, user_ptr)
+	.user_ptr = offsetof(odp_timeout_hdr_t, user_ptr),
+	.uarea_addr = offsetof(odp_timeout_hdr_t, uarea_addr),
 };
 
 #include <odp/visibility_end.h>

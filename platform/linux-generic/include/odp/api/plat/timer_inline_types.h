@@ -25,6 +25,7 @@ typedef struct _odp_timeout_inline_offset_t {
 	uint16_t expiration;
 	uint16_t timer;
 	uint16_t user_ptr;
+	uint16_t uarea_addr;
 
 } _odp_timeout_inline_offset_t;
 
