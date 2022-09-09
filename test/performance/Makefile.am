@@ -73,10 +73,7 @@ odp_sched_perf_SOURCES = odp_sched_perf.c
 odp_timer_perf_SOURCES = odp_timer_perf.c
 
 # l2fwd test depends on generator example
-EXTRA_odp_l2fwd_DEPENDENCIES = example-generator
-.PHONY: $(EXTRA_odp_l2fwd_DEPENDENCIES)
-example-generator:
-	$(MAKE) -C $(top_builddir)/example/generator odp_generator$(EXEEXT)
+EXTRA_odp_l2fwd_DEPENDENCIES = $(top_builddir)/example/generator/odp_generator$(EXEEXT)
 
 dist_check_SCRIPTS = $(TESTSCRIPTS)
 
