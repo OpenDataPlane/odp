@@ -22,7 +22,6 @@ extern "C" {
 
 #include <odp/helper/odph_debug.h>
 #include <odp/helper/chksum.h>
-#include <odp/helper/cli.h>
 #include <odp/helper/odph_cuckootable.h>
 #include <odp/helper/eth.h>
 #include <odp/helper/gtp.h>
@@ -40,6 +39,10 @@ extern "C" {
 #include <odp/helper/threads.h>
 #include <odp/helper/udp.h>
 #include <odp/helper/version.h>
+
+#ifdef ODPH_CLI
+#include <odp/helper/cli.h>
+#endif
 
 #ifdef __cplusplus
 }
