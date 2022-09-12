@@ -273,7 +273,7 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool)
 		exit(EXIT_FAILURE);
 	}
 
-	if (appl_args_gbl->promisc_mode) {
+	if (appl_args_gbl->promisc_mode && odp_pktio_promisc_mode(pktio) != 1) {
 		if (!capa.set_op.op.promisc_mode) {
 			ODPH_ERR("enabling promisc mode not supported %s\n", dev);
 			exit(EXIT_FAILURE);
