@@ -21,10 +21,6 @@
 extern "C" {
 #endif
 
-#include <odp/helper/autoheader_external.h>
-
-#if defined ODPH_CLI && ODPH_CLI
-
 #include <stdint.h>
 #include <stdarg.h>
 
@@ -177,8 +173,6 @@ int odph_cli_term(void);
 /**
  * @}
  */
-
-#endif
 
 #ifdef __cplusplus
 }
