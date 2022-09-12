@@ -846,7 +846,7 @@ static int open_pktios(test_global_t *global)
 
 		odp_pktio_config(pktio, &pktio_config);
 
-		if (test_options->promisc_mode) {
+		if (test_options->promisc_mode && odp_pktio_promisc_mode(pktio) != 1) {
 			if (!pktio_capa.set_op.op.promisc_mode) {
 				ODPH_ERR("Error (%s): promisc mode set not supported\n", name);
 				return -1;
