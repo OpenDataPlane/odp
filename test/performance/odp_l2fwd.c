@@ -982,7 +982,7 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx, odp_po
 
 	odp_pktio_config(pktio, &config);
 
-	if (gbl_args->appl.promisc_mode) {
+	if (gbl_args->appl.promisc_mode && odp_pktio_promisc_mode(pktio) != 1) {
 		if (!pktio_capa.set_op.op.promisc_mode) {
 			ODPH_ERR("Promisc mode set not supported: %s\n", dev);
 			return -1;
