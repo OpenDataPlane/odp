@@ -1079,10 +1079,12 @@ int main(int argc, char **argv)
 		if (create_pktio(dev, i, num_rx, num_workers, gbl_args->pool))
 			exit(EXIT_FAILURE);
 
-		ret = odp_pktio_promisc_mode_set(gbl_args->pktios[i].pktio, 1);
-		if (ret != 0) {
-			printf("Error: failed to set port to promiscuous mode.\n");
-			exit(EXIT_FAILURE);
+		if (odp_pktio_promisc_mode(gbl_args->pktios[i].pktio) != 1) {
+			ret = odp_pktio_promisc_mode_set(gbl_args->pktios[i].pktio, 1);
+			if (ret != 0) {
+				printf("Error: failed to set %s to promiscuous mode.\n", dev);
+				exit(EXIT_FAILURE);
+			}
 		}
 	}
 	gbl_args->pktios[i].pktio = ODP_PKTIO_INVALID;

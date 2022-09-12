@@ -263,7 +263,7 @@ static int open_pktios(test_global_t *global)
 
 		global->pktio[i].pktout = pktout;
 
-		if (global->opt.promisc) {
+		if (global->opt.promisc && odp_pktio_promisc_mode(pktio) != 1) {
 			if (pktio_capa.set_op.op.promisc_mode == 0) {
 				ODPH_ERR("Promiscuous mode cannot be set: %s\n", name);
 				return -1;
