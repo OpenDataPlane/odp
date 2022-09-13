@@ -1,5 +1,5 @@
 /* Copyright (c) 2014-2018, Linaro Limited
- * Copyright (c) 2019, Nokia
+ * Copyright (c) 2019-2022, Nokia
  * Copyright (c) 2022, Marvell
  * All rights reserved.
  *
@@ -7,6 +7,7 @@
  */
 
 #include <odp_api.h>
+#include <odp/helper/odph_debug.h>
 #include "odp_cunit_common.h"
 
 #define BUF_ALIGN  ODP_CACHE_LINE_SIZE
@@ -491,6 +492,58 @@ static void buffer_test_pool_max_pools_max_cache(void)
 	test_pool_max_pools(&param);
 }
 
+static void buffer_test_user_area(void)
+{
+	odp_pool_t pool;
+	odp_pool_param_t param;
+	uint32_t i, num;
+	void *addr;
+	void *prev = NULL;
+	uint32_t num_alloc = 0;
+	uint32_t size = 1024;
+	const uint32_t max_size = pool_capa.buf.max_uarea_size;
+
+	if (max_size == 0) {
+		ODPH_DBG("Buffer user area not supported\n");
+		return;
+	}
+
+	if (size > max_size)
+		size = max_size;
+
+	memcpy(&param, &default_param, sizeof(odp_pool_param_t));
+	param.buf.uarea_size = size;
+
+	num = param.buf.num;
+
+	odp_buffer_t buffer[num];
+
+	pool = odp_pool_create("test_user_area", &param);
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+
+	for (i = 0; i < num; i++) {
+		buffer[i] = odp_buffer_alloc(pool);
+
+		if (buffer[i] == ODP_BUFFER_INVALID)
+			break;
+		num_alloc++;
+
+		addr = odp_buffer_user_area(buffer[i]);
+		CU_ASSERT_FATAL(addr != NULL);
+		CU_ASSERT(prev != addr);
+
+		prev = addr;
+		memset(addr, 0, size);
+	}
+
+	CU_ASSERT(i == num);
+
+	if (num_alloc)
+		odp_buffer_free_multi(buffer, num_alloc);
+
+	CU_ASSERT_FATAL(odp_pool_destroy(pool) == 0);
+}
+
 odp_testinfo_t buffer_suite[] = {
 	ODP_TEST_INFO(buffer_test_pool_alloc_free),
 	ODP_TEST_INFO(buffer_test_pool_alloc_free_min_cache),
@@ -507,6 +560,7 @@ odp_testinfo_t buffer_suite[] = {
 	ODP_TEST_INFO(buffer_test_pool_max_pools),
 	ODP_TEST_INFO(buffer_test_pool_max_pools_min_cache),
 	ODP_TEST_INFO(buffer_test_pool_max_pools_max_cache),
+	ODP_TEST_INFO(buffer_test_user_area),
 	ODP_TEST_INFO_NULL,
 };
 
