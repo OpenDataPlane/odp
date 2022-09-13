@@ -154,14 +154,23 @@ typedef enum {
 	 */
 	ODP_CIPHER_ALG_AES_EEA2,
 
-	/** Confidentiality 128-EEA3 algorithm
+	/** ZUC based confidentiality algorithm
 	 *
-	 *  ZUC-based 128-EEA3 algorithm.
+	 *  128-EEA3/128-NEA3 algorithm when key length is 128 bits.
 	 *
 	 *  IV (128 bit) should be formatted according to the ETSI/SAGE
 	 *  128-EEA3 & 128-EIA3 specification:
 	 *  COUNT || BEARER || DIRECTION || 0...0 ||
 	 *  COUNT || BEARER || DIRECTION || 0...0 ||
+	 *
+	 *  256-bit key length support is experimental and subject to
+	 *  change. The following variants may be supported:
+	 *
+	 *  - ZUC-256 with 25 byte IV (of which 184 bits are variable)
+	 *    as specified in "The ZUC-256 Stream Cipher".
+	 *  - ZUC-256 with 16 byte IV as specified in
+	 *        "An Addendum to the ZUC-256 Stream Cipher",
+	 *        https://eprint.iacr.org/2021/1439
 	 */
 	ODP_CIPHER_ALG_ZUC_EEA3,
 
@@ -304,15 +313,24 @@ typedef enum {
 	 */
 	ODP_AUTH_ALG_AES_EIA2,
 
-	/** Integrity 128-EIA3 algorithm
+	/** ZUC-based integrity algorithm.
 	 *
-	 *  ZUC-based 128-EIA3 algorithm.
+	 *  128-EIA3/128-NIA3 algorithm when key length is 128 bits.
 	 *
 	 *  IV (128 bit) should be formatted according to the ETSI/SAGE
 	 *  128-EA3 & 128-EIA2 specification:
 	 *  COUNT || BEARER ||
 	 *  DIRECTION XOR COUNT0 || COUNT1 .. COUNT31 ||
 	 *  BEARER || 0...0 || DIRECTION || 0...0
+	 *
+	 *  256-bit key length support is experimental and subject to
+	 *  change. The following variants may be supported:
+	 *
+	 *  - ZUC-256 with 25 byte IV (of which 184 bits are variable) and
+	 *    32/64/128 bit MAC as specified in "The ZUC-256 Stream Cipher".
+	 *  - ZUC-256 with 16 byte IV and 32/64/128 bit MAC as specified in
+	 *        "An Addendum to the ZUC-256 Stream Cipher",
+	 *        https://eprint.iacr.org/2021/1439
 	 */
 	ODP_AUTH_ALG_ZUC_EIA3,
 
