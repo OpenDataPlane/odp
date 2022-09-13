@@ -3140,6 +3140,60 @@ static void packet_vector_basic_test(void)
 	CU_ASSERT(odp_packet_vector_valid(pktv_default) == 1);
 }
 
+static void packet_vector_test_user_area(void)
+{
+	odp_pool_param_t param;
+	odp_pool_t pool;
+	uint32_t i;
+	void *addr;
+	uint32_t num = 10;
+	void *prev = NULL;
+	uint32_t num_alloc = 0;
+	uint32_t size = 1024;
+	const uint32_t max_size = pool_capa.vector.max_uarea_size;
+
+	if (max_size == 0) {
+		ODPH_DBG("Packet vector user area not supported\n");
+		return;
+	}
+
+	if (size > max_size)
+		size = max_size;
+
+	odp_pool_param_init(&param);
+	param.type = ODP_POOL_VECTOR;
+	param.vector.num = num;
+	param.vector.max_size = pool_capa.vector.max_size;
+	param.vector.uarea_size = size;
+
+	odp_packet_vector_t pktv[num];
+
+	pool = odp_pool_create("test_user_area", &param);
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+
+	for (i = 0; i < num; i++) {
+		pktv[i] = odp_packet_vector_alloc(pool);
+
+		if (pktv[i] == ODP_PACKET_VECTOR_INVALID)
+			break;
+		num_alloc++;
+
+		addr = odp_packet_vector_user_area(pktv[i]);
+		CU_ASSERT_FATAL(addr != NULL);
+		CU_ASSERT(prev != addr);
+
+		prev = addr;
+		memset(addr, 0, size);
+	}
+
+	CU_ASSERT(i == num);
+
+	for (i = 0; i < num_alloc; i++)
+		odp_packet_vector_free(pktv[i]);
+
+	CU_ASSERT_FATAL(odp_pool_destroy(pool) == 0);
+}
+
 static int packet_vector_suite_init(void)
 {
 	uint32_t num_pkt = PKT_VEC_PACKET_NUM;
@@ -4344,6 +4398,7 @@ odp_testinfo_t packet_vector_parse_suite[] = {
 	ODP_TEST_INFO(packet_vector_basic_test),
 	ODP_TEST_INFO(packet_vector_test_alloc_free),
 	ODP_TEST_INFO(packet_vector_test_tbl),
+	ODP_TEST_INFO(packet_vector_test_user_area),
 	ODP_TEST_INFO(packet_vector_test_event_conversion),
 	ODP_TEST_INFO_NULL,
 };
