@@ -529,6 +529,22 @@ typedef enum odp_crypto_op_type_t {
 	 * odp_crypto_op() and odp_crypto_op_enq() can be used.
 	 */
 	ODP_CRYPTO_OP_TYPE_BASIC,
+
+	/**
+	 * Out-of-place crypto operation. Output packet is provided by
+	 * the caller and the input packet is not consumed nor modified.
+	 *
+	 * Output of the crypto operation is written in the caller provided
+	 * output packet without affecting other data and metadata of the
+	 * output packet. Memory layout of the output packet may change
+	 * during the operation.
+	 *
+	 * Crypto output is the processed crypto_range, auth_range and
+	 * MAC/digest (in encode sessions) of the input packet.
+	 *
+	 * odp_crypto_op() and odp_crypto_op_enq() can be used.
+	 */
+	ODP_CRYPTO_OP_TYPE_OOP,
 } odp_crypto_op_type_t;
 
 /**
@@ -669,8 +685,8 @@ typedef struct odp_crypto_session_param_t {
 	 *  crypto operation in the legacy operation type, the output
 	 *  packet will be allocated from this pool.
 	 *
-	 *  In ODP_CRYPTO_OP_TYPE_BASIC operation type this must be set to
-	 *  ODP_POOL_INVALID.
+	 *  In ODP_CRYPTO_OP_TYPE_BASIC and ODP_CRYPTO_OP_TYPE_OOP
+	 *  operation types this must be set to ODP_POOL_INVALID.
 	 */
 	odp_pool_t output_pool;
 
@@ -769,16 +785,23 @@ typedef struct odp_crypto_packet_op_param_t {
 	/** Offset from start of packet for hash result
 	 *
 	 *  In case of decode sessions, the expected hash will be read from
-	 *  this offset and compared with the calculated hash. After the
-	 *  operation the hash bytes will have undefined values.
+	 *  this offset from the input packet and compared with the calculated
+	 *  hash. After the operation the hash bytes will have undefined
+	 *  values except with out-of-place sessions (ODP_CRYPTO_OP_TYPE_OOP
+	 *  operation type).
+	 *
+	 *  With out-of-place decode sessions the input packet is not modified
+	 *  but if the hash location overlaps the cipher range or the auth
+	 *  range, then the corresponding location in the output packet will
+	 *  have undefined content.
 	 *
 	 *  In case of encode sessions the calculated hash will be stored in
-	 *  this offset.
+	 *  this offset in the output packet.
 	 *
 	 *  If the hash_result_in_auth_range session parameter is true,
 	 *  the hash result location may overlap auth_range. In that case the
-	 *  result location will be zeroed in decode sessions before hash
-	 *  calculation. Zeroing is not done in encode sessions.
+	 *  result location will be treated as containing zero bytes for the
+	 *  purpose of hash calculation in decode sessions.
 	 */
 	uint32_t hash_result_offset;
 
@@ -792,6 +815,19 @@ typedef struct odp_crypto_packet_op_param_t {
 
 	/** Data range to authenticate */
 	odp_packet_data_range_t auth_range;
+
+	/** Shift of the output offsets with ODP_CRYPTO_OP_TYPE_OOP
+	 *
+	 *  The processed crypto range and auth range of the input packet
+	 *  will be written in the output packet at the offset specified
+	 *  in the ranges (i.e. the same as in the input packet), shifted
+	 *  by this many bytes. This allows directing the output to
+	 *  a different packet offset than the offset of the input data.
+	 *
+	 *  This is ignored if the crypto operation type is not
+	 *  ODP_CRYPTO_OP_TYPE_OOP.
+	 */
+	int32_t dst_offset_shift;
 
 } odp_crypto_packet_op_param_t;
 
@@ -913,6 +949,12 @@ typedef struct odp_crypto_op_result {
 typedef struct odp_crypto_packet_result_t {
 	/** Request completed successfully */
 	odp_bool_t  ok;
+
+	/** Input packet passed to odp_crypo_op_enq() when the operation
+	 *  type of the session is ODP_CRYPTO_OP_TYPE_OOP. In other cases
+	 *  this field does not have a valid value.
+	 */
+	odp_packet_t pkt_in;
 
 	/** Cipher status */
 	odp_crypto_op_status_t cipher_status;
