@@ -316,12 +316,39 @@ int odp_crypto_result(odp_crypto_packet_result_t *result,
  * The value of pktout[n] is ignored as pktout[n] is used purely as an
  * output parameter that returns the handle of the newly allocated packet.
  *
+ * ODP_CRYPTO_OP_TYPE_OOP:
+ *
+ * Writes the output bytes of the crypto operation in a caller provided
+ * output packet passed through pkt_out[n]. Input packets are not consumed
+ * nor modified. Memory layout (including packet data pointers, head and
+ * tail room, segmentation) of the output packet may change during the
+ * operation.
+ *
+ * Crypto output is the processed crypto_range, auth_range and
+ * MAC/digest (in encode sessions) of the input packet. The operation
+ * behaves as if crypto range and auth range were first copied from the
+ * input packet to the output packet and then the crypto operation
+ * was applied to the output packet.
+ *
+ * Crypto range and auth range of null cipher and auth algorithms are
+ * ignored, i.e. not copied in the output packet. Auth range of (AEAD)
+ * algorithms that ignore auth range is not copied.
+ *
+ * The offset of the crypto range and auth range in the output packet is
+ * the same as in the input packet, adjusted by dst_offset_shift operation
+ * parameter.
+ *
+ * pkt_out[n] must be a valid handle to a packet that is long enough to
+ * contain the shifted crypto range, auth range and, in encode sessions,
+ * the MAC/digest result. pkt_out[n] must not be the same as any input
+ * packet or any other output packet.
+ *
  * @param         pkt_in   Packets to be processed
  * @param[in,out] pkt_out  Packet handle array for resulting packets
  * @param         param    Operation parameters array
  * @param         num_pkt  Number of packets to be processed
  *
- * @return Number of input packets consumed (0 ... num_pkt)
+ * @return Number of input packets processed (0 ... num_pkt)
  * @retval <0 on failure
  */
 int odp_crypto_op(const odp_packet_t pkt_in[],
@@ -335,6 +362,11 @@ int odp_crypto_op(const odp_packet_t pkt_in[],
  * Performs the ASYNC cryptographic operations specified during session
  * creation on the packets. Behaves otherwise like odp_crypto_op() but
  * returns output packets through events.
+ *
+ * With ODP_CRYPTO_OP_TYPE_OOP, an enqueued input packet is consumed but
+ * returned back unmodified after the crypto operation is complete. The
+ * caller may not access the input packet until getting the handle back
+ * through odp_crypto_result().
  *
  * All arrays should be of num_pkt size, except that pkt_out parameter
  * is ignored when the crypto operation type is ODP_CRYPTO_OP_TYPE_BASIC.
