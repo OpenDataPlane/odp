@@ -1,5 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
- * Copyright (c) 2019, Nokia
+ * Copyright (c) 2019-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -17,6 +17,7 @@
 #include <sys/syscall.h>
 #include <errno.h>
 #include <limits.h>
+#include <sys/mman.h>
 #include <sys/time.h>
 #include <sys/resource.h>
 
@@ -28,9 +29,8 @@
 
 /* Thread status codes */
 #define NOT_STARTED 0
-#define SYNC_INIT   1
-#define INIT_DONE   2
-#define STARTED     3
+#define INIT_DONE   1
+#define STARTED     2
 
 static odph_helper_options_t helper_options;
 
@@ -65,8 +65,8 @@ static void *run_thread(void *arg)
 		 "pthread" : "process",
 		 (int)getpid());
 
-	if (odp_atomic_load_u32(&start_args->status) == SYNC_INIT)
-		odp_atomic_store_rel_u32(&start_args->status, INIT_DONE);
+	if (start_args->init_status)
+		odp_atomic_store_rel_u32(start_args->init_status, INIT_DONE);
 
 	status = thr_params->start(thr_params->arg);
 	ret = odp_term_local();
@@ -281,6 +281,7 @@ int odph_thread_create(odph_thread_t thread[],
 	int i, num_cpu, cpu;
 	const odp_cpumask_t *cpumask = param->cpumask;
 	int use_pthread = 1;
+	odp_atomic_u32_t *init_status = NULL;
 
 	if (param->thread_model == 1)
 		use_pthread = 0;
@@ -303,6 +304,16 @@ int odph_thread_create(odph_thread_t thread[],
 
 	memset(thread, 0, num * sizeof(odph_thread_t));
 
+	if (param->sync) {
+		init_status = mmap(NULL, sizeof(odp_atomic_u32_t), PROT_READ | PROT_WRITE,
+				   MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+
+		if (init_status == MAP_FAILED) {
+			ODPH_ERR("mmap() failed: %s\n", strerror(errno));
+			return -1;
+		}
+	}
+
 	cpu = odp_cpumask_first(cpumask);
 	for (i = 0; i < num; i++) {
 		odph_thread_start_args_t *start_args = &thread[i].start_args;
@@ -314,11 +325,10 @@ int odph_thread_create(odph_thread_t thread[],
 			start_args->thr_params = thr_param[i];
 
 		start_args->instance   = param->instance;
-
-		if (param->sync)
-			odp_atomic_init_u32(&start_args->status, SYNC_INIT);
-		else
-			odp_atomic_init_u32(&start_args->status, NOT_STARTED);
+		start_args->status = NOT_STARTED;
+		start_args->init_status = init_status;
+		if (init_status)
+			odp_atomic_init_u32(init_status, NOT_STARTED);
 
 		if (use_pthread) {
 			if (create_pthread(&thread[i], cpu, start_args->thr_params.stack_size))
@@ -329,12 +339,11 @@ int odph_thread_create(odph_thread_t thread[],
 		}
 
 		/* Wait newly created thread to update status */
-		if (param->sync) {
+		if (init_status) {
 			odp_time_t t1, t2;
 			uint64_t diff_ns;
 			uint32_t status;
 			int timeout = 0;
-			odp_atomic_u32_t *atomic = &start_args->status;
 			uint64_t timeout_ns = param->sync_timeout;
 
 			if (!timeout_ns)
@@ -347,7 +356,7 @@ int odph_thread_create(odph_thread_t thread[],
 				t2 = odp_time_local();
 				diff_ns = odp_time_diff_ns(t2, t1);
 				timeout = diff_ns > timeout_ns;
-				status = odp_atomic_load_acq_u32(atomic);
+				status = odp_atomic_load_acq_u32(init_status);
 
 			} while (status != INIT_DONE && timeout == 0);
 
@@ -357,9 +366,14 @@ int odph_thread_create(odph_thread_t thread[],
 			}
 		}
 
-		odp_atomic_store_u32(&start_args->status, STARTED);
+		start_args->status = STARTED;
 
 		cpu = odp_cpumask_next(cpumask, cpu);
+	}
+
+	if (init_status) {
+		if (munmap(init_status, sizeof(odp_atomic_u32_t)))
+			ODPH_ERR("munmap() failed: %s\n", strerror(errno));
 	}
 
 	return i;
@@ -373,7 +387,7 @@ int odph_thread_join(odph_thread_t thread[], int num)
 	for (i = 0; i < num; i++) {
 		start_args = &thread[i].start_args;
 
-		if (odp_atomic_load_u32(&start_args->status) != STARTED) {
+		if (start_args->status != STARTED) {
 			ODPH_DBG("Thread (i:%i) not started.\n", i);
 			break;
 		}
@@ -386,7 +400,7 @@ int odph_thread_join(odph_thread_t thread[], int num)
 				break;
 		}
 
-		odp_atomic_store_u32(&start_args->status, NOT_STARTED);
+		start_args->status = NOT_STARTED;
 	}
 
 	return i;
