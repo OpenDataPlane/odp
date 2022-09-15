@@ -678,48 +678,24 @@ static struct cli_def *create_cli(cli_shm_t *shm)
 	cli_set_banner(cli, NULL);
 	cli_set_hostname(cli, shm->cli_param.hostname);
 
-	cli_register_command(cli, NULL, "odp_cls_print_all",
-			     cmd_odp_cls_print_all,
-			     PRIVILEGE_UNPRIVILEGED, MODE_EXEC, NULL);
-	cli_register_command(cli, NULL, "odp_ipsec_print",
-			     cmd_odp_ipsec_print,
-			     PRIVILEGE_UNPRIVILEGED, MODE_EXEC, NULL);
-	cli_register_command(cli, NULL, "odp_pktio_print",
-			     cmd_odp_pktio_print,
-			     PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "<name>");
-	cli_register_command(cli, NULL, "odp_pktio_extra_stats_print",
-			     cmd_odp_pktio_extra_stats_print,
-			     PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "<name>");
-	cli_register_command(cli, NULL, "odp_pool_print",
-			     cmd_odp_pool_print,
-			     PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "<name>");
-	cli_register_command(cli, NULL, "odp_queue_print",
-			     cmd_odp_queue_print,
-			     PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "<name>");
-	cli_register_command(cli, NULL, "odp_queue_print_all",
-			     cmd_odp_queue_print_all,
-			     PRIVILEGE_UNPRIVILEGED, MODE_EXEC, NULL);
-	cli_register_command(cli, NULL, "odp_shm_print_all",
-			     cmd_odp_shm_print_all,
-			     PRIVILEGE_UNPRIVILEGED, MODE_EXEC, NULL);
-	cli_register_command(cli, NULL, "odp_shm_print",
-			     cmd_odp_shm_print,
-			     PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "<name>");
-	cli_register_command(cli, NULL, "odp_sys_config_print",
-			     cmd_odp_sys_config_print,
-			     PRIVILEGE_UNPRIVILEGED, MODE_EXEC, NULL);
-	cli_register_command(cli, NULL, "odp_sys_info_print",
-			     cmd_odp_sys_info_print,
-			     PRIVILEGE_UNPRIVILEGED, MODE_EXEC, NULL);
-	cli_register_command(cli, NULL, "odp_pktio_stats_print",
-			     cmd_odp_pktio_stats_print,
-			     PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "<name>");
-	cli_register_command(cli, NULL, "odp_pktio_queue_stats_print",
-			     cmd_odp_pktio_queue_stats_print,
-			     PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "<name>");
-	cli_register_command(cli, NULL, "odp_pktio_event_queue_stats_print",
-			     cmd_odp_pktio_event_queue_stats_print,
-			     PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "<name>");
+#define CMD(name, help) \
+	cli_register_command(cli, NULL, #name, cmd_ ## name, \
+			     PRIVILEGE_UNPRIVILEGED, MODE_EXEC, help)
+
+	CMD(odp_cls_print_all, NULL);
+	CMD(odp_ipsec_print, NULL);
+	CMD(odp_pktio_event_queue_stats_print, "<name>");
+	CMD(odp_pktio_extra_stats_print, "<name>");
+	CMD(odp_pktio_print, "<name>");
+	CMD(odp_pktio_queue_stats_print, "<name>");
+	CMD(odp_pktio_stats_print, "<name>");
+	CMD(odp_pool_print, "<name>");
+	CMD(odp_queue_print_all, NULL);
+	CMD(odp_queue_print, "<name>");
+	CMD(odp_shm_print_all, NULL);
+	CMD(odp_shm_print, "<name>");
+	CMD(odp_sys_config_print, NULL);
+	CMD(odp_sys_info_print, NULL);
 
 	for (uint32_t i = 0; i < shm->num_user_commands; i++) {
 		cli_register_command(cli, NULL, shm->user_cmd[i].name,
