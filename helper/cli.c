@@ -399,6 +399,18 @@ static int cmd_odp_pktio_extra_stats_print(struct cli_def *cli, const char *comm
 	return CLI_OK;
 }
 
+static int cmd_odp_pool_print_all(struct cli_def *cli,
+				  const char *command ODP_UNUSED,
+				  char *argv[] ODP_UNUSED, int argc)
+{
+	if (check_num_args(cli, argc, 0))
+		return CLI_ERROR;
+
+	odp_pool_print_all();
+
+	return CLI_OK;
+}
+
 static int cmd_odp_pool_print(struct cli_def *cli, const char *command ODP_UNUSED, char *argv[],
 			      int argc)
 {
@@ -689,6 +701,7 @@ static struct cli_def *create_cli(cli_shm_t *shm)
 	CMD(odp_pktio_print, "<name>");
 	CMD(odp_pktio_queue_stats_print, "<name>");
 	CMD(odp_pktio_stats_print, "<name>");
+	CMD(odp_pool_print_all, NULL);
 	CMD(odp_pool_print, "<name>");
 	CMD(odp_queue_print_all, NULL);
 	CMD(odp_queue_print, "<name>");
