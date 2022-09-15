@@ -464,8 +464,8 @@ static int cmd_odp_shm_print(struct cli_def *cli, const char *command ODP_UNUSED
 	return CLI_OK;
 }
 
-static int cmd_pktio_stats_print(struct cli_def *cli, const char *command ODP_UNUSED, char *argv[],
-				 int argc)
+static int cmd_odp_pktio_stats_print(struct cli_def *cli, const char *command ODP_UNUSED,
+				     char *argv[], int argc)
 {
 	if (check_num_args(cli, argc, 1))
 		return CLI_ERROR;
@@ -519,8 +519,8 @@ static void cli_log_pktout_queue_stats(odp_pktout_queue_stats_t *stats)
 	cli_log(ODP_LOG_PRINT, "  errors: %" PRIu64 "\n", stats->errors);
 }
 
-static int cmd_pktio_queue_stats_print(struct cli_def *cli, const char *command ODP_UNUSED,
-				       char *argv[], int argc)
+static int cmd_odp_pktio_queue_stats_print(struct cli_def *cli, const char *command ODP_UNUSED,
+					   char *argv[], int argc)
 {
 	if (check_num_args(cli, argc, 1))
 		return CLI_ERROR;
@@ -583,8 +583,9 @@ static int cmd_pktio_queue_stats_print(struct cli_def *cli, const char *command 
 	return CLI_OK;
 }
 
-static int cmd_pktio_event_queue_stats_print(struct cli_def *cli, const char *command ODP_UNUSED,
-					     char *argv[], int argc)
+static int cmd_odp_pktio_event_queue_stats_print(struct cli_def *cli,
+						 const char *command ODP_UNUSED, char *argv[],
+						 int argc)
 {
 	if (check_num_args(cli, argc, 1))
 		return CLI_ERROR;
@@ -710,14 +711,14 @@ static struct cli_def *create_cli(cli_shm_t *shm)
 	cli_register_command(cli, NULL, "odp_sys_info_print",
 			     cmd_odp_sys_info_print,
 			     PRIVILEGE_UNPRIVILEGED, MODE_EXEC, NULL);
-	cli_register_command(cli, NULL, "pktio_stats_print",
-			     cmd_pktio_stats_print,
+	cli_register_command(cli, NULL, "odp_pktio_stats_print",
+			     cmd_odp_pktio_stats_print,
 			     PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "<name>");
-	cli_register_command(cli, NULL, "pktio_queue_stats_print",
-			     cmd_pktio_queue_stats_print,
+	cli_register_command(cli, NULL, "odp_pktio_queue_stats_print",
+			     cmd_odp_pktio_queue_stats_print,
 			     PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "<name>");
-	cli_register_command(cli, NULL, "pktio_event_queue_stats_print",
-			     cmd_pktio_event_queue_stats_print,
+	cli_register_command(cli, NULL, "odp_pktio_event_queue_stats_print",
+			     cmd_odp_pktio_event_queue_stats_print,
 			     PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "<name>");
 
 	for (uint32_t i = 0; i < shm->num_user_commands; i++) {
