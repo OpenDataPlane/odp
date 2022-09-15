@@ -308,9 +308,8 @@ static int cli_log(odp_log_level_t level, const char *fmt, ...)
 	return r;
 }
 
-static int cmd_call_odp_cls_print_all(struct cli_def *cli,
-				      const char *command ODP_UNUSED,
-				      char *argv[] ODP_UNUSED, int argc)
+static int cmd_odp_cls_print_all(struct cli_def *cli, const char *command ODP_UNUSED,
+				 char *argv[] ODP_UNUSED, int argc)
 {
 	if (check_num_args(cli, argc, 0))
 		return CLI_ERROR;
@@ -320,9 +319,8 @@ static int cmd_call_odp_cls_print_all(struct cli_def *cli,
 	return CLI_OK;
 }
 
-static int cmd_call_odp_ipsec_print(struct cli_def *cli,
-				    const char *command ODP_UNUSED,
-				    char *argv[] ODP_UNUSED, int argc)
+static int cmd_odp_ipsec_print(struct cli_def *cli, const char *command ODP_UNUSED,
+			       char *argv[] ODP_UNUSED, int argc)
 {
 	if (check_num_args(cli, argc, 0))
 		return CLI_ERROR;
@@ -332,9 +330,8 @@ static int cmd_call_odp_ipsec_print(struct cli_def *cli,
 	return CLI_OK;
 }
 
-static int cmd_call_odp_shm_print_all(struct cli_def *cli,
-				      const char *command ODP_UNUSED,
-				      char *argv[] ODP_UNUSED, int argc)
+static int cmd_odp_shm_print_all(struct cli_def *cli, const char *command ODP_UNUSED,
+				 char *argv[] ODP_UNUSED, int argc)
 {
 	if (check_num_args(cli, argc, 0))
 		return CLI_ERROR;
@@ -344,9 +341,8 @@ static int cmd_call_odp_shm_print_all(struct cli_def *cli,
 	return CLI_OK;
 }
 
-static int cmd_call_odp_sys_config_print(struct cli_def *cli,
-					 const char *command ODP_UNUSED,
-					 char *argv[] ODP_UNUSED, int argc)
+static int cmd_odp_sys_config_print(struct cli_def *cli, const char *command ODP_UNUSED,
+				    char *argv[] ODP_UNUSED, int argc)
 {
 	if (check_num_args(cli, argc, 0))
 		return CLI_ERROR;
@@ -356,9 +352,8 @@ static int cmd_call_odp_sys_config_print(struct cli_def *cli,
 	return CLI_OK;
 }
 
-static int cmd_call_odp_sys_info_print(struct cli_def *cli,
-				       const char *command ODP_UNUSED,
-				       char *argv[] ODP_UNUSED, int argc)
+static int cmd_odp_sys_info_print(struct cli_def *cli, const char *command ODP_UNUSED,
+				  char *argv[] ODP_UNUSED, int argc)
 {
 	if (check_num_args(cli, argc, 0))
 		return CLI_ERROR;
@@ -368,9 +363,8 @@ static int cmd_call_odp_sys_info_print(struct cli_def *cli,
 	return CLI_OK;
 }
 
-static int cmd_call_odp_pktio_print(struct cli_def *cli,
-				    const char *command ODP_UNUSED,
-				    char *argv[], int argc)
+static int cmd_odp_pktio_print(struct cli_def *cli, const char *command ODP_UNUSED, char *argv[],
+			       int argc)
 {
 	if (check_num_args(cli, argc, 1))
 		return CLI_ERROR;
@@ -387,9 +381,8 @@ static int cmd_call_odp_pktio_print(struct cli_def *cli,
 	return CLI_OK;
 }
 
-static int cmd_call_odp_pktio_extra_stats_print(struct cli_def *cli,
-						const char *command ODP_UNUSED,
-						char *argv[], int argc)
+static int cmd_odp_pktio_extra_stats_print(struct cli_def *cli, const char *command ODP_UNUSED,
+					   char *argv[], int argc)
 {
 	if (check_num_args(cli, argc, 1))
 		return CLI_ERROR;
@@ -406,9 +399,8 @@ static int cmd_call_odp_pktio_extra_stats_print(struct cli_def *cli,
 	return CLI_OK;
 }
 
-static int cmd_call_odp_pool_print(struct cli_def *cli,
-				   const char *command ODP_UNUSED, char *argv[],
-				   int argc)
+static int cmd_odp_pool_print(struct cli_def *cli, const char *command ODP_UNUSED, char *argv[],
+			      int argc)
 {
 	if (check_num_args(cli, argc, 1))
 		return CLI_ERROR;
@@ -425,9 +417,8 @@ static int cmd_call_odp_pool_print(struct cli_def *cli,
 	return CLI_OK;
 }
 
-static int cmd_call_odp_queue_print(struct cli_def *cli,
-				    const char *command ODP_UNUSED,
-				    char *argv[], int argc)
+static int cmd_odp_queue_print(struct cli_def *cli, const char *command ODP_UNUSED, char *argv[],
+			       int argc)
 {
 	if (check_num_args(cli, argc, 1))
 		return CLI_ERROR;
@@ -444,9 +435,8 @@ static int cmd_call_odp_queue_print(struct cli_def *cli,
 	return CLI_OK;
 }
 
-static int cmd_call_odp_queue_print_all(struct cli_def *cli,
-					const char *command ODP_UNUSED,
-					char *argv[] ODP_UNUSED, int argc)
+static int cmd_odp_queue_print_all(struct cli_def *cli, const char *command ODP_UNUSED,
+				   char *argv[] ODP_UNUSED, int argc)
 {
 	if (check_num_args(cli, argc, 0))
 		return CLI_ERROR;
@@ -456,9 +446,8 @@ static int cmd_call_odp_queue_print_all(struct cli_def *cli,
 	return CLI_OK;
 }
 
-static int cmd_call_odp_shm_print(struct cli_def *cli,
-				  const char *command ODP_UNUSED, char *argv[],
-				  int argc)
+static int cmd_odp_shm_print(struct cli_def *cli, const char *command ODP_UNUSED, char *argv[],
+			     int argc)
 {
 	if (check_num_args(cli, argc, 1))
 		return CLI_ERROR;
@@ -682,48 +671,44 @@ static int cmd_user_cmd(struct cli_def *cli ODP_UNUSED, const char *command,
 
 static struct cli_def *create_cli(cli_shm_t *shm)
 {
-	struct cli_command *c;
 	struct cli_def *cli;
 
 	cli = cli_init();
 	cli_set_banner(cli, NULL);
 	cli_set_hostname(cli, shm->cli_param.hostname);
 
-	c = cli_register_command(cli, NULL, "call", NULL,
-				 PRIVILEGE_UNPRIVILEGED, MODE_EXEC,
-				 "Call ODP API function.");
-	cli_register_command(cli, c, "odp_cls_print_all",
-			     cmd_call_odp_cls_print_all,
+	cli_register_command(cli, NULL, "odp_cls_print_all",
+			     cmd_odp_cls_print_all,
 			     PRIVILEGE_UNPRIVILEGED, MODE_EXEC, NULL);
-	cli_register_command(cli, c, "odp_ipsec_print",
-			     cmd_call_odp_ipsec_print,
+	cli_register_command(cli, NULL, "odp_ipsec_print",
+			     cmd_odp_ipsec_print,
 			     PRIVILEGE_UNPRIVILEGED, MODE_EXEC, NULL);
-	cli_register_command(cli, c, "odp_pktio_print",
-			     cmd_call_odp_pktio_print,
+	cli_register_command(cli, NULL, "odp_pktio_print",
+			     cmd_odp_pktio_print,
 			     PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "<name>");
-	cli_register_command(cli, c, "odp_pktio_extra_stats_print",
-			     cmd_call_odp_pktio_extra_stats_print,
+	cli_register_command(cli, NULL, "odp_pktio_extra_stats_print",
+			     cmd_odp_pktio_extra_stats_print,
 			     PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "<name>");
-	cli_register_command(cli, c, "odp_pool_print",
-			     cmd_call_odp_pool_print,
+	cli_register_command(cli, NULL, "odp_pool_print",
+			     cmd_odp_pool_print,
 			     PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "<name>");
-	cli_register_command(cli, c, "odp_queue_print",
-			     cmd_call_odp_queue_print,
+	cli_register_command(cli, NULL, "odp_queue_print",
+			     cmd_odp_queue_print,
 			     PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "<name>");
-	cli_register_command(cli, c, "odp_queue_print_all",
-			     cmd_call_odp_queue_print_all,
+	cli_register_command(cli, NULL, "odp_queue_print_all",
+			     cmd_odp_queue_print_all,
 			     PRIVILEGE_UNPRIVILEGED, MODE_EXEC, NULL);
-	cli_register_command(cli, c, "odp_shm_print_all",
-			     cmd_call_odp_shm_print_all,
+	cli_register_command(cli, NULL, "odp_shm_print_all",
+			     cmd_odp_shm_print_all,
 			     PRIVILEGE_UNPRIVILEGED, MODE_EXEC, NULL);
-	cli_register_command(cli, c, "odp_shm_print",
-			     cmd_call_odp_shm_print,
+	cli_register_command(cli, NULL, "odp_shm_print",
+			     cmd_odp_shm_print,
 			     PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "<name>");
-	cli_register_command(cli, c, "odp_sys_config_print",
-			     cmd_call_odp_sys_config_print,
+	cli_register_command(cli, NULL, "odp_sys_config_print",
+			     cmd_odp_sys_config_print,
 			     PRIVILEGE_UNPRIVILEGED, MODE_EXEC, NULL);
-	cli_register_command(cli, c, "odp_sys_info_print",
-			     cmd_call_odp_sys_info_print,
+	cli_register_command(cli, NULL, "odp_sys_info_print",
+			     cmd_odp_sys_info_print,
 			     PRIVILEGE_UNPRIVILEGED, MODE_EXEC, NULL);
 	cli_register_command(cli, NULL, "pktio_stats_print",
 			     cmd_pktio_stats_print,
