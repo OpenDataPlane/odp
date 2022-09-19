@@ -932,7 +932,7 @@ int crypto_int(odp_packet_t pkt_in,
 		int ret;
 		int md_copy;
 
-		md_copy = _odp_packet_copy_md_possible(session->p.output_pool,
+		md_copy = _odp_packet_copy_md_possible(odp_packet_pool(out_pkt),
 						       odp_packet_pool(pkt_in));
 		if (odp_unlikely(md_copy < 0)) {
 			ODP_ERR("Unable to copy packet metadata\n");
