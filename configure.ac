@@ -427,6 +427,11 @@ AC_SUBST([ODP_LDFLAGS])
 
 AC_SUBST([EXEEXT])
 
+AM_CONDITIONAL([enable_static], [test x$enable_static = xyes ])
+AM_CONDITIONAL([enable_shared], [test x$enable_shared = xyes ])
+
+AM_CONDITIONAL([cross_compile], [test x$host != x -a x$host != x$build ])
+
 CC_VERSION=$($CC --version | head -n 1)
 
 AC_OUTPUT
@@ -439,6 +444,7 @@ AC_MSG_RESULT([
 	Helper version:		${ODPH_VERSION}
 
 	implementation_name:	${ODP_IMPLEMENTATION_NAME}
+	build:			${build}
 	host:			${host}
 	ARCH_DIR		${ARCH_DIR}
 	ARCH_ABI		${ARCH_ABI}
@@ -450,7 +456,6 @@ AC_MSG_RESULT([
 	libdir:			${libdir}
 	includedir:		${includedir}
 	testdir:		${testdir}
-	WITH_ARCH:              ${WITH_ARCH}
 
 	cc:			${CC}
 	cc version:             ${CC_VERSION}
