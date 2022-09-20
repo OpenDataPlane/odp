@@ -415,6 +415,8 @@ static void ipsec_pkt_proto_err_set(odp_packet_t pkt)
 	uint32_t l3_off = odp_packet_l3_offset(pkt);
 	odph_ipv4hdr_t ip;
 
+	memset(&ip, 0, sizeof(ip));
+
 	/* Simulate proto error by corrupting protocol field */
 
 	odp_packet_copy_to_mem(pkt, l3_off, sizeof(ip), &ip);
