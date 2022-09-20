@@ -27,6 +27,4 @@ make -j $(nproc)
 
 make install
 
-pushd ${HOME}
-${CC} ${CFLAGS} ${OLDPWD}/example/sysinfo/odp_sysinfo.c -o odp_sysinfo_inst_dynamic `PKG_CONFIG_PATH=/opt/odp/lib/pkgconfig:${PKG_CONFIG_PATH} pkg-config --cflags --libs libodp-linux`
-popd
+make installcheck
