@@ -1,2 +1,3 @@
 libodp-linux.pc
+libodp-linux-internal.pc
 odp_libconfig_config.h

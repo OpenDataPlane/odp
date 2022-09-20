@@ -53,6 +53,7 @@ AM_CONDITIONAL([PLATFORM_IS_LINUX_GENERIC],
 	       [test "${with_platform}" = "linux-generic"])
 AC_CONFIG_FILES([platform/linux-generic/Makefile
 		 platform/linux-generic/libodp-linux.pc
+		 platform/linux-generic/libodp-linux-internal.pc
 		 platform/linux-generic/dumpconfig/Makefile
 		 platform/linux-generic/test/Makefile
 		 platform/linux-generic/test/example/Makefile
