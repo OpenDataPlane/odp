@@ -1,7 +1,6 @@
 ACLOCAL_AMFLAGS=-I m4
 AM_DISTCHECK_CONFIGURE_FLAGS = --enable-user-guides	\
-			       --enable-helper-linux	\
-			       --with-testdir
+			       --enable-helper-linux
 
 if PLATFORM_IS_LINUX_GENERIC
 PLATFORM_DIR = platform/linux-generic
