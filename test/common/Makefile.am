@@ -20,5 +20,3 @@ noinst_HEADERS = test_common_macros.h \
 		 test_packet_ipv4.h \
 		 test_packet_ipv4_with_crc.h \
 		 test_packet_ipv6.h
-
-dist_test_SCRIPTS = run-test.sh

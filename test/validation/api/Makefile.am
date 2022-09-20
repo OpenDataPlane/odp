@@ -88,9 +88,4 @@ $(TESTENV):
 	echo "$(TESTS_ENVIRONMENT)" >> $@
 	echo "$(LOG_COMPILER)"      >> $@
 
-if test_installdir
-installcheck-local:
-	$(DESTDIR)/$(testdir)/run-test.sh $(TESTNAME)
-endif
-
 .NOTPARALLEL:
