@@ -217,34 +217,34 @@ static int test_alloc_single(int thr, test_globals_t *globals)
 static int test_alloc_multi(int thr, test_globals_t *globals)
 {
 	int i, j, ret;
-	odp_buffer_t temp_buf[MAX_ALLOCS];
+	const int num_alloc = MAX_ALLOCS;
+	odp_buffer_t temp_buf[num_alloc];
 	uint64_t c1, c2, cycles;
 
 	c1 = odp_cpu_cycles();
 
 	for (i = 0; i < ALLOC_ROUNDS; i++) {
-		ret = odp_buffer_alloc_multi(globals->pool, temp_buf,
-					     MAX_ALLOCS);
-		if (ret != MAX_ALLOCS) {
+		ret = odp_buffer_alloc_multi(globals->pool, temp_buf, num_alloc);
+		if (ret != num_alloc) {
 			ODPH_ERR("  [%i] buffer alloc failed\n", thr);
 			ret = ret < 0 ? 0 : ret;
 			odp_buffer_free_multi(temp_buf, ret);
 			return -1;
 		}
 
-		for (j = 0; j < MAX_ALLOCS; j++) {
+		for (j = 0; j < num_alloc; j++) {
 			if (!odp_buffer_is_valid(temp_buf[j])) {
 				ODPH_ERR("  [%i] alloc_multi failed\n", thr);
-				odp_buffer_free_multi(temp_buf, MAX_ALLOCS);
+				odp_buffer_free_multi(temp_buf, num_alloc);
 				return -1;
 			}
 		}
-		odp_buffer_free_multi(temp_buf, MAX_ALLOCS);
+		odp_buffer_free_multi(temp_buf, num_alloc);
 	}
 
 	c2     = odp_cpu_cycles();
 	cycles = odp_cpu_cycles_diff(c2, c1);
-	cycles = cycles / (ALLOC_ROUNDS * MAX_ALLOCS);
+	cycles = cycles / (ALLOC_ROUNDS * num_alloc);
 
 	printf("  [%i] alloc_multi alloc+free %6" PRIu64 " CPU cycles\n",
 	       thr, cycles);
