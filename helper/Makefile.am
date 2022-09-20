@@ -1,7 +1,7 @@
 include $(top_srcdir)/Makefile.inc
 
 pkgconfigdir = $(libdir)/pkgconfig
-pkgconfig_DATA = libodphelper.pc
+pkgconfig_DATA = libodphelper.pc libodphelper-internal.pc
 
 AM_CPPFLAGS = \
 	$(ODP_INCLUDES) \
