@@ -9,11 +9,15 @@
 
 #include <odp/api/init.h>
 #include <odp/api/shared_memory.h>
+
+#include <odp/api/plat/thread_inlines.h>
+
 #include <odp_debug_internal.h>
+#include <odp_global_data.h>
 #include <odp_init_internal.h>
 #include <odp_schedule_if.h>
 #include <odp_libconfig_internal.h>
-#include <odp/api/plat/thread_inlines.h>
+
 #include <string.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -51,6 +55,15 @@ enum init_stage {
 
 odp_global_data_ro_t odp_global_ro;
 odp_global_data_rw_t *odp_global_rw;
+
+/* Global function pointers for inline header usage.  The values are written
+ * during odp_init_global() (enables process mode support). */
+#include <odp/visibility_begin.h>
+
+odp_log_func_t ODP_PRINTF_FORMAT(2, 3) _odp_log_fn;
+odp_abort_func_t _odp_abort_fn;
+
+#include <odp/visibility_end.h>
 
 /* odp_init_local() call status */
 static __thread uint8_t init_local_called;
@@ -316,17 +329,17 @@ int odp_init_global(odp_instance_t *instance,
 
 	memset(&odp_global_ro, 0, sizeof(odp_global_data_ro_t));
 	odp_global_ro.main_pid = getpid();
-	odp_global_ro.log_fn = odp_override_log;
-	odp_global_ro.abort_fn = odp_override_abort;
+	_odp_log_fn = odp_override_log;
+	_odp_abort_fn = odp_override_abort;
 
 	odp_init_param_init(&odp_global_ro.init_param);
 	if (params != NULL) {
 		odp_global_ro.init_param  = *params;
 
 		if (params->log_fn != NULL)
-			odp_global_ro.log_fn = params->log_fn;
+			_odp_log_fn = params->log_fn;
 		if (params->abort_fn != NULL)
-			odp_global_ro.abort_fn = params->abort_fn;
+			_odp_abort_fn = params->abort_fn;
 		if (params->mem_model == ODP_MEM_MODEL_PROCESS)
 			odp_global_ro.shm_single_va = 1;
 	}

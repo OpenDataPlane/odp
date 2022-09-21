@@ -11,14 +11,16 @@
 
 #if defined(_ODP_PCAPNG) && _ODP_PCAPNG == 1
 
-#include <odp_pcapng.h>
-#include <odp/api/plat/packet_inlines.h>
 #include <odp/api/shared_memory.h>
+#include <odp/api/spinlock.h>
+
+#include <odp/api/plat/packet_inlines.h>
+
+#include <odp_global_data.h>
 #include <odp_init_internal.h>
 #include <odp_macros_internal.h>
 #include <odp_packet_io_internal.h>
-#include <odp_posix_extensions.h>
-#include <odp/api/spinlock.h>
+#include <odp_pcapng.h>
 
 #include <errno.h>
 #include <fcntl.h>

@@ -7,25 +7,27 @@
  */
 
 #include <odp_posix_extensions.h>
+
 #include <odp/api/crypto.h>
-#include <odp_init_internal.h>
 #include <odp/api/spinlock.h>
 #include <odp/api/sync.h>
 #include <odp/api/debug.h>
 #include <odp/api/align.h>
 #include <odp/api/shared_memory.h>
-#include <odp_debug_internal.h>
 #include <odp/api/hints.h>
 #include <odp/api/random.h>
+
+#include <odp/api/plat/event_inlines.h>
 #include <odp/api/plat/packet_inlines.h>
-#include <odp/api/plat/thread_inlines.h>
-#include <odp_packet_internal.h>
 #include <odp/api/plat/queue_inlines.h>
+#include <odp/api/plat/thread_inlines.h>
+
+#include <odp_debug_internal.h>
+#include <odp_global_data.h>
+#include <odp_init_internal.h>
+#include <odp_packet_internal.h>
 
 #include "AArch64cryptolib.h"
-
-/* Inlined API functions */
-#include <odp/api/plat/event_inlines.h>
 
 #define MAX_SESSIONS 4000
 /* Length in bytes */
