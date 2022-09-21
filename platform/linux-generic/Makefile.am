@@ -33,6 +33,7 @@ odpapiplatinclude_HEADERS = \
 		  include/odp/api/plat/buffer_inlines.h \
 		  include/odp/api/plat/byteorder_inlines.h \
 		  include/odp/api/plat/cpu_inlines.h \
+		  include/odp/api/plat/debug_inlines.h \
 		  include/odp/api/plat/event_inlines.h \
 		  include/odp/api/plat/event_inline_types.h \
 		  include/odp/api/plat/event_vector_inline_types.h \
