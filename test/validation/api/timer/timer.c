@@ -451,6 +451,62 @@ static void timer_test_timeout_pool_free(void)
 	CU_ASSERT(odp_pool_destroy(pool) == 0);
 }
 
+static void timer_test_timeout_user_area(void)
+{
+	odp_pool_t pool;
+	odp_pool_capability_t pool_capa;
+	odp_pool_param_t param;
+	uint32_t i, max_size;
+	void *addr;
+	void *prev = NULL;
+	const uint32_t num = 10;
+	uint32_t num_alloc = 0;
+	uint32_t size = 1024;
+	odp_timeout_t tmo[num];
+
+	CU_ASSERT_FATAL(!odp_pool_capability(&pool_capa));
+	max_size = pool_capa.tmo.max_uarea_size;
+
+	if (max_size == 0) {
+		ODPH_DBG("Timeout user area not supported\n");
+		return;
+	}
+
+	if (size > max_size)
+		size = max_size;
+
+	odp_pool_param_init(&param);
+	param.type           = ODP_POOL_TIMEOUT;
+	param.tmo.num        = num;
+	param.tmo.uarea_size = size;
+
+	pool = odp_pool_create("test_user_area", &param);
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+
+	for (i = 0; i < num; i++) {
+		tmo[i] = odp_timeout_alloc(pool);
+
+		if (tmo[i] == ODP_TIMEOUT_INVALID)
+			break;
+
+		num_alloc++;
+
+		addr = odp_timeout_user_area(tmo[i]);
+		CU_ASSERT_FATAL(addr != NULL);
+		CU_ASSERT(prev != addr);
+
+		prev = addr;
+		memset(addr, 0, size);
+	}
+
+	CU_ASSERT(i == num);
+
+	for (i = 0; i < num_alloc; i++)
+		odp_timeout_free(tmo[i]);
+
+	CU_ASSERT_FATAL(odp_pool_destroy(pool) == 0);
+}
+
 static void timer_pool_create_destroy(void)
 {
 	odp_timer_pool_param_t tparam;
@@ -2546,6 +2602,7 @@ odp_testinfo_t timer_suite[] = {
 	ODP_TEST_INFO(timer_test_param_init),
 	ODP_TEST_INFO(timer_test_timeout_pool_alloc),
 	ODP_TEST_INFO(timer_test_timeout_pool_free),
+	ODP_TEST_INFO(timer_test_timeout_user_area),
 	ODP_TEST_INFO(timer_pool_create_destroy),
 	ODP_TEST_INFO(timer_pool_create_max),
 	ODP_TEST_INFO(timer_pool_max_res),
