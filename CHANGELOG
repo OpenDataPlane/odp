@@ -1,3 +1,43 @@
+== OpenDataPlane (1.38.0.0)
+
+=== Backward incompatible API changes
+==== Pool
+* Change `odp_pool_capability_t.pkt.max_uarea_size` specification to state
+that the value of zero means user area is not supported.
+* Specify that the default value of `odp_pool_param_t.pkt.uarea_size` is zero
+and implementation may round up the given value.
+
+=== Backward compatible API changes
+==== Buffer
+* Add `odp_buffer_user_area()` function which returns pointer to the user area
+configured with pool create parameters.
+
+==== Crypto
+* Add experimental ZUC-256 support.
+
+==== Packet
+* Add `odp_packet_vector_user_area()` function which returns pointer to the user
+area configured with pool create parameters.
+* Add new user flag metadata to packets (`odp_packet_user_flag()`,
+`odp_packet_user_flag_set()`) and packet vectors
+(`odp_packet_vector_user_flag()`, `odp_packet_vector_user_flag_set()`).
+
+==== Pool
+* Add user area size capability and parameter into buffer, timeout, and vector
+event pools.
+
+==== Stash
+* Add batch variants of all put/get functions and capabilities for maximum
+supported batch sizes.
+
+==== Thread
+* Clarify `odp_thread_id()` specification to state that thread IDs are assigned
+sequentially starting from 0 in the order threads call `odp_init_local()`.
+
+==== Timer
+* Add `odp_timeout_user_area()` function which returns pointer to the user area
+configured with pool create parameters.
+
 == OpenDataPlane (1.37.2.0)
 
 === Backward compatible API changes
