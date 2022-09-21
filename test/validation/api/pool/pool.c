@@ -1027,7 +1027,7 @@ static void pool_test_create_max_pkt_pools(void)
 	CU_ASSERT(num_shm == shm_capa.max_blocks);
 
 	/* Create maximum number of packet pools */
-	if (global_pool_capa.pkt.max_uarea_size && global_pool_capa.pkt.max_uarea_size < uarea_size)
+	if (uarea_size > global_pool_capa.pkt.max_uarea_size)
 		uarea_size = global_pool_capa.pkt.max_uarea_size;
 
 	odp_pool_param_init(&param);
@@ -1685,7 +1685,7 @@ static void packet_pool_ext_alloc(int len_test)
 
 		if (uarea_size) {
 			CU_ASSERT(odp_packet_user_area(pkt[i]) != NULL);
-			CU_ASSERT(odp_packet_user_area_size(pkt[i]) == uarea_size);
+			CU_ASSERT(odp_packet_user_area_size(pkt[i]) >= uarea_size);
 		}
 
 		/* Check that application header content has not changed */

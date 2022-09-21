@@ -1,5 +1,5 @@
 /* Copyright (c) 2014-2018, Linaro Limited
- * Copyright (c) 2019-2020, Nokia
+ * Copyright (c) 2019-2022, Nokia
  * Copyright (c) 2020, Marvell
  * All rights reserved.
  *
@@ -189,7 +189,7 @@ static int packet_suite_init(void)
 	odp_pool_param_t params;
 	odp_packet_t pkt_tbl[PACKET_POOL_NUM_SEG];
 	struct udata_struct *udat;
-	uint32_t udat_size;
+	uint32_t uarea_size;
 	uint8_t data = 0;
 	uint32_t i;
 	uint32_t num = PACKET_POOL_NUM;
@@ -201,6 +201,10 @@ static int packet_suite_init(void)
 		printf("pool_capability failed\n");
 		return -1;
 	}
+
+	if (pool_capa.pkt.max_uarea_size == 0)
+		printf("Warning: Packet user area not supported\n");
+
 	if (pool_capa.pkt.max_segs_per_pkt == 0)
 		pool_capa.pkt.max_segs_per_pkt = 10;
 
@@ -232,6 +236,10 @@ static int packet_suite_init(void)
 	params.pkt.num        = num;
 	params.pkt.uarea_size = sizeof(struct udata_struct);
 
+	if (params.pkt.uarea_size > pool_capa.pkt.max_uarea_size)
+		params.pkt.uarea_size = pool_capa.pkt.max_uarea_size;
+
+	uarea_size = params.pkt.uarea_size;
 	memcpy(&default_param, &params, sizeof(odp_pool_param_t));
 
 	default_pool = odp_pool_create("default_pool", &params);
@@ -288,23 +296,22 @@ static int packet_suite_init(void)
 	}
 
 	udat = odp_packet_user_area(test_packet);
-	udat_size = odp_packet_user_area_size(test_packet);
-	if (!udat || udat_size != sizeof(struct udata_struct)) {
-		printf("packet_user_area failed: 1\n");
+	if (odp_packet_user_area_size(test_packet) < uarea_size) {
+		printf("Bad packet user area size %u\n", odp_packet_user_area_size(test_packet));
 		return -1;
 	}
 
 	odp_pool_print(default_pool);
-	memcpy(udat, &test_packet_udata, sizeof(struct udata_struct));
+	memcpy(udat, &test_packet_udata, uarea_size);
 
 	udat = odp_packet_user_area(segmented_test_packet);
-	udat_size = odp_packet_user_area_size(segmented_test_packet);
-	if (udat == NULL || udat_size != sizeof(struct udata_struct)) {
-		printf("packet_user_area failed: 2\n");
+	if (odp_packet_user_area_size(segmented_test_packet) < uarea_size) {
+		printf("Bad segmented packet user area size %u\n",
+		       odp_packet_user_area_size(segmented_test_packet));
 		return -1;
 	}
 
-	memcpy(udat, &test_packet_udata, sizeof(struct udata_struct));
+	memcpy(udat, &test_packet_udata, uarea_size);
 
 	return 0;
 }
@@ -906,10 +913,11 @@ static void packet_test_debug(void)
 
 static void packet_test_context(void)
 {
-	odp_packet_t pkt = test_packet;
-	char ptr_test_value = 2;
 	void *prev_ptr;
 	struct udata_struct *udat;
+	uint32_t uarea_size;
+	odp_packet_t pkt = test_packet;
+	char ptr_test_value = 2;
 
 	prev_ptr = odp_packet_user_ptr(pkt);
 	odp_packet_user_ptr_set(pkt, &ptr_test_value);
@@ -917,11 +925,15 @@ static void packet_test_context(void)
 	odp_packet_user_ptr_set(pkt, prev_ptr);
 
 	udat = odp_packet_user_area(pkt);
-	CU_ASSERT_PTR_NOT_NULL(udat);
-	CU_ASSERT(odp_packet_user_area_size(pkt) ==
-		  sizeof(struct udata_struct));
-	CU_ASSERT(memcmp(udat, &test_packet_udata, sizeof(struct udata_struct))
-		  == 0);
+	uarea_size = odp_packet_user_area_size(pkt);
+	CU_ASSERT(uarea_size >= default_param.pkt.uarea_size);
+
+	if (uarea_size) {
+		CU_ASSERT(udat != NULL);
+		CU_ASSERT(memcmp(udat, &test_packet_udata, default_param.pkt.uarea_size) == 0);
+	} else {
+		CU_ASSERT(udat == NULL);
+	}
 
 	odp_packet_user_ptr_set(pkt, NULL);
 	CU_ASSERT(odp_packet_user_ptr(pkt) == NULL);
@@ -1364,9 +1376,10 @@ static void packet_test_add_rem_data(void)
 	odp_packet_t pkt, new_pkt;
 	uint32_t pkt_len, offset, add_len;
 	void *usr_ptr;
-	struct udata_struct *udat, *new_udat;
+	struct udata_struct *udat;
 	int ret;
 	uint32_t min_seg_len;
+	uint32_t uarea_size = default_param.pkt.uarea_size;
 
 	min_seg_len = pool_capa.pkt.min_seg_len;
 
@@ -1375,10 +1388,14 @@ static void packet_test_add_rem_data(void)
 
 	pkt_len = odp_packet_len(pkt);
 	usr_ptr = odp_packet_user_ptr(pkt);
-	udat    = odp_packet_user_area(pkt);
-	CU_ASSERT(odp_packet_user_area_size(pkt) ==
-		  sizeof(struct udata_struct));
-	memcpy(udat, &test_packet_udata, sizeof(struct udata_struct));
+
+	if (uarea_size) {
+		udat = odp_packet_user_area(pkt);
+
+		CU_ASSERT_FATAL(udat != NULL);
+		CU_ASSERT_FATAL(odp_packet_user_area_size(pkt) >= uarea_size);
+		memcpy(udat, &test_packet_udata, uarea_size);
+	}
 
 	offset = pkt_len / 2;
 
@@ -1401,13 +1418,14 @@ static void packet_test_add_rem_data(void)
 	/* Verify that user metadata is preserved */
 	CU_ASSERT(odp_packet_user_ptr(new_pkt) == usr_ptr);
 
-	/* Verify that user metadata has been preserved */
-	new_udat = odp_packet_user_area(new_pkt);
-	CU_ASSERT_PTR_NOT_NULL(new_udat);
-	CU_ASSERT(odp_packet_user_area_size(new_pkt) ==
-		  sizeof(struct udata_struct));
-	CU_ASSERT(memcmp(new_udat, &test_packet_udata,
-			 sizeof(struct udata_struct)) == 0);
+	if (uarea_size) {
+		/* Verify that user metadata has been preserved */
+		udat = odp_packet_user_area(new_pkt);
+
+		CU_ASSERT_FATAL(udat != NULL);
+		CU_ASSERT(odp_packet_user_area_size(new_pkt) >= uarea_size);
+		CU_ASSERT(memcmp(udat, &test_packet_udata, uarea_size) == 0);
+	}
 
 	pkt = new_pkt;
 
@@ -1422,13 +1440,14 @@ static void packet_test_add_rem_data(void)
 	CU_ASSERT(odp_packet_len(new_pkt) == pkt_len - add_len);
 	CU_ASSERT(odp_packet_user_ptr(new_pkt) == usr_ptr);
 
-	/* Verify that user metadata has been preserved */
-	new_udat = odp_packet_user_area(new_pkt);
-	CU_ASSERT_PTR_NOT_NULL(new_udat);
-	CU_ASSERT(odp_packet_user_area_size(new_pkt) ==
-		  sizeof(struct udata_struct));
-	CU_ASSERT(memcmp(new_udat, &test_packet_udata,
-			 sizeof(struct udata_struct)) == 0);
+	if (uarea_size) {
+		/* Verify that user metadata has been preserved */
+		udat = odp_packet_user_area(new_pkt);
+
+		CU_ASSERT(udat != NULL);
+		CU_ASSERT(odp_packet_user_area_size(new_pkt) >= uarea_size);
+		CU_ASSERT(memcmp(udat, &test_packet_udata, uarea_size) == 0);
+	}
 
 	pkt = new_pkt;
 
@@ -1442,7 +1461,7 @@ free_packet:
 #define COMPARE_INFLAG(p1, p2, flag) \
 	CU_ASSERT(odp_packet_##flag(p1) == odp_packet_##flag(p2))
 
-static void _packet_compare_inflags(odp_packet_t pkt1, odp_packet_t pkt2)
+static void packet_compare_inflags(odp_packet_t pkt1, odp_packet_t pkt2)
 {
 	COMPARE_HAS_INFLAG(pkt1, pkt2, l2);
 	COMPARE_HAS_INFLAG(pkt1, pkt2, l3);
@@ -1473,7 +1492,7 @@ static void _packet_compare_inflags(odp_packet_t pkt1, odp_packet_t pkt2)
 	COMPARE_INFLAG(pkt1, pkt2, shaper_len_adjust);
 }
 
-static void _packet_compare_udata(odp_packet_t pkt1, odp_packet_t pkt2)
+static void packet_compare_udata(odp_packet_t pkt1, odp_packet_t pkt2)
 {
 	uint32_t usize1 = odp_packet_user_area_size(pkt1);
 	uint32_t usize2 = odp_packet_user_area_size(pkt2);
@@ -1609,7 +1628,7 @@ static void packet_test_meta_data_copy(void)
 	copy = odp_packet_copy(pkt, pool);
 	CU_ASSERT_FATAL(copy != ODP_PACKET_INVALID);
 
-	_packet_compare_inflags(pkt, copy);
+	packet_compare_inflags(pkt, copy);
 	CU_ASSERT(odp_packet_input(copy) == pktio);
 	CU_ASSERT(odp_packet_user_ptr(copy) == (void *)(uintptr_t)0xdeadbeef);
 	CU_ASSERT(odp_packet_l2_offset(copy) == 20);
@@ -1633,69 +1652,73 @@ static void packet_test_meta_data_copy(void)
 static void packet_test_copy(void)
 {
 	odp_packet_t pkt;
-	odp_packet_t pkt_copy, pkt_part;
+	odp_packet_t pkt_part;
 	odp_pool_param_t param;
-	odp_pool_t pool, pool_double_uarea, pool_no_uarea;
-	uint32_t i, plen, src_offset, dst_offset;
-	uint32_t seg_len = 0;
+	odp_pool_t pool, pool_min_uarea, pool_large_uarea;
 	void *pkt_data;
+	uint32_t i, plen, src_offset, dst_offset, uarea_size;
+	uint32_t seg_len = 0;
 
 	memcpy(&param, &default_param, sizeof(odp_pool_param_t));
 
 	param.pkt.uarea_size = 0;
-	pool_no_uarea = odp_pool_create("no_uarea", &param);
-	CU_ASSERT_FATAL(pool_no_uarea != ODP_POOL_INVALID);
+	pool_min_uarea = odp_pool_create("min_uarea", &param);
+	CU_ASSERT_FATAL(pool_min_uarea != ODP_POOL_INVALID);
 
-	param.pkt.uarea_size = 2 * sizeof(struct udata_struct);
-	pool_double_uarea = odp_pool_create("double_uarea", &param);
-	CU_ASSERT_FATAL(pool_double_uarea != ODP_POOL_INVALID);
+	uarea_size = 2 * sizeof(struct udata_struct);
+	if (uarea_size > pool_capa.pkt.max_uarea_size)
+		uarea_size = pool_capa.pkt.max_uarea_size;
 
-	pkt = odp_packet_copy(test_packet, pool_no_uarea);
-	CU_ASSERT(pkt == ODP_PACKET_INVALID);
-	if (pkt != ODP_PACKET_INVALID)
+	param.pkt.uarea_size = uarea_size;
+
+	pool_large_uarea = odp_pool_create("large_uarea", &param);
+	CU_ASSERT_FATAL(pool_large_uarea != ODP_POOL_INVALID);
+
+	/* Pool with minimal user area */
+	pkt = odp_packet_copy(test_packet, pool_min_uarea);
+	if (pkt != ODP_PACKET_INVALID) {
+		/* Pool has enough user area also when zero was requested */
+		CU_ASSERT(odp_packet_user_area_size(pkt) >= sizeof(struct udata_struct));
+
+		packet_compare_inflags(pkt, test_packet);
+		packet_compare_udata(pkt, test_packet);
+		packet_compare_data(pkt, test_packet);
+
 		odp_packet_free(pkt);
+	}
 
+	/* The same pool */
 	pkt = odp_packet_copy(test_packet, odp_packet_pool(test_packet));
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+	CU_ASSERT(pkt != test_packet);
+	CU_ASSERT(odp_packet_pool(pkt) == odp_packet_pool(test_packet));
+	CU_ASSERT(odp_packet_user_area(pkt) != odp_packet_user_area(test_packet));
+	CU_ASSERT(odp_packet_user_area_size(pkt) == odp_packet_user_area_size(test_packet));
+	CU_ASSERT(odp_packet_data(pkt) != odp_packet_data(test_packet));
+	CU_ASSERT(odp_packet_len(pkt) == odp_packet_len(test_packet));
+
+	packet_compare_inflags(pkt, test_packet);
+	packet_compare_udata(pkt, test_packet);
 	packet_compare_data(pkt, test_packet);
-	pool = odp_packet_pool(pkt);
-	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
-	pkt_copy = odp_packet_copy(pkt, pool);
-	CU_ASSERT_FATAL(pkt_copy != ODP_PACKET_INVALID);
 
-	CU_ASSERT(pkt != pkt_copy);
-	CU_ASSERT(odp_packet_data(pkt) != odp_packet_data(pkt_copy));
-	CU_ASSERT(odp_packet_len(pkt) == odp_packet_len(pkt_copy));
-
-	_packet_compare_inflags(pkt, pkt_copy);
-	packet_compare_data(pkt, pkt_copy);
-	CU_ASSERT(odp_packet_user_area_size(pkt) ==
-		  odp_packet_user_area_size(test_packet));
-	_packet_compare_udata(pkt, pkt_copy);
-	odp_packet_free(pkt_copy);
 	odp_packet_free(pkt);
 
-	pkt = odp_packet_copy(test_packet, pool_double_uarea);
+	/* Pool with larger user area */
+	pkt = odp_packet_copy(test_packet, pool_large_uarea);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+	CU_ASSERT(pkt != test_packet);
+	CU_ASSERT(odp_packet_pool(pkt) == pool_large_uarea);
+	CU_ASSERT(odp_packet_user_area(pkt) != odp_packet_user_area(test_packet));
+	CU_ASSERT(odp_packet_user_area_size(pkt) >= uarea_size);
+	CU_ASSERT(odp_packet_data(pkt) != odp_packet_data(test_packet));
+	CU_ASSERT(odp_packet_len(pkt) == odp_packet_len(test_packet));
+
+	packet_compare_inflags(pkt, test_packet);
+	packet_compare_udata(pkt, test_packet);
 	packet_compare_data(pkt, test_packet);
-	pool = odp_packet_pool(pkt);
-	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
-	pkt_copy = odp_packet_copy(pkt, pool);
-	CU_ASSERT_FATAL(pkt_copy != ODP_PACKET_INVALID);
-
-	CU_ASSERT(pkt != pkt_copy);
-	CU_ASSERT(odp_packet_data(pkt) != odp_packet_data(pkt_copy));
-	CU_ASSERT(odp_packet_len(pkt) == odp_packet_len(pkt_copy));
-
-	_packet_compare_inflags(pkt, pkt_copy);
-	packet_compare_data(pkt, pkt_copy);
-	CU_ASSERT(odp_packet_user_area_size(pkt) ==
-		  2 * odp_packet_user_area_size(test_packet));
-	_packet_compare_udata(pkt, pkt_copy);
-	_packet_compare_udata(pkt, test_packet);
-	odp_packet_free(pkt_copy);
 
 	/* Now test copy_part */
+	pool = pool_large_uarea;
 	pkt_part = odp_packet_copy_part(pkt, 0, odp_packet_len(pkt) + 1, pool);
 	CU_ASSERT(pkt_part == ODP_PACKET_INVALID);
 	pkt_part = odp_packet_copy_part(pkt, odp_packet_len(pkt), 1, pool);
@@ -1743,8 +1766,8 @@ static void packet_test_copy(void)
 	odp_packet_free(pkt_part);
 	odp_packet_free(pkt);
 
-	CU_ASSERT(odp_pool_destroy(pool_no_uarea) == 0);
-	CU_ASSERT(odp_pool_destroy(pool_double_uarea) == 0);
+	CU_ASSERT(odp_pool_destroy(pool_min_uarea) == 0);
+	CU_ASSERT(odp_pool_destroy(pool_large_uarea) == 0);
 }
 
 static void packet_test_copydata(void)
@@ -3284,10 +3307,19 @@ static void packet_test_user_area(void)
 	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
 	pkt = odp_packet_alloc(pool, param.pkt.len);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
-	CU_ASSERT(odp_packet_user_area(pkt) == NULL);
-	CU_ASSERT(odp_packet_user_area_size(pkt) == 0);
+	CU_ASSERT(odp_packet_user_area_size(pkt) <= pool_capa.pkt.max_uarea_size);
+	if (odp_packet_user_area_size(pkt)) {
+		/* CU_ASSERT needs these extra bracets */
+		CU_ASSERT(odp_packet_user_area(pkt) != NULL);
+	} else {
+		CU_ASSERT(odp_packet_user_area(pkt) == NULL);
+	}
+
 	odp_packet_free(pkt);
 	CU_ASSERT(odp_pool_destroy(pool) == 0);
+
+	if (pool_capa.pkt.max_uarea_size == 0)
+		return;
 
 	param.pkt.uarea_size = 1;
 	pool = odp_pool_create("one_uarea", &param);
@@ -3295,16 +3327,13 @@ static void packet_test_user_area(void)
 	pkt = odp_packet_alloc(pool, param.pkt.len);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	CU_ASSERT_FATAL(odp_packet_user_area(pkt) != NULL);
-	CU_ASSERT(odp_packet_user_area_size(pkt) == 1);
+	CU_ASSERT(odp_packet_user_area_size(pkt) >= 1);
 	*(char *)odp_packet_user_area(pkt) = 0;
 	CU_ASSERT_FATAL(odp_packet_is_valid(pkt) == 1);
 	odp_packet_free(pkt);
 	CU_ASSERT(odp_pool_destroy(pool) == 0);
 
-	if (pool_capa.pkt.max_uarea_size)
-		param.pkt.uarea_size = pool_capa.pkt.max_uarea_size;
-	else
-		param.pkt.uarea_size = 512;
+	param.pkt.uarea_size = pool_capa.pkt.max_uarea_size;
 	pool = odp_pool_create("max_uarea", &param);
 	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
 	pkt = odp_packet_alloc(pool, param.pkt.len);
