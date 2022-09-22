@@ -28,6 +28,8 @@ ODP_STATIC_ASSERT(PACKET_POOL_NUM_SEG > 1 &&
 
 /* Number of packets in parse test */
 #define PARSE_TEST_NUM_PKT 10
+/* Maximum offset to Ethernet in parse tests */
+#define MAX_PARSE_L2_OFFSET 207
 
 /* Default packet vector size */
 #define PKT_VEC_SIZE 64
@@ -66,7 +68,7 @@ static struct udata_struct {
 static struct {
 	odp_pool_t          pool;
 	odp_proto_chksums_t all_chksums;
-	uint32_t            offset_zero[PARSE_TEST_NUM_PKT];
+	uint32_t            l2_offset[PARSE_TEST_NUM_PKT];
 } parse_test;
 
 static uint32_t parse_test_pkt_len[] = {
@@ -3457,6 +3459,7 @@ static int packet_parse_suite_init(void)
 		if (max_len < parse_test_pkt_len[i])
 			max_len = parse_test_pkt_len[i];
 	}
+	max_len += MAX_PARSE_L2_OFFSET;
 
 	odp_pool_param_init(&param);
 
@@ -3476,9 +3479,6 @@ static int packet_parse_suite_init(void)
 	parse_test.all_chksums.chksum.tcp  = 1;
 	parse_test.all_chksums.chksum.sctp = 1;
 
-	for (i = 0; i < PARSE_TEST_NUM_PKT; i++)
-		parse_test.offset_zero[i] = 0;
-
 	return 0;
 }
 
@@ -3494,12 +3494,24 @@ static void parse_test_alloc(odp_packet_t pkt[], const uint8_t test_packet[],
 			     uint32_t len, int num_pkt)
 {
 	int ret, i;
+	static uint32_t l2_offset[PARSE_TEST_NUM_PKT] = {0 /* must be zero */,
+		 2, 8, 12, 19, 36, 64, 120, MAX_PARSE_L2_OFFSET};
 
-	ret = odp_packet_alloc_multi(parse_test.pool, len, pkt, num_pkt);
-	CU_ASSERT_FATAL(ret == num_pkt);
+	CU_ASSERT_FATAL(num_pkt <= PARSE_TEST_NUM_PKT);
 
 	for (i = 0; i < num_pkt; i++) {
-		ret = odp_packet_copy_from_mem(pkt[i], 0, len, test_packet);
+		uint32_t offs = l2_offset[i];
+		uint32_t data = 0;
+
+		parse_test.l2_offset[i] = offs;
+		pkt[i] = odp_packet_alloc(parse_test.pool, len + offs);
+		CU_ASSERT_FATAL(pkt[i] != ODP_PACKET_INVALID);
+
+		if (offs > 0) {
+			ret = fill_data_forward(pkt[i], 0, offs, &data);
+			CU_ASSERT(ret == 0);
+		}
+		ret = odp_packet_copy_from_mem(pkt[i], offs, len, test_packet);
 		CU_ASSERT_FATAL(ret == 0);
 	}
 }
@@ -3528,7 +3540,7 @@ static void parse_eth_ipv4_udp(void)
 	parse.chksums = parse_test.all_chksums;
 
 	CU_ASSERT(odp_packet_parse(pkt[0], 0, &parse) == 0);
-	CU_ASSERT(odp_packet_parse_multi(&pkt[1], parse_test.offset_zero,
+	CU_ASSERT(odp_packet_parse_multi(&pkt[1], parse_test.l2_offset + 1,
 					 num_pkt - 1, &parse) == (num_pkt - 1));
 
 	for (i = 0; i < num_pkt; i++) {
@@ -3572,7 +3584,7 @@ static void parse_eth_snap_ipv4_udp(void)
 	parse.chksums = parse_test.all_chksums;
 
 	CU_ASSERT(odp_packet_parse(pkt[0], 0, &parse) == 0);
-	CU_ASSERT(odp_packet_parse_multi(&pkt[1], parse_test.offset_zero,
+	CU_ASSERT(odp_packet_parse_multi(&pkt[1], parse_test.l2_offset + 1,
 					 num_pkt - 1, &parse) == (num_pkt - 1));
 
 	for (i = 0; i < num_pkt; i++) {
@@ -3605,7 +3617,7 @@ static void parse_ipv4_udp(void)
 			 sizeof(test_packet_ipv4_udp), num_pkt);
 
 	for (i = 0; i < num_pkt; i++)
-		offset[i] = 14;
+		offset[i] = parse_test.l2_offset[i] + 14;
 
 	parse.proto = ODP_PROTO_IPV4;
 	parse.last_layer = ODP_PROTO_LAYER_L4;
@@ -3645,7 +3657,7 @@ static void parse_eth_ipv4_tcp(void)
 	parse.chksums.all_chksum = 0;
 
 	CU_ASSERT(odp_packet_parse(pkt[0], 0, &parse) == 0);
-	CU_ASSERT(odp_packet_parse_multi(&pkt[1], parse_test.offset_zero,
+	CU_ASSERT(odp_packet_parse_multi(&pkt[1], parse_test.l2_offset + 1,
 					 num_pkt - 1, &parse) == (num_pkt - 1));
 
 	for (i = 0; i < num_pkt; i++) {
@@ -3681,7 +3693,7 @@ static void parse_eth_ipv6_udp(void)
 	parse.chksums.all_chksum = 0;
 
 	CU_ASSERT(odp_packet_parse(pkt[0], 0, &parse) == 0);
-	CU_ASSERT(odp_packet_parse_multi(&pkt[1], parse_test.offset_zero,
+	CU_ASSERT(odp_packet_parse_multi(&pkt[1], parse_test.l2_offset + 1,
 					 num_pkt - 1, &parse) == (num_pkt - 1));
 
 	for (i = 0; i < num_pkt; i++) {
@@ -3711,7 +3723,7 @@ static void parse_eth_ipv6_tcp(void)
 	parse.chksums.all_chksum = 0;
 
 	CU_ASSERT(odp_packet_parse(pkt[0], 0, &parse) == 0);
-	CU_ASSERT(odp_packet_parse_multi(&pkt[1], parse_test.offset_zero,
+	CU_ASSERT(odp_packet_parse_multi(&pkt[1], parse_test.l2_offset + 1,
 					 num_pkt - 1, &parse) == (num_pkt - 1));
 
 	for (i = 0; i < num_pkt; i++) {
@@ -3741,7 +3753,7 @@ static void parse_eth_vlan_ipv4_udp(void)
 	parse.chksums.all_chksum = 0;
 
 	CU_ASSERT(odp_packet_parse(pkt[0], 0, &parse) == 0);
-	CU_ASSERT(odp_packet_parse_multi(&pkt[1], parse_test.offset_zero,
+	CU_ASSERT(odp_packet_parse_multi(&pkt[1], parse_test.l2_offset + 1,
 					 num_pkt - 1, &parse) == (num_pkt - 1));
 
 	for (i = 0; i < num_pkt; i++) {
@@ -3772,7 +3784,7 @@ static void parse_eth_vlan_ipv6_udp(void)
 	parse.chksums.all_chksum = 0;
 
 	CU_ASSERT(odp_packet_parse(pkt[0], 0, &parse) == 0);
-	CU_ASSERT(odp_packet_parse_multi(&pkt[1], parse_test.offset_zero,
+	CU_ASSERT(odp_packet_parse_multi(&pkt[1], parse_test.l2_offset + 1,
 					 num_pkt - 1, &parse) == (num_pkt - 1));
 
 	for (i = 0; i < num_pkt; i++) {
@@ -3809,7 +3821,7 @@ static void parse_eth_vlan_qinq_ipv4_udp(void)
 	parse.chksums.all_chksum = 0;
 
 	CU_ASSERT(odp_packet_parse(pkt[0], 0, &parse) == 0);
-	CU_ASSERT(odp_packet_parse_multi(&pkt[1], parse_test.offset_zero,
+	CU_ASSERT(odp_packet_parse_multi(&pkt[1], parse_test.l2_offset + 1,
 					 num_pkt - 1, &parse) == (num_pkt - 1));
 
 	for (i = 0; i < num_pkt; i++) {
@@ -3841,7 +3853,7 @@ static void parse_eth_arp(void)
 	parse.chksums.all_chksum = 0;
 
 	CU_ASSERT(odp_packet_parse(pkt[0], 0, &parse) == 0);
-	CU_ASSERT(odp_packet_parse_multi(&pkt[1], parse_test.offset_zero,
+	CU_ASSERT(odp_packet_parse_multi(&pkt[1], parse_test.l2_offset + 1,
 					 num_pkt - 1, &parse) == (num_pkt - 1));
 
 	for (i = 0; i < num_pkt; i++) {
@@ -3873,7 +3885,7 @@ static void parse_eth_ipv4_icmp(void)
 	parse.chksums.all_chksum = 0;
 
 	CU_ASSERT(odp_packet_parse(pkt[0], 0, &parse) == 0);
-	CU_ASSERT(odp_packet_parse_multi(&pkt[1], parse_test.offset_zero,
+	CU_ASSERT(odp_packet_parse_multi(&pkt[1], parse_test.l2_offset + 1,
 					 num_pkt - 1, &parse) == (num_pkt - 1));
 
 	for (i = 0; i < num_pkt; i++) {
@@ -3904,7 +3916,7 @@ static void parse_eth_ipv6_icmp(void)
 	parse.chksums.all_chksum = 0;
 
 	CU_ASSERT(odp_packet_parse(pkt[0], 0, &parse) == 0);
-	CU_ASSERT(odp_packet_parse_multi(&pkt[1], parse_test.offset_zero,
+	CU_ASSERT(odp_packet_parse_multi(&pkt[1], parse_test.l2_offset + 1,
 					 num_pkt - 1, &parse) == (num_pkt - 1));
 
 	for (i = 0; i < num_pkt; i++) {
@@ -3935,7 +3947,7 @@ static void parse_eth_ipv4_sctp(void)
 	parse.chksums.all_chksum = 0;
 
 	CU_ASSERT(odp_packet_parse(pkt[0], 0, &parse) == 0);
-	CU_ASSERT(odp_packet_parse_multi(&pkt[1], parse_test.offset_zero,
+	CU_ASSERT(odp_packet_parse_multi(&pkt[1], parse_test.l2_offset + 1,
 					 num_pkt - 1, &parse) == (num_pkt - 1));
 
 	for (i = 0; i < num_pkt; i++) {
@@ -3966,7 +3978,7 @@ static void parse_eth_ipv4_ipsec_ah(void)
 	parse.chksums.all_chksum = 0;
 
 	CU_ASSERT(odp_packet_parse(pkt[0], 0, &parse) == 0);
-	CU_ASSERT(odp_packet_parse_multi(&pkt[1], parse_test.offset_zero,
+	CU_ASSERT(odp_packet_parse_multi(&pkt[1], parse_test.l2_offset + 1,
 					 num_pkt - 1, &parse) == (num_pkt - 1));
 
 	for (i = 0; i < num_pkt; i++) {
@@ -3997,7 +4009,7 @@ static void parse_eth_ipv4_ipsec_esp(void)
 	parse.chksums.all_chksum = 0;
 
 	CU_ASSERT(odp_packet_parse(pkt[0], 0, &parse) == 0);
-	CU_ASSERT(odp_packet_parse_multi(&pkt[1], parse_test.offset_zero,
+	CU_ASSERT(odp_packet_parse_multi(&pkt[1], parse_test.l2_offset + 1,
 					 num_pkt - 1, &parse) == (num_pkt - 1));
 
 	for (i = 0; i < num_pkt; i++) {
@@ -4028,7 +4040,7 @@ static void parse_eth_ipv6_ipsec_ah(void)
 	parse.chksums.all_chksum = 0;
 
 	CU_ASSERT(odp_packet_parse(pkt[0], 0, &parse) == 0);
-	CU_ASSERT(odp_packet_parse_multi(&pkt[1], parse_test.offset_zero,
+	CU_ASSERT(odp_packet_parse_multi(&pkt[1], parse_test.l2_offset + 1,
 					 num_pkt - 1, &parse) == (num_pkt - 1));
 
 	for (i = 0; i < num_pkt; i++) {
@@ -4065,7 +4077,7 @@ static void parse_eth_ipv6_ipsec_esp(void)
 	parse.chksums.all_chksum = 0;
 
 	CU_ASSERT(odp_packet_parse(pkt[0], 0, &parse) == 0);
-	CU_ASSERT(odp_packet_parse_multi(&pkt[1], parse_test.offset_zero,
+	CU_ASSERT(odp_packet_parse_multi(&pkt[1], parse_test.l2_offset + 1,
 					 num_pkt - 1, &parse) == (num_pkt - 1));
 
 	for (i = 0; i < num_pkt; i++) {
@@ -4096,7 +4108,7 @@ static void parse_mcast_eth_ipv4_udp(void)
 	parse.chksums.all_chksum = 0;
 
 	CU_ASSERT(odp_packet_parse(pkt[0], 0, &parse) == 0);
-	CU_ASSERT(odp_packet_parse_multi(&pkt[1], parse_test.offset_zero,
+	CU_ASSERT(odp_packet_parse_multi(&pkt[1], parse_test.l2_offset + 1,
 					 num_pkt - 1, &parse) == (num_pkt - 1));
 
 	for (i = 0; i < num_pkt; i++) {
@@ -4130,7 +4142,7 @@ static void parse_bcast_eth_ipv4_udp(void)
 	parse.chksums.all_chksum = 0;
 
 	CU_ASSERT(odp_packet_parse(pkt[0], 0, &parse) == 0);
-	CU_ASSERT(odp_packet_parse_multi(&pkt[1], parse_test.offset_zero,
+	CU_ASSERT(odp_packet_parse_multi(&pkt[1], parse_test.l2_offset + 1,
 					 num_pkt - 1, &parse) == (num_pkt - 1));
 
 	for (i = 0; i < num_pkt; i++) {
@@ -4165,7 +4177,7 @@ static void parse_mcast_eth_ipv6_udp(void)
 	parse.chksums.all_chksum = 0;
 
 	CU_ASSERT(odp_packet_parse(pkt[0], 0, &parse) == 0);
-	CU_ASSERT(odp_packet_parse_multi(&pkt[1], parse_test.offset_zero,
+	CU_ASSERT(odp_packet_parse_multi(&pkt[1], parse_test.l2_offset + 1,
 					 num_pkt - 1, &parse) == (num_pkt - 1));
 
 	for (i = 0; i < num_pkt; i++) {
@@ -4199,7 +4211,7 @@ static void parse_eth_ipv4_udp_first_frag(void)
 	parse.chksums.all_chksum = 0;
 
 	CU_ASSERT(odp_packet_parse(pkt[0], 0, &parse) == 0);
-	CU_ASSERT(odp_packet_parse_multi(&pkt[1], parse_test.offset_zero,
+	CU_ASSERT(odp_packet_parse_multi(&pkt[1], parse_test.l2_offset + 1,
 					 num_pkt - 1, &parse) == (num_pkt - 1));
 
 	for (i = 0; i < num_pkt; i++) {
@@ -4231,7 +4243,7 @@ static void parse_eth_ipv4_udp_last_frag(void)
 	parse.chksums.all_chksum = 0;
 
 	CU_ASSERT(odp_packet_parse(pkt[0], 0, &parse) == 0);
-	CU_ASSERT(odp_packet_parse_multi(&pkt[1], parse_test.offset_zero,
+	CU_ASSERT(odp_packet_parse_multi(&pkt[1], parse_test.l2_offset + 1,
 					 num_pkt - 1, &parse) == (num_pkt - 1));
 
 	for (i = 0; i < num_pkt; i++) {
@@ -4263,7 +4275,7 @@ static void parse_eth_ipv4_rr_nop_icmp(void)
 	parse.chksums.all_chksum = 0;
 
 	CU_ASSERT(odp_packet_parse(pkt[0], 0, &parse) == 0);
-	CU_ASSERT(odp_packet_parse_multi(&pkt[1], parse_test.offset_zero,
+	CU_ASSERT(odp_packet_parse_multi(&pkt[1], parse_test.l2_offset + 1,
 					 num_pkt - 1, &parse) == (num_pkt - 1));
 
 	for (i = 0; i < num_pkt; i++) {
@@ -4298,7 +4310,7 @@ static void parse_result(void)
 	parse.chksums.all_chksum = 0;
 
 	CU_ASSERT(odp_packet_parse(pkt[0], 0, &parse) == 0);
-	CU_ASSERT(odp_packet_parse_multi(&pkt[1], parse_test.offset_zero,
+	CU_ASSERT(odp_packet_parse_multi(&pkt[1], parse_test.l2_offset + 1,
 					 num_pkt - 1, &parse) == (num_pkt - 1));
 
 	for (i = 0; i < num_pkt; i++) {
