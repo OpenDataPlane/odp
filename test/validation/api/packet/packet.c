@@ -327,6 +327,56 @@ static int packet_suite_term(void)
 	return 0;
 }
 
+static void packet_set_inflags(odp_packet_t pkt, int val)
+{
+	odp_packet_has_l2_set(pkt, val);
+	odp_packet_has_l3_set(pkt, val);
+	odp_packet_has_l4_set(pkt, val);
+	odp_packet_has_eth_set(pkt, val);
+	odp_packet_has_eth_bcast_set(pkt, val);
+	odp_packet_has_eth_mcast_set(pkt, val);
+	odp_packet_has_jumbo_set(pkt, val);
+	odp_packet_has_vlan_set(pkt, val);
+	odp_packet_has_vlan_qinq_set(pkt, val);
+	odp_packet_has_arp_set(pkt, val);
+	odp_packet_has_ipv4_set(pkt, val);
+	odp_packet_has_ipv6_set(pkt, val);
+	odp_packet_has_ip_bcast_set(pkt, val);
+	odp_packet_has_ip_mcast_set(pkt, val);
+	odp_packet_has_ipfrag_set(pkt, val);
+	odp_packet_has_ipopt_set(pkt, val);
+	odp_packet_has_ipsec_set(pkt, val);
+	odp_packet_has_udp_set(pkt, val);
+	odp_packet_has_tcp_set(pkt, val);
+	odp_packet_has_sctp_set(pkt, val);
+	odp_packet_has_icmp_set(pkt, val);
+}
+
+static void packet_check_inflags(odp_packet_t pkt, int val)
+{
+	CU_ASSERT(odp_packet_has_l2(pkt) == !!val);
+	CU_ASSERT(odp_packet_has_l3(pkt) == !!val);
+	CU_ASSERT(odp_packet_has_l4(pkt) == !!val);
+	CU_ASSERT(odp_packet_has_eth(pkt) == !!val);
+	CU_ASSERT(odp_packet_has_eth_bcast(pkt) == !!val);
+	CU_ASSERT(odp_packet_has_eth_mcast(pkt) == !!val);
+	CU_ASSERT(odp_packet_has_jumbo(pkt) == !!val);
+	CU_ASSERT(odp_packet_has_vlan(pkt) == !!val);
+	CU_ASSERT(odp_packet_has_vlan_qinq(pkt) == !!val);
+	CU_ASSERT(odp_packet_has_arp(pkt) == !!val);
+	CU_ASSERT(odp_packet_has_ipv4(pkt) == !!val);
+	CU_ASSERT(odp_packet_has_ipv6(pkt) == !!val);
+	CU_ASSERT(odp_packet_has_ip_bcast(pkt) == !!val);
+	CU_ASSERT(odp_packet_has_ip_mcast(pkt) == !!val);
+	CU_ASSERT(odp_packet_has_ipfrag(pkt) == !!val);
+	CU_ASSERT(odp_packet_has_ipopt(pkt) == !!val);
+	CU_ASSERT(odp_packet_has_ipsec(pkt) == !!val);
+	CU_ASSERT(odp_packet_has_udp(pkt) == !!val);
+	CU_ASSERT(odp_packet_has_tcp(pkt) == !!val);
+	CU_ASSERT(odp_packet_has_sctp(pkt) == !!val);
+	CU_ASSERT(odp_packet_has_icmp(pkt) == !!val);
+}
+
 static void packet_test_alloc_free(void)
 {
 	odp_pool_t pool;
@@ -362,6 +412,9 @@ static void packet_test_alloc_free(void)
 
 	/* User pointer should be NULL after alloc */
 	CU_ASSERT(odp_packet_user_ptr(packet) == NULL);
+
+	/* Packet flags should be zero */
+	packet_check_inflags(packet, 0);
 
 	/* Pool should have only one packet */
 	CU_ASSERT_FATAL(odp_packet_alloc(pool, packet_len)
@@ -880,11 +933,10 @@ static void packet_test_reset(void)
 	CU_ASSERT(odp_packet_reset(pkt, len) == 0);
 	CU_ASSERT(odp_packet_len(pkt) == len);
 
-	CU_ASSERT(odp_packet_has_udp(pkt) == 0);
-	odp_packet_has_udp_set(pkt, 1);
-	CU_ASSERT(odp_packet_has_udp(pkt) != 0);
+	packet_set_inflags(pkt, 1);
+	packet_check_inflags(pkt, 1);
 	CU_ASSERT(odp_packet_reset(pkt, len) == 0);
-	CU_ASSERT(odp_packet_has_udp(pkt) == 0);
+	packet_check_inflags(pkt, 0);
 
 	CU_ASSERT(odp_packet_reset(pkt, len - 1) == 0);
 	CU_ASSERT(odp_packet_len(pkt) == (len - 1));
@@ -1308,37 +1360,45 @@ static void packet_test_segment_last(void)
 
 #define TEST_INFLAG(packet, flag) \
 do { \
-	odp_packet_has_##flag##_set(packet, 0);           \
-	CU_ASSERT(odp_packet_has_##flag(packet) == 0);    \
-	odp_packet_has_##flag##_set(packet, 1);           \
-	CU_ASSERT(odp_packet_has_##flag(packet) != 0);    \
+	odp_packet_##flag##_set(packet, 0);           \
+	CU_ASSERT(odp_packet_##flag(packet) == 0);    \
+	odp_packet_##flag##_set(packet, 1);           \
+	CU_ASSERT(odp_packet_##flag(packet) != 0);    \
 } while (0)
 
 static void packet_test_in_flags(void)
 {
 	odp_packet_t pkt = test_packet;
 
-	TEST_INFLAG(pkt, l2);
-	TEST_INFLAG(pkt, l3);
-	TEST_INFLAG(pkt, l4);
-	TEST_INFLAG(pkt, eth);
-	TEST_INFLAG(pkt, eth_bcast);
-	TEST_INFLAG(pkt, eth_mcast);
-	TEST_INFLAG(pkt, jumbo);
-	TEST_INFLAG(pkt, vlan);
-	TEST_INFLAG(pkt, vlan_qinq);
-	TEST_INFLAG(pkt, arp);
-	TEST_INFLAG(pkt, ipv4);
-	TEST_INFLAG(pkt, ipv6);
-	TEST_INFLAG(pkt, ip_bcast);
-	TEST_INFLAG(pkt, ip_mcast);
-	TEST_INFLAG(pkt, ipfrag);
-	TEST_INFLAG(pkt, ipopt);
-	TEST_INFLAG(pkt, ipsec);
-	TEST_INFLAG(pkt, udp);
-	TEST_INFLAG(pkt, tcp);
-	TEST_INFLAG(pkt, sctp);
-	TEST_INFLAG(pkt, icmp);
+	packet_set_inflags(pkt, 0);
+	packet_check_inflags(pkt, 0);
+	packet_set_inflags(pkt, 1);
+	packet_check_inflags(pkt, 1);
+
+	TEST_INFLAG(pkt, has_l2);
+	TEST_INFLAG(pkt, has_l3);
+	TEST_INFLAG(pkt, has_l4);
+	TEST_INFLAG(pkt, has_eth);
+	TEST_INFLAG(pkt, has_eth_bcast);
+	TEST_INFLAG(pkt, has_eth_mcast);
+	TEST_INFLAG(pkt, has_jumbo);
+	TEST_INFLAG(pkt, has_vlan);
+	TEST_INFLAG(pkt, has_vlan_qinq);
+	TEST_INFLAG(pkt, has_arp);
+	TEST_INFLAG(pkt, has_ipv4);
+	TEST_INFLAG(pkt, has_ipv6);
+	TEST_INFLAG(pkt, has_ip_bcast);
+	TEST_INFLAG(pkt, has_ip_mcast);
+	TEST_INFLAG(pkt, has_ipfrag);
+	TEST_INFLAG(pkt, has_ipopt);
+	TEST_INFLAG(pkt, has_ipsec);
+	TEST_INFLAG(pkt, has_udp);
+	TEST_INFLAG(pkt, has_tcp);
+	TEST_INFLAG(pkt, has_sctp);
+	TEST_INFLAG(pkt, has_icmp);
+
+	packet_set_inflags(pkt, 0);
+	packet_check_inflags(pkt, 0);
 }
 
 static void packet_test_error_flags(void)
@@ -1455,37 +1515,34 @@ free_packet:
 	odp_packet_free(pkt);
 }
 
-#define COMPARE_HAS_INFLAG(p1, p2, flag) \
-	CU_ASSERT(odp_packet_has_##flag(p1) == odp_packet_has_##flag(p2))
-
 #define COMPARE_INFLAG(p1, p2, flag) \
 	CU_ASSERT(odp_packet_##flag(p1) == odp_packet_##flag(p2))
 
 static void packet_compare_inflags(odp_packet_t pkt1, odp_packet_t pkt2)
 {
-	COMPARE_HAS_INFLAG(pkt1, pkt2, l2);
-	COMPARE_HAS_INFLAG(pkt1, pkt2, l3);
-	COMPARE_HAS_INFLAG(pkt1, pkt2, l4);
-	COMPARE_HAS_INFLAG(pkt1, pkt2, eth);
-	COMPARE_HAS_INFLAG(pkt1, pkt2, eth_bcast);
-	COMPARE_HAS_INFLAG(pkt1, pkt2, eth_mcast);
-	COMPARE_HAS_INFLAG(pkt1, pkt2, jumbo);
-	COMPARE_HAS_INFLAG(pkt1, pkt2, vlan);
-	COMPARE_HAS_INFLAG(pkt1, pkt2, vlan_qinq);
-	COMPARE_HAS_INFLAG(pkt1, pkt2, arp);
-	COMPARE_HAS_INFLAG(pkt1, pkt2, ipv4);
-	COMPARE_HAS_INFLAG(pkt1, pkt2, ipv6);
-	COMPARE_HAS_INFLAG(pkt1, pkt2, ip_bcast);
-	COMPARE_HAS_INFLAG(pkt1, pkt2, ip_mcast);
-	COMPARE_HAS_INFLAG(pkt1, pkt2, ipfrag);
-	COMPARE_HAS_INFLAG(pkt1, pkt2, ipopt);
-	COMPARE_HAS_INFLAG(pkt1, pkt2, ipsec);
-	COMPARE_HAS_INFLAG(pkt1, pkt2, udp);
-	COMPARE_HAS_INFLAG(pkt1, pkt2, tcp);
-	COMPARE_HAS_INFLAG(pkt1, pkt2, sctp);
-	COMPARE_HAS_INFLAG(pkt1, pkt2, icmp);
-	COMPARE_HAS_INFLAG(pkt1, pkt2, flow_hash);
-	COMPARE_HAS_INFLAG(pkt1, pkt2, ts);
+	COMPARE_INFLAG(pkt1, pkt2, has_l2);
+	COMPARE_INFLAG(pkt1, pkt2, has_l3);
+	COMPARE_INFLAG(pkt1, pkt2, has_l4);
+	COMPARE_INFLAG(pkt1, pkt2, has_eth);
+	COMPARE_INFLAG(pkt1, pkt2, has_eth_bcast);
+	COMPARE_INFLAG(pkt1, pkt2, has_eth_mcast);
+	COMPARE_INFLAG(pkt1, pkt2, has_jumbo);
+	COMPARE_INFLAG(pkt1, pkt2, has_vlan);
+	COMPARE_INFLAG(pkt1, pkt2, has_vlan_qinq);
+	COMPARE_INFLAG(pkt1, pkt2, has_arp);
+	COMPARE_INFLAG(pkt1, pkt2, has_ipv4);
+	COMPARE_INFLAG(pkt1, pkt2, has_ipv6);
+	COMPARE_INFLAG(pkt1, pkt2, has_ip_bcast);
+	COMPARE_INFLAG(pkt1, pkt2, has_ip_mcast);
+	COMPARE_INFLAG(pkt1, pkt2, has_ipfrag);
+	COMPARE_INFLAG(pkt1, pkt2, has_ipopt);
+	COMPARE_INFLAG(pkt1, pkt2, has_ipsec);
+	COMPARE_INFLAG(pkt1, pkt2, has_udp);
+	COMPARE_INFLAG(pkt1, pkt2, has_tcp);
+	COMPARE_INFLAG(pkt1, pkt2, has_sctp);
+	COMPARE_INFLAG(pkt1, pkt2, has_icmp);
+	COMPARE_INFLAG(pkt1, pkt2, has_flow_hash);
+	COMPARE_INFLAG(pkt1, pkt2, has_ts);
 
 	COMPARE_INFLAG(pkt1, pkt2, color);
 	COMPARE_INFLAG(pkt1, pkt2, drop_eligible);
@@ -1564,53 +1621,16 @@ static void packet_test_meta_data_copy(void)
 
 	pkt = odp_packet_alloc(pool, packet_len);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
-	CU_ASSERT(odp_packet_has_l2(pkt) == 0);
-	CU_ASSERT(odp_packet_has_l3(pkt) == 0);
-	CU_ASSERT(odp_packet_has_l4(pkt) == 0);
-	CU_ASSERT(odp_packet_has_eth(pkt) == 0);
-	CU_ASSERT(odp_packet_has_eth_bcast(pkt) == 0);
-	CU_ASSERT(odp_packet_has_eth_mcast(pkt) == 0);
-	CU_ASSERT(odp_packet_has_jumbo(pkt) == 0);
-	CU_ASSERT(odp_packet_has_vlan(pkt) == 0);
-	CU_ASSERT(odp_packet_has_vlan_qinq(pkt) == 0);
-	CU_ASSERT(odp_packet_has_arp(pkt) == 0);
-	CU_ASSERT(odp_packet_has_ipv4(pkt) == 0);
-	CU_ASSERT(odp_packet_has_ipv6(pkt) == 0);
-	CU_ASSERT(odp_packet_has_ip_bcast(pkt) == 0);
-	CU_ASSERT(odp_packet_has_ip_mcast(pkt) == 0);
-	CU_ASSERT(odp_packet_has_ipfrag(pkt) == 0);
-	CU_ASSERT(odp_packet_has_ipopt(pkt) == 0);
-	CU_ASSERT(odp_packet_has_ipsec(pkt) == 0);
-	CU_ASSERT(odp_packet_has_udp(pkt) == 0);
-	CU_ASSERT(odp_packet_has_tcp(pkt) == 0);
-	CU_ASSERT(odp_packet_has_sctp(pkt) == 0);
-	CU_ASSERT(odp_packet_has_icmp(pkt) == 0);
+
+	packet_check_inflags(pkt, 0);
+
 	CU_ASSERT(odp_packet_input(pkt) == ODP_PKTIO_INVALID);
 	CU_ASSERT(odp_packet_l3_offset(pkt) == ODP_PACKET_OFFSET_INVALID);
 	CU_ASSERT(odp_packet_l4_offset(pkt) == ODP_PACKET_OFFSET_INVALID);
 	CU_ASSERT(odp_packet_payload_offset(pkt) == ODP_PACKET_OFFSET_INVALID);
 
-	odp_packet_has_l2_set(pkt, 1);
-	odp_packet_has_l3_set(pkt, 1);
-	odp_packet_has_l4_set(pkt, 1);
-	odp_packet_has_eth_set(pkt, 1);
-	odp_packet_has_eth_bcast_set(pkt, 1);
-	odp_packet_has_eth_mcast_set(pkt, 1);
-	odp_packet_has_jumbo_set(pkt, 1);
-	odp_packet_has_vlan_set(pkt, 1);
-	odp_packet_has_vlan_qinq_set(pkt, 1);
-	odp_packet_has_arp_set(pkt, 1);
-	odp_packet_has_ipv4_set(pkt, 1);
-	odp_packet_has_ipv6_set(pkt, 1);
-	odp_packet_has_ip_bcast_set(pkt, 1);
-	odp_packet_has_ip_mcast_set(pkt, 1);
-	odp_packet_has_ipfrag_set(pkt, 1);
-	odp_packet_has_ipopt_set(pkt, 1);
-	odp_packet_has_ipsec_set(pkt, 1);
-	odp_packet_has_udp_set(pkt, 1);
-	odp_packet_has_tcp_set(pkt, 1);
-	odp_packet_has_sctp_set(pkt, 1);
-	odp_packet_has_icmp_set(pkt, 1);
+	packet_set_inflags(pkt, 1);
+	packet_check_inflags(pkt, 1);
 
 	odp_packet_input_set(pkt, pktio);
 	odp_packet_user_ptr_set(pkt, (void *)(uintptr_t)0xdeadbeef);
