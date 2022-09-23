@@ -4688,6 +4688,8 @@ static void traffic_mngr_test_queue_stats(void)
 	num_rcv_pkts = receive_pkts(odp_tm_systems[0], rcv_pktin, pkts_sent,
 				    1 * GBPS);
 
+	odp_tm_stats_print(odp_tm_systems[0]);
+
 	CU_ASSERT(odp_tm_queue_stats(tm_queue, &stats_stop) == 0);
 
 	if (capa.queue_stats.counter.packets)
