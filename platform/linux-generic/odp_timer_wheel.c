@@ -940,7 +940,7 @@ uint32_t _odp_timer_wheel_count(_odp_timer_wheel_t timer_wheel)
 static void _odp_int_timer_wheel_desc_print(wheel_desc_t *wheel_desc,
 					    uint32_t      wheel_idx)
 {
-	_ODP_PRINT("  wheel=%u num_slots=%u ticks_shift=%u ticks_per_slot=%u"
+	_ODP_PRINT("    wheel=%u num_slots=%u ticks_shift=%u ticks_per_slot=%u"
 		   " ticks_per_rev=%" PRIu64 "\n",
 		   wheel_idx, wheel_desc->num_slots, wheel_desc->ticks_shift,
 		   wheel_desc->ticks_per_slot, wheel_desc->ticks_per_rev);
@@ -955,24 +955,24 @@ void _odp_timer_wheel_stats_print(_odp_timer_wheel_t timer_wheel)
 	timer_wheels = (timer_wheels_t *)(uintptr_t)timer_wheel;
 	expired_ring = timer_wheels->expired_timers_ring;
 
-	_ODP_PRINT("_odp_int_timer_wheel_stats current_ticks=%" PRIu64 "\n",
+	_ODP_PRINT("  _odp_int_timer_wheel_stats current_ticks=%" PRIu64 "\n",
 		   timer_wheels->current_ticks);
 	for (wheel_idx = 0; wheel_idx < 4; wheel_idx++)
 		_odp_int_timer_wheel_desc_print(&timer_wheels->wheel_descs[wheel_idx], wheel_idx);
 
-	_ODP_PRINT("  total timer_inserts=%" PRIu64 " timer_removes=%" PRIu64
+	_ODP_PRINT("    total timer_inserts=%" PRIu64 " timer_removes=%" PRIu64
 		   " insert_fails=%" PRIu64 "\n",
 		   timer_wheels->total_timer_inserts,
 		   timer_wheels->total_timer_removes,
 		   timer_wheels->insert_fail_cnt);
-	_ODP_PRINT("  total_promote_cnt=%" PRIu64 " promote_fail_cnt=%"
+	_ODP_PRINT("    total_promote_cnt=%" PRIu64 " promote_fail_cnt=%"
 		   PRIu64 "\n", timer_wheels->total_promote_cnt,
 		   timer_wheels->promote_fail_cnt);
-	_ODP_PRINT("  free_list_size=%u min_size=%u peak_size=%u\n",
+	_ODP_PRINT("    free_list_size=%u min_size=%u peak_size=%u\n",
 		   timer_wheels->free_list_size,
 		   timer_wheels->min_free_list_size,
 		   timer_wheels->peak_free_list_size);
-	_ODP_PRINT("  expired_timers_ring size=%u count=%u "
+	_ODP_PRINT("    expired_timers_ring size=%u count=%u "
 		   "peak_count=%u full_cnt=%u\n",
 		   expired_ring->max_idx + 1, expired_ring->count,
 		   expired_ring->peak_count,

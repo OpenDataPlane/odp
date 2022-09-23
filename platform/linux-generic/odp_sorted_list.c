@@ -262,10 +262,10 @@ void _odp_sorted_list_stats_print(_odp_int_sorted_pool_t sorted_pool)
 	sorted_pool_t *pool;
 
 	pool = (sorted_pool_t *)(uintptr_t)sorted_pool;
-	_ODP_PRINT("sorted_pool=0x%" PRIX64 "\n", sorted_pool);
-	_ODP_PRINT("  max_sorted_lists=%u next_list_idx=%u\n",
+	_ODP_PRINT("  sorted_pool=0x%" PRIX64 "\n", sorted_pool);
+	_ODP_PRINT("    max_sorted_lists=%u next_list_idx=%u\n",
 		   pool->max_sorted_lists, pool->next_list_idx);
-	_ODP_PRINT("  total_inserts=%" PRIu64 " total_deletes=%" PRIu64
+	_ODP_PRINT("    total_inserts=%" PRIu64 " total_deletes=%" PRIu64
 		   " total_removes=%" PRIu64 "\n", pool->total_inserts,
 		   pool->total_deletes, pool->total_removes);
 }

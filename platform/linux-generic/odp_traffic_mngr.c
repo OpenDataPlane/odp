@@ -4973,16 +4973,17 @@ void odp_tm_stats_print(odp_tm_t odp_tm)
 	tm_system = GET_TM_SYSTEM(odp_tm);
 	input_work_queue = &tm_system->input_work_queue;
 
-	_ODP_PRINT("tm_system=0x%" PRIX64 " tm_idx=%u\n",
-		   odp_tm, tm_system->tm_idx);
-	_ODP_PRINT("  input_work_queue size=%u current cnt=%" PRIu64 " peak cnt=%" PRIu32 "\n",
+	_ODP_PRINT("\nTM stats\n");
+	_ODP_PRINT("--------\n");
+	_ODP_PRINT("  tm_system=0x%" PRIX64 " tm_idx=%u\n", odp_tm, tm_system->tm_idx);
+	_ODP_PRINT("    input_work_queue size=%u current cnt=%" PRIu64 " peak cnt=%" PRIu32 "\n",
 		   INPUT_WORK_RING_SIZE, odp_atomic_load_u64(&input_work_queue->queue_cnt),
 		   input_work_queue->peak_cnt);
-	_ODP_PRINT("  input_work_queue enqueues=%" PRIu64 " dequeues=%" PRIu64
+	_ODP_PRINT("    input_work_queue enqueues=%" PRIu64 " dequeues=%" PRIu64
 		   " fail_cnt=%" PRIu64 "\n", input_work_queue->total_enqueues,
 		   input_work_queue->total_dequeues,
 		   input_work_queue->enqueue_fail_cnt);
-	_ODP_PRINT("  green_cnt=%" PRIu64 " yellow_cnt=%" PRIu64 " red_cnt=%" PRIu64 "\n",
+	_ODP_PRINT("    green_cnt=%" PRIu64 " yellow_cnt=%" PRIu64 " red_cnt=%" PRIu64 "\n",
 		   tm_system->shaper_green_cnt,
 		   tm_system->shaper_yellow_cnt,
 		   tm_system->shaper_red_cnt);
@@ -4995,13 +4996,13 @@ void odp_tm_stats_print(odp_tm_t odp_tm)
 		tm_queue_obj = tm_system->queue_num_tbl[queue_num - 1];
 		if (tm_queue_obj && tm_queue_obj->pkts_rcvd_cnt != 0)
 			_ODP_PRINT("queue_num=%u priority=%u rcvd=%u enqueued=%u "
-				  "dequeued=%u consumed=%u\n",
-				  queue_num,
-				  tm_queue_obj->priority,
-				  tm_queue_obj->pkts_rcvd_cnt,
-				  tm_queue_obj->pkts_enqueued_cnt,
-				  tm_queue_obj->pkts_dequeued_cnt,
-				  tm_queue_obj->pkts_consumed_cnt);
+				   "dequeued=%u consumed=%u\n",
+				   queue_num,
+				   tm_queue_obj->priority,
+				   tm_queue_obj->pkts_rcvd_cnt,
+				   tm_queue_obj->pkts_enqueued_cnt,
+				   tm_queue_obj->pkts_dequeued_cnt,
+				   tm_queue_obj->pkts_consumed_cnt);
 	}
 }
 
