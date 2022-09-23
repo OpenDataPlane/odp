@@ -171,7 +171,7 @@ static int init_global(void)
 	odp_shm_t shm;
 	sched_group_t *sched_group = NULL;
 
-	ODP_DBG("Using SP scheduler\n");
+	_ODP_DBG("Using SP scheduler\n");
 
 	shm = odp_shm_reserve("_odp_sched_sp_global",
 			      sizeof(sched_global_t),
@@ -180,7 +180,7 @@ static int init_global(void)
 	sched_global = odp_shm_addr(shm);
 
 	if (sched_global == NULL) {
-		ODP_ERR("Schedule init: Shm reserve failed.\n");
+		_ODP_ERR("Schedule init: Shm reserve failed.\n");
 		return -1;
 	}
 
@@ -252,7 +252,7 @@ static int term_global(void)
 		if (sched_global->queue_cmd[qi].init) {
 			while (_odp_sched_queue_deq(qi, &event, 1, 1) > 0) {
 				if (report) {
-					ODP_ERR("Queue not empty\n");
+					_ODP_ERR("Queue not empty\n");
 					report = 0;
 				}
 				odp_event_free(event);
@@ -262,7 +262,7 @@ static int term_global(void)
 
 	ret = odp_shm_free(sched_global->shm);
 	if (ret < 0) {
-		ODP_ERR("Shm free failed for sp_scheduler");
+		_ODP_ERR("Shm free failed for sp_scheduler");
 		ret = -1;
 	}
 
@@ -290,7 +290,7 @@ static void schedule_group_clear(odp_schedule_group_t group)
 	const odp_thrmask_t *thrmask;
 
 	if (group < 0 || group >= NUM_STATIC_GROUP)
-		ODP_ABORT("Invalid scheduling group\n");
+		_ODP_ABORT("Invalid scheduling group\n");
 
 	thrmask = &sched_group->s.group[group].mask;
 
@@ -356,7 +356,7 @@ static void remove_group(sched_group_t *sched_group, int thr, int group)
 
 	/* Extra array bounds check to suppress warning on GCC 7.4 with -O3 */
 	if (num >= NUM_GROUP) {
-		ODP_ERR("Too many groups");
+		_ODP_ERR("Too many groups");
 		return;
 	}
 
@@ -440,7 +440,7 @@ static int create_queue(uint32_t qi, const odp_schedule_param_t *sched_param)
 	int prio = 0;
 
 	if (odp_global_rw->schedule_configured == 0) {
-		ODP_ERR("Scheduler has not been configured\n");
+		_ODP_ERR("Scheduler has not been configured\n");
 		return -1;
 	}
 
@@ -527,14 +527,12 @@ static void pktio_start(int pktio_index,
 	int i;
 	sched_cmd_t *cmd;
 
-	ODP_DBG("pktio index: %i, %i pktin queues %i\n",
-		pktio_index, num, pktin_idx[0]);
+	_ODP_DBG("pktio index: %i, %i pktin queues %i\n", pktio_index, num, pktin_idx[0]);
 
 	cmd = &sched_global->pktio_cmd[pktio_index];
 
 	if (num > NUM_PKTIN)
-		ODP_ABORT("Supports only %i pktin queues per interface\n",
-			  NUM_PKTIN);
+		_ODP_ABORT("Supports only %i pktin queues per interface\n", NUM_PKTIN);
 
 	for (i = 0; i < num; i++) {
 		cmd->pktin_idx[i] = pktin_idx[i];
@@ -607,7 +605,7 @@ static inline void enqueue_packets(odp_queue_t queue,
 	if (num_enq < num_pkt) {
 		num_drop = num_pkt - num_enq;
 
-		ODP_DBG("Dropped %i packets\n", num_drop);
+		_ODP_DBG("Dropped %i packets\n", num_drop);
 		odp_packet_free_multi((odp_packet_t *)&hdr_tbl[num_enq],
 				      num_drop);
 	}
@@ -1046,12 +1044,12 @@ static void schedule_print(void)
 
 	(void)schedule_capability(&capa);
 
-	ODP_PRINT("\nScheduler debug info\n");
-	ODP_PRINT("--------------------\n");
-	ODP_PRINT("  scheduler:         sp\n");
-	ODP_PRINT("  max groups:        %u\n", capa.max_groups);
-	ODP_PRINT("  max priorities:    %u\n", capa.max_prios);
-	ODP_PRINT("\n");
+	_ODP_PRINT("\nScheduler debug info\n");
+	_ODP_PRINT("--------------------\n");
+	_ODP_PRINT("  scheduler:         sp\n");
+	_ODP_PRINT("  max groups:        %u\n", capa.max_groups);
+	_ODP_PRINT("  max priorities:    %u\n", capa.max_prios);
+	_ODP_PRINT("\n");
 }
 
 static void get_config(schedule_config_t *config)

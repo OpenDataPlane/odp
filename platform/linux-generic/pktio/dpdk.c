@@ -215,8 +215,7 @@ static int lookup_opt(const char *opt_name, const char *drv_name, int *val)
 
 	ret = _odp_libconfig_lookup_ext_int(base, drv_name, opt_name, val);
 	if (ret == 0)
-		ODP_ERR("Unable to find DPDK configuration option: %s\n",
-			opt_name);
+		_ODP_ERR("Unable to find DPDK configuration option: %s\n", opt_name);
 
 	return ret;
 }
@@ -233,7 +232,7 @@ static int init_options(pktio_entry_t *pktio_entry,
 	if (opt->num_rx_desc < dev_info->rx_desc_lim.nb_min ||
 	    opt->num_rx_desc > dev_info->rx_desc_lim.nb_max ||
 	    opt->num_rx_desc % dev_info->rx_desc_lim.nb_align) {
-		ODP_ERR("Invalid number of RX descriptors\n");
+		_ODP_ERR("Invalid number of RX descriptors\n");
 		return -1;
 	}
 
@@ -253,12 +252,12 @@ static int init_options(pktio_entry_t *pktio_entry,
 		return -1;
 	opt->multicast_en = !!val;
 
-	ODP_DBG("DPDK interface (%s): %" PRIu16 "\n", dev_info->driver_name,
-		pkt_priv(pktio_entry)->port_id);
-	ODP_DBG("  multicast_en: %d\n", opt->multicast_en);
-	ODP_DBG("  num_rx_desc: %d\n", opt->num_rx_desc);
-	ODP_DBG("  num_tx_desc: %d\n", opt->num_tx_desc_default);
-	ODP_DBG("  rx_drop_en: %d\n", opt->rx_drop_en);
+	_ODP_DBG("DPDK interface (%s): %" PRIu16 "\n", dev_info->driver_name,
+		 pkt_priv(pktio_entry)->port_id);
+	_ODP_DBG("  multicast_en: %d\n", opt->multicast_en);
+	_ODP_DBG("  num_rx_desc: %d\n", opt->num_rx_desc);
+	_ODP_DBG("  num_tx_desc: %d\n", opt->num_tx_desc_default);
+	_ODP_DBG("  rx_drop_en: %d\n", opt->rx_drop_en);
 
 	return 0;
 }
@@ -283,7 +282,7 @@ static uint32_t cache_size(uint32_t num)
 		}
 	if (odp_unlikely(size > RTE_MEMPOOL_CACHE_MAX_SIZE ||
 			 (uint32_t)size * 1.5 > num)) {
-		ODP_ERR("Cache size calc failure: %d\n", size);
+		_ODP_ERR("Cache size calc failure: %d\n", size);
 		size = 0;
 	}
 
@@ -339,7 +338,7 @@ static void pktmbuf_init(struct rte_mempool *mp, void *opaque_arg ODP_UNUSED,
 
 	m->buf_iova = rte_mem_virt2iova(buf_addr);
 	if (odp_unlikely(m->buf_iova == 0))
-		ODP_ABORT("Bad IO virtual address\n");
+		_ODP_ABORT("Bad IO virtual address\n");
 
 	m->buf_len = (uint16_t)buf_len;
 	m->data_off = RTE_PKTMBUF_HEADROOM;
@@ -371,28 +370,28 @@ static struct rte_mempool *mbuf_pool_create(const char *name,
 	int ret;
 
 	if (!(pool_entry->mem_from_huge_pages)) {
-		ODP_ERR("DPDK requires memory is allocated from huge pages\n");
+		_ODP_ERR("DPDK requires memory is allocated from huge pages\n");
 		goto fail;
 	}
 
 	if (pool_entry->seg_len < RTE_MBUF_DEFAULT_BUF_SIZE) {
-		ODP_ERR("Some NICs need at least %dB buffers to not segment "
-			"standard ethernet frames. Increase pool seg_len.\n",
-			RTE_MBUF_DEFAULT_BUF_SIZE);
+		_ODP_ERR("Some NICs need at least %dB buffers to not segment "
+			 "standard ethernet frames. Increase pool seg_len.\n",
+			 RTE_MBUF_DEFAULT_BUF_SIZE);
 		goto fail;
 	}
 
 	if (odp_shm_info(pool_entry->shm, &shm_info)) {
-		ODP_ERR("Failed to query SHM info.\n");
+		_ODP_ERR("Failed to query SHM info.\n");
 		goto fail;
 	}
 
 	page_size = shm_info.page_size;
 	total_size = rte_mempool_calc_obj_size(elt_size, MEMPOOL_FLAGS, &sz);
 	if (total_size != pool_entry->block_size) {
-		ODP_ERR("DPDK pool block size not matching to ODP pool: "
-			"%" PRIu32 "/%" PRIu32 "\n", total_size,
-			pool_entry->block_size);
+		_ODP_ERR("DPDK pool block size not matching to ODP pool: "
+			 "%" PRIu32 "/%" PRIu32 "\n", total_size,
+			 pool_entry->block_size);
 		goto fail;
 	}
 
@@ -400,14 +399,14 @@ static struct rte_mempool *mbuf_pool_create(const char *name,
 				      sizeof(struct rte_pktmbuf_pool_private),
 				      rte_socket_id(), MEMPOOL_FLAGS);
 	if (mp == NULL) {
-		ODP_ERR("Failed to create empty DPDK packet pool\n");
+		_ODP_ERR("Failed to create empty DPDK packet pool\n");
 		goto fail;
 	}
 
 	mp->pool_data = _odp_pool_handle(pool_entry);
 
 	if (rte_mempool_set_ops_byname(mp, "odp_pool", pool_entry)) {
-		ODP_ERR("Failed setting mempool operations\n");
+		_ODP_ERR("Failed setting mempool operations\n");
 		goto fail;
 	}
 
@@ -429,7 +428,7 @@ static struct rte_mempool *mbuf_pool_create(const char *name,
 						NULL, NULL);
 
 		if (ret <= 0) {
-			ODP_ERR("Failed to populate mempool: %d\n", ret);
+			_ODP_ERR("Failed to populate mempool: %d\n", ret);
 			goto fail;
 		}
 
@@ -438,8 +437,8 @@ static struct rte_mempool *mbuf_pool_create(const char *name,
 	}
 
 	if (populated != num) {
-		ODP_ERR("Failed to populate mempool with all requested blocks, populated: %u, "
-			"requested: %u\n", populated, num);
+		_ODP_ERR("Failed to populate mempool with all requested blocks, populated: %u, "
+			 "requested: %u\n", populated, num);
 		goto fail;
 	}
 
@@ -516,7 +515,7 @@ static unsigned pool_get_count(const struct rte_mempool *mp)
 	odp_pool_info_t info;
 
 	if (odp_pool_info(pool, &info)) {
-		ODP_ERR("Failed to read pool info\n");
+		_ODP_ERR("Failed to read pool info\n");
 		return 0;
 	}
 	return info.params.pkt.num;
@@ -565,7 +564,7 @@ static int pool_create(uint8_t *data, pool_t *pool)
 	pkt_pool = mbuf_pool_create(pool_name, pool, mem_src_data->dpdk_elt_size);
 
 	if (pkt_pool == NULL) {
-		ODP_ERR("Creating external DPDK pool failed\n");
+		_ODP_ERR("Creating external DPDK pool failed\n");
 		return -1;
 	}
 
@@ -588,7 +587,7 @@ static void pool_obj_size(uint8_t *data, uint32_t *block_size, uint32_t *block_o
 
 	if (odp_global_rw->dpdk_initialized == 0) {
 		if (dpdk_pktio_init()) {
-			ODP_ERR("Initializing DPDK failed\n");
+			_ODP_ERR("Initializing DPDK failed\n");
 			*block_size = 0;
 			return;
 		}
@@ -640,8 +639,8 @@ static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 	num = _odp_packet_alloc_multi(pool, max_len + frame_offset,
 				      pkt_table, mbuf_num);
 	if (num != mbuf_num) {
-		ODP_DBG("_odp_packet_alloc_multi() unable to allocate all packets: "
-			"%d/%" PRIu16 " allocated\n", num, mbuf_num);
+		_ODP_DBG("_odp_packet_alloc_multi() unable to allocate all packets: "
+			 "%d/%" PRIu16 " allocated\n", num, mbuf_num);
 		for (i = num; i < mbuf_num; i++)
 			rte_pktmbuf_free(mbuf_table[i]);
 	}
@@ -649,7 +648,7 @@ static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 	for (i = 0; i < num; i++) {
 		mbuf = mbuf_table[i];
 		if (odp_unlikely(mbuf->nb_segs != 1)) {
-			ODP_ERR("Segmented buffers not supported\n");
+			_ODP_ERR("Segmented buffers not supported\n");
 			goto fail;
 		}
 
@@ -855,7 +854,7 @@ static inline int pkt_to_mbuf(pktio_entry_t *pktio_entry,
 
 	if (odp_unlikely((rte_pktmbuf_alloc_bulk(pkt_dpdk->pkt_pool,
 						 mbuf_table, num)))) {
-		ODP_ERR("Failed to alloc mbuf\n");
+		_ODP_ERR("Failed to alloc mbuf\n");
 		return 0;
 	}
 	for (i = 0; i < num; i++) {
@@ -936,7 +935,7 @@ static inline int mbuf_to_pkt_zero(pktio_entry_t *pktio_entry,
 
 		mbuf = mbuf_table[i];
 		if (odp_unlikely(mbuf->nb_segs != 1)) {
-			ODP_ERR("Segmented buffers not supported\n");
+			_ODP_ERR("Segmented buffers not supported\n");
 			rte_pktmbuf_free(mbuf);
 			continue;
 		}
@@ -1077,7 +1076,7 @@ static uint32_t dpdk_vdev_mtu_get(uint16_t port_id)
 
 	sockfd = socket(AF_INET, SOCK_DGRAM, 0);
 	if (sockfd < 0) {
-		ODP_ERR("Failed to create control socket\n");
+		_ODP_ERR("Failed to create control socket\n");
 		return 0;
 	}
 
@@ -1126,7 +1125,7 @@ static int dpdk_maxlen_set(pktio_entry_t *pktio_entry, uint32_t maxlen_input,
 
 	ret = rte_eth_dev_set_mtu(pkt_dpdk->port_id, mtu);
 	if (odp_unlikely(ret))
-		ODP_ERR("rte_eth_dev_set_mtu() failed: %d\n", ret);
+		_ODP_ERR("rte_eth_dev_set_mtu() failed: %d\n", ret);
 
 	pkt_dpdk->mtu = maxlen_input;
 	pkt_dpdk->mtu_set = 1;
@@ -1148,7 +1147,7 @@ static int dpdk_vdev_promisc_mode_get(uint16_t port_id)
 
 	sockfd = socket(AF_INET, SOCK_DGRAM, 0);
 	if (sockfd < 0) {
-		ODP_ERR("Failed to create control socket\n");
+		_ODP_ERR("Failed to create control socket\n");
 		return -1;
 	}
 
@@ -1171,7 +1170,7 @@ static int dpdk_vdev_promisc_mode_set(uint16_t port_id, int enable)
 
 	sockfd = socket(AF_INET, SOCK_DGRAM, 0);
 	if (sockfd < 0) {
-		ODP_ERR("Failed to create control socket\n");
+		_ODP_ERR("Failed to create control socket\n");
 		return -1;
 	}
 
@@ -1251,8 +1250,8 @@ static int dpdk_setup_eth_dev(pktio_entry_t *pktio_entry)
 				    pktio_entry->num_in_queue,
 				    pktio_entry->num_out_queue, &eth_conf);
 	if (ret < 0) {
-		ODP_ERR("Failed to setup device: err=%d, port=%" PRIu8 "\n",
-			ret, pkt_dpdk->port_id);
+		_ODP_ERR("Failed to setup device: err=%d, port=%" PRIu8 "\n",
+			 ret, pkt_dpdk->port_id);
 		return -1;
 	}
 	return 0;
@@ -1301,7 +1300,7 @@ static int dpdk_pktio_init(void)
 	i = pthread_getaffinity_np(pthread_self(),
 				   sizeof(original_cpuset), &original_cpuset);
 	if (i != 0) {
-		ODP_ERR("Failed to read thread affinity: %d\n", i);
+		_ODP_ERR("Failed to read thread affinity: %d\n", i);
 		return -1;
 	}
 
@@ -1315,7 +1314,7 @@ static int dpdk_pktio_init(void)
 	masklen = odp_cpumask_to_str(&mask, mask_str, ODP_CPUMASK_STR_SIZE);
 
 	if (masklen < 0) {
-		ODP_ERR("CPU mask error: %" PRId32 "\n", masklen);
+		_ODP_ERR("CPU mask error: %" PRId32 "\n", masklen);
 		return -1;
 	}
 
@@ -1359,7 +1358,7 @@ static int dpdk_pktio_init(void)
 	dpdk_argc = rte_strsplit(full_cmd, strlen(full_cmd), dpdk_argv,
 				 dpdk_argc, ' ');
 	for (i = 0; i < dpdk_argc; ++i)
-		ODP_DBG("arg[%d]: %s\n", i, dpdk_argv[i]);
+		_ODP_DBG("arg[%d]: %s\n", i, dpdk_argv[i]);
 
 	i = rte_eal_init(dpdk_argc, dpdk_argv);
 
@@ -1367,22 +1366,22 @@ static int dpdk_pktio_init(void)
 	optind = 0;
 
 	if (i < 0) {
-		ODP_ERR("Cannot init the Intel DPDK EAL!\n");
+		_ODP_ERR("Cannot init the Intel DPDK EAL!\n");
 		return -1;
 	} else if (i + 1 != dpdk_argc) {
-		ODP_DBG("Some DPDK args were not processed!\n");
-		ODP_DBG("Passed: %d Consumed %d\n", dpdk_argc, i + 1);
+		_ODP_DBG("Some DPDK args were not processed!\n");
+		_ODP_DBG("Passed: %d Consumed %d\n", dpdk_argc, i + 1);
 	}
-	ODP_DBG("rte_eal_init OK\n");
+	_ODP_DBG("rte_eal_init OK\n");
 
 	rte_log_set_global_level(RTE_LOG_WARNING);
 
 	i = pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t),
 				   &original_cpuset);
 	if (i)
-		ODP_ERR("Failed to reset thread affinity: %d\n", i);
+		_ODP_ERR("Failed to reset thread affinity: %d\n", i);
 
-	ODP_PRINT("\nDPDK version: %s\n", rte_version());
+	_ODP_PRINT("\nDPDK version: %s\n", rte_version());
 
 	return 0;
 }
@@ -1391,12 +1390,12 @@ static int dpdk_pktio_init(void)
 static int dpdk_pktio_init_global(void)
 {
 	if (getenv("ODP_PKTIO_DISABLE_DPDK")) {
-		ODP_PRINT("PKTIO: dpdk pktio skipped,"
-			  " enabled export ODP_PKTIO_DISABLE_DPDK=1.\n");
+		_ODP_PRINT("PKTIO: dpdk pktio skipped,"
+			   " enabled export ODP_PKTIO_DISABLE_DPDK=1.\n");
 		disable_pktio = 1;
 	} else  {
-		ODP_PRINT("PKTIO: initialized dpdk pktio,"
-			  " use export ODP_PKTIO_DISABLE_DPDK=1 to disable.\n");
+		_ODP_PRINT("PKTIO: initialized dpdk pktio,"
+			   " use export ODP_PKTIO_DISABLE_DPDK=1 to disable.\n");
 	}
 	return 0;
 }
@@ -1407,7 +1406,7 @@ static int dpdk_pktio_init_local(void)
 
 	cpu = sched_getcpu();
 	if (cpu < 0) {
-		ODP_ERR("getcpu failed\n");
+		_ODP_ERR("getcpu failed\n");
 		return -1;
 	}
 
@@ -1457,33 +1456,33 @@ static void prepare_rss_conf(pktio_entry_t *pktio_entry,
 	/* Print debug info about unsupported hash protocols */
 	if (p->hash_proto.proto.ipv4 &&
 	    ((rss_hf_capa & ETH_RSS_IPV4) == 0))
-		ODP_PRINT("DPDK: hash_proto.ipv4 not supported (rss_hf_capa 0x%" PRIx64 ")\n",
-			  rss_hf_capa);
+		_ODP_PRINT("DPDK: hash_proto.ipv4 not supported (rss_hf_capa 0x%" PRIx64 ")\n",
+			   rss_hf_capa);
 
 	if (p->hash_proto.proto.ipv4_udp &&
 	    ((rss_hf_capa & ETH_RSS_NONFRAG_IPV4_UDP) == 0))
-		ODP_PRINT("DPDK: hash_proto.ipv4_udp not supported (rss_hf_capa 0x%" PRIx64 ")\n",
-			  rss_hf_capa);
+		_ODP_PRINT("DPDK: hash_proto.ipv4_udp not supported (rss_hf_capa 0x%" PRIx64 ")\n",
+			   rss_hf_capa);
 
 	if (p->hash_proto.proto.ipv4_tcp &&
 	    ((rss_hf_capa & ETH_RSS_NONFRAG_IPV4_TCP) == 0))
-		ODP_PRINT("DPDK: hash_proto.ipv4_tcp not supported (rss_hf_capa 0x%" PRIx64 ")\n",
-			  rss_hf_capa);
+		_ODP_PRINT("DPDK: hash_proto.ipv4_tcp not supported (rss_hf_capa 0x%" PRIx64 ")\n",
+			   rss_hf_capa);
 
 	if (p->hash_proto.proto.ipv6 &&
 	    ((rss_hf_capa & ETH_RSS_IPV6) == 0))
-		ODP_PRINT("DPDK: hash_proto.ipv6 not supported (rss_hf_capa 0x%" PRIx64 ")\n",
-			  rss_hf_capa);
+		_ODP_PRINT("DPDK: hash_proto.ipv6 not supported (rss_hf_capa 0x%" PRIx64 ")\n",
+			   rss_hf_capa);
 
 	if (p->hash_proto.proto.ipv6_udp &&
 	    ((rss_hf_capa & ETH_RSS_NONFRAG_IPV6_UDP) == 0))
-		ODP_PRINT("DPDK: hash_proto.ipv6_udp not supported (rss_hf_capa 0x%" PRIx64 ")\n",
-			  rss_hf_capa);
+		_ODP_PRINT("DPDK: hash_proto.ipv6_udp not supported (rss_hf_capa 0x%" PRIx64 ")\n",
+			   rss_hf_capa);
 
 	if (p->hash_proto.proto.ipv6_tcp &&
 	    ((rss_hf_capa & ETH_RSS_NONFRAG_IPV6_TCP) == 0))
-		ODP_PRINT("DPDK: hash_proto.ipv6_tcp not supported (rss_hf_capa 0x%" PRIx64 ")\n",
-			  rss_hf_capa);
+		_ODP_PRINT("DPDK: hash_proto.ipv6_tcp not supported (rss_hf_capa 0x%" PRIx64 ")\n",
+			   rss_hf_capa);
 
 	hash_proto_to_rss_conf(&pkt_dpdk->rss_conf, &p->hash_proto);
 
@@ -1530,7 +1529,7 @@ static int dpdk_output_queues_config(pktio_entry_t *pktio_entry,
 
 	ret  = rte_eth_dev_info_get(pkt_dpdk->port_id, &dev_info);
 	if (ret) {
-		ODP_ERR("DPDK: rte_eth_dev_info_get() failed: %d\n", ret);
+		_ODP_ERR("DPDK: rte_eth_dev_info_get() failed: %d\n", ret);
 		return -1;
 	}
 
@@ -1549,7 +1548,7 @@ static int dpdk_output_queues_config(pktio_entry_t *pktio_entry,
 		if (num_tx_desc < dev_info.tx_desc_lim.nb_min ||
 		    num_tx_desc > dev_info.tx_desc_lim.nb_max ||
 		    num_tx_desc % dev_info.tx_desc_lim.nb_align) {
-			ODP_ERR("DPDK: invalid number of TX descriptors\n");
+			_ODP_ERR("DPDK: invalid number of TX descriptors\n");
 			return -1;
 		}
 		pkt_dpdk->num_tx_desc[i] = num_tx_desc;
@@ -1594,7 +1593,7 @@ static int dpdk_init_capability(pktio_entry_t *pktio_entry,
 	if (ret == 0) {
 		capa->set_op.op.mac_addr = 1;
 	} else if (ret != -ENOTSUP && ret != -EPERM) {
-		ODP_ERR("Failed to set interface default MAC: %d\n", ret);
+		_ODP_ERR("Failed to set interface default MAC: %d\n", ret);
 		return -1;
 	}
 
@@ -1743,7 +1742,7 @@ static int dpdk_open(odp_pktio_t id ODP_UNUSED,
 	else if (dpdk_netdev_is_valid(netdev))
 		pkt_dpdk->port_id = atoi(netdev);
 	else {
-		ODP_ERR("Invalid DPDK interface name: %s\n", netdev);
+		_ODP_ERR("Invalid DPDK interface name: %s\n", netdev);
 		return -1;
 	}
 
@@ -1757,27 +1756,27 @@ static int dpdk_open(odp_pktio_t id ODP_UNUSED,
 	pkt_dpdk->pool = pool;
 
 	if (rte_eth_dev_count_avail() == 0) {
-		ODP_ERR("No DPDK ports found\n");
+		_ODP_ERR("No DPDK ports found\n");
 		return -1;
 	}
 
 	memset(&dev_info, 0, sizeof(struct rte_eth_dev_info));
 	ret = rte_eth_dev_info_get(pkt_dpdk->port_id, &dev_info);
 	if (ret) {
-		ODP_ERR("Failed to read device info: %d\n", ret);
+		_ODP_ERR("Failed to read device info: %d\n", ret);
 		return -1;
 	}
 
 	/* Initialize runtime options */
 	if (init_options(pktio_entry, &dev_info)) {
-		ODP_ERR("Initializing runtime options failed\n");
+		_ODP_ERR("Initializing runtime options failed\n");
 		return -1;
 	}
 	pkt_dpdk->flags.set_flow_hash = pkt_dpdk->opt.set_flow_hash; /* Copy for fast path access */
 
 	mtu = dpdk_mtu_get(pktio_entry);
 	if (mtu == 0) {
-		ODP_ERR("Failed to read interface MTU\n");
+		_ODP_ERR("Failed to read interface MTU\n");
 		return -1;
 	}
 	pkt_dpdk->mtu = mtu + _ODP_ETHHDR_LEN;
@@ -1793,7 +1792,7 @@ static int dpdk_open(odp_pktio_t id ODP_UNUSED,
 
 	/* Not supported by all PMDs, so ignore the return value */
 	if (ret)
-		ODP_DBG("Configuring multicast reception not supported by the PMD\n");
+		_ODP_DBG("Configuring multicast reception not supported by the PMD\n");
 
 	/* Drivers requiring minimum burst size. Supports also *_vf versions
 	 * of the drivers. */
@@ -1824,7 +1823,7 @@ static int dpdk_open(odp_pktio_t id ODP_UNUSED,
 		}
 	}
 	if (pkt_pool == NULL) {
-		ODP_ERR("Cannot init mbuf packet pool\n");
+		_ODP_ERR("Cannot init mbuf packet pool\n");
 		return -1;
 	}
 
@@ -1842,7 +1841,7 @@ static int dpdk_open(odp_pktio_t id ODP_UNUSED,
 	pkt_dpdk->mtu_max = RTE_MIN(pkt_dpdk->mtu_max, pkt_dpdk->data_room);
 
 	if (dpdk_init_capability(pktio_entry, &dev_info)) {
-		ODP_ERR("Failed to initialize capability\n");
+		_ODP_ERR("Failed to initialize capability\n");
 		return -1;
 	}
 
@@ -1870,8 +1869,7 @@ static int dpdk_setup_eth_tx(pktio_entry_t *pktio_entry,
 					     rte_eth_dev_socket_id(port_id),
 					     &dev_info->default_txconf);
 		if (ret < 0) {
-			ODP_ERR("Queue setup failed: err=%d, port=%" PRIu8 "\n",
-				ret, port_id);
+			_ODP_ERR("Queue setup failed: err=%d, port=%" PRIu8 "\n", ret, port_id);
 			return -1;
 		}
 	}
@@ -1881,11 +1879,11 @@ static int dpdk_setup_eth_tx(pktio_entry_t *pktio_entry,
 	for (i = 0; i < pktio_entry->num_out_queue && i < RTE_ETHDEV_QUEUE_STAT_CNTRS; i++) {
 		ret = rte_eth_dev_set_tx_queue_stats_mapping(port_id, i, i);
 		if (ret) {
-			ODP_DBG("Mapping per TX queue statistics not supported: %d\n", ret);
+			_ODP_DBG("Mapping per TX queue statistics not supported: %d\n", ret);
 			break;
 		}
 	}
-	ODP_DBG("Mapped %" PRIu32 "/%d TX counters\n", i, RTE_ETHDEV_QUEUE_STAT_CNTRS);
+	_ODP_DBG("Mapped %" PRIu32 "/%d TX counters\n", i, RTE_ETHDEV_QUEUE_STAT_CNTRS);
 
 	return 0;
 }
@@ -1909,8 +1907,7 @@ static int dpdk_setup_eth_rx(const pktio_entry_t *pktio_entry,
 					     rte_eth_dev_socket_id(port_id),
 					     &rxconf, pkt_dpdk->pkt_pool);
 		if (ret < 0) {
-			ODP_ERR("Queue setup failed: err=%d, port=%" PRIu8 "\n",
-				ret, port_id);
+			_ODP_ERR("Queue setup failed: err=%d, port=%" PRIu8 "\n", ret, port_id);
 			return -1;
 		}
 	}
@@ -1920,11 +1917,11 @@ static int dpdk_setup_eth_rx(const pktio_entry_t *pktio_entry,
 	for (i = 0; i < pktio_entry->num_in_queue && i < RTE_ETHDEV_QUEUE_STAT_CNTRS; i++) {
 		ret = rte_eth_dev_set_rx_queue_stats_mapping(port_id, i, i);
 		if (ret) {
-			ODP_DBG("Mapping per RX queue statistics not supported: %d\n", ret);
+			_ODP_DBG("Mapping per RX queue statistics not supported: %d\n", ret);
 			break;
 		}
 	}
-	ODP_DBG("Mapped %" PRIu32 "/%d RX counters\n", i, RTE_ETHDEV_QUEUE_STAT_CNTRS);
+	_ODP_DBG("Mapped %" PRIu32 "/%d RX counters\n", i, RTE_ETHDEV_QUEUE_STAT_CNTRS);
 
 	return 0;
 }
@@ -1946,7 +1943,7 @@ static int dpdk_start(pktio_entry_t *pktio_entry)
 
 	/* Setup device */
 	if (dpdk_setup_eth_dev(pktio_entry)) {
-		ODP_ERR("Failed to configure device\n");
+		_ODP_ERR("Failed to configure device\n");
 		return -1;
 	}
 
@@ -1962,16 +1959,15 @@ static int dpdk_start(pktio_entry_t *pktio_entry)
 	if (pkt_dpdk->mtu_set && pktio_entry->capa.set_op.op.maxlen) {
 		ret = dpdk_maxlen_set(pktio_entry, pkt_dpdk->mtu, 0);
 		if (ret) {
-			ODP_ERR("Restoring device MTU failed: err=%d, port=%" PRIu8 "\n",
-				ret, port_id);
+			_ODP_ERR("Restoring device MTU failed: err=%d, port=%" PRIu8 "\n",
+				 ret, port_id);
 			return -1;
 		}
 	}
 	/* Start device */
 	ret = rte_eth_dev_start(port_id);
 	if (ret < 0) {
-		ODP_ERR("Device start failed: err=%d, port=%" PRIu8 "\n",
-			ret, port_id);
+		_ODP_ERR("Device start failed: err=%d, port=%" PRIu8 "\n", ret, port_id);
 		return -1;
 	}
 
@@ -2191,7 +2187,7 @@ static int dpdk_link_info(pktio_entry_t *pktio_entry, odp_pktio_link_info_t *inf
 
 	ret = rte_eth_dev_flow_ctrl_get(port_id, &fc_conf);
 	if (ret && ret != -ENOTSUP) {
-		ODP_ERR("rte_eth_dev_flow_ctrl_get() failed\n");
+		_ODP_ERR("rte_eth_dev_flow_ctrl_get() failed\n");
 		return -1;
 	}
 
@@ -2278,7 +2274,7 @@ static int dpdk_extra_stat_info(pktio_entry_t *pktio_entry,
 
 	num_stats = rte_eth_xstats_get_names(port_id, NULL, 0);
 	if (num_stats < 0) {
-		ODP_ERR("rte_eth_xstats_get_names() failed: %d\n", num_stats);
+		_ODP_ERR("rte_eth_xstats_get_names() failed: %d\n", num_stats);
 		return num_stats;
 	} else if (info == NULL || num == 0 || num_stats == 0) {
 		return num_stats;
@@ -2288,7 +2284,7 @@ static int dpdk_extra_stat_info(pktio_entry_t *pktio_entry,
 
 	ret = rte_eth_xstats_get_names(port_id, xstats_names, num_stats);
 	if (ret < 0 || ret > num_stats) {
-		ODP_ERR("rte_eth_xstats_get_names() failed: %d\n", ret);
+		_ODP_ERR("rte_eth_xstats_get_names() failed: %d\n", ret);
 		return -1;
 	}
 	num_stats = ret;
@@ -2308,7 +2304,7 @@ static int dpdk_extra_stats(pktio_entry_t *pktio_entry,
 
 	num_stats = rte_eth_xstats_get(port_id, NULL, 0);
 	if (num_stats < 0) {
-		ODP_ERR("rte_eth_xstats_get() failed: %d\n", num_stats);
+		_ODP_ERR("rte_eth_xstats_get() failed: %d\n", num_stats);
 		return num_stats;
 	} else if (stats == NULL || num == 0 || num_stats == 0) {
 		return num_stats;
@@ -2318,7 +2314,7 @@ static int dpdk_extra_stats(pktio_entry_t *pktio_entry,
 
 	ret = rte_eth_xstats_get(port_id, xstats, num_stats);
 	if (ret < 0 || ret > num_stats) {
-		ODP_ERR("rte_eth_xstats_get() failed: %d\n", ret);
+		_ODP_ERR("rte_eth_xstats_get() failed: %d\n", ret);
 		return -1;
 	}
 	num_stats = ret;
@@ -2338,7 +2334,7 @@ static int dpdk_extra_stat_counter(pktio_entry_t *pktio_entry, uint32_t id,
 
 	ret = rte_eth_xstats_get_by_id(port_id, &xstat_id, stat, 1);
 	if (ret != 1) {
-		ODP_ERR("rte_eth_xstats_get_by_id() failed: %d\n", ret);
+		_ODP_ERR("rte_eth_xstats_get_by_id() failed: %d\n", ret);
 		return -1;
 	}
 
@@ -2352,14 +2348,13 @@ static int dpdk_pktin_stats(pktio_entry_t *pktio_entry, uint32_t index,
 	int ret;
 
 	if (odp_unlikely(index > RTE_ETHDEV_QUEUE_STAT_CNTRS - 1)) {
-		ODP_ERR("DPDK supports max %d per queue counters\n",
-			RTE_ETHDEV_QUEUE_STAT_CNTRS);
+		_ODP_ERR("DPDK supports max %d per queue counters\n", RTE_ETHDEV_QUEUE_STAT_CNTRS);
 		return -1;
 	}
 
 	ret = rte_eth_stats_get(pkt_priv(pktio_entry)->port_id, &rte_stats);
 	if (odp_unlikely(ret)) {
-		ODP_ERR("Failed to read DPDK pktio stats: %d\n", ret);
+		_ODP_ERR("Failed to read DPDK pktio stats: %d\n", ret);
 		return -1;
 	}
 
@@ -2379,14 +2374,13 @@ static int dpdk_pktout_stats(pktio_entry_t *pktio_entry, uint32_t index,
 	int ret;
 
 	if (odp_unlikely(index > RTE_ETHDEV_QUEUE_STAT_CNTRS - 1)) {
-		ODP_ERR("DPDK supports max %d per queue counters\n",
-			RTE_ETHDEV_QUEUE_STAT_CNTRS);
+		_ODP_ERR("DPDK supports max %d per queue counters\n", RTE_ETHDEV_QUEUE_STAT_CNTRS);
 		return -1;
 	}
 
 	ret = rte_eth_stats_get(pkt_priv(pktio_entry)->port_id, &rte_stats);
 	if (odp_unlikely(ret)) {
-		ODP_ERR("Failed to read DPDK pktio stats: %d\n", ret);
+		_ODP_ERR("Failed to read DPDK pktio stats: %d\n", ret);
 		return -1;
 	}
 

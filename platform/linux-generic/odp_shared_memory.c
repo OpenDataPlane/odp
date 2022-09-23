@@ -72,7 +72,7 @@ odp_shm_t odp_shm_reserve(const char *name, uint64_t size, uint64_t align,
 	uint32_t supported_flgs = SUPPORTED_SHM_FLAGS;
 
 	if (flags & ~supported_flgs) {
-		ODP_ERR("Unsupported SHM flag\n");
+		_ODP_ERR("Unsupported SHM flag\n");
 		return ODP_SHM_INVALID;
 	}
 

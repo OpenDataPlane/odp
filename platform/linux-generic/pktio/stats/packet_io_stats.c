@@ -24,7 +24,7 @@ static int sock_stats_get(pktio_entry_t *e, odp_pktio_stats_t *stats, int fd)
 		ret = _odp_sysfs_stats(e, stats);
 
 	if (ret)
-		ODP_ERR("Failed to get pktio statistics.\n");
+		_ODP_ERR("Failed to get pktio statistics.\n");
 
 	return ret;
 }

@@ -39,7 +39,7 @@ void odp_buffer_print(odp_buffer_t buf)
 	char str[max_len];
 
 	if (!odp_buffer_is_valid(buf)) {
-		ODP_ERR("Buffer is not valid.\n");
+		_ODP_ERR("Buffer is not valid.\n");
 		return;
 	}
 
@@ -53,7 +53,7 @@ void odp_buffer_print(odp_buffer_t buf)
 	len += snprintf(&str[len], n - len, "  size          %u\n", odp_buffer_size(buf));
 	str[len] = 0;
 
-	ODP_PRINT("\n%s\n", str);
+	_ODP_PRINT("\n%s\n", str);
 }
 
 uint64_t odp_buffer_to_u64(odp_buffer_t hdl)

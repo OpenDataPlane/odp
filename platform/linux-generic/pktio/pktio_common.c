@@ -72,8 +72,8 @@ int _odp_sock_recv_mq_tmo_try_int_driven(const struct odp_pktin_queue_t queues[]
 		entry[i] = get_pktio_entry(queues[i].pktio);
 		index[i] = queues[i].index;
 		if (entry[i] == NULL) {
-			ODP_DBG("pktio entry %" PRIuPTR " does not exist\n",
-				(uintptr_t)queues[i].pktio);
+			_ODP_DBG("pktio entry %" PRIuPTR " does not exist\n",
+				 (uintptr_t)queues[i].pktio);
 			*trial_successful = 0;
 			return -1;
 		}

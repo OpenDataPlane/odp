@@ -32,7 +32,7 @@ static int sysfs_get_val(const char *fname, uint64_t *val)
 		 * kernel driver.
 		 */
 		if (errno != ENOENT)
-			ODP_ERR("fopen %s: %s\n", fname, strerror(errno));
+			_ODP_ERR("fopen %s: %s\n", fname, strerror(errno));
 		return 0;
 	}
 
@@ -42,7 +42,7 @@ static int sysfs_get_val(const char *fname, uint64_t *val)
 	(void)fclose(file);
 
 	if (ret != 1) {
-		ODP_ERR("read %s\n", fname);
+		_ODP_ERR("read %s\n", fname);
 		return -1;
 	}
 
@@ -103,7 +103,7 @@ int _odp_sysfs_extra_stat_info(pktio_entry_t *pktio_entry,
 	snprintf(sysfs_dir, PATH_MAX, SYSFS_DIR, pktio_entry->name);
 	dir = opendir(sysfs_dir);
 	if (!dir) {
-		ODP_ERR("Failed to open sysfs dir: %s\n", sysfs_dir);
+		_ODP_ERR("Failed to open sysfs dir: %s\n", sysfs_dir);
 		return -1;
 	}
 
@@ -135,7 +135,7 @@ int _odp_sysfs_extra_stats(pktio_entry_t *pktio_entry, uint64_t stats[],
 	snprintf(sysfs_dir, PATH_MAX, SYSFS_DIR, pktio_entry->name);
 	dir = opendir(sysfs_dir);
 	if (!dir) {
-		ODP_ERR("Failed to open dir: %s\n", sysfs_dir);
+		_ODP_ERR("Failed to open dir: %s\n", sysfs_dir);
 		return -1;
 	}
 
@@ -148,7 +148,7 @@ int _odp_sysfs_extra_stats(pktio_entry_t *pktio_entry, uint64_t stats[],
 
 		snprintf(file_path, PATH_MAX, "%s/%s", sysfs_dir, e->d_name);
 		if (sysfs_get_val(file_path, &val)) {
-			ODP_ERR("Failed to read file: %s/n", file_path);
+			_ODP_ERR("Failed to read file: %s/n", file_path);
 			counters = -1;
 			break;
 		}
@@ -176,7 +176,7 @@ int _odp_sysfs_extra_stat_counter(pktio_entry_t *pktio_entry, uint32_t id,
 	snprintf(sysfs_dir, PATH_MAX, SYSFS_DIR, pktio_entry->name);
 	dir = opendir(sysfs_dir);
 	if (!dir) {
-		ODP_ERR("Failed to open dir: %s\n", sysfs_dir);
+		_ODP_ERR("Failed to open dir: %s\n", sysfs_dir);
 		return -1;
 	}
 
@@ -191,7 +191,7 @@ int _odp_sysfs_extra_stat_counter(pktio_entry_t *pktio_entry, uint32_t id,
 			snprintf(file_path, PATH_MAX, "%s/%s",
 				 sysfs_dir, e->d_name);
 			if (sysfs_get_val(file_path, &val)) {
-				ODP_ERR("Failed to read file: %s/n", file_path);
+				_ODP_ERR("Failed to read file: %s/n", file_path);
 			} else {
 				*stat = val;
 				ret = 0;

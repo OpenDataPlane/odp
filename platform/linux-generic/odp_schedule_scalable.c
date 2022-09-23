@@ -79,7 +79,7 @@ static int thread_state_init(int tidx)
 	sched_scalable_thread_state_t *ts;
 	uint32_t i;
 
-	ODP_ASSERT(tidx < MAXTHREADS);
+	_ODP_ASSERT(tidx < MAXTHREADS);
 	ts = &global->thread_state[tidx];
 	ts->atomq = NULL;
 	ts->src_schedq = NULL;
@@ -123,7 +123,7 @@ static void insert_schedq_in_list(sched_scalable_thread_state_t *ts,
 		}
 	}
 	if (ts->num_schedq == SCHEDQ_PER_THREAD)
-		ODP_ABORT("Too many schedqs\n");
+		_ODP_ABORT("Too many schedqs\n");
 	ts->schedq_list[ts->num_schedq++] = schedq;
 }
 
@@ -139,7 +139,7 @@ static void remove_schedq_from_list(sched_scalable_thread_state_t *ts,
 			ts->num_schedq--;
 			return;
 		}
-	ODP_ABORT("Cannot find schedq\n");
+	_ODP_ABORT("Cannot find schedq\n");
 }
 
 /*******************************************************************************
@@ -319,7 +319,7 @@ sched_update_deq(sched_elem_t *q,
 		 */
 		oss = q->qschst;
 		do {
-			ODP_ASSERT(oss.cur_ticket == _odp_sched_ts->ticket);
+			_ODP_ASSERT(oss.cur_ticket == _odp_sched_ts->ticket);
 			nss = oss;
 			nss.numevts -= actual;
 			if (nss.numevts > 0 && !pushed) {
@@ -361,7 +361,7 @@ sched_update_deq(sched_elem_t *q,
 					    true, __ATOMIC_RELAXED, __ATOMIC_RELAXED));
 
 	if (odp_unlikely(ticket != TICKET_INVALID)) {
-		ODP_ASSERT(q->qschst_type != ODP_SCHED_SYNC_ATOMIC);
+		_ODP_ASSERT(q->qschst_type != ODP_SCHED_SYNC_ATOMIC);
 		/* Wait for our turn to update schedq. */
 		if (odp_unlikely(__atomic_load_n(&q->qschst.cur_ticket,
 						 __ATOMIC_ACQUIRE) != ticket)) {
@@ -421,8 +421,8 @@ sched_update_deq_sc(sched_elem_t *q,
 	uint32_t ticket;
 
 	if (atomic) {
-		ODP_ASSERT(q->qschst.cur_ticket == _odp_sched_ts->ticket);
-		ODP_ASSERT(q->qschst.cur_ticket != q->qschst.nxt_ticket);
+		_ODP_ASSERT(q->qschst.cur_ticket == _odp_sched_ts->ticket);
+		_ODP_ASSERT(q->qschst.cur_ticket != q->qschst.nxt_ticket);
 		q->qschst.numevts -= actual;
 		q->qschst.cur_ticket = _odp_sched_ts->ticket + 1;
 		if (q->qschst.numevts > 0)
@@ -528,9 +528,9 @@ sched_queue_t *_odp_sched_queue_add(odp_schedule_group_t grp, uint32_t prio)
 	sched_group_t *sg;
 	uint32_t x;
 
-	ODP_ASSERT(grp >= 0 && grp < (odp_schedule_group_t)MAX_SCHED_GROUP);
-	ODP_ASSERT((global->sg_free & (1ULL << grp)) == 0);
-	ODP_ASSERT(prio < ODP_SCHED_PRIO_NUM);
+	_ODP_ASSERT(grp >= 0 && grp < (odp_schedule_group_t)MAX_SCHED_GROUP);
+	_ODP_ASSERT((global->sg_free & (1ULL << grp)) == 0);
+	_ODP_ASSERT(prio < ODP_SCHED_PRIO_NUM);
 
 	sgi = grp;
 	sg = global->sg_vec[sgi];
@@ -554,9 +554,9 @@ static uint32_t sched_pktin_add(odp_schedule_group_t grp, uint32_t prio)
 	uint32_t sgi;
 	sched_group_t *sg;
 
-	ODP_ASSERT(grp >= 0 && grp < (odp_schedule_group_t)MAX_SCHED_GROUP);
-	ODP_ASSERT((global->sg_free & (1ULL << grp)) == 0);
-	ODP_ASSERT(prio < ODP_SCHED_PRIO_NUM);
+	_ODP_ASSERT(grp >= 0 && grp < (odp_schedule_group_t)MAX_SCHED_GROUP);
+	_ODP_ASSERT((global->sg_free & (1ULL << grp)) == 0);
+	_ODP_ASSERT(prio < ODP_SCHED_PRIO_NUM);
 
 	sgi = grp;
 	sg = global->sg_vec[sgi];
@@ -589,9 +589,9 @@ void _odp_sched_queue_rem(odp_schedule_group_t grp, uint32_t prio)
 	sched_group_t *sg;
 	uint32_t x;
 
-	ODP_ASSERT(grp >= 0 && grp < (odp_schedule_group_t)MAX_SCHED_GROUP);
-	ODP_ASSERT((global->sg_free & (1ULL << grp)) == 0);
-	ODP_ASSERT(prio < ODP_SCHED_PRIO_NUM);
+	_ODP_ASSERT(grp >= 0 && grp < (odp_schedule_group_t)MAX_SCHED_GROUP);
+	_ODP_ASSERT((global->sg_free & (1ULL << grp)) == 0);
+	_ODP_ASSERT(prio < ODP_SCHED_PRIO_NUM);
 
 	sgi = grp;
 	sg = global->sg_vec[sgi];
@@ -685,8 +685,8 @@ static inline void _schedule_release_atomic(sched_scalable_thread_state_t *ts)
 {
 #ifdef CONFIG_QSCHST_LOCK
 	sched_update_deq_sc(ts->atomq, ts->dequeued, true);
-	ODP_ASSERT(ts->atomq->qschst.cur_ticket != ts->ticket);
-	ODP_ASSERT(ts->atomq->qschst.cur_ticket ==
+	_ODP_ASSERT(ts->atomq->qschst.cur_ticket != ts->ticket);
+	_ODP_ASSERT(ts->atomq->qschst.cur_ticket ==
 			ts->atomq->qschst.nxt_ticket);
 #else
 	sched_update_deq(ts->atomq, ts->dequeued, true);
@@ -711,10 +711,10 @@ static void pktio_start(int pktio_idx,
 	queue_entry_t *qentry;
 	sched_elem_t *elem;
 
-	ODP_ASSERT(pktio_idx < ODP_CONFIG_PKTIO_ENTRIES);
+	_ODP_ASSERT(pktio_idx < ODP_CONFIG_PKTIO_ENTRIES);
 	for (i = 0; i < num_in_queue; i++) {
 		rxq = in_queue_idx[i];
-		ODP_ASSERT(rxq < PKTIO_MAX_QUEUES);
+		_ODP_ASSERT(rxq < PKTIO_MAX_QUEUES);
 		__atomic_fetch_add(&global->poll_count[pktio_idx], 1,
 				   __ATOMIC_RELAXED);
 		qentry = _odp_qentry_from_ext(odpq[i]);
@@ -723,7 +723,7 @@ static void pktio_start(int pktio_idx,
 		elem->pktio_idx = pktio_idx;
 		elem->rx_queue = rxq;
 		elem->xoffset = sched_pktin_add(elem->sched_grp, elem->sched_prio);
-		ODP_ASSERT(elem->schedq != NULL);
+		_ODP_ASSERT(elem->schedq != NULL);
 		schedq_push(elem->schedq, elem);
 	}
 }
@@ -780,7 +780,7 @@ static int poll_pktin(sched_elem_t *elem, odp_event_t ev[], int num_evts)
 	if (is_ordered(elem)) {
 		/* Need reorder context and slot in reorder window */
 		rwin = queue_get_rwin((queue_entry_t *)elem);
-		ODP_ASSERT(rwin != NULL);
+		_ODP_ASSERT(rwin != NULL);
 		if (odp_unlikely(!have_reorder_ctx(ts) ||
 				 !_odp_rwin_reserve_sc(rwin, &sn))) {
 			/* Put back queue on source schedq */
@@ -831,7 +831,7 @@ events_dequeued:
 			/* Events remain, enqueue them */
 			i = _odp_queue_enq_sp(elem, &rx_evts[num], num_rx - num);
 			/* Enqueue must succeed as the queue was empty */
-			ODP_ASSERT(i == num_rx - num);
+			_ODP_ASSERT(i == num_rx - num);
 		}
 		goto events_dequeued;
 	}
@@ -858,9 +858,9 @@ events_dequeued:
 		/* Don't push queue to schedq */
 	}
 
-	ODP_ASSERT(ts->atomq == NULL);
-	ODP_ASSERT(!ts->out_of_order);
-	ODP_ASSERT(ts->rctx == NULL);
+	_ODP_ASSERT(ts->atomq == NULL);
+	_ODP_ASSERT(!ts->out_of_order);
+	_ODP_ASSERT(ts->rctx == NULL);
 	return 0;
 }
 
@@ -883,7 +883,7 @@ static int _schedule(odp_queue_t *from, odp_event_t ev[], int num_evts)
 	if (atomq != NULL && is_pktin(atomq)) {
 		/* Atomic pktin queue */
 		if (ts->dequeued < atomq->qschst.wrr_budget) {
-			ODP_ASSERT(ts->src_schedq != NULL);
+			_ODP_ASSERT(ts->src_schedq != NULL);
 			num = poll_pktin(atomq, ev, num_evts);
 			if (odp_likely(num != 0)) {
 				if (from)
@@ -896,13 +896,13 @@ static int _schedule(odp_queue_t *from, odp_event_t ev[], int num_evts)
 		}
 		ts->atomq = NULL;
 	} else if (atomq != NULL) {
-		ODP_ASSERT(ts->ticket != TICKET_INVALID);
+		_ODP_ASSERT(ts->ticket != TICKET_INVALID);
 #ifdef CONFIG_QSCHST_LOCK
 		LOCK(&atomq->qschlock);
 #endif
 dequeue_atomic:
-		ODP_ASSERT(ts->ticket == atomq->qschst.cur_ticket);
-		ODP_ASSERT(ts->ticket != atomq->qschst.nxt_ticket);
+		_ODP_ASSERT(ts->ticket == atomq->qschst.cur_ticket);
+		_ODP_ASSERT(ts->ticket != atomq->qschst.nxt_ticket);
 		/* Atomic queues can be dequeued without lock since this thread
 		 * has the only reference to the atomic queue being processed.
 		 */
@@ -985,7 +985,7 @@ restart_same:
 #ifdef CONFIG_QSCHST_LOCK
 			LOCK(&atomq->qschlock);
 			ts->ticket = atomq->qschst.nxt_ticket++;
-			ODP_ASSERT(atomq->qschst.cur_ticket == ts->ticket);
+			_ODP_ASSERT(atomq->qschst.cur_ticket == ts->ticket);
 #else
 			/* Dequeued atomic queue from the schedq, only we
 			 * can process it and any qschst updates are our
@@ -1045,7 +1045,7 @@ restart_same:
 			 * Allocate a slot in the reorder window.
 			 */
 			rwin = queue_get_rwin((queue_entry_t *)elem);
-			ODP_ASSERT(rwin != NULL);
+			_ODP_ASSERT(rwin != NULL);
 			if (odp_unlikely(!_odp_rwin_reserve(rwin, &sn))) {
 				/* Reorder window full */
 				/* Look at next schedq, find other queue */
@@ -1107,7 +1107,7 @@ restart_same:
 			 * inserted into the reorder window.
 			 */
 			_odp_rctx_release(rctx);
-			ODP_ASSERT(ts->rctx == NULL);
+			_ODP_ASSERT(ts->rctx == NULL);
 		}
 		/* Dequeue from parallel/ordered queue failed
 		 * Check if we have a queue at the head of the schedq that needs
@@ -1137,7 +1137,7 @@ static void schedule_order_lock(uint32_t lock_index)
 	if (odp_unlikely(rctx == NULL ||
 			 rctx->rwin == NULL ||
 			 lock_index >= rctx->rwin->lock_count)) {
-		ODP_ERR("Invalid call to odp_schedule_order_lock\n");
+		_ODP_ERR("Invalid call to odp_schedule_order_lock\n");
 		return;
 	}
 	if (odp_unlikely(__atomic_load_n(&rctx->rwin->olock[lock_index],
@@ -1159,7 +1159,7 @@ static void schedule_order_unlock(uint32_t lock_index)
 			 rctx->rwin == NULL ||
 			 lock_index >= rctx->rwin->lock_count ||
 			 rctx->rwin->olock[lock_index] != rctx->sn)) {
-		ODP_ERR("Invalid call to odp_schedule_order_unlock\n");
+		_ODP_ERR("Invalid call to odp_schedule_order_unlock\n");
 		return;
 	}
 	atomic_store_release(&rctx->rwin->olock[lock_index],
@@ -1456,7 +1456,7 @@ static odp_schedule_group_t schedule_group_create(const char *name,
 
 	/* Validate inputs */
 	if (mask == NULL)
-		ODP_ABORT("mask is NULL\n");
+		_ODP_ABORT("mask is NULL\n");
 
 	odp_spinlock_lock(&global->sched_grp_lock);
 
@@ -1570,12 +1570,12 @@ static int schedule_group_destroy(odp_schedule_group_t group)
 	/* Check if all threads/queues have left the group */
 	for (p = 0; p < ODP_SCHED_PRIO_NUM; p++) {
 		if (!bitset_is_null(sg->thr_actual[p])) {
-			ODP_ERR("Group has threads\n");
+			_ODP_ERR("Group has threads\n");
 			ret = -1;
 			goto thrd_q_present_in_group;
 		}
 		if (p != ODP_SCHED_PRIO_PKTIN && sg->xcount[p] != 0) {
-			ODP_ERR("Group has queues\n");
+			_ODP_ERR("Group has queues\n");
 			ret = -1;
 			goto thrd_q_present_in_group;
 		}
@@ -1606,7 +1606,7 @@ static odp_schedule_group_t schedule_group_lookup(const char *name)
 
 	/* Validate inputs */
 	if (name == NULL)
-		ODP_ABORT("name or mask is NULL\n");
+		_ODP_ABORT("name or mask is NULL\n");
 
 	group = ODP_SCHED_GROUP_INVALID;
 
@@ -1639,7 +1639,7 @@ static int schedule_group_join(odp_schedule_group_t group,
 		return -1;
 
 	if (mask == NULL)
-		ODP_ABORT("name or mask is NULL\n");
+		_ODP_ABORT("name or mask is NULL\n");
 
 	odp_spinlock_lock(&global->sched_grp_lock);
 
@@ -1671,7 +1671,7 @@ static int schedule_group_leave(odp_schedule_group_t group,
 	}
 
 	if (mask == NULL)
-		ODP_ABORT("name or mask is NULL\n");
+		_ODP_ABORT("name or mask is NULL\n");
 
 	odp_spinlock_lock(&global->sched_grp_lock);
 
@@ -1710,7 +1710,7 @@ static int schedule_group_thrmask(odp_schedule_group_t group,
 	}
 
 	if (mask == NULL)
-		ODP_ABORT("name or mask is NULL\n");
+		_ODP_ABORT("name or mask is NULL\n");
 
 	odp_spinlock_lock(&global->sched_grp_lock);
 
@@ -1748,7 +1748,7 @@ static int schedule_group_info(odp_schedule_group_t group,
 	}
 
 	if (info == NULL)
-		ODP_ABORT("name or mask is NULL\n");
+		_ODP_ABORT("name or mask is NULL\n");
 
 	odp_spinlock_lock(&global->sched_grp_lock);
 
@@ -1794,7 +1794,7 @@ static int schedule_init_global(void)
 
 	global = odp_shm_addr(shm);
 	if (global == NULL) {
-		ODP_ERR("Schedule init: Shm reserve failed.\n");
+		_ODP_ERR("Schedule init: Shm reserve failed.\n");
 		return -1;
 	}
 
@@ -1817,7 +1817,7 @@ static int schedule_init_global(void)
 	pool = _odp_ishm_pool_create("sched_shm_pool", pool_size,
 				     min_alloc, max_alloc, 0);
 	if (pool == NULL) {
-		ODP_ERR("Failed to allocate shared memory pool "
+		_ODP_ERR("Failed to allocate shared memory pool "
 			"for sched\n");
 		goto failed_sched_shm_pool_create;
 	}
@@ -1846,19 +1846,19 @@ static int schedule_init_global(void)
 	odp_thrmask_zero(&mask);
 	tmp_all = odp_schedule_group_create("__group_all", &mask);
 	if (tmp_all != ODP_SCHED_GROUP_ALL) {
-		ODP_ERR("Could not create ODP_SCHED_GROUP_ALL()\n");
+		_ODP_ERR("Could not create ODP_SCHED_GROUP_ALL()\n");
 		goto failed_create_group_all;
 	}
 
 	tmp_wrkr = odp_schedule_group_create("__group_worker", &mask);
 	if (tmp_wrkr != ODP_SCHED_GROUP_WORKER) {
-		ODP_ERR("Could not create ODP_SCHED_GROUP_WORKER()\n");
+		_ODP_ERR("Could not create ODP_SCHED_GROUP_WORKER()\n");
 		goto failed_create_group_worker;
 	}
 
 	tmp_ctrl = odp_schedule_group_create("__group_control", &mask);
 	if (tmp_ctrl != ODP_SCHED_GROUP_CONTROL) {
-		ODP_ERR("Could not create ODP_SCHED_GROUP_CONTROL()\n");
+		_ODP_ERR("Could not create ODP_SCHED_GROUP_CONTROL()\n");
 		goto failed_create_group_control;
 	}
 
@@ -1891,21 +1891,21 @@ static int schedule_term_global(void)
 	 * GROUP_CONTROL groups. */
 	if (global->config_if.group_enable.all) {
 		if (odp_schedule_group_destroy(ODP_SCHED_GROUP_ALL) != 0)
-			ODP_ERR("Failed to destroy ODP_SCHED_GROUP_ALL\n");
+			_ODP_ERR("Failed to destroy ODP_SCHED_GROUP_ALL\n");
 	}
 	if (global->config_if.group_enable.worker) {
 		if (odp_schedule_group_destroy(ODP_SCHED_GROUP_WORKER) != 0)
-			ODP_ERR("Failed to destroy ODP_SCHED_GROUP_WORKER\n");
+			_ODP_ERR("Failed to destroy ODP_SCHED_GROUP_WORKER\n");
 	}
 	if (global->config_if.group_enable.control) {
 		if (odp_schedule_group_destroy(ODP_SCHED_GROUP_CONTROL) != 0)
-			ODP_ERR("Failed to destroy ODP_SCHED_GROUP_CONTROL\n");
+			_ODP_ERR("Failed to destroy ODP_SCHED_GROUP_CONTROL\n");
 	}
 
 	_odp_ishm_pool_destroy(global->sched_shm_pool);
 
 	if (odp_shm_free(global->shm)) {
-		ODP_ERR("Shm free failed for scalable scheduler");
+		_ODP_ERR("Shm free failed for scalable scheduler");
 		return -1;
 	}
 
@@ -1931,21 +1931,21 @@ static int schedule_init_local(void)
 
 	if (global->config_if.group_enable.all) {
 		if (odp_schedule_group_join(ODP_SCHED_GROUP_ALL, &mask) != 0) {
-			ODP_ERR("Failed to join ODP_SCHED_GROUP_ALL\n");
+			_ODP_ERR("Failed to join ODP_SCHED_GROUP_ALL\n");
 			goto failed_to_join_grp_all;
 		}
 	}
 	if (global->config_if.group_enable.control && thr_type == ODP_THREAD_CONTROL) {
 		if (odp_schedule_group_join(ODP_SCHED_GROUP_CONTROL,
 					    &mask) != 0) {
-			ODP_ERR("Failed to join ODP_SCHED_GROUP_CONTROL\n");
+			_ODP_ERR("Failed to join ODP_SCHED_GROUP_CONTROL\n");
 			goto failed_to_join_grp_ctrl;
 		}
 	}
 	if (global->config_if.group_enable.worker && thr_type == ODP_THREAD_WORKER) {
 		if (odp_schedule_group_join(ODP_SCHED_GROUP_WORKER,
 					    &mask) != 0) {
-			ODP_ERR("Failed to join ODP_SCHED_GROUP_WORKER\n");
+			_ODP_ERR("Failed to join ODP_SCHED_GROUP_WORKER\n");
 			goto failed_to_join_grp_wrkr;
 		}
 	}
@@ -1981,25 +1981,24 @@ static int schedule_term_local(void)
 
 	if (global->config_if.group_enable.all) {
 		if (odp_schedule_group_leave(ODP_SCHED_GROUP_ALL, &mask) != 0)
-			ODP_ERR("Failed to leave ODP_SCHED_GROUP_ALL\n");
+			_ODP_ERR("Failed to leave ODP_SCHED_GROUP_ALL\n");
 	}
 	if (global->config_if.group_enable.control && thr_type == ODP_THREAD_CONTROL) {
 		if (odp_schedule_group_leave(ODP_SCHED_GROUP_CONTROL,
 					     &mask) != 0)
-			ODP_ERR("Failed to leave ODP_SCHED_GROUP_CONTROL\n");
+			_ODP_ERR("Failed to leave ODP_SCHED_GROUP_CONTROL\n");
 	}
 	if (global->config_if.group_enable.worker && thr_type == ODP_THREAD_WORKER) {
 		if (odp_schedule_group_leave(ODP_SCHED_GROUP_WORKER,
 					     &mask) != 0)
-			ODP_ERR("Failed to leave ODP_SCHED_GROUP_WORKER\n");
+			_ODP_ERR("Failed to leave ODP_SCHED_GROUP_WORKER\n");
 	}
 
 	update_sg_membership(_odp_sched_ts);
 
 	/* Check if the thread is still part of any groups */
 	if (_odp_sched_ts->num_schedq != 0) {
-		ODP_ERR("Thread %d still part of scheduler group(s)\n",
-			_odp_sched_ts->tidx);
+		_ODP_ERR("Thread %d still part of scheduler group(s)\n", _odp_sched_ts->tidx);
 		rc = -1;
 	}
 
@@ -2026,16 +2025,16 @@ static int schedule_config(const odp_schedule_config_t *config)
 	/* Destroy disabled predefined scheduling groups. */
 	if (!config->sched_group.all) {
 		if (odp_schedule_group_destroy(ODP_SCHED_GROUP_ALL) != 0)
-			ODP_ERR("Failed to destroy ODP_SCHED_GROUP_ALL\n");
+			_ODP_ERR("Failed to destroy ODP_SCHED_GROUP_ALL\n");
 	}
 	if (!config->sched_group.worker) {
 		if (odp_schedule_group_destroy(ODP_SCHED_GROUP_WORKER) != 0)
-			ODP_ERR("Failed to destroy ODP_SCHED_GROUP_WORKER\n");
+			_ODP_ERR("Failed to destroy ODP_SCHED_GROUP_WORKER\n");
 	}
 
 	if (!config->sched_group.control) {
 		if (odp_schedule_group_destroy(ODP_SCHED_GROUP_CONTROL) != 0)
-			ODP_ERR("Failed to destroy ODP_SCHED_GROUP_CONTROL\n");
+			_ODP_ERR("Failed to destroy ODP_SCHED_GROUP_CONTROL\n");
 	}
 
 	odp_spinlock_unlock(&global->init_lock);
@@ -2131,7 +2130,7 @@ static void order_lock(void)
 		 * We are in-order when our reorder window slot number (sn)
 		 * equals the head of the reorder window.
 		 */
-		ODP_ASSERT(ts->rctx != NULL);
+		_ODP_ASSERT(ts->rctx != NULL);
 		rwin = ts->rctx->rwin;
 		sn = ts->rctx->sn;
 		sevl();
@@ -2178,12 +2177,12 @@ static void schedule_print(void)
 
 	(void)schedule_capability(&capa);
 
-	ODP_PRINT("\nScheduler debug info\n");
-	ODP_PRINT("--------------------\n");
-	ODP_PRINT("  scheduler:         scalable\n");
-	ODP_PRINT("  max groups:        %u\n", capa.max_groups);
-	ODP_PRINT("  max priorities:    %u\n", capa.max_prios);
-	ODP_PRINT("\n");
+	_ODP_PRINT("\nScheduler debug info\n");
+	_ODP_PRINT("--------------------\n");
+	_ODP_PRINT("  scheduler:         scalable\n");
+	_ODP_PRINT("  max groups:        %u\n", capa.max_groups);
+	_ODP_PRINT("  max priorities:    %u\n", capa.max_prios);
+	_ODP_PRINT("\n");
 }
 
 const schedule_fn_t _odp_schedule_scalable_fn = {

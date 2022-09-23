@@ -336,7 +336,7 @@ int _odp_cpuinfo_parser(FILE *file, system_info_t *sysinfo)
 			if (sysinfo->cpu_hz_max[id] == 0) {
 				uint64_t hz = sysinfo->default_cpu_hz_max;
 
-				ODP_PRINT("WARN: cpu[%i] uses default max "
+				_ODP_PRINT("WARN: cpu[%i] uses default max "
 					  "frequency of %" PRIu64 " Hz from "
 					  "config file\n", id, hz);
 				sysinfo->cpu_hz_max[id] = hz;

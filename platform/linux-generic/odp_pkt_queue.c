@@ -280,7 +280,7 @@ void _odp_pkt_queue_destroy(_odp_int_queue_pool_t queue_pool,
 	uint32_t queue_num = (uint32_t)pkt_queue;
 
 	if ((queue_num == 0) || (queue_num > pool->max_queue_num)) {
-		ODP_ERR("Invalid TM packet queue ID\n");
+		_ODP_ERR("Invalid TM packet queue ID\n");
 		return;
 	}
 
@@ -406,17 +406,17 @@ void _odp_pkt_queue_stats_print(_odp_int_queue_pool_t queue_pool)
 	queue_pool_t *pool;
 
 	pool = (queue_pool_t *)(uintptr_t)queue_pool;
-	ODP_PRINT("pkt_queue_stats - queue_pool=0x%" PRIX64 "\n", queue_pool);
-	ODP_PRINT("  max_queue_num=%" PRIu32 " max_queued_pkts=%" PRIu32 " "
-		  "num_queues=%" PRIu32 "\n", pool->max_queue_num,
-		  pool->max_queued_pkts, pool->num_queues);
-	ODP_PRINT("  total pkt appends=%" PRIu64 " total pkt removes=%" PRIu64
-		  " bad removes=%" PRIu64 "\n",
-		  pool->total_pkt_appends, pool->total_pkt_removes,
-		  pool->total_bad_removes);
-	ODP_PRINT("  free_list size=%u min size=%u peak size=%u\n",
-		  pool->free_list_size, pool->min_free_list_size,
-		  pool->peak_free_list_size);
+	_ODP_PRINT("pkt_queue_stats - queue_pool=0x%" PRIX64 "\n", queue_pool);
+	_ODP_PRINT("  max_queue_num=%" PRIu32 " max_queued_pkts=%" PRIu32 " "
+		   "num_queues=%" PRIu32 "\n", pool->max_queue_num,
+		   pool->max_queued_pkts, pool->num_queues);
+	_ODP_PRINT("  total pkt appends=%" PRIu64 " total pkt removes=%" PRIu64
+		   " bad removes=%" PRIu64 "\n",
+		   pool->total_pkt_appends, pool->total_pkt_removes,
+		   pool->total_bad_removes);
+	_ODP_PRINT("  free_list size=%u min size=%u peak size=%u\n",
+		   pool->free_list_size, pool->min_free_list_size,
+		   pool->peak_free_list_size);
 }
 
 void _odp_queue_pool_destroy(_odp_int_queue_pool_t queue_pool)

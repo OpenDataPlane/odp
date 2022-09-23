@@ -30,7 +30,7 @@ static inline uint16_t ll8(uint8_t *var, int mm)
 				 : "r" (var)
 				 : );
 	else
-		ODP_ABORT();
+		_ODP_ABORT();
 	return old;
 }
 
@@ -49,7 +49,7 @@ static inline uint32_t ll32(uint32_t *var, int mm)
 				 : "r" (var)
 				 : );
 	else
-		ODP_ABORT();
+		_ODP_ABORT();
 	return old;
 }
 
@@ -69,7 +69,7 @@ static inline uint32_t sc32(uint32_t *var, uint32_t neu, int mm)
 				 : "r" (neu), "r" (var)
 				 : );
 	else
-		ODP_ABORT();
+		_ODP_ABORT();
 	return ret;
 }
 
@@ -88,7 +88,7 @@ static inline uint64_t ll(uint64_t *var, int mm)
 				 : "r" (var)
 				 : );
 	else
-		ODP_ABORT();
+		_ODP_ABORT();
 	return old;
 }
 
@@ -110,7 +110,7 @@ static inline uint32_t sc(uint64_t *var, uint64_t neu, int mm)
 				 : "r" (neu), "r" (var)
 				 : );
 	else
-		ODP_ABORT();
+		_ODP_ABORT();
 	return ret;
 }
 
@@ -136,7 +136,7 @@ static inline _odp_u128_t lld(_odp_u128_t *var, int mm)
 				 : "r" (var)
 				 : );
 	else
-		ODP_ABORT();
+		_ODP_ABORT();
 	return old.i128;
 }
 
@@ -162,7 +162,7 @@ static inline uint32_t scd(_odp_u128_t *var, _odp_u128_t neu, int mm)
 				   "r" (var)
 				 : );
 	else
-		ODP_ABORT();
+		_ODP_ABORT();
 #pragma GCC diagnostic pop
 	return ret;
 }

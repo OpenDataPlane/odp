@@ -69,7 +69,7 @@ int _odp_stash_init_global(void)
 	odp_shm_t shm;
 
 	if (odp_global_ro.disable.stash) {
-		ODP_PRINT("Stash is DISABLED\n");
+		_ODP_PRINT("Stash is DISABLED\n");
 		return 0;
 	}
 
@@ -79,7 +79,7 @@ int _odp_stash_init_global(void)
 	stash_global = odp_shm_addr(shm);
 
 	if (stash_global == NULL) {
-		ODP_ERR("SHM reserve of stash global data failed\n");
+		_ODP_ERR("SHM reserve of stash global data failed\n");
 		return -1;
 	}
 
@@ -99,7 +99,7 @@ int _odp_stash_term_global(void)
 		return 0;
 
 	if (odp_shm_free(stash_global->shm)) {
-		ODP_ERR("SHM free failed\n");
+		_ODP_ERR("SHM free failed\n");
 		return -1;
 	}
 
@@ -109,7 +109,7 @@ int _odp_stash_term_global(void)
 int odp_stash_capability(odp_stash_capability_t *capa, odp_stash_type_t type)
 {
 	if (odp_global_ro.disable.stash) {
-		ODP_ERR("Stash is disabled\n");
+		_ODP_ERR("Stash is disabled\n");
 		return -1;
 	}
 
@@ -175,29 +175,29 @@ odp_stash_t odp_stash_create(const char *name, const odp_stash_param_t *param)
 	uint32_t shm_flags = 0;
 
 	if (odp_global_ro.disable.stash) {
-		ODP_ERR("Stash is disabled\n");
+		_ODP_ERR("Stash is disabled\n");
 		return ODP_STASH_INVALID;
 	}
 
 	if (param->obj_size > sizeof(uint64_t)) {
-		ODP_ERR("Too large object handle.\n");
+		_ODP_ERR("Too large object handle.\n");
 		return ODP_STASH_INVALID;
 	}
 
 	if (param->num_obj > MAX_RING_SIZE) {
-		ODP_ERR("Too many objects.\n");
+		_ODP_ERR("Too many objects.\n");
 		return ODP_STASH_INVALID;
 	}
 
 	if (name && strlen(name) >= ODP_STASH_NAME_LEN) {
-		ODP_ERR("Too long name.\n");
+		_ODP_ERR("Too long name.\n");
 		return ODP_STASH_INVALID;
 	}
 
 	index = reserve_index();
 
 	if (index < 0) {
-		ODP_ERR("Maximum number of stashes created already.\n");
+		_ODP_ERR("Maximum number of stashes created already.\n");
 		return ODP_STASH_INVALID;
 	}
 
@@ -227,7 +227,7 @@ odp_stash_t odp_stash_create(const char *name, const odp_stash_param_t *param)
 	shm = odp_shm_reserve(shm_name, shm_size, ODP_CACHE_LINE_SIZE, shm_flags);
 
 	if (shm == ODP_SHM_INVALID) {
-		ODP_ERR("SHM reserve failed.\n");
+		_ODP_ERR("SHM reserve failed.\n");
 		free_index(index);
 		return ODP_STASH_INVALID;
 	}
@@ -279,7 +279,7 @@ int odp_stash_destroy(odp_stash_t st)
 	free_index(index);
 
 	if (odp_shm_free(shm)) {
-		ODP_ERR("SHM free failed.\n");
+		_ODP_ERR("SHM free failed.\n");
 		return -1;
 	}
 
@@ -390,7 +390,7 @@ static inline int32_t stash_put_u32(odp_stash_t st, const uint32_t val[],
 	if (odp_unlikely(st == ODP_STASH_INVALID))
 		return -1;
 
-	ODP_ASSERT(stash->obj_size == sizeof(uint32_t));
+	_ODP_ASSERT(stash->obj_size == sizeof(uint32_t));
 
 	ring_u32_enq_multi(&stash->ring_u32.hdr, stash->ring_mask,
 			   (uint32_t *)(uintptr_t)val, num);
@@ -417,7 +417,7 @@ static inline int32_t stash_put_u64(odp_stash_t st, const uint64_t val[],
 	if (odp_unlikely(st == ODP_STASH_INVALID))
 		return -1;
 
-	ODP_ASSERT(stash->obj_size == sizeof(uint64_t));
+	_ODP_ASSERT(stash->obj_size == sizeof(uint64_t));
 
 	ring_u64_enq_multi(&stash->ring_u64.hdr, stash->ring_mask,
 			   (uint64_t *)(uintptr_t)val, num);
@@ -444,7 +444,7 @@ static inline int32_t stash_put_ptr(odp_stash_t st, const uintptr_t ptr[],
 	if (odp_unlikely(st == ODP_STASH_INVALID))
 		return -1;
 
-	ODP_ASSERT(stash->obj_size == sizeof(uintptr_t));
+	_ODP_ASSERT(stash->obj_size == sizeof(uintptr_t));
 
 	if (sizeof(uintptr_t) == sizeof(uint32_t))
 		ring_u32_enq_multi(&stash->ring_u32.hdr, stash->ring_mask,
@@ -553,7 +553,7 @@ int32_t odp_stash_get_u32(odp_stash_t st, uint32_t val[], int32_t num)
 	if (odp_unlikely(st == ODP_STASH_INVALID))
 		return -1;
 
-	ODP_ASSERT(stash->obj_size == sizeof(uint32_t));
+	_ODP_ASSERT(stash->obj_size == sizeof(uint32_t));
 
 	return ring_u32_deq_multi(&stash->ring_u32.hdr, stash->ring_mask, val,
 				  num);
@@ -566,7 +566,7 @@ int32_t odp_stash_get_u32_batch(odp_stash_t st, uint32_t val[], int32_t num)
 	if (odp_unlikely(st == ODP_STASH_INVALID))
 		return -1;
 
-	ODP_ASSERT(stash->obj_size == sizeof(uint32_t));
+	_ODP_ASSERT(stash->obj_size == sizeof(uint32_t));
 
 	return ring_u32_deq_batch(&stash->ring_u32.hdr, stash->ring_mask, val, num);
 }
@@ -578,7 +578,7 @@ int32_t odp_stash_get_u64(odp_stash_t st, uint64_t val[], int32_t num)
 	if (odp_unlikely(st == ODP_STASH_INVALID))
 		return -1;
 
-	ODP_ASSERT(stash->obj_size == sizeof(uint64_t));
+	_ODP_ASSERT(stash->obj_size == sizeof(uint64_t));
 
 	return ring_u64_deq_multi(&stash->ring_u64.hdr, stash->ring_mask, val,
 				  num);
@@ -591,7 +591,7 @@ int32_t odp_stash_get_u64_batch(odp_stash_t st, uint64_t val[], int32_t num)
 	if (odp_unlikely(st == ODP_STASH_INVALID))
 		return -1;
 
-	ODP_ASSERT(stash->obj_size == sizeof(uint64_t));
+	_ODP_ASSERT(stash->obj_size == sizeof(uint64_t));
 
 	return ring_u64_deq_batch(&stash->ring_u64.hdr, stash->ring_mask, val, num);
 }
@@ -603,7 +603,7 @@ int32_t odp_stash_get_ptr(odp_stash_t st, uintptr_t ptr[], int32_t num)
 	if (odp_unlikely(st == ODP_STASH_INVALID))
 		return -1;
 
-	ODP_ASSERT(stash->obj_size == sizeof(uintptr_t));
+	_ODP_ASSERT(stash->obj_size == sizeof(uintptr_t));
 
 	if (sizeof(uintptr_t) == sizeof(uint32_t))
 		return ring_u32_deq_multi(&stash->ring_u32.hdr,
@@ -623,7 +623,7 @@ int32_t odp_stash_get_ptr_batch(odp_stash_t st, uintptr_t ptr[], int32_t num)
 	if (odp_unlikely(st == ODP_STASH_INVALID))
 		return -1;
 
-	ODP_ASSERT(stash->obj_size == sizeof(uintptr_t));
+	_ODP_ASSERT(stash->obj_size == sizeof(uintptr_t));
 
 	if (sizeof(uintptr_t) == sizeof(uint32_t))
 		return ring_u32_deq_batch(&stash->ring_u32.hdr, stash->ring_mask,
@@ -663,19 +663,19 @@ void odp_stash_print(odp_stash_t st)
 	stash_t *stash = (stash_t *)(uintptr_t)st;
 
 	if (st == ODP_STASH_INVALID) {
-		ODP_ERR("Bad stash handle\n");
+		_ODP_ERR("Bad stash handle\n");
 		return;
 	}
 
-	ODP_PRINT("\nStash info\n");
-	ODP_PRINT("----------\n");
-	ODP_PRINT("  handle          0x%" PRIx64 "\n", odp_stash_to_u64(st));
-	ODP_PRINT("  name            %s\n", stash->name);
-	ODP_PRINT("  index           %i\n", stash->index);
-	ODP_PRINT("  obj size        %u\n", stash->obj_size);
-	ODP_PRINT("  obj count       %u\n", stash_obj_count(stash));
-	ODP_PRINT("  ring size       %u\n", stash->ring_mask + 1);
-	ODP_PRINT("\n");
+	_ODP_PRINT("\nStash info\n");
+	_ODP_PRINT("----------\n");
+	_ODP_PRINT("  handle          0x%" PRIx64 "\n", odp_stash_to_u64(st));
+	_ODP_PRINT("  name            %s\n", stash->name);
+	_ODP_PRINT("  index           %i\n", stash->index);
+	_ODP_PRINT("  obj size        %u\n", stash->obj_size);
+	_ODP_PRINT("  obj count       %u\n", stash_obj_count(stash));
+	_ODP_PRINT("  ring size       %u\n", stash->ring_mask + 1);
+	_ODP_PRINT("\n");
 }
 
 int odp_stash_stats(odp_stash_t st, odp_stash_stats_t *stats)
@@ -683,7 +683,7 @@ int odp_stash_stats(odp_stash_t st, odp_stash_stats_t *stats)
 	stash_t *stash = (stash_t *)(uintptr_t)st;
 
 	if (st == ODP_STASH_INVALID) {
-		ODP_ERR("Bad stash handle\n");
+		_ODP_ERR("Bad stash handle\n");
 		return -1;
 	}
 

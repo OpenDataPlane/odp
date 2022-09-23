@@ -157,7 +157,7 @@ static inline void remove_from_list(pool_t *bpool, uint8_t order,
 	}
 
 remove_from_list_error:
-	ODP_ERR("List corrupted\n");
+	_ODP_ERR("List corrupted\n");
 }
 
 /*
@@ -227,13 +227,13 @@ static pool_t *_odp_ishmbud_pool_create(const char *pool_name, int store_idx,
 	blk_idx = _odp_ishm_reserve(pool_name, total_sz, -1,
 				    ODP_CACHE_LINE_SIZE, 0, flags, 0);
 	if (blk_idx < 0) {
-		ODP_ERR("_odp_ishm_reserve failed.");
+		_ODP_ERR("_odp_ishm_reserve failed.");
 		return NULL;
 	}
 
 	bpool = _odp_ishm_address(blk_idx);
 	if (bpool == NULL) {
-		ODP_ERR("_odp_ishm_address failed.");
+		_ODP_ERR("_odp_ishm_address failed.");
 		return NULL;
 	}
 
@@ -284,7 +284,7 @@ static void *_odp_ishmbud_alloc(pool_t *bpool, uint64_t size)
 
 	/* if size is zero or too big reject: */
 	if ((!size) && (size > (1ULL << bpool->ctrl.order))) {
-		ODP_ERR("Invalid alloc size (0 or larger than whole pool)\n");
+		_ODP_ERR("Invalid alloc size (0 or larger than whole pool)\n");
 		return NULL;
 	}
 
@@ -314,7 +314,7 @@ static void *_odp_ishmbud_alloc(pool_t *bpool, uint64_t size)
 
 	if (!bblock) {
 		odp_spinlock_unlock(&bpool->ctrl.lock);
-		ODP_ERR("Out of memory. (Buddy pool full)\n");
+		_ODP_ERR("Out of memory. (Buddy pool full)\n");
 		return NULL;
 	}
 
@@ -366,7 +366,7 @@ static int _odp_ishmbud_free(pool_t *bpool, void *addr)
 	if (((uintptr_t)addr < user_start) ||
 	    ((uintptr_t)addr > user_stop)  ||
 	    (((uintptr_t)addr - user_start) & mask)) {
-		ODP_ERR("Invalid address to be freed\n");
+		_ODP_ERR("Invalid address to be freed\n");
 		return -1;
 	}
 
@@ -378,7 +378,7 @@ static int _odp_ishmbud_free(pool_t *bpool, void *addr)
 	nr = get_bblock_nr(bpool, bblock);
 	order = bpool->ctrl.alloced_order[nr];
 	if (order == BBLOCK_FREE) {
-		ODP_ERR("Double free error\n");
+		_ODP_ERR("Double free error\n");
 		odp_spinlock_unlock(&bpool->ctrl.lock);
 		return -1;
 	}
@@ -470,13 +470,13 @@ static pool_t *_odp_ishmslab_pool_create(const char *pool_name, int store_idx,
 	blk_idx = _odp_ishm_reserve(pool_name, total_sz, -1,
 				    ODP_CACHE_LINE_SIZE, 0, flags, 0);
 	if (blk_idx < 0) {
-		ODP_ERR("_odp_ishm_reserve failed.");
+		_ODP_ERR("_odp_ishm_reserve failed.");
 		return NULL;
 	}
 
 	spool = _odp_ishm_address(blk_idx);
 	if (spool == NULL) {
-		ODP_ERR("_odp_ishm_address failed.");
+		_ODP_ERR("_odp_ishm_address failed.");
 		return NULL;
 	}
 
@@ -525,7 +525,7 @@ static void *_odp_ishmslab_alloc(pool_t *spool, uint64_t size)
 	ret = spool->ctrl.free_head;
 	if (!ret) {
 		odp_spinlock_unlock(&spool->ctrl.lock);
-		ODP_ERR("Out of memory. (Slab pool full)\n");
+		_ODP_ERR("Out of memory. (Slab pool full)\n");
 		return NULL;
 	}
 
@@ -555,7 +555,7 @@ static int _odp_ishmslab_free(pool_t *spool, void *addr)
 	if (((uintptr_t)addr < user_start) ||
 	    ((uintptr_t)addr > user_stop)  ||
 	    (((uintptr_t)addr - user_start) % spool->ctrl.element_sz)) {
-		ODP_ERR("Invalid address to be freed\n");
+		_ODP_ERR("Invalid address to be freed\n");
 		return -1;
 	}
 
@@ -579,7 +579,7 @@ pool_t *_odp_ishm_pool_create(const char *pool_name, uint64_t size,
 	uint64_t real_pool_sz;
 
 	if (min_alloc > max_alloc) {
-		ODP_ERR("invalid parameter: min_alloc > max_alloc");
+		_ODP_ERR("invalid parameter: min_alloc > max_alloc");
 		return NULL;
 	}
 
@@ -589,7 +589,7 @@ pool_t *_odp_ishm_pool_create(const char *pool_name, uint64_t size,
 			break;
 	}
 	if (store_idx == MAX_NB_POOL) {
-		ODP_ERR("Max number of pool reached (MAX_NB_POOL)");
+		_ODP_ERR("Max number of pool reached (MAX_NB_POOL)");
 		return NULL;
 	}
 

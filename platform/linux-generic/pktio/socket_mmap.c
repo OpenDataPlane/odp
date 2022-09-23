@@ -114,14 +114,14 @@ static int mmap_pkt_socket(void)
 
 	if (sock == -1) {
 		_odp_errno = errno;
-		ODP_ERR("socket(SOCK_RAW): %s\n", strerror(errno));
+		_ODP_ERR("socket(SOCK_RAW): %s\n", strerror(errno));
 		return -1;
 	}
 
 	ret = setsockopt(sock, SOL_PACKET, PACKET_VERSION, &ver, sizeof(ver));
 	if (ret == -1) {
 		_odp_errno = errno;
-		ODP_ERR("setsockopt(PACKET_VERSION): %s\n", strerror(errno));
+		_ODP_ERR("setsockopt(PACKET_VERSION): %s\n", strerror(errno));
 		close(sock);
 		return -1;
 	}
@@ -187,7 +187,7 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 		if (odp_unlikely(pkt_len > pkt_sock->mtu)) {
 			tp_hdr->tp_status = TP_STATUS_KERNEL;
 			frame_num = next_frame_num;
-			ODP_DBG("dropped oversized packet\n");
+			_ODP_DBG("dropped oversized packet\n");
 			continue;
 		}
 
@@ -251,7 +251,7 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 			static int warning_printed;
 
 			if (warning_printed == 0) {
-				ODP_DBG("Original TPID value lost. Using 0x8100 for single tagged and 0x88a8 for double tagged.\n");
+				_ODP_DBG("Original TPID value lost. Using 0x8100 for single tagged and 0x88a8 for double tagged.\n");
 				warning_printed = 1;
 			}
 			type2 = (uint16_t *)(uintptr_t)(mac + (2 * _ODP_ETHADDR_LEN) + vlan_len);
@@ -347,7 +347,7 @@ static inline int pkt_mmap_v2_tx(pktio_entry_t *pktio_entry, int sock,
 
 		if (tp_status != TP_STATUS_AVAILABLE) {
 			if (tp_status == TP_STATUS_WRONG_FORMAT) {
-				ODP_ERR("Socket mmap: wrong format\n");
+				_ODP_ERR("Socket mmap: wrong format\n");
 				return -1;
 			}
 
@@ -389,8 +389,7 @@ static inline int pkt_mmap_v2_tx(pktio_entry_t *pktio_entry, int sock,
 
 		/* Returns -1 when nothing is sent (send() would block) */
 		if (ret < 0 && errno != EWOULDBLOCK) {
-			ODP_ERR("Socket mmap: send failed, ret %i, errno %i\n",
-				ret, errno);
+			_ODP_ERR("Socket mmap: send failed, ret %i, errno %i\n", ret, errno);
 			return -1;
 		}
 
@@ -404,7 +403,7 @@ static inline int pkt_mmap_v2_tx(pktio_entry_t *pktio_entry, int sock,
 				break;
 
 			if (tp_status == TP_STATUS_WRONG_FORMAT) {
-				ODP_ERR("Socket mmap: wrong format\n");
+				_ODP_ERR("Socket mmap: wrong format\n");
 				break;
 			}
 		}
@@ -462,7 +461,7 @@ static int mmap_setup_ring(pkt_sock_mmap_t *pkt_sock, struct ring *ring,
 	shm = odp_shm_reserve(NULL, ring_size, ODP_CACHE_LINE_SIZE, flags);
 
 	if (shm == ODP_SHM_INVALID) {
-		ODP_ERR("Reserving shm failed\n");
+		_ODP_ERR("Reserving shm failed\n");
 		return -1;
 	}
 	ring->shm = shm;
@@ -477,21 +476,21 @@ static int mmap_setup_ring(pkt_sock_mmap_t *pkt_sock, struct ring *ring,
 	ring->flen   = ring->req.tp_frame_size;
 	ring->rd_len = ring_size;
 
-	ODP_DBG("  tp_block_size %u\n", ring->req.tp_block_size);
-	ODP_DBG("  tp_block_nr   %u\n", ring->req.tp_block_nr);
-	ODP_DBG("  tp_frame_size %u\n", ring->req.tp_frame_size);
-	ODP_DBG("  tp_frame_nr   %u\n", ring->req.tp_frame_nr);
+	_ODP_DBG("  tp_block_size %u\n", ring->req.tp_block_size);
+	_ODP_DBG("  tp_block_nr   %u\n", ring->req.tp_block_nr);
+	_ODP_DBG("  tp_frame_size %u\n", ring->req.tp_frame_size);
+	_ODP_DBG("  tp_frame_nr   %u\n", ring->req.tp_frame_nr);
 
 	ret = setsockopt(sock, SOL_PACKET, type, &ring->req, sizeof(ring->req));
 	if (ret == -1) {
 		_odp_errno = errno;
-		ODP_ERR("setsockopt(pkt mmap): %s\n", strerror(errno));
+		_ODP_ERR("setsockopt(pkt mmap): %s\n", strerror(errno));
 		return -1;
 	}
 
 	ring->rd = odp_shm_addr(shm);
 	if (!ring->rd) {
-		ODP_ERR("Reading shm addr failed\n");
+		_ODP_ERR("Reading shm addr failed\n");
 		return -1;
 	}
 
@@ -516,7 +515,7 @@ static int mmap_sock(pkt_sock_mmap_t *pkt_sock)
 
 	if (pkt_sock->mmap_base == MAP_FAILED) {
 		_odp_errno = errno;
-		ODP_ERR("mmap rx&tx buffer failed: %s\n", strerror(errno));
+		_ODP_ERR("mmap rx&tx buffer failed: %s\n", strerror(errno));
 		return -1;
 	}
 
@@ -572,7 +571,7 @@ static int mmap_bind_sock(pkt_sock_mmap_t *pkt_sock, const char *netdev)
 		   sizeof(pkt_sock->ll));
 	if (ret == -1) {
 		_odp_errno = errno;
-		ODP_ERR("bind(to IF): %s\n", strerror(errno));
+		_ODP_ERR("bind(to IF): %s\n", strerror(errno));
 		return -1;
 	}
 
@@ -586,13 +585,13 @@ static int sock_mmap_close(pktio_entry_t *entry)
 
 	ret = mmap_unmap_sock(pkt_sock);
 	if (ret != 0) {
-		ODP_ERR("mmap_unmap_sock() %s\n", strerror(errno));
+		_ODP_ERR("mmap_unmap_sock() %s\n", strerror(errno));
 		return -1;
 	}
 
 	if (pkt_sock->sockfd != -1 && close(pkt_sock->sockfd) != 0) {
 		_odp_errno = errno;
-		ODP_ERR("close(sockfd): %s\n", strerror(errno));
+		_ODP_ERR("close(sockfd): %s\n", strerror(errno));
 		return -1;
 	}
 
@@ -643,14 +642,14 @@ static int sock_mmap_open(odp_pktio_t id ODP_UNUSED,
 	if (pkt_sock->mtu > _ODP_SOCKET_MTU_MAX)
 		pkt_sock->mtu_max =  pkt_sock->mtu;
 
-	ODP_DBG("MTU size: %i\n", pkt_sock->mtu);
+	_ODP_DBG("MTU size: %i\n", pkt_sock->mtu);
 
-	ODP_DBG("TX ring setup:\n");
+	_ODP_DBG("TX ring setup:\n");
 	ret = mmap_setup_ring(pkt_sock, &pkt_sock->tx_ring, PACKET_TX_RING);
 	if (ret != 0)
 		goto error;
 
-	ODP_DBG("RX ring setup:\n");
+	_ODP_DBG("RX ring setup:\n");
 	ret = mmap_setup_ring(pkt_sock, &pkt_sock->rx_ring, PACKET_RX_RING);
 	if (ret != 0)
 		goto error;
@@ -666,14 +665,14 @@ static int sock_mmap_open(odp_pktio_t id ODP_UNUSED,
 	if_idx = if_nametoindex(netdev);
 	if (if_idx == 0) {
 		_odp_errno = errno;
-		ODP_ERR("if_nametoindex(): %s\n", strerror(errno));
+		_ODP_ERR("if_nametoindex(): %s\n", strerror(errno));
 		goto error;
 	}
 
 	pktio_entry->stats_type = _odp_sock_stats_type_fd(pktio_entry,
 							  pkt_sock->sockfd);
 	if (pktio_entry->stats_type == STATS_UNSUPPORTED)
-		ODP_DBG("pktio: %s unsupported stats\n", pktio_entry->name);
+		_ODP_DBG("pktio: %s unsupported stats\n", pktio_entry->name);
 
 	ret = _odp_sock_stats_reset_fd(pktio_entry,
 				       pkt_priv(pktio_entry)->sockfd);
@@ -934,11 +933,11 @@ static int sock_mmap_extra_stat_counter(pktio_entry_t *pktio_entry, uint32_t id,
 static int sock_mmap_init_global(void)
 {
 	if (getenv("ODP_PKTIO_DISABLE_SOCKET_MMAP")) {
-		ODP_PRINT("PKTIO: socket mmap skipped,"
+		_ODP_PRINT("PKTIO: socket mmap skipped,"
 				" enabled export ODP_PKTIO_DISABLE_SOCKET_MMAP=1.\n");
 		disable_pktio = 1;
 	} else  {
-		ODP_PRINT("PKTIO: initialized socket mmap,"
+		_ODP_PRINT("PKTIO: initialized socket mmap,"
 				" use export ODP_PKTIO_DISABLE_SOCKET_MMAP=1 to disable.\n");
 	}
 	return 0;

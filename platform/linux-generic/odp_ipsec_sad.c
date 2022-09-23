@@ -133,7 +133,7 @@ static inline odp_ipsec_sa_t ipsec_sa_index_to_handle(uint32_t ipsec_sa_idx)
 
 ipsec_sa_t *_odp_ipsec_sa_entry_from_hdl(odp_ipsec_sa_t sa)
 {
-	ODP_ASSERT(ODP_IPSEC_SA_INVALID != sa);
+	_ODP_ASSERT(ODP_IPSEC_SA_INVALID != sa);
 	return ipsec_sa_entry_from_hdl(sa);
 }
 
@@ -171,7 +171,7 @@ int _odp_ipsec_sad_init_global(void)
 	crypto_capa.max_sessions = 0;
 
 	if (odp_crypto_capability(&crypto_capa)) {
-		ODP_ERR("odp_crypto_capability() failed\n");
+		_ODP_ERR("odp_crypto_capability() failed\n");
 		return -1;
 	}
 	if (max_num_sa > crypto_capa.max_sessions)
@@ -250,8 +250,7 @@ int _odp_ipsec_sad_term_global(void)
 
 		if (odp_atomic_load_u32(&ipsec_sa->state) !=
 		    IPSEC_SA_STATE_FREE) {
-			ODP_ERR("Not destroyed ipsec_sa: %u\n",
-				ipsec_sa->ipsec_sa_idx);
+			_ODP_ERR("Not destroyed ipsec_sa: %u\n", ipsec_sa->ipsec_sa_idx);
 			rc = -1;
 		}
 		odp_atomic_store_u32(&ipsec_sa->state, IPSEC_SA_STATE_FREE);
@@ -259,7 +258,7 @@ int _odp_ipsec_sad_term_global(void)
 
 	ret = odp_shm_free(ipsec_sa_tbl->shm);
 	if (ret < 0) {
-		ODP_ERR("shm free failed");
+		_ODP_ERR("shm free failed");
 		rc = -1;
 	}
 
@@ -338,7 +337,7 @@ ipsec_sa_t *_odp_ipsec_sa_use(odp_ipsec_sa_t sa)
 {
 	ipsec_sa_t *ipsec_sa;
 
-	ODP_ASSERT(ODP_IPSEC_SA_INVALID != sa);
+	_ODP_ASSERT(ODP_IPSEC_SA_INVALID != sa);
 
 	ipsec_sa = ipsec_sa_entry_from_hdl(sa);
 
@@ -354,7 +353,7 @@ void _odp_ipsec_sa_unuse(ipsec_sa_t *ipsec_sa)
 	odp_ipsec_sa_t sa;
 	odp_ipsec_warn_t warn = { .all = 0 };
 
-	ODP_ASSERT(NULL != ipsec_sa);
+	_ODP_ASSERT(NULL != ipsec_sa);
 
 	queue = ipsec_sa->queue;
 	sa = ipsec_sa->ipsec_sa_hdl;
@@ -433,7 +432,7 @@ static uint32_t esp_block_len_to_mask(uint32_t block_len)
 	if (block_len < 4)
 		block_len = 4;
 
-	ODP_ASSERT(_ODP_CHECK_IS_POWER2(block_len));
+	_ODP_ASSERT(_ODP_CHECK_IS_POWER2(block_len));
 	return block_len - 1;
 }
 
@@ -444,8 +443,8 @@ static int ipsec_antireplay_init(ipsec_sa_t *ipsec_sa,
 	uint16_t num_bkts = 0;
 
 	if (param->inbound.antireplay_ws > IPSEC_AR_WIN_SIZE_MAX) {
-		ODP_ERR("Anti-replay window size %" PRIu32 " is not supported.\n",
-			param->inbound.antireplay_ws);
+		_ODP_ERR("Anti-replay window size %" PRIu32 " is not supported.\n",
+			 param->inbound.antireplay_ws);
 		return -1;
 	}
 
@@ -499,7 +498,7 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 
 	ipsec_sa = ipsec_sa_reserve();
 	if (NULL == ipsec_sa) {
-		ODP_ERR("No more free SA\n");
+		_ODP_ERR("No more free SA\n");
 		return ODP_IPSEC_SA_INVALID;
 	}
 
@@ -734,13 +733,12 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 
 	if (ipsec_sa->salt_length) {
 		if (ipsec_sa->salt_length > IPSEC_MAX_SALT_LEN) {
-			ODP_ERR("IPSEC_MAX_SALT_LEN too small\n");
+			_ODP_ERR("IPSEC_MAX_SALT_LEN too small\n");
 			goto error;
 		}
 
 		if (ipsec_sa->salt_length != salt_param->length) {
-			ODP_ERR("Bad extra keying material length: %i\n",
-				salt_param->length);
+			_ODP_ERR("Bad extra keying material length: %i\n", salt_param->length);
 			goto error;
 		}
 
@@ -813,14 +811,13 @@ int odp_ipsec_sa_destroy(odp_ipsec_sa_t sa)
 	uint32_t state = odp_atomic_load_u32(&ipsec_sa->state);
 
 	if (IPSEC_SA_STATE_DISABLE != state) {
-		ODP_ERR("Distroying not disabled ipsec_sa: %u\n",
-			ipsec_sa->ipsec_sa_idx);
+		_ODP_ERR("Distroying not disabled ipsec_sa: %u\n", ipsec_sa->ipsec_sa_idx);
 		return -1;
 	}
 
 	if (odp_crypto_session_destroy(ipsec_sa->session) < 0) {
-		ODP_ERR("Error destroying crypto session for ipsec_sa: %u\n",
-			ipsec_sa->ipsec_sa_idx);
+		_ODP_ERR("Error destroying crypto session for ipsec_sa: %u\n",
+			 ipsec_sa->ipsec_sa_idx);
 		rc = -1;
 	}
 
@@ -846,7 +843,7 @@ int odp_ipsec_sa_mtu_update(odp_ipsec_sa_t sa, uint32_t mtu)
 	ipsec_sa_t *ipsec_sa;
 
 	ipsec_sa = ipsec_sa_entry_from_hdl(sa);
-	ODP_ASSERT(NULL != ipsec_sa);
+	_ODP_ASSERT(NULL != ipsec_sa);
 	odp_atomic_store_u32(&ipsec_sa->out.mtu, mtu);
 	return 0;
 }
@@ -1235,8 +1232,8 @@ int odp_ipsec_sa_info(odp_ipsec_sa_t sa, odp_ipsec_sa_info_t  *sa_info)
 
 	ipsec_sa = _odp_ipsec_sa_entry_from_hdl(sa);
 
-	ODP_ASSERT(ipsec_sa != NULL);
-	ODP_ASSERT(sa_info != NULL);
+	_ODP_ASSERT(ipsec_sa != NULL);
+	_ODP_ASSERT(sa_info != NULL);
 
 	memset(sa_info, 0, sizeof(*sa_info));
 	param = &sa_info->param;

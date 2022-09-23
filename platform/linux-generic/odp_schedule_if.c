@@ -51,7 +51,7 @@ int odp_schedule_config(const odp_schedule_config_t *config)
 	odp_schedule_config_t defconfig;
 
 	if (odp_global_rw->schedule_configured) {
-		ODP_ERR("Scheduler has been configured already\n");
+		_ODP_ERR("Scheduler has been configured already\n");
 		return -1;
 	}
 
@@ -70,7 +70,7 @@ int odp_schedule_config(const odp_schedule_config_t *config)
 
 odp_event_t odp_schedule(odp_queue_t *from, uint64_t wait)
 {
-	ODP_ASSERT(odp_global_rw->schedule_configured);
+	_ODP_ASSERT(odp_global_rw->schedule_configured);
 
 	return _odp_sched_api->schedule(from, wait);
 }
@@ -78,7 +78,7 @@ odp_event_t odp_schedule(odp_queue_t *from, uint64_t wait)
 int odp_schedule_multi(odp_queue_t *from, uint64_t wait, odp_event_t events[],
 		       int num)
 {
-	ODP_ASSERT(odp_global_rw->schedule_configured);
+	_ODP_ASSERT(odp_global_rw->schedule_configured);
 
 	return _odp_sched_api->schedule_multi(from, wait, events, num);
 }
@@ -220,7 +220,7 @@ int _odp_schedule_init_global(void)
 	if (sched == NULL || !strcmp(sched, "default"))
 		sched = _ODP_SCHEDULE_DEFAULT;
 
-	ODP_PRINT("Using scheduler '%s'\n", sched);
+	_ODP_PRINT("Using scheduler '%s'\n", sched);
 
 	if (!strcmp(sched, "basic")) {
 		_odp_sched_id = _ODP_SCHED_ID_BASIC;
@@ -235,7 +235,7 @@ int _odp_schedule_init_global(void)
 		_odp_sched_fn = &_odp_schedule_scalable_fn;
 		_odp_sched_api = &_odp_schedule_scalable_api;
 	} else {
-		ODP_ABORT("Unknown scheduler specified via ODP_SCHEDULER\n");
+		_ODP_ABORT("Unknown scheduler specified via ODP_SCHEDULER\n");
 		return -1;
 	}
 

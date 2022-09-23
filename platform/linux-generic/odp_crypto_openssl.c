@@ -384,7 +384,7 @@ void packet_hmac(odp_packet_t pkt,
 	uint32_t offset = param->auth_range.offset;
 	uint32_t len   = param->auth_range.length;
 
-	ODP_ASSERT(offset + len <= odp_packet_len(pkt));
+	_ODP_ASSERT(offset + len <= odp_packet_len(pkt));
 
 	/* Reinitialize HMAC calculation without resetting the key */
 	HMAC_Init_ex(ctx, NULL, 0, NULL, NULL);
@@ -434,9 +434,9 @@ void packet_aes_xcbc_mac(odp_packet_t pkt,
 	void *mapaddr;
 	uint8_t *data = NULL;
 
-	ODP_ASSERT(offset + len <= odp_packet_len(pkt));
-	ODP_ASSERT(session != NULL);
-	ODP_ASSERT(sizeof(session->auth.key) >= 3 * AES_KEY_LENGTH);
+	_ODP_ASSERT(offset + len <= odp_packet_len(pkt));
+	_ODP_ASSERT(session != NULL);
+	_ODP_ASSERT(sizeof(session->auth.key) >= 3 * AES_KEY_LENGTH);
 
 	ctx = EVP_CIPHER_CTX_new();
 	EVP_EncryptInit_ex(ctx, session->auth.evp_cipher,
@@ -639,7 +639,7 @@ void packet_cmac(odp_packet_t pkt,
 	uint32_t len   = param->auth_range.length;
 	size_t outlen;
 
-	ODP_ASSERT(offset + len <= odp_packet_len(pkt));
+	_ODP_ASSERT(offset + len <= odp_packet_len(pkt));
 
 	/* Reinitialize CMAC calculation without resetting the key */
 	CMAC_Init(ctx, NULL, 0, NULL, NULL);
@@ -724,10 +724,10 @@ int packet_cmac_eia2(odp_packet_t pkt,
 		return ODP_CRYPTO_ALG_ERR_IV_INVALID;
 #else
 	iv_ptr = param->auth_iv_ptr;
-	ODP_ASSERT(session->p.auth_iv_len == 0 || iv_ptr != NULL);
+	_ODP_ASSERT(session->p.auth_iv_len == 0 || iv_ptr != NULL);
 #endif
 
-	ODP_ASSERT(offset + len <= odp_packet_len(pkt));
+	_ODP_ASSERT(offset + len <= odp_packet_len(pkt));
 
 	/* Reinitialize CMAC calculation without resetting the key */
 	CMAC_Init(ctx, NULL, 0, NULL, NULL);
@@ -814,7 +814,7 @@ void packet_digest(odp_packet_t pkt,
 	uint32_t offset = param->auth_range.offset;
 	uint32_t len   = param->auth_range.length;
 
-	ODP_ASSERT(offset + len <= odp_packet_len(pkt));
+	_ODP_ASSERT(offset + len <= odp_packet_len(pkt));
 
 	EVP_DigestInit_ex(ctx,
 			  session->auth.evp_md,
@@ -892,7 +892,7 @@ int internal_aad(EVP_CIPHER_CTX *ctx,
 	int dummy_len;
 	int ret;
 
-	ODP_ASSERT(offset + len <= odp_packet_len(pkt));
+	_ODP_ASSERT(offset + len <= odp_packet_len(pkt));
 
 	while (len > 0) {
 		uint32_t seglen = 0; /* GCC */
@@ -935,7 +935,7 @@ static inline int internal_crypt(EVP_CIPHER_CTX *ctx,
 	int out_len;
 	int rc;
 
-	ODP_ASSERT(in_pos + in_len <= odp_packet_len(pkt));
+	_ODP_ASSERT(in_pos + in_len <= odp_packet_len(pkt));
 
 	/*
 	 * In the following loop we process one packet segment per iteration.
@@ -1002,7 +1002,7 @@ static inline int internal_crypt(EVP_CIPHER_CTX *ctx,
 				continue;
 			}
 		}
-		ODP_ASSERT(buffered == 0);
+		_ODP_ASSERT(buffered == 0);
 
 		if (in_len > 0) {
 			/*
@@ -1014,7 +1014,7 @@ static inline int internal_crypt(EVP_CIPHER_CTX *ctx,
 			rc = EVP_update(ctx, in_addr, &out_len, in_addr, len);
 			if (odp_unlikely(rc != 1))
 				goto err;
-			ODP_ASSERT(_ODP_CHECK_IS_POWER2(block_len));
+			_ODP_ASSERT(_ODP_CHECK_IS_POWER2(block_len));
 			buffered = len & (block_len - 1);
 			if (odp_unlikely(out_len + buffered != len))
 				goto err;
@@ -1034,7 +1034,7 @@ static inline int internal_crypt(EVP_CIPHER_CTX *ctx,
 		return 0;
 	return rc;
 err:
-	ODP_ERR("internal error\n");
+	_ODP_ERR("internal error\n");
 	(void)EVP_final(ctx, block, &out_len);
 	return 0;
 }
@@ -1085,7 +1085,7 @@ odp_crypto_alg_err_t cipher_encrypt(odp_packet_t pkt,
 		return ODP_CRYPTO_ALG_ERR_IV_INVALID;
 #else
 	iv_ptr = param->cipher_iv_ptr;
-	ODP_ASSERT(session->p.cipher_iv_len == 0 || iv_ptr != NULL);
+	_ODP_ASSERT(session->p.cipher_iv_len == 0 || iv_ptr != NULL);
 #endif
 
 	EVP_EncryptInit_ex(ctx, NULL, NULL, NULL, iv_ptr);
@@ -1124,7 +1124,7 @@ odp_crypto_alg_err_t cipher_decrypt(odp_packet_t pkt,
 		return ODP_CRYPTO_ALG_ERR_IV_INVALID;
 #else
 	iv_ptr = param->cipher_iv_ptr;
-	ODP_ASSERT(session->p.cipher_iv_len == 0 || iv_ptr != NULL);
+	_ODP_ASSERT(session->p.cipher_iv_len == 0 || iv_ptr != NULL);
 #endif
 
 	EVP_DecryptInit_ex(ctx, NULL, NULL, NULL, iv_ptr);
@@ -1192,7 +1192,7 @@ odp_crypto_alg_err_t cipher_encrypt_bits(odp_packet_t pkt,
 		return ODP_CRYPTO_ALG_ERR_IV_INVALID;
 #else
 	iv_ptr = param->cipher_iv_ptr;
-	ODP_ASSERT(session->p.cipher_iv_len == 0 || iv_ptr != NULL);
+	_ODP_ASSERT(session->p.cipher_iv_len == 0 || iv_ptr != NULL);
 #endif
 	EVP_EncryptInit_ex(ctx, NULL, NULL, NULL, iv_ptr);
 
@@ -1236,7 +1236,7 @@ odp_crypto_alg_err_t cipher_decrypt_bits(odp_packet_t pkt,
 		return ODP_CRYPTO_ALG_ERR_IV_INVALID;
 #else
 	iv_ptr = param->cipher_iv_ptr;
-	ODP_ASSERT(session->p.cipher_iv_len == 0 || iv_ptr != NULL);
+	_ODP_ASSERT(session->p.cipher_iv_len == 0 || iv_ptr != NULL);
 #endif
 	EVP_DecryptInit_ex(ctx, NULL, NULL, NULL, iv_ptr);
 
@@ -1317,7 +1317,7 @@ odp_crypto_alg_err_t aes_gcm_encrypt(odp_packet_t pkt,
 		return ODP_CRYPTO_ALG_ERR_IV_INVALID;
 #else
 	iv_ptr = param->cipher_iv_ptr;
-	ODP_ASSERT(session->p.cipher_iv_len == 0 || iv_ptr != NULL);
+	_ODP_ASSERT(session->p.cipher_iv_len == 0 || iv_ptr != NULL);
 #endif
 
 	EVP_EncryptInit_ex(ctx, NULL, NULL, NULL, iv_ptr);
@@ -1372,7 +1372,7 @@ odp_crypto_alg_err_t aes_gcm_decrypt(odp_packet_t pkt,
 		return ODP_CRYPTO_ALG_ERR_IV_INVALID;
 #else
 	iv_ptr = param->cipher_iv_ptr;
-	ODP_ASSERT(session->p.cipher_iv_len == 0 || iv_ptr != NULL);
+	_ODP_ASSERT(session->p.cipher_iv_len == 0 || iv_ptr != NULL);
 #endif
 
 	EVP_DecryptInit_ex(ctx, NULL, NULL, NULL, iv_ptr);
@@ -1453,7 +1453,7 @@ odp_crypto_alg_err_t aes_gmac_gen(odp_packet_t pkt,
 		return ODP_CRYPTO_ALG_ERR_IV_INVALID;
 #else
 	iv_ptr = param->auth_iv_ptr;
-	ODP_ASSERT(session->p.auth_iv_len == 0 || iv_ptr != NULL);
+	_ODP_ASSERT(session->p.auth_iv_len == 0 || iv_ptr != NULL);
 #endif
 
 	EVP_EncryptInit_ex(ctx, NULL, NULL, NULL, iv_ptr);
@@ -1500,7 +1500,7 @@ odp_crypto_alg_err_t aes_gmac_check(odp_packet_t pkt,
 		return ODP_CRYPTO_ALG_ERR_IV_INVALID;
 #else
 	iv_ptr = param->auth_iv_ptr;
-	ODP_ASSERT(session->p.auth_iv_len == 0 || iv_ptr != NULL);
+	_ODP_ASSERT(session->p.auth_iv_len == 0 || iv_ptr != NULL);
 #endif
 
 	EVP_DecryptInit_ex(ctx, NULL, NULL, NULL, iv_ptr);
@@ -1585,7 +1585,7 @@ odp_crypto_alg_err_t aes_ccm_encrypt(odp_packet_t pkt,
 		return ODP_CRYPTO_ALG_ERR_IV_INVALID;
 #else
 	iv_ptr = param->cipher_iv_ptr;
-	ODP_ASSERT(session->p.cipher_iv_len == 0 || iv_ptr != NULL);
+	_ODP_ASSERT(session->p.cipher_iv_len == 0 || iv_ptr != NULL);
 #endif
 
 	EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_CCM_SET_TAG,
@@ -1657,7 +1657,7 @@ odp_crypto_alg_err_t aes_ccm_decrypt(odp_packet_t pkt,
 		return ODP_CRYPTO_ALG_ERR_IV_INVALID;
 #else
 	iv_ptr = param->cipher_iv_ptr;
-	ODP_ASSERT(session->p.cipher_iv_len == 0 || iv_ptr != NULL);
+	_ODP_ASSERT(session->p.cipher_iv_len == 0 || iv_ptr != NULL);
 #endif
 
 	odp_packet_copy_to_mem(pkt, param->hash_result_offset,
@@ -1741,7 +1741,7 @@ odp_crypto_alg_err_t xts_encrypt(odp_packet_t pkt,
 		return ODP_CRYPTO_ALG_ERR_IV_INVALID;
 #else
 	iv_ptr = param->cipher_iv_ptr;
-	ODP_ASSERT(session->p.cipher_iv_len == 0 || iv_ptr != NULL);
+	_ODP_ASSERT(session->p.cipher_iv_len == 0 || iv_ptr != NULL);
 #endif
 
 	EVP_EncryptInit_ex(ctx, NULL, NULL, NULL, iv_ptr);
@@ -1783,7 +1783,7 @@ odp_crypto_alg_err_t xts_decrypt(odp_packet_t pkt,
 		return ODP_CRYPTO_ALG_ERR_IV_INVALID;
 #else
 	iv_ptr = param->cipher_iv_ptr;
-	ODP_ASSERT(session->p.cipher_iv_len == 0 || iv_ptr != NULL);
+	_ODP_ASSERT(session->p.cipher_iv_len == 0 || iv_ptr != NULL);
 #endif
 
 	EVP_DecryptInit_ex(ctx, NULL, NULL, NULL, iv_ptr);
@@ -1947,7 +1947,7 @@ static int process_digest_param(odp_crypto_generic_session_t *session,
 int odp_crypto_capability(odp_crypto_capability_t *capa)
 {
 	if (odp_global_ro.disable.crypto) {
-		ODP_ERR("Crypto is disabled\n");
+		_ODP_ERR("Crypto is disabled\n");
 		return -1;
 	}
 
@@ -2194,7 +2194,7 @@ odp_crypto_session_create(const odp_crypto_session_param_t *param,
 	odp_crypto_generic_session_t *session;
 
 	if (odp_global_ro.disable.crypto) {
-		ODP_ERR("Crypto is disabled\n");
+		_ODP_ERR("Crypto is disabled\n");
 		/* Dummy output to avoid compiler warning about uninitialized
 		 * variables */
 		*status = ODP_CRYPTO_SES_ERR_ENOMEM;
@@ -2223,13 +2223,13 @@ odp_crypto_session_create(const odp_crypto_session_param_t *param,
 	session->p = *param;
 
 	if (session->p.cipher_iv_len > EVP_MAX_IV_LENGTH) {
-		ODP_DBG("Maximum IV length exceeded\n");
+		_ODP_DBG("Maximum IV length exceeded\n");
 		*status = ODP_CRYPTO_SES_ERR_CIPHER;
 		goto err;
 	}
 
 	if (session->p.auth_iv_len > EVP_MAX_IV_LENGTH) {
-		ODP_DBG("Maximum auth IV length exceeded\n");
+		_ODP_DBG("Maximum auth IV length exceeded\n");
 		*status = ODP_CRYPTO_SES_ERR_CIPHER;
 		goto err;
 	}
@@ -2599,7 +2599,7 @@ int _odp_crypto_init_global(void)
 	int nlocks = CRYPTO_num_locks();
 
 	if (odp_global_ro.disable.crypto) {
-		ODP_PRINT("\nODP crypto is DISABLED\n");
+		_ODP_PRINT("\nODP crypto is DISABLED\n");
 		return 0;
 	}
 
@@ -2612,7 +2612,7 @@ int _odp_crypto_init_global(void)
 			      ODP_CACHE_LINE_SIZE,
 			      0);
 	if (ODP_SHM_INVALID == shm) {
-		ODP_ERR("unable to allocate crypto pool\n");
+		_ODP_ERR("unable to allocate crypto pool\n");
 		return -1;
 	}
 
@@ -2654,7 +2654,7 @@ int _odp_crypto_term_global(void)
 	for (session = global->free; session != NULL; session = session->next)
 		count++;
 	if (count != MAX_SESSIONS) {
-		ODP_ERR("crypto sessions still active\n");
+		_ODP_ERR("crypto sessions still active\n");
 		rc = -1;
 	}
 
@@ -2665,7 +2665,7 @@ int _odp_crypto_term_global(void)
 
 	ret = odp_shm_free(odp_shm_lookup("_odp_crypto_ssl_global"));
 	if (ret < 0) {
-		ODP_ERR("shm free failed for crypto_pool\n");
+		_ODP_ERR("shm free failed for crypto_pool\n");
 		rc = -1;
 	}
 
@@ -2734,7 +2734,7 @@ odp_crypto_compl_t odp_crypto_compl_from_event(odp_event_t ev)
 {
 	/* This check not mandated by the API specification */
 	if (odp_event_type(ev) != ODP_EVENT_CRYPTO_COMPL)
-		ODP_ABORT("Event not a crypto completion");
+		_ODP_ABORT("Event not a crypto completion");
 	return (odp_crypto_compl_t)ev;
 }
 
@@ -2751,7 +2751,7 @@ odp_crypto_compl_result(odp_crypto_compl_t completion_event,
 	(void)result;
 
 	/* We won't get such events anyway, so there can be no result */
-	ODP_ASSERT(0);
+	_ODP_ASSERT(0);
 }
 
 void
@@ -2781,8 +2781,8 @@ uint64_t odp_crypto_session_to_u64(odp_crypto_session_t hdl)
 odp_packet_t odp_crypto_packet_from_event(odp_event_t ev)
 {
 	/* This check not mandated by the API specification */
-	ODP_ASSERT(odp_event_type(ev) == ODP_EVENT_PACKET);
-	ODP_ASSERT(odp_event_subtype(ev) == ODP_EVENT_PACKET_CRYPTO);
+	_ODP_ASSERT(odp_event_type(ev) == ODP_EVENT_PACKET);
+	_ODP_ASSERT(odp_event_subtype(ev) == ODP_EVENT_PACKET_CRYPTO);
 
 	return odp_packet_from_event(ev);
 }
@@ -2805,7 +2805,7 @@ int odp_crypto_result(odp_crypto_packet_result_t *result,
 {
 	odp_crypto_packet_result_t *op_result;
 
-	ODP_ASSERT(odp_event_subtype(odp_packet_to_event(packet)) ==
+	_ODP_ASSERT(odp_event_subtype(odp_packet_to_event(packet)) ==
 		   ODP_EVENT_PACKET_CRYPTO);
 
 	op_result = get_op_result_from_packet(packet);
@@ -2823,13 +2823,13 @@ static int copy_data_and_metadata(odp_packet_t dst, odp_packet_t src)
 	md_copy = _odp_packet_copy_md_possible(odp_packet_pool(dst),
 					       odp_packet_pool(src));
 	if (odp_unlikely(md_copy < 0)) {
-		ODP_ERR("Unable to copy packet metadata\n");
+		_ODP_ERR("Unable to copy packet metadata\n");
 		return -1;
 	}
 
 	rc = odp_packet_copy_from_pkt(dst, 0, src, 0, odp_packet_len(src));
 	if (odp_unlikely(rc < 0)) {
-		ODP_ERR("Unable to copy packet data\n");
+		_ODP_ERR("Unable to copy packet data\n");
 		return -1;
 	}
 
@@ -2849,7 +2849,7 @@ static odp_packet_t get_output_packet(const odp_crypto_generic_session_t *sessio
 	if (pkt_out == ODP_PACKET_INVALID) {
 		odp_pool_t pool = session->p.output_pool;
 
-		ODP_ASSERT(pool != ODP_POOL_INVALID);
+		_ODP_ASSERT(pool != ODP_POOL_INVALID);
 		if (pool == odp_packet_pool(pkt_in)) {
 			pkt_out = pkt_in;
 		} else {
@@ -2922,7 +2922,7 @@ int odp_crypto_op(const odp_packet_t pkt_in[],
 
 	for (i = 0; i < num_pkt; i++) {
 		session = (odp_crypto_generic_session_t *)(intptr_t)param[i].session;
-		ODP_ASSERT(ODP_CRYPTO_SYNC == session->p.op_mode);
+		_ODP_ASSERT(ODP_CRYPTO_SYNC == session->p.op_mode);
 
 		rc = crypto_int(pkt_in[i], &pkt_out[i], &param[i]);
 		if (rc < 0)
@@ -2944,8 +2944,8 @@ int odp_crypto_op_enq(const odp_packet_t pkt_in[],
 
 	for (i = 0; i < num_pkt; i++) {
 		session = (odp_crypto_generic_session_t *)(intptr_t)param[i].session;
-		ODP_ASSERT(ODP_CRYPTO_ASYNC == session->p.op_mode);
-		ODP_ASSERT(ODP_QUEUE_INVALID != session->p.compl_queue);
+		_ODP_ASSERT(ODP_CRYPTO_ASYNC == session->p.op_mode);
+		_ODP_ASSERT(ODP_QUEUE_INVALID != session->p.compl_queue);
 
 		pkt = pkt_out[i];
 		rc = crypto_int(pkt_in[i], &pkt, &param[i]);

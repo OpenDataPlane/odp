@@ -146,7 +146,7 @@ int odp_ipsec_capability(odp_ipsec_capability_t *capa)
 	odp_queue_capability_t queue_capa;
 
 	if (odp_global_ro.disable.ipsec) {
-		ODP_ERR("IPSec is disabled\n");
+		_ODP_ERR("IPSec is disabled\n");
 		return -1;
 	}
 
@@ -315,7 +315,7 @@ odp_bool_t _odp_ipsec_is_sync_mode(odp_ipsec_dir_t dir)
 
 static odp_ipsec_packet_result_t *ipsec_pkt_result(odp_packet_t packet)
 {
-	ODP_ASSERT(ODP_EVENT_PACKET_IPSEC ==
+	_ODP_ASSERT(ODP_EVENT_PACKET_IPSEC ==
 		   odp_event_subtype(odp_packet_to_event(packet)));
 
 	return &packet_hdr(packet)->ipsec_ctx;
@@ -517,7 +517,7 @@ static inline ipsec_sa_t *ipsec_get_sa(odp_ipsec_sa_t sa,
 		}
 	} else {
 		ipsec_sa = _odp_ipsec_sa_entry_from_hdl(sa);
-		ODP_ASSERT(NULL != ipsec_sa);
+		_ODP_ASSERT(NULL != ipsec_sa);
 		if (ipsec_sa->proto != proto ||
 		    ipsec_sa->spi != spi) {
 			status->error.proto = 1;
@@ -646,7 +646,7 @@ static int ipsec_in_esp(odp_packet_t *pkt,
 
 		if (odp_packet_extend_tail(pkt, IPSEC_SEQ_HI_LEN, NULL, NULL) < 0) {
 			status->error.alg = 1;
-			ODP_ERR("odp_packet_extend_tail failed\n");
+			_ODP_ERR("odp_packet_extend_tail failed\n");
 			return -1;
 		}
 		odp_packet_move_data(*pkt, icv_offset + IPSEC_SEQ_HI_LEN, icv_offset,
@@ -775,7 +775,7 @@ static int ipsec_in_ah(odp_packet_t *pkt,
 
 		if (odp_packet_extend_tail(pkt, IPSEC_SEQ_HI_LEN, NULL, NULL) < 0) {
 			status->error.alg = 1;
-			ODP_ERR("odp_packet_extend_tail failed\n");
+			_ODP_ERR("odp_packet_extend_tail failed\n");
 			return -1;
 		}
 		odp_packet_copy_from_mem(*pkt, seqh_offset, IPSEC_SEQ_HI_LEN, &inb_seqh);
@@ -874,10 +874,10 @@ static ipsec_sa_t *ipsec_in_single(odp_packet_t pkt,
 	odp_crypto_packet_result_t crypto; /**< Crypto operation result */
 
 	state.ip_offset = odp_packet_l3_offset(pkt);
-	ODP_ASSERT(ODP_PACKET_OFFSET_INVALID != state.ip_offset);
+	_ODP_ASSERT(ODP_PACKET_OFFSET_INVALID != state.ip_offset);
 
 	state.ip = odp_packet_l3_ptr(pkt, NULL);
-	ODP_ASSERT(NULL != state.ip);
+	_ODP_ASSERT(NULL != state.ip);
 
 	/* Initialize parameters block */
 	memset(&param, 0, sizeof(param));
@@ -928,14 +928,14 @@ static ipsec_sa_t *ipsec_in_single(odp_packet_t pkt,
 
 	rc = odp_crypto_op(&pkt, &pkt, &param, 1);
 	if (rc < 0) {
-		ODP_DBG("Crypto failed\n");
+		_ODP_DBG("Crypto failed\n");
 		status->error.alg = 1;
 		goto exit;
 	}
 
 	rc = odp_crypto_result(&crypto, pkt);
 	if (rc < 0) {
-		ODP_DBG("Crypto failed\n");
+		_ODP_DBG("Crypto failed\n");
 		status->error.alg = 1;
 		goto exit;
 	}
@@ -1101,7 +1101,7 @@ uint64_t ipsec_seq_no(ipsec_sa_t *ipsec_sa)
  */
 static inline uint32_t ipsec_padded_len(uint32_t len, uint32_t pad_mask)
 {
-	ODP_ASSERT(_ODP_CHECK_IS_POWER2(pad_mask + 1));
+	_ODP_ASSERT(_ODP_CHECK_IS_POWER2(pad_mask + 1));
 
 	return (len + pad_mask) & ~pad_mask;
 }
@@ -1295,7 +1295,7 @@ static int ipsec_out_iv(ipsec_state_t *state,
 {
 	if (ipsec_sa->use_counter_iv) {
 		/* Both GCM and CTR use 8-bit counters */
-		ODP_ASSERT(sizeof(seq_no) == ipsec_sa->esp_iv_len);
+		_ODP_ASSERT(sizeof(seq_no) == ipsec_sa->esp_iv_len);
 
 		/* Check for overrun */
 		if (seq_no == 0)
@@ -1475,7 +1475,7 @@ static int ipsec_out_esp(odp_packet_t *pkt,
 
 		if (odp_packet_extend_tail(pkt, IPSEC_SEQ_HI_LEN, NULL, NULL) < 0) {
 			status->error.alg = 1;
-			ODP_ERR("odp_packet_extend_tail failed\n");
+			_ODP_ERR("odp_packet_extend_tail failed\n");
 			return -1;
 		}
 		odp_packet_copy_from_mem(*pkt,
@@ -1525,7 +1525,7 @@ static int ipsec_out_esp_post(ipsec_state_t *state, odp_packet_t *pkt,
 		odp_packet_move_data(*pkt, icv_offset - IPSEC_SEQ_HI_LEN, icv_offset,
 				     ipsec_sa->icv_len);
 		if (odp_packet_trunc_tail(pkt, IPSEC_SEQ_HI_LEN, NULL, NULL) < 0) {
-			ODP_ERR("odp_packet_trunc_tail failed\n");
+			_ODP_ERR("odp_packet_trunc_tail failed\n");
 			return -1;
 		}
 	}
@@ -1631,7 +1631,7 @@ static int ipsec_out_ah(odp_packet_t *pkt,
 
 		if (odp_packet_extend_tail(pkt, IPSEC_SEQ_HI_LEN, NULL, NULL) < 0) {
 			status->error.alg = 1;
-			ODP_ERR("odp_packet_extend_tail failed\n");
+			_ODP_ERR("odp_packet_extend_tail failed\n");
 			return -1;
 		}
 		odp_packet_copy_from_mem(*pkt,
@@ -1672,7 +1672,7 @@ static int ipsec_out_ah_post(ipsec_state_t *state, odp_packet_t *pkt,
 	 */
 	if (ipsec_sa->insert_seq_hi) {
 		if (odp_packet_trunc_tail(pkt, IPSEC_SEQ_HI_LEN, NULL, NULL) < 0) {
-			ODP_ERR("odp_packet_trunc_tail failed\n");
+			_ODP_ERR("odp_packet_trunc_tail failed\n");
 			return -1;
 		}
 	}
@@ -1748,12 +1748,12 @@ static ipsec_sa_t *ipsec_out_single(odp_packet_t pkt,
 	 * is done by the application.
 	 */
 	ipsec_sa = _odp_ipsec_sa_entry_from_hdl(sa);
-	ODP_ASSERT(NULL != ipsec_sa);
+	_ODP_ASSERT(NULL != ipsec_sa);
 
 	if (opt->flag.tfc_dummy) {
 		odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
 
-		ODP_ASSERT(ODP_IPSEC_MODE_TUNNEL == ipsec_sa->mode);
+		_ODP_ASSERT(ODP_IPSEC_MODE_TUNNEL == ipsec_sa->mode);
 		pkt_hdr->p.l2_offset = ODP_PACKET_OFFSET_INVALID;
 		pkt_hdr->p.l3_offset = 0;
 		state.ip_offset = 0;
@@ -1762,10 +1762,10 @@ static ipsec_sa_t *ipsec_out_single(odp_packet_t pkt,
 		state.is_ipv6 = 0;
 	} else {
 		state.ip_offset = odp_packet_l3_offset(pkt);
-		ODP_ASSERT(ODP_PACKET_OFFSET_INVALID != state.ip_offset);
+		_ODP_ASSERT(ODP_PACKET_OFFSET_INVALID != state.ip_offset);
 
 		state.ip = odp_packet_l3_ptr(pkt, NULL);
-		ODP_ASSERT(NULL != state.ip);
+		_ODP_ASSERT(NULL != state.ip);
 
 		state.is_ipv4 = (((uint8_t *)state.ip)[0] >> 4) == 0x4;
 		state.is_ipv6 = (((uint8_t *)state.ip)[0] >> 4) == 0x6;
@@ -1869,14 +1869,14 @@ static ipsec_sa_t *ipsec_out_single(odp_packet_t pkt,
 	 */
 	rc = odp_crypto_op(&pkt, &pkt, &param, 1);
 	if (rc < 0) {
-		ODP_DBG("Crypto failed\n");
+		_ODP_DBG("Crypto failed\n");
 		status->error.alg = 1;
 		goto post_lifetime_err_cnt_update;
 	}
 
 	rc = odp_crypto_result(&crypto, pkt);
 	if (rc < 0) {
-		ODP_DBG("Crypto failed\n");
+		_ODP_DBG("Crypto failed\n");
 		status->error.alg = 1;
 		goto post_lifetime_err_cnt_update;
 	}
@@ -1935,7 +1935,7 @@ int odp_ipsec_in(const odp_packet_t pkt_in[], int num_in,
 			sa = ODP_IPSEC_SA_INVALID;
 		} else {
 			sa = param->sa[sa_idx];
-			ODP_ASSERT(ODP_IPSEC_SA_INVALID != sa);
+			_ODP_ASSERT(ODP_IPSEC_SA_INVALID != sa);
 		}
 
 		ipsec_sa = ipsec_in_single(pkt, sa, &pkt, false, &status, &dummy);
@@ -1982,7 +1982,7 @@ int odp_ipsec_out(const odp_packet_t pkt_in[], int num_in,
 	unsigned sa_inc = (param->num_sa > 1) ? 1 : 0;
 	unsigned opt_inc = (param->num_opt > 1) ? 1 : 0;
 
-	ODP_ASSERT(param->num_sa != 0);
+	_ODP_ASSERT(param->num_sa != 0);
 
 	while (in_pkt < num_in && out_pkt < max_out) {
 		odp_packet_t pkt = pkt_in[in_pkt];
@@ -1995,7 +1995,7 @@ int odp_ipsec_out(const odp_packet_t pkt_in[], int num_in,
 		memset(&status, 0, sizeof(status));
 
 		sa = param->sa[sa_idx];
-		ODP_ASSERT(ODP_IPSEC_SA_INVALID != sa);
+		_ODP_ASSERT(ODP_IPSEC_SA_INVALID != sa);
 
 		if (0 == param->num_opt)
 			opt = &default_out_opt;
@@ -2003,7 +2003,7 @@ int odp_ipsec_out(const odp_packet_t pkt_in[], int num_in,
 			opt = &param->opt[opt_idx];
 
 		ipsec_sa = ipsec_out_single(pkt, sa, &pkt, opt, false, &status);
-		ODP_ASSERT(NULL != ipsec_sa);
+		_ODP_ASSERT(NULL != ipsec_sa);
 
 		packet_subtype_set(pkt, ODP_EVENT_PACKET_IPSEC);
 		result = ipsec_pkt_result(pkt);
@@ -2049,7 +2049,7 @@ int odp_ipsec_in_enq(const odp_packet_t pkt_in[], int num_in,
 			sa = ODP_IPSEC_SA_INVALID;
 		} else {
 			sa = param->sa[sa_idx];
-			ODP_ASSERT(ODP_IPSEC_SA_INVALID != sa);
+			_ODP_ASSERT(ODP_IPSEC_SA_INVALID != sa);
 		}
 
 		ipsec_sa = ipsec_in_single(pkt, sa, &pkt, true, &status, &orig_ip_len);
@@ -2097,7 +2097,7 @@ int odp_ipsec_out_enq(const odp_packet_t pkt_in[], int num_in,
 	unsigned sa_inc = (param->num_sa > 1) ? 1 : 0;
 	unsigned opt_inc = (param->num_opt > 1) ? 1 : 0;
 
-	ODP_ASSERT(param->num_sa != 0);
+	_ODP_ASSERT(param->num_sa != 0);
 
 	while (in_pkt < num_in) {
 		odp_packet_t pkt = pkt_in[in_pkt];
@@ -2112,7 +2112,7 @@ int odp_ipsec_out_enq(const odp_packet_t pkt_in[], int num_in,
 		memset(&status, 0, sizeof(status));
 
 		sa = param->sa[sa_idx];
-		ODP_ASSERT(ODP_IPSEC_SA_INVALID != sa);
+		_ODP_ASSERT(ODP_IPSEC_SA_INVALID != sa);
 
 		if (0 == param->num_opt)
 			opt = &default_out_opt;
@@ -2120,7 +2120,7 @@ int odp_ipsec_out_enq(const odp_packet_t pkt_in[], int num_in,
 			opt = &param->opt[opt_idx];
 
 		ipsec_sa = ipsec_out_single(pkt, sa, &pkt, opt, true, &status);
-		ODP_ASSERT(NULL != ipsec_sa);
+		_ODP_ASSERT(NULL != ipsec_sa);
 
 		packet_subtype_set(pkt, ODP_EVENT_PACKET_IPSEC);
 		result = ipsec_pkt_result(pkt);
@@ -2201,7 +2201,7 @@ int odp_ipsec_out_inline(const odp_packet_t pkt_in[], int num_in,
 	unsigned opt_inc = (param->num_opt > 1) ? 1 : 0;
 	uint8_t hdr_buf[MAX_HDR_LEN];
 
-	ODP_ASSERT(param->num_sa != 0);
+	_ODP_ASSERT(param->num_sa != 0);
 
 	while (in_pkt < num_in) {
 		odp_packet_t pkt = pkt_in[in_pkt];
@@ -2213,7 +2213,7 @@ int odp_ipsec_out_inline(const odp_packet_t pkt_in[], int num_in,
 		uint32_t hdr_len, offset;
 		const void *ptr;
 
-		ODP_ASSERT(inline_param[in_pkt].pktio != ODP_PKTIO_INVALID);
+		_ODP_ASSERT(inline_param[in_pkt].pktio != ODP_PKTIO_INVALID);
 
 		memset(&status, 0, sizeof(status));
 
@@ -2221,7 +2221,7 @@ int odp_ipsec_out_inline(const odp_packet_t pkt_in[], int num_in,
 			sa = ODP_IPSEC_SA_INVALID;
 		} else {
 			sa = param->sa[sa_idx];
-			ODP_ASSERT(ODP_IPSEC_SA_INVALID != sa);
+			_ODP_ASSERT(ODP_IPSEC_SA_INVALID != sa);
 		}
 
 		hdr_len = inline_param[in_pkt].outer_hdr.len;
@@ -2230,7 +2230,7 @@ int odp_ipsec_out_inline(const odp_packet_t pkt_in[], int num_in,
 		if (!ptr) {
 			uint32_t l2_offset = odp_packet_l2_offset(pkt);
 
-			ODP_ASSERT(hdr_len == odp_packet_l3_offset(pkt) - l2_offset);
+			_ODP_ASSERT(hdr_len == odp_packet_l3_offset(pkt) - l2_offset);
 
 			if (odp_likely(hdr_len <= MAX_HDR_LEN) &&
 			    odp_likely(odp_packet_copy_to_mem(pkt, l2_offset,
@@ -2249,7 +2249,7 @@ int odp_ipsec_out_inline(const odp_packet_t pkt_in[], int num_in,
 			opt = &param->opt[opt_idx];
 
 		ipsec_sa = ipsec_out_single(pkt, sa, &pkt, opt, true, &status);
-		ODP_ASSERT(NULL != ipsec_sa);
+		_ODP_ASSERT(NULL != ipsec_sa);
 
 		offset = odp_packet_l3_offset(pkt);
 		if (odp_unlikely(offset == ODP_PACKET_OFFSET_INVALID))
@@ -2321,7 +2321,7 @@ int odp_ipsec_test_sa_update(odp_ipsec_sa_t sa,
 	ipsec_sa_t *ipsec_sa;
 
 	ipsec_sa = _odp_ipsec_sa_entry_from_hdl(sa);
-	ODP_ASSERT(NULL != ipsec_sa);
+	_ODP_ASSERT(NULL != ipsec_sa);
 
 	switch (sa_op) {
 	case ODP_IPSEC_TEST_SA_UPDATE_SEQ_NUM:
@@ -2338,7 +2338,7 @@ int odp_ipsec_result(odp_ipsec_packet_result_t *result, odp_packet_t packet)
 {
 	odp_ipsec_packet_result_t *res;
 
-	ODP_ASSERT(result != NULL);
+	_ODP_ASSERT(result != NULL);
 
 	res = ipsec_pkt_result(packet);
 
@@ -2352,8 +2352,8 @@ int odp_ipsec_result(odp_ipsec_packet_result_t *result, odp_packet_t packet)
 
 odp_packet_t odp_ipsec_packet_from_event(odp_event_t ev)
 {
-	ODP_ASSERT(odp_event_type(ev) == ODP_EVENT_PACKET);
-	ODP_ASSERT(odp_event_subtype(ev) == ODP_EVENT_PACKET_IPSEC);
+	_ODP_ASSERT(odp_event_type(ev) == ODP_EVENT_PACKET);
+	_ODP_ASSERT(odp_event_subtype(ev) == ODP_EVENT_PACKET_IPSEC);
 	return odp_packet_from_event(ev);
 }
 
@@ -2372,10 +2372,10 @@ int odp_ipsec_stats(odp_ipsec_sa_t sa, odp_ipsec_stats_t *stats)
 	if (!ipsec_config->stats_en)
 		return -ENOTSUP;
 
-	ODP_ASSERT(NULL != stats);
+	_ODP_ASSERT(NULL != stats);
 
 	ipsec_sa = _odp_ipsec_sa_entry_from_hdl(sa);
-	ODP_ASSERT(NULL != ipsec_sa);
+	_ODP_ASSERT(NULL != ipsec_sa);
 
 	_odp_ipsec_sa_stats_pkts(ipsec_sa, stats);
 	stats->proto_err = odp_atomic_load_u64(&ipsec_sa->stats.proto_err);
@@ -2393,7 +2393,7 @@ int odp_ipsec_stats_multi(odp_ipsec_sa_t sa[], odp_ipsec_stats_t stats[], int nu
 {
 	int ret, i;
 
-	ODP_ASSERT(NULL != stats);
+	_ODP_ASSERT(NULL != stats);
 
 	for (i = 0; i < num; i++) {
 		ret = odp_ipsec_stats(sa[i], &stats[i]);
@@ -2411,13 +2411,13 @@ static int read_config_file(ipsec_global_t *global)
 	int val;
 
 	if (!_odp_libconfig_lookup_int(str_i, &val)) {
-		ODP_ERR("Config option '%s' not found.\n", str_i);
+		_ODP_ERR("Config option '%s' not found.\n", str_i);
 		return -1;
 	}
 	global->inbound_ordering_mode = val;
 
 	if (!_odp_libconfig_lookup_int(str_o, &val)) {
-		ODP_ERR("Config option '%s' not found.\n", str_o);
+		_ODP_ERR("Config option '%s' not found.\n", str_o);
 		return -1;
 	}
 	global->outbound_ordering_mode = val;
@@ -2435,12 +2435,12 @@ int _odp_ipsec_init_global(void)
 	shm = odp_shm_reserve("_odp_ipsec_global", sizeof(*ipsec_global),
 			      ODP_CACHE_LINE_SIZE, 0);
 	if (shm == ODP_SHM_INVALID) {
-		ODP_ERR("Shm reserve failed for odp_ipsec\n");
+		_ODP_ERR("Shm reserve failed for odp_ipsec\n");
 		return -1;
 	}
 	ipsec_global = odp_shm_addr(shm);
 	if (ipsec_global == NULL) {
-		ODP_ERR("ipsec: odp_shm_addr() failed\n");
+		_ODP_ERR("ipsec: odp_shm_addr() failed\n");
 		odp_shm_free(shm);
 		return -1;
 	}
@@ -2467,7 +2467,7 @@ int _odp_ipsec_term_global(void)
 	shm = odp_shm_lookup("_odp_ipsec_global");
 
 	if (shm == ODP_SHM_INVALID || odp_shm_free(shm)) {
-		ODP_ERR("Shm free failed for odp_ipsec");
+		_ODP_ERR("Shm free failed for odp_ipsec");
 		return -1;
 	}
 
@@ -2476,16 +2476,16 @@ int _odp_ipsec_term_global(void)
 
 void odp_ipsec_print(void)
 {
-	ODP_PRINT("\nIPSEC print\n");
-	ODP_PRINT("-----------\n");
-	ODP_PRINT("  max number of SA %u\n\n", ipsec_config->max_num_sa);
+	_ODP_PRINT("\nIPSEC print\n");
+	_ODP_PRINT("-----------\n");
+	_ODP_PRINT("  max number of SA %u\n\n", ipsec_config->max_num_sa);
 }
 
 void odp_ipsec_sa_print(odp_ipsec_sa_t sa)
 {
 	ipsec_sa_t *ipsec_sa = _odp_ipsec_sa_entry_from_hdl(sa);
 
-	ODP_PRINT("\nIPSEC SA print\n");
-	ODP_PRINT("--------------\n");
-	ODP_PRINT("  SPI              %u\n\n", ipsec_sa->spi);
+	_ODP_PRINT("\nIPSEC SA print\n");
+	_ODP_PRINT("--------------\n");
+	_ODP_PRINT("  SPI              %u\n\n", ipsec_sa->spi);
 }

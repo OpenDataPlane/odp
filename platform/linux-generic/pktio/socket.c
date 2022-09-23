@@ -97,7 +97,7 @@ static int sock_close(pktio_entry_t *pktio_entry)
 
 	if (pkt_sock->sockfd != -1 && close(pkt_sock->sockfd) != 0) {
 		_odp_errno = errno;
-		ODP_ERR("close(sockfd): %s\n", strerror(errno));
+		_ODP_ERR("close(sockfd): %s\n", strerror(errno));
 		return -1;
 	}
 
@@ -129,7 +129,7 @@ static int sock_setup_pkt(pktio_entry_t *pktio_entry, const char *netdev,
 	sockfd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
 	if (sockfd == -1) {
 		_odp_errno = errno;
-		ODP_ERR("socket(): %s\n", strerror(errno));
+		_ODP_ERR("socket(): %s\n", strerror(errno));
 		goto error;
 	}
 	pkt_sock->sockfd = sockfd;
@@ -140,8 +140,7 @@ static int sock_setup_pkt(pktio_entry_t *pktio_entry, const char *netdev,
 	err = ioctl(sockfd, SIOCGIFINDEX, &ethreq);
 	if (err != 0) {
 		_odp_errno = errno;
-		ODP_ERR("ioctl(SIOCGIFINDEX): %s: \"%s\".\n", strerror(errno),
-			ethreq.ifr_name);
+		_ODP_ERR("ioctl(SIOCGIFINDEX): %s: \"%s\".\n", strerror(errno), ethreq.ifr_name);
 		goto error;
 	}
 	if_idx = ethreq.ifr_ifindex;
@@ -164,14 +163,14 @@ static int sock_setup_pkt(pktio_entry_t *pktio_entry, const char *netdev,
 	sa_ll.sll_protocol = htons(ETH_P_ALL);
 	if (bind(sockfd, (struct sockaddr *)&sa_ll, sizeof(sa_ll)) < 0) {
 		_odp_errno = errno;
-		ODP_ERR("bind(to IF): %s\n", strerror(errno));
+		_ODP_ERR("bind(to IF): %s\n", strerror(errno));
 		goto error;
 	}
 
 	pktio_entry->stats_type = _odp_sock_stats_type_fd(pktio_entry,
 							  pkt_sock->sockfd);
 	if (pktio_entry->stats_type == STATS_UNSUPPORTED)
-		ODP_DBG("pktio: %s unsupported stats\n", pktio_entry->name);
+		_ODP_DBG("pktio: %s unsupported stats\n", pktio_entry->name);
 
 	err = sock_stats_reset(pktio_entry);
 	if (err != 0)
@@ -268,14 +267,14 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 
 		if (odp_unlikely(msgvec[i].msg_hdr.msg_flags & MSG_TRUNC)) {
 			odp_packet_free(pkt);
-			ODP_DBG("dropped truncated packet\n");
+			_ODP_DBG("dropped truncated packet\n");
 			continue;
 		}
 
 		ret = odp_packet_trunc_tail(&pkt, odp_packet_len(pkt) - pkt_len,
 					    NULL, NULL);
 		if (ret < 0) {
-			ODP_ERR("trunc_tail failed");
+			_ODP_ERR("trunc_tail failed");
 			odp_packet_free(pkt);
 			continue;
 		}
@@ -488,7 +487,7 @@ static int sock_mmsg_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 		if (odp_unlikely(ret <= -1)) {
 			if (i == 0 && SOCK_ERR_REPORT(errno)) {
 				_odp_errno = errno;
-				ODP_ERR("sendmmsg(): %s\n", strerror(errno));
+				_ODP_ERR("sendmmsg(): %s\n", strerror(errno));
 				odp_ticketlock_unlock(&pkt_sock->tx_lock);
 				return -1;
 			}
@@ -625,11 +624,11 @@ static int sock_extra_stat_counter(pktio_entry_t *pktio_entry, uint32_t id,
 static int sock_init_global(void)
 {
 	if (getenv("ODP_PKTIO_DISABLE_SOCKET_MMSG")) {
-		ODP_PRINT("PKTIO: socket mmsg skipped,"
+		_ODP_PRINT("PKTIO: socket mmsg skipped,"
 			  " enabled export ODP_PKTIO_DISABLE_SOCKET_MMSG=1.\n");
 		disable_pktio = 1;
 	} else {
-		ODP_PRINT("PKTIO: initialized socket mmsg,"
+		_ODP_PRINT("PKTIO: initialized socket mmsg,"
 			  " use export ODP_PKTIO_DISABLE_SOCKET_MMSG=1 to disable.\n");
 	}
 	return 0;

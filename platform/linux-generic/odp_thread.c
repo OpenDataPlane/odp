@@ -58,11 +58,11 @@ int _odp_thread_init_global(void)
 	const char *str = "system.thread_count_max";
 
 	if (!_odp_libconfig_lookup_int(str, &num_max)) {
-		ODP_ERR("Config option '%s' not found.\n", str);
+		_ODP_ERR("Config option '%s' not found.\n", str);
 		return -1;
 	}
 	if (num_max <= 0) {
-		ODP_ERR("Config option '%s' not valid.\n", str);
+		_ODP_ERR("Config option '%s' not valid.\n", str);
 		return -1;
 	}
 	if (num_max > ODP_THREAD_COUNT_MAX)
@@ -80,8 +80,8 @@ int _odp_thread_init_global(void)
 	memset(thread_globals, 0, sizeof(thread_globals_t));
 	odp_spinlock_init(&thread_globals->lock);
 	thread_globals->num_max = num_max;
-	ODP_PRINT("System config:\n");
-	ODP_PRINT("  system.thread_count_max: %d\n\n", num_max);
+	_ODP_PRINT("System config:\n");
+	_ODP_PRINT("  system.thread_count_max: %d\n\n", num_max);
 
 	return 0;
 }
@@ -95,11 +95,11 @@ int _odp_thread_term_global(void)
 	odp_spinlock_unlock(&thread_globals->lock);
 
 	if (num)
-		ODP_ERR("%u threads have not called odp_term_local().\n", num);
+		_ODP_ERR("%u threads have not called odp_term_local().\n", num);
 
 	ret = odp_shm_free(odp_shm_lookup("_odp_thread_global"));
 	if (ret < 0)
-		ODP_ERR("shm free failed for _odp_thread_globals");
+		_ODP_ERR("shm free failed for _odp_thread_globals");
 
 	return ret;
 }
@@ -180,14 +180,14 @@ int _odp_thread_init_local(odp_thread_type_t type)
 	odp_spinlock_unlock(&thread_globals->lock);
 
 	if (id < 0) {
-		ODP_ERR("Too many threads\n");
+		_ODP_ERR("Too many threads\n");
 		return -1;
 	}
 
 	cpu = sched_getcpu();
 
 	if (cpu < 0) {
-		ODP_ERR("getcpu failed\n");
+		_ODP_ERR("getcpu failed\n");
 		return -1;
 	}
 
@@ -245,7 +245,7 @@ int _odp_thread_term_local(void)
 	odp_spinlock_unlock(&thread_globals->lock);
 
 	if (num < 0) {
-		ODP_ERR("failed to free thread id %i", id);
+		_ODP_ERR("failed to free thread id %i", id);
 		return -1;
 	}
 

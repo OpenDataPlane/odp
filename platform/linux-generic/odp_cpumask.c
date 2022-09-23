@@ -238,7 +238,7 @@ static int get_available_cpus(void)
 	ret = sched_getaffinity(0, sizeof(cpuset), &cpuset);
 
 	if (ret < 0) {
-		ODP_ERR("Failed to get cpu affinity");
+		_ODP_ERR("Failed to get cpu affinity");
 			return -1;
 	}
 

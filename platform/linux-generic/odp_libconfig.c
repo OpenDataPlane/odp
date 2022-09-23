@@ -34,9 +34,9 @@ int _odp_libconfig_init_global(void)
 	odp_global_ro.has_config_rt = 0;
 
 	if (!config_read_string(config, config_builtin)) {
-		ODP_ERR("Failed to read default config: %s(%d): %s\n",
-			config_error_file(config), config_error_line(config),
-			config_error_text(config));
+		_ODP_ERR("Failed to read default config: %s(%d): %s\n",
+			 config_error_file(config), config_error_line(config),
+			 config_error_text(config));
 		goto fail;
 	}
 
@@ -44,46 +44,44 @@ int _odp_libconfig_init_global(void)
 	if (filename == NULL)
 		return 0;
 
-	ODP_PRINT("ODP CONFIG FILE: %s\n", filename);
+	_ODP_PRINT("ODP CONFIG FILE: %s\n", filename);
 
 	if (!config_read_file(config_rt, filename)) {
-		ODP_PRINT("  ERROR: failed to read config file: %s(%d): %s\n\n",
-			  config_error_file(config_rt),
-			  config_error_line(config_rt),
-			  config_error_text(config_rt));
+		_ODP_PRINT("  ERROR: failed to read config file: %s(%d): %s\n\n",
+			   config_error_file(config_rt),
+			   config_error_line(config_rt),
+			   config_error_text(config_rt));
 		goto fail;
 	}
 
 	/* Check runtime configuration's implementation name and version */
 	if (!config_lookup_string(config, impl_field, &impl) ||
 	    !config_lookup_string(config_rt, impl_field, &impl_rt)) {
-		ODP_PRINT("  ERROR: missing mandatory field: %s\n\n",
-			  impl_field);
+		_ODP_PRINT("  ERROR: missing mandatory field: %s\n\n", impl_field);
 		goto fail;
 	}
 	if (!config_lookup_string(config, vers_field, &vers) ||
 	    !config_lookup_string(config_rt, vers_field, &vers_rt)) {
-		ODP_PRINT("  ERROR: missing mandatory field: %s\n\n",
-			  vers_field);
+		_ODP_PRINT("  ERROR: missing mandatory field: %s\n\n", vers_field);
 		goto fail;
 	}
 	if (strcmp(impl, impl_rt)) {
-		ODP_PRINT("  ERROR: ODP implementation name mismatch:\n"
-			  "    Expected: \"%s\"\n"
-			  "    Found:    \"%s\"\n\n", impl, impl_rt);
+		_ODP_PRINT("  ERROR: ODP implementation name mismatch:\n"
+			   "    Expected: \"%s\"\n"
+			   "    Found:    \"%s\"\n\n", impl, impl_rt);
 		goto fail;
 	}
 	if (strcmp(vers, vers_rt)) {
-		ODP_PRINT("  ERROR: config file version number mismatch:\n"
-			  "    Expected: \"%s\"\n"
-			  "    Found:    \"%s\"\n\n", vers, vers_rt);
+		_ODP_PRINT("  ERROR: config file version number mismatch:\n"
+			   "    Expected: \"%s\"\n"
+			   "    Found:    \"%s\"\n\n", vers, vers_rt);
 		goto fail;
 	}
 
 	odp_global_ro.has_config_rt = 1;
 	return 0;
 fail:
-	ODP_ERR("Config file failure\n");
+	_ODP_ERR("Config file failure\n");
 	config_destroy(config);
 	config_destroy(config_rt);
 	return -1;
@@ -133,8 +131,7 @@ int _odp_libconfig_lookup_str(const char *path, char *value,
 			return length;
 
 		if (length > str_size) {
-			ODP_ERR("libconfig: length of %d bigger than size %u\n",
-				length, str_size);
+			_ODP_ERR("libconfig: length of %d bigger than size %u\n", length, str_size);
 			return -1;
 		}
 
@@ -142,7 +139,7 @@ int _odp_libconfig_lookup_str(const char *path, char *value,
 		return length;
 	}
 
-	ODP_ERR("libconfig: %s is not defined in config files\n", path);
+	_ODP_ERR("libconfig: %s is not defined in config files\n", path);
 	return -1;
 }
 
@@ -199,7 +196,7 @@ int _odp_libconfig_lookup_array_str(const char *path, char **value,
 
 		/* invalid config if element is not an array */
 		if (config_setting_is_array(setting) == CONFIG_FALSE) {
-			ODP_ERR("libconfig: %s is not an array\n", path);
+			_ODP_ERR("libconfig: %s is not an array\n", path);
 			return -1;
 		}
 		num = config_setting_length(setting);
@@ -209,15 +206,15 @@ int _odp_libconfig_lookup_array_str(const char *path, char **value,
 
 		elem = config_setting_get_elem(setting, 0);
 		if (config_setting_type(elem) != CONFIG_TYPE_STRING) {
-			ODP_ERR("libconfig: %s array is not of type string\n", path);
+			_ODP_ERR("libconfig: %s array is not of type string\n", path);
 			return -1;
 		}
 
 		for (j = 0; j < num; j++) {
 			elem = config_setting_get_elem(setting, j);
 			if (strlen(elem->value.sval) > str_size) {
-				ODP_ERR("libconfig: length of %s bigger than size %u\n",
-					elem->value.sval, str_size);
+				_ODP_ERR("libconfig: length of %s bigger than size %u\n",
+					 elem->value.sval, str_size);
 				return -1;
 			}
 			strcpy(value[j], elem->value.sval);
@@ -226,7 +223,7 @@ int _odp_libconfig_lookup_array_str(const char *path, char **value,
 		return num;
 	}
 
-	ODP_ERR("libconfig: %s is not defined in config files\n", path);
+	_ODP_ERR("libconfig: %s is not defined in config files\n", path);
 	return -1;
 }
 
@@ -336,7 +333,7 @@ int _odp_libconfig_print(void)
 	/* Print temp file to the log */
 	rewind(file);
 	while ((c = fgetc(file)) != EOF)
-		ODP_PRINT("%c", (char)c);
+		_ODP_PRINT("%c", (char)c);
 
 	fclose(file);
 	return 0;

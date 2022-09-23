@@ -28,7 +28,7 @@ uint64_t _odp_cpu_cycles(void)
 	ret = clock_gettime(CLOCK_MONOTONIC_RAW, &time);
 
 	if (ret != 0)
-		ODP_ABORT("clock_gettime failed\n");
+		_ODP_ABORT("clock_gettime failed\n");
 
 	hz  = odp_global_ro.system_info.cpu_hz_max[0];
 

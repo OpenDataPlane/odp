@@ -342,8 +342,8 @@ static inline void _odp_packet_copy_md(odp_packet_hdr_t *dst_hdr,
 			const uint32_t src_uarea_size = src_pool->param_uarea_size;
 			const uint32_t dst_uarea_size = dst_pool->param_uarea_size;
 
-			ODP_ASSERT(dst_hdr->uarea_addr != NULL);
-			ODP_ASSERT(dst_uarea_size >= src_uarea_size);
+			_ODP_ASSERT(dst_hdr->uarea_addr != NULL);
+			_ODP_ASSERT(dst_uarea_size >= src_uarea_size);
 
 			memcpy(dst_hdr->uarea_addr, src_hdr->uarea_addr, src_uarea_size);
 		} else {
@@ -351,7 +351,7 @@ static inline void _odp_packet_copy_md(odp_packet_hdr_t *dst_hdr,
 
 			/* If user area exists, packets should always be from the same pool, so
 			 * user area pointers can simply be swapped. */
-			ODP_ASSERT(dst_hdr->event_hdr.pool == src_hdr->event_hdr.pool);
+			_ODP_ASSERT(dst_hdr->event_hdr.pool == src_hdr->event_hdr.pool);
 
 			src_hdr->uarea_addr = dst_hdr->uarea_addr;
 			dst_hdr->uarea_addr = src_uarea;

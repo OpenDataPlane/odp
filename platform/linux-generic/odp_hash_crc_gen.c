@@ -39,7 +39,7 @@ int _odp_hash_init_global(void)
 	crc_table = odp_shm_addr(shm);
 
 	if (crc_table == NULL) {
-		ODP_ERR("Shm reserve failed for odp_hash_crc_gen\n");
+		_ODP_ERR("Shm reserve failed for odp_hash_crc_gen\n");
 		return -1;
 	}
 
@@ -54,7 +54,7 @@ int _odp_hash_init_global(void)
 int _odp_hash_term_global(void)
 {
 	if (odp_shm_free(crc_table->shm)) {
-		ODP_ERR("Shm free failed for odp_hash_crc_gen\n");
+		_ODP_ERR("Shm free failed for odp_hash_crc_gen\n");
 		return -1;
 	}
 
@@ -203,18 +203,18 @@ int odp_hash_crc_gen64(const void *data_ptr, uint32_t data_len,
 	int reflect = crc_param->reflect_in;
 
 	if (odp_unlikely(crc_param->reflect_in != crc_param->reflect_out)) {
-		ODP_ERR("Odd reflection setting not supported.\n");
+		_ODP_ERR("Odd reflection setting not supported.\n");
 		return -1;
 	}
 
 	if (odp_unlikely(width != 32 && width != 24 && width != 16)) {
-		ODP_ERR("CRC width %" PRIu32 " bits not supported.\n", width);
+		_ODP_ERR("CRC width %" PRIu32 " bits not supported.\n", width);
 		return -1;
 	}
 
 	/* TODO: fix implementation of 24 bit CRC with reflection */
 	if (odp_unlikely(width == 24 && reflect)) {
-		ODP_ERR("24 bit CRC with reflection not supported.\n");
+		_ODP_ERR("24 bit CRC with reflection not supported.\n");
 		return -1;
 	}
 

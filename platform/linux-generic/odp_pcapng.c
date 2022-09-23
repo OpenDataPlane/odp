@@ -112,7 +112,7 @@ int _odp_pcapng_term_global(void)
 	int ret = 0;
 
 	if (odp_shm_free(pcapng_gbl->shm)) {
-		ODP_ERR("shm free failed");
+		_ODP_ERR("shm free failed");
 		ret = -1;
 	}
 
@@ -139,8 +139,7 @@ static void inotify_event_handle(pktio_entry_t *entry, int qidx,
 
 		if (PIPE_BUF < mtu + sizeof(pcapng_enhanced_packet_block_t) +
 		    sizeof(uint32_t)) {
-			ODP_ERR("PIPE_BUF:%d too small. Disabling pcap\n",
-				PIPE_BUF);
+			_ODP_ERR("PIPE_BUF:%d too small. Disabling pcap\n", PIPE_BUF);
 			entry->pcapng.state[qidx] = PCAPNG_WR_STOP;
 
 			return;
@@ -151,16 +150,16 @@ static void inotify_event_handle(pktio_entry_t *entry, int qidx,
 			entry->pcapng.state[qidx] = PCAPNG_WR_STOP;
 		} else {
 			entry->pcapng.state[qidx] = PCAPNG_WR_PKT;
-			ODP_DBG("Open %s for pcap tracing\n", event->name);
+			_ODP_DBG("Open %s for pcap tracing\n", event->name);
 		}
 	} else if (event->mask & IN_CLOSE) {
 		int fd = entry->pcapng.fd[qidx];
 
 		pcapng_drain_fifo(fd);
 		entry->pcapng.state[qidx] = PCAPNG_WR_STOP;
-		ODP_DBG("Close %s for pcap tracing\n", event->name);
+		_ODP_DBG("Close %s for pcap tracing\n", event->name);
 	} else {
-		ODP_ERR("Unknown inotify event 0x%08x\n", event->mask);
+		_ODP_ERR("Unknown inotify event 0x%08x\n", event->mask);
 	}
 }
 
@@ -296,7 +295,7 @@ int _odp_pcapng_start(pktio_entry_t *entry)
 
 	fifo_sz = get_fifo_max_size();
 	if (fifo_sz < 0)
-		ODP_DBG("failed to read max fifo size\n");
+		_ODP_DBG("failed to read max fifo size\n");
 
 	for (i = 0; i < max_queue; i++) {
 		char pcapng_name[128];
@@ -310,29 +309,28 @@ int _odp_pcapng_start(pktio_entry_t *entry)
 		snprintf(pcapng_path, sizeof(pcapng_path), "%s/%s",
 			 PCAPNG_WATCH_DIR, pcapng_name);
 		if (mkfifo(pcapng_path, O_RDWR)) {
-			ODP_ERR("pcap not available for %s %s\n",
-				pcapng_path, strerror(errno));
+			_ODP_ERR("pcap not available for %s %s\n", pcapng_path, strerror(errno));
 			continue;
 		}
 
 		if (chmod(pcapng_path, S_IRUSR | S_IRGRP))
-			ODP_ERR("Failed to change file permission for %s %s\n",
-				pcapng_path, strerror(errno));
+			_ODP_ERR("Failed to change file permission for %s %s\n",
+				 pcapng_path, strerror(errno));
 
 		fd = open(pcapng_path, O_RDWR | O_NONBLOCK);
 		if (fd == -1) {
-			ODP_ERR("Fail to open fifo\n");
+			_ODP_ERR("Fail to open fifo\n");
 			entry->pcapng.state[i] = PCAPNG_WR_STOP;
 			if (remove(pcapng_path) == -1)
-				ODP_ERR("Can't remove fifo %s\n", pcapng_path);
+				_ODP_ERR("Can't remove fifo %s\n", pcapng_path);
 			continue;
 		}
 
 		if (fifo_sz > 0) {
 			if (fcntl(fd, F_SETPIPE_SZ, fifo_sz) != fifo_sz)
-				ODP_DBG("Failed to set max fifo size\n");
+				_ODP_DBG("Failed to set max fifo size\n");
 			else
-				ODP_DBG("set pcap fifo size %i\n", fifo_sz);
+				_ODP_DBG("set pcap fifo size %i\n", fifo_sz);
 		}
 
 		entry->pcapng.fd[i] = fd;
@@ -353,7 +351,7 @@ int _odp_pcapng_start(pktio_entry_t *entry)
 
 	pcapng_gbl->inotify_fd = inotify_init();
 	if (pcapng_gbl->inotify_fd == -1) {
-		ODP_ERR("can't init inotify. pcap disabled\n");
+		_ODP_ERR("can't init inotify. pcap disabled\n");
 		goto out_destroy;
 	}
 
@@ -362,8 +360,7 @@ int _odp_pcapng_start(pktio_entry_t *entry)
 							 IN_CLOSE | IN_OPEN);
 
 	if (pcapng_gbl->inotify_watch_fd == -1) {
-		ODP_ERR("can't register inotify for %s. pcap disabled\n",
-			strerror(errno));
+		_ODP_ERR("can't register inotify for %s. pcap disabled\n", strerror(errno));
 		goto out_destroy;
 	}
 
@@ -372,7 +369,7 @@ int _odp_pcapng_start(pktio_entry_t *entry)
 	ret = pthread_create(&pcapng_gbl->inotify_thread, &attr, inotify_update,
 			     &pcapng_gbl->inotify_fd);
 	if (ret) {
-		ODP_ERR("Can't start inotify thread (ret=%d). pcapng disabled.\n", ret);
+		_ODP_ERR("Can't start inotify thread (ret=%d). pcapng disabled.\n", ret);
 	} else {
 		pcapng_gbl->entry[odp_pktio_index(entry->handle)] = entry;
 		pcapng_gbl->num_entries++;
@@ -406,8 +403,7 @@ void _odp_pcapng_stop(pktio_entry_t *entry)
 	    pcapng_gbl->num_entries == 0) {
 		ret = pthread_cancel(pcapng_gbl->inotify_thread);
 		if (ret)
-			ODP_ERR("can't cancel inotify thread %s\n",
-				strerror(errno));
+			_ODP_ERR("can't cancel inotify thread %s\n", strerror(errno));
 		pcapng_gbl->inotify_is_running = 0;
 	}
 
@@ -416,8 +412,7 @@ void _odp_pcapng_stop(pktio_entry_t *entry)
 		ret = inotify_rm_watch(pcapng_gbl->inotify_fd,
 				       pcapng_gbl->inotify_watch_fd);
 		if (ret)
-			ODP_ERR("can't deregister inotify %s\n",
-				strerror(errno));
+			_ODP_ERR("can't deregister inotify %s\n", strerror(errno));
 
 		if (pcapng_gbl->inotify_fd != -1)
 			close(pcapng_gbl->inotify_fd);
@@ -441,7 +436,7 @@ void _odp_pcapng_stop(pktio_entry_t *entry)
 			 PCAPNG_WATCH_DIR, pcapng_name);
 
 		if (remove(pcapng_path))
-			ODP_ERR("can't delete fifo %s\n", pcapng_path);
+			_ODP_ERR("can't delete fifo %s\n", pcapng_path);
 	}
 }
 
@@ -466,7 +461,7 @@ int write_pcapng_hdr(pktio_entry_t *entry, int qidx)
 	len = write(fd, &shb, sizeof(shb));
 	/* fail to write shb/idb means the pcapng is unreadable */
 	if (len != sizeof(shb)) {
-		ODP_ERR("Failed to write pcapng section hdr\n");
+		_ODP_ERR("Failed to write pcapng section hdr\n");
 		return -1;
 	}
 	fsync(fd);
@@ -478,7 +473,7 @@ int write_pcapng_hdr(pktio_entry_t *entry, int qidx)
 	idb.snaplen = 0x0; /* unlimited */
 	len = write(fd, &idb, sizeof(idb));
 	if (len != sizeof(idb)) {
-		ODP_ERR("Failed to write pcapng interface description\n");
+		_ODP_ERR("Failed to write pcapng interface description\n");
 		return -1;
 	}
 	fsync(fd);

@@ -121,11 +121,11 @@ static odp_bool_t disable_pktio;
 static int sock_xdp_init_global(void)
 {
 	if (getenv("ODP_PKTIO_DISABLE_SOCKET_XDP")) {
-		ODP_PRINT("PKTIO: socket xdp skipped,"
+		_ODP_PRINT("PKTIO: socket xdp skipped,"
 			  " enabled export ODP_PKTIO_DISABLE_SOCKET_XDP=1.\n");
 		disable_pktio = true;
 	} else {
-		ODP_PRINT("PKTIO: initialized socket xdp,"
+		_ODP_PRINT("PKTIO: initialized socket xdp,"
 			  " use export ODP_PKTIO_DISABLE_SOCKET_XDP=1 to disable.\n");
 	}
 
@@ -143,16 +143,16 @@ static void parse_options(xdp_umem_info_t *umem_info)
 					   &umem_info->num_rx_desc) ||
 	    !_odp_libconfig_lookup_ext_int(CONF_BASE_STR, NULL, TX_DESCS_STR,
 					   &umem_info->num_tx_desc)) {
-		ODP_ERR("Unable to parse xdp descriptor configuration, using defaults (%d).\n",
-			NUM_DESCS_DEFAULT);
+		_ODP_ERR("Unable to parse xdp descriptor configuration, using defaults (%d).\n",
+			 NUM_DESCS_DEFAULT);
 		goto defaults;
 	}
 
 	if (umem_info->num_rx_desc <= 0 || umem_info->num_tx_desc <= 0 ||
 	    !_ODP_CHECK_IS_POWER2(umem_info->num_rx_desc) ||
 	    !_ODP_CHECK_IS_POWER2(umem_info->num_tx_desc)) {
-		ODP_ERR("Invalid xdp descriptor configuration, using defaults (%d).\n",
-			NUM_DESCS_DEFAULT);
+		_ODP_ERR("Invalid xdp descriptor configuration, using defaults (%d).\n",
+			 NUM_DESCS_DEFAULT);
 		goto defaults;
 	}
 
@@ -251,7 +251,7 @@ static int sock_xdp_open(odp_pktio_t pktio, pktio_entry_t *pktio_entry, const ch
 	ret = umem_create(priv->umem_info, pool);
 
 	if (ret) {
-		ODP_ERR("Error creating UMEM pool for xdp: %d\n", ret);
+		_ODP_ERR("Error creating UMEM pool for xdp: %d\n", ret);
 		return -1;
 	}
 
@@ -263,7 +263,7 @@ static int sock_xdp_open(odp_pktio_t pktio, pktio_entry_t *pktio_entry, const ch
 	ret = socket(AF_INET, SOCK_DGRAM, 0);
 
 	if (ret == -1) {
-		ODP_ERR("Error creating helper socket for xdp: %s\n", strerror(errno));
+		_ODP_ERR("Error creating helper socket for xdp: %s\n", strerror(errno));
 		goto sock_err;
 	}
 
@@ -282,10 +282,10 @@ static int sock_xdp_open(odp_pktio_t pktio, pktio_entry_t *pktio_entry, const ch
 
 	priv->bind_q = get_bind_queue_index(pktio_entry->name);
 
-	ODP_DBG("Socket xdp interface (%s):\n", pktio_entry->name);
-	ODP_DBG("  num_rx_desc: %d\n", priv->umem_info->num_rx_desc);
-	ODP_DBG("  num_tx_desc: %d\n", priv->umem_info->num_tx_desc);
-	ODP_DBG("  starting bind queue: %u\n", priv->bind_q);
+	_ODP_DBG("Socket xdp interface (%s):\n", pktio_entry->name);
+	_ODP_DBG("  num_rx_desc: %d\n", priv->umem_info->num_rx_desc);
+	_ODP_DBG("  num_tx_desc: %d\n", priv->umem_info->num_tx_desc);
+	_ODP_DBG("  starting bind queue: %u\n", priv->bind_q);
 
 	return 0;
 
@@ -465,7 +465,7 @@ static int sock_xdp_extra_stat_counter(pktio_entry_t *pktio_entry, uint32_t id, 
 	const uint32_t total_stats = MAX_INTERNAL_STATS * priv->num_q;
 
 	if (id >= total_stats) {
-		ODP_ERR("Invalid counter id: %u (allowed range: 0-%u)\n", id, total_stats - 1U);
+		_ODP_ERR("Invalid counter id: %u (allowed range: 0-%u)\n", id, total_stats - 1U);
 		return -1;
 	}
 
@@ -845,7 +845,7 @@ static int set_queue_capability(int fd, const char *devname, odp_pktio_capabilit
 
 	if (ret == -1 || channels.max_combined == 0U) {
 		if (ret == -1 && errno != EOPNOTSUPP) {
-			ODP_ERR("Unable to query NIC channel capabilities: %s\n", strerror(errno));
+			_ODP_ERR("Unable to query NIC channel capabilities: %s\n", strerror(errno));
 			return -1;
 		}
 
@@ -940,15 +940,15 @@ static int sock_xdp_output_queues_config(pktio_entry_t *pktio_entry,
 						&sock->tx, &sock->fill_q, &sock->compl_q, &config);
 
 		if (ret) {
-			ODP_ERR("Error creating xdp socket for bind queue %u: %d\n", bind_q, ret);
+			_ODP_ERR("Error creating xdp socket for bind queue %u: %d\n", bind_q, ret);
 			goto err;
 		}
 
 		++i;
 
 		if (!reserve_fill_queue_elements(priv, sock, config.rx_size)) {
-			ODP_ERR("Unable to reserve fill queue descriptors for queue: %u.\n",
-				bind_q);
+			_ODP_ERR("Unable to reserve fill queue descriptors for queue: %u.\n",
+				 bind_q);
 			goto err;
 		}
 
@@ -1032,8 +1032,8 @@ static void sock_xdp_adjust_block_size(uint8_t *data ODP_UNUSED, uint32_t *block
 		return;
 
 	if (size > ps) {
-		ODP_ERR("Adjusted pool block size larger than page size: %u > %" PRIu64 "\n",
-			size, ps);
+		_ODP_ERR("Adjusted pool block size larger than page size: %u > %" PRIu64 "\n",
+			 size, ps);
 		*block_size = 0U;
 	}
 

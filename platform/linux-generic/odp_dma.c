@@ -79,7 +79,7 @@ static inline dma_session_t *dma_session_from_handle(odp_dma_t dma)
 int odp_dma_capability(odp_dma_capability_t *capa)
 {
 	if (odp_global_ro.disable.dma) {
-		ODP_ERR("DMA is disabled\n");
+		_ODP_ERR("DMA is disabled\n");
 		return -1;
 	}
 
@@ -131,7 +131,7 @@ static odp_stash_t create_stash(void)
 	stash = odp_stash_create("_odp_dma_transfer_id", &stash_param);
 
 	if (stash == ODP_STASH_INVALID) {
-		ODP_ERR("Stash create failed\n");
+		_ODP_ERR("Stash create failed\n");
 		return ODP_STASH_INVALID;
 	}
 
@@ -139,7 +139,7 @@ static odp_stash_t create_stash(void)
 	for (id = 1; id < MAX_TRANSFERS + 1; id++) {
 		ret = odp_stash_put_u32(stash, &id, 1);
 		if (ret != 1) {
-			ODP_ERR("Stash put failed: %i, %u\n", ret, id);
+			_ODP_ERR("Stash put failed: %i, %u\n", ret, id);
 			break;
 		}
 	}
@@ -147,13 +147,13 @@ static odp_stash_t create_stash(void)
 	if (ret != 1) {
 		for (i = 0; i < id; i++) {
 			if (odp_stash_get_u32(stash, &tmp, 1) != 1) {
-				ODP_ERR("Stash get failed: %u\n", i);
+				_ODP_ERR("Stash get failed: %u\n", i);
 				break;
 			}
 		}
 
 		if (odp_stash_destroy(stash))
-			ODP_ERR("Stash destroy failed\n");
+			_ODP_ERR("Stash destroy failed\n");
 
 		return ODP_STASH_INVALID;
 	}
@@ -176,13 +176,13 @@ static int destroy_stash(odp_stash_t stash)
 		if (num == 0)
 			break;
 
-		ODP_ERR("Stash get failed: %i\n", num);
+		_ODP_ERR("Stash get failed: %i\n", num);
 		ret = -1;
 		break;
 	}
 
 	if (odp_stash_destroy(stash)) {
-		ODP_ERR("Stash destroy failed\n");
+		_ODP_ERR("Stash destroy failed\n");
 		ret = -1;
 	}
 
@@ -196,28 +196,28 @@ odp_dma_t odp_dma_create(const char *name, const odp_dma_param_t *param)
 	dma_session_t *session = NULL;
 
 	if (odp_global_ro.disable.dma) {
-		ODP_ERR("DMA is disabled\n");
+		_ODP_ERR("DMA is disabled\n");
 		return ODP_DMA_INVALID;
 	}
 
 	if ((param->direction != ODP_DMA_MAIN_TO_MAIN) ||
 	    (param->type != ODP_DMA_TYPE_COPY)) {
-		ODP_ERR("Bad DMA parameter\n");
+		_ODP_ERR("Bad DMA parameter\n");
 		return ODP_DMA_INVALID;
 	}
 
 	if (param->compl_mode_mask == 0) {
-		ODP_ERR("Empty compl mode mask\n");
+		_ODP_ERR("Empty compl mode mask\n");
 		return ODP_DMA_INVALID;
 	}
 
 	if (odp_dma_capability(&dma_capa)) {
-		ODP_ERR("DMA capa failed\n");
+		_ODP_ERR("DMA capa failed\n");
 		return ODP_DMA_INVALID;
 	}
 
 	if (param->compl_mode_mask & ~dma_capa.compl_mode_mask) {
-		ODP_ERR("Compl mode not supported\n");
+		_ODP_ERR("Compl mode not supported\n");
 		return ODP_DMA_INVALID;
 	}
 
@@ -239,7 +239,7 @@ odp_dma_t odp_dma_create(const char *name, const odp_dma_param_t *param)
 	}
 
 	if (session == NULL) {
-		ODP_DBG("Out of DMA sessions\n");
+		_ODP_DBG("Out of DMA sessions\n");
 		return ODP_DMA_INVALID;
 	}
 
@@ -271,7 +271,7 @@ int odp_dma_destroy(odp_dma_t dma)
 	int ret = 0;
 
 	if (dma == ODP_DMA_INVALID) {
-		ODP_ERR("Bad DMA handle\n");
+		_ODP_ERR("Bad DMA handle\n");
 		return -1;
 	}
 
@@ -282,7 +282,7 @@ int odp_dma_destroy(odp_dma_t dma)
 	odp_ticketlock_lock(&session->lock);
 
 	if (session->active == 0) {
-		ODP_ERR("Session not created\n");
+		_ODP_ERR("Session not created\n");
 		odp_ticketlock_unlock(&session->lock);
 		return -1;
 	}
@@ -372,7 +372,7 @@ static inline int segment_pkt(segment_t seg[], int num_seg, const odp_dma_seg_t 
 		tot_len = dma_seg[i].len;
 
 		if (odp_unlikely(offset + tot_len > odp_packet_len(pkt))) {
-			ODP_ERR("Bad packet segment len/offset (%u/%u)\n", tot_len, offset);
+			_ODP_ERR("Bad packet segment len/offset (%u/%u)\n", tot_len, offset);
 			return 0;
 		}
 
@@ -380,7 +380,7 @@ static inline int segment_pkt(segment_t seg[], int num_seg, const odp_dma_seg_t 
 			addr = odp_packet_offset(pkt, offset, &seg_len, NULL);
 
 			if (odp_unlikely(addr == NULL)) {
-				ODP_ERR("Bad packet offset %u\n", offset);
+				_ODP_ERR("Bad packet offset %u\n", offset);
 				return 0;
 			}
 
@@ -396,7 +396,7 @@ static inline int segment_pkt(segment_t seg[], int num_seg, const odp_dma_seg_t 
 			num++;
 
 			if (odp_unlikely(num >= MAX_SEGS)) {
-				ODP_ERR("Too many packet segments\n");
+				_ODP_ERR("Too many packet segments\n");
 				return 0;
 			}
 		}
@@ -474,29 +474,29 @@ int odp_dma_transfer(odp_dma_t dma, const odp_dma_transfer_param_t *transfer,
 	segment_t dst[MAX_SEGS];
 
 	if (odp_unlikely(dma == ODP_DMA_INVALID)) {
-		ODP_ERR("Bad DMA handle\n");
+		_ODP_ERR("Bad DMA handle\n");
 		return -1;
 	}
 
 	if (odp_unlikely(session->active == 0)) {
-		ODP_ERR("Session not created\n");
+		_ODP_ERR("Session not created\n");
 		return -1;
 	}
 
 	if (odp_unlikely(transfer->num_src == 0 || transfer->num_src > MAX_SEGS)) {
-		ODP_ERR("Bad number of src segments\n");
+		_ODP_ERR("Bad number of src segments\n");
 		return -1;
 	}
 
 	if (odp_unlikely(transfer->num_dst == 0 || transfer->num_dst > MAX_SEGS)) {
-		ODP_ERR("Bad number of dst segments\n");
+		_ODP_ERR("Bad number of dst segments\n");
 		return -1;
 	}
 
 	tot_len = transfer_len(transfer);
 
 	if (odp_unlikely(tot_len == 0)) {
-		ODP_ERR("Bad transfer length\n");
+		_ODP_ERR("Bad transfer length\n");
 		return -1;
 	}
 
@@ -523,7 +523,7 @@ int odp_dma_transfer(odp_dma_t dma, const odp_dma_transfer_param_t *transfer,
 	num = transfer_table(trs, src, dst, max_num, tot_len);
 
 	if (odp_unlikely(num > max_num)) {
-		ODP_ERR("Segment table error\n");
+		_ODP_ERR("Segment table error\n");
 		return -1;
 	}
 
@@ -546,7 +546,7 @@ int odp_dma_transfer_multi(odp_dma_t dma, const odp_dma_transfer_param_t *trs_pa
 	int ret = 0;
 
 	if (odp_unlikely(num < 1)) {
-		ODP_ERR("Bad number of transfers\n");
+		_ODP_ERR("Bad number of transfers\n");
 		return -1;
 	}
 
@@ -597,7 +597,7 @@ void odp_dma_transfer_id_free(odp_dma_t dma, odp_dma_transfer_id_t transfer_id)
 	num = odp_stash_put_u32(session->stash, &id, 1);
 
 	if (odp_unlikely(num != 1))
-		ODP_ERR("Stash put failed\n");
+		_ODP_ERR("Stash put failed\n");
 }
 
 static inline uint32_t index_from_transfer_id(odp_dma_transfer_id_t transfer_id)
@@ -612,7 +612,7 @@ int odp_dma_transfer_start(odp_dma_t dma, const odp_dma_transfer_param_t *transf
 	dma_session_t *session = dma_session_from_handle(dma);
 
 	if (odp_unlikely(dma == ODP_DMA_INVALID)) {
-		ODP_ERR("Bad DMA handle\n");
+		_ODP_ERR("Bad DMA handle\n");
 		return -1;
 	}
 
@@ -623,19 +623,19 @@ int odp_dma_transfer_start(odp_dma_t dma, const odp_dma_transfer_param_t *transf
 	case ODP_DMA_COMPL_POLL:
 		if (compl->transfer_id == ODP_DMA_TRANSFER_ID_INVALID ||
 		    compl->transfer_id > MAX_TRANSFERS) {
-			ODP_ERR("Bad transfer ID: %u\n", compl->transfer_id);
+			_ODP_ERR("Bad transfer ID: %u\n", compl->transfer_id);
 			return -1;
 		}
 		break;
 	case ODP_DMA_COMPL_EVENT:
 		if (compl->event == ODP_EVENT_INVALID ||
 		    compl->queue == ODP_QUEUE_INVALID) {
-			ODP_ERR("Bad event or queue\n");
+			_ODP_ERR("Bad event or queue\n");
 			return -1;
 		}
 		break;
 	default:
-		ODP_ERR("Bad completion mode %u\n", compl->compl_mode);
+		_ODP_ERR("Bad completion mode %u\n", compl->compl_mode);
 		return -1;
 	}
 
@@ -654,7 +654,7 @@ int odp_dma_transfer_start(odp_dma_t dma, const odp_dma_transfer_param_t *transf
 		odp_buffer_t buf = (odp_buffer_t)(uintptr_t)compl->event;
 
 		if (odp_unlikely(odp_event_type(compl->event) != ODP_EVENT_DMA_COMPL)) {
-			ODP_ERR("Bad completion event type\n");
+			_ODP_ERR("Bad completion event type\n");
 			return -1;
 		}
 
@@ -663,8 +663,8 @@ int odp_dma_transfer_start(odp_dma_t dma, const odp_dma_transfer_param_t *transf
 		result->user_ptr = compl->user_ptr;
 
 		if (odp_unlikely(odp_queue_enq(compl->queue, compl->event))) {
-			ODP_ERR("Completion event enqueue failed %" PRIu64 "\n",
-				odp_queue_to_u64(compl->queue));
+			_ODP_ERR("Completion event enqueue failed %" PRIu64 "\n",
+				 odp_queue_to_u64(compl->queue));
 			return -1;
 		}
 	}
@@ -679,7 +679,7 @@ int odp_dma_transfer_start_multi(odp_dma_t dma, const odp_dma_transfer_param_t *
 	int ret = 0;
 
 	if (odp_unlikely(num < 1)) {
-		ODP_ERR("Bad number of transfers\n");
+		_ODP_ERR("Bad number of transfers\n");
 		return -1;
 	}
 
@@ -702,13 +702,13 @@ int odp_dma_transfer_done(odp_dma_t dma, odp_dma_transfer_id_t transfer_id,
 	dma_session_t *session = dma_session_from_handle(dma);
 
 	if (odp_unlikely(dma == ODP_DMA_INVALID)) {
-		ODP_ERR("Bad DMA handle\n");
+		_ODP_ERR("Bad DMA handle\n");
 		return -1;
 	}
 
 	if (odp_unlikely(transfer_id == ODP_DMA_TRANSFER_ID_INVALID ||
 			 transfer_id > MAX_TRANSFERS)) {
-		ODP_ERR("Bad transfer ID: %u\n", transfer_id);
+		_ODP_ERR("Bad transfer ID: %u\n", transfer_id);
 		return -1;
 	}
 
@@ -737,13 +737,13 @@ odp_pool_t odp_dma_pool_create(const char *name, const odp_dma_pool_param_t *dma
 	uint32_t cache_size = dma_pool_param->cache_size;
 
 	if (num > _odp_dma_glb->pool_capa.buf.max_num) {
-		ODP_ERR("Too many DMA completion events: %u\n", num);
+		_ODP_ERR("Too many DMA completion events: %u\n", num);
 		return ODP_POOL_INVALID;
 	}
 
 	if (cache_size < _odp_dma_glb->pool_capa.buf.min_cache_size ||
 	    cache_size > _odp_dma_glb->pool_capa.buf.max_cache_size) {
-		ODP_ERR("Bad cache size: %u\n", cache_size);
+		_ODP_ERR("Bad cache size: %u\n", cache_size);
 		return ODP_POOL_INVALID;
 	}
 
@@ -784,7 +784,7 @@ void odp_dma_compl_free(odp_dma_compl_t dma_compl)
 	odp_buffer_t buf = (odp_buffer_t)(uintptr_t)dma_compl;
 
 	if (odp_unlikely(dma_compl == ODP_DMA_COMPL_INVALID)) {
-		ODP_ERR("Bad DMA compl handle\n");
+		_ODP_ERR("Bad DMA compl handle\n");
 		return;
 	}
 
@@ -810,7 +810,7 @@ int odp_dma_compl_result(odp_dma_compl_t dma_compl, odp_dma_result_t *result_out
 	odp_buffer_t buf = (odp_buffer_t)(uintptr_t)dma_compl;
 
 	if (odp_unlikely(dma_compl == ODP_DMA_COMPL_INVALID)) {
-		ODP_ERR("Bad DMA compl handle\n");
+		_ODP_ERR("Bad DMA compl handle\n");
 		return -1;
 	}
 
@@ -837,15 +837,15 @@ void odp_dma_print(odp_dma_t dma)
 	dma_session_t *session = dma_session_from_handle(dma);
 
 	if (dma == ODP_DMA_INVALID) {
-		ODP_ERR("Bad DMA handle\n");
+		_ODP_ERR("Bad DMA handle\n");
 		return;
 	}
 
-	ODP_PRINT("\nDMA info\n");
-	ODP_PRINT("--------\n");
-	ODP_PRINT("  DMA handle      0x%" PRIx64 "\n", odp_dma_to_u64(dma));
-	ODP_PRINT("  name            %s\n", session->name);
-	ODP_PRINT("\n");
+	_ODP_PRINT("\nDMA info\n");
+	_ODP_PRINT("--------\n");
+	_ODP_PRINT("  DMA handle      0x%" PRIx64 "\n", odp_dma_to_u64(dma));
+	_ODP_PRINT("  name            %s\n", session->name);
+	_ODP_PRINT("\n");
 }
 
 void odp_dma_compl_print(odp_dma_compl_t dma_compl)
@@ -854,25 +854,25 @@ void odp_dma_compl_print(odp_dma_compl_t dma_compl)
 	int ret;
 
 	if (dma_compl == ODP_DMA_COMPL_INVALID) {
-		ODP_ERR("Bad DMA compl handle\n");
+		_ODP_ERR("Bad DMA compl handle\n");
 		return;
 	}
 
 	ret = odp_dma_compl_result(dma_compl, &result);
 
-	ODP_PRINT("\nDMA completion\n");
-	ODP_PRINT("--------------\n");
-	ODP_PRINT("  Compl event handle: 0x%" PRIx64 "\n", (uint64_t)(uintptr_t)dma_compl);
+	_ODP_PRINT("\nDMA completion\n");
+	_ODP_PRINT("--------------\n");
+	_ODP_PRINT("  Compl event handle: 0x%" PRIx64 "\n", (uint64_t)(uintptr_t)dma_compl);
 
 	if (ret == 0) {
-		ODP_PRINT("  Result:             %s\n", result.success ? "success" : "fail");
-		ODP_PRINT("  User pointer:       0x%" PRIx64 "\n",
-			  (uint64_t)(uintptr_t)result.user_ptr);
+		_ODP_PRINT("  Result:             %s\n", result.success ? "success" : "fail");
+		_ODP_PRINT("  User pointer:       0x%" PRIx64 "\n",
+			   (uint64_t)(uintptr_t)result.user_ptr);
 	} else {
-		ODP_PRINT("  No result metadata\n");
+		_ODP_PRINT("  No result metadata\n");
 	}
 
-	ODP_PRINT("\n");
+	_ODP_PRINT("\n");
 }
 
 int _odp_dma_init_global(void)
@@ -881,7 +881,7 @@ int _odp_dma_init_global(void)
 	int i;
 
 	if (odp_global_ro.disable.dma) {
-		ODP_PRINT("DMA is DISABLED\n");
+		_ODP_PRINT("DMA is DISABLED\n");
 		return 0;
 	}
 
@@ -889,7 +889,7 @@ int _odp_dma_init_global(void)
 	_odp_dma_glb = odp_shm_addr(shm);
 
 	if (_odp_dma_glb == NULL) {
-		ODP_ERR("SHM reserve failed\n");
+		_ODP_ERR("SHM reserve failed\n");
 		return -1;
 	}
 
@@ -899,7 +899,7 @@ int _odp_dma_init_global(void)
 	odp_pool_param_init(&_odp_dma_glb->pool_param);
 
 	if (odp_pool_capability(&_odp_dma_glb->pool_capa)) {
-		ODP_ERR("Pool capability failed\n");
+		_ODP_ERR("Pool capability failed\n");
 		return -1;
 	}
 
@@ -922,7 +922,7 @@ int _odp_dma_term_global(void)
 	shm = _odp_dma_glb->shm;
 
 	if (odp_shm_free(shm)) {
-		ODP_ERR("SHM free failed\n");
+		_ODP_ERR("SHM free failed\n");
 		return -1;
 	}
 
