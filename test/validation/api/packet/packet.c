@@ -350,6 +350,7 @@ static void packet_set_inflags(odp_packet_t pkt, int val)
 	odp_packet_has_tcp_set(pkt, val);
 	odp_packet_has_sctp_set(pkt, val);
 	odp_packet_has_icmp_set(pkt, val);
+	odp_packet_user_flag_set(pkt, val);
 }
 
 static void packet_check_inflags(odp_packet_t pkt, int val)
@@ -375,6 +376,7 @@ static void packet_check_inflags(odp_packet_t pkt, int val)
 	CU_ASSERT(odp_packet_has_tcp(pkt) == !!val);
 	CU_ASSERT(odp_packet_has_sctp(pkt) == !!val);
 	CU_ASSERT(odp_packet_has_icmp(pkt) == !!val);
+	CU_ASSERT(odp_packet_user_flag(pkt) == !!val);
 }
 
 static void packet_test_alloc_free(void)
@@ -1396,6 +1398,7 @@ static void packet_test_in_flags(void)
 	TEST_INFLAG(pkt, has_tcp);
 	TEST_INFLAG(pkt, has_sctp);
 	TEST_INFLAG(pkt, has_icmp);
+	TEST_INFLAG(pkt, user_flag);
 
 	packet_set_inflags(pkt, 0);
 	packet_check_inflags(pkt, 0);
@@ -1541,6 +1544,7 @@ static void packet_compare_inflags(odp_packet_t pkt1, odp_packet_t pkt2)
 	COMPARE_INFLAG(pkt1, pkt2, has_tcp);
 	COMPARE_INFLAG(pkt1, pkt2, has_sctp);
 	COMPARE_INFLAG(pkt1, pkt2, has_icmp);
+	COMPARE_INFLAG(pkt1, pkt2, user_flag);
 	COMPARE_INFLAG(pkt1, pkt2, has_flow_hash);
 	COMPARE_INFLAG(pkt1, pkt2, has_ts);
 
@@ -3097,6 +3101,19 @@ static void packet_vector_test_alloc_free(void)
 	CU_ASSERT_FATAL(odp_packet_vector_valid(pktv) == 1)
 	CU_ASSERT(odp_packet_vector_to_u64(pktv) !=
 		  odp_packet_vector_to_u64(ODP_PACKET_VECTOR_INVALID));
+
+	/* User flag should be initially zero */
+	CU_ASSERT(odp_packet_vector_user_flag(pktv) == 0);
+	odp_packet_vector_user_flag_set(pktv, 1);
+	CU_ASSERT(odp_packet_vector_user_flag(pktv) != 0);
+	odp_packet_vector_user_flag_set(pktv, 0);
+	CU_ASSERT(odp_packet_vector_user_flag(pktv) == 0);
+
+	/* Free with flag still set, alloc should clear it. */
+	odp_packet_vector_user_flag_set(pktv, 1);
+	odp_packet_vector_free(pktv);
+	pktv = odp_packet_vector_alloc(pool);
+	CU_ASSERT(odp_packet_vector_user_flag(pktv) == 0);
 
 	/* Since it was only one buffer pool, more vector packets can't be
 	 * allocated.
