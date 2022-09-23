@@ -57,7 +57,7 @@ odp_time_t _odp_timespec_cur(void)
 
 	ret = clock_gettime(CLOCK_MONOTONIC_RAW, &sys_time);
 	if (odp_unlikely(ret != 0))
-		ODP_ABORT("clock_gettime failed\n");
+		_ODP_ABORT("clock_gettime failed\n");
 
 	time.nsec = time_spec_diff_nsec(&sys_time, start_time);
 
@@ -73,7 +73,7 @@ static inline uint64_t time_spec_res(void)
 
 	ret = clock_getres(CLOCK_MONOTONIC_RAW, &tres);
 	if (odp_unlikely(ret != 0))
-		ODP_ABORT("clock_getres failed\n");
+		_ODP_ABORT("clock_getres failed\n");
 
 	return ODP_TIME_SEC_IN_NS / (uint64_t)tres.tv_nsec;
 }
@@ -194,8 +194,7 @@ int _odp_time_init_global(void)
 		if (global->hw_freq_hz == 0)
 			return -1;
 
-		ODP_PRINT("HW time counter freq: %" PRIu64 " hz\n\n",
-			  global->hw_freq_hz);
+		_ODP_PRINT("HW time counter freq: %" PRIu64 " hz\n\n", global->hw_freq_hz);
 
 		global->hw_start = _odp_cpu_global_time();
 		return 0;

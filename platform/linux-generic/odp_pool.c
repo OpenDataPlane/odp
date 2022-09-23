@@ -145,13 +145,13 @@ static inline int cache_available(pool_t *pool, odp_pool_stats_t *stats)
 
 	if (per_thread) {
 		if (first > last || last >= odp_thread_count_max()) {
-			ODP_ERR("Bad thread ids: first=%" PRIu16 " last=%" PRIu16 "\n",
-				first, last);
+			_ODP_ERR("Bad thread ids: first=%" PRIu16 " last=%" PRIu16 "\n",
+				 first, last);
 			return -1;
 		}
 
 		if (last - first + 1 > ODP_POOL_MAX_THREAD_STATS) {
-			ODP_ERR("Too many thread ids: max=%d\n", ODP_POOL_MAX_THREAD_STATS);
+			_ODP_ERR("Too many thread ids: max=%d\n", ODP_POOL_MAX_THREAD_STATS);
 			return -1;
 		}
 	}
@@ -177,81 +177,80 @@ static int read_config_file(pool_global_t *pool_glb)
 	const char *str;
 	int val = 0;
 
-	ODP_PRINT("Pool config:\n");
+	_ODP_PRINT("Pool config:\n");
 
 	str = "pool.local_cache_size";
 	if (!_odp_libconfig_lookup_int(str, &val)) {
-		ODP_ERR("Config option '%s' not found.\n", str);
+		_ODP_ERR("Config option '%s' not found.\n", str);
 		return -1;
 	}
 
 	if (val > CONFIG_POOL_CACHE_MAX_SIZE || val < 0) {
-		ODP_ERR("Bad value %s = %i, max %i\n", str, val,
-			CONFIG_POOL_CACHE_MAX_SIZE);
+		_ODP_ERR("Bad value %s = %i, max %i\n", str, val, CONFIG_POOL_CACHE_MAX_SIZE);
 		return -1;
 	}
 
 	local_cache_size = val;
 	pool_glb->config.local_cache_size = local_cache_size;
-	ODP_PRINT("  %s: %i\n", str, val);
+	_ODP_PRINT("  %s: %i\n", str, val);
 
 	str = "pool.burst_size";
 	if (!_odp_libconfig_lookup_int(str, &val)) {
-		ODP_ERR("Config option '%s' not found.\n", str);
+		_ODP_ERR("Config option '%s' not found.\n", str);
 		return -1;
 	}
 
 	if (val <= 0) {
-		ODP_ERR("Bad value %s = %i\n", str, val);
+		_ODP_ERR("Bad value %s = %i\n", str, val);
 		return -1;
 	}
 
 	burst_size = val;
 	pool_glb->config.burst_size = burst_size;
-	ODP_PRINT("  %s: %i\n", str, val);
+	_ODP_PRINT("  %s: %i\n", str, val);
 
 	/* Check local cache size and burst size relation */
 	if (local_cache_size % burst_size) {
-		ODP_ERR("Pool cache size not multiple of burst size\n");
+		_ODP_ERR("Pool cache size not multiple of burst size\n");
 		return -1;
 	}
 
 	if (local_cache_size && (local_cache_size / burst_size < 2)) {
-		ODP_ERR("Cache burst size too large compared to cache size\n");
+		_ODP_ERR("Cache burst size too large compared to cache size\n");
 		return -1;
 	}
 
 	str = "pool.pkt.max_num";
 	if (!_odp_libconfig_lookup_int(str, &val)) {
-		ODP_ERR("Config option '%s' not found.\n", str);
+		_ODP_ERR("Config option '%s' not found.\n", str);
 		return -1;
 	}
 
 	if (val > CONFIG_POOL_MAX_NUM || val < POOL_MAX_NUM_MIN) {
-		ODP_ERR("Bad value %s = %i\n", str, val);
+		_ODP_ERR("Bad value %s = %i\n", str, val);
 		return -1;
 	}
 
 	pool_glb->config.pkt_max_num = val;
-	ODP_PRINT("  %s: %i\n", str, val);
+	_ODP_PRINT("  %s: %i\n", str, val);
 
 	str = "pool.pkt.max_len";
 	if (!_odp_libconfig_lookup_int(str, &val)) {
-		ODP_ERR("Config option '%s' not found.\n", str);
+		_ODP_ERR("Config option '%s' not found.\n", str);
 		return -1;
 	}
 
 	if (val <= 0) {
-		ODP_ERR("Bad value %s = %i\n", str, val);
+		_ODP_ERR("Bad value %s = %i\n", str, val);
 		return -1;
 	}
 
 	pool_glb->config.pkt_max_len = val;
-	ODP_PRINT("  %s: %i\n", str, val);
+	_ODP_PRINT("  %s: %i\n", str, val);
 
 	str = "pool.pkt.base_align";
 	if (!_odp_libconfig_lookup_int(str, &val)) {
-		ODP_ERR("Config option '%s' not found.\n", str);
+		_ODP_ERR("Config option '%s' not found.\n", str);
 		return -1;
 	}
 
@@ -260,16 +259,16 @@ static int read_config_file(pool_global_t *pool_glb)
 		align = ODP_CACHE_LINE_SIZE;
 
 	if (!_ODP_CHECK_IS_POWER2(align)) {
-		ODP_ERR("Not a power of two: %s = %i\n", str, val);
+		_ODP_ERR("Not a power of two: %s = %i\n", str, val);
 		return -1;
 	}
 
 	pool_glb->config.pkt_base_align = align;
-	ODP_PRINT("  %s: %u\n", str, align);
+	_ODP_PRINT("  %s: %u\n", str, align);
 
 	str = "pool.buf.min_align";
 	if (!_odp_libconfig_lookup_int(str, &val)) {
-		ODP_ERR("Config option '%s' not found.\n", str);
+		_ODP_ERR("Config option '%s' not found.\n", str);
 		return -1;
 	}
 
@@ -278,14 +277,14 @@ static int read_config_file(pool_global_t *pool_glb)
 		align = ODP_CACHE_LINE_SIZE;
 
 	if (!_ODP_CHECK_IS_POWER2(align)) {
-		ODP_ERR("Not a power of two: %s = %i\n", str, val);
+		_ODP_ERR("Not a power of two: %s = %i\n", str, val);
 		return -1;
 	}
 
 	pool_glb->config.buf_min_align = align;
-	ODP_PRINT("  %s: %u\n", str, align);
+	_ODP_PRINT("  %s: %u\n", str, align);
 
-	ODP_PRINT("\n");
+	_ODP_PRINT("\n");
 
 	return 0;
 }
@@ -321,15 +320,15 @@ int _odp_pool_init_global(void)
 		pool->pool_idx = i;
 	}
 
-	ODP_DBG("\nPool init global\n");
-	ODP_DBG("  event_hdr_t size               %zu\n", sizeof(_odp_event_hdr_t));
-	ODP_DBG("  buffer_hdr_t size              %zu\n", sizeof(odp_buffer_hdr_t));
-	ODP_DBG("  packet_hdr_t size              %zu\n", sizeof(odp_packet_hdr_t));
-	ODP_DBG("  timeout_hdr_t size             %zu\n", sizeof(odp_timeout_hdr_t));
-	ODP_DBG("  event_vector_hdr_t size        %zu\n", sizeof(odp_event_vector_hdr_t));
-	ODP_DBG("  packet_hdr_t::seg_data offset  %zu\n", offsetof(odp_packet_hdr_t, seg_data));
-	ODP_DBG("  packet_hdr_t::timestamp offset %zu\n", offsetof(odp_packet_hdr_t, timestamp));
-	ODP_DBG("\n");
+	_ODP_DBG("\nPool init global\n");
+	_ODP_DBG("  event_hdr_t size               %zu\n", sizeof(_odp_event_hdr_t));
+	_ODP_DBG("  buffer_hdr_t size              %zu\n", sizeof(odp_buffer_hdr_t));
+	_ODP_DBG("  packet_hdr_t size              %zu\n", sizeof(odp_packet_hdr_t));
+	_ODP_DBG("  timeout_hdr_t size             %zu\n", sizeof(odp_timeout_hdr_t));
+	_ODP_DBG("  event_vector_hdr_t size        %zu\n", sizeof(odp_event_vector_hdr_t));
+	_ODP_DBG("  packet_hdr_t::seg_data offset  %zu\n", offsetof(odp_packet_hdr_t, seg_data));
+	_ODP_DBG("  packet_hdr_t::timestamp offset %zu\n", offsetof(odp_packet_hdr_t, timestamp));
+	_ODP_DBG("\n");
 	return 0;
 }
 
@@ -348,7 +347,7 @@ int _odp_pool_term_global(void)
 
 		LOCK(&pool->lock);
 		if (pool->reserved) {
-			ODP_ERR("Not destroyed pool: %s\n", pool->name);
+			_ODP_ERR("Not destroyed pool: %s\n", pool->name);
 			rc = -1;
 		}
 		UNLOCK(&pool->lock);
@@ -356,7 +355,7 @@ int _odp_pool_term_global(void)
 
 	ret = odp_shm_free(_odp_pool_glb->shm);
 	if (ret < 0) {
-		ODP_ERR("SHM free failed\n");
+		_ODP_ERR("SHM free failed\n");
 		rc = -1;
 	}
 
@@ -422,7 +421,7 @@ static pool_t *reserve_pool(uint32_t shmflags, uint8_t pool_ext, uint32_t num)
 			shm = odp_shm_reserve(ring_name, mem_size, ODP_CACHE_LINE_SIZE, shmflags);
 
 			if (odp_unlikely(shm == ODP_SHM_INVALID)) {
-				ODP_ERR("Unable to alloc pool ring %d\n", i);
+				_ODP_ERR("Unable to alloc pool ring %d\n", i);
 				LOCK(&pool->lock);
 				pool->reserved = 0;
 				UNLOCK(&pool->lock);
@@ -529,7 +528,7 @@ static void init_buffers(pool_t *pool)
 	int skipped_blocks = 0;
 
 	if (odp_shm_info(pool->shm, &shm_info))
-		ODP_ABORT("Shm info failed\n");
+		_ODP_ABORT("Shm info failed\n");
 
 	page_size = shm_info.page_size;
 	ring = &pool->ring->hdr;
@@ -600,7 +599,7 @@ static bool shm_is_from_huge_pages(odp_shm_t shm)
 		return 0;
 
 	if (odp_shm_info(shm, &info)) {
-		ODP_ERR("Failed to fetch shm info\n");
+		_ODP_ERR("Failed to fetch shm info\n");
 		return 0;
 	}
 
@@ -679,8 +678,8 @@ static void set_mem_src_ops(pool_t *pool)
 			if (_odp_pool_mem_src_ops[i]->is_active()) {
 				is_active_found = true;
 				pool->mem_src_ops = _odp_pool_mem_src_ops[i];
-				ODP_DBG("Packet pool as a memory source for: %s\n",
-					pool->mem_src_ops->name);
+				_ODP_DBG("Packet pool as a memory source for: %s\n",
+					 pool->mem_src_ops->name);
 			}
 		} else if (_odp_pool_mem_src_ops[i]->is_active()) {
 			_odp_pool_mem_src_ops[i]->force_disable();
@@ -719,7 +718,7 @@ odp_pool_t _odp_pool_create(const char *name, const odp_pool_param_t *params,
 		if (align_req &&
 		    (!_ODP_CHECK_IS_POWER2(align_req) ||
 		     align_req > _odp_pool_glb->config.pkt_base_align)) {
-			ODP_ERR("Bad align requirement\n");
+			_ODP_ERR("Bad align requirement\n");
 			return ODP_POOL_INVALID;
 		}
 
@@ -735,7 +734,7 @@ odp_pool_t _odp_pool_create(const char *name, const odp_pool_param_t *params,
 	/* Validate requested buffer alignment */
 	if (align > ODP_CONFIG_BUFFER_ALIGN_MAX ||
 	    align != _ODP_ROUNDDOWN_POWER2(align, align)) {
-		ODP_ERR("Bad align requirement\n");
+		_ODP_ERR("Bad align requirement\n");
 		return ODP_POOL_INVALID;
 	}
 
@@ -756,7 +755,7 @@ odp_pool_t _odp_pool_create(const char *name, const odp_pool_param_t *params,
 
 	case ODP_POOL_PACKET:
 		if (params->pkt.headroom > CONFIG_PACKET_HEADROOM) {
-			ODP_ERR("Packet headroom size not supported\n");
+			_ODP_ERR("Packet headroom size not supported\n");
 			return ODP_POOL_INVALID;
 		}
 
@@ -779,7 +778,7 @@ odp_pool_t _odp_pool_create(const char *name, const odp_pool_param_t *params,
 		if ((max_len + seg_len - 1) / seg_len > PKT_MAX_SEGS)
 			seg_len = (max_len + PKT_MAX_SEGS - 1) / PKT_MAX_SEGS;
 		if (seg_len > CONFIG_PACKET_MAX_SEG_LEN) {
-			ODP_ERR("Pool unable to store 'max_len' packet\n");
+			_ODP_ERR("Pool unable to store 'max_len' packet\n");
 			return ODP_POOL_INVALID;
 		}
 
@@ -789,8 +788,8 @@ odp_pool_t _odp_pool_create(const char *name, const odp_pool_param_t *params,
 
 		/* Make sure 'params->pkt.max_num' limitation holds */
 		if (params->pkt.max_num && num > params->pkt.max_num) {
-			ODP_ERR("Pool 'max_num' parameter too small (%u/%u)\n",
-				params->pkt.max_num, num);
+			_ODP_ERR("Pool 'max_num' parameter too small (%u/%u)\n",
+				 params->pkt.max_num, num);
 			return ODP_POOL_INVALID;
 		}
 
@@ -814,14 +813,14 @@ odp_pool_t _odp_pool_create(const char *name, const odp_pool_param_t *params,
 		break;
 
 	default:
-		ODP_ERR("Bad pool type\n");
+		_ODP_ERR("Bad pool type\n");
 		return ODP_POOL_INVALID;
 	}
 
 	pool = reserve_pool(shmflags, 0, num);
 
 	if (pool == NULL) {
-		ODP_ERR("No more free pools\n");
+		_ODP_ERR("No more free pools\n");
 		return ODP_POOL_INVALID;
 	}
 
@@ -848,7 +847,7 @@ odp_pool_t _odp_pool_create(const char *name, const odp_pool_param_t *params,
 						       &pool->block_offset, &shmflags);
 
 			if (!adj_size) {
-				ODP_ERR("Calculating adjusted block size failed\n");
+				_ODP_ERR("Calculating adjusted block size failed\n");
 				return ODP_POOL_INVALID;
 			}
 		}
@@ -908,7 +907,7 @@ odp_pool_t _odp_pool_create(const char *name, const odp_pool_param_t *params,
 	pool->shm = shm;
 
 	if (shm == ODP_SHM_INVALID) {
-		ODP_ERR("SHM reserve failed\n");
+		_ODP_ERR("SHM reserve failed\n");
 		goto error;
 	}
 
@@ -918,7 +917,7 @@ odp_pool_t _odp_pool_create(const char *name, const odp_pool_param_t *params,
 	pool->max_addr  = pool->base_addr + pool->shm_size - 1;
 
 	if (reserve_uarea(pool, uarea_size, num, shmflags)) {
-		ODP_ERR("User area SHM reserve failed\n");
+		_ODP_ERR("User area SHM reserve failed\n");
 		goto error;
 	}
 
@@ -927,7 +926,7 @@ odp_pool_t _odp_pool_create(const char *name, const odp_pool_param_t *params,
 
 	if (type == ODP_POOL_PACKET && pool->mem_src_ops && pool->mem_src_ops->bind &&
 	    pool->mem_src_ops->bind(pool->mem_src_data, pool)) {
-		ODP_ERR("Binding pool as memory source failed\n");
+		_ODP_ERR("Binding pool as memory source failed\n");
 		goto error;
 	}
 
@@ -981,27 +980,27 @@ static int check_params(const odp_pool_param_t *params)
 		cache_size = params->buf.cache_size;
 
 		if (params->buf.num > capa.buf.max_num) {
-			ODP_ERR("buf.num too large %u\n", params->buf.num);
+			_ODP_ERR("buf.num too large %u\n", params->buf.num);
 			return -1;
 		}
 
 		if (params->buf.size > capa.buf.max_size) {
-			ODP_ERR("buf.size too large %u\n", params->buf.size);
+			_ODP_ERR("buf.size too large %u\n", params->buf.size);
 			return -1;
 		}
 
 		if (params->buf.align > capa.buf.max_align) {
-			ODP_ERR("buf.align too large %u\n", params->buf.align);
+			_ODP_ERR("buf.align too large %u\n", params->buf.align);
 			return -1;
 		}
 
 		if (params->buf.uarea_size > capa.buf.max_uarea_size) {
-			ODP_ERR("buf.uarea_size too large %u\n", params->buf.uarea_size);
+			_ODP_ERR("buf.uarea_size too large %u\n", params->buf.uarea_size);
 			return -1;
 		}
 
 		if (params->stats.all & ~capa.buf.stats.all) {
-			ODP_ERR("Unsupported pool statistics counter\n");
+			_ODP_ERR("Unsupported pool statistics counter\n");
 			return -1;
 		}
 
@@ -1012,47 +1011,42 @@ static int check_params(const odp_pool_param_t *params)
 		cache_size = params->pkt.cache_size;
 
 		if (params->pkt.num > capa.pkt.max_num) {
-			ODP_ERR("pkt.num too large %u\n", params->pkt.num);
+			_ODP_ERR("pkt.num too large %u\n", params->pkt.num);
 			return -1;
 		}
 
 		if (params->pkt.max_num > capa.pkt.max_num) {
-			ODP_ERR("pkt.max_num too large %u\n",
-				params->pkt.max_num);
+			_ODP_ERR("pkt.max_num too large %u\n", params->pkt.max_num);
 			return -1;
 		}
 
 		if (params->pkt.len > capa.pkt.max_len) {
-			ODP_ERR("pkt.len too large %u\n", params->pkt.len);
+			_ODP_ERR("pkt.len too large %u\n", params->pkt.len);
 			return -1;
 		}
 
 		if (params->pkt.max_len > capa.pkt.max_len) {
-			ODP_ERR("pkt.max_len too large %u\n",
-				params->pkt.max_len);
+			_ODP_ERR("pkt.max_len too large %u\n", params->pkt.max_len);
 			return -1;
 		}
 
 		if (params->pkt.seg_len > capa.pkt.max_seg_len) {
-			ODP_ERR("pkt.seg_len too large %u\n",
-				params->pkt.seg_len);
+			_ODP_ERR("pkt.seg_len too large %u\n", params->pkt.seg_len);
 			return -1;
 		}
 
 		if (params->pkt.uarea_size > capa.pkt.max_uarea_size) {
-			ODP_ERR("pkt.uarea_size too large %u\n",
-				params->pkt.uarea_size);
+			_ODP_ERR("pkt.uarea_size too large %u\n", params->pkt.uarea_size);
 			return -1;
 		}
 
 		if (params->pkt.headroom > capa.pkt.max_headroom) {
-			ODP_ERR("pkt.headroom too large %u\n",
-				params->pkt.headroom);
+			_ODP_ERR("pkt.headroom too large %u\n", params->pkt.headroom);
 			return -1;
 		}
 
 		if (params->stats.all & ~capa.pkt.stats.all) {
-			ODP_ERR("Unsupported pool statistics counter\n");
+			_ODP_ERR("Unsupported pool statistics counter\n");
 			return -1;
 		}
 
@@ -1063,17 +1057,17 @@ static int check_params(const odp_pool_param_t *params)
 		cache_size = params->tmo.cache_size;
 
 		if (params->tmo.num > capa.tmo.max_num) {
-			ODP_ERR("tmo.num too large %u\n", params->tmo.num);
+			_ODP_ERR("tmo.num too large %u\n", params->tmo.num);
 			return -1;
 		}
 
 		if (params->tmo.uarea_size > capa.tmo.max_uarea_size) {
-			ODP_ERR("tmo.uarea_size too large %u\n", params->tmo.uarea_size);
+			_ODP_ERR("tmo.uarea_size too large %u\n", params->tmo.uarea_size);
 			return -1;
 		}
 
 		if (params->stats.all & ~capa.tmo.stats.all) {
-			ODP_ERR("Unsupported pool statistics counter\n");
+			_ODP_ERR("Unsupported pool statistics counter\n");
 			return -1;
 		}
 
@@ -1084,49 +1078,49 @@ static int check_params(const odp_pool_param_t *params)
 		cache_size = params->vector.cache_size;
 
 		if (params->vector.num == 0) {
-			ODP_ERR("vector.num zero\n");
+			_ODP_ERR("vector.num zero\n");
 			return -1;
 		}
 
 		if (params->vector.num > capa.vector.max_num) {
-			ODP_ERR("vector.num too large %u\n", params->vector.num);
+			_ODP_ERR("vector.num too large %u\n", params->vector.num);
 			return -1;
 		}
 
 		if (params->vector.max_size == 0) {
-			ODP_ERR("vector.max_size zero\n");
+			_ODP_ERR("vector.max_size zero\n");
 			return -1;
 		}
 
 		if (params->vector.max_size > capa.vector.max_size) {
-			ODP_ERR("vector.max_size too large %u\n", params->vector.max_size);
+			_ODP_ERR("vector.max_size too large %u\n", params->vector.max_size);
 			return -1;
 		}
 
 		if (params->vector.uarea_size > capa.vector.max_uarea_size) {
-			ODP_ERR("vector.uarea_size too large %u\n", params->vector.uarea_size);
+			_ODP_ERR("vector.uarea_size too large %u\n", params->vector.uarea_size);
 			return -1;
 		}
 
 		if (params->stats.all & ~capa.vector.stats.all) {
-			ODP_ERR("Unsupported pool statistics counter\n");
+			_ODP_ERR("Unsupported pool statistics counter\n");
 			return -1;
 		}
 
 		break;
 
 	default:
-		ODP_ERR("bad pool type %i\n", params->type);
+		_ODP_ERR("bad pool type %i\n", params->type);
 		return -1;
 	}
 
 	if (cache_size > CONFIG_POOL_CACHE_MAX_SIZE) {
-		ODP_ERR("Too large cache size %u\n", cache_size);
+		_ODP_ERR("Too large cache size %u\n", cache_size);
 		return -1;
 	}
 
 	if (num <= (num_threads * cache_size))
-		ODP_DBG("Entire pool fits into thread local caches. Pool "
+		_ODP_DBG("Entire pool fits into thread local caches. Pool "
 			"starvation may occur if the pool is used by multiple "
 			"threads.\n");
 
@@ -1153,7 +1147,7 @@ int odp_pool_destroy(odp_pool_t pool_hdl)
 
 	if (pool->reserved == 0) {
 		UNLOCK(&pool->lock);
-		ODP_ERR("Pool not created\n");
+		_ODP_ERR("Pool not created\n");
 		return -1;
 	}
 
@@ -1382,11 +1376,11 @@ odp_buffer_t odp_buffer_alloc(odp_pool_t pool_hdl)
 	pool_t *pool;
 	int ret;
 
-	ODP_ASSERT(ODP_POOL_INVALID != pool_hdl);
+	_ODP_ASSERT(ODP_POOL_INVALID != pool_hdl);
 
 	pool = _odp_pool_entry(pool_hdl);
 
-	ODP_ASSERT(pool->type == ODP_POOL_BUFFER);
+	_ODP_ASSERT(pool->type == ODP_POOL_BUFFER);
 
 	ret  = _odp_event_alloc_multi(pool, (_odp_event_hdr_t **)&buf, 1);
 
@@ -1413,11 +1407,11 @@ int odp_buffer_alloc_multi(odp_pool_t pool_hdl, odp_buffer_t buf[], int num)
 {
 	pool_t *pool;
 
-	ODP_ASSERT(ODP_POOL_INVALID != pool_hdl);
+	_ODP_ASSERT(ODP_POOL_INVALID != pool_hdl);
 
 	pool = _odp_pool_entry(pool_hdl);
 
-	ODP_ASSERT(pool->type == ODP_POOL_BUFFER);
+	_ODP_ASSERT(pool->type == ODP_POOL_BUFFER);
 
 	return _odp_event_alloc_multi(pool, (_odp_event_hdr_t **)buf, num);
 }
@@ -1505,39 +1499,37 @@ void odp_pool_print(odp_pool_t pool_hdl)
 
 	pool = _odp_pool_entry(pool_hdl);
 
-	ODP_PRINT("\nPool info\n");
-	ODP_PRINT("---------\n");
-	ODP_PRINT("  pool            %" PRIu64 "\n",
-		  odp_pool_to_u64(_odp_pool_handle(pool)));
-	ODP_PRINT("  name            %s\n", pool->name);
-	ODP_PRINT("  pool type       %s\n",
-		  pool->type == ODP_POOL_BUFFER ? "buffer" :
-		  (pool->type == ODP_POOL_PACKET ? "packet" :
-		   (pool->type == ODP_POOL_TIMEOUT ? "timeout" :
-		    (pool->type == ODP_POOL_VECTOR ? "vector" :
-		     "unknown"))));
-	ODP_PRINT("  pool shm        %" PRIu64 "\n",
-		  odp_shm_to_u64(pool->shm));
-	ODP_PRINT("  user area shm   %" PRIu64 "\n",
-		  odp_shm_to_u64(pool->uarea_shm));
-	ODP_PRINT("  num             %u\n", pool->num);
-	ODP_PRINT("  align           %u\n", pool->align);
-	ODP_PRINT("  headroom        %u\n", pool->headroom);
-	ODP_PRINT("  seg len         %u\n", pool->seg_len);
-	ODP_PRINT("  max data len    %u\n", pool->max_len);
-	ODP_PRINT("  tailroom        %u\n", pool->tailroom);
-	ODP_PRINT("  block size      %u\n", pool->block_size);
-	ODP_PRINT("  uarea size      %u\n", pool->uarea_size);
-	ODP_PRINT("  shm size        %" PRIu64 "\n", pool->shm_size);
-	ODP_PRINT("  base addr       %p\n", (void *)pool->base_addr);
-	ODP_PRINT("  max addr        %p\n", (void *)pool->max_addr);
-	ODP_PRINT("  uarea shm size  %" PRIu64 "\n", pool->uarea_shm_size);
-	ODP_PRINT("  uarea base addr %p\n", (void *)pool->uarea_base_addr);
-	ODP_PRINT("  cache size      %u\n", pool->cache_size);
-	ODP_PRINT("  burst size      %u\n", pool->burst_size);
-	ODP_PRINT("  mem src         %s\n",
-		  pool->mem_src_ops ? pool->mem_src_ops->name : "(none)");
-	ODP_PRINT("\n");
+	_ODP_PRINT("\nPool info\n");
+	_ODP_PRINT("---------\n");
+	_ODP_PRINT("  pool            %" PRIu64 "\n",
+		   odp_pool_to_u64(_odp_pool_handle(pool)));
+	_ODP_PRINT("  name            %s\n", pool->name);
+	_ODP_PRINT("  pool type       %s\n",
+		   pool->type == ODP_POOL_BUFFER ? "buffer" :
+		   (pool->type == ODP_POOL_PACKET ? "packet" :
+		    (pool->type == ODP_POOL_TIMEOUT ? "timeout" :
+		     (pool->type == ODP_POOL_VECTOR ? "vector" :
+		      "unknown"))));
+	_ODP_PRINT("  pool shm        %" PRIu64 "\n", odp_shm_to_u64(pool->shm));
+	_ODP_PRINT("  user area shm   %" PRIu64 "\n", odp_shm_to_u64(pool->uarea_shm));
+	_ODP_PRINT("  num             %u\n", pool->num);
+	_ODP_PRINT("  align           %u\n", pool->align);
+	_ODP_PRINT("  headroom        %u\n", pool->headroom);
+	_ODP_PRINT("  seg len         %u\n", pool->seg_len);
+	_ODP_PRINT("  max data len    %u\n", pool->max_len);
+	_ODP_PRINT("  tailroom        %u\n", pool->tailroom);
+	_ODP_PRINT("  block size      %u\n", pool->block_size);
+	_ODP_PRINT("  uarea size      %u\n", pool->uarea_size);
+	_ODP_PRINT("  shm size        %" PRIu64 "\n", pool->shm_size);
+	_ODP_PRINT("  base addr       %p\n", (void *)pool->base_addr);
+	_ODP_PRINT("  max addr        %p\n", (void *)pool->max_addr);
+	_ODP_PRINT("  uarea shm size  %" PRIu64 "\n", pool->uarea_shm_size);
+	_ODP_PRINT("  uarea base addr %p\n", (void *)pool->uarea_base_addr);
+	_ODP_PRINT("  cache size      %u\n", pool->cache_size);
+	_ODP_PRINT("  burst size      %u\n", pool->burst_size);
+	_ODP_PRINT("  mem src         %s\n",
+		   pool->mem_src_ops ? pool->mem_src_ops->name : "(none)");
+	_ODP_PRINT("\n");
 }
 
 void odp_pool_print_all(void)
@@ -1550,9 +1542,9 @@ void odp_pool_print_all(void)
 	const char *name;
 	char type_c;
 
-	ODP_PRINT("\nList of all pools\n");
-	ODP_PRINT("-----------------\n");
-	ODP_PRINT(" idx %-*s type   free    tot  cache  buf_len  ext\n", col_width, "name");
+	_ODP_PRINT("\nList of all pools\n");
+	_ODP_PRINT("-----------------\n");
+	_ODP_PRINT(" idx %-*s type   free    tot  cache  buf_len  ext\n", col_width, "name");
 
 	for (i = 0; i < ODP_CONFIG_POOLS; i++) {
 		pool_t *pool = _odp_pool_entry_from_idx(i);
@@ -1583,11 +1575,11 @@ void odp_pool_print_all(void)
 			 (type == ODP_POOL_TIMEOUT) ? 'T' :
 			 (type == ODP_POOL_VECTOR) ? 'V' : '-';
 
-		ODP_PRINT("%4u %-*s    %c %6" PRIu64 " %6" PRIu32 " %6" PRIu32 " %8" PRIu32 "    "
+		_ODP_PRINT("%4u %-*s    %c %6" PRIu64 " %6" PRIu32 " %6" PRIu32 " %8" PRIu32 "    "
 			  "%" PRIu8 "\n", index, col_width, name, type_c, available, tot,
 			  cache_size, buf_len, ext);
 	}
-	ODP_PRINT("\n");
+	_ODP_PRINT("\n");
 }
 
 void odp_pool_param_init(odp_pool_param_t *params)
@@ -1618,11 +1610,11 @@ int odp_pool_stats(odp_pool_t pool_hdl, odp_pool_stats_t *stats)
 	uint16_t first, last;
 
 	if (odp_unlikely(pool_hdl == ODP_POOL_INVALID)) {
-		ODP_ERR("Invalid pool handle\n");
+		_ODP_ERR("Invalid pool handle\n");
 		return -1;
 	}
 	if (odp_unlikely(stats == NULL)) {
-		ODP_ERR("Output buffer NULL\n");
+		_ODP_ERR("Output buffer NULL\n");
 		return -1;
 	}
 
@@ -1671,7 +1663,7 @@ int odp_pool_stats_reset(odp_pool_t pool_hdl)
 	pool_t *pool;
 
 	if (odp_unlikely(pool_hdl == ODP_POOL_INVALID)) {
-		ODP_ERR("Invalid pool handle\n");
+		_ODP_ERR("Invalid pool handle\n");
 		return -1;
 	}
 
@@ -1793,47 +1785,47 @@ static int check_pool_ext_param(const odp_pool_ext_param_t *param)
 	uint32_t head_offset = sizeof(odp_packet_hdr_t) + param->pkt.app_header_size;
 
 	if (param->type != ODP_POOL_PACKET) {
-		ODP_ERR("Pool type not supported\n");
+		_ODP_ERR("Pool type not supported\n");
 		return -1;
 	}
 
 	if (odp_pool_ext_capability(param->type, &capa)) {
-		ODP_ERR("Capa failed\n");
+		_ODP_ERR("Capa failed\n");
 		return -1;
 	}
 
 	if (param->cache_size > capa.max_cache_size) {
-		ODP_ERR("Too large cache size %u\n", param->cache_size);
+		_ODP_ERR("Too large cache size %u\n", param->cache_size);
 		return -1;
 	}
 
 	if (param->stats.all != capa.stats.all) {
-		ODP_ERR("Pool statistics not supported\n");
+		_ODP_ERR("Pool statistics not supported\n");
 		return -1;
 	}
 
 	if (param->pkt.num_buf > capa.pkt.max_num_buf) {
-		ODP_ERR("Too many packet buffers\n");
+		_ODP_ERR("Too many packet buffers\n");
 		return -1;
 	}
 
 	if (param->pkt.buf_size > capa.pkt.max_buf_size) {
-		ODP_ERR("Too large packet buffer size %u\n", param->pkt.buf_size);
+		_ODP_ERR("Too large packet buffer size %u\n", param->pkt.buf_size);
 		return -1;
 	}
 
 	if (param->pkt.uarea_size > capa.pkt.max_uarea_size) {
-		ODP_ERR("Too large user area size %u\n", param->pkt.uarea_size);
+		_ODP_ERR("Too large user area size %u\n", param->pkt.uarea_size);
 		return -1;
 	}
 
 	if (param->pkt.headroom > capa.pkt.max_headroom) {
-		ODP_ERR("Too large headroom size\n");
+		_ODP_ERR("Too large headroom size\n");
 		return -1;
 	}
 
 	if (head_offset % capa.pkt.min_head_align) {
-		ODP_ERR("Head pointer not %u byte aligned\n", capa.pkt.min_head_align);
+		_ODP_ERR("Head pointer not %u byte aligned\n", capa.pkt.min_head_align);
 		return -1;
 	}
 
@@ -1851,7 +1843,7 @@ odp_pool_t odp_pool_ext_create(const char *name, const odp_pool_ext_param_t *par
 	uint32_t shm_flags = 0;
 
 	if (check_pool_ext_param(param)) {
-		ODP_ERR("Bad pool ext param\n");
+		_ODP_ERR("Bad pool ext param\n");
 		return ODP_POOL_INVALID;
 	}
 
@@ -1861,7 +1853,7 @@ odp_pool_t odp_pool_ext_create(const char *name, const odp_pool_ext_param_t *par
 	pool = reserve_pool(shm_flags, 1, num_buf);
 
 	if (pool == NULL) {
-		ODP_ERR("No more free pools\n");
+		_ODP_ERR("No more free pools\n");
 		return ODP_POOL_INVALID;
 	}
 
@@ -1870,7 +1862,7 @@ odp_pool_t odp_pool_ext_create(const char *name, const odp_pool_ext_param_t *par
 	set_pool_cache_size(pool, param->cache_size);
 
 	if (reserve_uarea(pool, param->pkt.uarea_size, num_buf, shm_flags)) {
-		ODP_ERR("User area SHM reserve failed\n");
+		_ODP_ERR("User area SHM reserve failed\n");
 		goto error;
 	}
 
@@ -1919,14 +1911,14 @@ int odp_pool_ext_populate(odp_pool_t pool_hdl, void *buf[], uint32_t buf_size, u
 	void *uarea = NULL;
 
 	if (pool_hdl == ODP_POOL_INVALID) {
-		ODP_ERR("Bad pool handle\n");
+		_ODP_ERR("Bad pool handle\n");
 		return -1;
 	}
 
 	pool = _odp_pool_entry(pool_hdl);
 
 	if (pool->type != ODP_POOL_PACKET || pool->pool_ext == 0) {
-		ODP_ERR("Bad pool type\n");
+		_ODP_ERR("Bad pool type\n");
 		return -1;
 	}
 
@@ -1934,24 +1926,24 @@ int odp_pool_ext_populate(odp_pool_t pool_hdl, void *buf[], uint32_t buf_size, u
 	max_addr = pool->max_addr;
 
 	if (buf_size != pool->ext_param.pkt.buf_size) {
-		ODP_ERR("Bad buffer size\n");
+		_ODP_ERR("Bad buffer size\n");
 		return -1;
 	}
 
 	num_populated = pool->num_populated;
 
 	if (num_populated + num > pool->num) {
-		ODP_ERR("Trying to over populate the pool\n");
+		_ODP_ERR("Trying to over populate the pool\n");
 		return -1;
 	}
 
 	if ((num_populated + num == pool->num) && !(flags & ODP_POOL_POPULATE_DONE)) {
-		ODP_ERR("Missing ODP_POOL_POPULATE_DONE flag\n");
+		_ODP_ERR("Missing ODP_POOL_POPULATE_DONE flag\n");
 		return -1;
 	}
 
 	if ((num_populated + num < pool->num) && flags) {
-		ODP_ERR("Unexpected flags: 0x%x\n", flags);
+		_ODP_ERR("Unexpected flags: 0x%x\n", flags);
 		return -1;
 	}
 
@@ -1970,12 +1962,12 @@ int odp_pool_ext_populate(odp_pool_t pool_hdl, void *buf[], uint32_t buf_size, u
 			max_addr = (uint8_t *)event_hdr;
 
 		if ((uintptr_t)event_hdr & (ODP_CACHE_LINE_SIZE - 1)) {
-			ODP_ERR("Bad packet buffer align: buf[%u]\n", i);
+			_ODP_ERR("Bad packet buffer align: buf[%u]\n", i);
 			return -1;
 		}
 
 		if (((uintptr_t)event_hdr + head_offset) & (MIN_HEAD_ALIGN - 1)) {
-			ODP_ERR("Bad head pointer align: buf[%u]\n", i);
+			_ODP_ERR("Bad head pointer align: buf[%u]\n", i);
 			return -1;
 		}
 

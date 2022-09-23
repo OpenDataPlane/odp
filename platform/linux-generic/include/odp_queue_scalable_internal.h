@@ -67,7 +67,7 @@ static inline void *shm_pool_alloc_align(_odp_ishm_pool_t *pool, uint32_t size)
 	void *addr;
 
 	addr = _odp_ishm_pool_alloc(pool, _ODP_ROUNDUP_CACHE_LINE(size));
-	ODP_ASSERT(((uintptr_t)addr & (ODP_CACHE_LINE_SIZE - 1)) == 0);
+	_ODP_ASSERT(((uintptr_t)addr & (ODP_CACHE_LINE_SIZE - 1)) == 0);
 
 	return addr;
 }

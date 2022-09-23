@@ -51,7 +51,7 @@ static struct ethtool_gstrings *get_stringset(int fd, struct ifreq *ifr)
 		ifr->ifr_data = (void *)&drvinfo;
 		if (ioctl(fd, SIOCETHTOOL, ifr)) {
 			_odp_errno = errno;
-			ODP_ERR("Cannot get stats information\n");
+			_ODP_ERR("Cannot get stats information\n");
 			return NULL;
 		}
 		len = *(uint32_t *)(void *)((char *)&drvinfo + drvinfo_offset);
@@ -61,13 +61,13 @@ static struct ethtool_gstrings *get_stringset(int fd, struct ifreq *ifr)
 	}
 
 	if (!len) {
-		ODP_ERR("len is zero");
+		_ODP_ERR("len is zero");
 		return NULL;
 	}
 
 	strings = calloc(1, sizeof(*strings) + len * ETH_GSTRING_LEN);
 	if (!strings) {
-		ODP_ERR("alloc failed\n");
+		_ODP_ERR("alloc failed\n");
 		return NULL;
 	}
 
@@ -77,7 +77,7 @@ static struct ethtool_gstrings *get_stringset(int fd, struct ifreq *ifr)
 	ifr->ifr_data = (void *)strings;
 	if (ioctl(fd, SIOCETHTOOL, ifr)) {
 		_odp_errno = errno;
-		ODP_ERR("Cannot get stats information\n");
+		_ODP_ERR("Cannot get stats information\n");
 		free(strings);
 		return NULL;
 	}
@@ -105,7 +105,7 @@ static int ethtool_stats_get(int fd, const char *name,
 
 	n_stats = strings->len;
 	if (n_stats < 1) {
-		ODP_ERR("no stats available\n");
+		_ODP_ERR("no stats available\n");
 		free(strings);
 		return -1;
 	}
@@ -272,7 +272,7 @@ int _odp_ethtool_extra_stat_counter(int fd, const char *name, uint32_t id,
 		return -1;
 
 	if (id >= n_stats) {
-		ODP_ERR("Invalid counter id\n");
+		_ODP_ERR("Invalid counter id\n");
 		ret = -1;
 	} else {
 		*stat = estats->data[id];

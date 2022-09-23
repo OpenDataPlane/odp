@@ -291,7 +291,7 @@ static inline void link_segments(odp_packet_hdr_t *pkt_hdr[], int num)
 			ref_cnt = &pkt_hdr[cur]->ref_cnt;
 			prev_ref = odp_atomic_fetch_inc_u32(ref_cnt);
 
-			ODP_ASSERT(prev_ref == 0);
+			_ODP_ASSERT(prev_ref == 0);
 		}
 
 		cur++;
@@ -326,7 +326,7 @@ static inline void init_segments(odp_packet_hdr_t *pkt_hdr[], int num)
 		uint32_t prev_ref =
 			odp_atomic_fetch_inc_u32(&hdr->ref_cnt);
 
-		ODP_ASSERT(prev_ref == 0);
+		_ODP_ASSERT(prev_ref == 0);
 	}
 
 	/* Link segments */
@@ -694,7 +694,7 @@ void odp_packet_free(odp_packet_t pkt)
 	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
 	int num_seg = pkt_hdr->seg_count;
 
-	ODP_ASSERT(segment_ref(pkt_hdr) > 0);
+	_ODP_ASSERT(segment_ref(pkt_hdr) > 0);
 
 	if (odp_likely(num_seg == 1))
 		packet_free_multi(&pkt_hdr, 1);
@@ -712,7 +712,7 @@ void odp_packet_free_multi(const odp_packet_t pkt[], int num)
 		odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt[i]);
 		int num_seg = pkt_hdr->seg_count;
 
-		ODP_ASSERT(segment_ref(pkt_hdr) > 0);
+		_ODP_ASSERT(segment_ref(pkt_hdr) > 0);
 
 		if (odp_unlikely(num_seg > 1)) {
 			free_all_segments(pkt_hdr, num_seg);
@@ -905,7 +905,7 @@ void *odp_packet_push_tail(odp_packet_t pkt, uint32_t len)
 	if (len > pkt_hdr->tailroom)
 		return NULL;
 
-	ODP_ASSERT(odp_packet_has_ref(pkt) == 0);
+	_ODP_ASSERT(odp_packet_has_ref(pkt) == 0);
 
 	old_tail = packet_tail(pkt_hdr);
 	push_tail(pkt_hdr, len);
@@ -922,7 +922,7 @@ int odp_packet_extend_tail(odp_packet_t *pkt, uint32_t len,
 	uint32_t tail_off  = frame_len;
 	int ret = 0;
 
-	ODP_ASSERT(odp_packet_has_ref(*pkt) == 0);
+	_ODP_ASSERT(odp_packet_has_ref(*pkt) == 0);
 
 	if (len > tailroom) {
 		pool_t *pool = _odp_pool_entry(pkt_hdr->event_hdr.pool);
@@ -959,7 +959,7 @@ void *odp_packet_pull_tail(odp_packet_t pkt, uint32_t len)
 	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
 	odp_packet_hdr_t *last_seg = packet_last_seg(pkt_hdr);
 
-	ODP_ASSERT(odp_packet_has_ref(pkt) == 0);
+	_ODP_ASSERT(odp_packet_has_ref(pkt) == 0);
 
 	if (len >= last_seg->seg_len)
 		return NULL;
@@ -980,7 +980,7 @@ int odp_packet_trunc_tail(odp_packet_t *pkt, uint32_t len,
 	if (len >= pkt_hdr->frame_len)
 		return -1;
 
-	ODP_ASSERT(odp_packet_has_ref(*pkt) == 0);
+	_ODP_ASSERT(odp_packet_has_ref(*pkt) == 0);
 
 	last     = pkt_hdr->seg_count - 1;
 	last_seg = packet_last_seg(pkt_hdr);
@@ -1143,7 +1143,7 @@ int odp_packet_align(odp_packet_t *pkt, uint32_t offset, uint32_t len,
 	if (align > ODP_CACHE_LINE_SIZE)
 		return -1;
 
-	ODP_ASSERT(odp_packet_has_ref(*pkt) == 0);
+	_ODP_ASSERT(odp_packet_has_ref(*pkt) == 0);
 
 	if (seglen >= len) {
 		misalign = align <= 1 ? 0 :
@@ -1182,10 +1182,10 @@ int odp_packet_concat(odp_packet_t *dst, odp_packet_t src)
 	uint32_t dst_len = dst_hdr->frame_len;
 	uint32_t src_len = src_hdr->frame_len;
 
-	ODP_ASSERT(odp_packet_has_ref(*dst) == 0);
+	_ODP_ASSERT(odp_packet_has_ref(*dst) == 0);
 
 	if (odp_unlikely(dst_len + src_len > dst_pool->max_len)) {
-		ODP_ERR("concat would result oversized packet\n");
+		_ODP_ERR("concat would result oversized packet\n");
 		return -1;
 	}
 
@@ -1223,7 +1223,7 @@ int odp_packet_split(odp_packet_t *pkt, uint32_t len, odp_packet_t *tail)
 	if (len >= pktlen || tail == NULL)
 		return -1;
 
-	ODP_ASSERT(odp_packet_has_ref(*pkt) == 0);
+	_ODP_ASSERT(odp_packet_has_ref(*pkt) == 0);
 
 	*tail = odp_packet_copy_part(*pkt, len, pktlen - len,
 				     odp_packet_pool(*pkt));
@@ -1250,7 +1250,7 @@ odp_packet_t odp_packet_copy(odp_packet_t pkt, odp_pool_t pool)
 
 	md_copy = _odp_packet_copy_md_possible(pool, odp_packet_pool(pkt));
 	if (odp_unlikely(md_copy < 0)) {
-		ODP_ERR("Unable to copy packet metadata\n");
+		_ODP_ERR("Unable to copy packet metadata\n");
 		return ODP_PACKET_INVALID;
 	}
 
@@ -1384,7 +1384,7 @@ int _odp_packet_cmp_data(odp_packet_t pkt, uint32_t offset,
 	int ret;
 	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
 
-	ODP_ASSERT(offset + len <= pkt_hdr->frame_len);
+	_ODP_ASSERT(offset + len <= pkt_hdr->frame_len);
 
 	while (len > 0) {
 		mapaddr = packet_map(pkt_hdr, offset, &seglen, NULL);
@@ -1509,7 +1509,7 @@ void odp_packet_print(odp_packet_t pkt)
 		seg = odp_packet_next_seg(pkt, seg);
 	}
 
-	ODP_PRINT("%s\n", str);
+	_ODP_PRINT("%s\n", str);
 }
 
 void odp_packet_print_data(odp_packet_t pkt, uint32_t offset,
@@ -1544,7 +1544,7 @@ void odp_packet_print_data(odp_packet_t pkt, uint32_t offset,
 
 	if (offset + byte_len > data_len) {
 		len += snprintf(&str[len], n - len, " BAD OFFSET OR LEN\n");
-		ODP_PRINT("%s\n", str);
+		_ODP_PRINT("%s\n", str);
 		return;
 	}
 
@@ -1571,7 +1571,7 @@ void odp_packet_print_data(odp_packet_t pkt, uint32_t offset,
 		offset   += copy_len;
 	}
 
-	ODP_PRINT("%s\n", str);
+	_ODP_PRINT("%s\n", str);
 }
 
 int odp_packet_is_valid(odp_packet_t pkt)
@@ -1869,7 +1869,7 @@ int _odp_packet_l4_chksum(odp_packet_hdr_t *pkt_hdr,
 		if (sum != 0) {
 			pkt_hdr->p.flags.l4_chksum_err = 1;
 			pkt_hdr->p.flags.udp_err = 1;
-			ODP_DBG("UDP chksum fail (%x)!\n", sum);
+			_ODP_DBG("UDP chksum fail (%x)!\n", sum);
 			if (opt.bit.drop_udp_err)
 				return -1;
 		}
@@ -1889,7 +1889,7 @@ int _odp_packet_l4_chksum(odp_packet_hdr_t *pkt_hdr,
 		if (sum != 0) {
 			pkt_hdr->p.flags.l4_chksum_err = 1;
 			pkt_hdr->p.flags.tcp_err = 1;
-			ODP_DBG("TCP chksum fail (%x)!\n", sum);
+			_ODP_DBG("TCP chksum fail (%x)!\n", sum);
 			if (opt.bit.drop_tcp_err)
 				return -1;
 		}
@@ -1921,8 +1921,7 @@ int _odp_packet_l4_chksum(odp_packet_hdr_t *pkt_hdr,
 		if (sum != sctp->chksum) {
 			pkt_hdr->p.flags.l4_chksum_err = 1;
 			pkt_hdr->p.flags.sctp_err = 1;
-			ODP_DBG("SCTP chksum fail (%x/%x)!\n", sum,
-				sctp->chksum);
+			_ODP_DBG("SCTP chksum fail (%x/%x)!\n", sum, sctp->chksum);
 			if (opt.bit.drop_sctp_err)
 				return -1;
 		}
@@ -2102,14 +2101,14 @@ odp_packet_t odp_packet_ref(odp_packet_t pkt, uint32_t offset)
 	new = odp_packet_copy(pkt, odp_packet_pool(pkt));
 
 	if (new == ODP_PACKET_INVALID) {
-		ODP_ERR("copy failed\n");
+		_ODP_ERR("copy failed\n");
 		return ODP_PACKET_INVALID;
 	}
 
 	ret = odp_packet_trunc_head(&new, offset, NULL, NULL);
 
 	if (ret < 0) {
-		ODP_ERR("trunk_head failed\n");
+		_ODP_ERR("trunk_head failed\n");
 		odp_packet_free(new);
 		return ODP_PACKET_INVALID;
 	}
@@ -2126,14 +2125,14 @@ odp_packet_t odp_packet_ref_pkt(odp_packet_t pkt, uint32_t offset,
 	ref = odp_packet_ref(pkt, offset);
 
 	if (ref == ODP_PACKET_INVALID) {
-		ODP_DBG("reference create failed\n");
+		_ODP_DBG("reference create failed\n");
 		return ODP_PACKET_INVALID;
 	}
 
 	ret = odp_packet_concat(&hdr, ref);
 
 	if (ret < 0) {
-		ODP_DBG("concat failed\n");
+		_ODP_DBG("concat failed\n");
 		odp_packet_free(ref);
 		return ODP_PACKET_INVALID;
 	}
@@ -2227,7 +2226,7 @@ int odp_packet_has_tx_compl_request(odp_packet_t pkt)
 void odp_packet_tx_compl_free(odp_packet_tx_compl_t tx_compl)
 {
 	if (odp_unlikely(tx_compl == ODP_PACKET_TX_COMPL_INVALID)) {
-		ODP_ERR("Bad TX completion event handle\n");
+		_ODP_ERR("Bad TX completion event handle\n");
 		return;
 	}
 
@@ -2237,7 +2236,7 @@ void odp_packet_tx_compl_free(odp_packet_tx_compl_t tx_compl)
 void *odp_packet_tx_compl_user_ptr(odp_packet_tx_compl_t tx_compl)
 {
 	if (odp_unlikely(tx_compl == ODP_PACKET_TX_COMPL_INVALID)) {
-		ODP_ERR("Bad TX completion event handle\n");
+		_ODP_ERR("Bad TX completion event handle\n");
 		return NULL;
 	}
 
@@ -2279,17 +2278,17 @@ uint32_t odp_packet_disassemble(odp_packet_t pkt, odp_packet_buf_t pkt_buf[], ui
 	uint32_t num_segs = odp_packet_num_segs(pkt);
 
 	if (odp_unlikely(pool->type != ODP_POOL_PACKET)) {
-		ODP_ERR("Not a packet pool\n");
+		_ODP_ERR("Not a packet pool\n");
 		return 0;
 	}
 
 	if (odp_unlikely(pool->pool_ext == 0)) {
-		ODP_ERR("Not an external memory pool\n");
+		_ODP_ERR("Not an external memory pool\n");
 		return 0;
 	}
 
 	if (odp_unlikely(num < num_segs)) {
-		ODP_ERR("Not enough buffer handles %u. Packet has %u segments.\n", num, num_segs);
+		_ODP_ERR("Not enough buffer handles %u. Packet has %u segments.\n", num, num_segs);
 		return 0;
 	}
 
@@ -2313,17 +2312,17 @@ odp_packet_t odp_packet_reassemble(odp_pool_t pool_hdl, odp_packet_buf_t pkt_buf
 	pool_t *pool = _odp_pool_entry(pool_hdl);
 
 	if (odp_unlikely(pool->type != ODP_POOL_PACKET)) {
-		ODP_ERR("Not a packet pool\n");
+		_ODP_ERR("Not a packet pool\n");
 		return ODP_PACKET_INVALID;
 	}
 
 	if (odp_unlikely(pool->pool_ext == 0)) {
-		ODP_ERR("Not an external memory pool\n");
+		_ODP_ERR("Not an external memory pool\n");
 		return ODP_PACKET_INVALID;
 	}
 
 	if (odp_unlikely(num == 0)) {
-		ODP_ERR("Bad number of buffers: %u\n", num);
+		_ODP_ERR("Bad number of buffers: %u\n", num);
 		return ODP_PACKET_INVALID;
 	}
 

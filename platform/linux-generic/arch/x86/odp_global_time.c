@@ -34,19 +34,19 @@ uint64_t _odp_cpu_global_time_freq(void)
 			sleep.tv_nsec = SEC_IN_NS / 4;
 
 		if (clock_gettime(CLOCK_MONOTONIC_RAW, &ts1)) {
-			ODP_DBG("clock_gettime failed\n");
+			_ODP_DBG("clock_gettime failed\n");
 			return 0;
 		}
 
 		t1 = _odp_cpu_global_time();
 
 		if (nanosleep(&sleep, NULL) < 0) {
-			ODP_DBG("nanosleep failed\n");
+			_ODP_DBG("nanosleep failed\n");
 			return 0;
 		}
 
 		if (clock_gettime(CLOCK_MONOTONIC_RAW, &ts2)) {
-			ODP_DBG("clock_gettime failed\n");
+			_ODP_DBG("clock_gettime failed\n");
 			return 0;
 		}
 

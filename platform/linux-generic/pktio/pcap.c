@@ -109,7 +109,7 @@ static int _pcapif_parse_devname(pkt_pcap_t *pcap, const char *devname)
 		} else if (strncmp(tok, "loops=", 6) == 0) {
 			pcap->loops = atoi(tok + 6);
 			if (pcap->loops < 0) {
-				ODP_ERR("invalid loop count\n");
+				_ODP_ERR("invalid loop count\n");
 				return -1;
 			}
 		}
@@ -125,14 +125,13 @@ static int _pcapif_init_rx(pkt_pcap_t *pcap)
 
 	pcap->rx = pcap_open_offline(pcap->fname_rx, errbuf);
 	if (!pcap->rx) {
-		ODP_ERR("failed to open pcap file %s (%s)\n",
-			pcap->fname_rx, errbuf);
+		_ODP_ERR("failed to open pcap file %s (%s)\n", pcap->fname_rx, errbuf);
 		return -1;
 	}
 
 	linktype = pcap_datalink(pcap->rx);
 	if (linktype != DLT_EN10MB) {
-		ODP_ERR("unsupported datalink type: %d\n", linktype);
+		_ODP_ERR("unsupported datalink type: %d\n", linktype);
 		return -1;
 	}
 
@@ -148,7 +147,7 @@ static int _pcapif_init_tx(pkt_pcap_t *pcap)
 		 * one needs to be opened for writing the dump */
 		tx = pcap_open_dead(DLT_EN10MB, PKTIO_PCAP_MTU_MAX);
 		if (!tx) {
-			ODP_ERR("failed to open TX dump\n");
+			_ODP_ERR("failed to open TX dump\n");
 			return -1;
 		}
 
@@ -157,8 +156,7 @@ static int _pcapif_init_tx(pkt_pcap_t *pcap)
 
 	pcap->tx_dump = pcap_dump_open(tx, pcap->fname_tx);
 	if (!pcap->tx_dump) {
-		ODP_ERR("failed to open dump file %s (%s)\n",
-			pcap->fname_tx, pcap_geterr(tx));
+		_ODP_ERR("failed to open dump file %s (%s)\n", pcap->fname_tx, pcap_geterr(tx));
 		return -1;
 	}
 
@@ -192,14 +190,12 @@ static int pcapif_promisc_mode_set(pktio_entry_t *pktio_entry,
 
 	if (pcap_compile(pcap->rx, &bpf, filter_exp,
 			 0, PCAP_NETMASK_UNKNOWN) != 0) {
-		ODP_ERR("failed to compile promisc mode filter: %s\n",
-			pcap_geterr(pcap->rx));
+		_ODP_ERR("failed to compile promisc mode filter: %s\n", pcap_geterr(pcap->rx));
 		return -1;
 	}
 
 	if (pcap_setfilter(pcap->rx, &bpf) != 0) {
-		ODP_ERR("failed to set promisc mode filter: %s\n",
-			pcap_geterr(pcap->rx));
+		_ODP_ERR("failed to set promisc mode filter: %s\n", pcap_geterr(pcap->rx));
 		return -1;
 	}
 
@@ -274,8 +270,7 @@ static int _pcapif_reopen(pkt_pcap_t *pcap)
 
 	pcap->rx = pcap_open_offline(pcap->fname_rx, errbuf);
 	if (!pcap->rx) {
-		ODP_ERR("failed to reopen pcap file %s (%s)\n",
-			pcap->fname_rx, errbuf);
+		_ODP_ERR("failed to reopen pcap file %s (%s)\n", pcap->fname_rx, errbuf);
 		return 1;
 	}
 
@@ -336,7 +331,7 @@ static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			pull_head(pkt_hdr, frame_offset);
 
 		if (odp_packet_copy_from_mem(pkt, 0, pkt_len, data) != 0) {
-			ODP_ERR("failed to copy packet data\n");
+			_ODP_ERR("failed to copy packet data\n");
 			break;
 		}
 
@@ -530,7 +525,7 @@ static int pcapif_stats(pktio_entry_t *pktio_entry,
 
 static int pcapif_init_global(void)
 {
-	ODP_PRINT("PKTIO: initialized pcap interface.\n");
+	_ODP_PRINT("PKTIO: initialized pcap interface.\n");
 	return 0;
 }
 

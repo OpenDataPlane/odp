@@ -366,7 +366,7 @@ static void *alloc_entry_in_tbl(profile_tbl_t *profile_tbl,
 		return profile;
 	}
 	default:
-		ODP_ERR("Invalid TM profile\n");
+		_ODP_ERR("Invalid TM profile\n");
 		return NULL;
 	}
 }
@@ -401,7 +401,7 @@ static void free_tbl_entry(profile_tbl_t *profile_tbl,
 		return;
 
 	default:
-		ODP_ERR("Invalid TM profile\n");
+		_ODP_ERR("Invalid TM profile\n");
 		return;
 	}
 }
@@ -521,7 +521,7 @@ static void *tm_common_profile_create(const char      *name,
 	object_ptr  = alloc_entry_in_tbl(&tm_glb->profile_tbl, profile_kind,
 					 &idx);
 	if (!object_ptr) {
-		ODP_ERR("No free profiles left\n");
+		_ODP_ERR("No free profiles left\n");
 		return NULL;
 	}
 
@@ -586,7 +586,7 @@ static void *tm_get_profile_params(tm_handle_t profile_handle,
 		return &tm_glb->profile_tbl.wred.profile[idx];
 
 	default:
-		ODP_ERR("Invalid TM profile\n");
+		_ODP_ERR("Invalid TM profile\n");
 		return NULL;
 	}
 }
@@ -769,7 +769,7 @@ static int tm_threshold_config_set(tm_wred_node_t    *wred_node,
 	threshold_params = tm_get_profile_params(thresholds_profile,
 						 TM_THRESHOLD_PROFILE);
 	if (threshold_params == NULL) {
-		ODP_DBG("threshold_params is NULL\n");
+		_ODP_DBG("threshold_params is NULL\n");
 		return -1;
 	}
 
@@ -953,7 +953,7 @@ static void tm_block_pkt(tm_system_t *tm_system,
 				   tm_queue_obj->timer_shaper, pkt_desc);
 
 	else if (tm_queue_obj->timer_reason != NO_CALLBACK)
-		ODP_DBG("%s timer_reason != NO_CALLBACK\n", __func__);
+		_ODP_DBG("%s timer_reason != NO_CALLBACK\n", __func__);
 
 	tm_queue_obj->blocked_cnt = 1;
 	tm_queue_obj->blocked_scheduler = schedulers_obj;
@@ -983,8 +983,7 @@ static odp_bool_t delay_pkt(tm_system_t *tm_system,
 	rc = _odp_timer_wheel_insert(tm_system->_odp_int_timer_wheel,
 				     wakeup_time, timer_context);
 	if (rc < 0) {
-		ODP_DBG("%s odp_timer_wheel_insert() failed rc=%d\n",
-			__func__, rc);
+		_ODP_DBG("%s odp_timer_wheel_insert() failed rc=%d\n", __func__, rc);
 		return false;
 	}
 
@@ -1224,7 +1223,7 @@ static odp_bool_t run_sched(tm_system_t *tm_system,
 		new_sched_state = &schedulers_obj->sched_states[priority];
 		prev_best_pkt_desc = new_sched_state->smallest_pkt_desc;
 		if (pkt_descs_equal(new_pkt_desc, &prev_best_pkt_desc)) {
-			ODP_DBG("%s spurious execution ****\n", __func__);
+			_ODP_DBG("%s spurious execution ****\n", __func__);
 			return false;
 		}
 	}
@@ -1675,7 +1674,7 @@ static odp_bool_t tm_consume_pkt_desc(tm_system_t     *tm_system,
 	shaper_is_empty = new_shaper_pkt.queue_num == 0;
 
 	if (pkt_descs_equal(&new_shaper_pkt, sent_pkt_desc))
-		ODP_DBG("%s shaper has old pkt_desc\n", __func__);
+		_ODP_DBG("%s shaper has old pkt_desc\n", __func__);
 
 	tm_node_obj = shaper_obj->next_tm_node;
 	while (!tm_node_obj->is_root_node) { /* not at egress */
@@ -1685,7 +1684,7 @@ static odp_bool_t tm_consume_pkt_desc(tm_system_t     *tm_system,
 
 		/* Verify that the scheduler output is the sent_pkt_desc. */
 		if (pkt_descs_not_equal(&prev_sched_pkt, sent_pkt_desc)) {
-			ODP_DBG("%s sched has bad out pkt_desc\n", __func__);
+			_ODP_DBG("%s sched has bad out pkt_desc\n", __func__);
 			return false;
 		}
 
@@ -1703,17 +1702,17 @@ static odp_bool_t tm_consume_pkt_desc(tm_system_t     *tm_system,
 		sched_is_empty = new_sched_pkt.queue_num == 0;
 
 		if (pkt_descs_equal(&new_sched_pkt, sent_pkt_desc))
-			ODP_DBG("%s sched has old pkt_desc\n", __func__);
+			_ODP_DBG("%s sched has old pkt_desc\n", __func__);
 
 		if (pkt_descs_equal(&new_sched_pkt, sent_pkt_desc))
-			ODP_DBG("%s scheduler has old pkt_desc\n", __func__);
+			_ODP_DBG("%s scheduler has old pkt_desc\n", __func__);
 
 		shaper_obj      = &tm_node_obj->shaper_obj;
 		prev_shaper_pkt = shaper_obj->out_pkt_desc;
 
 		/* Verify that the shaper output is the sent_pkt_desc. */
 		if (pkt_descs_not_equal(&prev_shaper_pkt, sent_pkt_desc)) {
-			ODP_DBG("%s shaper has bad out pkt_desc\n", __func__);
+			_ODP_DBG("%s shaper has bad out pkt_desc\n", __func__);
 			return false;
 		}
 
@@ -1730,7 +1729,7 @@ static odp_bool_t tm_consume_pkt_desc(tm_system_t     *tm_system,
 		shaper_is_empty = new_shaper_pkt.queue_num == 0;
 
 		if (pkt_descs_equal(&new_shaper_pkt, sent_pkt_desc))
-			ODP_DBG("%s shaper has old pkt_desc\n", __func__);
+			_ODP_DBG("%s shaper has old pkt_desc\n", __func__);
 
 		tm_node_obj = shaper_obj->next_tm_node;
 	}
@@ -2055,7 +2054,7 @@ static int tm_enqueue(tm_system_t *tm_system,
 		_odp_sched_fn->order_unlock();
 
 	if (rc < 0) {
-		ODP_DBG("%s work queue full\n", __func__);
+		_ODP_DBG("%s work queue full\n", __func__);
 		return rc;
 	}
 
@@ -2227,7 +2226,7 @@ static void tm_egress_marking(tm_system_t *tm_system, odp_packet_t odp_pkt)
 	tm_tos_marking_t  *ip_marking;
 
 	color = odp_packet_color(odp_pkt);
-	ODP_ASSERT(color < ODP_NUM_PACKET_COLORS);
+	_ODP_ASSERT(color < ODP_NUM_PACKET_COLORS);
 
 	if (odp_packet_has_vlan(odp_pkt)) {
 		vlan_marking = &tm_system->marking.vlan_marking[color];
@@ -2328,8 +2327,7 @@ static int tm_process_input_work_queue(tm_system_t *tm_system,
 	for (cnt = 1; cnt <= pkts_to_process; cnt++) {
 		rc = input_work_queue_remove(input_work_queue, &work_item);
 		if (rc < 0) {
-			ODP_DBG("%s input_work_queue_remove() failed\n",
-				__func__);
+			_ODP_DBG("%s input_work_queue_remove() failed\n", __func__);
 			return rc;
 		}
 
@@ -2398,7 +2396,7 @@ static int tm_process_expired_timers(tm_system_t *tm_system,
 			if (tm_queue_obj->timer_cancels_outstanding != 0)
 				tm_queue_obj->timer_cancels_outstanding--;
 			else
-				ODP_DBG("%s bad timer return\n", __func__);
+				_ODP_DBG("%s bad timer return\n", __func__);
 
 			return work_done;
 		}
@@ -2475,8 +2473,7 @@ static int thread_affinity_get(odp_cpumask_t *odp_cpu_mask)
 	CPU_ZERO(&linux_cpu_set);
 	rc = sched_getaffinity(0, sizeof(cpu_set_t), &linux_cpu_set);
 	if (rc != 0) {
-		ODP_DBG("%s sched_getaffinity failed with rc=%d\n",
-			__func__, rc);
+		_ODP_DBG("%s sched_getaffinity failed with rc=%d\n", __func__, rc);
 		return -1;
 	}
 
@@ -2500,7 +2497,7 @@ static void *tm_system_thread(void *arg)
 
 	rc = odp_init_local((odp_instance_t)odp_global_ro.main_pid,
 			    ODP_THREAD_WORKER);
-	ODP_ASSERT(rc == 0);
+	_ODP_ASSERT(rc == 0);
 	tm_group = arg;
 
 	tm_system = tm_group->first_tm_system;
@@ -2564,7 +2561,7 @@ static void *tm_system_thread(void *arg)
 
 	odp_barrier_wait(&tm_system->tm_system_destroy_barrier);
 	if (odp_term_local() < 0)
-		ODP_ERR("Term local failed\n");
+		_ODP_ERR("Term local failed\n");
 
 	return NULL;
 }
@@ -2684,8 +2681,8 @@ int odp_tm_egress_capabilities(odp_tm_capabilities_t *capabilities,
 	if (egress->egress_kind == ODP_TM_EGRESS_PKT_IO) {
 		entry = get_pktio_entry(egress->pktio);
 		if (entry == NULL) {
-			ODP_DBG("pktio entry %" PRIuPTR " does not exist\n",
-				(uintptr_t)egress->pktio);
+			_ODP_DBG("pktio entry %" PRIuPTR " does not exist\n",
+				 (uintptr_t)egress->pktio);
 			return -1;
 		}
 
@@ -2827,8 +2824,7 @@ static int affinitize_main_thread(void)
 	if (rc == 0)
 		tm_glb->main_thread_cpu = cpu_num;
 	else
-		ODP_DBG("%s sched_setaffinity failed with rc=%d\n",
-			__func__, rc);
+		_ODP_DBG("%s sched_setaffinity failed with rc=%d\n", __func__, rc);
 	return rc;
 }
 
@@ -2883,8 +2879,7 @@ static int tm_thread_create(tm_system_group_t *tm_group)
 	rc = pthread_create(&tm_group->thread, &tm_group->attr,
 			    tm_system_thread, tm_group);
 	if (rc != 0)
-		ODP_ERR("Failed to start TM thread on CPU #%u: %d\n", cpu_num,
-			rc);
+		_ODP_ERR("Failed to start TM thread on CPU #%u: %d\n", cpu_num, rc);
 	return rc;
 }
 
@@ -2896,9 +2891,9 @@ static void _odp_tm_group_destroy(_odp_tm_group_t odp_tm_group)
 	tm_group = GET_TM_GROUP(odp_tm_group);
 
 	/* Wait for the thread to exit. */
-	ODP_ASSERT(tm_group->num_tm_systems <= 1);
+	_ODP_ASSERT(tm_group->num_tm_systems <= 1);
 	rc = pthread_join(tm_group->thread, NULL);
-	ODP_ASSERT(rc == 0);
+	_ODP_ASSERT(rc == 0);
 	pthread_attr_destroy(&tm_group->attr);
 	if (tm_glb->cpu_num > 0)
 		tm_glb->cpu_num--;
@@ -3059,18 +3054,18 @@ odp_tm_t odp_tm_create(const char            *name,
 	int rc;
 
 	if (odp_global_ro.disable.traffic_mngr) {
-		ODP_ERR("TM has been disabled\n");
+		_ODP_ERR("TM has been disabled\n");
 		return ODP_TM_INVALID;
 	}
 
 	if (odp_global_ro.init_param.mem_model == ODP_MEM_MODEL_PROCESS) {
-		ODP_ERR("TM is not supported in process mode\n");
+		_ODP_ERR("TM is not supported in process mode\n");
 		return ODP_TM_INVALID;
 	}
 
 	/* We only support global pkt priority mode */
 	if (requirements->pkt_prio_mode != ODP_TM_PKT_PRIO_MODE_PRESERVE) {
-		ODP_ERR("Unsupported Packet priority mode\n");
+		_ODP_ERR("Unsupported Packet priority mode\n");
 		return ODP_TM_INVALID;
 	}
 	odp_ticketlock_lock(&tm_glb->create_lock);
@@ -4617,7 +4612,7 @@ int odp_tm_enq_multi_lso(odp_tm_queue_t tm_queue, const odp_packet_t packets[], 
 	const odp_packet_lso_opt_t *opt_ptr = &lso_opt;
 
 	if (odp_unlikely(num <= 0)) {
-		ODP_ERR("No packets\n");
+		_ODP_ERR("No packets\n");
 		return -1;
 	}
 
@@ -4632,7 +4627,7 @@ int odp_tm_enq_multi_lso(odp_tm_queue_t tm_queue, const odp_packet_t packets[], 
 			odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
 
 			if (pkt_hdr->p.flags.lso == 0) {
-				ODP_ERR("No LSO options on packet %i\n", i);
+				_ODP_ERR("No LSO options on packet %i\n", i);
 				goto error;
 			}
 			/* Fill in LSO options from packet */
@@ -4644,14 +4639,14 @@ int odp_tm_enq_multi_lso(odp_tm_queue_t tm_queue, const odp_packet_t packets[], 
 		/* Calculate number of packets */
 		num_pkt = _odp_lso_num_packets(pkt, opt_ptr, &payload_len, &left_over_len);
 		if (odp_unlikely(num_pkt <= 0)) {
-			ODP_DBG("LSO num packets failed on packet %i\n", i);
+			_ODP_DBG("LSO num packets failed on packet %i\n", i);
 			goto error;
 		}
 
 		if (odp_unlikely(num_pkt == 1)) {
 			/* Segmentation not needed */
 			if (odp_tm_enq_multi(tm_queue, &pkt, 1) != 1) {
-				ODP_DBG("TM enqueue failed on packet %i\n", i);
+				_ODP_DBG("TM enqueue failed on packet %i\n", i);
 
 				goto error;
 			}
@@ -4672,7 +4667,7 @@ int odp_tm_enq_multi_lso(odp_tm_queue_t tm_queue, const odp_packet_t packets[], 
 		ret = odp_tm_enq_multi(tm_queue, pkt_out, num_pkt);
 
 		if (odp_unlikely(ret < num_pkt)) {
-			ODP_DBG("TM enqueue failed on packet %i\n", i);
+			_ODP_DBG("TM enqueue failed on packet %i\n", i);
 
 			if (ret < 0)
 				ret = 0;
@@ -4978,19 +4973,19 @@ void odp_tm_stats_print(odp_tm_t odp_tm)
 	tm_system = GET_TM_SYSTEM(odp_tm);
 	input_work_queue = &tm_system->input_work_queue;
 
-	ODP_PRINT("odp_tm_stats_print - tm_system=0x%" PRIX64 " tm_idx=%u\n",
-		  odp_tm, tm_system->tm_idx);
-	ODP_PRINT("  input_work_queue size=%u current cnt=%" PRIu64 " peak cnt=%" PRIu32 "\n",
-		  INPUT_WORK_RING_SIZE, odp_atomic_load_u64(&input_work_queue->queue_cnt),
-		  input_work_queue->peak_cnt);
-	ODP_PRINT("  input_work_queue enqueues=%" PRIu64 " dequeues=%" PRIu64
-		  " fail_cnt=%" PRIu64 "\n", input_work_queue->total_enqueues,
-		  input_work_queue->total_dequeues,
-		  input_work_queue->enqueue_fail_cnt);
-	ODP_PRINT("  green_cnt=%" PRIu64 " yellow_cnt=%" PRIu64 " red_cnt=%"
-		  PRIu64 "\n", tm_system->shaper_green_cnt,
-		  tm_system->shaper_yellow_cnt,
-		  tm_system->shaper_red_cnt);
+	_ODP_PRINT("tm_system=0x%" PRIX64 " tm_idx=%u\n",
+		   odp_tm, tm_system->tm_idx);
+	_ODP_PRINT("  input_work_queue size=%u current cnt=%" PRIu64 " peak cnt=%" PRIu32 "\n",
+		   INPUT_WORK_RING_SIZE, odp_atomic_load_u64(&input_work_queue->queue_cnt),
+		   input_work_queue->peak_cnt);
+	_ODP_PRINT("  input_work_queue enqueues=%" PRIu64 " dequeues=%" PRIu64
+		   " fail_cnt=%" PRIu64 "\n", input_work_queue->total_enqueues,
+		   input_work_queue->total_dequeues,
+		   input_work_queue->enqueue_fail_cnt);
+	_ODP_PRINT("  green_cnt=%" PRIu64 " yellow_cnt=%" PRIu64 " red_cnt=%" PRIu64 "\n",
+		   tm_system->shaper_green_cnt,
+		   tm_system->shaper_yellow_cnt,
+		   tm_system->shaper_red_cnt);
 
 	_odp_pkt_queue_stats_print(tm_system->_odp_int_queue_pool);
 	_odp_timer_wheel_stats_print(tm_system->_odp_int_timer_wheel);
@@ -4999,7 +4994,7 @@ void odp_tm_stats_print(odp_tm_t odp_tm)
 	for (queue_num = 1; queue_num <= ODP_TM_MAX_TM_QUEUES; queue_num++) {
 		tm_queue_obj = tm_system->queue_num_tbl[queue_num - 1];
 		if (tm_queue_obj && tm_queue_obj->pkts_rcvd_cnt != 0)
-			ODP_PRINT("queue_num=%u priority=%u rcvd=%u enqueued=%u "
+			_ODP_PRINT("queue_num=%u priority=%u rcvd=%u enqueued=%u "
 				  "dequeued=%u consumed=%u\n",
 				  queue_num,
 				  tm_queue_obj->priority,
@@ -5015,7 +5010,7 @@ int odp_tm_queue_stats(odp_tm_queue_t tm_queue, odp_tm_queue_stats_t *stats)
 	tm_queue_obj_t *tm_queue_obj = GET_TM_QUEUE_OBJ(tm_queue);
 
 	if (!tm_queue_obj) {
-		ODP_ERR("Invalid TM queue handle\n");
+		_ODP_ERR("Invalid TM queue handle\n");
 		return -1;
 	}
 
@@ -5067,7 +5062,7 @@ int _odp_tm_init_global(void)
 	odp_shm_t shm;
 
 	if (odp_global_ro.disable.traffic_mngr) {
-		ODP_PRINT("\nODP traffic manager is DISABLED\n");
+		_ODP_PRINT("\nODP traffic manager is DISABLED\n");
 		return 0;
 	}
 
@@ -5104,7 +5099,7 @@ int _odp_tm_term_global(void)
 		return 0;
 
 	if (odp_shm_free(tm_glb->shm)) {
-		ODP_ERR("shm free failed\n");
+		_ODP_ERR("shm free failed\n");
 		return -1;
 	}
 	return 0;

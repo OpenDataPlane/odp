@@ -750,7 +750,7 @@ invalid parameters are passed to ODP APIs. This is done for performance
 reasons so that implementations don't need to insert extraneous parameter
 checking that would impact runtime performance in fast-path operations. While
 this is a reasonable trade off, it can complicate application debugging.
-To address this, the ODP implementation makes use of the `ODP_ASSERT()` macro
+To address this, the ODP implementation makes use of the `_ODP_ASSERT()` macro
 that by default disappears at compile time unless the `--enable-debug`
 configuration option was specified. Running with a debug build of ODP trades
 off performance for improved parameter/bounds checking to make application

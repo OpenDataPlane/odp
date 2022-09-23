@@ -157,7 +157,7 @@ static int null_outqueues_config(pktio_entry_t *pktio_entry ODP_UNUSED,
 
 static int null_init_global(void)
 {
-	ODP_PRINT("PKTIO: initialized null interface.\n");
+	_ODP_PRINT("PKTIO: initialized null interface.\n");
 	return 0;
 }
 

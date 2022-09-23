@@ -142,8 +142,7 @@ static int lookup_opt(const char *opt_name, const char *drv_name, int *val)
 
 	ret = _odp_libconfig_lookup_ext_int(base, drv_name, opt_name, val);
 	if (ret == 0)
-		ODP_ERR("Unable to find netmap configuration option: %s\n",
-			opt_name);
+		_ODP_ERR("Unable to find netmap configuration option: %s\n", opt_name);
 
 	return ret;
 }
@@ -157,7 +156,7 @@ static int init_options(pktio_entry_t *pktio_entry)
 		return -1;
 	if (opt->nr_rx_slots < 0 ||
 	    opt->nr_rx_slots > 4096) {
-		ODP_ERR("Invalid number of RX slots\n");
+		_ODP_ERR("Invalid number of RX slots\n");
 		return -1;
 	}
 
@@ -166,13 +165,13 @@ static int init_options(pktio_entry_t *pktio_entry)
 		return -1;
 	if (opt->nr_tx_slots < 0 ||
 	    opt->nr_tx_slots > 4096) {
-		ODP_ERR("Invalid number of TX slots\n");
+		_ODP_ERR("Invalid number of TX slots\n");
 		return -1;
 	}
 
-	ODP_DBG("netmap interface: %s\n", pkt_priv(pktio_entry)->if_name);
-	ODP_DBG("  num_rx_desc: %d\n", opt->nr_rx_slots);
-	ODP_DBG("  num_tx_desc: %d\n", opt->nr_tx_slots);
+	_ODP_DBG("netmap interface: %s\n", pkt_priv(pktio_entry)->if_name);
+	_ODP_DBG("  num_rx_desc: %d\n", opt->nr_rx_slots);
+	_ODP_DBG("  num_tx_desc: %d\n", opt->nr_tx_slots);
 
 	return 0;
 }
@@ -220,7 +219,7 @@ static int netmap_do_ioctl(pktio_entry_t *pktio_entry, unsigned long cmd,
 	}
 done:
 	if (err)
-		ODP_ERR("ioctl err %d %lu: %s\n", err, cmd, strerror(errno));
+		_ODP_ERR("ioctl err %d %lu: %s\n", err, cmd, strerror(errno));
 
 	return err;
 }
@@ -246,7 +245,7 @@ static inline void map_netmap_rings(netmap_ring_t *rings,
 	remainder = num_rings % num_queues;
 
 	if (remainder)
-		ODP_DBG("WARNING: Netmap rings mapped unevenly to queues\n");
+		_ODP_DBG("WARNING: Netmap rings mapped unevenly to queues\n");
 
 	for (i = 0; i < num_queues; i++) {
 		desc_ring = &rings[i];
@@ -283,7 +282,7 @@ static int netmap_input_queues_config(pktio_entry_t *pktio_entry,
 		if (_odp_rss_conf_set_fd(pkt_priv(pktio_entry)->sockfd,
 					 pkt_priv(pktio_entry)->if_name,
 					 &p->hash_proto)) {
-			ODP_ERR("Failed to configure input hash\n");
+			_ODP_ERR("Failed to configure input hash\n");
 			return -1;
 		}
 	}
@@ -342,7 +341,7 @@ static int netmap_close(pktio_entry_t *pktio_entry)
 
 	if (pkt_nm->sockfd != -1 && close(pkt_nm->sockfd) != 0) {
 		_odp_errno = errno;
-		ODP_ERR("close(sockfd): %s\n", strerror(errno));
+		_ODP_ERR("close(sockfd): %s\n", strerror(errno));
 		return -1;
 	}
 	return 0;
@@ -407,7 +406,7 @@ static inline int netmap_wait_for_link(pktio_entry_t *pktio_entry)
 		if (ret == 1)
 			return 1;
 	}
-	ODP_DBG("%s link is down\n", pkt_priv(pktio_entry)->if_name);
+	_ODP_DBG("%s link is down\n", pkt_priv(pktio_entry)->if_name);
 	return 0;
 }
 
@@ -430,7 +429,7 @@ static void netmap_init_capability(pktio_entry_t *pktio_entry)
 		/* Have to use a single descriptor to fetch packets from all
 		 * netmap rings */
 		capa->max_input_queues = 1;
-		ODP_DBG("Unable to store all %" PRIu32 " rx rings (max %d)\n"
+		_ODP_DBG("Unable to store all %" PRIu32 " rx rings (max %d)\n"
 			"  max input queues: %u\n", pkt_nm->num_rx_rings,
 			NM_MAX_DESC, capa->max_input_queues);
 	}
@@ -440,7 +439,7 @@ static void netmap_init_capability(pktio_entry_t *pktio_entry)
 		capa->max_output_queues = pkt_nm->num_tx_rings;
 	if (capa->max_output_queues > NM_MAX_DESC) {
 		capa->max_output_queues = NM_MAX_DESC;
-		ODP_DBG("Unable to store all %" PRIu32 " tx rings (max %d)\n"
+		_ODP_DBG("Unable to store all %" PRIu32 " tx rings (max %d)\n"
 			"  max output queues: %u\n", pkt_nm->num_tx_rings,
 			NM_MAX_DESC, capa->max_output_queues);
 	}
@@ -525,14 +524,14 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 
 	/* Initialize runtime options */
 	if (init_options(pktio_entry)) {
-		ODP_ERR("Initializing runtime options failed\n");
+		_ODP_ERR("Initializing runtime options failed\n");
 		return -1;
 	}
 
 	/* Read netmap buffer size */
 	nm_buf_size = read_netmap_buf_size();
 	if (!nm_buf_size) {
-		ODP_ERR("Unable to read netmap buf size\n");
+		_ODP_ERR("Unable to read netmap buf size\n");
 		return -1;
 	}
 	pkt_nm->mtu_max = _ODP_SOCKET_MTU_MAX;
@@ -542,7 +541,7 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 	if (!pkt_nm->is_virtual) {
 		sockfd = socket(AF_INET, SOCK_DGRAM, 0);
 		if (sockfd == -1) {
-			ODP_ERR("Cannot get device control socket\n");
+			_ODP_ERR("Cannot get device control socket\n");
 			return -1;
 		}
 		pkt_nm->sockfd = sockfd;
@@ -551,7 +550,7 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 		 * whichever is smaller. */
 		mtu = _odp_mtu_get_fd(pkt_nm->sockfd, pkt_nm->if_name);
 		if (mtu == 0) {
-			ODP_ERR("Unable to read interface MTU\n");
+			_ODP_ERR("Unable to read interface MTU\n");
 			goto error;
 		}
 		pkt_nm->mtu = (mtu < nm_buf_size) ? mtu : nm_buf_size;
@@ -560,7 +559,7 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 		if (mtu > nm_buf_size) {
 			if (_odp_mtu_set_fd(pkt_nm->sockfd, pkt_nm->if_name,
 					    nm_buf_size)) {
-				ODP_ERR("Unable to set interface MTU\n");
+				_ODP_ERR("Unable to set interface MTU\n");
 				goto error;
 			}
 		}
@@ -569,7 +568,7 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 	 * capability info. */
 	desc = nm_open(pkt_nm->nm_name, NULL, 0, NULL);
 	if (desc == NULL) {
-		ODP_ERR("nm_open(%s) failed\n", pkt_nm->nm_name);
+		_ODP_ERR("nm_open(%s) failed\n", pkt_nm->nm_name);
 		goto error;
 	}
 	pkt_nm->num_rx_rings = desc->nifp->ni_rx_rings;
@@ -589,7 +588,7 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 		uint32_t tid = syscall(SYS_gettid);
 
 		if ((int)tid == -1)
-			ODP_DBG("Unable to fetch thread ID. VALE port MAC "
+			_ODP_DBG("Unable to fetch thread ID. VALE port MAC "
 				"addresses may not be unique.\n");
 
 		pktio_entry->capa.max_input_queues = 1;
@@ -611,7 +610,7 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 	/* Check if RSS is supported. If not, set 'max_input_queues' to 1. */
 	if (_odp_rss_conf_get_supported_fd(pkt_nm->sockfd, netdev,
 					   &hash_proto) == 0) {
-		ODP_DBG("RSS not supported\n");
+		_ODP_DBG("RSS not supported\n");
 		pktio_entry->capa.max_input_queues = 1;
 	}
 
@@ -619,7 +618,7 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 	if (err)
 		goto error;
 	if ((pkt_nm->if_flags & IFF_UP) == 0)
-		ODP_DBG("%s is down\n", pkt_nm->if_name);
+		_ODP_DBG("%s is down\n", pkt_nm->if_name);
 
 	err = _odp_mac_addr_get_fd(pkt_nm->sockfd, netdev, pkt_nm->if_mac);
 	if (err)
@@ -628,8 +627,8 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 	/* netmap uses only ethtool to get statistics counters */
 	err = _odp_ethtool_stats_get_fd(pkt_nm->sockfd, pkt_nm->if_name, &cur_stats);
 	if (err) {
-		ODP_DBG("netmap pktio %s does not support statistics counters\n",
-			pkt_nm->if_name);
+		_ODP_DBG("netmap pktio %s does not support statistics counters\n",
+			 pkt_nm->if_name);
 		pktio_entry->stats_type = STATS_UNSUPPORTED;
 	} else {
 		pktio_entry->stats_type = STATS_ETHTOOL;
@@ -703,7 +702,7 @@ static int netmap_start(pktio_entry_t *pktio_entry)
 	/* Use nm_open() to parse netmap flags from interface name */
 	desc_ptr = nm_open(pkt_nm->nm_name, NULL, 0, NULL);
 	if (desc_ptr == NULL) {
-		ODP_ERR("nm_start(%s) failed\n", pkt_nm->nm_name);
+		_ODP_ERR("nm_start(%s) failed\n", pkt_nm->nm_name);
 		goto error;
 	}
 	struct nm_desc base_desc = *desc_ptr;
@@ -736,7 +735,7 @@ static int netmap_start(pktio_entry_t *pktio_entry)
 	desc_ring[0].desc[0] = nm_open(pkt_nm->nm_name, NULL, flags,
 				       &base_desc);
 	if (desc_ring[0].desc[0] == NULL) {
-		ODP_ERR("nm_start(%s) failed\n", pkt_nm->nm_name);
+		_ODP_ERR("nm_start(%s) failed\n", pkt_nm->nm_name);
 		goto error;
 	}
 	/* Open rest of the rx descriptors (one per netmap ring) */
@@ -755,8 +754,7 @@ static int netmap_start(pktio_entry_t *pktio_entry)
 			desc_ring[i].desc[j] = nm_open(pkt_nm->nm_name, NULL,
 						       flags, &base_desc);
 			if (desc_ring[i].desc[j] == NULL) {
-				ODP_ERR("nm_start(%s) failed\n",
-					pkt_nm->nm_name);
+				_ODP_ERR("nm_start(%s) failed\n", pkt_nm->nm_name);
 				goto error;
 			}
 		}
@@ -778,8 +776,7 @@ static int netmap_start(pktio_entry_t *pktio_entry)
 			desc_ring[i].desc[j] = nm_open(pkt_nm->nm_name, NULL,
 						       flags, &base_desc);
 			if (desc_ring[i].desc[j] == NULL) {
-				ODP_ERR("nm_start(%s) failed\n",
-					pkt_nm->nm_name);
+				_ODP_ERR("nm_start(%s) failed\n", pkt_nm->nm_name);
 				goto error;
 			}
 		}
@@ -934,7 +931,7 @@ static inline int netmap_recv_desc(pktio_entry_t *pktio_entry,
 				slot_tbl[num_rx].len = ring->slot[slot_id].len;
 				num_rx++;
 			} else {
-				ODP_DBG("Dropped oversized packet: %" PRIu16 " "
+				_ODP_DBG("Dropped oversized packet: %" PRIu16 " "
 					"B\n", ring->slot[slot_id].len);
 			}
 			ring->cur = nm_ring_next(ring, slot_id);
@@ -1031,7 +1028,7 @@ static int netmap_recv(pktio_entry_t *pktio_entry, int index,
 		struct timeval tout = {.tv_sec = 0, .tv_usec = 0};
 
 		if (select(max_fd + 1, &empty_rings, NULL, NULL, &tout) == -1)
-			ODP_ERR("RX: select error\n");
+			_ODP_ERR("RX: select error\n");
 	}
 	if (!pkt_nm->lockless_rx)
 		odp_ticketlock_unlock(&pkt_nm->rx_desc_ring[index].lock);
@@ -1293,11 +1290,11 @@ static void netmap_print(pktio_entry_t *pktio_entry)
 static int netmap_init_global(void)
 {
 	if (getenv("ODP_PKTIO_DISABLE_NETMAP")) {
-		ODP_PRINT("PKTIO: netmap pktio skipped,"
+		_ODP_PRINT("PKTIO: netmap pktio skipped,"
 			  " enabled export ODP_PKTIO_DISABLE_NETMAP=1.\n");
 		disable_pktio = 1;
 	} else  {
-		ODP_PRINT("PKTIO: initialized netmap pktio,"
+		_ODP_PRINT("PKTIO: initialized netmap pktio,"
 			  " use export ODP_PKTIO_DISABLE_NETMAP=1 to disable.\n"
 			  " Netmap prefixes are netmap:eth0 or vale:eth0. Refer to"
 			  " Netmap documentation for usage information.\n");

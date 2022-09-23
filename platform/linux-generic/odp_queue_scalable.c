@@ -170,7 +170,7 @@ static int queue_init(queue_entry_t *queue, const char *name,
 				_odp_rwin_alloc(queue_shm_pool,
 						queue->param.sched.lock_count);
 			if (sched_elem->rwin == NULL) {
-				ODP_ERR("Reorder window not created\n");
+				_ODP_ERR("Reorder window not created\n");
 				goto rwin_create_failed;
 			}
 		}
@@ -178,7 +178,7 @@ static int queue_init(queue_entry_t *queue, const char *name,
 		sched_elem->sched_prio = prio;
 		sched_elem->schedq =
 			_odp_sched_queue_add(param->sched.group, prio);
-		ODP_ASSERT(sched_elem->schedq != NULL);
+		_ODP_ASSERT(sched_elem->schedq != NULL);
 	}
 
 	return 0;
@@ -196,7 +196,7 @@ static int queue_init_global(void)
 	uint64_t min_alloc;
 	uint64_t max_alloc;
 
-	ODP_DBG("Queue init ... ");
+	_ODP_DBG("Queue init ... ");
 
 	/* Fill in queue entry field offsets for inline functions */
 	memset(&_odp_queue_inline_offset, 0,
@@ -222,7 +222,7 @@ static int queue_init_global(void)
 					       pool_size,
 					       min_alloc, max_alloc, 0);
 	if (queue_shm_pool == NULL) {
-		ODP_ERR("Failed to allocate shared memory pool for"
+		_ODP_ERR("Failed to allocate shared memory pool for"
 			" queues\n");
 		goto queue_shm_pool_create_failed;
 	}
@@ -231,7 +231,7 @@ static int queue_init_global(void)
 		    shm_pool_alloc_align(queue_shm_pool,
 					 sizeof(queue_table_t));
 	if (queue_tbl == NULL) {
-		ODP_ERR("Failed to reserve shared memory for queue table\n");
+		_ODP_ERR("Failed to reserve shared memory for queue table\n");
 		goto queue_tbl_ishm_alloc_failed;
 	}
 
@@ -247,13 +247,11 @@ static int queue_init_global(void)
 		queue->handle = (odp_queue_t)queue;
 	}
 
-	ODP_DBG("done\n");
-	ODP_DBG("Queue init global\n");
-	ODP_DBG("  struct queue_entry_s size %zu\n",
-		sizeof(struct queue_entry_s));
-	ODP_DBG("  queue_entry_t size        %zu\n",
-		sizeof(queue_entry_t));
-	ODP_DBG("\n");
+	_ODP_DBG("done\n");
+	_ODP_DBG("Queue init global\n");
+	_ODP_DBG("  struct queue_entry_s size %zu\n", sizeof(struct queue_entry_s));
+	_ODP_DBG("  queue_entry_t size        %zu\n", sizeof(queue_entry_t));
+	_ODP_DBG("\n");
 
 	return 0;
 
@@ -276,7 +274,7 @@ static int queue_term_global(void)
 		queue = &queue_tbl->queue[i];
 		if (__atomic_load_n(&queue->status,
 				    __ATOMIC_RELAXED) != QUEUE_STATUS_FREE) {
-			ODP_ERR("Not destroyed queue: %s\n", queue->name);
+			_ODP_ERR("Not destroyed queue: %s\n", queue->name);
 			rc = -1;
 		}
 	}
@@ -285,7 +283,7 @@ static int queue_term_global(void)
 
 	ret = _odp_ishm_pool_destroy(queue_shm_pool);
 	if (ret < 0) {
-		ODP_ERR("Failed to destroy shared memory pool for queues\n");
+		_ODP_ERR("Failed to destroy shared memory pool for queues\n");
 		rc = -1;
 	}
 
@@ -363,7 +361,7 @@ static odp_queue_t queue_create(const char *name,
 	if (type == ODP_QUEUE_TYPE_SCHED) {
 		if (param->sched.prio < odp_schedule_min_prio() ||
 		    param->sched.prio > odp_schedule_max_prio()) {
-			ODP_ERR("Bad queue priority: %i\n", param->sched.prio);
+			_ODP_ERR("Bad queue priority: %i\n", param->sched.prio);
 			return ODP_QUEUE_INVALID;
 		}
 	}
@@ -467,7 +465,7 @@ static int queue_destroy(odp_queue_t handle)
 
 	if (q->rwin != NULL) {
 		if (_odp_rwin_free(queue_shm_pool, q->rwin) < 0) {
-			ODP_ERR("Failed to free reorder window\n");
+			_ODP_ERR("Failed to free reorder window\n");
 			UNLOCK(&queue->lock);
 			return -1;
 		}
@@ -897,15 +895,14 @@ static int queue_info(odp_queue_t handle, odp_queue_info_t *info)
 	int status;
 
 	if (odp_unlikely(info == NULL)) {
-		ODP_ERR("Unable to store info, NULL ptr given\n");
+		_ODP_ERR("Unable to store info, NULL ptr given\n");
 		return -1;
 	}
 
 	queue_id = queue_to_id(handle);
 
 	if (odp_unlikely(queue_id >= CONFIG_MAX_QUEUES)) {
-		ODP_ERR("Invalid queue handle:%" PRIu64 "\n",
-			odp_queue_to_u64(handle));
+		_ODP_ERR("Invalid queue handle:%" PRIu64 "\n", odp_queue_to_u64(handle));
 		return -1;
 	}
 
@@ -917,7 +914,7 @@ static int queue_info(odp_queue_t handle, odp_queue_info_t *info)
 	if (odp_unlikely(status == QUEUE_STATUS_FREE ||
 			 status == QUEUE_STATUS_DESTROYED)) {
 		UNLOCK(&queue->lock);
-		ODP_ERR("Invalid queue status:%d\n", status);
+		_ODP_ERR("Invalid queue status:%d\n", status);
 		return -1;
 	}
 
@@ -939,8 +936,7 @@ static void queue_print(odp_queue_t handle)
 	queue_id = queue_to_id(handle);
 
 	if (odp_unlikely(queue_id >= CONFIG_MAX_QUEUES)) {
-		ODP_ERR("Invalid queue handle: 0x%" PRIx64 "\n",
-			odp_queue_to_u64(handle));
+		_ODP_ERR("Invalid queue handle: 0x%" PRIx64 "\n", odp_queue_to_u64(handle));
 		return;
 	}
 
@@ -952,50 +948,49 @@ static void queue_print(odp_queue_t handle)
 	if (odp_unlikely(status == QUEUE_STATUS_FREE ||
 			 status == QUEUE_STATUS_DESTROYED)) {
 		UNLOCK(&queue->lock);
-		ODP_ERR("Invalid queue status:%d\n", status);
+		_ODP_ERR("Invalid queue status:%d\n", status);
 		return;
 	}
-	ODP_PRINT("\nQueue info\n");
-	ODP_PRINT("----------\n");
-	ODP_PRINT("  handle          %p\n", (void *)queue->handle);
-	ODP_PRINT("  index           %" PRIu32 "\n", queue->index);
-	ODP_PRINT("  name            %s\n", queue->name);
-	ODP_PRINT("  enq mode        %s\n",
-		  queue->param.enq_mode == ODP_QUEUE_OP_MT ? "ODP_QUEUE_OP_MT" :
-		  (queue->param.enq_mode == ODP_QUEUE_OP_MT_UNSAFE ? "ODP_QUEUE_OP_MT_UNSAFE" :
-		   (queue->param.enq_mode == ODP_QUEUE_OP_DISABLED ? "ODP_QUEUE_OP_DISABLED" :
-		    "unknown")));
-	ODP_PRINT("  deq mode        %s\n",
-		  queue->param.deq_mode == ODP_QUEUE_OP_MT ? "ODP_QUEUE_OP_MT" :
-		  (queue->param.deq_mode == ODP_QUEUE_OP_MT_UNSAFE ? "ODP_QUEUE_OP_MT_UNSAFE" :
-		   (queue->param.deq_mode == ODP_QUEUE_OP_DISABLED ? "ODP_QUEUE_OP_DISABLED" :
-		    "unknown")));
-	ODP_PRINT("  type            %s\n",
-		  queue->type == ODP_QUEUE_TYPE_PLAIN ? "ODP_QUEUE_TYPE_PLAIN" :
-		  (queue->type == ODP_QUEUE_TYPE_SCHED ? "ODP_QUEUE_TYPE_SCHED" : "unknown"));
+	_ODP_PRINT("\nQueue info\n");
+	_ODP_PRINT("----------\n");
+	_ODP_PRINT("  handle          %p\n", (void *)queue->handle);
+	_ODP_PRINT("  index           %" PRIu32 "\n", queue->index);
+	_ODP_PRINT("  name            %s\n", queue->name);
+	_ODP_PRINT("  enq mode        %s\n",
+		   queue->param.enq_mode == ODP_QUEUE_OP_MT ? "ODP_QUEUE_OP_MT" :
+		   (queue->param.enq_mode == ODP_QUEUE_OP_MT_UNSAFE ? "ODP_QUEUE_OP_MT_UNSAFE" :
+		    (queue->param.enq_mode == ODP_QUEUE_OP_DISABLED ? "ODP_QUEUE_OP_DISABLED" :
+		     "unknown")));
+	_ODP_PRINT("  deq mode        %s\n",
+		   queue->param.deq_mode == ODP_QUEUE_OP_MT ? "ODP_QUEUE_OP_MT" :
+		   (queue->param.deq_mode == ODP_QUEUE_OP_MT_UNSAFE ? "ODP_QUEUE_OP_MT_UNSAFE" :
+		    (queue->param.deq_mode == ODP_QUEUE_OP_DISABLED ? "ODP_QUEUE_OP_DISABLED" :
+		     "unknown")));
+	_ODP_PRINT("  type            %s\n",
+		   queue->type == ODP_QUEUE_TYPE_PLAIN ? "ODP_QUEUE_TYPE_PLAIN" :
+		   (queue->type == ODP_QUEUE_TYPE_SCHED ? "ODP_QUEUE_TYPE_SCHED" : "unknown"));
 	if (queue->type == ODP_QUEUE_TYPE_SCHED) {
-		ODP_PRINT("    sync          %s\n",
-			  queue->param.sched.sync == ODP_SCHED_SYNC_PARALLEL ?
-			  "ODP_SCHED_SYNC_PARALLEL" :
-			  (queue->param.sched.sync == ODP_SCHED_SYNC_ATOMIC ?
-			   "ODP_SCHED_SYNC_ATOMIC" :
-			   (queue->param.sched.sync == ODP_SCHED_SYNC_ORDERED ?
-			    "ODP_SCHED_SYNC_ORDERED" : "unknown")));
-		ODP_PRINT("    priority      %d\n", queue->param.sched.prio);
-		ODP_PRINT("    group         %d\n", queue->param.sched.group);
+		_ODP_PRINT("    sync          %s\n",
+			   queue->param.sched.sync == ODP_SCHED_SYNC_PARALLEL ?
+			   "ODP_SCHED_SYNC_PARALLEL" :
+			   (queue->param.sched.sync == ODP_SCHED_SYNC_ATOMIC ?
+			    "ODP_SCHED_SYNC_ATOMIC" :
+			    (queue->param.sched.sync == ODP_SCHED_SYNC_ORDERED ?
+			     "ODP_SCHED_SYNC_ORDERED" : "unknown")));
+		_ODP_PRINT("    priority      %d\n", queue->param.sched.prio);
+		_ODP_PRINT("    group         %d\n", queue->param.sched.group);
 	}
 	if (queue->pktin.pktio != ODP_PKTIO_INVALID) {
 		if (!odp_pktio_info(queue->pktin.pktio, &pktio_info))
-			ODP_PRINT("  pktin           %s\n", pktio_info.name);
+			_ODP_PRINT("  pktin           %s\n", pktio_info.name);
 	}
 	if (queue->pktout.pktio != ODP_PKTIO_INVALID) {
 		if (!odp_pktio_info(queue->pktout.pktio, &pktio_info))
-			ODP_PRINT("  pktout          %s\n", pktio_info.name);
+			_ODP_PRINT("  pktout          %s\n", pktio_info.name);
 	}
-	ODP_PRINT("  timers          %" PRIu64 "\n",
-		  odp_atomic_load_u64(&queue->num_timers));
-	ODP_PRINT("  param.size      %" PRIu32 "\n", queue->param.size);
-	ODP_PRINT("\n");
+	_ODP_PRINT("  timers          %" PRIu64 "\n", odp_atomic_load_u64(&queue->num_timers));
+	_ODP_PRINT("  param.size      %" PRIu32 "\n", queue->param.size);
+	_ODP_PRINT("\n");
 
 	UNLOCK(&queue->lock);
 }
@@ -1016,9 +1011,9 @@ static void queue_print_all(void)
 	char type_c, enq_c, deq_c, order_c, sync_c;
 	const int col_width = 24;
 
-	ODP_PRINT("\nList of all queues\n");
-	ODP_PRINT("------------------\n");
-	ODP_PRINT(" idx %-*s type blk enq deq ord sync prio\n", col_width, "name");
+	_ODP_PRINT("\nList of all queues\n");
+	_ODP_PRINT("------------------\n");
+	_ODP_PRINT(" idx %-*s type blk enq deq ord sync prio\n", col_width, "name");
 
 	for (i = 0; i < CONFIG_MAX_QUEUES; i++) {
 		queue_entry_t *queue = &queue_tbl->queue[i];
@@ -1057,19 +1052,19 @@ static void queue_print_all(void)
 
 		order_c = (order == ODP_QUEUE_ORDER_KEEP) ? 'K' : 'I';
 
-		ODP_PRINT("%4u %-*s    %c  %2s", index, col_width, name, type_c, bl_str);
-		ODP_PRINT("   %c   %c   %c", enq_c, deq_c, order_c);
+		_ODP_PRINT("%4u %-*s    %c  %2s", index, col_width, name, type_c, bl_str);
+		_ODP_PRINT("   %c   %c   %c", enq_c, deq_c, order_c);
 
 		if (type == ODP_QUEUE_TYPE_SCHED) {
 			sync_c = (sync == ODP_SCHED_SYNC_PARALLEL) ? 'P' :
 				 ((sync == ODP_SCHED_SYNC_ATOMIC) ? 'A' : 'O');
-			ODP_PRINT("    %c %4i", sync_c, prio);
+			_ODP_PRINT("    %c %4i", sync_c, prio);
 		}
 
-		ODP_PRINT("\n");
+		_ODP_PRINT("\n");
 	}
 
-	ODP_PRINT("\n");
+	_ODP_PRINT("\n");
 }
 
 static uint64_t queue_to_u64(odp_queue_t hdl)

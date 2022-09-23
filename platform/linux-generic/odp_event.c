@@ -71,7 +71,7 @@ void odp_event_free(odp_event_t event)
 		odp_dma_compl_free(odp_dma_compl_from_event(event));
 		break;
 	default:
-		ODP_ABORT("Invalid event type: %d\n", odp_event_type(event));
+		_ODP_ABORT("Invalid event type: %d\n", odp_event_type(event));
 	}
 }
 

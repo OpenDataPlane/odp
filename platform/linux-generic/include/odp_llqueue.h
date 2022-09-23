@@ -84,7 +84,7 @@ static inline void llq_enqueue(struct llqueue *llq, struct llnode *node)
 {
 	union llht old, neu;
 
-	ODP_ASSERT(node->next == NULL);
+	_ODP_ASSERT(node->next == NULL);
 	node->next = SENTINEL;
 	do {
 		old.ui = lld(&llq->u.ui, __ATOMIC_RELAXED);
@@ -93,7 +93,7 @@ static inline void llq_enqueue(struct llqueue *llq, struct llnode *node)
 	} while (odp_unlikely(scd(&llq->u.ui, neu.ui, __ATOMIC_RELEASE)));
 	if (old.st.tail != NULL) {
 		/* List was not empty */
-		ODP_ASSERT(old.st.tail->next == SENTINEL);
+		_ODP_ASSERT(old.st.tail->next == SENTINEL);
 		old.st.tail->next = node;
 	}
 }
@@ -230,7 +230,7 @@ static inline void llqueue_init(struct llqueue *llq)
 
 static inline void llq_enqueue(struct llqueue *llq, struct llnode *node)
 {
-	ODP_ASSERT(node->next == NULL);
+	_ODP_ASSERT(node->next == NULL);
 	node->next = SENTINEL;
 
 	odp_spinlock_lock(&llq->lock);
@@ -257,11 +257,11 @@ static inline struct llnode *llq_dequeue(struct llqueue *llq)
 	if (llq->head != NULL) {
 		node = llq->head;
 		if (llq->head == llq->tail) {
-			ODP_ASSERT(node->next == SENTINEL);
+			_ODP_ASSERT(node->next == SENTINEL);
 			llq->head = NULL;
 			llq->tail = NULL;
 		} else {
-			ODP_ASSERT(node->next != SENTINEL);
+			_ODP_ASSERT(node->next != SENTINEL);
 			llq->head = node->next;
 		}
 		node->next = NULL;
@@ -279,11 +279,11 @@ static inline odp_bool_t llq_dequeue_cond(struct llqueue *llq,
 	if (odp_likely(llq->head != NULL && llq->head == node)) {
 		success = true;
 		if (llq->head == llq->tail) {
-			ODP_ASSERT(node->next == SENTINEL);
+			_ODP_ASSERT(node->next == SENTINEL);
 			llq->head = NULL;
 			llq->tail = NULL;
 		} else {
-			ODP_ASSERT(node->next != SENTINEL);
+			_ODP_ASSERT(node->next != SENTINEL);
 			llq->head = node->next;
 		}
 		node->next = NULL;
@@ -302,7 +302,7 @@ static inline odp_bool_t llq_cond_rotate(struct llqueue *llq,
 	if (odp_likely(llq->head == node)) {
 		success = true;
 		if (llq->tail != node) {
-			ODP_ASSERT(node->next != SENTINEL);
+			_ODP_ASSERT(node->next != SENTINEL);
 			llq->head = node->next;
 			llq->tail->next = node;
 			llq->tail = node;

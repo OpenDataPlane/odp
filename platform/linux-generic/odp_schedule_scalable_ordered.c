@@ -97,7 +97,7 @@ bool _odp_rwin_reserve_sc(reorder_window_t *rwin, uint32_t *sn)
 
 void _odp_rwin_unreserve_sc(reorder_window_t *rwin, uint32_t sn)
 {
-	ODP_ASSERT(rwin->tail == sn + 1);
+	_ODP_ASSERT(rwin->tail == sn + 1);
 	rwin->tail = sn;
 }
 
@@ -117,7 +117,7 @@ static void rwin_insert(reorder_window_t *rwin,
 		/* We are out-of-order. Store context in reorder window,
 		 * releasing its content.
 		 */
-		ODP_ASSERT(rwin->ring[sn & winmask] == NULL);
+		_ODP_ASSERT(rwin->ring[sn & winmask] == NULL);
 		atomic_store_release(&rwin->ring[sn & winmask],
 				     rctx,
 				     /*readonly=*/false);
@@ -147,7 +147,7 @@ static void rwin_insert(reorder_window_t *rwin,
 	}
 
 	/* old.head == sn => we are now in-order! */
-	ODP_ASSERT(old.head == sn);
+	_ODP_ASSERT(old.head == sn);
 	/* We are in-order so our responsibility to retire contexts */
 	new.head = old.head;
 	new.chgi = old.chgi + 1;
@@ -191,7 +191,7 @@ void _odp_rctx_init(reorder_context_t *rctx, uint16_t idx,
 	/* rctx->rvec_free and rctx->idx already initialised in
 	 * thread_state_init function.
 	 */
-	ODP_ASSERT(rctx->idx == idx);
+	_ODP_ASSERT(rctx->idx == idx);
 	rctx->rwin = rwin;
 	rctx->sn = sn;
 	rctx->olock_flags = 0;
@@ -210,7 +210,7 @@ static inline void rctx_free(const reorder_context_t *rctx)
 
 	next_idx = rctx->next_idx;
 
-	ODP_ASSERT(rctx->rwin != NULL);
+	_ODP_ASSERT(rctx->rwin != NULL);
 	/* Set free bit */
 	if (rctx->rvec_free == &_odp_sched_ts->rvec_free)
 		/* Since it is our own reorder context, we can instead
@@ -266,7 +266,7 @@ static void blocking_enqueue(queue_entry_t *q, _odp_event_hdr_t **evts, int num)
 		/* Attempt to enqueue remaining events */
 		actual = q->enqueue_multi(qentry_to_int(q), evts, num);
 		if (odp_unlikely(actual < 0))
-			ODP_ERR("Failed to enqueue deferred events\n");
+			_ODP_ERR("Failed to enqueue deferred events\n");
 		/* Update for potential partial success */
 		evts += actual;
 		num -= actual;
@@ -327,7 +327,7 @@ int _odp_rctx_save(queue_entry_t *queue, _odp_event_hdr_t *event_hdr[], int num)
 
 	ts = _odp_sched_ts;
 	first = ts->rctx;
-	ODP_ASSERT(ts->rctx != NULL);
+	_ODP_ASSERT(ts->rctx != NULL);
 	cur = &first[(int)first->cur_idx - (int)first->idx];
 	for (i = 0; i < num; i++) {
 		if (odp_unlikely(cur->numevts == RC_EVT_SIZE)) {

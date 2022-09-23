@@ -46,7 +46,7 @@ static inline int spsc_enq_multi(odp_queue_t handle,
 	event_index_from_hdr(buf_idx, event_hdr, num);
 
 	if (odp_unlikely(queue->status < QUEUE_STATUS_READY)) {
-		ODP_ERR("Bad queue status\n");
+		_ODP_ERR("Bad queue status\n");
 		return -1;
 	}
 

@@ -135,14 +135,14 @@ static void process_input(odp_packet_t pkt_out,
 	do {
 		out_data =
 		    odp_packet_offset(pkt_out, start, &out_len, &cur_seg);
-		ODP_DBG("out_data %p seg_data_ptr %p out_len %d seg %p\n",
-			(void *)out_data, odp_packet_seg_data(pkt_out, cur_seg),
-			out_len, (void *)cur_seg);
+		_ODP_DBG("out_data %p seg_data_ptr %p out_len %d seg %p\n",
+			 (void *)out_data, odp_packet_seg_data(pkt_out, cur_seg),
+			 out_len, (void *)cur_seg);
 
 		if (0 == out_len) {
 			/* there are no more segments */
-			ODP_DBG("Ran out of space.  (streamp->avail_out) %d\n",
-				(streamp->avail_out));
+			_ODP_DBG("Ran out of space.  (streamp->avail_out) %d\n",
+				 (streamp->avail_out));
 			result->status = ODP_COMP_STATUS_OUT_OF_SPACE_TERM;
 			break;
 		}
@@ -156,12 +156,9 @@ static void process_input(odp_packet_t pkt_out,
 		streamp->next_out = out_data;
 		streamp->avail_out = out_len;
 
-		ODP_DBG("next_in %p, avail_in %d next_out %p"
-			" avail_out %d, sync %d\n",
-			(const void *)streamp->next_in, streamp->avail_in,
-			(void *)streamp->next_out,
-			streamp->avail_out,
-			sync);
+		_ODP_DBG("next_in %p, avail_in %d next_out %p avail_out %d, sync %d\n",
+			 (const void *)streamp->next_in, streamp->avail_in,
+			 (void *)streamp->next_out, streamp->avail_out, sync);
 
 		if (session->params.op == ODP_COMP_OP_COMPRESS)
 			ret = mz_deflate(streamp,
@@ -169,8 +166,8 @@ static void process_input(odp_packet_t pkt_out,
 		else
 			ret = mz_inflate(streamp, MZ_NO_FLUSH);
 
-		ODP_DBG("ret %d streamp->avail_out %d avail_in %d\n",
-			ret, streamp->avail_out, streamp->avail_in);
+		_ODP_DBG("ret %d streamp->avail_out %d avail_in %d\n",
+			 ret, streamp->avail_out, streamp->avail_in);
 
 		out_len = out_len - streamp->avail_out;
 		written += out_len;
@@ -182,7 +179,7 @@ static void process_input(odp_packet_t pkt_out,
 		start += out_len;
 		space_avail -= out_len;
 
-		ODP_DBG("ret %d,written %d\n", ret, out_len);
+		_ODP_DBG("ret %d,written %d\n", ret, out_len);
 
 		if (ret == MZ_STREAM_END) {
 			if (session->params.op == ODP_COMP_OP_COMPRESS) {
@@ -196,7 +193,7 @@ static void process_input(odp_packet_t pkt_out,
 			break;
 		}
 		if ((ret != MZ_BUF_ERROR) && (ret != MZ_OK)) {
-			ODP_DBG("deflate failed. Err %s,ret %d"
+			_ODP_DBG("deflate failed. Err %s,ret %d"
 				"(streamp->avail_out) %d\n",
 				streamp->msg, ret, (streamp->avail_out));
 			result->status = ODP_COMP_STATUS_FAILURE;
@@ -210,7 +207,7 @@ static void process_input(odp_packet_t pkt_out,
 		/* if write stopped as output exhausted,
 		   return OUT_OF_SPACE_ERR
 		 */
-		ODP_DBG("Ran out of space.  (out avail) %d,"
+		_ODP_DBG("Ran out of space.  (out avail) %d,"
 			"to process %d\n", streamp->avail_out,
 			streamp->avail_in);
 		result->status = ODP_COMP_STATUS_OUT_OF_SPACE_TERM;
@@ -239,10 +236,10 @@ static int deflate_comp(odp_packet_t pkt_in,
 	odp_packet_seg_t in_seg = ODP_PACKET_SEG_INVALID;
 	odp_comp_packet_result_t *result = get_op_result_from_packet(pkt_out);
 
-	ODP_ASSERT(session != NULL);
-	ODP_ASSERT(params != NULL);
-	ODP_ASSERT(pkt_in != ODP_PACKET_INVALID);
-	ODP_ASSERT(pkt_out != ODP_PACKET_INVALID);
+	_ODP_ASSERT(session != NULL);
+	_ODP_ASSERT(params != NULL);
+	_ODP_ASSERT(pkt_in != ODP_PACKET_INVALID);
+	_ODP_ASSERT(pkt_out != ODP_PACKET_INVALID);
 
 	streamp = &session->comp.stream;
 
@@ -260,8 +257,8 @@ static int deflate_comp(odp_packet_t pkt_in,
 					 read,
 					 &in_len,
 					 &in_seg);
-		ODP_DBG("data %p in_len %d seg %p len %d\n",
-			(void *)data, in_len, (void *)in_seg, len);
+		_ODP_DBG("data %p in_len %d seg %p len %d\n",
+			 (void *)data, in_len, (void *)in_seg, len);
 
 		if (in_len > len)
 			in_len = len;
@@ -272,7 +269,7 @@ static int deflate_comp(odp_packet_t pkt_in,
 		streamp->avail_in = in_len;
 
 		if (consumed >= len) {
-			ODP_DBG("This is last chunk\n");
+			_ODP_DBG("This is last chunk\n");
 			sync = true;
 		}
 
@@ -284,9 +281,7 @@ static int deflate_comp(odp_packet_t pkt_in,
 		read += in_len;
 	}
 
-	ODP_DBG("Read %d Written %d\n",
-		read,
-		result->output_data_range.length);
+	_ODP_DBG("Read %d Written %d\n", read, result->output_data_range.length);
 
 	return 0;
 }
@@ -316,7 +311,7 @@ static int deflate_init(odp_comp_generic_session_t *session)
 	odp_comp_huffman_code_t cc;
 
 	/* optional check as such may not required */
-	ODP_ASSERT(strcmp(mz_version(), MZ_VERSION) == 0);
+	_ODP_ASSERT(strcmp(mz_version(), MZ_VERSION) == 0);
 
 	memset(&session->comp.stream, 0, sizeof(mz_stream));
 
@@ -358,20 +353,17 @@ static int deflate_init(odp_comp_generic_session_t *session)
 	default:
 		return -1;
 	}
-	ODP_DBG(" level %d strategy %d window %d\n",
-		level, strategy, window_bits);
+	_ODP_DBG(" level %d strategy %d window %d\n", level, strategy, window_bits);
 
 	if (ODP_COMP_OP_COMPRESS == session->params.op) {
 		if (mz_deflateInit2(streamp, level, MZ_DEFLATED, window_bits,
 				    MEM_LEVEL, strategy) != MZ_OK) {
-			ODP_DBG("Err in Deflate Initialization %s\n",
-				streamp->msg);
+			_ODP_DBG("Err in Deflate Initialization %s\n", streamp->msg);
 			return -1;
 		}
 	} else {
 		if (mz_inflateInit2(streamp, window_bits) != MZ_OK) {
-			ODP_DBG("Err in Inflate Initialization %s\n",
-				streamp->msg);
+			_ODP_DBG("Err in Inflate Initialization %s\n", streamp->msg);
 			return -1;
 		}
 	}
@@ -390,14 +382,13 @@ static int term_def(odp_comp_generic_session_t *session)
 		rc = mz_deflateEnd(streamp);
 
 		if (rc != MZ_OK) {
-			ODP_ERR("deflateEnd failed. Err %s,rc %d\n",
-				streamp->msg, rc);
+			_ODP_ERR("deflateEnd failed. Err %s,rc %d\n", streamp->msg, rc);
 			/* we choose to just return 0 with error info */
 		}
 	} else {
 		rc = mz_inflateEnd(streamp);
 		if (rc != MZ_OK) {
-			ODP_ERR("inflateEnd failed. Err %s\n", streamp->msg);
+			_ODP_ERR("inflateEnd failed. Err %s\n", streamp->msg);
 			/* we choose to just return 0 with error info */
 		}
 	}
@@ -459,7 +450,7 @@ int odp_comp_session_destroy(odp_comp_session_t session)
 		break;
 	}
 	if (rc < 0) {
-		ODP_ERR("Compression Unit could not be terminated\n");
+		_ODP_ERR("Compression Unit could not be terminated\n");
 		return -1;
 	}
 
@@ -533,12 +524,12 @@ static int _odp_comp_single(odp_packet_t pkt_in, odp_packet_t pkt_out,
 	int rc;
 
 	session = to_gen_session(param->session);
-	ODP_ASSERT(session);
-	ODP_ASSERT(pkt_in != ODP_PACKET_INVALID);
-	ODP_ASSERT(pkt_out != ODP_PACKET_INVALID);
+	_ODP_ASSERT(session);
+	_ODP_ASSERT(pkt_in != ODP_PACKET_INVALID);
+	_ODP_ASSERT(pkt_out != ODP_PACKET_INVALID);
 
 	result = get_op_result_from_packet(pkt_out);
-	ODP_ASSERT(result);
+	_ODP_ASSERT(result);
 
 	result->pkt_in = pkt_in;
 	result->output_data_range.offset = param->out_data_range.offset;
@@ -598,11 +589,11 @@ int odp_comp_result(odp_comp_packet_result_t *result,
 {
 	odp_comp_packet_result_t *op_result;
 
-	ODP_ASSERT(odp_event_subtype(odp_packet_to_event(packet))
+	_ODP_ASSERT(odp_event_subtype(odp_packet_to_event(packet))
 		   == ODP_EVENT_PACKET_COMP);
 
 	op_result = get_op_result_from_packet(packet);
-	ODP_DBG("Copy operational result back\n");
+	_ODP_DBG("Copy operational result back\n");
 	memcpy(result, op_result, sizeof(*result));
 	return 0;
 }
@@ -614,7 +605,7 @@ int _odp_comp_init_global(void)
 	int idx;
 
 	if (odp_global_ro.disable.compress) {
-		ODP_PRINT("\nODP compress is DISABLED\n");
+		_ODP_PRINT("\nODP compress is DISABLED\n");
 		return 0;
 	}
 
@@ -655,13 +646,13 @@ int _odp_comp_term_global(void)
 		count++;
 
 	if (count != MAX_SESSIONS) {
-		ODP_ERR("comp sessions still active\n");
+		_ODP_ERR("comp sessions still active\n");
 		rc = -1;
 	}
 
 	ret = odp_shm_free(global->global_shm);
 	if (ret < 0) {
-		ODP_ERR("shm free failed for comp_pool\n");
+		_ODP_ERR("shm free failed for comp_pool\n");
 		rc = -1;
 	}
 
@@ -671,8 +662,8 @@ int _odp_comp_term_global(void)
 odp_packet_t odp_comp_packet_from_event(odp_event_t ev)
 {
 	/* This check not mandated by the API specification */
-	ODP_ASSERT(odp_event_type(ev) == ODP_EVENT_PACKET);
-	ODP_ASSERT(odp_event_subtype(ev) == ODP_EVENT_PACKET_COMP);
+	_ODP_ASSERT(odp_event_type(ev) == ODP_EVENT_PACKET);
+	_ODP_ASSERT(odp_event_subtype(ev) == ODP_EVENT_PACKET_COMP);
 
 	return odp_packet_from_event(ev);
 }

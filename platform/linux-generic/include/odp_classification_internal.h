@@ -62,7 +62,7 @@ static inline void _odp_cos_queue_stats_add(cos_t *cos, odp_queue_t queue,
 	int queue_idx = _odp_cos_queue_idx(cos, queue);
 
 	if (odp_unlikely(queue_idx < 0)) {
-		ODP_ERR("Queue not attached to the CoS\n");
+		_ODP_ERR("Queue not attached to the CoS\n");
 		return;
 	}
 

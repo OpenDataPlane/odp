@@ -55,7 +55,7 @@ static int read_cache_line_size(void)
 	file = fopen(CACHE_LNSZ_FILE, "rt");
 	if (file == NULL) {
 		/* File not found */
-		ODP_PRINT("WARN: unable to read host CPU cache line size. "
+		_ODP_PRINT("WARN: unable to read host CPU cache line size. "
 			  "Using ODP_CACHE_LINE_SIZE instead.\n");
 		return ODP_CACHE_LINE_SIZE;
 	}
@@ -83,13 +83,13 @@ static uint64_t default_huge_page_size(void)
 
 	while (fgets(str, sizeof(str), file) != NULL) {
 		if (sscanf(str, "Hugepagesize:   %8lu kB", &sz) == 1) {
-			ODP_DBG("defaut hp size is %lu kB\n", sz);
+			_ODP_DBG("defaut hp size is %lu kB\n", sz);
 			fclose(file);
 			return (uint64_t)sz * 1024;
 		}
 	}
 
-	ODP_ERR("unable to get default hp size\n");
+	_ODP_ERR("unable to get default hp size\n");
 	fclose(file);
 	return 0;
 }
@@ -215,7 +215,7 @@ static char *get_hugepage_dir(uint64_t hugepage_sz)
 	while (fgets(buf, sizeof(buf), fd)) {
 		if (strsplit(buf, sizeof(buf), tokens,
 			     _FIELDNAME_MAX, split_tok) != _FIELDNAME_MAX) {
-			ODP_ERR("Error parsing %s\n", proc_mounts);
+			_ODP_ERR("Error parsing %s\n", proc_mounts);
 			break; /* return NULL */
 		}
 
@@ -292,14 +292,14 @@ static int system_cache_line(system_info_t *sysinfo)
 
 	ret = read_cache_line_size();
 	if (ret == 0) {
-		ODP_ERR("read_cache_line_size failed.\n");
+		_ODP_ERR("read_cache_line_size failed.\n");
 		return -1;
 	}
 
 	sysinfo->cache_line_size = ret;
 
 	if (ret != ODP_CACHE_LINE_SIZE)
-		ODP_PRINT("WARN: host CPU cache line size and ODP_CACHE_LINE_SIZE don't match.\n");
+		_ODP_PRINT("WARN: host CPU cache line size and ODP_CACHE_LINE_SIZE don't match.\n");
 
 	return 0;
 }
@@ -324,21 +324,21 @@ static int read_config_file(void)
 
 	str = "system.cpu_mhz";
 	if (!_odp_libconfig_lookup_int(str, &val)) {
-		ODP_ERR("Config option '%s' not found.\n", str);
+		_ODP_ERR("Config option '%s' not found.\n", str);
 		return -1;
 	}
 	odp_global_ro.system_info.default_cpu_hz = (uint64_t)val * 1000000;
 
 	str = "system.cpu_mhz_max";
 	if (!_odp_libconfig_lookup_int(str, &val)) {
-		ODP_ERR("Config option '%s' not found.\n", str);
+		_ODP_ERR("Config option '%s' not found.\n", str);
 		return -1;
 	}
 	odp_global_ro.system_info.default_cpu_hz_max = (uint64_t)val * 1000000;
 
 	str = "system.cpu_hz_static";
 	if (!_odp_libconfig_lookup_int(str, &val)) {
-		ODP_ERR("Config option '%s' not found.\n", str);
+		_ODP_ERR("Config option '%s' not found.\n", str);
 		return -1;
 	}
 	odp_global_ro.system_info.cpu_hz_static = !!val;
@@ -348,17 +348,17 @@ static int read_config_file(void)
 
 static void print_compiler_info(void)
 {
-	ODP_PRINT("Compiler defines:\n");
-	ODP_PRINT("  __GCC_ATOMIC_LLONG_LOCK_FREE:        %d\n", __GCC_ATOMIC_LLONG_LOCK_FREE);
-	ODP_PRINT("  __GCC_ATOMIC_LONG_LOCK_FREE:         %d\n", __GCC_ATOMIC_LONG_LOCK_FREE);
-	ODP_PRINT("  __GCC_ATOMIC_INT_LOCK_FREE:          %d\n", __GCC_ATOMIC_INT_LOCK_FREE);
-	ODP_PRINT("  __GCC_HAVE_SYNC_COMPARE_AND_SWAP_16: ");
+	_ODP_PRINT("Compiler defines:\n");
+	_ODP_PRINT("  __GCC_ATOMIC_LLONG_LOCK_FREE:        %d\n", __GCC_ATOMIC_LLONG_LOCK_FREE);
+	_ODP_PRINT("  __GCC_ATOMIC_LONG_LOCK_FREE:         %d\n", __GCC_ATOMIC_LONG_LOCK_FREE);
+	_ODP_PRINT("  __GCC_ATOMIC_INT_LOCK_FREE:          %d\n", __GCC_ATOMIC_INT_LOCK_FREE);
+	_ODP_PRINT("  __GCC_HAVE_SYNC_COMPARE_AND_SWAP_16: ");
 #ifdef __GCC_HAVE_SYNC_COMPARE_AND_SWAP_16
-	ODP_PRINT("1\n");
+	_ODP_PRINT("1\n");
 #else
-	ODP_PRINT("0\n");
+	_ODP_PRINT("0\n");
 #endif
-	ODP_PRINT("\n");
+	_ODP_PRINT("\n");
 }
 
 /*
@@ -381,7 +381,7 @@ int _odp_system_info_init(void)
 	/* Check that CONFIG_NUM_CPU_IDS is large enough */
 	num_cpus = get_nprocs_conf();
 	if (num_cpus > CONFIG_NUM_CPU_IDS)
-		ODP_ERR("Unable to handle all %d "
+		_ODP_ERR("Unable to handle all %d "
 			"CPU IDs. Increase CONFIG_NUM_CPU_IDS value.\n",
 			num_cpus);
 
@@ -443,7 +443,7 @@ uint64_t odp_cpu_hz(void)
 
 uint64_t odp_cpu_hz_id(int id)
 {
-	ODP_ASSERT(id >= 0 && id < CONFIG_NUM_CPU_IDS);
+	_ODP_ASSERT(id >= 0 && id < CONFIG_NUM_CPU_IDS);
 
 	if (odp_global_ro.system_info.cpu_hz_static)
 		return cpu_hz_static(id);
@@ -490,8 +490,7 @@ int odp_sys_huge_page_size_all(uint64_t size[], int num)
 	/* See: kernel.org: hugetlbpage.txt */
 	dir = opendir("/sys/kernel/mm/hugepages");
 	if (!dir) {
-		ODP_PRINT("Failed to open /sys/kernel/mm/hugepages: %s\n",
-			  strerror(errno));
+		_ODP_PRINT("Failed to open /sys/kernel/mm/hugepages: %s\n", strerror(errno));
 		return 0;
 	}
 
@@ -587,7 +586,7 @@ void odp_sys_info_print(void)
 		       num_cpu, cpumask_str);
 
 	str[len] = '\0';
-	ODP_PRINT("%s", str);
+	_ODP_PRINT("%s", str);
 
 	_odp_sys_info_print_arch();
 }
@@ -596,21 +595,21 @@ void odp_sys_config_print(void)
 {
 	/* Print ODP_CONFIG_FILE default and override values */
 	if (_odp_libconfig_print())
-		ODP_ERR("Config file print failed\n");
+		_ODP_ERR("Config file print failed\n");
 
-	ODP_PRINT("\n\nodp_config_internal.h values:\n"
+	_ODP_PRINT("\n\nodp_config_internal.h values:\n"
 		  "-----------------------------\n");
-	ODP_PRINT("ODP_CONFIG_POOLS:            %i\n", ODP_CONFIG_POOLS);
-	ODP_PRINT("CONFIG_MAX_PLAIN_QUEUES:     %i\n", CONFIG_MAX_PLAIN_QUEUES);
-	ODP_PRINT("CONFIG_MAX_SCHED_QUEUES:     %i\n", CONFIG_MAX_SCHED_QUEUES);
-	ODP_PRINT("CONFIG_QUEUE_MAX_ORD_LOCKS:  %i\n", CONFIG_QUEUE_MAX_ORD_LOCKS);
-	ODP_PRINT("ODP_CONFIG_PKTIO_ENTRIES:    %i\n", ODP_CONFIG_PKTIO_ENTRIES);
-	ODP_PRINT("CONFIG_PACKET_HEADROOM:      %i\n", CONFIG_PACKET_HEADROOM);
-	ODP_PRINT("CONFIG_PACKET_TAILROOM:      %i\n", CONFIG_PACKET_TAILROOM);
-	ODP_PRINT("CONFIG_SHM_BLOCKS:           %i\n", CONFIG_SHM_BLOCKS);
-	ODP_PRINT("CONFIG_BURST_SIZE:           %i\n", CONFIG_BURST_SIZE);
-	ODP_PRINT("CONFIG_POOL_MAX_NUM:         %i\n", CONFIG_POOL_MAX_NUM);
-	ODP_PRINT("CONFIG_POOL_CACHE_MAX_SIZE:  %i\n", CONFIG_POOL_CACHE_MAX_SIZE);
-	ODP_PRINT("CONFIG_TIMER_128BIT_ATOMICS: %i\n", CONFIG_TIMER_128BIT_ATOMICS);
-	ODP_PRINT("\n");
+	_ODP_PRINT("ODP_CONFIG_POOLS:            %i\n", ODP_CONFIG_POOLS);
+	_ODP_PRINT("CONFIG_MAX_PLAIN_QUEUES:     %i\n", CONFIG_MAX_PLAIN_QUEUES);
+	_ODP_PRINT("CONFIG_MAX_SCHED_QUEUES:     %i\n", CONFIG_MAX_SCHED_QUEUES);
+	_ODP_PRINT("CONFIG_QUEUE_MAX_ORD_LOCKS:  %i\n", CONFIG_QUEUE_MAX_ORD_LOCKS);
+	_ODP_PRINT("ODP_CONFIG_PKTIO_ENTRIES:    %i\n", ODP_CONFIG_PKTIO_ENTRIES);
+	_ODP_PRINT("CONFIG_PACKET_HEADROOM:      %i\n", CONFIG_PACKET_HEADROOM);
+	_ODP_PRINT("CONFIG_PACKET_TAILROOM:      %i\n", CONFIG_PACKET_TAILROOM);
+	_ODP_PRINT("CONFIG_SHM_BLOCKS:           %i\n", CONFIG_SHM_BLOCKS);
+	_ODP_PRINT("CONFIG_BURST_SIZE:           %i\n", CONFIG_BURST_SIZE);
+	_ODP_PRINT("CONFIG_POOL_MAX_NUM:         %i\n", CONFIG_POOL_MAX_NUM);
+	_ODP_PRINT("CONFIG_POOL_CACHE_MAX_SIZE:  %i\n", CONFIG_POOL_CACHE_MAX_SIZE);
+	_ODP_PRINT("CONFIG_TIMER_128BIT_ATOMICS: %i\n", CONFIG_TIMER_128BIT_ATOMICS);
+	_ODP_PRINT("\n");
 }

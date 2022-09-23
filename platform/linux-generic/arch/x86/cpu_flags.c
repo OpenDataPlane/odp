@@ -356,7 +356,7 @@ void _odp_cpu_flags_print_all(void)
 	len += snprintf(&str[len], max_len - len, "\n\n");
 
 	str[len] = '\0';
-	ODP_PRINT("%s", str);
+	_ODP_PRINT("%s", str);
 }
 
 int _odp_cpu_has_global_time(void)

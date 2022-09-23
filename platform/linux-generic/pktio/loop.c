@@ -106,7 +106,7 @@ static int loopback_queue_destroy(odp_queue_t queue)
 	} while (event != ODP_EVENT_INVALID);
 
 	if (odp_queue_destroy(queue)) {
-		ODP_ERR("Destroying loopback pktio queue failed\n");
+		_ODP_ERR("Destroying loopback pktio queue failed\n");
 		return -1;
 	}
 	return 0;
@@ -131,7 +131,7 @@ static int loopback_pktout_queue_config(pktio_entry_t *pktio_entry,
 
 	pkt_loop->loopq = odp_queue_create(queue_name, &queue_param);
 	if (pkt_loop->loopq == ODP_QUEUE_INVALID) {
-		ODP_ERR("Creating loopback pktio queue failed\n");
+		_ODP_ERR("Creating loopback pktio queue failed\n");
 		return -1;
 	}
 
@@ -408,7 +408,7 @@ static int loopback_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 		pktio_entry->stats.out_packets += ret;
 		pktio_entry->stats.out_octets += out_octets_tbl[ret - 1];
 	} else {
-		ODP_DBG("queue enqueue failed %i\n", ret);
+		_ODP_DBG("queue enqueue failed %i\n", ret);
 		ret = -1;
 	}
 
@@ -468,7 +468,7 @@ static int loopback_init_capability(pktio_entry_t *pktio_entry)
 	odp_queue_capability_t queue_capa;
 
 	if (odp_queue_capability(&queue_capa)) {
-		ODP_ERR("Queue capability failed\n");
+		_ODP_ERR("Queue capability failed\n");
 		return -1;
 	}
 
@@ -579,7 +579,7 @@ static int loopback_pktout_stats(pktio_entry_t *pktio_entry,
 
 static int loop_init_global(void)
 {
-	ODP_PRINT("PKTIO: initialized loop interface.\n");
+	_ODP_PRINT("PKTIO: initialized loop interface.\n");
 	return 0;
 }
 

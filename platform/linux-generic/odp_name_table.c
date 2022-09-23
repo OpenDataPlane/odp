@@ -223,20 +223,19 @@ static void secondary_hash_dump(secondary_hash_tbl_t *secondary_hash_tbl)
 				entry_cnt = hash_tbl_entry & 0x3F;
 				list_cnt  = linked_list_len(name_tbl_entry);
 				if (entry_cnt != list_cnt)
-					ODP_DBG("%s idx=%u entry_cnt=%u "
+					_ODP_DBG("%s idx=%u entry_cnt=%u "
 						"list_cnt=%u\n",
 						__func__,
 						idx, entry_cnt, list_cnt);
 
 				count += entry_cnt;
 			} else {
-				ODP_DBG("%s inner secondary tbl\n",
-					__func__);
+				_ODP_DBG("%s inner secondary tbl\n", __func__);
 			}
 		}
 	}
 
-	ODP_DBG("%s count=%u\n", __func__, count);
+	_ODP_DBG("%s count=%u\n", __func__, count);
 }
 
 static uint32_t name_tbl_free_list_add(name_tbl_t *name_tbl,
@@ -1073,7 +1072,7 @@ static void secondary_hash_histo_print(void)
 	if (name_hash_tbl.num_secondary_tbls[0] == 0)
 		return;
 
-	ODP_DBG("  level1 secondary hash histogram:\n");
+	_ODP_DBG("  level1 secondary hash histogram:\n");
 	total_count = 0;
 	for (idx = 0; idx < 256; idx++) {
 		count = level1_histo[idx];
@@ -1081,24 +1080,23 @@ static void secondary_hash_histo_print(void)
 			total_count += count * idx;
 
 		if (count != 0)
-			ODP_DBG("    num collisions=%02u    count=%u\n",
-				idx, count);
+			_ODP_DBG("    num collisions=%02u    count=%u\n", idx, count);
 	}
 
 	count = level1_histo[256];
 	total_count += count;
 	if (count != 0)
-		ODP_DBG("    num collisions >=256  count=%u\n", count);
+		_ODP_DBG("    num collisions >=256  count=%u\n", count);
 
 	avg = (100 * total_count) / name_hash_tbl.num_secondary_tbls[0];
 	avg = avg / SECONDARY_HASH_TBL_SIZE;
-	ODP_DBG("    avg collisions=%02u.%02u total=%u\n\n",
-		avg / 100, avg % 100, total_count);
+	_ODP_DBG("    avg collisions=%02u.%02u total=%u\n\n",
+		 avg / 100, avg % 100, total_count);
 
 	if (name_hash_tbl.num_secondary_tbls[1] == 0)
 		return;
 
-	ODP_DBG("  level2 secondary hash histogram:\n");
+	_ODP_DBG("  level2 secondary hash histogram:\n");
 	total_count = 0;
 	for (idx = 0; idx < 256; idx++) {
 		count = level2_histo[idx];
@@ -1106,19 +1104,18 @@ static void secondary_hash_histo_print(void)
 			total_count += count * idx;
 
 		if (count != 0)
-			ODP_DBG("    num collisions=%02u    count=%u\n",
-				idx, count);
+			_ODP_DBG("    num collisions=%02u    count=%u\n", idx, count);
 	}
 
 	count = level2_histo[256];
 	total_count += count;
 	if (count != 0)
-		ODP_DBG("    num collisions >=256  count=%u\n", count);
+		_ODP_DBG("    num collisions >=256  count=%u\n", count);
 
 	avg = (100 * total_count) / name_hash_tbl.num_secondary_tbls[1];
 	avg = avg / SECONDARY_HASH_TBL_SIZE;
-	ODP_DBG("    avg collisions=%02u.%02u total=%u\n\n",
-		avg / 100, avg % 100, total_count);
+	_ODP_DBG("    avg collisions=%02u.%02u total=%u\n\n",
+		 avg / 100, avg % 100, total_count);
 }
 
 #endif
@@ -1130,21 +1127,21 @@ void _odp_int_name_tbl_stats_print(void)
 		count, total_count;
 	uint32_t avg;
 
-	ODP_DBG("\nname table stats:\n");
-	ODP_DBG("  num_names=%" PRIu32 " num_adds=%" PRIu64 " "
-		"num_deletes=%" PRIu64 " num_name_tbls=%" PRIu8 "\n",
-		name_tbls.current_num_names, name_tbls.num_adds,
-		name_tbls.num_deletes, name_tbls.num_name_tbls);
+	_ODP_DBG("\nname table stats:\n");
+	_ODP_DBG("  num_names=%" PRIu32 " num_adds=%" PRIu64 " "
+		 "num_deletes=%" PRIu64 " num_name_tbls=%" PRIu8 "\n",
+		 name_tbls.current_num_names, name_tbls.num_adds,
+		 name_tbls.num_deletes, name_tbls.num_name_tbls);
 	for (idx = 0; idx < NUM_NAME_TBLS; idx++) {
 		name_tbl = name_tbls.tbls[idx];
 		if ((name_tbl) && (name_tbl->num_used != 0))
-			ODP_DBG("  name_tbl %u  num_allocd=%7u "
-				"num_added_to_free_list=%7u "
-				"num_used=%7u num_avail_to_add=%7u\n", idx,
-				name_tbl->num_allocd,
-				name_tbl->num_added_to_free_list,
-				name_tbl->num_used,
-				name_tbl->num_avail_to_add);
+			_ODP_DBG("  name_tbl %u  num_allocd=%7u "
+				 "num_added_to_free_list=%7u "
+				 "num_used=%7u num_avail_to_add=%7u\n", idx,
+				 name_tbl->num_allocd,
+				 name_tbl->num_added_to_free_list,
+				 name_tbl->num_used,
+				 name_tbl->num_avail_to_add);
 	}
 
 	memset(primary_hash_histo, 0, sizeof(primary_hash_histo));
@@ -1154,7 +1151,7 @@ void _odp_int_name_tbl_stats_print(void)
 		primary_hash_histo[collisions]++;
 	}
 
-	ODP_DBG("  name_tbl primary hash histogram:\n");
+	_ODP_DBG("  name_tbl primary hash histogram:\n");
 	total_count = 0;
 	for (idx = 0; idx < 256; idx++) {
 		count = primary_hash_histo[idx];
@@ -1162,23 +1159,20 @@ void _odp_int_name_tbl_stats_print(void)
 			total_count += count * idx;
 
 		if (count != 0)
-			ODP_DBG("    num collisions=%02u    count=%u\n",
-				idx, count);
+			_ODP_DBG("    num collisions=%02u    count=%u\n", idx, count);
 	}
 
 	count = primary_hash_histo[256];
 	total_count += count;
 	if (count != 0)
-		ODP_DBG("    num collisions >=256  count=%u\n", count);
+		_ODP_DBG("    num collisions >=256  count=%u\n", count);
 
 	avg = (100 * total_count) / PRIMARY_HASH_TBL_SIZE;
-	ODP_DBG("    avg collisions=%02u.%02u total=%u\n\n",
-		avg / 100, avg % 100, total_count);
+	_ODP_DBG("    avg collisions=%02u.%02u total=%u\n\n",
+		 avg / 100, avg % 100, total_count);
 
-	ODP_DBG("  num of first level secondary hash tbls=%u "
-		"second level tbls=%u\n",
-		name_hash_tbl.num_secondary_tbls[0],
-		name_hash_tbl.num_secondary_tbls[1]);
+	_ODP_DBG("  num of first level secondary hash tbls=%u second level tbls=%u\n",
+		 name_hash_tbl.num_secondary_tbls[0], name_hash_tbl.num_secondary_tbls[1]);
 
 #ifdef SECONDARY_HASH_HISTO_PRINT
 	if (name_hash_tbl.num_secondary_tbls[0] != 0)

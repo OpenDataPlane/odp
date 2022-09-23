@@ -120,7 +120,7 @@ int _odp_queue_init_global(void)
 		_odp_queue_fn = &_odp_queue_scalable_fn;
 		_odp_queue_api = &_odp_queue_scalable_api;
 	} else {
-		ODP_ABORT("Unknown scheduler specified via ODP_SCHEDULER\n");
+		_ODP_ABORT("Unknown scheduler specified via ODP_SCHEDULER\n");
 		return -1;
 	}
 

@@ -78,7 +78,7 @@ static int gen_random_mac(unsigned char *mac)
 {
 	mac[0] = 0x7a; /* not multicast and local assignment bit is set */
 	if (odp_random_data(mac + 1, 5, ODP_RANDOM_BASIC) < 5) {
-		ODP_ERR("odp_random_data failed.\n");
+		_ODP_ERR("odp_random_data failed.\n");
 		return -1;
 	}
 	return 0;
@@ -99,8 +99,7 @@ static int mac_addr_set_fd(int fd, const char *name,
 	ret = ioctl(fd, SIOCSIFHWADDR, &ethreq);
 	if (ret != 0) {
 		_odp_errno = errno;
-		ODP_ERR("ioctl(SIOCSIFHWADDR): %s: \"%s\".\n", strerror(errno),
-			ethreq.ifr_name);
+		_ODP_ERR("ioctl(SIOCSIFHWADDR): %s: \"%s\".\n", strerror(errno), ethreq.ifr_name);
 		return -1;
 	}
 
@@ -130,7 +129,7 @@ static int tap_pktio_open(odp_pktio_t id ODP_UNUSED,
 	fd = open("/dev/net/tun", O_RDWR);
 	if (fd < 0) {
 		_odp_errno = errno;
-		ODP_ERR("failed to open /dev/net/tun: %s\n", strerror(errno));
+		_ODP_ERR("failed to open /dev/net/tun: %s\n", strerror(errno));
 		return -1;
 	}
 
@@ -145,8 +144,7 @@ static int tap_pktio_open(odp_pktio_t id ODP_UNUSED,
 
 	if (ioctl(fd, TUNSETIFF, (void *)&ifr) < 0) {
 		_odp_errno = errno;
-		ODP_ERR("%s: creating tap device failed: %s\n",
-			ifr.ifr_name, strerror(errno));
+		_ODP_ERR("%s: creating tap device failed: %s\n", ifr.ifr_name, strerror(errno));
 		goto tap_err;
 	}
 
@@ -154,13 +152,13 @@ static int tap_pktio_open(odp_pktio_t id ODP_UNUSED,
 	flags = fcntl(fd, F_GETFL, 0);
 	if (flags < 0) {
 		_odp_errno = errno;
-		ODP_ERR("fcntl(F_GETFL) failed: %s\n", strerror(errno));
+		_ODP_ERR("fcntl(F_GETFL) failed: %s\n", strerror(errno));
 		goto tap_err;
 	}
 
 	if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) < 0) {
 		_odp_errno = errno;
-		ODP_ERR("fcntl(F_SETFL) failed: %s\n", strerror(errno));
+		_ODP_ERR("fcntl(F_SETFL) failed: %s\n", strerror(errno));
 		goto tap_err;
 	}
 
@@ -171,14 +169,14 @@ static int tap_pktio_open(odp_pktio_t id ODP_UNUSED,
 	skfd = socket(AF_INET, SOCK_DGRAM, 0);
 	if (skfd < 0) {
 		_odp_errno = errno;
-		ODP_ERR("socket creation failed: %s\n", strerror(errno));
+		_ODP_ERR("socket creation failed: %s\n", strerror(errno));
 		goto tap_err;
 	}
 
 	mtu = _odp_mtu_get_fd(skfd, devname + 4);
 	if (mtu == 0) {
 		_odp_errno = errno;
-		ODP_ERR("_odp_mtu_get_fd failed: %s\n", strerror(errno));
+		_ODP_ERR("_odp_mtu_get_fd failed: %s\n", strerror(errno));
 		goto sock_err;
 	}
 	tap->mtu_max = _ODP_SOCKET_MTU_MAX;
@@ -194,7 +192,7 @@ sock_err:
 	close(skfd);
 tap_err:
 	close(fd);
-	ODP_ERR("Tap device alloc failed.\n");
+	_ODP_ERR("Tap device alloc failed.\n");
 	return -1;
 }
 
@@ -210,7 +208,7 @@ static int tap_pktio_start(pktio_entry_t *pktio_entry)
 		/* Up interface by default. */
 	if (ioctl(tap->skfd, SIOCGIFFLAGS, &ifr) < 0) {
 		_odp_errno = errno;
-		ODP_ERR("ioctl(SIOCGIFFLAGS) failed: %s\n", strerror(errno));
+		_ODP_ERR("ioctl(SIOCGIFFLAGS) failed: %s\n", strerror(errno));
 		goto sock_err;
 	}
 
@@ -219,13 +217,13 @@ static int tap_pktio_start(pktio_entry_t *pktio_entry)
 
 	if (ioctl(tap->skfd, SIOCSIFFLAGS, &ifr) < 0) {
 		_odp_errno = errno;
-		ODP_ERR("failed to come up: %s\n", strerror(errno));
+		_ODP_ERR("failed to come up: %s\n", strerror(errno));
 		goto sock_err;
 	}
 
 	return 0;
 sock_err:
-	ODP_ERR("Tap device open failed.\n");
+	_ODP_ERR("Tap device open failed.\n");
 	return -1;
 }
 
@@ -241,7 +239,7 @@ static int tap_pktio_stop(pktio_entry_t *pktio_entry)
 		/* Up interface by default. */
 	if (ioctl(tap->skfd, SIOCGIFFLAGS, &ifr) < 0) {
 		_odp_errno = errno;
-		ODP_ERR("ioctl(SIOCGIFFLAGS) failed: %s\n", strerror(errno));
+		_ODP_ERR("ioctl(SIOCGIFFLAGS) failed: %s\n", strerror(errno));
 		goto sock_err;
 	}
 
@@ -250,13 +248,13 @@ static int tap_pktio_stop(pktio_entry_t *pktio_entry)
 
 	if (ioctl(tap->skfd, SIOCSIFFLAGS, &ifr) < 0) {
 		_odp_errno = errno;
-		ODP_ERR("failed to come up: %s\n", strerror(errno));
+		_ODP_ERR("failed to come up: %s\n", strerror(errno));
 		goto sock_err;
 	}
 
 	return 0;
 sock_err:
-	ODP_ERR("Tap device open failed.\n");
+	_ODP_ERR("Tap device open failed.\n");
 	return -1;
 }
 
@@ -267,13 +265,13 @@ static int tap_pktio_close(pktio_entry_t *pktio_entry)
 
 	if (tap->fd != -1 && close(tap->fd) != 0) {
 		_odp_errno = errno;
-		ODP_ERR("close(tap->fd): %s\n", strerror(errno));
+		_ODP_ERR("close(tap->fd): %s\n", strerror(errno));
 		ret = -1;
 	}
 
 	if (tap->skfd != -1 && close(tap->skfd) != 0) {
 		_odp_errno = errno;
-		ODP_ERR("close(tap->skfd): %s\n", strerror(errno));
+		_ODP_ERR("close(tap->skfd): %s\n", strerror(errno));
 		ret = -1;
 	}
 
@@ -301,7 +299,7 @@ static odp_packet_t pack_odp_pkt(pktio_entry_t *pktio_entry, const void *data,
 		pull_head(pkt_hdr, frame_offset);
 
 	if (odp_packet_copy_from_mem(pkt, 0, len, data) < 0) {
-		ODP_ERR("failed to copy packet data\n");
+		_ODP_ERR("failed to copy packet data\n");
 		odp_packet_free(pkt);
 		return ODP_PACKET_INVALID;
 	}
@@ -401,7 +399,7 @@ static int tap_pktio_send_lockless(pktio_entry_t *pktio_entry,
 		}
 
 		if (odp_packet_copy_to_mem(pkts[i], 0, pkt_len, buf) < 0) {
-			ODP_ERR("failed to copy packet data\n");
+			_ODP_ERR("failed to copy packet data\n");
 			break;
 		}
 
@@ -412,12 +410,12 @@ static int tap_pktio_send_lockless(pktio_entry_t *pktio_entry,
 		if (retval < 0) {
 			if (i == 0 && SOCK_ERR_REPORT(errno)) {
 				_odp_errno = errno;
-				ODP_ERR("write(): %s\n", strerror(errno));
+				_ODP_ERR("write(): %s\n", strerror(errno));
 				return -1;
 			}
 			break;
 		} else if ((uint32_t)retval != pkt_len) {
-			ODP_ERR("sent partial ethernet packet\n");
+			_ODP_ERR("sent partial ethernet packet\n");
 			if (i == 0) {
 				_odp_errno = EMSGSIZE;
 				return -1;

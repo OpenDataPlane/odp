@@ -93,14 +93,6 @@ extern odp_abort_func_t _odp_abort_fn;
 #define _ODP_PRINT(fmt, ...) \
 	_ODP_LOG_FN(ODP_LOG_PRINT, fmt, ##__VA_ARGS__)
 
-/* Temp defines for backwards compatibility */
-#define ODP_ASSERT _ODP_ASSERT
-#define ODP_DBG _ODP_DBG
-#define ODP_ERR _ODP_ERR
-#define ODP_ABORT _ODP_ABORT
-#define ODP_ASSERT _ODP_ASSERT
-#define ODP_PRINT _ODP_PRINT
-
 #ifdef __cplusplus
 }
 #endif

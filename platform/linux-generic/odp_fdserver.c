@@ -157,7 +157,7 @@ static int send_fdserver_msg(int sock, int command,
 	}
 	res = sendmsg(sock, &socket_message, 0);
 	if (res < 0) {
-		ODP_ERR("send_fdserver_msg: %s\n", strerror(errno));
+		_ODP_ERR("sendmsg() failed: %s\n", strerror(errno));
 		return -1;
 	}
 
@@ -203,7 +203,7 @@ static int recv_fdserver_msg(int sock, int *command,
 
 	/* receive the message */
 	if (recvmsg(sock, &socket_message, MSG_CMSG_CLOEXEC) < 0) {
-		ODP_ERR("recv_fdserver_msg: %s\n", strerror(errno));
+		_ODP_ERR("recvmsg() failed: %s\n", strerror(errno));
 		return -1;
 	}
 
@@ -246,13 +246,13 @@ static int get_socket(void)
 		       odp_global_ro.main_pid);
 
 	if (len >= FDSERVER_SOCKPATH_MAXLEN || len >= (int)sizeof(remote.sun_path)) {
-		ODP_ERR("path too long\n");
+		_ODP_ERR("path too long\n");
 		return -1;
 	}
 
 	s_sock = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (s_sock == -1) {
-		ODP_ERR("cannot connect to server: %s\n", strerror(errno));
+		_ODP_ERR("cannot connect to server: %s\n", strerror(errno));
 		return -1;
 	}
 
@@ -262,7 +262,7 @@ static int get_socket(void)
 	while (connect(s_sock, (struct sockaddr *)&remote, len) == -1) {
 		if (errno == EINTR)
 			continue;
-		ODP_ERR("cannot connect to server: %s\n", strerror(errno));
+		_ODP_ERR("cannot connect to server: %s\n", strerror(errno));
 		close(s_sock);
 		return -1;
 	}
@@ -292,7 +292,7 @@ int _odp_fdserver_register_fd(fd_server_context_e context, uint64_t key,
 	res =  send_fdserver_msg(s_sock, FD_REGISTER_REQ, context, key,
 				 fd_to_send);
 	if (res < 0) {
-		ODP_ERR("fd registration failure\n");
+		_ODP_ERR("fd registration failure\n");
 		close(s_sock);
 		return -1;
 	}
@@ -300,7 +300,7 @@ int _odp_fdserver_register_fd(fd_server_context_e context, uint64_t key,
 	res = recv_fdserver_msg(s_sock, &command, &context, &key, &fd);
 
 	if ((res < 0) || (command != FD_REGISTER_ACK)) {
-		ODP_ERR("fd registration failure\n");
+		_ODP_ERR("fd registration failure\n");
 		close(s_sock);
 		return -1;
 	}
@@ -330,7 +330,7 @@ int _odp_fdserver_deregister_fd(fd_server_context_e context, uint64_t key)
 
 	res =  send_fdserver_msg(s_sock, FD_DEREGISTER_REQ, context, key, -1);
 	if (res < 0) {
-		ODP_ERR("fd de-registration failure\n");
+		_ODP_ERR("fd de-registration failure\n");
 		close(s_sock);
 		return -1;
 	}
@@ -338,7 +338,7 @@ int _odp_fdserver_deregister_fd(fd_server_context_e context, uint64_t key)
 	res = recv_fdserver_msg(s_sock, &command, &context, &key, &fd);
 
 	if ((res < 0) || (command != FD_DEREGISTER_ACK)) {
-		ODP_ERR("fd de-registration failure\n");
+		_ODP_ERR("fd de-registration failure\n");
 		close(s_sock);
 		return -1;
 	}
@@ -366,7 +366,7 @@ int _odp_fdserver_lookup_fd(fd_server_context_e context, uint64_t key)
 
 	res =  send_fdserver_msg(s_sock, FD_LOOKUP_REQ, context, key, -1);
 	if (res < 0) {
-		ODP_ERR("fd lookup failure\n");
+		_ODP_ERR("fd lookup failure\n");
 		close(s_sock);
 		return -1;
 	}
@@ -374,14 +374,14 @@ int _odp_fdserver_lookup_fd(fd_server_context_e context, uint64_t key)
 	res = recv_fdserver_msg(s_sock, &command, &context, &key, &fd);
 
 	if ((res < 0) || (command != FD_LOOKUP_ACK)) {
-		ODP_ERR("fd lookup failure\n");
+		_ODP_ERR("fd lookup failure\n");
 		close(s_sock);
 		return -1;
 	}
 
 	close(s_sock);
-	ODP_DBG("FD client lookup: pid=%d, key=%" PRIu64 ", fd=%d\n",
-		getpid(), key, fd);
+	_ODP_DBG("FD client lookup: pid=%d, key=%" PRIu64 ", fd=%d\n",
+		 getpid(), key, fd);
 
 	return fd;
 }
@@ -402,7 +402,7 @@ static int stop_server(void)
 
 	res =  send_fdserver_msg(s_sock, FD_SERVERSTOP_REQ, 0, 0, -1);
 	if (res < 0) {
-		ODP_ERR("fd stop request failure\n");
+		_ODP_ERR("fd stop request failure\n");
 		close(s_sock);
 		return -1;
 	}
@@ -430,7 +430,7 @@ static int handle_request(int client_sock)
 	switch (command) {
 	case FD_REGISTER_REQ:
 		if ((fd < 0) || (context >= FD_SRV_CTX_END)) {
-			ODP_ERR("Invalid register fd or context\n");
+			_ODP_ERR("Invalid register fd or context\n");
 			send_fdserver_msg(client_sock, FD_REGISTER_NACK,
 					  FD_SRV_CTX_NA, 0, -1);
 			return 0;
@@ -444,7 +444,7 @@ static int handle_request(int client_sock)
 			ODP_DBG_LVL(FD_DBG, "storing {ctx=%d, key=%" PRIu64 "}->fd=%d\n",
 				    context, key, fd);
 		} else {
-			ODP_ERR("FD table full\n");
+			_ODP_ERR("FD table full\n");
 			send_fdserver_msg(client_sock, FD_REGISTER_NACK,
 					  FD_SRV_CTX_NA, 0, -1);
 			return 0;
@@ -456,7 +456,7 @@ static int handle_request(int client_sock)
 
 	case FD_LOOKUP_REQ:
 		if (context >= FD_SRV_CTX_END) {
-			ODP_ERR("invalid lookup context\n");
+			_ODP_ERR("invalid lookup context\n");
 			send_fdserver_msg(client_sock, FD_LOOKUP_NACK,
 					  FD_SRV_CTX_NA, 0, -1);
 			return 0;
@@ -467,7 +467,7 @@ static int handle_request(int client_sock)
 			if ((fd_table[i].context == context) &&
 			    (fd_table[i].key == key)) {
 				fd = fd_table[i].fd;
-				ODP_DBG("lookup {ctx=%d,"
+				_ODP_DBG("lookup {ctx=%d,"
 					" key=%" PRIu64 "}->fd=%d\n",
 					context, key, fd);
 				send_fdserver_msg(client_sock,
@@ -484,7 +484,7 @@ static int handle_request(int client_sock)
 
 	case FD_DEREGISTER_REQ:
 		if (context >= FD_SRV_CTX_END) {
-			ODP_ERR("invalid deregister context\n");
+			_ODP_ERR("invalid deregister context\n");
 			send_fdserver_msg(client_sock, FD_DEREGISTER_NACK,
 					  FD_SRV_CTX_NA, 0, -1);
 			return 0;
@@ -516,7 +516,7 @@ static int handle_request(int client_sock)
 		return 1;
 
 	default:
-		ODP_ERR("Unexpected request\n");
+		_ODP_ERR("Unexpected request\n");
 		break;
 	}
 	return 0;
@@ -539,7 +539,7 @@ static void wait_requests(int sock)
 			if (errno == EINTR)
 				continue;
 
-			ODP_ERR("wait_requests: %s\n", strerror(errno));
+			_ODP_ERR("accept() failed: %s\n", strerror(errno));
 			return;
 		}
 
@@ -574,14 +574,14 @@ int _odp_fdserver_init_global(void)
 		       odp_global_ro.main_pid);
 
 	if (len >= FDSERVER_SOCKPATH_MAXLEN || len >= (int)sizeof(local.sun_path)) {
-		ODP_ERR("path too long\n");
+		_ODP_ERR("path too long\n");
 		return -1;
 	}
 
 	/* create UNIX domain socket: */
 	sock = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (sock == -1) {
-		ODP_ERR("_odp_fdserver_init_global: %s\n", strerror(errno));
+		_ODP_ERR("socket() failed: %s\n", strerror(errno));
 		return -1;
 	}
 
@@ -595,14 +595,14 @@ int _odp_fdserver_init_global(void)
 
 	res = bind(sock, (struct sockaddr *)&local, sizeof(struct sockaddr_un));
 	if (res == -1) {
-		ODP_ERR("_odp_fdserver_init_global: %s\n", strerror(errno));
+		_ODP_ERR("bind() failed: %s\n", strerror(errno));
 		close(sock);
 		return -1;
 	}
 
-	/* listen for incoming conections: */
+	/* listen for incoming connections: */
 	if (listen(sock, FDSERVER_BACKLOG) == -1) {
-		ODP_ERR("_odp_fdserver_init_global: %s\n", strerror(errno));
+		_ODP_ERR("listen() failed: %s\n", strerror(errno));
 		close(sock);
 		return -1;
 	}
@@ -610,7 +610,7 @@ int _odp_fdserver_init_global(void)
 	/* fork a server process: */
 	server_pid = fork();
 	if (server_pid == -1) {
-		ODP_ERR("Could not fork!\n");
+		_ODP_ERR("Could not fork!\n");
 		close(sock);
 		return -1;
 	}
@@ -630,7 +630,7 @@ int _odp_fdserver_init_global(void)
 		/* these we want to handle */
 		sigdelset(&sigset, SIGTERM);
 		if (sigprocmask(SIG_SETMASK, &sigset, NULL) == -1) {
-			ODP_ERR("Could not set signal mask");
+			_ODP_ERR("Could not set signal mask");
 			exit(1);
 		}
 
@@ -653,14 +653,14 @@ int _odp_fdserver_init_global(void)
 
 		res = setsid();
 		if (res == -1) {
-			ODP_ERR("Could not setsid()");
+			_ODP_ERR("Could not setsid()");
 			exit(1);
 		}
 
 		/* allocate the space for the file descriptor<->key table: */
 		fd_table = malloc(FDSERVER_MAX_ENTRIES * sizeof(fdentry_t));
 		if (!fd_table) {
-			ODP_ERR("maloc failed!\n");
+			_ODP_ERR("maloc failed!\n");
 			exit(1);
 		}
 
@@ -691,15 +691,15 @@ int _odp_fdserver_term_global(void)
 
 	/* close fdserver and wait for it to terminate */
 	if (stop_server()) {
-		ODP_ERR("Server stop failed\n");
+		_ODP_ERR("Server stop failed\n");
 		return -1;
 	}
 
-	ODP_DBG("Waiting for fdserver (%i) to stop\n", odp_global_ro.fdserver_pid);
+	_ODP_DBG("Waiting for fdserver (%i) to stop\n", odp_global_ro.fdserver_pid);
 	pid = waitpid(odp_global_ro.fdserver_pid, &status, 0);
 
 	if (pid != odp_global_ro.fdserver_pid)
-		ODP_ERR("Failed to wait for fdserver\n");
+		_ODP_ERR("Failed to wait for fdserver\n");
 
 	/* construct the server named socket path: */
 	snprintf(sockpath, FDSERVER_SOCKPATH_MAXLEN, FDSERVER_SOCK_FORMAT,

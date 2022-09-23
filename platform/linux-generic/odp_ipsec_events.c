@@ -37,7 +37,7 @@ int _odp_ipsec_events_init_global(void)
 	odp_pool_param_t param;
 
 	if (odp_global_ro.disable.ipsec) {
-		ODP_PRINT("\nODP IPSec is DISABLED\n");
+		_ODP_PRINT("\nODP IPSec is DISABLED\n");
 		return 0;
 	}
 
@@ -50,7 +50,7 @@ int _odp_ipsec_events_init_global(void)
 
 	ipsec_status_pool = odp_pool_create("_odp_ipsec_status_pool", &param);
 	if (ODP_POOL_INVALID == ipsec_status_pool) {
-		ODP_ERR("Error: status pool create failed.\n");
+		_ODP_ERR("Error: status pool create failed.\n");
 		goto err_status;
 	}
 
@@ -69,7 +69,7 @@ int _odp_ipsec_events_term_global(void)
 
 	ret = odp_pool_destroy(ipsec_status_pool);
 	if (ret < 0) {
-		ODP_ERR("status pool destroy failed");
+		_ODP_ERR("status pool destroy failed");
 		return -1;
 	}
 
@@ -78,15 +78,15 @@ int _odp_ipsec_events_term_global(void)
 
 ipsec_status_t _odp_ipsec_status_from_event(odp_event_t ev)
 {
-	ODP_ASSERT(ODP_EVENT_INVALID != ev);
-	ODP_ASSERT(ODP_EVENT_IPSEC_STATUS == odp_event_type(ev));
+	_ODP_ASSERT(ODP_EVENT_INVALID != ev);
+	_ODP_ASSERT(ODP_EVENT_IPSEC_STATUS == odp_event_type(ev));
 
 	return (ipsec_status_t)ev;
 }
 
 static odp_event_t ipsec_status_to_event(ipsec_status_t status)
 {
-	ODP_ASSERT(ODP_IPSEC_STATUS_INVALID != status);
+	_ODP_ASSERT(ODP_IPSEC_STATUS_INVALID != status);
 
 	return (odp_event_t)status;
 }

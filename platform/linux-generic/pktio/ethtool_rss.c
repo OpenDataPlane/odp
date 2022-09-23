@@ -248,6 +248,6 @@ void _odp_rss_conf_print(const odp_pktin_hash_proto_t *hash_proto)
 				"    IPV6 UDP\n");
 	str[len] = '\0';
 
-	ODP_PRINT("%s\n", str);
+	_ODP_PRINT("%s\n", str);
 }
 

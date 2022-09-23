@@ -264,8 +264,8 @@ uint32_t _odp_queue_lf_init_global(uint32_t *queue_lf_size,
 	/* 16 byte lockfree CAS operation is needed. */
 	lockfree = lockfree_check_u128();
 
-	ODP_DBG("\nLock-free queue init\n");
-	ODP_DBG("  u128 lock-free: %i\n\n", lockfree);
+	_ODP_DBG("\nLock-free queue init\n");
+	_ODP_DBG("  u128 lock-free: %i\n\n", lockfree);
 
 	if (!lockfree)
 		return 0;
@@ -302,7 +302,7 @@ void _odp_queue_lf_term_global(void)
 	shm = queue_lf_glb->shm;
 
 	if (odp_shm_free(shm) < 0)
-		ODP_ERR("shm free failed");
+		_ODP_ERR("shm free failed");
 }
 
 static void init_queue(queue_lf_t *queue_lf)
@@ -321,7 +321,7 @@ void *_odp_queue_lf_create(queue_entry_t *queue)
 	queue_lf_t *queue_lf = NULL;
 
 	if (queue_lf_glb == NULL) {
-		ODP_ERR("No lock-free queues available\n");
+		_ODP_ERR("No lock-free queues available\n");
 		return NULL;
 	}
 
