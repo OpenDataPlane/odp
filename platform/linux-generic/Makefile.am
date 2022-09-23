@@ -52,6 +52,7 @@ odpapiplatinclude_HEADERS = \
 		  include/odp/api/plat/strong_types.h \
 		  include/odp/api/plat/sync_inlines.h \
 		  include/odp/api/plat/thread_inlines.h \
+		  include/odp/api/plat/thread_inline_types.h \
 		  include/odp/api/plat/ticketlock_inlines.h \
 		  include/odp/api/plat/time_inlines.h \
 		  include/odp/api/plat/timer_inlines.h \

@@ -9,21 +9,13 @@
 
 #include <odp/api/init.h>
 
+#include <odp/api/plat/thread_inline_types.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /** @cond _ODP_HIDE_FROM_DOXYGEN_ */
-
-typedef struct {
-	int thr;
-	int cpu;
-	odp_thread_type_t type;
-	odp_log_func_t log_fn;
-
-} _odp_thread_state_t;
-
-extern __thread _odp_thread_state_t *_odp_this_thread;
 
 #ifndef _ODP_NO_INLINE
 	/* Inline functions by default */
