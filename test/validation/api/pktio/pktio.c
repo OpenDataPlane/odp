@@ -695,6 +695,7 @@ static int get_packets(pktio_info_t *pktio_rx, odp_packet_t pkt_tbl[],
 
 			pktv = odp_packet_vector_from_event(evt_tbl[i]);
 			pktv_len = odp_packet_vector_tbl(pktv, &pkts);
+			CU_ASSERT(odp_packet_vector_user_flag(pktv) == 0);
 
 			/* Make sure too many packets are not received */
 			if (num_pkts + pktv_len > num) {
@@ -996,6 +997,7 @@ static void pktio_txrx_multi(pktio_info_t *pktio_info_a,
 			CU_ASSERT(odp_packet_has_udp(pkt));
 		}
 
+		CU_ASSERT(odp_packet_user_flag(pkt) == 0);
 		CU_ASSERT(odp_packet_user_ptr(pkt) == NULL);
 		CU_ASSERT(odp_packet_cls_mark(pkt) == 0);
 
