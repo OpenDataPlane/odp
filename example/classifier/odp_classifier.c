@@ -1314,7 +1314,7 @@ static void usage(void)
 		"  -c, --count <num>        CPU count, 0=all available, default=1\n"
 		"\n"
 		"  -m, --mode <mode>        0: Packet Drop mode. Received packets will be dropped\n"
-		"                           !0: Packet ICMP mode. Received packets will be sent back\n"
+		"                           !0: Echo mode. Received packets will be sent back\n"
 		"                           default: Packet Drop mode\n"
 		"\n"
 		"  -t, --time <sec>         !0: Time for which the classifier will be run in seconds\n"
