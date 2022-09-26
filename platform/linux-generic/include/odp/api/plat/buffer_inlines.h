@@ -7,11 +7,12 @@
 #ifndef ODP_PLAT_BUFFER_INLINES_H_
 #define ODP_PLAT_BUFFER_INLINES_H_
 
-#include <odp/api/event_types.h>
+#include <odp/api/event.h>
 #include <odp/api/pool_types.h>
 
 #include <odp/api/abi/buffer.h>
 
+#include <odp/api/plat/debug_inlines.h>
 #include <odp/api/plat/event_inline_types.h>
 
 /** @cond _ODP_HIDE_FROM_DOXYGEN_ */
@@ -31,6 +32,8 @@ extern const _odp_event_inline_offset_t _odp_event_inline_offset;
 
 _ODP_INLINE odp_buffer_t odp_buffer_from_event(odp_event_t ev)
 {
+	_ODP_ASSERT(odp_event_type(ev) == ODP_EVENT_BUFFER);
+
 	return (odp_buffer_t)ev;
 }
 

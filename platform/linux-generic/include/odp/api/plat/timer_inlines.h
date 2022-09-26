@@ -10,6 +10,7 @@
 #include <odp/api/event.h>
 #include <odp/api/timer_types.h>
 
+#include <odp/api/plat/debug_inlines.h>
 #include <odp/api/plat/timer_inline_types.h>
 
 #include <stdint.h>
@@ -71,6 +72,8 @@ _ODP_INLINE uint64_t odp_timer_ns_to_tick(odp_timer_pool_t tp, uint64_t ns)
 
 _ODP_INLINE odp_timeout_t odp_timeout_from_event(odp_event_t ev)
 {
+	_ODP_ASSERT(odp_event_type(ev) == ODP_EVENT_TIMEOUT);
+
 	return (odp_timeout_t)ev;
 }
 
