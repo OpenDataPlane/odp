@@ -96,9 +96,14 @@ static ipsec_status_hdr_t *ipsec_status_hdr_from_buf(odp_buffer_t buf)
 	return (ipsec_status_hdr_t *)(void *)_odp_buf_hdr(buf);
 }
 
+static inline odp_buffer_t buffer_from_event(odp_event_t ev)
+{
+	return (odp_buffer_t)ev;
+}
+
 static ipsec_status_hdr_t *ipsec_status_hdr(ipsec_status_t status)
 {
-	odp_buffer_t buf = odp_buffer_from_event(ipsec_status_to_event(status));
+	odp_buffer_t buf = buffer_from_event(ipsec_status_to_event(status));
 
 	return ipsec_status_hdr_from_buf(buf);
 }
@@ -119,7 +124,7 @@ void _odp_ipsec_status_free(ipsec_status_t status)
 {
 	odp_event_t ev = ipsec_status_to_event(status);
 
-	odp_buffer_free(odp_buffer_from_event(ev));
+	odp_buffer_free(buffer_from_event(ev));
 }
 
 int _odp_ipsec_status_send(odp_queue_t queue,
