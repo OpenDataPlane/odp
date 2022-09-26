@@ -94,6 +94,7 @@ typedef struct {
 	int verbose;
 	int promisc_mode;	/**< Promiscuous mode enabled */
 	int classifier_enable;
+	int parse_layer;
 } appl_args_t;
 
 enum packet_mode {
@@ -241,6 +242,7 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool)
 	odp_pktio_param_t pktio_param;
 	odp_pktin_queue_param_t pktin_param;
 	odp_pktio_capability_t capa;
+	odp_pktio_config_t cfg;
 
 	odp_pktio_param_init(&pktio_param);
 	pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
@@ -290,6 +292,13 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool)
 			"  \tdefault pktio%02" PRIu64 "\n",
 			odp_pktio_to_u64(pktio), dev,
 			odp_pktio_to_u64(pktio));
+
+	odp_pktio_config_init(&cfg);
+	cfg.parser.layer = appl_args_gbl->parse_layer;
+	if (odp_pktio_config(pktio, &cfg)) {
+		ODPH_ERR("failed to configure pktio %s\n", dev);
+		exit(EXIT_FAILURE);
+	}
 
 	return pktio;
 }
@@ -1127,15 +1136,17 @@ static int parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{"verbose", no_argument, NULL, 'v'},
 		{"help", no_argument, NULL, 'h'},
 		{"enable", required_argument, NULL, 'e'},
+		{"layer", required_argument, NULL, 'l'},
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+c:t:i:p:m:t:C:Pvhe:";
+	static const char *shortopts = "+c:t:i:p:m:t:C:Pvhe:l:";
 
 	appl_args->cpu_count = 1; /* Use one worker by default */
 	appl_args->verbose = 0;
 	appl_args->promisc_mode = 0;
 	appl_args->classifier_enable = 1;
+	appl_args->parse_layer = ODP_PROTO_LAYER_ALL;
 
 	while (ret == 0) {
 		opt = getopt_long(argc, argv, shortopts,
@@ -1198,6 +1209,9 @@ static int parse_args(int argc, char *argv[], appl_args_t *appl_args)
 			break;
 		case 'e':
 			appl_args->classifier_enable = atoi(optarg);
+			break;
+		case 'l':
+			appl_args->parse_layer = atoi(optarg);
 			break;
 		default:
 			break;
@@ -1284,6 +1298,9 @@ static void usage(void)
 		"  -e, --enable <enable>    0: Classifier is disabled\n"
 		"                           1: Classifier is enabled\n"
 		"                           default: Classifier is enabled\n"
+		"\n"
+		"  -l, --layer <layer>      Parse packets up to and including this layer. See odp_proto_layer_t\n"
+		"                           default: ODP_PROTO_LAYER_ALL\n"
 		"\n"
 		"  -C, --ci_pass <dst queue:count>\n"
 		"                           Minimum acceptable packet count for a CoS destination queue.\n"
