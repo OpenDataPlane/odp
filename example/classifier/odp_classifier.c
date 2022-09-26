@@ -80,6 +80,8 @@ typedef struct {
 } ci_pass_counters;
 
 typedef struct {
+	odp_pktout_queue_t pktout[MAX_WORKERS];
+	int num_pktout;
 	global_statistics stats[MAX_PMR_COUNT];
 	ci_pass_counters ci_pass_rules[MAX_PMR_COUNT];
 	int policy_count;	/**< global policy count */
@@ -250,6 +252,8 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool)
 	odp_pktin_queue_param_t pktin_param;
 	odp_pktio_capability_t capa;
 	odp_pktio_config_t cfg;
+	odp_pktout_queue_param_t pktout_queue_param;
+	int num_tx;
 
 	odp_pktio_param_init(&pktio_param);
 	pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
@@ -277,8 +281,26 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool)
 		exit(EXIT_FAILURE);
 	}
 
-	if (odp_pktout_queue_config(pktio, NULL)) {
+	num_tx = appl_args_gbl->cpu_count;
+
+	if (num_tx > (int)capa.max_output_queues) {
+		printf("Sharing %i output queues between %i workers\n",
+		       capa.max_output_queues, num_tx);
+		num_tx = capa.max_output_queues;
+	}
+
+	appl_args_gbl->num_pktout = num_tx;
+
+	odp_pktout_queue_param_init(&pktout_queue_param);
+	pktout_queue_param.num_queues = num_tx;
+
+	if (odp_pktout_queue_config(pktio, &pktout_queue_param)) {
 		ODPH_ERR("pktout queue config failed for %s\n", dev);
+		exit(EXIT_FAILURE);
+	}
+
+	if (odp_pktout_queue(pktio, appl_args_gbl->pktout, num_tx) != num_tx) {
+		ODPH_ERR("Pktout queue query failed: %s\n", dev);
 		exit(EXIT_FAILURE);
 	}
 
@@ -323,7 +345,6 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool)
 static int pktio_receive_thread(void *arg)
 {
 	int thr;
-	odp_pktout_queue_t pktout;
 	odp_packet_t pkt;
 	odp_pool_t pool;
 	odp_event_t ev;
@@ -334,11 +355,10 @@ static int pktio_receive_thread(void *arg)
 	thr = odp_thread_id();
 	appl_args_t *appl = (appl_args_t *)arg;
 	uint64_t wait_time = odp_schedule_wait_time(100 * ODP_TIME_MSEC_IN_NS);
+	odp_pktout_queue_t pktout = appl_args_gbl->pktout[thr % appl_args_gbl->num_pktout];
 
 	/* Loop packets */
 	for (;;) {
-		odp_pktio_t pktio_tmp;
-
 		if (appl->shutdown)
 			break;
 
@@ -371,13 +391,6 @@ static int pktio_receive_thread(void *arg)
 		if (odp_unlikely(drop_err_pkts(&pkt, 1) == 0)) {
 			ODPH_ERR("Drop frame - err_cnt:%lu\n", ++err_cnt);
 			continue;
-		}
-
-		pktio_tmp = odp_packet_input(pkt);
-
-		if (odp_pktout_queue(pktio_tmp, &pktout, 1) != 1) {
-			ODPH_ERR("  [%02i] Error: no output queue\n", thr);
-			return -1;
 		}
 
 		pool = odp_packet_pool(pkt);
