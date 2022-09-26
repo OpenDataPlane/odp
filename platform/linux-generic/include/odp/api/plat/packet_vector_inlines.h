@@ -14,10 +14,11 @@
 #ifndef _ODP_PLAT_PACKET_VECTOR_INLINES_H_
 #define _ODP_PLAT_PACKET_VECTOR_INLINES_H_
 
-#include <odp/api/event_types.h>
+#include <odp/api/event.h>
 #include <odp/api/packet_types.h>
 #include <odp/api/pool_types.h>
 
+#include <odp/api/plat/debug_inlines.h>
 #include <odp/api/plat/event_vector_inline_types.h>
 
 #include <stdint.h>
@@ -45,6 +46,8 @@ extern const _odp_event_vector_inline_offset_t _odp_event_vector_inline;
 
 _ODP_INLINE odp_packet_vector_t odp_packet_vector_from_event(odp_event_t ev)
 {
+	_ODP_ASSERT(odp_event_type(ev) == ODP_EVENT_PACKET_VECTOR);
+
 	return (odp_packet_vector_t)ev;
 }
 

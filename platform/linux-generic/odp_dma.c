@@ -5,6 +5,7 @@
  */
 
 #include <odp/api/dma.h>
+#include <odp/api/event.h>
 #include <odp/api/shared_memory.h>
 #include <odp/api/ticketlock.h>
 #include <odp/api/align.h>
@@ -796,6 +797,8 @@ void odp_dma_compl_free(odp_dma_compl_t dma_compl)
 
 odp_dma_compl_t odp_dma_compl_from_event(odp_event_t ev)
 {
+	_ODP_ASSERT(odp_event_type(ev) == ODP_EVENT_DMA_COMPL);
+
 	return (odp_dma_compl_t)(uintptr_t)ev;
 }
 

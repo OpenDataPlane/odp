@@ -14,16 +14,13 @@
 #ifndef _ODP_PLAT_PACKET_INLINES_H_
 #define _ODP_PLAT_PACKET_INLINES_H_
 
+#include <odp/api/event.h>
 #include <odp/api/hints.h>
 #include <odp/api/packet_types.h>
 #include <odp/api/pool_types.h>
 #include <odp/api/time.h>
 
-#include <odp/api/abi/buffer.h>
-#include <odp/api/abi/event_types.h>
-#include <odp/api/abi/packet.h>
-#include <odp/api/abi/packet_io.h>
-
+#include <odp/api/plat/debug_inlines.h>
 #include <odp/api/plat/packet_io_inlines.h>
 #include <odp/api/plat/packet_inline_types.h>
 #include <odp/api/plat/pool_inline_types.h>
@@ -535,6 +532,8 @@ _ODP_INLINE int odp_packet_copy_to_mem(odp_packet_t pkt, uint32_t offset,
 
 _ODP_INLINE odp_packet_t odp_packet_from_event(odp_event_t ev)
 {
+	_ODP_ASSERT(odp_event_type(ev) == ODP_EVENT_PACKET);
+
 	return (odp_packet_t)ev;
 }
 
@@ -569,6 +568,8 @@ _ODP_INLINE odp_event_subtype_t odp_packet_subtype(odp_packet_t pkt)
 
 _ODP_INLINE odp_packet_tx_compl_t odp_packet_tx_compl_from_event(odp_event_t ev)
 {
+	_ODP_ASSERT(odp_event_type(ev) == ODP_EVENT_PACKET_TX_COMPL);
+
 	return (odp_packet_tx_compl_t)(uintptr_t)ev;
 }
 
