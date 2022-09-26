@@ -9,13 +9,15 @@
 #define ODP_PLAT_EVENT_INLINES_H_
 
 #include <odp/api/event_types.h>
-#include <odp/api/packet.h>
+#include <odp/api/packet_types.h>
 
 #include <odp/api/plat/event_inline_types.h>
+#include <odp/api/plat/packet_inline_types.h>
 
 /** @cond _ODP_HIDE_FROM_DOXYGEN_ */
 
 extern const _odp_event_inline_offset_t _odp_event_inline_offset;
+extern const _odp_packet_inline_offset_t _odp_packet_inline;
 
 #ifndef _ODP_NO_INLINE
 	/* Inline functions by default */
@@ -26,8 +28,6 @@ extern const _odp_event_inline_offset_t _odp_event_inline_offset;
 	#define odp_event_types __odp_event_types
 	#define odp_event_flow_id __odp_event_flow_id
 	#define odp_event_flow_id_set __odp_event_flow_id_set
-
-	#include <odp/api/plat/packet_inlines.h>
 #else
 	#define _ODP_INLINE
 #endif
@@ -67,7 +67,7 @@ _ODP_INLINE odp_event_subtype_t odp_event_subtype(odp_event_t event)
 	if (__odp_event_type_get(event) != ODP_EVENT_PACKET)
 		return ODP_EVENT_NO_SUBTYPE;
 
-	return odp_packet_subtype(odp_packet_from_event(event));
+	return (odp_event_subtype_t)_odp_pkt_get((odp_packet_t)event, int8_t, subtype);
 }
 
 _ODP_INLINE odp_event_type_t odp_event_types(odp_event_t event,
@@ -76,7 +76,7 @@ _ODP_INLINE odp_event_type_t odp_event_types(odp_event_t event,
 	odp_event_type_t event_type = __odp_event_type_get(event);
 
 	*subtype = event_type == ODP_EVENT_PACKET ?
-			odp_packet_subtype(odp_packet_from_event(event)) :
+			(odp_event_subtype_t)_odp_pkt_get((odp_packet_t)event, int8_t, subtype) :
 			ODP_EVENT_NO_SUBTYPE;
 
 	return event_type;
