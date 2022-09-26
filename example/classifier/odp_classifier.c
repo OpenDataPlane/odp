@@ -1114,7 +1114,6 @@ static int parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	size_t len;
 	int i;
 	int interface = 0;
-	int policy = 0;
 	int ret = 0;
 
 	static const struct option longopts[] = {
@@ -1152,7 +1151,6 @@ static int parse_args(int argc, char *argv[], appl_args_t *appl_args)
 				ret = -1;
 				break;
 			}
-			policy = 1;
 			break;
 		case 't':
 			appl_args->time = atoi(optarg);
@@ -1201,7 +1199,7 @@ static int parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		}
 	}
 
-	if (!interface || !policy)
+	if (!interface)
 		ret = -1;
 
 	if (appl_args->if_name == NULL)
@@ -1254,6 +1252,8 @@ static void usage(void)
 		"\n"
 		"Mandatory OPTIONS:\n"
 		"  -i, --interface <interface name>\n"
+		"\n"
+		"Optional OPTIONS\n"
 		"  -p, --policy <PMR term>:<offset>:<value>:<mask>:<src queue>:<dst queue>\n"
 		"\n"
 		"    <PMR term>             PMR term name defined in odp_cls_pmr_term_t\n"
@@ -1266,7 +1266,6 @@ static void usage(void)
 		"                           this is not defined.\n"
 		"    <dst queue>            Name of the destination queue (CoS).\n"
 		"\n"
-		"Optional OPTIONS\n"
 		"  -c, --count <num>        CPU count, 0=all available, default=1\n"
 		"\n"
 		"  -m, --mode <mode>        0: Packet Drop mode. Received packets will be dropped\n"
