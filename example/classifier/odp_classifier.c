@@ -97,6 +97,7 @@ typedef struct {
 	int promisc_mode;	/**< Promiscuous mode enabled */
 	int classifier_enable;
 	int parse_layer;
+	int cos_pools;
 } appl_args_t;
 
 enum packet_mode {
@@ -419,6 +420,29 @@ static int pktio_receive_thread(void *arg)
 	return 0;
 }
 
+static odp_pool_t pool_create(const char *name)
+{
+	static odp_pool_t pool = ODP_POOL_INVALID;
+	odp_pool_param_t pool_params;
+
+	if (!appl_args_gbl->cos_pools && pool != ODP_POOL_INVALID)
+		return pool;
+
+	odp_pool_param_init(&pool_params);
+	pool_params.pkt.seg_len = SHM_PKT_POOL_BUF_SIZE;
+	pool_params.pkt.len = SHM_PKT_POOL_BUF_SIZE;
+	pool_params.pkt.num = SHM_PKT_POOL_SIZE / SHM_PKT_POOL_BUF_SIZE;
+	pool_params.type = ODP_POOL_PACKET;
+	pool = odp_pool_create(name, &pool_params);
+
+	if (pool == ODP_POOL_INVALID) {
+		ODPH_ERR("Error: failed to create pool %s\n", name);
+		exit(EXIT_FAILURE);
+	}
+
+	return pool;
+}
+
 static odp_cos_t configure_default_cos(odp_pktio_t pktio, appl_args_t *args)
 {
 	odp_queue_param_t qparam;
@@ -428,7 +452,6 @@ static odp_cos_t configure_default_cos(odp_pktio_t pktio, appl_args_t *args)
 	odp_queue_t queue_default;
 	odp_pool_t pool_default;
 	odp_cos_t cos_default;
-	odp_pool_param_t pool_params;
 	odp_cls_cos_param_t cls_param;
 	global_statistics *stats = args->stats;
 
@@ -444,17 +467,7 @@ static odp_cos_t configure_default_cos(odp_pktio_t pktio, appl_args_t *args)
 		exit(EXIT_FAILURE);
 	}
 
-	odp_pool_param_init(&pool_params);
-	pool_params.pkt.seg_len = SHM_PKT_POOL_BUF_SIZE;
-	pool_params.pkt.len     = SHM_PKT_POOL_BUF_SIZE;
-	pool_params.pkt.num     = SHM_PKT_POOL_SIZE / SHM_PKT_POOL_BUF_SIZE;
-	pool_params.type        = ODP_POOL_PACKET;
-	pool_default = odp_pool_create(pool_name, &pool_params);
-
-	if (pool_default == ODP_POOL_INVALID) {
-		ODPH_ERR("Error: default pool create failed\n");
-		exit(EXIT_FAILURE);
-	}
+	pool_default = pool_create(pool_name);
 
 	odp_cls_cos_param_init(&cls_param);
 	cls_param.pool = pool_default;
@@ -474,7 +487,8 @@ static odp_cos_t configure_default_cos(odp_pktio_t pktio, appl_args_t *args)
 	stats[args->policy_count].cos = cos_default;
 	/* add default queue to global stats */
 	stats[args->policy_count].queue = queue_default;
-	stats[args->policy_count].pool = pool_default;
+	if (appl_args_gbl->cos_pools)
+		stats[args->policy_count].pool = pool_default;
 	snprintf(stats[args->policy_count].cos_name,
 		 sizeof(stats[args->policy_count].cos_name),
 		 "%s", cos_name);
@@ -506,7 +520,6 @@ static void configure_cos(odp_cos_t default_cos, appl_args_t *args)
 	char cos_name[ODP_COS_NAME_LEN];
 	char pool_name[ODP_POOL_NAME_LEN];
 	const char *queue_name;
-	odp_pool_param_t pool_params;
 	odp_cls_cos_param_t cls_param;
 	int i;
 	global_statistics *stats;
@@ -528,26 +541,15 @@ static void configure_cos(odp_cos_t default_cos, appl_args_t *args)
 			exit(EXIT_FAILURE);
 		}
 
-		odp_pool_param_init(&pool_params);
-		pool_params.pkt.seg_len = SHM_PKT_POOL_BUF_SIZE;
-		pool_params.pkt.len     = SHM_PKT_POOL_BUF_SIZE;
-		pool_params.pkt.num     = SHM_PKT_POOL_SIZE /
-					SHM_PKT_POOL_BUF_SIZE;
-		pool_params.type        = ODP_POOL_PACKET;
-
 		snprintf(pool_name, sizeof(pool_name), "%sPool%d",
 			 args->stats[i].cos_name, i);
-		stats->pool = odp_pool_create(pool_name, &pool_params);
-
-		if (stats->pool == ODP_POOL_INVALID) {
-			ODPH_ERR("Error: default pool create failed\n");
-			exit(EXIT_FAILURE);
-		}
 
 		snprintf(cos_name, sizeof(cos_name), "CoS%s",
 			 stats->cos_name);
 		odp_cls_cos_param_init(&cls_param);
-		cls_param.pool = stats->pool;
+		cls_param.pool = pool_create(pool_name);
+		if (appl_args_gbl->cos_pools)
+			stats->pool = cls_param.pool;
 		cls_param.queue = stats->queue;
 		cls_param.drop_policy = ODP_COS_DROP_POOL;
 		stats->cos = odp_cls_cos_create(cos_name, &cls_param);
@@ -607,7 +609,6 @@ int main(int argc, char *argv[])
 	int i;
 	odp_cpumask_t cpumask;
 	char cpumaskstr[ODP_CPUMASK_STR_SIZE];
-	odp_pool_param_t params;
 	odp_pktio_t pktio;
 	appl_args_t *args;
 	odp_cos_t default_cos;
@@ -680,18 +681,7 @@ int main(int argc, char *argv[])
 	printf("cpu mask:           %s\n", cpumaskstr);
 
 	/* Create packet pool */
-	odp_pool_param_init(&params);
-	params.pkt.seg_len = SHM_PKT_POOL_BUF_SIZE;
-	params.pkt.len     = SHM_PKT_POOL_BUF_SIZE;
-	params.pkt.num     = SHM_PKT_POOL_SIZE / SHM_PKT_POOL_BUF_SIZE;
-	params.type        = ODP_POOL_PACKET;
-
-	pool = odp_pool_create("packet_pool", &params);
-
-	if (pool == ODP_POOL_INVALID) {
-		ODPH_ERR("Error: packet pool create failed\n");
-		exit(EXIT_FAILURE);
-	}
+	pool = pool_create("packet_pool");
 
 	/* Configure scheduler */
 	odp_schedule_config(NULL);
@@ -708,6 +698,7 @@ int main(int argc, char *argv[])
 	configure_cos(default_cos, args);
 
 	printf("\n");
+	odp_pool_print_all();
 	odp_cls_print_all();
 
 	if (odp_pktio_start(pktio)) {
@@ -760,7 +751,7 @@ int main(int argc, char *argv[])
 			ODPH_ERR("err: odp_cos_destroy for %d\n", i);
 		if (odp_queue_destroy(args->stats[i].queue))
 			ODPH_ERR("err: odp_queue_destroy for %d\n", i);
-		if (odp_pool_destroy(args->stats[i].pool))
+		if (args->cos_pools && odp_pool_destroy(args->stats[i].pool))
 			ODPH_ERR("err: odp_pool_destroy for %d\n", i);
 	}
 
@@ -1163,16 +1154,18 @@ static int parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{"help", no_argument, NULL, 'h'},
 		{"enable", required_argument, NULL, 'e'},
 		{"layer", required_argument, NULL, 'l'},
+		{"dedicated", required_argument, NULL, 'd'},
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+c:t:i:p:m:t:C:Pvhe:l:";
+	static const char *shortopts = "+c:t:i:p:m:t:C:Pvhe:l:d:";
 
 	appl_args->cpu_count = 1; /* Use one worker by default */
 	appl_args->verbose = 0;
 	appl_args->promisc_mode = 0;
 	appl_args->classifier_enable = 1;
 	appl_args->parse_layer = ODP_PROTO_LAYER_ALL;
+	appl_args->cos_pools = 1;
 
 	while (ret == 0) {
 		opt = getopt_long(argc, argv, shortopts,
@@ -1238,6 +1231,9 @@ static int parse_args(int argc, char *argv[], appl_args_t *appl_args)
 			break;
 		case 'l':
 			appl_args->parse_layer = atoi(optarg);
+			break;
+		case 'd':
+			appl_args->cos_pools = atoi(optarg);
 			break;
 		default:
 			break;
@@ -1327,6 +1323,10 @@ static void usage(void)
 		"\n"
 		"  -l, --layer <layer>      Parse packets up to and including this layer. See odp_proto_layer_t\n"
 		"                           default: ODP_PROTO_LAYER_ALL\n"
+		"\n"
+		"  -d, --dedicated <enable> 0: One pool for pktio and all CoSes\n"
+		"                           1: Dedicated pools for pktio and each CoS\n"
+		"                           default: Dedicated pools\n"
 		"\n"
 		"  -C, --ci_pass <dst queue:count>\n"
 		"                           Minimum acceptable packet count for a CoS destination queue.\n"
