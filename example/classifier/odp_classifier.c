@@ -175,7 +175,7 @@ static inline void print_cls_statistics(appl_args_t *args)
 	printf("\n");
 	for (i = 0; i < args->policy_count; i++)
 		printf("%-12s |", args->stats[i].cos_name);
-	printf("Total Packets");
+	printf("%-6s %-6s", "Total", "Mpps");
 	printf("\n");
 	for (i = 0; i < args->policy_count; i++)
 		printf("%-6s %-6s|", "queue", "pool");
@@ -188,9 +188,12 @@ static inline void print_cls_statistics(appl_args_t *args)
 	if (timeout == 0)
 		infinite = 1;
 
+	uint64_t total_packets, last_total_packets = 0;
+	odp_time_t start = odp_time_local(), end;
+	float mpps;
+
 	for (; timeout > 0 || infinite; timeout--) {
 		sleep(1);
-		printf("\r");
 		for (i = 0; i < args->policy_count; i++) {
 			printf("%-6" PRIu64 " ",
 			       odp_atomic_load_u64(&args->stats[i]
@@ -200,9 +203,13 @@ static inline void print_cls_statistics(appl_args_t *args)
 						   .pool_pkt_count));
 		}
 
-		printf("%-" PRIu64, odp_atomic_load_u64(&args->
-							total_packets));
-		fflush(stdout);
+		end = odp_time_local();
+		total_packets = odp_atomic_load_u64(&args->total_packets);
+		mpps = (total_packets - last_total_packets) /
+		       (odp_time_diff_ns(end, start) / 1000.0);
+		printf("%-6" PRIu64 " %-6.3f\n", total_packets, mpps);
+		last_total_packets = total_packets;
+		start = end;
 
 		if (args->shutdown_sig)
 			break;
