@@ -93,6 +93,7 @@ typedef struct {
 	int shutdown_sig;
 	int verbose;
 	int promisc_mode;	/**< Promiscuous mode enabled */
+	int classifier_enable;
 } appl_args_t;
 
 enum packet_mode {
@@ -260,8 +261,7 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool)
 	}
 
 	odp_pktin_queue_param_init(&pktin_param);
-	pktin_param.queue_param.sched.sync = ODP_SCHED_SYNC_ATOMIC;
-	pktin_param.classifier_enable = 1;
+	pktin_param.classifier_enable = appl_args_gbl->classifier_enable;
 
 	if (odp_pktin_queue_config(pktio, &pktin_param)) {
 		ODPH_ERR("pktin queue config failed for %s\n", dev);
@@ -1126,14 +1126,16 @@ static int parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{"promisc_mode", no_argument, NULL, 'P'},
 		{"verbose", no_argument, NULL, 'v'},
 		{"help", no_argument, NULL, 'h'},
+		{"enable", required_argument, NULL, 'e'},
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+c:t:i:p:m:t:C:Pvh";
+	static const char *shortopts = "+c:t:i:p:m:t:C:Pvhe:";
 
 	appl_args->cpu_count = 1; /* Use one worker by default */
 	appl_args->verbose = 0;
 	appl_args->promisc_mode = 0;
+	appl_args->classifier_enable = 1;
 
 	while (ret == 0) {
 		opt = getopt_long(argc, argv, shortopts,
@@ -1193,6 +1195,9 @@ static int parse_args(int argc, char *argv[], appl_args_t *appl_args)
 			break;
 		case 'h':
 			ret = -1;
+			break;
+		case 'e':
+			appl_args->classifier_enable = atoi(optarg);
 			break;
 		default:
 			break;
@@ -1275,6 +1280,10 @@ static void usage(void)
 		"  -t, --time <sec>         !0: Time for which the classifier will be run in seconds\n"
 		"                           0: Runs in infinite loop\n"
 		"                           default: Runs in infinite loop\n"
+		"\n"
+		"  -e, --enable <enable>    0: Classifier is disabled\n"
+		"                           1: Classifier is enabled\n"
+		"                           default: Classifier is enabled\n"
 		"\n"
 		"  -C, --ci_pass <dst queue:count>\n"
 		"                           Minimum acceptable packet count for a CoS destination queue.\n"
