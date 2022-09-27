@@ -397,8 +397,6 @@ static int pktio_receive_thread(void *arg)
 
 		pool = odp_packet_pool(pkt);
 
-		/* Swap Eth MACs and possibly IP-addrs before sending back */
-		swap_pkt_addrs(&pkt, 1);
 		for (i = 0; i <  MAX_PMR_COUNT; i++) {
 			stats = &appl->stats[i];
 			if (queue == stats->queue)
@@ -411,6 +409,9 @@ static int pktio_receive_thread(void *arg)
 			odp_packet_free(pkt);
 			continue;
 		}
+
+		/* Swap Eth MACs and possibly IP-addrs before sending back */
+		swap_pkt_addrs(&pkt, 1);
 
 		if (odp_pktout_send(pktout, &pkt, 1) < 1) {
 			ODPH_ERR("  [%i] Packet send failed\n", thr);
