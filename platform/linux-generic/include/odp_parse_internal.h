@@ -59,10 +59,13 @@ uint16_t _odp_parse_eth(packet_parser_t *prs, const uint8_t **parseptr,
  *
  * See _odp_packet_parse_common(). Requires up to PARSE_L3_L4_BYTES bytes of
  * contiguous packet data.
+ *
+ * - offset is the offset of the first byte of the data pointed to by parseptr
+ * - seg_end is the maximum offset that can be accessed plus one
  */
 int _odp_packet_parse_common_l3_l4(packet_parser_t *prs,
 				   const uint8_t *parseptr, uint32_t offset,
-				   uint32_t frame_len, uint32_t seg_len,
+				   uint32_t frame_len, uint32_t seg_end,
 				   int layer, uint16_t ethtype,
 				   uint64_t *l4_part_sum,
 				   odp_pktin_config_opt_t opt);
