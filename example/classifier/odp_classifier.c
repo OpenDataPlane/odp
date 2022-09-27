@@ -25,6 +25,11 @@
  */
 #define MAX_WORKERS            (ODP_THREAD_COUNT_MAX - 1)
 
+/** @def MAX_PKT_BURST
+ * @brief Maximum packet burst size
+ */
+#define MAX_PKT_BURST 32
+
 /** @def SHM_PKT_POOL_SIZE
  * @brief Packet pool size (number of packets)
  */
@@ -347,11 +352,11 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool)
 static int pktio_receive_thread(void *arg)
 {
 	int thr;
-	odp_packet_t pkt;
+	odp_packet_t pkt[MAX_PKT_BURST];
 	odp_pool_t pool;
-	odp_event_t ev;
+	odp_event_t ev[MAX_PKT_BURST];
 	odp_queue_t queue;
-	int i;
+	int i, j, num, dropped, sent;
 	global_statistics *stats;
 	unsigned long err_cnt = 0;
 	thr = odp_thread_id();
@@ -365,57 +370,66 @@ static int pktio_receive_thread(void *arg)
 			break;
 
 		/* Use schedule to get buf from any input queue */
-		ev = odp_schedule(&queue, wait_time);
+		num = odp_schedule_multi(&queue, wait_time, ev, MAX_PKT_BURST);
 
 		/* Loop back to receive packets incase of invalid event */
-		if (odp_unlikely(ev == ODP_EVENT_INVALID))
+		if (odp_unlikely(!num))
 			continue;
 
-		pkt = odp_packet_from_event(ev);
+		odp_packet_from_event_multi(pkt, ev, num);
 
-		if (appl->verbose) {
-			odp_queue_info_t info;
-			uint32_t len = odp_packet_len(pkt);
+		if (odp_unlikely(appl->verbose)) {
+			for (j = 0; j < num; j++) {
+				odp_queue_info_t info;
+				uint32_t len = odp_packet_len(pkt[j]);
 
-			if (odp_queue_info(queue, &info) == 0)
-				printf("Queue: %s\n", info.name);
+				if (odp_queue_info(queue, &info) == 0)
+					printf("Queue: %s\n", info.name);
 
-			if (len > 96)
-				len = 96;
+				if (len > 96)
+					len = 96;
 
-			odp_packet_print_data(pkt, 0, len);
+				odp_packet_print_data(pkt[j], 0, len);
+			}
 		}
 
 		/* Total packets received */
-		odp_atomic_inc_u64(&appl->total_packets);
+		odp_atomic_add_u64(&appl->total_packets, num);
 
 		/* Drop packets with errors */
-		if (odp_unlikely(drop_err_pkts(&pkt, 1) == 0)) {
-			ODPH_ERR("Drop frame - err_cnt:%lu\n", ++err_cnt);
-			continue;
+		dropped = drop_err_pkts(pkt, num);
+		if (odp_unlikely(dropped)) {
+			num -= dropped;
+			err_cnt += dropped;
+			ODPH_ERR("Drop frame - err_cnt:%lu\n", err_cnt);
 		}
 
-		pool = odp_packet_pool(pkt);
+		for (j = 0; j < num; j++) {
+			pool = odp_packet_pool(pkt[j]);
 
-		for (i = 0; i <  MAX_PMR_COUNT; i++) {
-			stats = &appl->stats[i];
-			if (queue == stats->queue)
-				odp_atomic_inc_u64(&stats->queue_pkt_count);
-			if (pool == stats->pool)
-				odp_atomic_inc_u64(&stats->pool_pkt_count);
+			for (i = 0; i <  MAX_PMR_COUNT; i++) {
+				stats = &appl->stats[i];
+				if (queue == stats->queue)
+					odp_atomic_inc_u64(&stats->queue_pkt_count);
+				if (pool == stats->pool)
+					odp_atomic_inc_u64(&stats->pool_pkt_count);
+			}
 		}
 
 		if (appl->appl_mode == APPL_MODE_DROP) {
-			odp_packet_free(pkt);
+			odp_packet_free_multi(pkt, num);
 			continue;
 		}
 
 		/* Swap Eth MACs and possibly IP-addrs before sending back */
-		swap_pkt_addrs(&pkt, 1);
+		swap_pkt_addrs(pkt, num);
 
-		if (odp_pktout_send(pktout, &pkt, 1) < 1) {
+		sent = odp_pktout_send(pktout, pkt, num);
+		sent = sent < 0 ? 0 : sent;
+
+		if (sent != num) {
 			ODPH_ERR("  [%i] Packet send failed\n", thr);
-			odp_packet_free(pkt);
+			odp_packet_free_multi(pkt + sent, num - sent);
 		}
 	}
 
@@ -784,26 +798,26 @@ args_error:
  * @param pkt_tbl  Array of packet
  * @param len      Length of pkt_tbl[]
  *
- * @return Number of packets with no detected error
+ * @return Number of packets dropped
  */
 static int drop_err_pkts(odp_packet_t pkt_tbl[], unsigned len)
 {
 	odp_packet_t pkt;
-	unsigned pkt_cnt = len;
 	unsigned i, j;
+	int dropped = 0;
 
 	for (i = 0, j = 0; i < len; ++i) {
 		pkt = pkt_tbl[i];
 
 		if (odp_unlikely(odp_packet_has_error(pkt))) {
 			odp_packet_free(pkt); /* Drop */
-			pkt_cnt--;
+			dropped++;
 		} else if (odp_unlikely(i != j++)) {
 			pkt_tbl[j-1] = pkt;
 		}
 	}
 
-	return pkt_cnt;
+	return dropped;
 }
 
 /**
