@@ -28,7 +28,12 @@
 /** @def MAX_PKT_BURST
  * @brief Maximum packet burst size
  */
-#define MAX_PKT_BURST 32
+#define MAX_PKT_BURST 64
+
+/** @def DEF_PKT_BURST
+ * @brief Default packet burst size
+ */
+#define DEF_PKT_BURST 32
 
 /** @def SHM_PKT_POOL_SIZE
  * @brief Packet pool size (number of packets)
@@ -104,6 +109,7 @@ typedef struct {
 	int parse_layer;
 	int cos_pools;
 	int pool_size;
+	int burst_size;
 } appl_args_t;
 
 enum packet_mode {
@@ -370,7 +376,7 @@ static int pktio_receive_thread(void *arg)
 			break;
 
 		/* Use schedule to get buf from any input queue */
-		num = odp_schedule_multi(&queue, wait_time, ev, MAX_PKT_BURST);
+		num = odp_schedule_multi(&queue, wait_time, ev, appl_args_gbl->burst_size);
 
 		/* Loop back to receive packets incase of invalid event */
 		if (odp_unlikely(!num))
@@ -1172,10 +1178,11 @@ static int parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{"layer", required_argument, NULL, 'l'},
 		{"dedicated", required_argument, NULL, 'd'},
 		{"size", required_argument, NULL, 's'},
+		{"burst", required_argument, NULL, 'b'},
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+c:t:i:p:m:t:C:Pvhe:l:d:s:";
+	static const char *shortopts = "+c:t:i:p:m:t:C:Pvhe:l:d:s:b:";
 
 	appl_args->cpu_count = 1; /* Use one worker by default */
 	appl_args->verbose = 0;
@@ -1184,6 +1191,7 @@ static int parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	appl_args->parse_layer = ODP_PROTO_LAYER_ALL;
 	appl_args->cos_pools = 1;
 	appl_args->pool_size = SHM_PKT_POOL_SIZE;
+	appl_args->burst_size = DEF_PKT_BURST;
 
 	while (ret == 0) {
 		opt = getopt_long(argc, argv, shortopts,
@@ -1255,6 +1263,9 @@ static int parse_args(int argc, char *argv[], appl_args_t *appl_args)
 			break;
 		case 's':
 			appl_args->pool_size = atoi(optarg);
+			break;
+		case 'b':
+			appl_args->burst_size = atoi(optarg);
 			break;
 		default:
 			break;
@@ -1352,6 +1363,9 @@ static void usage(void)
 		"  -s, --size <num>         Number of packets in each packet pool\n"
 		"                           default: %d\n"
 		"\n"
+		"  -b, --burst <num>        Packet burst size\n"
+		"                           default: %d\n"
+		"\n"
 		"  -C, --ci_pass <dst queue:count>\n"
 		"                           Minimum acceptable packet count for a CoS destination queue.\n"
 		"                           If the received packet count is smaller than this value,\n"
@@ -1360,5 +1374,5 @@ static void usage(void)
 		"  -P, --promisc_mode       Enable promiscuous mode.\n"
 		"  -v, --verbose            Verbose output.\n"
 		"  -h, --help               Display help and exit.\n"
-		"\n", SHM_PKT_POOL_SIZE);
+		"\n", SHM_PKT_POOL_SIZE, DEF_PKT_BURST);
 }
