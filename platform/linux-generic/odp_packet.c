@@ -1936,6 +1936,7 @@ int odp_packet_parse(odp_packet_t pkt, uint32_t offset,
 	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
 	const uint8_t *data;
 	uint32_t seg_len;
+	uint32_t seg_end;
 	uint32_t packet_len = pkt_hdr->frame_len;
 	odp_proto_t proto = param->proto;
 	odp_proto_layer_t layer = param->last_layer;
@@ -1968,6 +1969,8 @@ int odp_packet_parse(odp_packet_t pkt, uint32_t offset,
 		data = buf;
 	}
 
+	seg_end = offset + seg_len; /* one past the maximum offset */
+
 	/* Reset parser flags, keep other flags */
 	packet_parse_reset(pkt_hdr, 0);
 
@@ -1991,7 +1994,7 @@ int odp_packet_parse(odp_packet_t pkt, uint32_t offset,
 	opt.bit.sctp_chksum = param->chksums.chksum.sctp;
 
 	ret = _odp_packet_parse_common_l3_l4(&pkt_hdr->p, data, offset,
-					     packet_len, seg_len, layer,
+					     packet_len, seg_end, layer,
 					     ethtype, &l4_part_sum, opt);
 
 	if (ret)

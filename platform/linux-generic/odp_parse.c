@@ -179,10 +179,13 @@ static inline uint8_t parse_ipv4(packet_parser_t *prs, const uint8_t **parseptr,
  * Parser helper function for IPv6
  *
  * Requires at least PARSE_IPV6_BYTES bytes of contiguous packet data.
+ *
+ * - offset is the offset of the first byte of the data pointed to by parseptr
+ * - seg_end is the maximum offset that can be accessed plus one
  */
 static inline uint8_t parse_ipv6(packet_parser_t *prs, const uint8_t **parseptr,
 				 uint32_t *offset, uint32_t frame_len,
-				 uint32_t seg_len,
+				 uint32_t seg_end,
 				 odp_pktin_config_opt_t opt,
 				 uint64_t *l4_part_sum)
 {
@@ -226,7 +229,7 @@ static inline uint8_t parse_ipv6(packet_parser_t *prs, const uint8_t **parseptr,
 			*parseptr += extlen;
 		} while ((ipv6ext->next_hdr == _ODP_IPPROTO_HOPOPTS ||
 			  ipv6ext->next_hdr == _ODP_IPPROTO_ROUTE) &&
-			 *offset < seg_len);
+			 *offset < seg_end);
 
 		if (*offset >= prs->l3_offset +
 		    odp_be_to_cpu_16(ipv6->payload_len)) {
@@ -355,10 +358,15 @@ static inline void parse_sctp(packet_parser_t *prs, const uint8_t **parseptr,
 	*parseptr += sizeof(_odp_sctphdr_t);
 }
 
-/* Requires up to PARSE_L3_L4_BYTES bytes of contiguous packet data. */
+/*
+ * Requires up to PARSE_L3_L4_BYTES bytes of contiguous packet data.
+ *
+ * - offset is the offset of the first byte of the data pointed to by parseptr
+ * - seg_end is the maximum offset that can be accessed plus one
+ */
 int _odp_packet_parse_common_l3_l4(packet_parser_t *prs,
 				   const uint8_t *parseptr, uint32_t offset,
-				   uint32_t frame_len, uint32_t seg_len,
+				   uint32_t frame_len, uint32_t seg_end,
 				   int layer, uint16_t ethtype,
 				   uint64_t *l4_part_sum,
 				   odp_pktin_config_opt_t opt)
@@ -388,7 +396,7 @@ int _odp_packet_parse_common_l3_l4(packet_parser_t *prs,
 	case _ODP_ETHTYPE_IPV6:
 		prs->input_flags.ipv6 = 1;
 		ip_proto = parse_ipv6(prs, &parseptr, &offset, frame_len,
-				      seg_len, opt, l4_part_sum);
+				      seg_end, opt, l4_part_sum);
 		if (odp_likely(!prs->flags.ip_err))
 			prs->l4_offset = offset;
 		else if (opt.bit.drop_ipv6_err)
@@ -425,7 +433,7 @@ int _odp_packet_parse_common_l3_l4(packet_parser_t *prs,
 		break;
 
 	case _ODP_IPPROTO_TCP:
-		if (odp_unlikely(offset + _ODP_TCPHDR_LEN > seg_len))
+		if (odp_unlikely(offset + _ODP_TCPHDR_LEN > seg_end))
 			return -1;
 		prs->input_flags.tcp = 1;
 		parse_tcp(prs, &parseptr, frame_len - prs->l4_offset, opt,
@@ -435,7 +443,7 @@ int _odp_packet_parse_common_l3_l4(packet_parser_t *prs,
 		break;
 
 	case _ODP_IPPROTO_UDP:
-		if (odp_unlikely(offset + _ODP_UDPHDR_LEN > seg_len))
+		if (odp_unlikely(offset + _ODP_UDPHDR_LEN > seg_end))
 			return -1;
 		prs->input_flags.udp = 1;
 		parse_udp(prs, &parseptr, opt, l4_part_sum);
