@@ -26,9 +26,9 @@
 #define MAX_WORKERS            (ODP_THREAD_COUNT_MAX - 1)
 
 /** @def SHM_PKT_POOL_SIZE
- * @brief Size of the shared memory block
+ * @brief Packet pool size (number of packets)
  */
-#define SHM_PKT_POOL_SIZE      (512*2048)
+#define SHM_PKT_POOL_SIZE 512
 
 /** @def SHM_PKT_POOL_BUF_SIZE
  * @brief Buffer size of the packet pool buffer
@@ -98,6 +98,7 @@ typedef struct {
 	int classifier_enable;
 	int parse_layer;
 	int cos_pools;
+	int pool_size;
 } appl_args_t;
 
 enum packet_mode {
@@ -431,7 +432,7 @@ static odp_pool_t pool_create(const char *name)
 	odp_pool_param_init(&pool_params);
 	pool_params.pkt.seg_len = SHM_PKT_POOL_BUF_SIZE;
 	pool_params.pkt.len = SHM_PKT_POOL_BUF_SIZE;
-	pool_params.pkt.num = SHM_PKT_POOL_SIZE / SHM_PKT_POOL_BUF_SIZE;
+	pool_params.pkt.num = appl_args_gbl->pool_size;
 	pool_params.type = ODP_POOL_PACKET;
 	pool = odp_pool_create(name, &pool_params);
 
@@ -1155,10 +1156,11 @@ static int parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{"enable", required_argument, NULL, 'e'},
 		{"layer", required_argument, NULL, 'l'},
 		{"dedicated", required_argument, NULL, 'd'},
+		{"size", required_argument, NULL, 's'},
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+c:t:i:p:m:t:C:Pvhe:l:d:";
+	static const char *shortopts = "+c:t:i:p:m:t:C:Pvhe:l:d:s:";
 
 	appl_args->cpu_count = 1; /* Use one worker by default */
 	appl_args->verbose = 0;
@@ -1166,6 +1168,7 @@ static int parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	appl_args->classifier_enable = 1;
 	appl_args->parse_layer = ODP_PROTO_LAYER_ALL;
 	appl_args->cos_pools = 1;
+	appl_args->pool_size = SHM_PKT_POOL_SIZE;
 
 	while (ret == 0) {
 		opt = getopt_long(argc, argv, shortopts,
@@ -1234,6 +1237,9 @@ static int parse_args(int argc, char *argv[], appl_args_t *appl_args)
 			break;
 		case 'd':
 			appl_args->cos_pools = atoi(optarg);
+			break;
+		case 's':
+			appl_args->pool_size = atoi(optarg);
 			break;
 		default:
 			break;
@@ -1328,6 +1334,9 @@ static void usage(void)
 		"                           1: Dedicated pools for pktio and each CoS\n"
 		"                           default: Dedicated pools\n"
 		"\n"
+		"  -s, --size <num>         Number of packets in each packet pool\n"
+		"                           default: %d\n"
+		"\n"
 		"  -C, --ci_pass <dst queue:count>\n"
 		"                           Minimum acceptable packet count for a CoS destination queue.\n"
 		"                           If the received packet count is smaller than this value,\n"
@@ -1336,5 +1345,5 @@ static void usage(void)
 		"  -P, --promisc_mode       Enable promiscuous mode.\n"
 		"  -v, --verbose            Verbose output.\n"
 		"  -h, --help               Display help and exit.\n"
-		"\n");
+		"\n", SHM_PKT_POOL_SIZE);
 }
