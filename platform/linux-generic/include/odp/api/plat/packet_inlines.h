@@ -58,6 +58,9 @@
 	#define odp_packet_l2_ptr __odp_packet_l2_ptr
 	#define odp_packet_l3_ptr __odp_packet_l3_ptr
 	#define odp_packet_l4_ptr __odp_packet_l4_ptr
+	#define odp_packet_l2_type __odp_packet_l2_type
+	#define odp_packet_l3_type __odp_packet_l3_type
+	#define odp_packet_l4_type __odp_packet_l4_type
 	#define odp_packet_flow_hash __odp_packet_flow_hash
 	#define odp_packet_ts __odp_packet_ts
 	#define odp_packet_head __odp_packet_head
@@ -272,6 +275,57 @@ _ODP_INLINE void *odp_packet_l4_ptr(odp_packet_t pkt, uint32_t *len)
 		*len = seg_len - offset;
 
 	return data + offset;
+}
+
+_ODP_INLINE odp_proto_l2_type_t odp_packet_l2_type(odp_packet_t pkt)
+{
+	_odp_packet_input_flags_t input_flags;
+
+	input_flags.all = _odp_pkt_get(pkt, uint64_t, input_flags);
+
+	return input_flags.eth ? ODP_PROTO_L2_TYPE_ETH : ODP_PROTO_L2_TYPE_NONE;
+}
+
+_ODP_INLINE odp_proto_l3_type_t odp_packet_l3_type(odp_packet_t pkt)
+{
+	_odp_packet_input_flags_t input_flags;
+
+	input_flags.all = _odp_pkt_get(pkt, uint64_t, input_flags);
+
+	if (input_flags.ipv4)
+		return ODP_PROTO_L3_TYPE_IPV4;
+	else if (input_flags.ipv6)
+		return ODP_PROTO_L3_TYPE_IPV6;
+	else if (input_flags.arp)
+		return ODP_PROTO_L3_TYPE_ARP;
+
+	return ODP_PROTO_L3_TYPE_NONE;
+}
+
+_ODP_INLINE odp_proto_l4_type_t odp_packet_l4_type(odp_packet_t pkt)
+{
+	_odp_packet_input_flags_t input_flags;
+
+	input_flags.all = _odp_pkt_get(pkt, uint64_t, input_flags);
+
+	if (input_flags.tcp)
+		return ODP_PROTO_L4_TYPE_TCP;
+	else if (input_flags.udp)
+		return ODP_PROTO_L4_TYPE_UDP;
+	else if (input_flags.sctp)
+		return ODP_PROTO_L4_TYPE_SCTP;
+	else if (input_flags.ipsec_ah)
+		return ODP_PROTO_L4_TYPE_AH;
+	else if (input_flags.ipsec_esp)
+		return ODP_PROTO_L4_TYPE_ESP;
+	else if (input_flags.icmp && input_flags.ipv4)
+		return ODP_PROTO_L4_TYPE_ICMPV4;
+	else if (input_flags.icmp && input_flags.ipv6)
+		return ODP_PROTO_L4_TYPE_ICMPV6;
+	else if (input_flags.no_next_hdr)
+		return ODP_PROTO_L4_TYPE_NO_NEXT;
+
+	return ODP_PROTO_L4_TYPE_NONE;
 }
 
 _ODP_INLINE uint32_t odp_packet_flow_hash(odp_packet_t pkt)

@@ -2247,56 +2247,6 @@ int odp_packet_has_ref(odp_packet_t pkt)
 	return 0;
 }
 
-odp_proto_l2_type_t odp_packet_l2_type(odp_packet_t pkt)
-{
-	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
-
-	if (pkt_hdr->p.input_flags.eth)
-		return ODP_PROTO_L2_TYPE_ETH;
-
-	return ODP_PROTO_L2_TYPE_NONE;
-}
-
-odp_proto_l3_type_t odp_packet_l3_type(odp_packet_t pkt)
-{
-	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
-
-	if (pkt_hdr->p.input_flags.ipv4)
-		return ODP_PROTO_L3_TYPE_IPV4;
-	else if (pkt_hdr->p.input_flags.ipv6)
-		return ODP_PROTO_L3_TYPE_IPV6;
-	else if (pkt_hdr->p.input_flags.arp)
-		return ODP_PROTO_L3_TYPE_ARP;
-
-	return ODP_PROTO_L3_TYPE_NONE;
-}
-
-odp_proto_l4_type_t odp_packet_l4_type(odp_packet_t pkt)
-{
-	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
-
-	if (pkt_hdr->p.input_flags.tcp)
-		return ODP_PROTO_L4_TYPE_TCP;
-	else if (pkt_hdr->p.input_flags.udp)
-		return ODP_PROTO_L4_TYPE_UDP;
-	else if (pkt_hdr->p.input_flags.sctp)
-		return ODP_PROTO_L4_TYPE_SCTP;
-	else if (pkt_hdr->p.input_flags.ipsec_ah)
-		return ODP_PROTO_L4_TYPE_AH;
-	else if (pkt_hdr->p.input_flags.ipsec_esp)
-		return ODP_PROTO_L4_TYPE_ESP;
-	else if (pkt_hdr->p.input_flags.icmp &&
-		 pkt_hdr->p.input_flags.ipv4)
-		return ODP_PROTO_L4_TYPE_ICMPV4;
-	else if (pkt_hdr->p.input_flags.icmp &&
-		 pkt_hdr->p.input_flags.ipv6)
-		return ODP_PROTO_L4_TYPE_ICMPV6;
-	else if (pkt_hdr->p.input_flags.no_next_hdr)
-		return ODP_PROTO_L4_TYPE_NO_NEXT;
-
-	return ODP_PROTO_L4_TYPE_NONE;
-}
-
 void odp_packet_ts_request(odp_packet_t pkt, int enable)
 {
 	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
