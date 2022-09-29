@@ -79,6 +79,7 @@
 	#define odp_packet_color __odp_packet_color
 	#define odp_packet_drop_eligible __odp_packet_drop_eligible
 	#define odp_packet_shaper_len_adjust __odp_packet_shaper_len_adjust
+	#define odp_packet_cls_mark __odp_packet_cls_mark
 	#define odp_packet_buf_data_len __odp_packet_buf_data_len
 	#define odp_packet_buf_size __odp_packet_buf_size
 	#define odp_packet_buf_head __odp_packet_buf_head
@@ -431,6 +432,15 @@ _ODP_INLINE int8_t odp_packet_shaper_len_adjust(odp_packet_t pkt)
 	flags.all_flags = _odp_pkt_get(pkt, uint32_t, flags);
 
 	return (int8_t)flags.shaper_len_adj;
+}
+
+_ODP_INLINE uint64_t odp_packet_cls_mark(odp_packet_t pkt)
+{
+	_odp_packet_input_flags_t input_flags;
+
+	input_flags.all = _odp_pkt_get(pkt, uint64_t, input_flags);
+
+	return input_flags.cls_mark ? _odp_pkt_get(pkt, uint16_t, cls_mark) : 0;
 }
 
 _ODP_INLINE uint32_t odp_packet_buf_data_len(odp_packet_buf_t pkt_buf)

@@ -65,7 +65,8 @@ const _odp_packet_inline_offset_t _odp_packet_inline ODP_ALIGNED_CACHE = {
 	.timestamp      = offsetof(odp_packet_hdr_t, timestamp),
 	.input_flags    = offsetof(odp_packet_hdr_t, p.input_flags),
 	.flags          = offsetof(odp_packet_hdr_t, p.flags),
-	.subtype        = offsetof(odp_packet_hdr_t, subtype)
+	.subtype        = offsetof(odp_packet_hdr_t, subtype),
+	.cls_mark       = offsetof(odp_packet_hdr_t, cls_mark)
 
 };
 
@@ -2294,16 +2295,6 @@ odp_proto_l4_type_t odp_packet_l4_type(odp_packet_t pkt)
 		return ODP_PROTO_L4_TYPE_NO_NEXT;
 
 	return ODP_PROTO_L4_TYPE_NONE;
-}
-
-uint64_t odp_packet_cls_mark(odp_packet_t pkt)
-{
-	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
-
-	if (pkt_hdr->p.input_flags.cls_mark)
-		return pkt_hdr->cls_mark;
-
-	return 0;
 }
 
 void odp_packet_ts_request(odp_packet_t pkt, int enable)
