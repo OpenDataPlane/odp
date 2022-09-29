@@ -1098,32 +1098,6 @@ void odp_packet_l4_chksum_insert(odp_packet_t pkt, int insert)
 	pkt_hdr->p.flags.l4_chksum = insert;
 }
 
-odp_packet_chksum_status_t odp_packet_l3_chksum_status(odp_packet_t pkt)
-{
-	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
-
-	if (!pkt_hdr->p.input_flags.l3_chksum_done)
-		return ODP_PACKET_CHKSUM_UNKNOWN;
-
-	if (pkt_hdr->p.flags.l3_chksum_err)
-		return ODP_PACKET_CHKSUM_BAD;
-
-	return ODP_PACKET_CHKSUM_OK;
-}
-
-odp_packet_chksum_status_t odp_packet_l4_chksum_status(odp_packet_t pkt)
-{
-	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
-
-	if (!pkt_hdr->p.input_flags.l4_chksum_done)
-		return ODP_PACKET_CHKSUM_UNKNOWN;
-
-	if (pkt_hdr->p.flags.l4_chksum_err)
-		return ODP_PACKET_CHKSUM_BAD;
-
-	return ODP_PACKET_CHKSUM_OK;
-}
-
 void odp_packet_flow_hash_set(odp_packet_t pkt, uint32_t flow_hash)
 {
 	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);

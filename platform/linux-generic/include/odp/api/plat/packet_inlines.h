@@ -61,6 +61,8 @@
 	#define odp_packet_l2_type __odp_packet_l2_type
 	#define odp_packet_l3_type __odp_packet_l3_type
 	#define odp_packet_l4_type __odp_packet_l4_type
+	#define odp_packet_l3_chksum_status __odp_packet_l3_chksum_status
+	#define odp_packet_l4_chksum_status __odp_packet_l4_chksum_status
 	#define odp_packet_flow_hash __odp_packet_flow_hash
 	#define odp_packet_ts __odp_packet_ts
 	#define odp_packet_head __odp_packet_head
@@ -326,6 +328,40 @@ _ODP_INLINE odp_proto_l4_type_t odp_packet_l4_type(odp_packet_t pkt)
 		return ODP_PROTO_L4_TYPE_NO_NEXT;
 
 	return ODP_PROTO_L4_TYPE_NONE;
+}
+
+_ODP_INLINE odp_packet_chksum_status_t odp_packet_l3_chksum_status(odp_packet_t pkt)
+{
+	_odp_packet_flags_t flags;
+	_odp_packet_input_flags_t input_flags;
+
+	flags.all_flags = _odp_pkt_get(pkt, uint32_t, flags);
+	input_flags.all = _odp_pkt_get(pkt, uint64_t, input_flags);
+
+	if (!input_flags.l3_chksum_done)
+		return ODP_PACKET_CHKSUM_UNKNOWN;
+
+	if (flags.l3_chksum_err)
+		return ODP_PACKET_CHKSUM_BAD;
+
+	return ODP_PACKET_CHKSUM_OK;
+}
+
+_ODP_INLINE odp_packet_chksum_status_t odp_packet_l4_chksum_status(odp_packet_t pkt)
+{
+	_odp_packet_flags_t flags;
+	_odp_packet_input_flags_t input_flags;
+
+	flags.all_flags = _odp_pkt_get(pkt, uint32_t, flags);
+	input_flags.all = _odp_pkt_get(pkt, uint64_t, input_flags);
+
+	if (!input_flags.l4_chksum_done)
+		return ODP_PACKET_CHKSUM_UNKNOWN;
+
+	if (flags.l4_chksum_err)
+		return ODP_PACKET_CHKSUM_BAD;
+
+	return ODP_PACKET_CHKSUM_OK;
 }
 
 _ODP_INLINE uint32_t odp_packet_flow_hash(odp_packet_t pkt)
