@@ -63,6 +63,8 @@
 	#define odp_packet_l4_type __odp_packet_l4_type
 	#define odp_packet_l3_chksum_status __odp_packet_l3_chksum_status
 	#define odp_packet_l4_chksum_status __odp_packet_l4_chksum_status
+	#define odp_packet_l3_chksum_insert __odp_packet_l3_chksum_insert
+	#define odp_packet_l4_chksum_insert __odp_packet_l4_chksum_insert
 	#define odp_packet_flow_hash __odp_packet_flow_hash
 	#define odp_packet_ts __odp_packet_ts
 	#define odp_packet_head __odp_packet_head
@@ -362,6 +364,22 @@ _ODP_INLINE odp_packet_chksum_status_t odp_packet_l4_chksum_status(odp_packet_t 
 		return ODP_PACKET_CHKSUM_BAD;
 
 	return ODP_PACKET_CHKSUM_OK;
+}
+
+_ODP_INLINE void odp_packet_l3_chksum_insert(odp_packet_t pkt, int insert)
+{
+	_odp_packet_flags_t *flags = _odp_pkt_get_ptr(pkt, _odp_packet_flags_t, flags);
+
+	flags->l3_chksum_set = 1;
+	flags->l3_chksum = !!insert;
+}
+
+_ODP_INLINE void odp_packet_l4_chksum_insert(odp_packet_t pkt, int insert)
+{
+	_odp_packet_flags_t *flags = _odp_pkt_get_ptr(pkt, _odp_packet_flags_t, flags);
+
+	flags->l4_chksum_set = 1;
+	flags->l4_chksum = !!insert;
 }
 
 _ODP_INLINE uint32_t odp_packet_flow_hash(odp_packet_t pkt)
