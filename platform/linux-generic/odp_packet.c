@@ -1027,19 +1027,6 @@ void *odp_packet_offset(odp_packet_t pkt, uint32_t offset, uint32_t *len,
  *
  */
 
-void odp_packet_user_ptr_set(odp_packet_t pkt, const void *ptr)
-{
-	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
-
-	if (odp_unlikely(ptr == NULL)) {
-		pkt_hdr->p.flags.user_ptr_set = 0;
-		return;
-	}
-
-	pkt_hdr->user_ptr = ptr;
-	pkt_hdr->p.flags.user_ptr_set = 1;
-}
-
 uint16_t odp_packet_ones_comp(odp_packet_t pkt, odp_packet_data_range_t *range)
 {
 	(void)pkt;

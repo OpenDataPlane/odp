@@ -48,6 +48,7 @@
 	#define odp_packet_input_index __odp_packet_input_index
 	#define odp_packet_num_segs __odp_packet_num_segs
 	#define odp_packet_user_ptr __odp_packet_user_ptr
+	#define odp_packet_user_ptr_set __odp_packet_user_ptr_set
 	#define odp_packet_user_area __odp_packet_user_area
 	#define odp_packet_user_area_size __odp_packet_user_area_size
 	#define odp_packet_user_flag __odp_packet_user_flag
@@ -185,6 +186,20 @@ _ODP_INLINE void *odp_packet_user_ptr(odp_packet_t pkt)
 		return NULL;
 
 	return _odp_pkt_get(pkt, void *, user_ptr);
+}
+
+_ODP_INLINE void odp_packet_user_ptr_set(odp_packet_t pkt, const void *ptr)
+{
+	_odp_packet_flags_t *flags = _odp_pkt_get_ptr(pkt, _odp_packet_flags_t, flags);
+	const void **user_ptr = _odp_pkt_get_ptr(pkt, const void *, user_ptr);
+
+	if (odp_unlikely(ptr == NULL)) {
+		flags->user_ptr_set = 0;
+		return;
+	}
+
+	*user_ptr = ptr;
+	flags->user_ptr_set = 1;
 }
 
 _ODP_INLINE void *odp_packet_user_area(odp_packet_t pkt)
