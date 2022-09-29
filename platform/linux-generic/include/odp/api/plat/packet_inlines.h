@@ -55,6 +55,9 @@
 	#define odp_packet_l2_offset __odp_packet_l2_offset
 	#define odp_packet_l3_offset __odp_packet_l3_offset
 	#define odp_packet_l4_offset __odp_packet_l4_offset
+	#define odp_packet_l2_offset_set __odp_packet_l2_offset_set
+	#define odp_packet_l3_offset_set __odp_packet_l3_offset_set
+	#define odp_packet_l4_offset_set __odp_packet_l4_offset_set
 	#define odp_packet_l2_ptr __odp_packet_l2_ptr
 	#define odp_packet_l3_ptr __odp_packet_l3_ptr
 	#define odp_packet_l4_ptr __odp_packet_l4_ptr
@@ -225,6 +228,42 @@ _ODP_INLINE uint32_t odp_packet_l3_offset(odp_packet_t pkt)
 _ODP_INLINE uint32_t odp_packet_l4_offset(odp_packet_t pkt)
 {
 	return _odp_pkt_get(pkt, uint16_t, l4_offset);
+}
+
+_ODP_INLINE int odp_packet_l2_offset_set(odp_packet_t pkt, uint32_t offset)
+{
+	uint16_t *l2_offset = _odp_pkt_get_ptr(pkt, uint16_t, l2_offset);
+	_odp_packet_input_flags_t *input_flags = _odp_pkt_get_ptr(pkt, _odp_packet_input_flags_t,
+								  input_flags);
+
+	if (odp_unlikely(offset >= odp_packet_len(pkt)))
+		return -1;
+
+	input_flags->l2 = 1;
+	*l2_offset = (uint16_t)offset;
+	return 0;
+}
+
+_ODP_INLINE int odp_packet_l3_offset_set(odp_packet_t pkt, uint32_t offset)
+{
+	uint16_t *l3_offset = _odp_pkt_get_ptr(pkt, uint16_t, l3_offset);
+
+	if (odp_unlikely(offset >= odp_packet_len(pkt)))
+		return -1;
+
+	*l3_offset = (uint16_t)offset;
+	return 0;
+}
+
+_ODP_INLINE int odp_packet_l4_offset_set(odp_packet_t pkt, uint32_t offset)
+{
+	uint16_t *l4_offset = _odp_pkt_get_ptr(pkt, uint16_t, l4_offset);
+
+	if (odp_unlikely(offset >= odp_packet_len(pkt)))
+		return -1;
+
+	*l4_offset = (uint16_t)offset;
+	return 0;
 }
 
 _ODP_INLINE void *odp_packet_l2_ptr(odp_packet_t pkt, uint32_t *len)

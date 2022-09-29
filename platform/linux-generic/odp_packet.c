@@ -1040,40 +1040,6 @@ void odp_packet_user_ptr_set(odp_packet_t pkt, const void *ptr)
 	pkt_hdr->p.flags.user_ptr_set = 1;
 }
 
-int odp_packet_l2_offset_set(odp_packet_t pkt, uint32_t offset)
-{
-	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
-
-	if (offset >= pkt_hdr->frame_len)
-		return -1;
-
-	packet_hdr_has_l2_set(pkt_hdr, 1);
-	pkt_hdr->p.l2_offset = offset;
-	return 0;
-}
-
-int odp_packet_l3_offset_set(odp_packet_t pkt, uint32_t offset)
-{
-	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
-
-	if (offset >= pkt_hdr->frame_len)
-		return -1;
-
-	pkt_hdr->p.l3_offset = offset;
-	return 0;
-}
-
-int odp_packet_l4_offset_set(odp_packet_t pkt, uint32_t offset)
-{
-	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
-
-	if (offset >= pkt_hdr->frame_len)
-		return -1;
-
-	pkt_hdr->p.l4_offset = offset;
-	return 0;
-}
-
 uint16_t odp_packet_ones_comp(odp_packet_t pkt, odp_packet_data_range_t *range)
 {
 	(void)pkt;

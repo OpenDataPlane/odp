@@ -440,11 +440,6 @@ static inline int packet_hdr_has_l2(odp_packet_hdr_t *pkt_hdr)
 	return pkt_hdr->p.input_flags.l2;
 }
 
-static inline void packet_hdr_has_l2_set(odp_packet_hdr_t *pkt_hdr, int val)
-{
-	pkt_hdr->p.input_flags.l2 = val;
-}
-
 static inline int packet_hdr_has_eth(odp_packet_hdr_t *pkt_hdr)
 {
 	return pkt_hdr->p.input_flags.eth;
