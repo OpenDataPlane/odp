@@ -562,6 +562,19 @@ typedef struct odp_pktio_parser_config_t {
 
 } odp_pktio_parser_config_t;
 
+/** Ethernet flow control modes */
+typedef enum odp_pktio_link_pause_t {
+	/** Flow control mode is unknown */
+	ODP_PKTIO_LINK_PAUSE_UNKNOWN = -1,
+	/** No flow control */
+	ODP_PKTIO_LINK_PAUSE_OFF = 0,
+	/** Pause frame flow control enabled */
+	ODP_PKTIO_LINK_PAUSE_ON = 1,
+	/** Priority-based Flow Control (PFC) enabled */
+	ODP_PKTIO_LINK_PFC_ON = 2
+
+} odp_pktio_link_pause_t;
+
 /**
  * Packet IO configuration options
  *
@@ -1079,13 +1092,6 @@ typedef enum odp_pktio_link_duplex_t {
 	ODP_PKTIO_LINK_DUPLEX_FULL = 1
 
 } odp_pktio_link_duplex_t;
-
-/** Ethernet pause frame (flow control) mode */
-typedef enum odp_pktio_link_pause_t {
-	ODP_PKTIO_LINK_PAUSE_UNKNOWN = -1,
-	ODP_PKTIO_LINK_PAUSE_OFF = 0,
-	ODP_PKTIO_LINK_PAUSE_ON  = 1
-} odp_pktio_link_pause_t;
 
 /**
  * Packet IO link information
