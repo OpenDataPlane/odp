@@ -1,11 +1,13 @@
 /* Copyright (c) 2016-2018, Linaro Limited
- * Copyright (c) 2021, Nokia
+ * Copyright (c) 2021-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
 #include <odp/autoheader_internal.h>
+
+#include <odp/api/plat/schedule_inline_types.h>
 
 #include <odp_schedule_if.h>
 #include <odp_init_internal.h>
@@ -15,23 +17,24 @@
 #include <stdlib.h>
 #include <string.h>
 
+/* Enable visibility to inline headers */
+#include <odp/visibility_begin.h>
+
+const _odp_schedule_api_fn_t *_odp_sched_api;
+
+#include <odp/visibility_end.h>
+
 extern const schedule_fn_t _odp_schedule_sp_fn;
-extern const schedule_api_t _odp_schedule_sp_api;
+extern const _odp_schedule_api_fn_t _odp_schedule_sp_api;
 
 extern const schedule_fn_t _odp_schedule_basic_fn;
-extern const schedule_api_t _odp_schedule_basic_api;
+extern const _odp_schedule_api_fn_t _odp_schedule_basic_api;
 
 extern const schedule_fn_t  _odp_schedule_scalable_fn;
-extern const schedule_api_t _odp_schedule_scalable_api;
+extern const _odp_schedule_api_fn_t _odp_schedule_scalable_api;
 
 const schedule_fn_t *_odp_sched_fn;
-const schedule_api_t *_odp_sched_api;
 int _odp_sched_id;
-
-uint64_t odp_schedule_wait_time(uint64_t ns)
-{
-	return _odp_sched_api->schedule_wait_time(ns);
-}
 
 int odp_schedule_capability(odp_schedule_capability_t *capa)
 {
@@ -66,56 +69,6 @@ int odp_schedule_config(const odp_schedule_config_t *config)
 		odp_global_rw->schedule_configured = 1;
 
 	return ret;
-}
-
-odp_event_t odp_schedule(odp_queue_t *from, uint64_t wait)
-{
-	_ODP_ASSERT(odp_global_rw->schedule_configured);
-
-	return _odp_sched_api->schedule(from, wait);
-}
-
-int odp_schedule_multi(odp_queue_t *from, uint64_t wait, odp_event_t events[],
-		       int num)
-{
-	_ODP_ASSERT(odp_global_rw->schedule_configured);
-
-	return _odp_sched_api->schedule_multi(from, wait, events, num);
-}
-
-int odp_schedule_multi_wait(odp_queue_t *from, odp_event_t events[], int num)
-{
-	return _odp_sched_api->schedule_multi_wait(from, events, num);
-}
-
-int odp_schedule_multi_no_wait(odp_queue_t *from, odp_event_t events[], int num)
-{
-	return _odp_sched_api->schedule_multi_no_wait(from, events, num);
-}
-
-void odp_schedule_pause(void)
-{
-	_odp_sched_api->schedule_pause();
-}
-
-void odp_schedule_resume(void)
-{
-	_odp_sched_api->schedule_resume();
-}
-
-void odp_schedule_release_atomic(void)
-{
-	_odp_sched_api->schedule_release_atomic();
-}
-
-void odp_schedule_release_ordered(void)
-{
-	_odp_sched_api->schedule_release_ordered();
-}
-
-void odp_schedule_prefetch(int num)
-{
-	_odp_sched_api->schedule_prefetch(num);
 }
 
 int odp_schedule_min_prio(void)
@@ -176,36 +129,6 @@ int odp_schedule_group_info(odp_schedule_group_t group,
 			    odp_schedule_group_info_t *info)
 {
 	return _odp_sched_api->schedule_group_info(group, info);
-}
-
-void odp_schedule_order_lock(uint32_t lock_index)
-{
-	_odp_sched_api->schedule_order_lock(lock_index);
-}
-
-void odp_schedule_order_unlock(uint32_t lock_index)
-{
-	_odp_sched_api->schedule_order_unlock(lock_index);
-}
-
-void odp_schedule_order_unlock_lock(uint32_t unlock_index, uint32_t lock_index)
-{
-	_odp_sched_api->schedule_order_unlock_lock(unlock_index, lock_index);
-}
-
-void odp_schedule_order_lock_start(uint32_t lock_index)
-{
-	_odp_sched_api->schedule_order_lock_start(lock_index);
-}
-
-void odp_schedule_order_lock_wait(uint32_t lock_index)
-{
-	_odp_sched_api->schedule_order_lock_wait(lock_index);
-}
-
-void odp_schedule_order_wait(void)
-{
-	_odp_sched_api->schedule_order_wait();
 }
 
 void odp_schedule_print(void)

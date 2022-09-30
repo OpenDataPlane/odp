@@ -34,6 +34,7 @@
 #include <odp_queue_basic_internal.h>
 #include <odp_libconfig_internal.h>
 #include <odp/api/plat/queue_inlines.h>
+#include <odp/api/plat/schedule_inline_types.h>
 #include <odp_global_data.h>
 #include <odp_event_internal.h>
 #include <odp_macros_internal.h>
@@ -2195,7 +2196,7 @@ const schedule_fn_t _odp_schedule_basic_fn = {
 };
 
 /* Fill in scheduler API calls */
-const schedule_api_t _odp_schedule_basic_api = {
+const _odp_schedule_api_fn_t _odp_schedule_basic_api = {
 	.schedule_wait_time       = schedule_wait_time,
 	.schedule_capability      = schedule_capability,
 	.schedule_config_init     = schedule_config_init,

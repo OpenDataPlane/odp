@@ -47,6 +47,8 @@ odpapiplatinclude_HEADERS = \
 		  include/odp/api/plat/pool_inline_types.h \
 		  include/odp/api/plat/queue_inlines.h \
 		  include/odp/api/plat/queue_inline_types.h \
+		  include/odp/api/plat/schedule_inlines.h \
+		  include/odp/api/plat/schedule_inline_types.h \
 		  include/odp/api/plat/spinlock_inlines.h \
 		  include/odp/api/plat/spinlock_recursive_inlines.h \
 		  include/odp/api/plat/std_inlines.h \
@@ -290,6 +292,7 @@ __LIB__libodp_linux_la_SOURCES += \
 			   odp_packet_io_api.c \
 			   odp_pool_api.c \
 			   odp_queue_api.c \
+			   odp_schedule_api.c \
 			   odp_spinlock_api.c \
 			   odp_spinlock_recursive_api.c \
 			   odp_std_api.c \

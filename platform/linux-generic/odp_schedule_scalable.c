@@ -14,9 +14,11 @@
 #include <odp/api/shared_memory.h>
 #include <odp/api/sync.h>
 #include <odp/api/thread.h>
-#include <odp/api/plat/thread_inlines.h>
 #include <odp/api/thrmask.h>
 #include <odp/api/time.h>
+
+#include <odp/api/plat/schedule_inline_types.h>
+#include <odp/api/plat/thread_inlines.h>
 #include <odp/api/plat/time_inlines.h>
 
 #include <odp_config_internal.h>
@@ -2203,7 +2205,7 @@ const schedule_fn_t _odp_schedule_scalable_fn = {
 	.max_ordered_locks = schedule_max_ordered_locks,
 };
 
-const schedule_api_t _odp_schedule_scalable_api = {
+const _odp_schedule_api_fn_t _odp_schedule_scalable_api = {
 	.schedule_wait_time		= schedule_wait_time,
 	.schedule_capability            = schedule_capability,
 	.schedule_config_init		= schedule_config_init,
