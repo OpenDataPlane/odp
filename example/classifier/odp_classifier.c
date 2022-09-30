@@ -28,7 +28,7 @@
 /** @def SHM_PKT_POOL_SIZE
  * @brief Packet pool size (number of packets)
  */
-#define SHM_PKT_POOL_SIZE 512
+#define SHM_PKT_POOL_SIZE 10000
 
 /** @def SHM_PKT_POOL_BUF_SIZE
  * @brief Buffer size of the packet pool buffer
