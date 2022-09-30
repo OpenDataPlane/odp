@@ -2158,13 +2158,6 @@ int odp_packet_has_ref(odp_packet_t pkt)
 	return 0;
 }
 
-void odp_packet_ts_request(odp_packet_t pkt, int enable)
-{
-	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
-
-	pkt_hdr->p.flags.ts_set = !!enable;
-}
-
 void odp_packet_lso_request_clr(odp_packet_t pkt)
 {
 	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);

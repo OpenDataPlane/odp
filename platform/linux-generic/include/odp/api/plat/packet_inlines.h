@@ -71,6 +71,7 @@
 	#define odp_packet_l4_chksum_insert __odp_packet_l4_chksum_insert
 	#define odp_packet_flow_hash __odp_packet_flow_hash
 	#define odp_packet_ts __odp_packet_ts
+	#define odp_packet_ts_request __odp_packet_ts_request
 	#define odp_packet_head __odp_packet_head
 	#define odp_packet_is_segmented __odp_packet_is_segmented
 	#define odp_packet_first_seg __odp_packet_first_seg
@@ -444,6 +445,13 @@ _ODP_INLINE uint32_t odp_packet_flow_hash(odp_packet_t pkt)
 _ODP_INLINE odp_time_t odp_packet_ts(odp_packet_t pkt)
 {
 	return _odp_pkt_get(pkt, odp_time_t, timestamp);
+}
+
+_ODP_INLINE void odp_packet_ts_request(odp_packet_t pkt, int enable)
+{
+	_odp_packet_flags_t *flags = _odp_pkt_get_ptr(pkt, _odp_packet_flags_t, flags);
+
+	flags->ts_set = !!enable;
 }
 
 _ODP_INLINE void *odp_packet_head(odp_packet_t pkt)
