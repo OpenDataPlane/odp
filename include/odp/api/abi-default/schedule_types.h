@@ -18,10 +18,16 @@ extern "C" {
 #endif
 
 #include <odp/api/deprecated.h>
+#include <odp/api/std_types.h>
 
 /** @addtogroup odp_scheduler
  *  @{
  */
+
+#define ODP_SCHED_WAIT     UINT64_MAX
+#define ODP_SCHED_NO_WAIT  0
+
+#define ODP_SCHED_GROUP_NAME_LEN 32
 
 #if ODP_DEPRECATED_API
 #define ODP_SCHED_PRIO_HIGHEST  (odp_schedule_max_prio())

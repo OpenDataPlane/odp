@@ -4,12 +4,6 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-/**
- * @file
- *
- * ODP schedule
- */
-
 #ifndef ODP_ABI_SCHEDULE_H_
 #define ODP_ABI_SCHEDULE_H_
 
@@ -17,20 +11,7 @@
 extern "C" {
 #endif
 
-#include <odp/api/std_types.h>
-
-/** @addtogroup odp_scheduler
- *  @{
- */
-
-#define ODP_SCHED_WAIT     UINT64_MAX
-#define ODP_SCHED_NO_WAIT  0
-
-#define ODP_SCHED_GROUP_NAME_LEN 32
-
-/**
- * @}
- */
+/* Empty header required due to the schedule inline functions */
 
 #ifdef __cplusplus
 }

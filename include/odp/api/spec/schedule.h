@@ -30,21 +30,6 @@ extern "C" {
  */
 
 /**
- * @def ODP_SCHED_WAIT
- * Wait infinitely
- */
-
-/**
- * @def ODP_SCHED_NO_WAIT
- * Do not wait
- */
-
-/**
- * @def ODP_SCHED_GROUP_NAME_LEN
- * Maximum schedule group name length in chars including null char
- */
-
-/**
  * Schedule wait time
  *
  * Converts nanoseconds to wait values for other schedule functions.
@@ -425,14 +410,6 @@ int odp_schedule_group_leave(odp_schedule_group_t group,
  */
 int odp_schedule_group_thrmask(odp_schedule_group_t group,
 			       odp_thrmask_t *thrmask);
-
-/**
- * Schedule group information
- */
-typedef struct odp_schedule_group_info_t {
-	const char    *name;   /**< Schedule group name */
-	odp_thrmask_t thrmask; /**< Thread mask of the schedule group */
-} odp_schedule_group_info_t;
 
 /**
  * Retrieve information about a schedule group
