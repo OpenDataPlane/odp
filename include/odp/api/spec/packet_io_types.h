@@ -992,9 +992,13 @@ typedef struct odp_lso_profile_param_t {
 
 /** Link status */
 typedef enum odp_pktio_link_status_t {
+	/** Link status is unknown */
 	ODP_PKTIO_LINK_STATUS_UNKNOWN = -1,
+	/** Link status is down */
 	ODP_PKTIO_LINK_STATUS_DOWN = 0,
+	/** Link status is up */
 	ODP_PKTIO_LINK_STATUS_UP = 1
+
 } odp_pktio_link_status_t;
 
 /**
@@ -1062,13 +1066,18 @@ typedef enum odp_pktio_link_autoneg_t {
 	ODP_PKTIO_LINK_AUTONEG_OFF = 0,
 	/** Autonegotiation enabled */
 	ODP_PKTIO_LINK_AUTONEG_ON  = 1
+
 } odp_pktio_link_autoneg_t;
 
 /** Duplex mode */
 typedef enum odp_pktio_link_duplex_t {
+	/** Link duplex mode is unknown */
 	ODP_PKTIO_LINK_DUPLEX_UNKNOWN = -1,
+	/** Half duplex mode */
 	ODP_PKTIO_LINK_DUPLEX_HALF = 0,
+	/** Full duplex mode */
 	ODP_PKTIO_LINK_DUPLEX_FULL = 1
+
 } odp_pktio_link_duplex_t;
 
 /** Ethernet pause frame (flow control) mode */
