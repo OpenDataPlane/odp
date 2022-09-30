@@ -15,6 +15,7 @@
 #include <odp/visibility_begin.h>
 
 #include <odp/api/std_types.h>
+#include <odp/api/thrmask.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -22,6 +23,21 @@ extern "C" {
 
 /** @addtogroup odp_scheduler
  *  @{
+ */
+
+/**
+ * @def ODP_SCHED_WAIT
+ * Wait infinitely
+ */
+
+/**
+ * @def ODP_SCHED_NO_WAIT
+ * Do not wait
+ */
+
+/**
+ * @def ODP_SCHED_GROUP_NAME_LEN
+ * Maximum schedule group name length in chars including null char
  */
 
 /**
@@ -293,6 +309,14 @@ typedef struct odp_schedule_config_t {
 	} sched_group;
 
 } odp_schedule_config_t;
+
+/**
+ * Schedule group information
+ */
+typedef struct odp_schedule_group_info_t {
+	const char    *name;   /**< Schedule group name */
+	odp_thrmask_t thrmask; /**< Thread mask of the schedule group */
+} odp_schedule_group_info_t;
 
 /**
  * @}

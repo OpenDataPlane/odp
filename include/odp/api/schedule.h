@@ -17,7 +17,6 @@
 extern "C" {
 #endif
 
-#include <odp/api/abi/schedule_types.h>
 #include <odp/api/abi/schedule.h>
 
 #include <odp/api/spec/schedule.h>
