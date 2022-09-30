@@ -1596,6 +1596,7 @@ static int ipsec_out_esp(odp_packet_t *pkt,
 				   ipsec_sa->icv_len;
 
 	state->stats_length = param->cipher_range.length;
+	param->session = ipsec_sa->session;
 
 	return 0;
 }
@@ -1735,6 +1736,7 @@ static int ipsec_out_ah(odp_packet_t *pkt,
 
 	state->stats_length = param->auth_range.length;
 	param->auth_range.length += ipsec_get_seqh_len(ipsec_sa);
+	param->session = ipsec_sa->session;
 
 	return 0;
 }
@@ -1815,6 +1817,175 @@ static void ipsec_out_checksums(odp_packet_t pkt,
 		_odp_packet_sctp_chksum_insert(pkt);
 }
 
+static int ipsec_out_tp_encap(odp_packet_t pkt, ipsec_state_t *state)
+{
+	int (*op)(ipsec_state_t *state, odp_packet_t pkt);
+
+	if (odp_unlikely(!(state->is_ipv4 || state->is_ipv6)))
+		return -1;
+
+	op = state->is_ipv4 ? ipsec_parse_ipv4 : ipsec_parse_ipv6;
+
+	if (odp_unlikely(op(state, pkt) ||
+			 state->ip_tot_len + state->ip_offset != odp_packet_len(pkt)))
+		return -1;
+
+	ipsec_out_checksums(pkt, state);
+
+	return 0;
+}
+
+static int ipsec_out_tunnel_encap(odp_packet_t *pkt, ipsec_state_t *state, ipsec_sa_t *ipsec_sa,
+				  const odp_ipsec_out_opt_t *opt)
+{
+	int ret;
+
+	if (odp_unlikely(!(state->is_ipv4 || state->is_ipv6 || opt->flag.tfc_dummy)))
+		return -1;
+
+	if (state->is_ipv4) {
+		if (odp_unlikely(ipsec_out_tunnel_parse_ipv4(state, ipsec_sa)))
+			return -1;
+	} else if (state->is_ipv6) {
+		if (odp_unlikely(ipsec_out_tunnel_parse_ipv6(state, ipsec_sa)))
+			return -1;
+	} else {
+		state->out_tunnel.ip_tos = 0;
+		state->out_tunnel.ip_df = 0;
+		state->out_tunnel.ip_flabel = 0;
+		state->ip_next_hdr = _ODP_IPPROTO_NO_NEXT;
+	}
+
+	ipsec_out_checksums(*pkt, state);
+
+	if (ipsec_sa->tun_ipv4)
+		ret = ipsec_out_tunnel_ipv4(pkt, state, ipsec_sa,
+					    opt->flag.ip_param ? &opt->ipv4 :
+								 &ipsec_sa->out.tun_ipv4.param);
+	else
+		ret = ipsec_out_tunnel_ipv6(pkt, state, ipsec_sa,
+					    opt->flag.ip_param ? &opt->ipv6 :
+								 &ipsec_sa->out.tun_ipv6.param);
+
+	return ret;
+}
+
+static int ipsec_out_parse_encap_packet(odp_packet_t *pkt, ipsec_state_t *state,
+					ipsec_sa_t *ipsec_sa, const odp_ipsec_out_opt_t *opt,
+					odp_ipsec_op_status_t *status)
+{
+	odp_packet_hdr_t *pkt_hdr;
+	int ret;
+
+	if (opt->flag.tfc_dummy) {
+		pkt_hdr = packet_hdr(*pkt);
+		_ODP_ASSERT(ODP_IPSEC_MODE_TUNNEL == ipsec_sa->mode);
+		pkt_hdr->p.l2_offset = ODP_PACKET_OFFSET_INVALID;
+		pkt_hdr->p.l3_offset = 0;
+		state->ip_offset = 0;
+		state->ip = NULL;
+		state->is_ipv4 = 0;
+		state->is_ipv6 = 0;
+	} else {
+		state->ip_offset = odp_packet_l3_offset(*pkt);
+		_ODP_ASSERT(ODP_PACKET_OFFSET_INVALID != state->ip_offset);
+		state->ip = odp_packet_l3_ptr(*pkt, NULL);
+		_ODP_ASSERT(NULL != state->ip);
+		state->is_ipv4 = (((uint8_t *)state->ip)[0] >> 4) == 0x4;
+		state->is_ipv6 = (((uint8_t *)state->ip)[0] >> 4) == 0x6;
+	}
+
+	if (ODP_IPSEC_MODE_TRANSPORT == ipsec_sa->mode)
+		ret = ipsec_out_tp_encap(*pkt, state);
+	else
+		ret = ipsec_out_tunnel_encap(pkt, state, ipsec_sa, opt);
+
+	if (odp_unlikely(ret))
+		status->error.alg = 1;
+
+	return ret;
+}
+
+static int ipsec_out_prepare_op(odp_packet_t *pkt, ipsec_state_t *state, ipsec_sa_t *ipsec_sa,
+				const odp_ipsec_out_opt_t *opt, odp_bool_t is_enqueue_op,
+				odp_crypto_packet_op_param_t *param, odp_ipsec_op_status_t *status)
+{
+	odp_ipsec_frag_mode_t frag_mode;
+	uint32_t mtu;
+	int ret;
+
+	memset(param, 0, sizeof(*param));
+
+	frag_mode = opt->flag.frag_mode ? opt->frag_mode : ipsec_sa->out.frag_mode;
+	mtu = frag_mode == ODP_IPSEC_FRAG_CHECK ? odp_atomic_load_u32(&ipsec_sa->out.mtu) :
+						  UINT32_MAX;
+
+	if (odp_unlikely(!(ODP_IPSEC_ESP == ipsec_sa->proto || ODP_IPSEC_AH == ipsec_sa->proto))) {
+		status->error.alg = 1;
+
+		return -1;
+	}
+
+	if (ODP_IPSEC_ESP == ipsec_sa->proto)
+		ret = ipsec_out_esp(pkt, state, ipsec_sa, param, status, mtu, is_enqueue_op, opt);
+	else
+		ret = ipsec_out_ah(pkt, state, ipsec_sa, param, status, mtu, is_enqueue_op);
+
+	return ret;
+}
+
+static int ipsec_out_prepare_packet(odp_packet_t *pkt, ipsec_state_t *state, ipsec_sa_t *ipsec_sa,
+				    const odp_ipsec_out_opt_t *opt, odp_bool_t is_enqueue_op,
+				    odp_crypto_packet_op_param_t *param,
+				    odp_ipsec_op_status_t *status)
+{
+	return ipsec_out_parse_encap_packet(pkt, state, ipsec_sa, opt, status) ||
+	       ipsec_out_prepare_op(pkt, state, ipsec_sa, opt, is_enqueue_op, param, status);
+}
+
+static int ipsec_out_do_crypto(odp_packet_t *pkt, odp_crypto_packet_op_param_t *param,
+			       odp_ipsec_op_status_t *status)
+{
+	odp_crypto_packet_result_t crypto;
+
+	if (odp_unlikely(odp_crypto_op(pkt, pkt, param, 1) < 0)) {
+		_ODP_DBG("Crypto failed\n");
+		goto alg_err;
+	}
+
+	if (odp_unlikely(odp_crypto_result(&crypto, *pkt) < 0)) {
+		_ODP_DBG("Crypto failed\n");
+		goto alg_err;
+	}
+
+	if (odp_unlikely(!crypto.ok))
+		goto alg_err;
+
+	return 0;
+
+alg_err:
+	status->error.alg = 1;
+
+	return -1;
+}
+
+static int ipsec_out_finalize_packet(odp_packet_t *pkt, ipsec_state_t *state, ipsec_sa_t *ipsec_sa,
+				     odp_ipsec_op_status_t *status)
+{
+	int (*op)(ipsec_state_t *state, odp_packet_t *pkt, ipsec_sa_t *ipsec_sa);
+
+	op = ODP_IPSEC_ESP == ipsec_sa->proto ? ipsec_out_esp_post :
+		ODP_IPSEC_AH == ipsec_sa->proto ? ipsec_out_ah_post : NULL;
+
+	if (odp_unlikely(op && op(state, pkt, ipsec_sa))) {
+		status->error.alg = 1;
+
+		return -1;
+	}
+
+	return 0;
+}
+
 static ipsec_sa_t *ipsec_out_single(odp_packet_t pkt,
 				    odp_ipsec_sa_t sa,
 				    odp_packet_t *pkt_out,
@@ -1825,179 +1996,47 @@ static ipsec_sa_t *ipsec_out_single(odp_packet_t pkt,
 	ipsec_state_t state;
 	ipsec_sa_t *ipsec_sa;
 	odp_crypto_packet_op_param_t param;
-	int rc;
-	odp_crypto_packet_result_t crypto; /**< Crypto operation result */
-	odp_ipsec_frag_mode_t frag_mode;
-	uint32_t mtu;
 
-	/*
-	 * No need to do _odp_ipsec_sa_use() here since an ODP application
-	 * is not allowed to do call IPsec output before SA creation has
-	 * completed nor call odp_ipsec_sa_disable() before IPsec output
-	 * has completed. IOW, the needed sychronization between threads
-	 * is done by the application.
-	 */
+	/* No need to do _odp_ipsec_sa_use() here since an ODP application is not allowed to do
+	 * call IPsec output before SA creation has completed nor call odp_ipsec_sa_disable()
+	 * before IPsec output has completed. IOW, the needed sychronization between threads is
+	 * done by the application. */
 	ipsec_sa = _odp_ipsec_sa_entry_from_hdl(sa);
 	_ODP_ASSERT(NULL != ipsec_sa);
 
-	if (opt->flag.tfc_dummy) {
-		odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
-
-		_ODP_ASSERT(ODP_IPSEC_MODE_TUNNEL == ipsec_sa->mode);
-		pkt_hdr->p.l2_offset = ODP_PACKET_OFFSET_INVALID;
-		pkt_hdr->p.l3_offset = 0;
-		state.ip_offset = 0;
-		state.ip = NULL;
-		state.is_ipv4 = 0;
-		state.is_ipv6 = 0;
-	} else {
-		state.ip_offset = odp_packet_l3_offset(pkt);
-		_ODP_ASSERT(ODP_PACKET_OFFSET_INVALID != state.ip_offset);
-
-		state.ip = odp_packet_l3_ptr(pkt, NULL);
-		_ODP_ASSERT(NULL != state.ip);
-
-		state.is_ipv4 = (((uint8_t *)state.ip)[0] >> 4) == 0x4;
-		state.is_ipv6 = (((uint8_t *)state.ip)[0] >> 4) == 0x6;
-	}
-
-	frag_mode = opt->flag.frag_mode ? opt->frag_mode :
-					  ipsec_sa->out.frag_mode;
-	if (frag_mode == ODP_IPSEC_FRAG_CHECK)
-		mtu = odp_atomic_load_u32(&ipsec_sa->out.mtu);
-	else
-		mtu = UINT32_MAX;
-
-	/* Initialize parameters block */
-	memset(&param, 0, sizeof(param));
-
-	if (ODP_IPSEC_MODE_TRANSPORT == ipsec_sa->mode) {
-		if (state.is_ipv4)
-			rc = ipsec_parse_ipv4(&state, pkt);
-		else if (state.is_ipv6)
-			rc = ipsec_parse_ipv6(&state, pkt);
-		else
-			rc = -1;
-
-		if (rc == 0) {
-			if (state.ip_tot_len + state.ip_offset !=
-			    odp_packet_len(pkt))
-				rc = -1;
-			else
-				ipsec_out_checksums(pkt, &state);
-		}
-	} else {
-		if (state.is_ipv4) {
-			rc = ipsec_out_tunnel_parse_ipv4(&state, ipsec_sa);
-		} else if (state.is_ipv6) {
-			rc = ipsec_out_tunnel_parse_ipv6(&state, ipsec_sa);
-		} else if (opt->flag.tfc_dummy) {
-			state.out_tunnel.ip_tos = 0;
-			state.out_tunnel.ip_df = 0;
-			state.out_tunnel.ip_flabel = 0;
-			state.ip_next_hdr = _ODP_IPPROTO_NO_NEXT;
-			rc = 0;
-		} else {
-			rc = -1;
-		}
-
-		if (rc < 0) {
-			status->error.alg = 1;
-			goto exit;
-		}
-
-		ipsec_out_checksums(pkt, &state);
-
-		if (ipsec_sa->tun_ipv4)
-			rc = ipsec_out_tunnel_ipv4(&pkt, &state, ipsec_sa,
-						   opt->flag.ip_param ?
-						   &opt->ipv4 :
-						   &ipsec_sa->out.tun_ipv4.param);
-		else
-			rc = ipsec_out_tunnel_ipv6(&pkt, &state, ipsec_sa,
-						   opt->flag.ip_param ?
-						   &opt->ipv6 :
-						   &ipsec_sa->out.tun_ipv6.param);
-	}
-	if (rc < 0) {
-		status->error.alg = 1;
-		goto exit;
-	}
-
-	if (ODP_IPSEC_ESP == ipsec_sa->proto) {
-		rc = ipsec_out_esp(&pkt, &state, ipsec_sa, &param, status, mtu,
-				   enqueue_op, opt);
-	} else if (ODP_IPSEC_AH == ipsec_sa->proto) {
-		rc = ipsec_out_ah(&pkt, &state, ipsec_sa, &param, status, mtu,
-				  enqueue_op);
-	} else {
-		status->error.alg = 1;
-		goto exit;
-	}
-	if (rc < 0)
+	if (odp_unlikely(ipsec_out_prepare_packet(&pkt, &state, ipsec_sa, opt, enqueue_op, &param,
+						  status)))
 		goto exit;
 
 	/* No need to run precheck here, we know that packet is authentic */
-	if (_odp_ipsec_sa_lifetime_update(ipsec_sa,
-					  state.stats_length,
-					  status) < 0)
+	if (_odp_ipsec_sa_lifetime_update(ipsec_sa, state.stats_length, status) < 0)
 		goto post_lifetime_err_cnt_update;
 
-	param.session = ipsec_sa->session;
-
-	/*
-	 * NOTE: Do not change to an asynchronous design without thinking
-	 * concurrency and what changes are required to guarantee that
-	 * used SAs are not destroyed when asynchronous operations are in
-	 * progress.
+	/* Do not change to an asynchronous design without thinking concurrency and what changes
+	 * are required to guarantee that used SAs are not destroyed when asynchronous operations
+	 * are in progress.
 	 *
-	 * The containing code does not hold a reference to the SA but
-	 * completes outbound processing synchronously and makes use of
-	 * the fact that the application may not disable (and then destroy)
-	 * the SA before this output routine returns (and all its side
-	 * effects are visible to the disabling thread).
-	 */
-	rc = odp_crypto_op(&pkt, &pkt, &param, 1);
-	if (rc < 0) {
-		_ODP_DBG("Crypto failed\n");
-		status->error.alg = 1;
+	 * The containing code does not hold a reference to the SA but completes outbound
+	 * processing synchronously and makes use of the fact that the application may not disable
+	 * (and then destroy) the SA before this output routine returns (and all its side effects
+	 * are visible to the disabling thread). */
+	if (odp_unlikely(ipsec_out_do_crypto(&pkt, &param, status)))
 		goto post_lifetime_err_cnt_update;
-	}
 
-	rc = odp_crypto_result(&crypto, pkt);
-	if (rc < 0) {
-		_ODP_DBG("Crypto failed\n");
-		status->error.alg = 1;
+	if (odp_unlikely(ipsec_out_finalize_packet(&pkt, &state, ipsec_sa, status)))
 		goto post_lifetime_err_cnt_update;
-	}
-
-	if (!crypto.ok) {
-		status->error.alg = 1;
-		goto post_lifetime_err_cnt_update;
-	}
-
-	/* Finalize the IP header */
-	if (ODP_IPSEC_ESP == ipsec_sa->proto)
-		rc = ipsec_out_esp_post(&state, &pkt, ipsec_sa);
-	else if (ODP_IPSEC_AH == ipsec_sa->proto)
-		rc = ipsec_out_ah_post(&state, &pkt, ipsec_sa);
-
-	if (rc < 0) {
-		status->error.alg = 1;
-		goto post_lifetime_err_cnt_update;
-	}
 
 	goto exit;
 
 post_lifetime_err_cnt_update:
 	if (ipsec_config->stats_en) {
 		odp_atomic_inc_u64(&ipsec_sa->stats.post_lifetime_err_pkts);
-		odp_atomic_add_u64(&ipsec_sa->stats.post_lifetime_err_bytes,
-				   state.stats_length);
+		odp_atomic_add_u64(&ipsec_sa->stats.post_lifetime_err_bytes, state.stats_length);
 	}
 
 exit:
 	*pkt_out = pkt;
+
 	return ipsec_sa;
 }
 
