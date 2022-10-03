@@ -1,5 +1,5 @@
 Copyright (c) 2014-2018, Linaro Limited
-Copyright (c) 2019, Nokia
+Copyright (c) 2019-2023, Nokia
 All rights reserved.
 
 SPDX-License-Identifier:        BSD-3-Clause
@@ -52,7 +52,29 @@ SPDX-License-Identifier:        BSD-3-Clause
     Note that there may be issues with the quality or security of rdrand and
     rdseed. [2]
 
-6. References
+6. Event validation
+    ODP linux-generic implementation supports additional fast path event
+    validity checks which are disabled by default to minimize overhead. These
+    checks can be enabled with --enable-event-validation [abort/warn] or
+    --enabled-debug=full configuration options.
+
+    Event validation adds additional endmark data to ODP buffers and packets,
+    which is used to detect data writes outside allowed areas. Endmarks are
+    checked by the implementation each time application calls one the following
+    API functions:
+        - odp_buffer_free() / odp_buffer_free_multi()
+        - odp_buffer_is_valid()
+        - odp_event_free() / odp_event_free_multi() / odp_event_free_sp()
+        - odp_event_is_valid()
+        - odp_packet_free() / odp_packet_free_multi() / odp_packet_free_sp()
+        - odp_packet_is_valid()
+        - odp_queue_enq() / odp_queue_enq_multi()
+
+    Event validation can function in two modes: abort (default) and warn. In
+    abort mode the application is terminated immediately if an event validity
+    check fails. In warn mode only an error log message is printed.
+
+7. References
     [1] Intel Digital Random Number Generator (DRNG) Software Implementation
         Guide. John P Mechalas, 17 October 2018.
         https://www.intel.com/content/www/us/en/developer/articles/guide/intel-digital-random-number-generator-drng-software-implementation-guide.html
