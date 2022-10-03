@@ -48,8 +48,11 @@
 /* Number of priority levels  */
 #define NUM_PRIO 8
 
-/* Number of scheduling groups */
-#define NUM_SCHED_GRPS 32
+/* Group mask (prio_grp_mask) size in bits */
+#define GRP_MASK_BITS 64
+
+/* Number of scheduling groups. Maximum value is GRP_MASK_BITS. */
+#define NUM_SCHED_GRPS GRP_MASK_BITS
 
 /* Spread balancing frequency. Balance every BALANCE_ROUNDS_M1 + 1 scheduling rounds. */
 #define BALANCE_ROUNDS_M1 0xfffff
@@ -185,8 +188,8 @@ typedef struct ODP_ALIGNED_CACHE {
 		odp_event_t ev[STASH_SIZE];
 	} stash;
 
+	uint64_t grp_mask;
 	uint32_t grp_epoch;
-	uint32_t grp_mask;
 	uint16_t num_grp;
 	uint8_t grp_idx;
 	uint8_t grp[NUM_SCHED_GRPS];
@@ -248,7 +251,7 @@ typedef struct {
 	prio_q_mask_t    prio_q_mask[NUM_SCHED_GRPS][NUM_PRIO];
 
 	/* Groups on a priority level that have queues created */
-	odp_atomic_u32_t prio_grp_mask[NUM_PRIO];
+	odp_atomic_u64_t prio_grp_mask[NUM_PRIO];
 
 	struct {
 		uint8_t grp;
@@ -297,7 +300,7 @@ typedef struct {
 } sched_global_t;
 
 /* Check that queue[] variables are large enough */
-ODP_STATIC_ASSERT(NUM_SCHED_GRPS  <= 32,  "Group mask is 32 bits");
+ODP_STATIC_ASSERT(NUM_SCHED_GRPS  <= GRP_MASK_BITS, "Groups do not fit into group mask");
 ODP_STATIC_ASSERT(NUM_PRIO        <= 256, "Prio_does_not_fit_8_bits");
 ODP_STATIC_ASSERT(MAX_SPREAD      <= 256, "Spread_does_not_fit_8_bits");
 ODP_STATIC_ASSERT(CONFIG_QUEUE_MAX_ORD_LOCKS <= 256,
@@ -309,6 +312,40 @@ static sched_global_t *sched;
 
 /* Thread local scheduler context */
 static __thread sched_local_t sched_local;
+
+static void prio_grp_mask_init(void)
+{
+	int i;
+
+	for (i = 0; i < NUM_PRIO; i++)
+		odp_atomic_init_u64(&sched->prio_grp_mask[i], 0);
+}
+
+static inline void prio_grp_mask_set(int prio, int grp)
+{
+	uint64_t grp_mask = 0x1u << grp;
+	uint64_t mask = odp_atomic_load_u64(&sched->prio_grp_mask[prio]);
+
+	odp_atomic_store_u64(&sched->prio_grp_mask[prio], mask | grp_mask);
+
+	sched->prio_grp_count[prio][grp]++;
+}
+
+static inline void prio_grp_mask_clear(int prio, int grp)
+{
+	uint64_t grp_mask = 0x1u << grp;
+	uint64_t mask = odp_atomic_load_u64(&sched->prio_grp_mask[prio]);
+
+	sched->prio_grp_count[prio][grp]--;
+
+	if (sched->prio_grp_count[prio][grp] == 0)
+		odp_atomic_store_u64(&sched->prio_grp_mask[prio], mask &= (~grp_mask));
+}
+
+static inline uint64_t prio_grp_mask_check(int prio, uint64_t grp_mask)
+{
+	return odp_atomic_load_u64(&sched->prio_grp_mask[prio]) & grp_mask;
+}
 
 static int read_burst_size_conf(uint8_t out_tbl[], const char *conf_str,
 				int min_val, int max_val, int print)
@@ -584,8 +621,7 @@ static int schedule_init_global(void)
 	odp_atomic_init_u32(&sched->grp_epoch, 0);
 	odp_atomic_init_u32(&sched->next_rand, 0);
 
-	for (i = 0; i < NUM_PRIO; i++)
-		odp_atomic_init_u32(&sched->prio_grp_mask[i], 0);
+	prio_grp_mask_init();
 
 	for (i = 0; i < NUM_SCHED_GRPS; i++) {
 		memset(sched->sched_grp[i].name, 0, ODP_SCHED_GROUP_NAME_LEN);
@@ -664,7 +700,7 @@ static inline int grp_update_tbl(void)
 	int i;
 	int num = 0;
 	int thr = sched_local.thr;
-	uint32_t mask = 0;
+	uint64_t mask = 0;
 
 	odp_ticketlock_lock(&sched->grp_lock);
 
@@ -686,32 +722,6 @@ static inline int grp_update_tbl(void)
 	sched_local.num_grp = num;
 
 	return num;
-}
-
-static inline void prio_grp_mask_set(int prio, int grp)
-{
-	uint32_t grp_mask = 0x1u << grp;
-	uint32_t mask = odp_atomic_load_u32(&sched->prio_grp_mask[prio]);
-
-	odp_atomic_store_u32(&sched->prio_grp_mask[prio], mask | grp_mask);
-
-	sched->prio_grp_count[prio][grp]++;
-}
-
-static inline void prio_grp_mask_clear(int prio, int grp)
-{
-	uint32_t grp_mask = 0x1u << grp;
-	uint32_t mask = odp_atomic_load_u32(&sched->prio_grp_mask[prio]);
-
-	sched->prio_grp_count[prio][grp]--;
-
-	if (sched->prio_grp_count[prio][grp] == 0)
-		odp_atomic_store_u32(&sched->prio_grp_mask[prio], mask &= (~grp_mask));
-}
-
-static inline uint32_t prio_grp_mask_check(int prio, uint32_t grp_mask)
-{
-	return odp_atomic_load_u32(&sched->prio_grp_mask[prio]) & grp_mask;
 }
 
 static uint32_t schedule_max_ordered_locks(void)
@@ -1464,7 +1474,7 @@ static inline int do_schedule(odp_queue_t *out_q, odp_event_t out_ev[], uint32_t
 	uint32_t sched_round;
 	uint16_t spread_round;
 	uint32_t epoch;
-	uint32_t my_groups;
+	uint64_t my_groups;
 	int balance = 0;
 
 	if (sched_local.stash.num_ev) {
