@@ -862,7 +862,7 @@ run_measure_one_async(ipsec_args_t *cargs,
 			packets_sent += rc;
 		} else {
 			odp_packet_t pkt_out[max_in_flight];
-			uint32_t i = 0;
+			int i = 0;
 
 			/*
 			 * Dequeue packets until we can enqueue the next burst
@@ -895,7 +895,7 @@ run_measure_one_async(ipsec_args_t *cargs,
 			}
 			debug_packets(debug, pkt_out, i);
 
-			if (i)
+			if (i > 0)
 				odp_packet_free_sp(pkt_out, i);
 		}
 	}

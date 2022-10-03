@@ -173,7 +173,7 @@ static inline void send_packets(test_global_t *test_global,
 
 	drop = num_pkt - sent;
 
-	if (odp_unlikely(drop))
+	if (odp_unlikely(drop > 0))
 		odp_packet_free_multi(&pkt[sent], drop);
 
 	if (odp_unlikely(test_global->opt.collect_stat)) {
