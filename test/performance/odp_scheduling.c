@@ -145,6 +145,7 @@ static int enqueue_events(int thr, int prio, int num_queues, int num_events,
 		if (ret != num_events) {
 			ODPH_ERR("  [%i] buffer alloc failed\n", thr);
 			ret = ret < 0 ? 0 : ret;
+			ret = ret > num_events ? num_events : ret; /* GCC-9 -O3 workaround */
 			odp_buffer_free_multi(buf, ret);
 			return -1;
 		}
