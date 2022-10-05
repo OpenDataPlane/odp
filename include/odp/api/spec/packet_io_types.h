@@ -659,6 +659,47 @@ typedef struct odp_pktio_config_t {
 	/** Packet input reassembly configuration */
 	odp_reass_config_t reassembly;
 
+	/** Link flow control configuration */
+	struct {
+		/** Reception of flow control frames
+		 *
+		 *  Configures interface operation when an Ethernet flow control frame is received:
+		 *    * ODP_PKTIO_LINK_PAUSE_OFF:  Flow control is disabled
+		 *    * ODP_PKTIO_LINK_PAUSE_ON:   Enable traditional Ethernet pause frame handling.
+		 *                                 When a pause frame is received, all packet output
+		 *                                 is halted temporarily.
+		 *    * ODP_PKTIO_LINK_PFC_ON:     Enable Priority-based Flow Control (PFC)
+		 *                                 handling. When a PFC frame is received, packet
+		 *                                 output of certain (VLAN) class of service levels
+		 *                                 are halted temporarily.
+		 *
+		 *  The default value is ODP_PKTIO_LINK_PAUSE_OFF.
+		 */
+		odp_pktio_link_pause_t pause_rx;
+
+		/** Transmission of flow control frames
+		 *
+		 *  Configures Ethernet flow control frame generation on the interface:
+		 *    * ODP_PKTIO_LINK_PAUSE_OFF:  Flow control is disabled
+		 *    * ODP_PKTIO_LINK_PAUSE_ON:   Enable traditional Ethernet pause frame
+		 *                                 generation. Pause frames are generated to request
+		 *                                 the remote end of the link to halt all
+		 *                                 transmissions temporarily.
+		 *    * ODP_PKTIO_LINK_PFC_ON:     Enable Priority-based Flow Control (PFC) frame
+		 *                                 generation. PFC frames are generated to request
+		 *                                 the remote end of the link to halt transmission
+		 *                                 of certain (VLAN) class of service levels
+		 *                                 temporarily.
+		 *
+		 *  When PFC is enabled, classifier API is used to configure CoS nodes with back
+		 *  pressure threshold and PFC priority level parameters (odp_bp_param_t).
+		 *
+		 *  The default value is ODP_PKTIO_LINK_PAUSE_OFF.
+		 */
+		odp_pktio_link_pause_t pause_tx;
+
+	} flow_control;
+
 } odp_pktio_config_t;
 
 /**
@@ -957,6 +998,22 @@ typedef struct odp_pktio_capability_t {
 
 	/** Statistics counters capabilities */
 	odp_pktio_stats_capability_t stats;
+
+	/** Supported flow control modes */
+	struct {
+		/** Reception of traditional Ethernet pause frames */
+		uint32_t pause_rx: 1;
+
+		/** Reception of PFC frames */
+		uint32_t pfc_rx: 1;
+
+		/** Generation of traditional Ethernet pause frames */
+		uint32_t pause_tx: 1;
+
+		/** Generation of PFC frames */
+		uint32_t pfc_tx: 1;
+
+	} flow_control;
 
 } odp_pktio_capability_t;
 
