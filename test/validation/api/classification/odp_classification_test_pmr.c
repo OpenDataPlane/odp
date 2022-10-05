@@ -836,8 +836,18 @@ static void classification_test_pmr_term_vlan_id_x(void)
 	pmr_param.match.mask = &mask;
 	pmr_param.val_sz = sizeof(val);
 
+	/* Single VLAN */
 	pkt_info = default_pkt_info;
 	pkt_info.vlan = true;
+	pkt = create_packet(pkt_info);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+	eth = (odph_ethhdr_t *)odp_packet_l2_ptr(pkt, NULL);
+	vlan_x = (odph_vlanhdr_t *)(eth + 1);
+	vlan_x->tci = val;
+
+	test_pmr(&pmr_param, pkt, MATCH);
+
+	/* Two VLANs */
 	pkt_info.vlan_qinq = true;
 	pkt = create_packet(pkt_info);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
@@ -848,6 +858,7 @@ static void classification_test_pmr_term_vlan_id_x(void)
 
 	test_pmr(&pmr_param, pkt, MATCH);
 
+	/* No VLAN */
 	pkt = create_packet(default_pkt_info);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 
@@ -941,8 +952,18 @@ static void classification_test_pmr_term_eth_type_x(void)
 	pmr_param.match.mask = &mask;
 	pmr_param.val_sz = sizeof(val);
 
+	/* Single VLAN */
 	pkt_info = default_pkt_info;
 	pkt_info.vlan = true;
+	pkt = create_packet(pkt_info);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+	eth = (odph_ethhdr_t *)odp_packet_l2_ptr(pkt, NULL);
+	vlan_x = (odph_vlanhdr_t *)(eth + 1);
+	vlan_x->tci = odp_cpu_to_be_16(0x123);
+
+	test_pmr(&pmr_param, pkt, MATCH);
+
+	/* Two VLANs */
 	pkt_info.vlan_qinq = true;
 	pkt = create_packet(pkt_info);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
@@ -950,10 +971,10 @@ static void classification_test_pmr_term_eth_type_x(void)
 	vlan_x = (odph_vlanhdr_t *)(eth + 1);
 	vlan_x++;
 	vlan_x->tci = odp_cpu_to_be_16(0x123);
-	vlan_x->type = val;
 
 	test_pmr(&pmr_param, pkt, MATCH);
 
+	/* No VLAN */
 	pkt = create_packet(default_pkt_info);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 
