@@ -12,12 +12,14 @@
 
 #include <odp/api/abi/buffer.h>
 
+#include <odp/api/plat/buffer_inline_types.h>
 #include <odp/api/plat/debug_inlines.h>
 #include <odp/api/plat/event_inline_types.h>
 
 /** @cond _ODP_HIDE_FROM_DOXYGEN_ */
 
 extern const _odp_event_inline_offset_t _odp_event_inline_offset;
+extern const _odp_buffer_inline_offset_t _odp_buffer_inline_offset;
 
 #ifndef _ODP_NO_INLINE
 	/* Inline functions by default */
@@ -26,6 +28,7 @@ extern const _odp_event_inline_offset_t _odp_event_inline_offset;
 	#define odp_buffer_to_event __odp_buffer_to_event
 	#define odp_buffer_addr __odp_buffer_addr
 	#define odp_buffer_pool __odp_buffer_pool
+	#define odp_buffer_user_area __odp_buffer_user_area
 #else
 	#define _ODP_INLINE
 #endif
@@ -50,6 +53,11 @@ _ODP_INLINE void *odp_buffer_addr(odp_buffer_t buf)
 _ODP_INLINE odp_pool_t odp_buffer_pool(odp_buffer_t buf)
 {
 	return _odp_event_hdr_field(buf, odp_pool_t, pool);
+}
+
+_ODP_INLINE void *odp_buffer_user_area(odp_buffer_t buf)
+{
+	return _odp_buffer_get(buf, void *, uarea_addr);
 }
 
 /** @endcond */
