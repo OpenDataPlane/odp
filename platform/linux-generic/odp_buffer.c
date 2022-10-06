@@ -5,7 +5,10 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+#include <odp/api/align.h>
 #include <odp/api/buffer.h>
+
+#include <odp/api/plat/buffer_inline_types.h>
 
 #include <odp_pool_internal.h>
 #include <odp_buffer_internal.h>
@@ -15,19 +18,21 @@
 #include <stdio.h>
 #include <inttypes.h>
 
+#include <odp/visibility_begin.h>
+
+/* Buffer header field offsets for inline functions */
+const _odp_buffer_inline_offset_t _odp_buffer_inline_offset ODP_ALIGNED_CACHE = {
+	.uarea_addr = offsetof(odp_buffer_hdr_t, uarea_addr)
+};
+
+#include <odp/visibility_end.h>
+
 uint32_t odp_buffer_size(odp_buffer_t buf)
 {
 	odp_buffer_hdr_t *hdr = _odp_buf_hdr(buf);
 	pool_t *pool = _odp_pool_entry(hdr->event_hdr.pool);
 
 	return pool->seg_len;
-}
-
-void *odp_buffer_user_area(odp_buffer_t buf)
-{
-	odp_buffer_hdr_t *hdr = _odp_buf_hdr(buf);
-
-	return hdr->uarea_addr;
 }
 
 void odp_buffer_print(odp_buffer_t buf)

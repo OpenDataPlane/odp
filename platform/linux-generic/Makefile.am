@@ -31,6 +31,7 @@ odpapiplatincludedir= $(includedir)/odp/api/plat
 odpapiplatinclude_HEADERS = \
 		  include/odp/api/plat/atomic_inlines.h \
 		  include/odp/api/plat/buffer_inlines.h \
+		  include/odp/api/plat/buffer_inline_types.h \
 		  include/odp/api/plat/byteorder_inlines.h \
 		  include/odp/api/plat/cpu_inlines.h \
 		  include/odp/api/plat/debug_inlines.h \
