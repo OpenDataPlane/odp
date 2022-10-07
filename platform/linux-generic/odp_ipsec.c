@@ -403,6 +403,14 @@ typedef struct {
 	uint8_t	iv[IPSEC_MAX_IV_LEN];
 } ipsec_state_t;
 
+typedef struct {
+	ipsec_state_t state;
+	odp_ipsec_op_status_t status;
+	ipsec_sa_t *sa;
+	odp_ipsec_sa_t sa_hdl;
+	uint32_t orig_ip_len;
+} ipsec_op_t;
+
 /*
  * Computes 64-bit seq number according to RFC4303 A2
  */
@@ -2040,61 +2048,171 @@ exit:
 	return ipsec_sa;
 }
 
-int odp_ipsec_in(const odp_packet_t pkt_in[], int num_in,
-		 odp_packet_t pkt_out[], int *num_out,
-		 const odp_ipsec_in_param_t *param)
+static void ipsec_in_prepare(const odp_packet_t pkt_in[], odp_packet_t pkt_out[], int num_in,
+			     const odp_ipsec_in_param_t *param, ipsec_op_t ops[],
+			     odp_packet_t crypto_pkts[],
+			     odp_crypto_packet_op_param_t crypto_param[], ipsec_op_t *crypto_ops[],
+			     int *num_crypto)
 {
-	int in_pkt = 0;
-	int out_pkt = 0;
-	int max_out = *num_out;
-	unsigned sa_idx = 0;
-	unsigned sa_inc = (param->num_sa > 1) ? 1 : 0;
+	unsigned int sa_idx = 0, sa_inc = (param->num_sa > 1) ? 1 : 0;
 
-	while (in_pkt < num_in && out_pkt < max_out) {
-		odp_packet_t pkt = pkt_in[in_pkt];
-		odp_ipsec_op_status_t status;
-		odp_ipsec_sa_t sa;
-		ipsec_sa_t *ipsec_sa;
-		uint32_t dummy; /* orig_ip_len not valid in sync operations */
-		odp_ipsec_packet_result_t *result;
+	*num_crypto = 0;
 
-		memset(&status, 0, sizeof(status));
+	for (int i = 0; i < num_in; i++) {
+		pkt_out[i] = pkt_in[i];
+		ipsec_op_t *op = &ops[i];
+		odp_packet_t *pkt = &pkt_out[i];
+		odp_crypto_packet_op_param_t c_p;
+
+		memset(op, 0, sizeof(*op));
 
 		if (0 == param->num_sa) {
-			sa = ODP_IPSEC_SA_INVALID;
+			op->sa_hdl = ODP_IPSEC_SA_INVALID;
 		} else {
-			sa = param->sa[sa_idx];
-			_ODP_ASSERT(ODP_IPSEC_SA_INVALID != sa);
+			op->sa_hdl = param->sa[sa_idx];
+			_ODP_ASSERT(ODP_IPSEC_SA_INVALID != op->sa_hdl);
 		}
 
-		ipsec_sa = ipsec_in_single(pkt, sa, &pkt, false, &status, &dummy);
-
-		packet_subtype_set(pkt, ODP_EVENT_PACKET_IPSEC);
-		result = ipsec_pkt_result(pkt);
-		memset(result, 0, sizeof(*result));
-		result->status = status;
-		if (NULL != ipsec_sa)
-			result->sa = ipsec_sa->ipsec_sa_hdl;
-		else
-			result->sa = ODP_IPSEC_SA_INVALID;
-
-		pkt_out[out_pkt] = pkt;
-		in_pkt++;
-		out_pkt++;
 		sa_idx += sa_inc;
 
-		/*
-		 * We need to decrease SA use count only if the SA was not
-		 * provided to us by the caller but was found through our own
-		 * SA lookup that increased the use count.
-		 */
-		if (sa == ODP_IPSEC_SA_INVALID && ipsec_sa)
-			_odp_ipsec_sa_unuse(ipsec_sa);
+		if (odp_likely(ipsec_in_prepare_packet(pkt, &op->state, &op->sa, op->sa_hdl, &c_p,
+						       &op->status, &op->orig_ip_len) == 0)) {
+			crypto_pkts[*num_crypto] = *pkt;
+			crypto_param[*num_crypto] = c_p;
+			crypto_ops[*num_crypto] = op;
+			(*num_crypto)++;
+		}
+	}
+}
+
+static void ipsec_do_crypto_burst(odp_packet_t pkts[], odp_crypto_packet_op_param_t param[],
+				  ipsec_op_t *ops[], int num)
+{
+	int num_procd = 0;
+
+	while (num_procd < num) {
+		int ret = odp_crypto_op(&pkts[num_procd], &pkts[num_procd], &param[num_procd],
+					num - num_procd);
+
+		if (odp_unlikely(ret <= 0))
+			break;
+
+		num_procd += ret;
 	}
 
-	*num_out = out_pkt;
+	for (int i = num_procd; i < num; i++)
+		ops[i]->status.error.alg = 1;
+}
 
-	return in_pkt;
+static int ipsec_in_check_crypto_result(odp_packet_t pkt, odp_ipsec_op_status_t *status)
+{
+	odp_crypto_packet_result_t crypto;
+
+	if (odp_unlikely(odp_crypto_result(&crypto, pkt) < 0)) {
+		_ODP_DBG("Crypto failed\n");
+		status->error.alg = 1;
+		return -1;
+	}
+
+	if (odp_unlikely(!crypto.ok)) {
+		if (crypto.cipher_status.alg_err == ODP_CRYPTO_ALG_ERR_ICV_CHECK ||
+		    crypto.auth_status.alg_err == ODP_CRYPTO_ALG_ERR_ICV_CHECK)
+			status->error.auth = 1;
+		else
+			status->error.alg = 1;
+
+		return -1;
+	}
+
+	return 0;
+}
+
+static inline void update_post_lifetime_stats(ipsec_sa_t *sa, ipsec_state_t *state)
+{
+	if (ipsec_config->stats_en) {
+		odp_atomic_inc_u64(&sa->stats.post_lifetime_err_pkts);
+		odp_atomic_add_u64(&sa->stats.post_lifetime_err_bytes, state->stats_length);
+	}
+}
+
+static inline void finish_packet_proc(odp_packet_t pkt, ipsec_op_t *op, odp_queue_t queue)
+{
+	odp_ipsec_packet_result_t *res;
+
+	if (ipsec_config->stats_en)
+		ipsec_sa_err_stats_update(op->sa, &op->status);
+
+	packet_subtype_set(pkt, ODP_EVENT_PACKET_IPSEC);
+	res = ipsec_pkt_result(pkt);
+	memset(res, 0, sizeof(*res));
+	res->status = op->status;
+	res->sa = NULL != op->sa ? op->sa->ipsec_sa_hdl : ODP_IPSEC_SA_INVALID;
+	/* We need to decrease SA use count only if the SA was not provided to us by the caller but
+	 * was found through our own SA lookup that increased the use count. */
+	if (op->sa_hdl == ODP_IPSEC_SA_INVALID && op->sa)
+		_odp_ipsec_sa_unuse(op->sa);
+
+	if (queue != ODP_QUEUE_INVALID) {
+		res->orig_ip_len = op->orig_ip_len;
+		/* What should be done if enqueue fails? */
+		if (odp_unlikely(odp_queue_enq(queue, odp_ipsec_packet_to_event(pkt)) < 0))
+			odp_packet_free(pkt);
+	}
+}
+
+static void ipsec_in_finalize(odp_packet_t pkt_in[], ipsec_op_t ops[], int num, odp_bool_t is_enq)
+{
+	for (int i = 0; i < num; i++) {
+		ipsec_op_t *op = &ops[i];
+		odp_packet_t *pkt = &pkt_in[i];
+		odp_queue_t q = ODP_QUEUE_INVALID;
+
+		if (odp_unlikely(op->status.error.all))
+			goto finish;
+
+		if (odp_unlikely(ipsec_in_check_crypto_result(*pkt, &op->status)))
+			goto finish;
+
+		if (op->sa->antireplay) {
+			if (is_enq)
+				wait_for_order(ipsec_global->inbound_ordering_mode);
+
+			if (odp_unlikely(_odp_ipsec_sa_replay_update(op->sa, op->state.in.seq_no,
+								     &op->status) < 0))
+				goto finish;
+		}
+
+		if (odp_unlikely(ipsec_in_finalize_packet(pkt, &op->state, op->sa,
+							  &op->status))) {
+			update_post_lifetime_stats(op->sa, &op->state);
+			goto finish;
+		}
+
+		ipsec_in_parse_decap_packet(*pkt, &op->state, op->sa);
+
+finish:
+		if (is_enq)
+			q = NULL != op->sa ? op->sa->queue : ipsec_config->inbound.default_queue;
+
+		finish_packet_proc(*pkt, op, q);
+	}
+}
+
+int odp_ipsec_in(const odp_packet_t pkt_in[], int num_in, odp_packet_t pkt_out[], int *num_out,
+		 const odp_ipsec_in_param_t *param)
+{
+	int max_out = _ODP_MIN(num_in, *num_out), num_crypto;
+	odp_packet_t crypto_pkts[max_out];
+	odp_crypto_packet_op_param_t crypto_param[max_out];
+	ipsec_op_t ops[max_out], *crypto_ops[max_out];
+
+	ipsec_in_prepare(pkt_in, pkt_out, max_out, param, ops, crypto_pkts, crypto_param,
+			 crypto_ops, &num_crypto);
+	ipsec_do_crypto_burst(crypto_pkts, crypto_param, crypto_ops, num_crypto);
+	ipsec_in_finalize(pkt_out, ops, max_out, false);
+	*num_out = max_out;
+
+	return max_out;
 }
 
 static odp_ipsec_out_opt_t default_out_opt;
@@ -2155,66 +2273,19 @@ int odp_ipsec_out(const odp_packet_t pkt_in[], int num_in,
 	return in_pkt;
 }
 
-int odp_ipsec_in_enq(const odp_packet_t pkt_in[], int num_in,
-		     const odp_ipsec_in_param_t *param)
+int odp_ipsec_in_enq(const odp_packet_t pkt_in[], int num_in, const odp_ipsec_in_param_t *param)
 {
-	int in_pkt = 0;
-	unsigned sa_idx = 0;
-	unsigned sa_inc = (param->num_sa > 1) ? 1 : 0;
+	int num_crypto;
+	odp_packet_t pkt_out[num_in], crypto_pkts[num_in];
+	odp_crypto_packet_op_param_t crypto_param[num_in];
+	ipsec_op_t ops[num_in], *crypto_ops[num_in];
 
-	while (in_pkt < num_in) {
-		odp_packet_t pkt = pkt_in[in_pkt];
-		odp_ipsec_op_status_t status;
-		odp_ipsec_sa_t sa;
-		ipsec_sa_t *ipsec_sa;
-		uint32_t orig_ip_len = 0;
-		odp_ipsec_packet_result_t *result;
-		odp_queue_t queue;
-		int rc;
+	ipsec_in_prepare(pkt_in, pkt_out, num_in, param, ops, crypto_pkts, crypto_param,
+			 crypto_ops, &num_crypto);
+	ipsec_do_crypto_burst(crypto_pkts, crypto_param, crypto_ops, num_crypto);
+	ipsec_in_finalize(pkt_out, ops, num_in, true);
 
-		memset(&status, 0, sizeof(status));
-
-		if (0 == param->num_sa) {
-			sa = ODP_IPSEC_SA_INVALID;
-		} else {
-			sa = param->sa[sa_idx];
-			_ODP_ASSERT(ODP_IPSEC_SA_INVALID != sa);
-		}
-
-		ipsec_sa = ipsec_in_single(pkt, sa, &pkt, true, &status, &orig_ip_len);
-
-		packet_subtype_set(pkt, ODP_EVENT_PACKET_IPSEC);
-		result = ipsec_pkt_result(pkt);
-		memset(result, 0, sizeof(*result));
-		result->status = status;
-		result->orig_ip_len = orig_ip_len;
-		if (NULL != ipsec_sa) {
-			result->sa = ipsec_sa->ipsec_sa_hdl;
-			queue = ipsec_sa->queue;
-		} else {
-			result->sa = ODP_IPSEC_SA_INVALID;
-			queue = ipsec_config->inbound.default_queue;
-		}
-
-		in_pkt++;
-		sa_idx += sa_inc;
-
-		/*
-		 * We need to decrease SA use count only if the SA was not
-		 * provided to us by the caller but was found through our own
-		 * SA lookup that increased the use count.
-		 */
-		if (sa == ODP_IPSEC_SA_INVALID && ipsec_sa)
-			_odp_ipsec_sa_unuse(ipsec_sa);
-
-		rc = odp_queue_enq(queue, odp_ipsec_packet_to_event(pkt));
-		if (odp_unlikely(rc)) {
-			odp_packet_free(pkt);
-			break;
-		}
-	}
-
-	return in_pkt;
+	return num_in;
 }
 
 int odp_ipsec_out_enq(const odp_packet_t pkt_in[], int num_in,
