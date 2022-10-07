@@ -22,6 +22,11 @@
 
 const _odp_schedule_api_fn_t *_odp_sched_api;
 
+int _odp_schedule_configured(void)
+{
+	return odp_global_rw->schedule_configured;
+}
+
 #include <odp/visibility_end.h>
 
 extern const schedule_fn_t _odp_schedule_sp_fn;

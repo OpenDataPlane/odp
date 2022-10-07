@@ -10,6 +10,7 @@
 #include <odp/api/event_types.h>
 #include <odp/api/queue_types.h>
 
+#include <odp/api/plat/debug_inlines.h>
 #include <odp/api/plat/schedule_inline_types.h>
 
 #include <stdint.h>
@@ -43,21 +44,29 @@ extern const _odp_schedule_api_fn_t *_odp_sched_api;
 
 _ODP_INLINE odp_event_t odp_schedule(odp_queue_t *from, uint64_t wait)
 {
+	_ODP_ASSERT(_odp_schedule_configured());
+
 	return _odp_sched_api->schedule(from, wait);
 }
 
 _ODP_INLINE int odp_schedule_multi(odp_queue_t *from, uint64_t wait, odp_event_t events[], int num)
 {
+	_ODP_ASSERT(_odp_schedule_configured());
+
 	return _odp_sched_api->schedule_multi(from, wait, events, num);
 }
 
 _ODP_INLINE int odp_schedule_multi_wait(odp_queue_t *from, odp_event_t events[], int num)
 {
+	_ODP_ASSERT(_odp_schedule_configured());
+
 	return _odp_sched_api->schedule_multi_wait(from, events, num);
 }
 
 _ODP_INLINE int odp_schedule_multi_no_wait(odp_queue_t *from, odp_event_t events[], int num)
 {
+	_ODP_ASSERT(_odp_schedule_configured());
+
 	return _odp_sched_api->schedule_multi_no_wait(from, events, num);
 }
 
