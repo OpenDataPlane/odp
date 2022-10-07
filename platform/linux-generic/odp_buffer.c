@@ -27,14 +27,6 @@ const _odp_buffer_inline_offset_t _odp_buffer_inline_offset ODP_ALIGNED_CACHE = 
 
 #include <odp/visibility_end.h>
 
-uint32_t odp_buffer_size(odp_buffer_t buf)
-{
-	odp_buffer_hdr_t *hdr = _odp_buf_hdr(buf);
-	pool_t *pool = _odp_pool_entry(hdr->event_hdr.pool);
-
-	return pool->seg_len;
-}
-
 void odp_buffer_print(odp_buffer_t buf)
 {
 	odp_buffer_hdr_t *hdr;

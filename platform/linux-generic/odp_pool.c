@@ -75,6 +75,7 @@ static __thread pool_local_t local;
 /* Fill in pool header field offsets for inline functions */
 const _odp_pool_inline_offset_t _odp_pool_inline ODP_ALIGNED_CACHE = {
 	.index             = offsetof(pool_t, pool_idx),
+	.seg_len           = offsetof(pool_t, seg_len),
 	.uarea_size        = offsetof(pool_t, param_uarea_size),
 	.ext_head_offset   = offsetof(pool_t, ext_head_offset),
 	.ext_pkt_buf_size  = offsetof(pool_t, ext_param.pkt.buf_size)
