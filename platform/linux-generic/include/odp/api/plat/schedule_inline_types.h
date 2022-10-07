@@ -56,6 +56,9 @@ typedef struct {
 
 } _odp_schedule_api_fn_t;
 
+/* Scheduler configuration status */
+int _odp_schedule_configured(void);
+
 /** @endcond */
 
 #ifdef __cplusplus
