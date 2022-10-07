@@ -1042,13 +1042,6 @@ void odp_packet_flow_hash_set(odp_packet_t pkt, uint32_t flow_hash)
 	packet_set_flow_hash(pkt_hdr, flow_hash);
 }
 
-void odp_packet_ts_set(odp_packet_t pkt, odp_time_t timestamp)
-{
-	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
-
-	packet_set_ts(pkt_hdr, &timestamp);
-}
-
 /*
  *
  * Segment level
