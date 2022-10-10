@@ -411,6 +411,13 @@ typedef struct {
 	uint32_t orig_ip_len;
 } ipsec_op_t;
 
+#define MAX_HDR_LEN 100 /* Enough for VxLAN over IPv6 */
+
+typedef struct {
+	ipsec_op_t op;
+	uint8_t hdr_buf[MAX_HDR_LEN];
+} ipsec_inline_op_t;
+
 /*
  * Computes 64-bit seq number according to RFC4303 A2
  */
@@ -1951,32 +1958,6 @@ static int ipsec_out_prepare_packet(odp_packet_t *pkt, ipsec_state_t *state, ips
 	       ipsec_out_prepare_op(pkt, state, ipsec_sa, opt, is_enqueue_op, param, status);
 }
 
-static int ipsec_out_do_crypto(odp_packet_t *pkt, odp_crypto_packet_op_param_t *param,
-			       odp_ipsec_op_status_t *status)
-{
-	odp_crypto_packet_result_t crypto;
-
-	if (odp_unlikely(odp_crypto_op(pkt, pkt, param, 1) < 0)) {
-		_ODP_DBG("Crypto failed\n");
-		goto alg_err;
-	}
-
-	if (odp_unlikely(odp_crypto_result(&crypto, *pkt) < 0)) {
-		_ODP_DBG("Crypto failed\n");
-		goto alg_err;
-	}
-
-	if (odp_unlikely(!crypto.ok))
-		goto alg_err;
-
-	return 0;
-
-alg_err:
-	status->error.alg = 1;
-
-	return -1;
-}
-
 static int ipsec_out_finalize_packet(odp_packet_t *pkt, ipsec_state_t *state, ipsec_sa_t *ipsec_sa,
 				     odp_ipsec_op_status_t *status)
 {
@@ -1992,60 +1973,6 @@ static int ipsec_out_finalize_packet(odp_packet_t *pkt, ipsec_state_t *state, ip
 	}
 
 	return 0;
-}
-
-static ipsec_sa_t *ipsec_out_single(odp_packet_t pkt,
-				    odp_ipsec_sa_t sa,
-				    odp_packet_t *pkt_out,
-				    const odp_ipsec_out_opt_t *opt,
-				    odp_bool_t enqueue_op,
-				    odp_ipsec_op_status_t *status)
-{
-	ipsec_state_t state;
-	ipsec_sa_t *ipsec_sa;
-	odp_crypto_packet_op_param_t param;
-
-	/* No need to do _odp_ipsec_sa_use() here since an ODP application is not allowed to do
-	 * call IPsec output before SA creation has completed nor call odp_ipsec_sa_disable()
-	 * before IPsec output has completed. IOW, the needed sychronization between threads is
-	 * done by the application. */
-	ipsec_sa = _odp_ipsec_sa_entry_from_hdl(sa);
-	_ODP_ASSERT(NULL != ipsec_sa);
-
-	if (odp_unlikely(ipsec_out_prepare_packet(&pkt, &state, ipsec_sa, opt, enqueue_op, &param,
-						  status)))
-		goto exit;
-
-	/* No need to run precheck here, we know that packet is authentic */
-	if (_odp_ipsec_sa_lifetime_update(ipsec_sa, state.stats_length, status) < 0)
-		goto post_lifetime_err_cnt_update;
-
-	/* Do not change to an asynchronous design without thinking concurrency and what changes
-	 * are required to guarantee that used SAs are not destroyed when asynchronous operations
-	 * are in progress.
-	 *
-	 * The containing code does not hold a reference to the SA but completes outbound
-	 * processing synchronously and makes use of the fact that the application may not disable
-	 * (and then destroy) the SA before this output routine returns (and all its side effects
-	 * are visible to the disabling thread). */
-	if (odp_unlikely(ipsec_out_do_crypto(&pkt, &param, status)))
-		goto post_lifetime_err_cnt_update;
-
-	if (odp_unlikely(ipsec_out_finalize_packet(&pkt, &state, ipsec_sa, status)))
-		goto post_lifetime_err_cnt_update;
-
-	goto exit;
-
-post_lifetime_err_cnt_update:
-	if (ipsec_config->stats_en) {
-		odp_atomic_inc_u64(&ipsec_sa->stats.post_lifetime_err_pkts);
-		odp_atomic_add_u64(&ipsec_sa->stats.post_lifetime_err_bytes, state.stats_length);
-	}
-
-exit:
-	*pkt_out = pkt;
-
-	return ipsec_sa;
 }
 
 static void ipsec_in_prepare(const odp_packet_t pkt_in[], odp_packet_t pkt_out[], int num_in,
@@ -2217,62 +2144,127 @@ int odp_ipsec_in(const odp_packet_t pkt_in[], int num_in, odp_packet_t pkt_out[]
 
 static odp_ipsec_out_opt_t default_out_opt;
 
-int odp_ipsec_out(const odp_packet_t pkt_in[], int num_in,
-		  odp_packet_t pkt_out[], int *num_out,
-		  const odp_ipsec_out_param_t *param)
+static void ipsec_out_prepare(const odp_packet_t pkt_in[], odp_packet_t pkt_out[], int num_in,
+			      const odp_ipsec_out_param_t *param, ipsec_op_t ops[],
+			      odp_packet_t crypto_pkts[],
+			      odp_crypto_packet_op_param_t crypto_param[],
+			      ipsec_op_t *crypto_ops[], int *num_crypto, odp_bool_t is_enq)
 {
-	int in_pkt = 0;
-	int out_pkt = 0;
-	int max_out = *num_out;
-	unsigned sa_idx = 0;
-	unsigned opt_idx = 0;
-	unsigned sa_inc = (param->num_sa > 1) ? 1 : 0;
-	unsigned opt_inc = (param->num_opt > 1) ? 1 : 0;
+	unsigned int sa_idx = 0, opt_idx = 0, sa_inc = (param->num_sa > 1) ? 1 : 0,
+	opt_inc = (param->num_opt > 1) ? 1 : 0;
+	/* No need to do _odp_ipsec_sa_use() here since an ODP application is not allowed to do
+	 * call IPsec output before SA creation has completed nor call odp_ipsec_sa_disable()
+	 * before IPsec output has completed. IOW, the needed sychronization between threads is
+	 * done by the application. */
+	*num_crypto = 0;
 
-	_ODP_ASSERT(param->num_sa != 0);
-
-	while (in_pkt < num_in && out_pkt < max_out) {
-		odp_packet_t pkt = pkt_in[in_pkt];
-		odp_ipsec_op_status_t status;
-		odp_ipsec_sa_t sa;
-		ipsec_sa_t *ipsec_sa;
-		odp_ipsec_packet_result_t *result;
+	for (int i = 0; i < num_in; i++) {
+		pkt_out[i] = pkt_in[i];
+		ipsec_op_t *op = &ops[i];
 		const odp_ipsec_out_opt_t *opt;
+		odp_packet_t *pkt = &pkt_out[i];
+		odp_crypto_packet_op_param_t c_p;
 
-		memset(&status, 0, sizeof(status));
-
-		sa = param->sa[sa_idx];
-		_ODP_ASSERT(ODP_IPSEC_SA_INVALID != sa);
+		memset(op, 0, sizeof(*op));
+		op->sa_hdl = param->sa[sa_idx];
+		_ODP_ASSERT(ODP_IPSEC_SA_INVALID != op->sa_hdl);
+		op->sa = _odp_ipsec_sa_entry_from_hdl(op->sa_hdl);
+		_ODP_ASSERT(NULL != op->sa);
 
 		if (0 == param->num_opt)
 			opt = &default_out_opt;
 		else
 			opt = &param->opt[opt_idx];
 
-		ipsec_sa = ipsec_out_single(pkt, sa, &pkt, opt, false, &status);
-		_ODP_ASSERT(NULL != ipsec_sa);
-
-		packet_subtype_set(pkt, ODP_EVENT_PACKET_IPSEC);
-		result = ipsec_pkt_result(pkt);
-		memset(result, 0, sizeof(*result));
-		result->status = status;
-		result->sa = ipsec_sa->ipsec_sa_hdl;
-
-		if (ipsec_config->stats_en)
-			ipsec_sa_err_stats_update(ipsec_sa, &status);
-
-		pkt_out[out_pkt] = pkt;
-		in_pkt++;
-		out_pkt++;
 		sa_idx += sa_inc;
 		opt_idx += opt_inc;
+
+		if (odp_unlikely(ipsec_out_prepare_packet(pkt, &op->state, op->sa, opt, is_enq,
+							  &c_p, &op->status)))
+			continue;
+
+		if (odp_unlikely(_odp_ipsec_sa_lifetime_update(op->sa, op->state.stats_length,
+							       &op->status))) {
+			update_post_lifetime_stats(op->sa, &op->state);
+			continue;
+		}
+
+		crypto_pkts[*num_crypto] = *pkt;
+		crypto_param[*num_crypto] = c_p;
+		crypto_ops[*num_crypto] = op;
+		(*num_crypto)++;
 	}
-
-	*num_out = out_pkt;
-
-	return in_pkt;
 }
 
+static int ipsec_out_check_crypto_result(odp_packet_t pkt, odp_ipsec_op_status_t *status)
+{
+	odp_crypto_packet_result_t crypto;
+
+	if (odp_unlikely(odp_crypto_result(&crypto, pkt) < 0)) {
+		_ODP_DBG("Crypto failed\n");
+		status->error.alg = 1;
+		return -1;
+	}
+
+	if (odp_unlikely(!crypto.ok)) {
+		status->error.alg = 1;
+
+		return -1;
+	}
+
+	return 0;
+}
+
+static void ipsec_out_finalize(odp_packet_t pkt_in[], ipsec_op_t ops[], int num, odp_bool_t is_enq)
+{
+	for (int i = 0; i < num; i++) {
+		ipsec_op_t *op = &ops[i];
+		odp_packet_t *pkt = &pkt_in[i];
+		odp_queue_t q = ODP_QUEUE_INVALID;
+
+		if (odp_unlikely(op->status.error.all))
+			goto finish;
+
+		if (odp_unlikely(ipsec_out_check_crypto_result(*pkt, &op->status))) {
+			update_post_lifetime_stats(op->sa, &op->state);
+			goto finish;
+		}
+
+		if (odp_unlikely(ipsec_out_finalize_packet(pkt, &op->state, op->sa, &op->status)))
+			update_post_lifetime_stats(op->sa, &op->state);
+
+finish:
+		if (is_enq)
+			q = NULL != op->sa ? op->sa->queue : ipsec_config->inbound.default_queue;
+
+		finish_packet_proc(*pkt, op, q);
+	}
+}
+
+int odp_ipsec_out(const odp_packet_t pkt_in[], int num_in, odp_packet_t pkt_out[], int *num_out,
+		  const odp_ipsec_out_param_t *param)
+{
+	int max_out = _ODP_MIN(num_in, *num_out), num_crypto;
+	odp_packet_t crypto_pkts[max_out];
+	odp_crypto_packet_op_param_t crypto_param[max_out];
+	ipsec_op_t ops[max_out], *crypto_ops[max_out];
+
+	ipsec_out_prepare(pkt_in, pkt_out, max_out, param, ops, crypto_pkts, crypto_param,
+			  crypto_ops, &num_crypto, false);
+	ipsec_do_crypto_burst(crypto_pkts, crypto_param, crypto_ops, num_crypto);
+	ipsec_out_finalize(pkt_out, ops, max_out, false);
+	*num_out = max_out;
+
+	return max_out;
+}
+
+/* Do not change to an asynchronous design without thinking concurrency and what changes are
+ * required to guarantee that used SAs are not destroyed when asynchronous operations are in
+ * progress.
+ *
+ * The containing code does not hold a reference to the SA but completes processing synchronously
+ * and makes use of the fact that the application may not disable (and then destroy) the SA before
+ * these routines return (and all side effects are visible to the disabling thread). */
 int odp_ipsec_in_enq(const odp_packet_t pkt_in[], int num_in, const odp_ipsec_in_param_t *param)
 {
 	int num_crypto;
@@ -2288,62 +2280,19 @@ int odp_ipsec_in_enq(const odp_packet_t pkt_in[], int num_in, const odp_ipsec_in
 	return num_in;
 }
 
-int odp_ipsec_out_enq(const odp_packet_t pkt_in[], int num_in,
-		      const odp_ipsec_out_param_t *param)
+int odp_ipsec_out_enq(const odp_packet_t pkt_in[], int num_in, const odp_ipsec_out_param_t *param)
 {
-	int in_pkt = 0;
-	unsigned sa_idx = 0;
-	unsigned opt_idx = 0;
-	unsigned sa_inc = (param->num_sa > 1) ? 1 : 0;
-	unsigned opt_inc = (param->num_opt > 1) ? 1 : 0;
+	int num_crypto;
+	odp_packet_t pkt_out[num_in], crypto_pkts[num_in];
+	odp_crypto_packet_op_param_t crypto_param[num_in];
+	ipsec_op_t ops[num_in], *crypto_ops[num_in];
 
-	_ODP_ASSERT(param->num_sa != 0);
+	ipsec_out_prepare(pkt_in, pkt_out, num_in, param, ops, crypto_pkts, crypto_param,
+			  crypto_ops, &num_crypto, true);
+	ipsec_do_crypto_burst(crypto_pkts, crypto_param, crypto_ops, num_crypto);
+	ipsec_out_finalize(pkt_out, ops, num_in, true);
 
-	while (in_pkt < num_in) {
-		odp_packet_t pkt = pkt_in[in_pkt];
-		odp_ipsec_op_status_t status;
-		odp_ipsec_sa_t sa;
-		ipsec_sa_t *ipsec_sa;
-		odp_ipsec_packet_result_t *result;
-		const odp_ipsec_out_opt_t *opt;
-		odp_queue_t queue;
-		int rc;
-
-		memset(&status, 0, sizeof(status));
-
-		sa = param->sa[sa_idx];
-		_ODP_ASSERT(ODP_IPSEC_SA_INVALID != sa);
-
-		if (0 == param->num_opt)
-			opt = &default_out_opt;
-		else
-			opt = &param->opt[opt_idx];
-
-		ipsec_sa = ipsec_out_single(pkt, sa, &pkt, opt, true, &status);
-		_ODP_ASSERT(NULL != ipsec_sa);
-
-		packet_subtype_set(pkt, ODP_EVENT_PACKET_IPSEC);
-		result = ipsec_pkt_result(pkt);
-		memset(result, 0, sizeof(*result));
-		result->status = status;
-		result->sa = ipsec_sa->ipsec_sa_hdl;
-		queue = ipsec_sa->queue;
-
-		if (ipsec_config->stats_en)
-			ipsec_sa_err_stats_update(ipsec_sa, &status);
-
-		in_pkt++;
-		sa_idx += sa_inc;
-		opt_idx += opt_inc;
-
-		rc = odp_queue_enq(queue, odp_ipsec_packet_to_event(pkt));
-		if (odp_unlikely(rc)) {
-			odp_packet_free(pkt);
-			break;
-		}
-	}
-
-	return in_pkt;
+	return num_in;
 }
 
 int _odp_ipsec_try_inline(odp_packet_t *pkt)
@@ -2388,130 +2337,180 @@ int _odp_ipsec_try_inline(odp_packet_t *pkt)
 	return 0;
 }
 
-#define MAX_HDR_LEN 100 /* Enough for VxLAN over IPv6 */
-
-int odp_ipsec_out_inline(const odp_packet_t pkt_in[], int num_in,
-			 const odp_ipsec_out_param_t *param,
-			 const odp_ipsec_out_inline_param_t *inline_param)
+static inline int ipsec_out_inline_check_out_hdrs(odp_packet_t pkt,
+						  const odp_ipsec_out_inline_param_t *param,
+						  ipsec_inline_op_t *op)
 {
-	int in_pkt = 0;
-	unsigned sa_idx = 0;
-	unsigned opt_idx = 0;
-	unsigned sa_inc = (param->num_sa > 1) ? 1 : 0;
-	unsigned opt_inc = (param->num_opt > 1) ? 1 : 0;
-	uint8_t hdr_buf[MAX_HDR_LEN];
+	uint32_t l2_offset, hdr_len = param->outer_hdr.len;
 
-	_ODP_ASSERT(param->num_sa != 0);
+	if (!param->outer_hdr.ptr) {
+		l2_offset = odp_packet_l2_offset(pkt);
+		_ODP_ASSERT(hdr_len == odp_packet_l3_offset(pkt) - l2_offset);
 
-	while (in_pkt < num_in) {
-		odp_packet_t pkt = pkt_in[in_pkt];
-		odp_ipsec_op_status_t status;
-		odp_ipsec_sa_t sa;
-		ipsec_sa_t *ipsec_sa;
-		odp_ipsec_packet_result_t *result;
+		if (odp_unlikely(hdr_len > MAX_HDR_LEN ||
+				 odp_packet_copy_to_mem(pkt, l2_offset, hdr_len, op->hdr_buf)
+				 < 0)) {
+			op->op.status.error.proto = 1;
+
+			return -1;
+		}
+	}
+
+	return 0;
+}
+
+static void ipsec_out_inline_prepare(const odp_packet_t pkt_in[], odp_packet_t pkt_out[],
+				     int num_in, const odp_ipsec_out_param_t *param,
+				     const odp_ipsec_out_inline_param_t *inline_param,
+				     ipsec_inline_op_t ops[], odp_packet_t crypto_pkts[],
+				     odp_crypto_packet_op_param_t crypto_param[],
+				     ipsec_op_t *crypto_ops[], int *num_crypto)
+{
+	unsigned int sa_idx = 0, opt_idx = 0, sa_inc = (param->num_sa > 1) ? 1 : 0,
+	opt_inc = (param->num_opt > 1) ? 1 : 0;
+
+	*num_crypto = 0;
+
+	for (int i = 0; i < num_in; i++) {
+		pkt_out[i] = pkt_in[i];
+		ipsec_inline_op_t *op = &ops[i];
 		const odp_ipsec_out_opt_t *opt;
-		uint32_t hdr_len, offset;
-		const void *ptr;
+		odp_packet_t *pkt = &pkt_out[i];
+		odp_crypto_packet_op_param_t c_p;
 
-		_ODP_ASSERT(inline_param[in_pkt].pktio != ODP_PKTIO_INVALID);
-
-		memset(&status, 0, sizeof(status));
-
-		if (0 == param->num_sa) {
-			sa = ODP_IPSEC_SA_INVALID;
-		} else {
-			sa = param->sa[sa_idx];
-			_ODP_ASSERT(ODP_IPSEC_SA_INVALID != sa);
-		}
-
-		hdr_len = inline_param[in_pkt].outer_hdr.len;
-		ptr = inline_param[in_pkt].outer_hdr.ptr;
-
-		if (!ptr) {
-			uint32_t l2_offset = odp_packet_l2_offset(pkt);
-
-			_ODP_ASSERT(hdr_len == odp_packet_l3_offset(pkt) - l2_offset);
-
-			if (odp_likely(hdr_len <= MAX_HDR_LEN) &&
-			    odp_likely(odp_packet_copy_to_mem(pkt, l2_offset,
-							      hdr_len, hdr_buf) == 0)) {
-				ptr = hdr_buf;
-			} else {
-				status.error.proto = 1;
-				ipsec_sa = _odp_ipsec_sa_entry_from_hdl(sa);
-				goto err;
-			}
-		}
+		memset(op, 0, sizeof(*op));
+		op->op.sa_hdl = param->sa[sa_idx];
+		_ODP_ASSERT(ODP_IPSEC_SA_INVALID != op->op.sa_hdl);
+		op->op.sa = _odp_ipsec_sa_entry_from_hdl(op->op.sa_hdl);
+		_ODP_ASSERT(NULL != op->op.sa);
 
 		if (0 == param->num_opt)
 			opt = &default_out_opt;
 		else
 			opt = &param->opt[opt_idx];
 
-		ipsec_sa = ipsec_out_single(pkt, sa, &pkt, opt, true, &status);
-		_ODP_ASSERT(NULL != ipsec_sa);
-
-		offset = odp_packet_l3_offset(pkt);
-		if (odp_unlikely(offset == ODP_PACKET_OFFSET_INVALID))
-			offset = 0;
-		if (offset >= hdr_len) {
-			if (odp_packet_trunc_head(&pkt, offset - hdr_len,
-						  NULL, NULL) < 0)
-				status.error.alg = 1;
-
-		} else {
-			if (odp_packet_extend_head(&pkt, hdr_len - offset,
-						   NULL, NULL) < 0)
-				status.error.alg = 1;
-		}
-
-		odp_packet_l3_offset_set(pkt, hdr_len);
-
-		if (odp_packet_copy_from_mem(pkt, 0,
-					     hdr_len,
-					     ptr) < 0)
-			status.error.alg = 1;
-
-		if (!status.error.all) {
-			odp_pktout_queue_t pkqueue;
-
-			if (odp_pktout_queue(inline_param[in_pkt].pktio,
-					     &pkqueue, 1) <= 0) {
-				status.error.alg = 1;
-				goto err;
-			}
-
-			if (odp_pktout_send(pkqueue, &pkt, 1) < 0) {
-				status.error.alg = 1;
-				goto err;
-			}
-		} else {
-			odp_queue_t queue;
-			int rc;
-err:
-			if (ipsec_config->stats_en)
-				ipsec_sa_err_stats_update(ipsec_sa, &status);
-
-			packet_subtype_set(pkt, ODP_EVENT_PACKET_IPSEC);
-			result = ipsec_pkt_result(pkt);
-			memset(result, 0, sizeof(*result));
-			result->sa = ipsec_sa->ipsec_sa_hdl;
-			result->status = status;
-			queue = ipsec_sa->queue;
-
-			rc = odp_queue_enq(queue, odp_ipsec_packet_to_event(pkt));
-			if (odp_unlikely(rc)) {
-				in_pkt++;
-				odp_packet_free(pkt);
-				break;
-			}
-		}
-		in_pkt++;
 		sa_idx += sa_inc;
 		opt_idx += opt_inc;
+
+		if (odp_unlikely(ipsec_out_inline_check_out_hdrs(*pkt, &inline_param[i], op) ||
+				 ipsec_out_prepare_packet(pkt, &op->op.state, op->op.sa, opt,
+							  true, &c_p, &op->op.status)))
+			continue;
+
+		if (odp_unlikely(_odp_ipsec_sa_lifetime_update(op->op.sa,
+							       op->op.state.stats_length,
+							       &op->op.status))) {
+			update_post_lifetime_stats(op->op.sa, &op->op.state);
+			continue;
+		}
+
+		crypto_pkts[*num_crypto] = *pkt;
+		crypto_param[*num_crypto] = c_p;
+		crypto_ops[*num_crypto] = &op->op;
+		(*num_crypto)++;
+	}
+}
+
+static void ipsec_out_inline_finish_packet_proc(odp_packet_t *pkt,
+						const odp_ipsec_out_inline_param_t *param,
+						ipsec_inline_op_t *op)
+{
+	uint32_t offset = odp_packet_l3_offset(*pkt), hdr_len = param->outer_hdr.len;
+	odp_pktout_queue_t pkqueue;
+
+	_ODP_ASSERT(NULL != op->op.sa);
+
+	if (odp_unlikely(offset == ODP_PACKET_OFFSET_INVALID))
+		offset = 0;
+
+	if (offset >= hdr_len) {
+		if (odp_packet_trunc_head(pkt, offset - hdr_len, NULL, NULL) < 0)
+			op->op.status.error.alg = 1;
+	} else {
+		if (odp_packet_extend_head(pkt, hdr_len - offset, NULL, NULL) < 0)
+			op->op.status.error.alg = 1;
 	}
 
-	return in_pkt;
+	odp_packet_l3_offset_set(*pkt, hdr_len);
+
+	if (odp_packet_copy_from_mem(*pkt, 0, hdr_len,
+				     param->outer_hdr.ptr ? param->outer_hdr.ptr : op->hdr_buf)
+	    < 0)
+		op->op.status.error.alg = 1;
+
+	if (!op->op.status.error.all) {
+		if (odp_pktout_queue(param->pktio, &pkqueue, 1) <= 0)
+			op->op.status.error.alg = 1;
+
+		if (odp_pktout_send(pkqueue, pkt, 1) < 0)
+			op->op.status.error.alg = 1;
+	}
+}
+
+static void ipsec_out_inline_handle_err(odp_packet_t pkt, ipsec_inline_op_t *op)
+{
+	odp_ipsec_packet_result_t *res;
+
+	if (odp_likely(!op->op.status.error.all))
+		return;
+
+	if (ipsec_config->stats_en)
+		ipsec_sa_err_stats_update(op->op.sa, &op->op.status);
+
+	packet_subtype_set(pkt, ODP_EVENT_PACKET_IPSEC);
+	res = ipsec_pkt_result(pkt);
+	memset(res, 0, sizeof(*res));
+	res->sa = op->op.sa_hdl;
+	res->status = op->op.status;
+
+	if (odp_unlikely(odp_queue_enq(op->op.sa->queue, odp_ipsec_packet_to_event(pkt)) < 0))
+		odp_packet_free(pkt);
+}
+
+static void ipsec_out_inline_finalize(odp_packet_t pkt_in[],
+				      const odp_ipsec_out_inline_param_t *inline_param,
+				      ipsec_inline_op_t ops[], int num)
+{
+	for (int i = 0; i < num; i++) {
+		ipsec_inline_op_t *op = &ops[i];
+		odp_packet_t *pkt = &pkt_in[i];
+
+		if (odp_unlikely(op->op.status.error.all))
+			goto handle_err;
+
+		if (odp_unlikely(ipsec_out_check_crypto_result(*pkt, &op->op.status))) {
+			update_post_lifetime_stats(op->op.sa, &op->op.state);
+			goto finish;
+		}
+
+		if (odp_unlikely(ipsec_out_finalize_packet(pkt, &op->op.state, op->op.sa,
+							   &op->op.status)))
+			update_post_lifetime_stats(op->op.sa, &op->op.state);
+
+finish:
+		ipsec_out_inline_finish_packet_proc(pkt, &inline_param[i], op);
+
+handle_err:
+		ipsec_out_inline_handle_err(*pkt, op);
+	}
+}
+
+int odp_ipsec_out_inline(const odp_packet_t pkt_in[], int num_in,
+			 const odp_ipsec_out_param_t *param,
+			 const odp_ipsec_out_inline_param_t *inline_param)
+{
+	int num_crypto;
+	odp_packet_t pkt_out[num_in], crypto_pkts[num_in];
+	odp_crypto_packet_op_param_t crypto_param[num_in];
+	ipsec_inline_op_t ops[num_in];
+	ipsec_op_t *crypto_ops[num_in];
+
+	ipsec_out_inline_prepare(pkt_in, pkt_out, num_in, param, inline_param, ops, crypto_pkts,
+				 crypto_param, crypto_ops, &num_crypto);
+	ipsec_do_crypto_burst(crypto_pkts, crypto_param, crypto_ops, num_crypto);
+	ipsec_out_inline_finalize(pkt_out, inline_param, ops, num_in);
+
+	return num_in;
 }
 
 int odp_ipsec_test_sa_update(odp_ipsec_sa_t sa,
