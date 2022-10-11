@@ -1555,56 +1555,46 @@ static inline void pmr_debug_print(pmr_t *pmr, cos_t *cos)
 
 /*
  * Match a PMR chain with a Packet and return matching CoS
- * This function gets called recursively to check the chained PMR Term value
- * with the packet.
+ * This function performs a depth-first search in the CoS tree.
  */
-static cos_t *match_pmr_cos(cos_t *cos, const uint8_t *pkt_addr, pmr_t *pmr,
-			    odp_packet_hdr_t *hdr)
+static cos_t *match_pmr_cos(cos_t *cos, const uint8_t *pkt_addr, odp_packet_hdr_t *hdr)
 {
-	uint32_t i, num_rule;
-
-	if (cos == NULL || pmr == NULL)
-		return NULL;
-
-	if (!cos->valid)
-		return NULL;
-
-	if (verify_pmr(pmr, pkt_addr, hdr)) {
-		/* PMR matched */
-		pmr_debug_print(pmr, cos);
-
-		if (cos->stats_enable)
-			odp_atomic_inc_u64(&cos->stats.packets);
-
-		hdr->p.input_flags.cls_mark = 0;
-		if (pmr->mark) {
-			hdr->p.input_flags.cls_mark = 1;
-			hdr->cls_mark = pmr->mark;
-		}
-
-		/* This gets called recursively. First matching leaf or branch
-		 * is returned. */
-		num_rule = odp_atomic_load_u32(&cos->num_rule);
-
-		/* No more rules. This is the best match. */
-		if (num_rule == 0)
-			return cos;
+	while (1) {
+		uint32_t i, num_rule = odp_atomic_load_u32(&cos->num_rule);
 
 		for (i = 0; i < num_rule; i++) {
-			cos_t *retcos = match_pmr_cos(cos->linked_cos[i],
-						      pkt_addr, cos->pmr[i],
-						      hdr);
+			pmr_t *pmr = cos->pmr[i];
+			struct cos_s *linked_cos = cos->linked_cos[i];
 
-			/* Found a matching leaf */
-			if (retcos)
-				return retcos;
+			if (odp_unlikely(!linked_cos->valid))
+				continue;
+
+			if (verify_pmr(pmr, pkt_addr, hdr)) {
+				/* PMR matched */
+
+				cos = linked_cos;
+
+				pmr_debug_print(pmr, cos);
+
+				if (cos->stats_enable)
+					odp_atomic_inc_u64(&cos->stats.packets);
+
+				hdr->p.input_flags.cls_mark = 0;
+				if (pmr->mark) {
+					hdr->p.input_flags.cls_mark = 1;
+					hdr->cls_mark = pmr->mark;
+				}
+
+				break;
+			}
 		}
 
-		/* Current CoS was the best match */
-		return cos;
+		/* If no PMR matched, the current CoS is the best match. */
+		if (i == num_rule)
+			break;
 	}
 
-	return NULL;
+	return cos;
 }
 
 int _odp_pktio_classifier_init(pktio_entry_t *entry)
@@ -1642,10 +1632,8 @@ static inline cos_t *cls_select_cos(pktio_entry_t *entry,
 				    const uint8_t *pkt_addr,
 				    odp_packet_hdr_t *pkt_hdr)
 {
-	pmr_t *pmr;
 	cos_t *cos;
 	cos_t *default_cos;
-	uint32_t i;
 	classifier_t *cls;
 
 	cls = &entry->cls;
@@ -1658,11 +1646,9 @@ static inline cos_t *cls_select_cos(pktio_entry_t *entry,
 	}
 
 	/* Calls all the PMRs attached at the PKTIO level*/
-	for (i = 0; i < odp_atomic_load_u32(&default_cos->num_rule); i++) {
-		pmr = default_cos->pmr[i];
-		cos = default_cos->linked_cos[i];
-		cos = match_pmr_cos(cos, pkt_addr, pmr, pkt_hdr);
-		if (cos)
+	if (default_cos && default_cos->valid) {
+		cos = match_pmr_cos(default_cos, pkt_addr, pkt_hdr);
+		if (cos && cos != default_cos)
 			return cos;
 	}
 
