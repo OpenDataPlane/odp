@@ -28,7 +28,7 @@ jobs:
             conf: '--enable-lto --enable-abi-compat'
     steps:
       - uses: AutoModality/action-clean@v1.1.0
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}"
                -e CONF="${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-native /odp/scripts/ci/build_${ARCH}.sh
       - name: Failure log
@@ -45,7 +45,7 @@ jobs:
         os: ['ubuntu_18.04', 'rocky_linux_8']
     steps:
       - uses: AutoModality/action-clean@v1.1.0
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}"
                -e CONF="${CONF}" $CONTAINER_NAMESPACE/odp-ci-${{matrix.os}}-${ARCH}-native /odp/scripts/ci/build_${ARCH}.sh
       - name: Failure log
@@ -64,7 +64,7 @@ jobs:
         conf: ['', '--enable-lto']
     steps:
       - uses: AutoModality/action-clean@v1.1.0
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="gcc-${{matrix.cc_ver}}" -e CXX="g++-${{matrix.cc_ver}}"
                -e CONF="${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-native /odp/scripts/ci/build_${ARCH}.sh
       - name: Failure log
@@ -76,7 +76,7 @@ jobs:
     runs-on: [self-hosted, ARM64]
     steps:
       - uses: AutoModality/action-clean@v1.1.0
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}"
                -e CONF="${CONF}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-native /odp/scripts/ci/out_of_tree.sh
       - name: Failure log
@@ -95,7 +95,7 @@ jobs:
         cc: [gcc, clang]
     steps:
       - uses: AutoModality/action-clean@v1.1.0
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}"
                -e CONF="${CONF}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-native /odp/scripts/ci/build_${ARCH}.sh
       - name: Failure log
@@ -111,7 +111,7 @@ jobs:
         conf: ['--enable-user-guides', '--enable-user-guides --enable-abi-compat']
     steps:
       - uses: AutoModality/action-clean@v1.1.0
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}"
                -e CONF="${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-native /odp/scripts/ci/distcheck.sh
       - name: Failure log
@@ -131,7 +131,7 @@ jobs:
                '--without-openssl --without-pcap', '--with-crypto=armv8crypto']
     steps:
       - uses: AutoModality/action-clean@v1.1.0
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}" -e ARCH="${ARCH}"
                -e CXX=g++-10 -e CONF="${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-native /odp/scripts/ci/check.sh
       - name: Failure log
@@ -148,7 +148,7 @@ jobs:
         cflags: ['-march=armv8.2-a -O2', '-march=armv8-a+lse -O2']
     steps:
       - uses: AutoModality/action-clean@v1.1.0
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}" -e ARCH="${ARCH}"
                -e CXX=g++-10 -e CFLAGS="${{matrix.cflags}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-native /odp/scripts/ci/check.sh
       - name: Failure log
@@ -164,7 +164,7 @@ jobs:
         os: ['ubuntu_18.04', 'ubuntu_22.04']
     steps:
       - uses: AutoModality/action-clean@v1.1.0
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}" -e ARCH="${ARCH}"
                -e CONF="${CONF}" $CONTAINER_NAMESPACE/odp-ci-${{matrix.os}}-${ARCH}-native /odp/scripts/ci/check.sh
       - name: Failure log
@@ -176,7 +176,7 @@ jobs:
     runs-on: [self-hosted, ARM64]
     steps:
       - uses: AutoModality/action-clean@v1.1.0
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}" -e ARCH="${ARCH}"
                -e CONF="${CONF}" -e ODP_CONFIG_FILE=/odp/platform/linux-generic/test/sched-basic.conf $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-native /odp/scripts/ci/check.sh
       - name: Failure log
@@ -188,7 +188,7 @@ jobs:
     runs-on: [self-hosted, ARM64]
     steps:
       - uses: AutoModality/action-clean@v1.1.0
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}" -e ARCH="${ARCH}"
                -e CONF="${CONF}" -e ODP_SCHEDULER=sp $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-native /odp/scripts/ci/check.sh
       - name: Failure log
@@ -200,7 +200,7 @@ jobs:
     runs-on: [self-hosted, ARM64]
     steps:
       - uses: AutoModality/action-clean@v1.1.0
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}" -e ARCH="${ARCH}"
                -e CONF="${CONF}" -e ODP_SCHEDULER=scalable -e CI_SKIP=pktio_test_pktin_event_sched $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-native /odp/scripts/ci/check.sh
       - name: Failure log
@@ -212,7 +212,7 @@ jobs:
     runs-on: [self-hosted, ARM64]
     steps:
       - uses: AutoModality/action-clean@v1.1.0
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}" -e ARCH="${ARCH}"
                -e CONF="${CONF}" -e ODP_CONFIG_FILE=/odp/platform/linux-generic/test/inline-timer.conf
                $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-native /odp/scripts/ci/check_inline_timer.sh
@@ -225,7 +225,7 @@ jobs:
     runs-on: [self-hosted, ARM64]
     steps:
       - uses: AutoModality/action-clean@v1.1.0
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}" -e ARCH="${ARCH}"
                -e CONF="${CONF}" -e ODP_CONFIG_FILE=/odp/platform/linux-generic/test/packet_align.conf
                $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-native /odp/scripts/ci/check_pktio.sh
@@ -238,7 +238,7 @@ jobs:
     runs-on: [self-hosted, ARM64]
     steps:
       - uses: AutoModality/action-clean@v1.1.0
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}" -e ARCH="${ARCH}"
                -e CONF="${CONF}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-native-dpdk_20.11 /odp/scripts/ci/check.sh
       - name: Failure log
@@ -250,7 +250,7 @@ jobs:
     runs-on: [self-hosted, ARM64]
     steps:
       - uses: AutoModality/action-clean@v1.1.0
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}" -e ARCH="${ARCH}"
                -e CONF="${CONF}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-native-dpdk_21.11 /odp/scripts/ci/check.sh
       - name: Failure log
