@@ -278,8 +278,13 @@ if WITH_ARMV8_CRYPTO
 __LIB__libodp_linux_la_SOURCES += \
 			   arch/aarch64/odp_crypto_armv8.c
 else
+if WITH_IPSECMB_CRYPTO
+__LIB__libodp_linux_la_SOURCES += \
+			   odp_crypto_ipsecmb.c
+else
 __LIB__libodp_linux_la_SOURCES += \
 			   odp_crypto_null.c
+endif
 endif
 endif
 if ODP_ABI_COMPAT
@@ -438,6 +443,7 @@ __LIB__libodp_linux_la_LIBADD += $(DPDK_LIBS_LIBODP)
 __LIB__libodp_linux_la_LIBADD += $(PTHREAD_LIBS)
 __LIB__libodp_linux_la_LIBADD += $(TIMER_LIBS)
 __LIB__libodp_linux_la_LIBADD += $(LIBXDP_LIBS)
+__LIB__libodp_linux_la_LIBADD += $(IPSEC_MB_LIBS)
 
 if ODP_PKTIO_PCAP
 __LIB__libodp_linux_la_LIBADD += $(PCAP_LIBS)
