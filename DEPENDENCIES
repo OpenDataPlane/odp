@@ -124,11 +124,39 @@ Prerequisites for building the OpenDataPlane (ODP) API
    $ ./configure --with-crypto=armv8crypto
    $ make
 
-3.4 Netmap packet I/O support (optional)
+3.4 Multi-buffer Crypto for IPsec Library (optional)
+
+   Multi-Buffer Crypto for IPsec Library is a set of functions that
+   implement authentication and encryption processing for IPsec, these functions
+   take advantage of SIMD instructions to improve performance.
+
+   Note ODP assumes that IPSec MB library is compiled with SAFE_PARAM enabled
+   (enabled by default), otherwise crypto operations with too long cipher/auth
+   ranges will have undefined behaviour.
+
+3.4.1 Building Multi-buffer Crypto for IPSec Library for Arm
+
+   # Checkout and build Arm code
+   $ git clone https://git.gitlab.arm.com/arm-reference-solutions/ipsec-mb.git
+   $ cd ipsec-mb/
+   $ git checkout SECLIB-IPSEC-2022.05.25
+   $ make
+   $ sudo make install
+
+   For additional instructions, refer to README.md in crypto library repository.
+
+3.4.2 Building ODP with Multi-buffer IPSec Library
+   $ ./bootstrap
+
+   # Compile and build ODP with Multi-buffer IPSec library
+   $ ./configure --with-crypto=ipsecmb
+   $ make
+
+3.5 Netmap packet I/O support (optional)
 
    Netmap accelerated ODP packet I/O.
 
-3.4.1 Building netmap kernel modules
+3.5.1 Building netmap kernel modules
 
    ODP works at least with the latest release version of netmap, which is
    currently v13.0. However, if possible one should try to use the latest netmap
@@ -172,14 +200,14 @@ Prerequisites for building the OpenDataPlane (ODP) API
    $ ./configure --kernel-sources=<path_to_kernel_src>
    $ make
 
-3.4.2 Building ODP
+3.5.2 Building ODP
 
    $ cd <odp_dir>
    $ ./bootstrap
    $ ./configure --with-netmap-path=<netmap_dir>
    $ make
 
-3.4.3 Inserting netmap kernel modules
+3.5.3 Inserting netmap kernel modules
 
    In order to use netmap I/O you need to insert at least the core netmap
    kernel module.
@@ -197,13 +225,13 @@ Prerequisites for building the OpenDataPlane (ODP) API
 
    To restore the original drivers you should be able to use modprobe.
 
-3.4.4 Running ODP with netmap I/O
+3.5.4 Running ODP with netmap I/O
 
    ODP applications will use netmap for packet I/O by default as long as the
    netmap kernel module is loaded. If socket I/O is desired instead, it can be
    activated by setting the environment variable ODP_PKTIO_DISABLE_NETMAP.
 
-3.5 DPDK packet I/O support (optional)
+3.6 DPDK packet I/O support (optional)
 
    Use DPDK for ODP packet I/O. Currently supported DPDK versions are v19.11,
    v20.11 (recommended), v21.11.
@@ -212,7 +240,7 @@ Prerequisites for building the OpenDataPlane (ODP) API
         https://github.com/OpenDataPlane/odp-dpdk.git
    for a full DPDK based ODP implementation.
 
-3.5.1 DPDK pktio requirements
+3.6.1 DPDK pktio requirements
 
    DPDK pktio adds a dependency to NUMA library.
    # Debian/Ubuntu
@@ -221,11 +249,11 @@ Prerequisites for building the OpenDataPlane (ODP) API
    # CentOS/RedHat/Fedora
    $ sudo yum install numactl-devel
 
-3.5.2 Native DPDK install
+3.6.2 Native DPDK install
    # Debian/Ubuntu starting from 20.04
    $ sudo apt-get install dpdk-dev
 
-3.5.3 Build DPDK v19.11 from source
+3.6.3 Build DPDK v19.11 from source
    $ git clone https://dpdk.org/git/dpdk-stable --branch 19.11 --depth 1 ./<dpdk-dir>
 
    # Make and edit DPDK configuration
@@ -243,7 +271,7 @@ Prerequisites for building the OpenDataPlane (ODP) API
    # Configure ODP
    $ ./configure --with-dpdk-path=<dpdk-dir>
 
-3.5.4 Build DPDK v20.11 and onwards from source
+3.6.4 Build DPDK v20.11 and onwards from source
    $ git clone https://dpdk.org/git/dpdk-stable --branch <version, e.g. 21.11> --depth 1 ./<dpdk-dir>
 
    # Prepare the build directory
@@ -263,7 +291,7 @@ Prerequisites for building the OpenDataPlane (ODP) API
    # Or, if DPDK was not installed to the default location, set PKG_CONFIG_PATH:
    $ PKG_CONFIG_PATH=<dpdk-dir>/install/lib/x86_64-linux-gnu/pkgconfig ./configure --enable-dpdk
 
-3.5.5 Setup system
+3.6.5 Setup system
 
    # Load DPDK modules
    $ sudo modprobe uio
@@ -275,7 +303,7 @@ Prerequisites for building the OpenDataPlane (ODP) API
    512 x 2MB huge pages. All this can be done with the DPDK setup script
    (<dpdk-dir>/usertools/dpdk-setup.sh).
 
-3.5.6 Running ODP with DPDK pktio
+3.6.6 Running ODP with DPDK pktio
 
    ODP applications will try use DPDK for packet I/O by default. If some other
    I/O type is desired instead, DPDK I/O can be disabled by setting the
@@ -291,7 +319,7 @@ Prerequisites for building the OpenDataPlane (ODP) API
    1024MB of memory:
    $ sudo ODP_PKTIO_DPDK_PARAMS="-m 1024" ./test/performance/odp_l2fwd -i 0 -c 1
 
-3.6 AF_XDP socket based packet I/O support (optional)
+3.7 AF_XDP socket based packet I/O support (optional)
 
    Use AF_XDP socket for packet I/O. At the moment, only zero-copy variant is
    supported, requiring a kernel version 5.4 or higher. Additionally, if packet
@@ -308,7 +336,7 @@ Prerequisites for building the OpenDataPlane (ODP) API
    Note that, currently, AF_XDP socket packet I/O cannot be instantiated if
    DPDK zero-copy is enabled.
 
-3.6.1 AF_XDP socket packet I/O requirements
+3.7.1 AF_XDP socket packet I/O requirements
 
    AF_XDP socket packet I/O implementation requires libxdp and libbpf libraries.
    They can be fetched from XDP-project in GitHub:
@@ -330,14 +358,14 @@ Prerequisites for building the OpenDataPlane (ODP) API
    $ cd <path to built libbpf>
    $ make install
 
-3.6.2 Build ODP with AF_XDP socket packet I/O support
+3.7.2 Build ODP with AF_XDP socket packet I/O support
 
    After building and installing libxdp and libbpf, ODP can be configured to be
    built with AF_XDP support (pass PKG_CONFIG_PATH if needed).
 
    $ ./configure --enable-xdp
 
-3.6.3 Running ODP with AF_XDP socket packet I/O
+3.7.3 Running ODP with AF_XDP socket packet I/O
 
    AF_XDP socket packet I/Os bind to TRX-combined queues. Based on the packet
    prosessing needs, NIC(s) of the environment should be configured

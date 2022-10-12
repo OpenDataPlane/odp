@@ -35,4 +35,7 @@
 /* Define to 1 to enable XDP support */
 #undef _ODP_PKTIO_XDP
 
+/* Define to 1 to enable IPSec MB crypto support */
+#undef _ODP_IPSECMB
+
 #endif
