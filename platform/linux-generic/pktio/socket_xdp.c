@@ -652,9 +652,9 @@ static void handle_pending_tx(xdp_sock_t *sock, uint8_t *base_addr, int num)
 	compl_q = &sock->compl_q;
 	sent = xsk_ring_cons__peek(compl_q, num, &start_idx);
 
-	odp_packet_t packets[sent];
-
 	if (sent) {
+		odp_packet_t packets[sent];
+
 		for (uint32_t i = 0U; i < sent; ++i) {
 			frame_off = *xsk_ring_cons__comp_addr(compl_q, start_idx++);
 			frame_off = xsk_umem__extract_addr(frame_off);
