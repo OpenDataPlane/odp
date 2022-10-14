@@ -13,6 +13,10 @@
 
 #include <odp/api/abi/spinlock_recursive.h>
 
+#include <odp/api/plat/debug_inlines.h>
+
+#include <stdint.h>
+
 /** @cond _ODP_HIDE_FROM_DOXYGEN_ */
 
 #ifndef _ODP_NO_INLINE
@@ -43,6 +47,7 @@ _ODP_INLINE void odp_spinlock_recursive_lock(odp_spinlock_recursive_t *rlock)
 	int thr = odp_thread_id();
 
 	if (rlock->owner == thr) {
+		_ODP_ASSERT(rlock->cnt < UINT32_MAX);
 		rlock->cnt++;
 		return;
 	}
@@ -57,6 +62,7 @@ _ODP_INLINE int odp_spinlock_recursive_trylock(odp_spinlock_recursive_t *rlock)
 	int thr = odp_thread_id();
 
 	if (rlock->owner == thr) {
+		_ODP_ASSERT(rlock->cnt < UINT32_MAX);
 		rlock->cnt++;
 		return 1;
 	}
@@ -72,6 +78,7 @@ _ODP_INLINE int odp_spinlock_recursive_trylock(odp_spinlock_recursive_t *rlock)
 
 _ODP_INLINE void odp_spinlock_recursive_unlock(odp_spinlock_recursive_t *rlock)
 {
+	_ODP_ASSERT(rlock->cnt);
 	rlock->cnt--;
 
 	if (rlock->cnt > 0)
