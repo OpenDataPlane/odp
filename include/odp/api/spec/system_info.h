@@ -24,6 +24,9 @@ extern "C" {
  *  @{
  */
 
+/** Maximum memory block name length in chars (including null char) */
+#define ODP_SYSTEM_MEMBLOCK_NAME_LEN 64
+
 /**
  * CPU instruction set architecture (ISA) families
  */
@@ -192,6 +195,70 @@ typedef struct odp_system_info_t {
 } odp_system_info_t;
 
 /**
+ * Memory information
+ */
+typedef struct odp_system_meminfo_t {
+	/**
+	 * Total mapped memory
+	 *
+	 * Total amount of memory (in bytes) in all memory pages that are reserved by
+	 * this ODP instance from the system.
+	 */
+	uint64_t total_mapped;
+
+	/**
+	 * Total memory usage
+	 *
+	 * Total amount of memory (in bytes) that is currently in use by this ODP instance.
+	 * This is a subset of 'total_mapped' bytes.
+	 */
+	uint64_t total_used;
+
+	/**
+	 * Total memory usage overheads
+	 *
+	 * Total amount of memory (in bytes) that is currently consumed by roundings to
+	 * alignment/block/page size limits, etc. overheads. This is a subset of 'total_used'
+	 * bytes.
+	 */
+	uint64_t total_overhead;
+
+} odp_system_meminfo_t;
+
+/**
+ * Memory block information
+ */
+typedef struct odp_system_memblock_t {
+	/** Memory block name */
+	char name[ODP_SYSTEM_MEMBLOCK_NAME_LEN];
+
+	/** Start address of the block */
+	uintptr_t addr;
+
+	/**
+	 * Memory usage
+	 *
+	 * Total amount of memory (in bytes) that is used by this block.
+	 */
+	uint64_t used;
+
+	/**
+	 * Memory usage overheads
+	 *
+	 * Total amount of memory (in bytes) that is currently consumed by rounding to
+	 * alignment/block/page size limits, etc. overheads. This is a subset of 'used' bytes.
+	 */
+	uint64_t overhead;
+
+	/** Memory page size in bytes
+	 *
+	 *  Page size used for this block.
+	 */
+	uint64_t page_size;
+
+} odp_system_memblock_t;
+
+/**
  * Retrieve system information
  *
  * Fills in system information structure on success. The call is not intended
@@ -203,6 +270,27 @@ typedef struct odp_system_info_t {
  * @retval <0 on failure
  */
 int odp_system_info(odp_system_info_t *info);
+
+/**
+ * Retrieve ODP memory usage information
+ *
+ * Retrieves information about ODP memory usage for debugging and monitoring purposes. A successful
+ * call fills in system memory info and outputs up to 'num' elements into memory block info array.
+ * Each array element represents a memory block used due to an API call (SHM reservation, pool
+ * creation, etc) or an implementation internal memory allocation.
+ *
+ * When return value is 'num' or less, it indicates the number of elements written. If return value
+ * is larger than 'num', all 'num' elements were written and the return value indicates the number
+ * of elements that would have been written into a large enough array.
+ *
+ * @param[out] info     Pointer to memory info struct for output
+ * @param[out] block    Pointer memory block info array for output
+ * @param      num      Maximum number of array elements to output (0 ... array size)
+ *
+ * @return  Number of array elements written / would have been written
+ * @retval <0 on failure
+ */
+int32_t odp_system_meminfo(odp_system_meminfo_t *info, odp_system_memblock_t block[], int32_t num);
 
 /**
  * Default system huge page size in bytes
