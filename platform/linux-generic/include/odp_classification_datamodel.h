@@ -159,7 +159,6 @@ typedef struct ODP_ALIGNED_CACHE cos_s {
 /* Pattern Matching Rule */
 typedef struct ODP_ALIGNED_CACHE pmr_s {
 	uint32_t valid;			/* Validity Flag */
-	odp_atomic_u32_t count;		/* num of packets matching this rule */
 	uint32_t num_pmr;		/* num of PMR Term Values*/
 	uint16_t mark;
 	odp_spinlock_t lock;		/* pmr lock*/
