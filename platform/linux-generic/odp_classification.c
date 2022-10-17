@@ -363,7 +363,6 @@ odp_pmr_t alloc_pmr(pmr_t **pmr)
 		LOCK(&pmr_tbl->pmr[i].lock);
 		if (0 == pmr_tbl->pmr[i].valid) {
 			pmr_tbl->pmr[i].valid = 1;
-			odp_atomic_init_u32(&pmr_tbl->pmr[i].count, 0);
 			pmr_tbl->pmr[i].num_pmr = 0;
 			*pmr = &pmr_tbl->pmr[i];
 			/* return as locked */
@@ -1446,7 +1445,6 @@ static int verify_pmr(pmr_t *pmr, const uint8_t *pkt_addr,
 		if (pmr_failure)
 			return 0;
 	}
-	odp_atomic_inc_u32(&pmr->count);
 	return 1;
 }
 
