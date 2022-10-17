@@ -161,10 +161,10 @@ typedef struct ODP_ALIGNED_CACHE pmr_s {
 	uint32_t valid;			/* Validity Flag */
 	uint32_t num_pmr;		/* num of PMR Term Values*/
 	uint16_t mark;
-	odp_spinlock_t lock;		/* pmr lock*/
-	cos_t *src_cos;			/* source CoS where PMR is attached */
 	pmr_term_value_t  pmr_term_value[CLS_PMRTERM_MAX];
 			/* List of associated PMR Terms */
+	odp_spinlock_t lock;		/* pmr lock*/
+	cos_t *src_cos;			/* source CoS where PMR is attached */
 } pmr_t;
 
 typedef struct ODP_ALIGNED_CACHE {
