@@ -36,6 +36,9 @@
 /* Minimum number of packets to receive in CI test */
 #define MIN_RX_PACKETS_CI 800
 
+/* Identifier for payload-timestamped packets */
+#define TS_MAGIC 0xff88ee99ddaaccbb
+
 ODP_STATIC_ASSERT(MAX_PKTIOS <= UINT8_MAX, "Interface index must fit into uint8_t\n");
 
 typedef struct test_options_t {
@@ -65,6 +68,7 @@ typedef struct test_options_t {
 	uint32_t mtu;
 	odp_bool_t use_refs;
 	odp_bool_t promisc_mode;
+	odp_bool_t calc_latency;
 
 	struct vlan_hdr {
 		uint16_t tpid;
@@ -96,6 +100,10 @@ typedef struct ODP_ALIGNED_CACHE thread_stat_t {
 	uint64_t rx_timeouts;
 	uint64_t rx_packets;
 	uint64_t rx_bytes;
+	uint64_t rx_lat_nsec;
+	uint64_t rx_lat_min_nsec;
+	uint64_t rx_lat_max_nsec;
+	uint64_t rx_lat_packets;
 
 	uint64_t tx_timeouts;
 	uint64_t tx_packets;
@@ -136,6 +144,18 @@ typedef struct test_global_t {
 	uint8_t if_from_pktio_idx[MAX_PKTIO_INDEXES];
 
 } test_global_t;
+
+typedef struct ODP_PACKED {
+	uint64_t magic;
+	uint64_t tx_ts;
+} ts_data_t;
+
+typedef struct {
+	uint64_t nsec;
+	uint64_t min;
+	uint64_t max;
+	uint64_t packets;
+} rx_lat_data_t;
 
 static test_global_t *test_global;
 
@@ -188,6 +208,8 @@ static void print_usage(void)
 	       "  -o, --udp_src             UDP source port. Default: 10000\n"
 	       "  -p, --udp_dst             UDP destination port. Default: 20000\n"
 	       "  -P, --promisc_mode        Enable promiscuous mode.\n"
+	       "  -a, --latency             Calculate latency. Disables packet references (see\n"
+	       "                            \"--no_pkt_refs\").\n"
 	       "  -c, --c_mode <counts>     Counter mode for incrementing UDP port numbers.\n"
 	       "                            Specify the number of port numbers used starting from\n"
 	       "                            udp_src/udp_dst. Comma-separated (no spaces) list of\n"
@@ -272,6 +294,7 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 		{"udp_src",     required_argument, NULL, 'o'},
 		{"udp_dst",     required_argument, NULL, 'p'},
 		{"promisc_mode", no_argument,      NULL, 'P'},
+		{"latency",     no_argument,       NULL, 'a'},
 		{"c_mode",      required_argument, NULL, 'c'},
 		{"mtu",         required_argument, NULL, 'M'},
 		{"quit",        required_argument, NULL, 'q'},
@@ -282,7 +305,7 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+i:e:r:t:n:l:L:RM:b:x:g:v:s:d:o:p:c:q:u:w:W:Ph";
+	static const char *shortopts = "+i:e:r:t:n:l:L:RM:b:x:g:v:s:d:o:p:c:q:u:w:W:Pah";
 
 	test_options->num_pktio  = 0;
 	test_options->num_rx     = 1;
@@ -296,6 +319,7 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 	test_options->gap_nsec   = 1000000;
 	test_options->num_vlan   = 0;
 	test_options->promisc_mode = 0;
+	test_options->calc_latency = 0;
 	strncpy(test_options->ipv4_src_s, "192.168.0.1",
 		sizeof(test_options->ipv4_src_s) - 1);
 	strncpy(test_options->ipv4_dst_s, "192.168.0.2",
@@ -409,6 +433,9 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 			break;
 		case 'P':
 			test_options->promisc_mode = 1;
+			break;
+		case 'a':
+			test_options->calc_latency = 1;
 			break;
 		case 'r':
 			test_options->num_rx = atoi(optarg);
@@ -559,6 +586,9 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 		       min_packets);
 		ret = -1;
 	}
+
+	if (test_options->calc_latency)
+		test_options->use_refs = 0;
 
 	if (test_options->gap_nsec) {
 		double gap_hz = 1000000000.0 / test_options->gap_nsec;
@@ -1032,6 +1062,28 @@ static int close_pktios(test_global_t *global)
 	return ret;
 }
 
+static inline void get_timestamp(odp_packet_t pkt, uint32_t ts_off, rx_lat_data_t *lat_data,
+				 uint64_t rx_ts)
+{
+	ts_data_t ts_data;
+	uint64_t nsec;
+
+	if (odp_unlikely(odp_packet_copy_to_mem(pkt, ts_off, sizeof(ts_data), &ts_data) < 0 ||
+			 ts_data.magic != TS_MAGIC))
+		return;
+
+	nsec = rx_ts - ts_data.tx_ts;
+
+	if (nsec < lat_data->min)
+		lat_data->min = nsec;
+
+	if (nsec > lat_data->max)
+		lat_data->max = nsec;
+
+	lat_data->nsec += nsec;
+	lat_data->packets++;
+}
+
 static int rx_thread(void *arg)
 {
 	int i, thr, num;
@@ -1052,6 +1104,9 @@ static int rx_thread(void *arg)
 	int paused = 0;
 	int max_num = 32;
 	odp_event_t ev[max_num];
+	uint32_t ts_off = global->test_options.calc_latency ? global->test_options.hdr_len : 0;
+	uint64_t rx_ts;
+	rx_lat_data_t rx_lat_data = { .nsec = 0, .min = UINT64_MAX, .max = 0, .packets = 0 };
 
 	thr = odp_thread_id();
 	global->stat[thr].thread_type = RX_THREAD;
@@ -1061,7 +1116,7 @@ static int rx_thread(void *arg)
 
 	while (1) {
 		num = odp_schedule_multi_no_wait(NULL, ev, max_num);
-
+		rx_ts = odp_time_global_ns();
 		exit_test = odp_atomic_load_u32(&global->exit_test);
 		if (exit_test) {
 			/* Wait 1 second for possible in flight packets sent by the tx threads */
@@ -1102,6 +1157,9 @@ static int rx_thread(void *arg)
 		for (i = 0; i < num; i++) {
 			pkt = odp_packet_from_event(ev[i]);
 			bytes += odp_packet_len(pkt);
+
+			if (ts_off)
+				get_timestamp(pkt, ts_off, &rx_lat_data, rx_ts);
 		}
 
 		rx_packets += num;
@@ -1125,10 +1183,14 @@ static int rx_thread(void *arg)
 		nsec = odp_time_diff_ns(t2, t1);
 
 	/* Update stats*/
-	global->stat[thr].time_nsec   = nsec;
-	global->stat[thr].rx_timeouts = rx_timeouts;
-	global->stat[thr].rx_packets  = rx_packets;
-	global->stat[thr].rx_bytes    = rx_bytes;
+	global->stat[thr].time_nsec       = nsec;
+	global->stat[thr].rx_timeouts     = rx_timeouts;
+	global->stat[thr].rx_packets      = rx_packets;
+	global->stat[thr].rx_bytes        = rx_bytes;
+	global->stat[thr].rx_lat_nsec     = rx_lat_data.nsec;
+	global->stat[thr].rx_lat_min_nsec = rx_lat_data.min;
+	global->stat[thr].rx_lat_max_nsec = rx_lat_data.max;
+	global->stat[thr].rx_lat_packets  = rx_lat_data.packets;
 
 	return ret;
 }
@@ -1227,9 +1289,10 @@ static int init_packets(test_global_t *global, int pktio,
 		udp->length   = odp_cpu_to_be_16(payload_len + ODPH_UDPHDR_LEN);
 		udp->chksum   = 0;
 
-		/* Init UDP payload until the end of the first segment */
 		u8  = data;
 		u8 += hdr_len;
+
+		/* Init UDP payload until the end of the first segment */
 		for (j = 0; j < seg_len - hdr_len; j++)
 			u8[j] = j;
 
@@ -1239,7 +1302,9 @@ static int init_packets(test_global_t *global, int pktio,
 		odp_packet_has_eth_set(pkt, 1);
 		odp_packet_has_ipv4_set(pkt, 1);
 		odp_packet_has_udp_set(pkt, 1);
-		udp->chksum = odph_ipv4_udp_chksum(pkt);
+
+		if (!test_options->calc_latency)
+			udp->chksum = odph_ipv4_udp_chksum(pkt);
 
 		/* Increment port numbers */
 		if (test_options->c_mode.udp_src) {
@@ -1290,9 +1355,18 @@ static inline int update_rand_data(uint8_t *data, uint32_t data_len)
 	return 0;
 }
 
+static inline void set_timestamp(odp_packet_t pkt, uint32_t ts_off)
+{
+	const ts_data_t ts_data = { .magic = TS_MAGIC, .tx_ts = odp_time_global_ns() };
+	odph_udphdr_t *udp = odp_packet_l4_ptr(pkt, NULL);
+
+	(void)odp_packet_copy_from_mem(pkt, ts_off, sizeof(ts_data), &ts_data);
+	udp->chksum = odph_ipv4_udp_chksum(pkt);
+}
+
 static inline int send_burst(odp_pktout_queue_t pktout, odp_packet_t pkt[],
 			     int burst_size, odp_bool_t use_rand_len, odp_bool_t use_refs,
-			     uint32_t pkts_per_pktio, uint64_t *sent_bytes) {
+			     uint32_t ts_off, uint32_t pkts_per_pktio, uint64_t *sent_bytes) {
 	int i;
 	int ret = 0;
 	int num = burst_size;
@@ -1326,6 +1400,9 @@ static inline int send_burst(odp_pktout_queue_t pktout, odp_packet_t pkt[],
 		} else {
 			out_pkt[i] = pkt[idx];
 			pkt[idx] = ODP_PACKET_INVALID;
+
+			if (ts_off)
+				set_timestamp(out_pkt[i], ts_off);
 		}
 		bytes_total += odp_packet_len(out_pkt[i]);
 	}
@@ -1468,6 +1545,7 @@ static int tx_thread(void *arg)
 	int num_pkt;
 	odp_pktout_queue_t pktout[num_pktio];
 	uint32_t pkts_per_pktio = bursts * burst_size;
+	uint32_t ts_off = test_options->calc_latency ? test_options->hdr_len : 0;
 
 	if (use_rand_len) {
 		uint32_t pkt_sizes = test_options->rand_pkt_len_max -
@@ -1536,7 +1614,7 @@ static int tx_thread(void *arg)
 
 			for (j = 0; j < bursts; j++) {
 				sent = send_burst(pktout[i], &pkt[first + j * burst_size],
-						  burst_size, use_rand_len, use_refs,
+						  burst_size, use_rand_len, use_refs, ts_off,
 						  pkts_per_pktio, &sent_bytes);
 
 				if (odp_unlikely(sent < 0)) {
@@ -1687,6 +1765,28 @@ static void periodic_print_loop(test_global_t *global)
 	}
 }
 
+static void print_humanised_time(double time_nsec)
+{
+	if (time_nsec > ODP_TIME_SEC_IN_NS)
+		printf("%.2f s\n", time_nsec / ODP_TIME_SEC_IN_NS);
+	else if (time_nsec > ODP_TIME_MSEC_IN_NS)
+		printf("%.2f ms\n", time_nsec / ODP_TIME_MSEC_IN_NS);
+	else if (time_nsec > ODP_TIME_USEC_IN_NS)
+		printf("%.2f us\n", time_nsec / ODP_TIME_USEC_IN_NS);
+	else
+		printf("%.0f ns\n", time_nsec);
+}
+
+static void print_humanised_latency(double lat_nsec, double lat_min_nsec, double lat_max_nsec)
+{
+	printf("  rx ave packet latency:      ");
+	print_humanised_time(lat_nsec);
+	printf("  rx min packet latency:      ");
+	print_humanised_time(lat_min_nsec);
+	printf("  rx max packet latency:      ");
+	print_humanised_time(lat_max_nsec);
+}
+
 static int print_final_stat(test_global_t *global)
 {
 	int i, num_thr;
@@ -1698,6 +1798,10 @@ static int print_final_stat(test_global_t *global)
 	uint64_t rx_pkt_sum = 0;
 	uint64_t rx_byte_sum = 0;
 	uint64_t rx_tmo_sum = 0;
+	uint64_t rx_lat_nsec_sum = 0;
+	uint64_t rx_lat_min_nsec = UINT64_MAX;
+	uint64_t rx_lat_max_nsec = 0;
+	uint64_t rx_lat_pkt_sum = 0;
 	uint64_t tx_nsec_sum = 0;
 	uint64_t tx_pkt_sum = 0;
 	uint64_t tx_byte_sum = 0;
@@ -1707,6 +1811,7 @@ static int print_final_stat(test_global_t *global)
 	double rx_byte_per_sec = 0.0;
 	double rx_pkt_len = 0.0;
 	double rx_sec = 0.0;
+	double rx_ave_lat_nsec = 0.0;
 	double tx_pkt_per_sec = 0.0;
 	double tx_byte_per_sec = 0.0;
 	double tx_sec = 0.0;
@@ -1752,15 +1857,22 @@ static int print_final_stat(test_global_t *global)
 
 	for (i = 0; i < ODP_THREAD_COUNT_MAX; i++) {
 		if (global->stat[i].thread_type == RX_THREAD) {
-			rx_tmo_sum  += global->stat[i].rx_timeouts;
-			rx_pkt_sum  += global->stat[i].rx_packets;
-			rx_byte_sum += global->stat[i].rx_bytes;
-			rx_nsec_sum += global->stat[i].time_nsec;
+			rx_tmo_sum      += global->stat[i].rx_timeouts;
+			rx_pkt_sum      += global->stat[i].rx_packets;
+			rx_byte_sum     += global->stat[i].rx_bytes;
+			rx_nsec_sum     += global->stat[i].time_nsec;
+			rx_lat_nsec_sum += global->stat[i].rx_lat_nsec;
+			rx_lat_pkt_sum  += global->stat[i].rx_lat_packets;
 
+			if (global->stat[i].rx_lat_min_nsec < rx_lat_min_nsec)
+				rx_lat_min_nsec = global->stat[i].rx_lat_min_nsec;
+
+			if (global->stat[i].rx_lat_max_nsec > rx_lat_max_nsec)
+				rx_lat_max_nsec = global->stat[i].rx_lat_max_nsec;
 		} else if (global->stat[i].thread_type == TX_THREAD) {
 			tx_tmo_sum  += global->stat[i].tx_timeouts;
 			tx_pkt_sum  += global->stat[i].tx_packets;
-			tx_byte_sum  += global->stat[i].tx_bytes;
+			tx_byte_sum += global->stat[i].tx_bytes;
 			tx_drop_sum += global->stat[i].tx_drops;
 			tx_nsec_sum += global->stat[i].time_nsec;
 		}
@@ -1796,6 +1908,9 @@ static int print_final_stat(test_global_t *global)
 	if (rx_pkt_sum)
 		rx_pkt_len = (double)rx_byte_sum / rx_pkt_sum;
 
+	if (rx_lat_pkt_sum)
+		rx_ave_lat_nsec = (double)rx_lat_nsec_sum / rx_lat_pkt_sum;
+
 	printf("TOTAL (%i rx and %i tx threads)\n", num_rx, num_tx);
 	printf("  rx timeouts:                %" PRIu64 "\n", rx_tmo_sum);
 	printf("  rx time spent (sec):        %.3f\n", rx_sec);
@@ -1805,6 +1920,10 @@ static int print_final_stat(test_global_t *global)
 	printf("  rx packets per thr per sec: %.1f\n", rx_pkt_per_sec);
 	printf("  rx packets per sec:         %.1f\n", num_rx * rx_pkt_per_sec);
 	printf("  rx ave packet len:          %.1f\n", rx_pkt_len);
+
+	if (rx_lat_pkt_sum)
+		print_humanised_latency(rx_ave_lat_nsec, rx_lat_min_nsec, rx_lat_max_nsec);
+
 	printf("  rx Mbit/s:                  %.1f\n", rx_mbit_per_sec);
 	printf("\n");
 	printf("  tx timeouts:                %" PRIu64 "\n", tx_tmo_sum);
