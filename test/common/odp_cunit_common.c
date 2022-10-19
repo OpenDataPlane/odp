@@ -36,6 +36,7 @@ static int allow_skip_result;
 static odph_thread_t thread_tbl[ODP_THREAD_COUNT_MAX];
 static int threads_running;
 static odp_instance_t instance;
+static bool control_thread;
 static char *progname;
 static int (*thread_func)(void *);
 
@@ -260,6 +261,7 @@ static int tests_global_init(odp_instance_t *inst)
 {
 	odp_init_t init_param;
 	odph_helper_options_t helper_options;
+	odp_thread_type_t thr_type;
 
 	if (odph_options(&helper_options)) {
 		fprintf(stderr, "error: odph_options() failed.\n");
@@ -273,7 +275,9 @@ static int tests_global_init(odp_instance_t *inst)
 		fprintf(stderr, "error: odp_init_global() failed.\n");
 		return -1;
 	}
-	if (0 != odp_init_local(*inst, ODP_THREAD_CONTROL)) {
+
+	thr_type = control_thread ? ODP_THREAD_CONTROL : ODP_THREAD_WORKER;
+	if (0 != odp_init_local(*inst, thr_type)) {
 		fprintf(stderr, "error: odp_init_local() failed.\n");
 		return -1;
 	}
@@ -706,10 +710,14 @@ int odp_cunit_register(odp_suiteinfo_t testsuites[])
  */
 int odp_cunit_parse_options(int argc, char *argv[])
 {
+	const char *ctrl_thread_env = getenv("CI_THREAD_TYPE_CONTROL");
 	const char *env = getenv("CI");
 
 	progname = argv[0];
 	odph_parse_options(argc, argv);
+	/* Check if we need to use control thread */
+	if (ctrl_thread_env && !strcmp(ctrl_thread_env, "true"))
+		control_thread = true;
 
 	if (env && !strcmp(env, "true")) {
 		allow_skip_result = 1;
