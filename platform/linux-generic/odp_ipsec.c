@@ -403,6 +403,8 @@ typedef struct {
 	uint8_t	iv[IPSEC_MAX_IV_LEN];
 } ipsec_state_t;
 
+#define MAX_BURST 32
+
 typedef struct {
 	ipsec_state_t state;
 	odp_ipsec_op_status_t status;
@@ -2128,10 +2130,10 @@ finish:
 int odp_ipsec_in(const odp_packet_t pkt_in[], int num_in, odp_packet_t pkt_out[], int *num_out,
 		 const odp_ipsec_in_param_t *param)
 {
-	int max_out = _ODP_MIN(num_in, *num_out), num_crypto;
-	odp_packet_t crypto_pkts[max_out];
-	odp_crypto_packet_op_param_t crypto_param[max_out];
-	ipsec_op_t ops[max_out], *crypto_ops[max_out];
+	int max_out = _ODP_MIN(_ODP_MIN(num_in, *num_out), MAX_BURST), num_crypto;
+	odp_packet_t crypto_pkts[MAX_BURST];
+	odp_crypto_packet_op_param_t crypto_param[MAX_BURST];
+	ipsec_op_t ops[MAX_BURST], *crypto_ops[MAX_BURST];
 
 	ipsec_in_prepare(pkt_in, pkt_out, max_out, param, ops, crypto_pkts, crypto_param,
 			 crypto_ops, &num_crypto);
@@ -2244,10 +2246,10 @@ finish:
 int odp_ipsec_out(const odp_packet_t pkt_in[], int num_in, odp_packet_t pkt_out[], int *num_out,
 		  const odp_ipsec_out_param_t *param)
 {
-	int max_out = _ODP_MIN(num_in, *num_out), num_crypto;
-	odp_packet_t crypto_pkts[max_out];
-	odp_crypto_packet_op_param_t crypto_param[max_out];
-	ipsec_op_t ops[max_out], *crypto_ops[max_out];
+	int max_out = _ODP_MIN(_ODP_MIN(num_in, *num_out), MAX_BURST), num_crypto;
+	odp_packet_t crypto_pkts[MAX_BURST];
+	odp_crypto_packet_op_param_t crypto_param[MAX_BURST];
+	ipsec_op_t ops[MAX_BURST], *crypto_ops[MAX_BURST];
 
 	ipsec_out_prepare(pkt_in, pkt_out, max_out, param, ops, crypto_pkts, crypto_param,
 			  crypto_ops, &num_crypto, false);
@@ -2267,32 +2269,32 @@ int odp_ipsec_out(const odp_packet_t pkt_in[], int num_in, odp_packet_t pkt_out[
  * these routines return (and all side effects are visible to the disabling thread). */
 int odp_ipsec_in_enq(const odp_packet_t pkt_in[], int num_in, const odp_ipsec_in_param_t *param)
 {
-	int num_crypto;
-	odp_packet_t pkt_out[num_in], crypto_pkts[num_in];
-	odp_crypto_packet_op_param_t crypto_param[num_in];
-	ipsec_op_t ops[num_in], *crypto_ops[num_in];
+	int max_out = _ODP_MIN(num_in, MAX_BURST), num_crypto;
+	odp_packet_t pkt_out[MAX_BURST], crypto_pkts[MAX_BURST];
+	odp_crypto_packet_op_param_t crypto_param[MAX_BURST];
+	ipsec_op_t ops[MAX_BURST], *crypto_ops[MAX_BURST];
 
-	ipsec_in_prepare(pkt_in, pkt_out, num_in, param, ops, crypto_pkts, crypto_param,
+	ipsec_in_prepare(pkt_in, pkt_out, max_out, param, ops, crypto_pkts, crypto_param,
 			 crypto_ops, &num_crypto);
 	ipsec_do_crypto_burst(crypto_pkts, crypto_param, crypto_ops, num_crypto);
-	ipsec_in_finalize(pkt_out, ops, num_in, true);
+	ipsec_in_finalize(pkt_out, ops, max_out, true);
 
-	return num_in;
+	return max_out;
 }
 
 int odp_ipsec_out_enq(const odp_packet_t pkt_in[], int num_in, const odp_ipsec_out_param_t *param)
 {
-	int num_crypto;
-	odp_packet_t pkt_out[num_in], crypto_pkts[num_in];
-	odp_crypto_packet_op_param_t crypto_param[num_in];
-	ipsec_op_t ops[num_in], *crypto_ops[num_in];
+	int max_out = _ODP_MIN(num_in, MAX_BURST), num_crypto;
+	odp_packet_t pkt_out[MAX_BURST], crypto_pkts[MAX_BURST];
+	odp_crypto_packet_op_param_t crypto_param[MAX_BURST];
+	ipsec_op_t ops[MAX_BURST], *crypto_ops[MAX_BURST];
 
-	ipsec_out_prepare(pkt_in, pkt_out, num_in, param, ops, crypto_pkts, crypto_param,
+	ipsec_out_prepare(pkt_in, pkt_out, max_out, param, ops, crypto_pkts, crypto_param,
 			  crypto_ops, &num_crypto, true);
 	ipsec_do_crypto_burst(crypto_pkts, crypto_param, crypto_ops, num_crypto);
-	ipsec_out_finalize(pkt_out, ops, num_in, true);
+	ipsec_out_finalize(pkt_out, ops, max_out, true);
 
-	return num_in;
+	return max_out;
 }
 
 int _odp_ipsec_try_inline(odp_packet_t *pkt)
@@ -2499,18 +2501,18 @@ int odp_ipsec_out_inline(const odp_packet_t pkt_in[], int num_in,
 			 const odp_ipsec_out_param_t *param,
 			 const odp_ipsec_out_inline_param_t *inline_param)
 {
-	int num_crypto;
-	odp_packet_t pkt_out[num_in], crypto_pkts[num_in];
-	odp_crypto_packet_op_param_t crypto_param[num_in];
-	ipsec_inline_op_t ops[num_in];
-	ipsec_op_t *crypto_ops[num_in];
+	int max_out = _ODP_MIN(num_in, MAX_BURST), num_crypto;
+	odp_packet_t pkt_out[MAX_BURST], crypto_pkts[MAX_BURST];
+	odp_crypto_packet_op_param_t crypto_param[MAX_BURST];
+	ipsec_inline_op_t ops[MAX_BURST];
+	ipsec_op_t *crypto_ops[MAX_BURST];
 
-	ipsec_out_inline_prepare(pkt_in, pkt_out, num_in, param, inline_param, ops, crypto_pkts,
+	ipsec_out_inline_prepare(pkt_in, pkt_out, max_out, param, inline_param, ops, crypto_pkts,
 				 crypto_param, crypto_ops, &num_crypto);
 	ipsec_do_crypto_burst(crypto_pkts, crypto_param, crypto_ops, num_crypto);
-	ipsec_out_inline_finalize(pkt_out, inline_param, ops, num_in);
+	ipsec_out_inline_finalize(pkt_out, inline_param, ops, max_out);
 
-	return num_in;
+	return max_out;
 }
 
 int odp_ipsec_test_sa_update(odp_ipsec_sa_t sa,
