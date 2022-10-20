@@ -7,7 +7,6 @@
  */
 
 #include <odp_posix_extensions.h>
-#include <odp/autoheader_internal.h>
 
 #include <odp/api/crypto.h>
 #include <odp/api/spinlock.h>
@@ -34,7 +33,7 @@
 /* Length in bytes */
 #define ARM_CRYPTO_MAX_CIPHER_KEY_LENGTH      32
 #define ARM_CRYPTO_MAX_AUTH_KEY_LENGTH        32
-#define ARM_CRYPTO_MAX_IV_LENGTH              16
+#define ARM_CRYPTO_MAX_IV_LENGTH              32
 #define ARM_CRYPTO_MAX_DATA_LENGTH	      65536
 #define ARM_CRYPTO_MAX_DIGEST_LENGTH          16
 
@@ -51,7 +50,8 @@ static const odp_crypto_cipher_capability_t cipher_capa_null[] = {
 {.key_len = 0, .iv_len = 0} };
 
 static const odp_crypto_cipher_capability_t cipher_capa_zuc_eea3[] = {
-{.key_len = 16, .iv_len = 16} };
+{.key_len = 16, .iv_len = 16},
+{.key_len = 32, .iv_len = 25} };
 
 /*
  * Authentication algorithm capabilities
@@ -63,7 +63,9 @@ static const odp_crypto_auth_capability_t auth_capa_null[] = {
 
 static const odp_crypto_auth_capability_t auth_capa_zuc_eia3[] = {
 {.digest_len = 4, .key_len = 16, .aad_len = {.min = 0, .max = 0, .inc = 0},
-	.iv_len = 16} };
+	.iv_len = 16},
+{.digest_len = 4, .key_len = 32, .aad_len = {.min = 0, .max = 0, .inc = 0},
+	.iv_len = 25} };
 
 /** Forward declaration of session structure */
 typedef struct odp_crypto_generic_session_t odp_crypto_generic_session_t;
@@ -239,11 +241,21 @@ void zuc_eea3_encrypt(odp_packet_t pkt,
 		local.packetLen[i] = param->cipher_range.length;
 	}
 
-	IMB_ZUC_EEA3_N_BUFFER(mb_mgr, (const void * const *)local.pKeys,
-			      (const void * const *)local.pIV,
-			      (const void * const *)local.pSrcData,
-			      (void **)local.pDstData, local.packetLen,
-			      MAX_BUFFERS);
+	if (session->p.cipher_key.length == 16) {
+		/* ZUC128 EEA3 */
+		IMB_ZUC_EEA3_N_BUFFER(mb_mgr, (const void * const *)local.pKeys,
+				      (const void * const *)local.pIV,
+				      (const void * const *)local.pSrcData,
+				      (void **)local.pDstData, local.packetLen,
+				      MAX_BUFFERS);
+	} else if (session->p.cipher_key.length == 32) {
+		/* ZUC256 EEA3 */
+		IMB_ZUC256_EEA3_1_BUFFER(mb_mgr, (const void *)local.pKeys[0],
+					 (const void *)local.pIV[0],
+					 (const void *)local.pSrcData[0],
+					 (void *)local.pDstData[0],
+					 local.packetLen[0]);
+	}
 
 	odp_packet_copy_from_mem(pkt, in_pos, in_len, local.pDstData[0]);
 
@@ -296,11 +308,21 @@ void zuc_eea3_decrypt(odp_packet_t pkt,
 		local.packetLen[i] = in_len;
 	}
 
-	IMB_ZUC_EEA3_N_BUFFER(mb_mgr, (const void * const *)local.pKeys,
-			      (const void * const *)local.pIV,
-			      (const void * const *)local.pSrcData,
-			      (void **)local.pDstData, local.packetLen,
-			      MAX_BUFFERS);
+	if (session->p.cipher_key.length == 16) {
+		/* ZUC128 EEA3 */
+		IMB_ZUC_EEA3_N_BUFFER(mb_mgr, (const void * const *)local.pKeys,
+				      (const void * const *)local.pIV,
+				      (const void * const *)local.pSrcData,
+				      (void **)local.pDstData, local.packetLen,
+				      MAX_BUFFERS);
+	} else if (session->p.cipher_key.length == 32) {
+		/* ZUC256 EEA3 */
+		IMB_ZUC256_EEA3_1_BUFFER(mb_mgr, (const void *)local.pKeys[0],
+					 (const void *)local.pIV[0],
+					 (const void *)local.pSrcData[0],
+					 (void *)local.pDstData[0],
+					 local.packetLen[0]);
+	}
 
 	odp_packet_copy_from_mem(pkt, in_pos, in_len, local.pDstData[0]);
 
@@ -311,11 +333,13 @@ void zuc_eea3_decrypt(odp_packet_t pkt,
 static int process_zuc_eea3_param(odp_crypto_generic_session_t *session)
 {
 	/* Verify key length is valid */
-	if (16 != session->p.cipher_key.length)
+	if (16 != session->p.cipher_key.length &&
+	    32 != session->p.cipher_key.length)
 		return -1;
 
 	/* Verify the IV length is correct */
-	if (16 != session->p.cipher_iv_len)
+	if (16 != session->p.cipher_iv_len &&
+	    25 != session->p.cipher_iv_len)
 		return -1;
 
 	memcpy(session->cipher.key_data, session->p.cipher_key.data,
@@ -376,11 +400,21 @@ void auth_zuc_eia3_gen(odp_packet_t pkt,
 		local.packetLen[i] = (param->auth_range.length) * 8;
 	}
 
-	IMB_ZUC_EIA3_N_BUFFER(mb_mgr, (const void * const *)local.pKeys,
-			      (const void * const *)local.pIV,
-			      (const void * const *)local.pSrcData,
-			      local.packetLen,
-			      (uint32_t **)local.pDstData, MAX_BUFFERS);
+	if (session->p.auth_key.length == 16) {
+		/* ZUC128 EIA3 */
+		IMB_ZUC_EIA3_N_BUFFER(mb_mgr, (const void * const *)local.pKeys,
+				      (const void * const *)local.pIV,
+				      (const void * const *)local.pSrcData,
+				      local.packetLen,
+				      (uint32_t **)local.pDstData, MAX_BUFFERS);
+	} else if (session->p.auth_key.length == 32) {
+		/* ZUC256 EIA3 */
+		IMB_ZUC256_EIA3_1_BUFFER(mb_mgr, (const void *)local.pKeys[0],
+					 (const void *)local.pIV[0],
+					 (const void *)local.pSrcData[0],
+					 local.packetLen[0],
+					 (uint32_t *)local.pDstData[0]);
+	}
 
 	/* Copy to the output location */
 	odp_packet_copy_from_mem(pkt, param->hash_result_offset,
@@ -441,11 +475,21 @@ void auth_zuc_eia3_check(odp_packet_t pkt,
 		local.packetLen[i] = (param->auth_range.length) * 8;
 	}
 
-	IMB_ZUC_EIA3_N_BUFFER(mb_mgr, (const void * const *)local.pKeys,
-			      (const void * const *)local.pIV,
-			      (const void * const *)local.pSrcData,
-			      local.packetLen,
-			      (uint32_t **)local.pDstData, MAX_BUFFERS);
+	if (session->p.auth_key.length == 16) {
+		/* ZUC128 EIA3 */
+		IMB_ZUC_EIA3_N_BUFFER(mb_mgr, (const void * const *)local.pKeys,
+				      (const void * const *)local.pIV,
+				      (const void * const *)local.pSrcData,
+				      local.packetLen,
+				      (uint32_t **)local.pDstData, MAX_BUFFERS);
+	} else if (session->p.auth_key.length == 32) {
+		/* ZUC256 EIA3 */
+		IMB_ZUC256_EIA3_1_BUFFER(mb_mgr, (const void *)local.pKeys[0],
+					 (const void *)local.pIV[0],
+					 (const void *)local.pSrcData[0],
+					 local.packetLen[0],
+					 (uint32_t *)local.pDstData[0]);
+	}
 
 	/* Verify match */
 	if (0 != memcmp(hash_in, local.pDstData[0], session->p.auth_digest_len))
@@ -468,11 +512,13 @@ err:
 static int process_auth_zuc_eia3_param(odp_crypto_generic_session_t *session)
 {
 	/* Verify Key len is valid */
-	if (16 != session->p.auth_key.length)
+	if (16 != session->p.auth_key.length &&
+	    32 != session->p.auth_key.length)
 		return -1;
 
 	/* Verify IV len is correct */
-	if (16 != session->p.auth_iv_len)
+	if (16 != session->p.auth_iv_len &&
+	    25 != session->p.auth_iv_len)
 		return -1;
 
 	/* Set function */
@@ -630,7 +676,8 @@ odp_crypto_session_create(const odp_crypto_session_param_t *param,
 		rc = 0;
 		break;
 	case ODP_CIPHER_ALG_ZUC_EEA3:
-		if (param->cipher_key.length == 16)
+		if (param->cipher_key.length == 16 ||
+		    param->cipher_key.length == 32)
 			rc = process_zuc_eea3_param(session);
 		else
 			rc = -1;
@@ -651,7 +698,8 @@ odp_crypto_session_create(const odp_crypto_session_param_t *param,
 		rc = 0;
 		break;
 	case ODP_AUTH_ALG_ZUC_EIA3:
-		if (param->auth_key.length == 16)
+		if (param->auth_key.length == 16 ||
+		    param->auth_key.length == 32)
 			rc = process_auth_zuc_eia3_param(session);
 		else
 			rc = -1;
