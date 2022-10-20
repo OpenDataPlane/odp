@@ -271,14 +271,17 @@ __LIB__libodp_linux_la_SOURCES = \
 if WITH_OPENSSL_CRYPTO
 __LIB__libodp_linux_la_SOURCES += \
 			   odp_crypto_openssl.c
-else
+endif
 if WITH_ARMV8_CRYPTO
 __LIB__libodp_linux_la_SOURCES += \
 			   arch/aarch64/odp_crypto_armv8.c
+endif
+if WITH_IPSECMB_CRYPTO
+__LIB__libodp_linux_la_SOURCES += \
+			   odp_crypto_ipsecmb.c
 else
 __LIB__libodp_linux_la_SOURCES += \
 			   odp_crypto_null.c
-endif
 endif
 if ODP_ABI_COMPAT
 __LIB__libodp_linux_la_SOURCES += \
