@@ -143,7 +143,7 @@ typedef struct {
 	/** Array for storing test packets */
 	odp_packet_t pkt2_tbl[TEST_REPEAT_COUNT];
 	/** Array for storing test event */
-	odp_event_t event_tbl[TEST_REPEAT_COUNT];
+	odp_event_t event_tbl[TEST_REPEAT_COUNT * TEST_MAX_BURST];
 	/** Array for storing test pointers */
 	void *ptr_tbl[TEST_REPEAT_COUNT];
 	/** Array for storing test segments */
