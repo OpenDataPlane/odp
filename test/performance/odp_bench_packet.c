@@ -85,6 +85,7 @@ const uint32_t test_packet_len[] = {WARM_UP, TEST_MIN_PKT_SIZE, 128, 256, 512,
 typedef struct {
 	int bench_idx;   /** Benchmark index to run indefinitely */
 	int burst_size;  /** Burst size for *_multi operations */
+	int cache_size;  /** Pool cache size */
 } appl_args_t;
 
 /**
@@ -1476,9 +1477,10 @@ static void usage(char *progname)
 	       "  E.g. %s\n"
 	       "\n"
 	       "Optional OPTIONS:\n"
-	       "  -b, --burst      Test packet burst size.\n"
-	       "  -i, --index      Benchmark index to run indefinitely.\n"
-	       "  -h, --help       Display help and exit.\n\n"
+	       "  -b, --burst <num>       Test packet burst size.\n"
+	       "  -c, --cache_size <num>  Pool cache size.\n"
+	       "  -i, --index <idx>       Benchmark index to run indefinitely.\n"
+	       "  -h, --help              Display help and exit.\n\n"
 	       "\n", NO_PATH(progname), NO_PATH(progname));
 }
 
@@ -1495,15 +1497,17 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	int long_index;
 	static const struct option longopts[] = {
 		{"burst", required_argument, NULL, 'b'},
+		{"cache_size", required_argument, NULL, 'c'},
 		{"help", no_argument, NULL, 'h'},
 		{"index", required_argument, NULL, 'i'},
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts =  "b:i:h";
+	static const char *shortopts =  "c:b:i:h";
 
 	appl_args->bench_idx = 0; /* Run all benchmarks */
 	appl_args->burst_size = TEST_DEF_BURST;
+	appl_args->cache_size = -1;
 
 	while (1) {
 		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
@@ -1512,6 +1516,9 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 			break;	/* No more options */
 
 		switch (opt) {
+		case 'c':
+			appl_args->cache_size = atoi(optarg);
+			break;
 		case 'b':
 			appl_args->burst_size = atoi(optarg);
 			break;
@@ -1750,6 +1757,10 @@ int main(int argc, char *argv[])
 		   capa.pkt.max_uarea_size < PKT_POOL_UAREA_SIZE) {
 		ODPH_ERR("Error: user area size not supported.\n");
 		exit(EXIT_FAILURE);
+	} else if (gbl_args->appl.cache_size > (int)capa.pkt.max_cache_size) {
+		ODPH_ERR("Error: cache size not supported (max %" PRIu32 ")\n",
+			 capa.pkt.max_cache_size);
+		exit(EXIT_FAILURE);
 	}
 
 	/* Create packet pool */
@@ -1762,6 +1773,8 @@ int main(int argc, char *argv[])
 	params.pkt.len     = 2 * TEST_MAX_PKT_SIZE;
 	params.pkt.num     = pkt_num;
 	params.pkt.uarea_size = PKT_POOL_UAREA_SIZE;
+	if (gbl_args->appl.cache_size >= 0)
+		params.pkt.cache_size = gbl_args->appl.cache_size;
 	params.type        = ODP_POOL_PACKET;
 
 	gbl_args->pool = odp_pool_create("packet pool", &params);
@@ -1775,6 +1788,10 @@ int main(int argc, char *argv[])
 	printf("CPU mask:        %s\n", cpumaskstr);
 	printf("Burst size:      %d\n", gbl_args->appl.burst_size);
 	printf("Bench repeat:    %d\n", TEST_REPEAT_COUNT);
+	if (gbl_args->appl.cache_size < 0)
+		printf("Pool cache size: default\n");
+	else
+		printf("Pool cache size: %d\n", gbl_args->appl.cache_size);
 
 	odp_pool_print(gbl_args->pool);
 
