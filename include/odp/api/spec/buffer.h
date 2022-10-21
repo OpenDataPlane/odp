@@ -52,6 +52,17 @@ extern "C" {
 odp_buffer_t odp_buffer_from_event(odp_event_t ev);
 
 /**
+ * Convert multiple buffer events to buffer handles
+ *
+ * All events must be of type ODP_EVENT_BUFFER.
+ *
+ * @param[out] buf  Buffer handle array for output
+ * @param      ev   Array of event handles to convert
+ * @param      num  Number of buffers and events
+ */
+void odp_buffer_from_event_multi(odp_buffer_t buf[], const odp_event_t ev[], int num);
+
+/**
  * Convert buffer handle to event
  *
  * @param buf  Buffer handle
@@ -59,6 +70,15 @@ odp_buffer_t odp_buffer_from_event(odp_event_t ev);
  * @return Event handle
  */
 odp_event_t odp_buffer_to_event(odp_buffer_t buf);
+
+/**
+ * Convert multiple buffer handles to events
+ *
+ * @param      buf  Array of buffer handles to convert
+ * @param[out] ev   Event handle array for output
+ * @param      num  Number of buffers and events
+ */
+void odp_buffer_to_event_multi(const odp_buffer_t buf[], odp_event_t ev[], int num);
 
 /**
  * Buffer start address
