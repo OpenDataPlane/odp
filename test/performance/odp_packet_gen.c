@@ -69,6 +69,7 @@ typedef struct test_options_t {
 	odp_bool_t use_refs;
 	odp_bool_t promisc_mode;
 	odp_bool_t calc_latency;
+	odp_bool_t calc_cs;
 
 	struct vlan_hdr {
 		uint16_t tpid;
@@ -215,6 +216,8 @@ static void print_usage(void)
 	       "                            udp_src/udp_dst. Comma-separated (no spaces) list of\n"
 	       "                            count values: <udp_src count>,<udp_dst count>\n"
 	       "                            Default value: 0,0\n"
+	       "  -C, --no_udp_checksum     Do not calculate UDP checksum. Instead, set it to\n"
+	       "                            zero in every packet.\n"
 	       "  -q, --quit                Quit after this many transmit rounds.\n"
 	       "                            Default: 0 (don't quit)\n"
 	       "  -u, --update_stat <msec>  Update and print statistics every <msec> milliseconds.\n"
@@ -296,6 +299,7 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 		{"promisc_mode", no_argument,      NULL, 'P'},
 		{"latency",     no_argument,       NULL, 'a'},
 		{"c_mode",      required_argument, NULL, 'c'},
+		{"no_udp_checksum", no_argument,   NULL, 'C'},
 		{"mtu",         required_argument, NULL, 'M'},
 		{"quit",        required_argument, NULL, 'q'},
 		{"wait",        required_argument, NULL, 'w'},
@@ -305,7 +309,7 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+i:e:r:t:n:l:L:RM:b:x:g:v:s:d:o:p:c:q:u:w:W:Pah";
+	static const char *shortopts = "+i:e:r:t:n:l:L:RM:b:x:g:v:s:d:o:p:c:Cq:u:w:W:Pah";
 
 	test_options->num_pktio  = 0;
 	test_options->num_rx     = 1;
@@ -320,6 +324,7 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 	test_options->num_vlan   = 0;
 	test_options->promisc_mode = 0;
 	test_options->calc_latency = 0;
+	test_options->calc_cs    = 1;
 	strncpy(test_options->ipv4_src_s, "192.168.0.1",
 		sizeof(test_options->ipv4_src_s) - 1);
 	strncpy(test_options->ipv4_dst_s, "192.168.0.2",
@@ -509,6 +514,9 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 			end++;
 			count = strtoul(end, NULL, 0);
 			test_options->c_mode.udp_dst = count;
+			break;
+		case 'C':
+			test_options->calc_cs = 0;
 			break;
 		case 'q':
 			test_options->quit = atoll(optarg);
@@ -1303,8 +1311,8 @@ static int init_packets(test_global_t *global, int pktio,
 		odp_packet_has_ipv4_set(pkt, 1);
 		odp_packet_has_udp_set(pkt, 1);
 
-		if (!test_options->calc_latency)
-			udp->chksum = odph_ipv4_udp_chksum(pkt);
+		udp->chksum = !test_options->calc_latency && test_options->calc_cs ?
+			odph_ipv4_udp_chksum(pkt) : 0;
 
 		/* Increment port numbers */
 		if (test_options->c_mode.udp_src) {
@@ -1355,18 +1363,19 @@ static inline int update_rand_data(uint8_t *data, uint32_t data_len)
 	return 0;
 }
 
-static inline void set_timestamp(odp_packet_t pkt, uint32_t ts_off)
+static inline void set_timestamp(odp_packet_t pkt, uint32_t ts_off, odp_bool_t calc_cs)
 {
 	const ts_data_t ts_data = { .magic = TS_MAGIC, .tx_ts = odp_time_global_ns() };
 	odph_udphdr_t *udp = odp_packet_l4_ptr(pkt, NULL);
 
 	(void)odp_packet_copy_from_mem(pkt, ts_off, sizeof(ts_data), &ts_data);
-	udp->chksum = odph_ipv4_udp_chksum(pkt);
+	udp->chksum = calc_cs ? odph_ipv4_udp_chksum(pkt) : 0;
 }
 
 static inline int send_burst(odp_pktout_queue_t pktout, odp_packet_t pkt[],
 			     int burst_size, odp_bool_t use_rand_len, odp_bool_t use_refs,
-			     uint32_t ts_off, uint32_t pkts_per_pktio, uint64_t *sent_bytes) {
+			     odp_bool_t calc_cs, uint32_t ts_off, uint32_t pkts_per_pktio,
+			     uint64_t *sent_bytes) {
 	int i;
 	int ret = 0;
 	int num = burst_size;
@@ -1402,7 +1411,7 @@ static inline int send_burst(odp_pktout_queue_t pktout, odp_packet_t pkt[],
 			pkt[idx] = ODP_PACKET_INVALID;
 
 			if (ts_off)
-				set_timestamp(out_pkt[i], ts_off);
+				set_timestamp(out_pkt[i], ts_off, calc_cs);
 		}
 		bytes_total += odp_packet_len(out_pkt[i]);
 	}
@@ -1541,6 +1550,7 @@ static int tx_thread(void *arg)
 	odp_bool_t use_rand_len = test_options->use_rand_pkt_len;
 	odp_bool_t use_refs = test_options->use_refs;
 	odp_bool_t is_allocd = false;
+	odp_bool_t calc_cs = test_options->calc_cs;
 	int num_pktio = test_options->num_pktio;
 	int num_pkt;
 	odp_pktout_queue_t pktout[num_pktio];
@@ -1614,8 +1624,8 @@ static int tx_thread(void *arg)
 
 			for (j = 0; j < bursts; j++) {
 				sent = send_burst(pktout[i], &pkt[first + j * burst_size],
-						  burst_size, use_rand_len, use_refs, ts_off,
-						  pkts_per_pktio, &sent_bytes);
+						  burst_size, use_rand_len, use_refs, calc_cs,
+						  ts_off, pkts_per_pktio, &sent_bytes);
 
 				if (odp_unlikely(sent < 0)) {
 					ret = -1;
