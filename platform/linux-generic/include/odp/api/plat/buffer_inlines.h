@@ -23,7 +23,9 @@
 	/* Inline functions by default */
 	#define _ODP_INLINE static inline
 	#define odp_buffer_from_event __odp_buffer_from_event
+	#define odp_buffer_from_event_multi __odp_buffer_from_event_multi
 	#define odp_buffer_to_event __odp_buffer_to_event
+	#define odp_buffer_to_event_multi __odp_buffer_to_event_multi
 	#define odp_buffer_addr __odp_buffer_addr
 	#define odp_buffer_size __odp_buffer_size
 	#define odp_buffer_pool __odp_buffer_pool
@@ -39,9 +41,21 @@ _ODP_INLINE odp_buffer_t odp_buffer_from_event(odp_event_t ev)
 	return (odp_buffer_t)ev;
 }
 
+_ODP_INLINE void odp_buffer_from_event_multi(odp_buffer_t buf[], const odp_event_t ev[], int num)
+{
+	for (int i = 0; i < num; i++)
+		buf[i] = odp_buffer_from_event(ev[i]);
+}
+
 _ODP_INLINE odp_event_t odp_buffer_to_event(odp_buffer_t buf)
 {
 	return (odp_event_t)buf;
+}
+
+_ODP_INLINE void odp_buffer_to_event_multi(const odp_buffer_t buf[], odp_event_t ev[], int num)
+{
+	for (int i = 0; i < num; i++)
+		ev[i] = odp_buffer_to_event(buf[i]);
 }
 
 _ODP_INLINE void *odp_buffer_addr(odp_buffer_t buf)
