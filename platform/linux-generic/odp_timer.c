@@ -148,11 +148,13 @@ ODP_STATIC_ASSERT(sizeof(tick_buf_t) == 16, "sizeof(tick_buf_t) == 16");
 
 typedef struct {
 	const void *user_ptr;
-	/* Used for free list when timer is free */
 	odp_queue_t queue;
-	/* Period of periodic timer in ticks (nanoseconds),
-	 * includes PERIODIC_CANCELLED flag. */
+
+	/* Period of periodic timer in ticks (nanoseconds), includes PERIODIC_CANCELLED flag. */
 	uint64_t periodic_ticks;
+
+	/* Used for free list of timers */
+	uint32_t next_free;
 
 } _odp_timer_t;
 
@@ -259,15 +261,14 @@ static void timer_fini(_odp_timer_t *tim, tick_buf_t *tb)
 
 static inline uint32_t get_next_free(_odp_timer_t *tim)
 {
-	/* Reusing 'queue' for next free index */
-	return _odp_typeval(tim->queue);
+	return tim->next_free;
 }
 
 static inline void set_next_free(_odp_timer_t *tim, uint32_t nf)
 {
 	_ODP_ASSERT(tim->queue == ODP_QUEUE_INVALID);
-	/* Reusing 'queue' for next free index */
-	tim->queue = _odp_cast_scalar(odp_queue_t, nf);
+
+	tim->next_free = nf;
 }
 
 static inline timer_pool_t *timer_pool_from_hdl(odp_timer_pool_t hdl)
