@@ -75,6 +75,8 @@ static void test_pool_alloc_free(const odp_pool_param_t *param)
 	odp_pool_print(pool);
 
 	for (i = 0; i < num; i++) {
+		odp_buffer_t buf;
+
 		buffer[i] = odp_buffer_alloc(pool);
 
 		if (buffer[i] == ODP_BUFFER_INVALID)
@@ -87,6 +89,10 @@ static void test_pool_alloc_free(const odp_pool_param_t *param)
 
 		ev = odp_buffer_to_event(buffer[i]);
 		CU_ASSERT(odp_buffer_from_event(ev) == buffer[i]);
+
+		odp_buffer_to_event_multi(&buffer[i], &ev, 1);
+		odp_buffer_from_event_multi(&buf, &ev, 1);
+		CU_ASSERT(buf == buffer[i]);
 
 		if (odp_event_type(ev) != ODP_EVENT_BUFFER)
 			wrong_type = true;
@@ -147,12 +153,20 @@ static void test_pool_alloc_free_multi(const odp_pool_param_t *param)
 
 	ret = 0;
 	for (i = 0; i < num; i += ret) {
+		odp_buffer_t buf[BURST];
+		odp_event_t event[BURST];
+
 		ret = odp_buffer_alloc_multi(pool, &buffer[i], BURST);
 		CU_ASSERT(ret >= 0);
 		CU_ASSERT(ret <= BURST);
 
 		if (ret <= 0)
 			break;
+
+		odp_buffer_to_event_multi(&buffer[i], event, ret);
+		odp_buffer_from_event_multi(buf, event, ret);
+		for (int j = 0; j < ret; j++)
+			CU_ASSERT(buf[j] == buffer[i + j]);
 	}
 
 	num_buf = i;
