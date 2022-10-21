@@ -70,6 +70,7 @@ typedef struct test_options_t {
 	odp_bool_t promisc_mode;
 	odp_bool_t calc_latency;
 	odp_bool_t calc_cs;
+	odp_bool_t fill_pl;
 
 	struct vlan_hdr {
 		uint16_t tpid;
@@ -171,8 +172,8 @@ static void print_usage(void)
 	       "  -i, --interface <name>  Packet IO interfaces. Comma-separated list of\n"
 	       "                          interface names (no spaces) e.g. eth0,eth1.\n"
 	       "                          At least one interface is required.\n"
-	       "\n"
-	       "  Optional:\n"
+	       "\n");
+	printf("  Optional:\n"
 	       "  -e, --eth_dst <mac>       Destination MAC address. Comma-separated list of\n"
 	       "                            addresses (no spaces), one address per packet IO\n"
 	       "                            interface e.g. AA:BB:CC:DD:EE:FF,11:22:33:44:55:66\n"
@@ -218,6 +219,9 @@ static void print_usage(void)
 	       "                            Default value: 0,0\n"
 	       "  -C, --no_udp_checksum     Do not calculate UDP checksum. Instead, set it to\n"
 	       "                            zero in every packet.\n"
+	       "  -A, --no_payload_fill     Do not fill payload. By default, payload is filled\n"
+	       "                            with a pattern until the end of first packet\n"
+	       "                            segment.\n"
 	       "  -q, --quit                Quit after this many transmit rounds.\n"
 	       "                            Default: 0 (don't quit)\n"
 	       "  -u, --update_stat <msec>  Update and print statistics every <msec> milliseconds.\n"
@@ -300,6 +304,7 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 		{"latency",     no_argument,       NULL, 'a'},
 		{"c_mode",      required_argument, NULL, 'c'},
 		{"no_udp_checksum", no_argument,   NULL, 'C'},
+		{"no_payload_fill", no_argument,   NULL, 'A'},
 		{"mtu",         required_argument, NULL, 'M'},
 		{"quit",        required_argument, NULL, 'q'},
 		{"wait",        required_argument, NULL, 'w'},
@@ -309,7 +314,7 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+i:e:r:t:n:l:L:RM:b:x:g:v:s:d:o:p:c:Cq:u:w:W:Pah";
+	static const char *shortopts = "+i:e:r:t:n:l:L:RM:b:x:g:v:s:d:o:p:c:CAq:u:w:W:Pah";
 
 	test_options->num_pktio  = 0;
 	test_options->num_rx     = 1;
@@ -325,6 +330,7 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 	test_options->promisc_mode = 0;
 	test_options->calc_latency = 0;
 	test_options->calc_cs    = 1;
+	test_options->fill_pl    = 1;
 	strncpy(test_options->ipv4_src_s, "192.168.0.1",
 		sizeof(test_options->ipv4_src_s) - 1);
 	strncpy(test_options->ipv4_dst_s, "192.168.0.2",
@@ -517,6 +523,9 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 			break;
 		case 'C':
 			test_options->calc_cs = 0;
+			break;
+		case 'A':
+			test_options->fill_pl = 0;
 			break;
 		case 'q':
 			test_options->quit = atoll(optarg);
@@ -1300,9 +1309,11 @@ static int init_packets(test_global_t *global, int pktio,
 		u8  = data;
 		u8 += hdr_len;
 
-		/* Init UDP payload until the end of the first segment */
-		for (j = 0; j < seg_len - hdr_len; j++)
-			u8[j] = j;
+		if (test_options->fill_pl) {
+			/* Init UDP payload until the end of the first segment */
+			for (j = 0; j < seg_len - hdr_len; j++)
+				u8[j] = j;
+		}
 
 		/* Insert UDP checksum */
 		odp_packet_l3_offset_set(pkt, l2_len);
