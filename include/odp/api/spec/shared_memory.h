@@ -43,6 +43,16 @@ extern "C" {
  /* Shared memory flags */
 
 /**
+ * @def ODP_SHM_IOVA_INVALID
+ * Invalid IOVA address
+ */
+
+/**
+ * @def ODP_SHM_PA_INVALID
+ * Invalid physical address
+ */
+
+/**
  * Application SW only, no HW access
  *
  * @deprecated  When set, application will not share the reserved memory with HW
@@ -123,7 +133,41 @@ typedef struct odp_shm_info_t {
 
 	/** ODP_SHM_* flags */
 	uint32_t    flags;
+
+	/**
+	 * Number of memory segments
+	 *
+	 * Number of segments in physical (or IOVA) address space that map memory to
+	 * the SHM block. More information about each segment can be retrieved with
+	 * odp_shm_segment_info(). Number of segments is always at least one, also when
+	 * physical (or IOVA) segmentation information is not available. */
+	uint32_t num_seg;
+
 } odp_shm_info_t;
+
+/**
+ * SHM memory segment info
+ */
+typedef struct odp_shm_segment_info_t {
+	/** Segment start address (virtual) */
+	uintptr_t addr;
+
+	/** Segment start address in IO virtual address (IOVA) space
+	 *
+	 *  Value is ODP_SHM_IOVA_INVALID when IOVA address is not available.
+	 */
+	uint64_t iova;
+
+	/** Segment start address in physical address space
+	 *
+	 *  Value is ODP_SHM_PA_INVALID when physical address is not available.
+	 */
+	uint64_t pa;
+
+	/** Segment length in bytes */
+	uint64_t len;
+
+} odp_shm_segment_info_t;
 
 /**
  * Shared memory capabilities
@@ -260,6 +304,27 @@ void *odp_shm_addr(odp_shm_t shm);
  * @retval <0 on failure
  */
 int odp_shm_info(odp_shm_t shm, odp_shm_info_t *info);
+
+/**
+ * SHM block segmentation information
+ *
+ * Retrieve information about each memory segment of an SHM block. SHM info call outputs the number
+ * of memory segments (@see odp_shm_info_t.num_seg). A single segment info call may be used
+ * to request information for all the segments, or for a subset of those. Use 'index' and 'num'
+ * parameters to specify the segments. Segment indexing starts from zero and continues to
+ * odp_shm_info_t.num_seg - 1. Segment infos are written in virtual memory address order and
+ * without address overlaps. Segment info array must have at least 'num' elements.
+ *
+ * @param      shm    SHM block handle
+ * @param      index  Index of the first segment to retrieve information
+ * @param      num    Number of segments to retrieve information
+ * @param[out] info   Segment info array for output
+ *
+ * @retval 0 on success
+ * @retval <0 on failure
+ */
+int odp_shm_segment_info(odp_shm_t shm, uint32_t index, uint32_t num,
+			 odp_shm_segment_info_t info[]);
 
 /**
  * Print all shared memory blocks
