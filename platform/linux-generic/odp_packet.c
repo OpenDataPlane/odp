@@ -25,6 +25,7 @@
 #include <odp_packet_internal.h>
 #include <odp_packet_io_internal.h>
 #include <odp_pool_internal.h>
+#include <odp_print_internal.h>
 
 /* Inlined API functions */
 #include <odp/api/plat/byteorder_inlines.h>
@@ -1404,31 +1405,31 @@ static int packet_print_input_flags(odp_packet_hdr_t *hdr, char *str, int max)
 	int len = 0;
 
 	if (hdr->p.input_flags.l2)
-		len += snprintf(&str[len], max - len, "l2 ");
+		len += _odp_snprint(&str[len], max - len, "l2 ");
 	if (hdr->p.input_flags.l3)
-		len += snprintf(&str[len], max - len, "l3 ");
+		len += _odp_snprint(&str[len], max - len, "l3 ");
 	if (hdr->p.input_flags.l4)
-		len += snprintf(&str[len], max - len, "l4 ");
+		len += _odp_snprint(&str[len], max - len, "l4 ");
 	if (hdr->p.input_flags.eth)
-		len += snprintf(&str[len], max - len, "eth ");
+		len += _odp_snprint(&str[len], max - len, "eth ");
 	if (hdr->p.input_flags.vlan)
-		len += snprintf(&str[len], max - len, "vlan ");
+		len += _odp_snprint(&str[len], max - len, "vlan ");
 	if (hdr->p.input_flags.arp)
-		len += snprintf(&str[len], max - len, "arp ");
+		len += _odp_snprint(&str[len], max - len, "arp ");
 	if (hdr->p.input_flags.ipv4)
-		len += snprintf(&str[len], max - len, "ipv4 ");
+		len += _odp_snprint(&str[len], max - len, "ipv4 ");
 	if (hdr->p.input_flags.ipv6)
-		len += snprintf(&str[len], max - len, "ipv6 ");
+		len += _odp_snprint(&str[len], max - len, "ipv6 ");
 	if (hdr->p.input_flags.ipsec)
-		len += snprintf(&str[len], max - len, "ipsec ");
+		len += _odp_snprint(&str[len], max - len, "ipsec ");
 	if (hdr->p.input_flags.udp)
-		len += snprintf(&str[len], max - len, "udp ");
+		len += _odp_snprint(&str[len], max - len, "udp ");
 	if (hdr->p.input_flags.tcp)
-		len += snprintf(&str[len], max - len, "tcp ");
+		len += _odp_snprint(&str[len], max - len, "tcp ");
 	if (hdr->p.input_flags.sctp)
-		len += snprintf(&str[len], max - len, "sctp ");
+		len += _odp_snprint(&str[len], max - len, "sctp ");
 	if (hdr->p.input_flags.icmp)
-		len += snprintf(&str[len], max - len, "icmp ");
+		len += _odp_snprint(&str[len], max - len, "icmp ");
 
 	return len;
 }
@@ -1442,40 +1443,39 @@ void odp_packet_print(odp_packet_t pkt)
 	int n = max_len - 1;
 	odp_packet_hdr_t *hdr = packet_hdr(pkt);
 
-	len += snprintf(&str[len], n - len, "Packet\n------\n");
-	len += snprintf(&str[len], n - len, "  pool index   %u\n", hdr->event_hdr.index.pool);
-	len += snprintf(&str[len], n - len, "  buf index    %u\n", hdr->event_hdr.index.event);
-	len += snprintf(&str[len], n - len, "  ev subtype   %i\n", hdr->subtype);
-	len += snprintf(&str[len], n - len, "  input_flags  0x%" PRIx64 "\n",
-			hdr->p.input_flags.all);
+	len += _odp_snprint(&str[len], n - len, "Packet info\n");
+	len += _odp_snprint(&str[len], n - len, "-----------\n");
+	len += _odp_snprint(&str[len], n - len, "  pool index     %u\n", hdr->event_hdr.index.pool);
+	len += _odp_snprint(&str[len], n - len, "  buf index      %u\n",
+			    hdr->event_hdr.index.event);
+	len += _odp_snprint(&str[len], n - len, "  ev subtype     %i\n", hdr->subtype);
+	len += _odp_snprint(&str[len], n - len, "  input_flags    0x%" PRIx64 "\n",
+			    hdr->p.input_flags.all);
 	if (hdr->p.input_flags.all) {
-		len += snprintf(&str[len], n - len, "               ");
+		len += _odp_snprint(&str[len], n - len, "                 ");
 		len += packet_print_input_flags(hdr, &str[len], n - len);
-		len += snprintf(&str[len], n - len, "\n");
+		len += _odp_snprint(&str[len], n - len, "\n");
 	}
-	len += snprintf(&str[len], n - len, "  flags        0x%" PRIx32 "\n",
-			hdr->p.flags.all_flags);
-	len += snprintf(&str[len], n - len, "  cls_mark     %" PRIu64 "\n",
-			odp_packet_cls_mark(pkt));
-	len += snprintf(&str[len], n - len,
-			"  l2_offset    %" PRIu32 "\n", hdr->p.l2_offset);
-	len += snprintf(&str[len], n - len,
-			"  l3_offset    %" PRIu32 "\n", hdr->p.l3_offset);
-	len += snprintf(&str[len], n - len,
-			"  l4_offset    %" PRIu32 "\n", hdr->p.l4_offset);
-	len += snprintf(&str[len], n - len,
-			"  frame_len    %" PRIu32 "\n", hdr->frame_len);
-	len += snprintf(&str[len], n - len,
-			"  input        %" PRIu64 "\n",
-			odp_pktio_to_u64(hdr->input));
-	len += snprintf(&str[len], n - len,
-			"  headroom     %" PRIu32 "\n",
-			odp_packet_headroom(pkt));
-	len += snprintf(&str[len], n - len,
-			"  tailroom     %" PRIu32 "\n",
-			odp_packet_tailroom(pkt));
-	len += snprintf(&str[len], n - len,
-			"  num_segs     %i\n", odp_packet_num_segs(pkt));
+	len += _odp_snprint(&str[len], n - len,
+			    "  flags          0x%" PRIx32 "\n", hdr->p.flags.all_flags);
+	len += _odp_snprint(&str[len], n - len,
+			    "  cls_mark       %" PRIu64 "\n", odp_packet_cls_mark(pkt));
+	len += _odp_snprint(&str[len], n - len,
+			    "  l2_offset      %" PRIu32 "\n", hdr->p.l2_offset);
+	len += _odp_snprint(&str[len], n - len,
+			    "  l3_offset      %" PRIu32 "\n", hdr->p.l3_offset);
+	len += _odp_snprint(&str[len], n - len,
+			    "  l4_offset      %" PRIu32 "\n", hdr->p.l4_offset);
+	len += _odp_snprint(&str[len], n - len,
+			    "  frame_len      %" PRIu32 "\n", hdr->frame_len);
+	len += _odp_snprint(&str[len], n - len,
+			    "  input          %" PRIu64 "\n", odp_pktio_to_u64(hdr->input));
+	len += _odp_snprint(&str[len], n - len,
+			    "  headroom       %" PRIu32 "\n", odp_packet_headroom(pkt));
+	len += _odp_snprint(&str[len], n - len,
+			    "  tailroom       %" PRIu32 "\n", odp_packet_tailroom(pkt));
+	len += _odp_snprint(&str[len], n - len,
+			    "  num_segs       %i\n", odp_packet_num_segs(pkt));
 
 	seg = odp_packet_first_seg(pkt);
 
@@ -1484,20 +1484,17 @@ void odp_packet_print(odp_packet_t pkt)
 		char seg_str[max_len];
 		int str_len;
 
-		str_len = snprintf(&seg_str[0], max_len,
-				   "    [%d] seg_len %-4" PRIu32 "  seg_data %p "
-				   " ref_cnt %u\n",
-				   seg_idx,
-				   odp_packet_seg_data_len(pkt, seg),
-				   odp_packet_seg_data(pkt, seg),
-				   segment_ref(seg_hdr));
+		str_len = _odp_snprint(&seg_str[0], max_len,
+				       "    [%d] seg_len %-4" PRIu32 "  seg_data %p  ref_cnt %u\n",
+				       seg_idx, odp_packet_seg_data_len(pkt, seg),
+				       odp_packet_seg_data(pkt, seg), segment_ref(seg_hdr));
 
 		/* Prevent print buffer overflow */
 		if (n - len - str_len < 10) {
-			len += snprintf(&str[len], n - len, "    ...\n");
+			len += _odp_snprint(&str[len], n - len, "    ...\n");
 			break;
 		}
-		len += snprintf(&str[len], n - len, "%s", seg_str);
+		len += _odp_snprint(&str[len], n - len, "%s", seg_str);
 
 		seg = odp_packet_next_seg(pkt, seg);
 	}
@@ -1518,25 +1515,25 @@ void odp_packet_print_data(odp_packet_t pkt, uint32_t offset,
 	uint32_t data_len = odp_packet_len(pkt);
 	pool_t *pool = _odp_pool_entry(hdr->event_hdr.pool);
 
-	len += snprintf(&str[len], n - len, "Packet\n------\n");
-	len += snprintf(&str[len], n - len,
-			"  pool index    %" PRIu32 "\n", pool->pool_idx);
-	len += snprintf(&str[len], n - len,
-			"  buf index     %" PRIu32 "\n",
-			hdr->event_hdr.index.event);
-	len += snprintf(&str[len], n - len,
-			"  seg_count     %" PRIu16 "\n", hdr->seg_count);
-	len += snprintf(&str[len], n - len,
-			"  data len      %" PRIu32 "\n", data_len);
-	len += snprintf(&str[len], n - len,
-			"  data ptr      %p\n", odp_packet_data(pkt));
-	len += snprintf(&str[len], n - len,
-			"  print offset  %" PRIu32 "\n", offset);
-	len += snprintf(&str[len], n - len,
-			"  print length  %" PRIu32 "\n", byte_len);
+	len += _odp_snprint(&str[len], n - len, "Packet data\n");
+	len += _odp_snprint(&str[len], n - len, "-----------\n");
+	len += _odp_snprint(&str[len], n - len,
+			    "  pool index     %" PRIu32 "\n", pool->pool_idx);
+	len += _odp_snprint(&str[len], n - len,
+			    "  buf index      %" PRIu32 "\n", hdr->event_hdr.index.event);
+	len += _odp_snprint(&str[len], n - len,
+			    "  seg_count      %" PRIu16 "\n", hdr->seg_count);
+	len += _odp_snprint(&str[len], n - len,
+			    "  data len       %" PRIu32 "\n", data_len);
+	len += _odp_snprint(&str[len], n - len,
+			    "  data ptr       %p\n", odp_packet_data(pkt));
+	len += _odp_snprint(&str[len], n - len,
+			    "  print offset   %" PRIu32 "\n", offset);
+	len += _odp_snprint(&str[len], n - len,
+			    "  print length   %" PRIu32 "\n", byte_len);
 
 	if (offset + byte_len > data_len) {
-		len += snprintf(&str[len], n - len, " BAD OFFSET OR LEN\n");
+		len += _odp_snprint(&str[len], n - len, " BAD OFFSET OR LEN\n");
 		_ODP_PRINT("%s\n", str);
 		return;
 	}
@@ -1553,12 +1550,12 @@ void odp_packet_print_data(odp_packet_t pkt, uint32_t offset,
 
 		odp_packet_copy_to_mem(pkt, offset, copy_len, data);
 
-		len += snprintf(&str[len], n - len, " ");
+		len += _odp_snprint(&str[len], n - len, " ");
 
 		for (i = 0; i < copy_len; i++)
-			len += snprintf(&str[len], n - len, " %02x", data[i]);
+			len += _odp_snprint(&str[len], n - len, " %02x", data[i]);
 
-		len += snprintf(&str[len], n - len, "\n");
+		len += _odp_snprint(&str[len], n - len, "\n");
 
 		byte_len -= copy_len;
 		offset   += copy_len;
