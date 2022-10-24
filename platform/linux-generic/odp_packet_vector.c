@@ -1,4 +1,4 @@
-/* Copyright (c) 2020-2021, Nokia
+/* Copyright (c) 2020-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -14,6 +14,7 @@
 #include <odp_debug_internal.h>
 #include <odp_event_vector_internal.h>
 #include <odp_pool_internal.h>
+#include <odp_print_internal.h>
 
 #include <inttypes.h>
 #include <stdint.h>
@@ -107,27 +108,26 @@ void odp_packet_vector_print(odp_packet_vector_t pktv)
 	uint32_t i;
 	odp_event_vector_hdr_t *pktv_hdr = _odp_packet_vector_hdr(pktv);
 
-	len += snprintf(&str[len], n - len, "Packet Vector\n");
-	len += snprintf(&str[len], n - len,
-			"  handle %p\n", (void *)pktv);
-	len += snprintf(&str[len], n - len,
-			"  size   %" PRIu32 "\n", pktv_hdr->size);
+	len += _odp_snprint(&str[len], n - len, "Packet vector info\n");
+	len += _odp_snprint(&str[len], n - len, "------------------\n");
+	len += _odp_snprint(&str[len], n - len, "  handle         0x%" PRIx64 "\n",
+			    odp_packet_vector_to_u64(pktv));
+	len += _odp_snprint(&str[len], n - len, "  size           %" PRIu32 "\n", pktv_hdr->size);
 
 	for (i = 0; i < pktv_hdr->size; i++) {
 		odp_packet_t pkt = pktv_hdr->packet[i];
 		char seg_str[max_len];
 		int str_len;
 
-		str_len = snprintf(seg_str, max_len,
-				   "    packet     %p  len %" PRIu32 "\n",
-				   (void *)pkt, odp_packet_len(pkt));
+		str_len = _odp_snprint(seg_str, max_len, "    packet     %p  len %" PRIu32 "\n",
+				       (void *)pkt, odp_packet_len(pkt));
 
 		/* Prevent print buffer overflow */
 		if (n - len - str_len < 10) {
-			len += snprintf(&str[len], n - len, "    ...\n");
+			len += _odp_snprint(&str[len], n - len, "    ...\n");
 			break;
 		}
-		len += snprintf(&str[len], n - len, "%s", seg_str);
+		len += _odp_snprint(&str[len], n - len, "%s", seg_str);
 	}
 
 	_ODP_PRINT("%s\n", str);
