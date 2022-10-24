@@ -803,7 +803,7 @@ static odp_event_t timer_set_unused(timer_pool_t *tp, uint32_t idx)
 
 	_odp_atomic_u128_xchg_mm((_odp_atomic_u128_t *)tb,
 				 (_odp_u128_t *)&new, (_odp_u128_t *)&old,
-				 _ODP_MEMMODEL_RLX);
+				 _ODP_MEMMODEL_ACQ_RLS);
 	old_event = old.tmo_event;
 #else
 	/* Take a related lock */
@@ -885,18 +885,24 @@ static odp_event_t timer_cancel(timer_pool_t *tp, uint32_t idx)
 
 static inline void timer_expire(timer_pool_t *tp, uint32_t idx, uint64_t tick)
 {
+	uint64_t exp_tck;
+	odp_queue_t queue;
 	_odp_timer_t *tim = &tp->timers[idx];
 	tick_buf_t *tb = &tp->tick_buf[idx];
 	odp_event_t tmo_event = ODP_EVENT_INVALID;
-	uint64_t exp_tck;
+
 #if USE_128BIT_ATOMICS
 	/* Atomic re-read for correctness */
-	exp_tck = odp_atomic_load_u64(&tb->exp_tck);
+	exp_tck = odp_atomic_load_acq_u64(&tb->exp_tck);
 	/* Re-check exp_tck */
 	if (odp_likely(exp_tck <= tick)) {
 		/* Attempt to grab timeout event, replace with inactive timer
 		 * and invalid event. */
 		tick_buf_t new, old;
+
+		/* Read queue handle between acq and rel. Timer_free overwrites the handle after
+		 * it sets tick value to inactive. */
+		queue = tim->queue;
 
 		/* Init all bits, also when tmo_event is less than 64 bits. */
 		new.tmo_u64 = 0;
@@ -929,6 +935,8 @@ static inline void timer_expire(timer_pool_t *tp, uint32_t idx, uint64_t tick)
 	if (odp_likely(exp_tck <= tick)) {
 		/* Verify that there is a timeout event */
 		if (odp_likely(tb->tmo_event != ODP_EVENT_INVALID)) {
+			queue = tim->queue;
+
 			/* Grab timeout event, replace with inactive timer
 			 * and invalid event. */
 			tmo_event = tb->tmo_event;
@@ -956,7 +964,7 @@ static inline void timer_expire(timer_pool_t *tp, uint32_t idx, uint64_t tick)
 		}
 		/* Else ignore events of other types */
 		/* Post the timeout to the destination queue */
-		int rc = odp_queue_enq(tim->queue, tmo_event);
+		int rc = odp_queue_enq(queue, tmo_event);
 
 		if (odp_unlikely(rc != 0)) {
 			_odp_event_free(tmo_event);
