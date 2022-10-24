@@ -113,6 +113,9 @@ void odp_packet_vector_print(odp_packet_vector_t pktv)
 	len += _odp_snprint(&str[len], n - len, "  handle         0x%" PRIx64 "\n",
 			    odp_packet_vector_to_u64(pktv));
 	len += _odp_snprint(&str[len], n - len, "  size           %" PRIu32 "\n", pktv_hdr->size);
+	len += _odp_snprint(&str[len], n - len, "  flags          0x%" PRIx32 "\n",
+			    pktv_hdr->flags.all_flags);
+	len += _odp_snprint(&str[len], n - len, "  user area      %p\n", pktv_hdr->uarea_addr);
 
 	for (i = 0; i < pktv_hdr->size; i++) {
 		odp_packet_t pkt = pktv_hdr->packet[i];
