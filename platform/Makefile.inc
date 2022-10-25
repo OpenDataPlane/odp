@@ -1,7 +1,7 @@
 include $(top_srcdir)/Makefile.inc
 
 pkgconfigdir = $(libdir)/pkgconfig
-pkgconfig_DATA = lib$(ODP_LIB_NAME).pc lib$(ODP_LIB_NAME)-internal.pc
+pkgconfig_DATA = lib$(ODP_LIB_NAME).pc
 
 EXTRA_DIST = doc/platform_specific.dox
 
