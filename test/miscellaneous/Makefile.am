@@ -35,7 +35,8 @@ installcheck-local: $(PROGRAM_static)
 
 $(PROGRAM_static): $(srcdir)/$(odp_api_headers_SOURCES)
 	$(CC) $(AM_CFLAGS) $(CFLAGS) $^ -o $@ \
-		`$(PKGCONFIG) --static libodphelper` `$(PKGCONFIG) --static lib$(ODP_LIB_NAME)`
+		`$(PKGCONFIG) --static libodphelper | sed "s/-lodphelper/-l:libodphelper.a/"` \
+		`$(PKGCONFIG) --static lib$(ODP_LIB_NAME) | sed "s/-l$(ODP_LIB_NAME)/-l:lib$(ODP_LIB_NAME).a/"`
 if ! cross_compile
 	./$@
 endif
