@@ -90,16 +90,6 @@ LT_INIT([])
 AC_SUBST([LIBTOOL_DEPS])
 AM_PROG_LIBTOOL
 
-##########################################################################
-# Detect legacy pkgconfig-0.27
-##########################################################################
-PKG_PROG_PKG_CONFIG([0.28])
-pkgconfig_workaround=yes
-AS_IF([test "x$PKG_CONFIG" != "x"],
-	[pkgconfig_workaround=no])
-AM_CONDITIONAL([PKGCONFIG_WORKAROUND],
-	[test "x$pkgconfig_workaround" = "xyes"])
-
 PKG_PROG_PKG_CONFIG
 
 ##########################################################################
