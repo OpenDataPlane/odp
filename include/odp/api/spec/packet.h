@@ -1685,6 +1685,11 @@ odp_proto_l2_type_t odp_packet_l2_type(odp_packet_t pkt);
  *
  * Returns layer 3 protocol type. Initial type value is ODP_PROTO_L3_TYPE_NONE.
  *
+ * In addition to protocol types specified in ODP_PROTO_L3_TYPE_* defines,
+ * the function may also return other L3 protocol types (e.g. from IEEE
+ * EtherTypes list) recognized by the parser. If protocol type is not
+ * recognized, ODP_PROTO_L3_TYPE_NONE is returned.
+ *
  * @param      pkt      Packet handle
  *
  * @return Layer 3 protocol type
@@ -1695,6 +1700,11 @@ odp_proto_l3_type_t odp_packet_l3_type(odp_packet_t pkt);
  * Layer 4 protocol type
  *
  * Returns layer 4 protocol type. Initial type value is ODP_PROTO_L4_TYPE_NONE.
+ *
+ * In addition to protocol types specified in ODP_PROTO_L4_TYPE_* defines,
+ * the function may also return other L4 protocol types (e.g. from IANA protocol
+ * number list) recognized by the parser. If protocol type is not recognized,
+ * ODP_PROTO_L4_TYPE_NONE is returned.
  *
  * @param      pkt      Packet handle
  *
