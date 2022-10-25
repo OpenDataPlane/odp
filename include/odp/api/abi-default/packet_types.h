@@ -46,39 +46,6 @@ typedef _odp_abi_packet_tx_compl_t *odp_packet_tx_compl_t;
 #define ODP_PACKET_VECTOR_INVALID   ((odp_packet_vector_t)0)
 #define ODP_PACKET_TX_COMPL_INVALID ((odp_packet_tx_compl_t)0)
 
-typedef uint8_t odp_proto_l2_type_t;
-
-#define ODP_PROTO_L2_TYPE_NONE   0
-#define ODP_PROTO_L2_TYPE_ETH    1
-
-typedef uint8_t odp_proto_l3_type_t;
-
-#define ODP_PROTO_L3_TYPE_NONE   0
-#define ODP_PROTO_L3_TYPE_ARP    1
-#define ODP_PROTO_L3_TYPE_RARP   2
-#define ODP_PROTO_L3_TYPE_MPLS   3
-#define ODP_PROTO_L3_TYPE_IPV4   4
-#define ODP_PROTO_L3_TYPE_IPV6   6
-
-typedef uint8_t odp_proto_l4_type_t;
-
-/* Numbers from IANA Assigned Internet Protocol Numbers list */
-#define ODP_PROTO_L4_TYPE_NONE      0
-#define ODP_PROTO_L4_TYPE_ICMPV4    1
-#define ODP_PROTO_L4_TYPE_IGMP      2
-#define ODP_PROTO_L4_TYPE_IPV4      4
-#define ODP_PROTO_L4_TYPE_TCP       6
-#define ODP_PROTO_L4_TYPE_UDP       17
-#define ODP_PROTO_L4_TYPE_IPV6      41
-#define ODP_PROTO_L4_TYPE_GRE       47
-#define ODP_PROTO_L4_TYPE_ESP       50
-#define ODP_PROTO_L4_TYPE_AH        51
-#define ODP_PROTO_L4_TYPE_ICMPV6    58
-#define ODP_PROTO_L4_TYPE_NO_NEXT   59
-#define ODP_PROTO_L4_TYPE_IPCOMP    108
-#define ODP_PROTO_L4_TYPE_SCTP      132
-#define ODP_PROTO_L4_TYPE_ROHC      142
-
 /** Packet Color */
 typedef enum {
 	ODP_PACKET_GREEN = 0,

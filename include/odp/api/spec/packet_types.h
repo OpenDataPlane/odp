@@ -89,95 +89,92 @@ extern "C" {
 #define ODP_NUM_PACKET_COLORS 3
 
 /**
- * @typedef odp_proto_l2_type_t
  * Layer 2 protocol type
  */
+typedef uint8_t odp_proto_l2_type_t;
+
+/** Layer 2 protocol type not defined */
+#define ODP_PROTO_L2_TYPE_NONE      0
+
+ /** Layer 2 protocol is Ethernet */
+#define ODP_PROTO_L2_TYPE_ETH       1
 
 /**
- * @def ODP_PROTO_L2_TYPE_NONE
- * Layer 2 protocol type not defined
- *
- * @def ODP_PROTO_L2_TYPE_ETH
- * Layer 2 protocol is Ethernet
- */
-
-/**
- * @typedef odp_proto_l3_type_t
  * Layer 3 protocol type
  */
+typedef uint16_t odp_proto_l3_type_t;
+
+/** Layer 3 protocol type not defined */
+#define ODP_PROTO_L3_TYPE_NONE      0xFFFF
+
+/* Types from IEEE EtherType assignments list */
+
+/** Layer 3 protocol is ARP */
+#define ODP_PROTO_L3_TYPE_ARP       0x0806
+
+/** Layer 3 protocol is RARP */
+#define ODP_PROTO_L3_TYPE_RARP      0x8035
+
+/** Layer 3 protocol is MPLS */
+#define ODP_PROTO_L3_TYPE_MPLS      0x8847
+
+/** Layer 3 protocol type is IPv4 */
+#define ODP_PROTO_L3_TYPE_IPV4      0x0800
+
+/** Layer 3 protocol type is IPv6 */
+#define ODP_PROTO_L3_TYPE_IPV6      0x86DD
 
 /**
- * @def ODP_PROTO_L3_TYPE_NONE
- * Layer 3 protocol type not defined
- *
- * @def ODP_PROTO_L3_TYPE_ARP
- * Layer 3 protocol is ARP
- *
- * @def ODP_PROTO_L3_TYPE_RARP
- * Layer 3 protocol is RARP
- *
- * @def ODP_PROTO_L3_TYPE_MPLS
- * Layer 3 protocol is MPLS
- *
- * @def ODP_PROTO_L3_TYPE_IPV4
- * Layer 3 protocol type is IPv4
- *
- * @def ODP_PROTO_L3_TYPE_IPV6
- * Layer 3 protocol type is IPv6
- */
-
-/**
- * @typedef odp_proto_l4_type_t
  * Layer 4 protocol type
  */
+typedef uint8_t odp_proto_l4_type_t;
 
-/**
- * @def ODP_PROTO_L4_TYPE_NONE
- * Layer 4 protocol type not defined
- *
- * @def ODP_PROTO_L4_TYPE_ICMPV4
- * Layer 4 protocol type is ICMPv4
- *
- * @def ODP_PROTO_L4_TYPE_IGMP
- * Layer 4 protocol type is IGMP
- *
- * @def ODP_PROTO_L4_TYPE_IPV4
- * Layer 4 protocol type is IPv4
- *
- * @def ODP_PROTO_L4_TYPE_TCP
- * Layer 4 protocol type is TCP
- *
- * @def ODP_PROTO_L4_TYPE_UDP
- * Layer 4 protocol type is UDP
- *
- * @def ODP_PROTO_L4_TYPE_IPV6
- * Layer 4 protocol type is IPv6
- *
- * @def ODP_PROTO_L4_TYPE_GRE
- * Layer 4 protocol type is GRE
- *
- * @def ODP_PROTO_L4_TYPE_ESP
- * Layer 4 protocol type is IPSEC ESP
- *
- * @def ODP_PROTO_L4_TYPE_AH
- * Layer 4 protocol type is IPSEC AH
- *
- * @def ODP_PROTO_L4_TYPE_ICMPV6
- * Layer 4 protocol type is ICMPv6
- *
- * @def ODP_PROTO_L4_TYPE_NO_NEXT
- * Layer 4 protocol type is "No Next Header".
- * Protocol / next header number is 59.
- *
- * @def ODP_PROTO_L4_TYPE_IPCOMP
- * Layer 4 protocol type is IP Payload Compression Protocol
- *
- * @def ODP_PROTO_L4_TYPE_SCTP
- * Layer 4 protocol type is SCTP
- *
- * @def ODP_PROTO_L4_TYPE_ROHC
- * Layer 4 protocol type is ROHC
- */
+/** Layer 4 protocol type not defined */
+ #define ODP_PROTO_L4_TYPE_NONE     255
+
+/* Types from IANA assigned Internet protocol numbers list */
+
+/** Layer 4 protocol type is ICMPv4 */
+ #define ODP_PROTO_L4_TYPE_ICMPV4   1
+
+/** Layer 4 protocol type is IGMP */
+#define ODP_PROTO_L4_TYPE_IGMP      2
+
+/** Layer 4 protocol type is IPv4 */
+#define ODP_PROTO_L4_TYPE_IPV4      4
+
+/** Layer 4 protocol type is TCP */
+ #define ODP_PROTO_L4_TYPE_TCP      6
+
+/** Layer 4 protocol type is UDP */
+#define ODP_PROTO_L4_TYPE_UDP       17
+
+/** Layer 4 protocol type is IPv6 */
+#define ODP_PROTO_L4_TYPE_IPV6      41
+
+/** Layer 4 protocol type is GRE */
+#define ODP_PROTO_L4_TYPE_GRE       47
+
+/** Layer 4 protocol type is IPSEC ESP */
+#define ODP_PROTO_L4_TYPE_ESP       50
+
+/** Layer 4 protocol type is IPSEC AH */
+#define ODP_PROTO_L4_TYPE_AH        51
+
+/** Layer 4 protocol type is ICMPv6 */
+#define ODP_PROTO_L4_TYPE_ICMPV6    58
+
+/** Layer 4 protocol type is No Next Header for IPv6 */
+#define ODP_PROTO_L4_TYPE_NO_NEXT   59
+
+/** Layer 4 protocol type is IP Payload Compression Protocol */
+#define ODP_PROTO_L4_TYPE_IPCOMP    108
+
+/** Layer 4 protocol type is SCTP */
+#define ODP_PROTO_L4_TYPE_SCTP      132
+
+/** Layer 4 protocol type is ROHC */
+#define ODP_PROTO_L4_TYPE_ROHC      142
 
 /**
  * @typedef odp_packet_chksum_status_t
