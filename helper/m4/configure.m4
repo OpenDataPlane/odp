@@ -60,5 +60,4 @@ AC_DEFINE_UNQUOTED([ODPH_DEPRECATED_API], [$ODPH_DEPRECATED_API],
 		   [Define to 1 to enable deprecated helper API definitions])
 
 AC_CONFIG_FILES([helper/libodphelper.pc
-		 helper/libodphelper-internal.pc
 		 helper/test/Makefile])
