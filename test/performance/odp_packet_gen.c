@@ -375,14 +375,13 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 				str_len -= len + 1;
 
 				if (i == MAX_PKTIOS) {
-					printf("Error: Too many interfaces\n");
+					ODPH_ERR("Error: Too many interfaces\n");
 					ret = -1;
 					break;
 				}
 
 				if (len > MAX_PKTIO_NAME) {
-					printf("Error: Too long interface name %s\n",
-					       str);
+					ODPH_ERR("Error: Too long interface name %s\n", str);
 					ret = -1;
 					break;
 				}
@@ -408,14 +407,13 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 				str_len -= len + 1;
 
 				if (i == MAX_PKTIOS) {
-					printf("Error: Too many MAC addresses\n");
+					ODPH_ERR("Error: Too many MAC addresses\n");
 					ret = -1;
 					break;
 				}
 
 				if (odph_eth_addr_parse(dst, str)) {
-					printf("Error: Bad MAC address: %s\n",
-					       str);
+					ODPH_ERR("Error: Bad MAC address: %s\n", str);
 					ret = -1;
 					break;
 				}
@@ -427,7 +425,7 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 		case 'o':
 			udp_port = atoi(optarg);
 			if (udp_port < 0 || udp_port > UINT16_MAX) {
-				printf("Error: Bad UDP source port: %d\n", udp_port);
+				ODPH_ERR("Error: Bad UDP source port: %d\n", udp_port);
 				ret = -1;
 				break;
 			}
@@ -436,7 +434,7 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 		case 'p':
 			udp_port = atoi(optarg);
 			if (udp_port < 0 || udp_port > UINT16_MAX) {
-				printf("Error: Bad UDP destination port: %d\n", udp_port);
+				ODPH_ERR("Error: Bad UDP destination port: %d\n", udp_port);
 				ret = -1;
 				break;
 			}
@@ -489,15 +487,14 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 		case 'v':
 			test_options->num_vlan = parse_vlan(optarg, global);
 			if (test_options->num_vlan == 0) {
-				printf("Error: Did not find any VLANs\n");
+				ODPH_ERR("Error: Did not find any VLANs\n");
 				ret = -1;
 			}
 			break;
 		case 's':
 			if (odph_ipv4_addr_parse(&test_options->ipv4_src,
 						 optarg)) {
-				printf("Error: Bad IPv4 source address: %s\n",
-				       optarg);
+				ODPH_ERR("Error: Bad IPv4 source address: %s\n", optarg);
 				ret = -1;
 			}
 			strncpy(test_options->ipv4_src_s, optarg,
@@ -506,8 +503,7 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 		case 'd':
 			if (odph_ipv4_addr_parse(&test_options->ipv4_dst,
 						 optarg)) {
-				printf("Error: Bad IPv4 destination address: %s\n",
-				       optarg);
+				ODPH_ERR("Error: Bad IPv4 destination address: %s\n", optarg);
 				ret = -1;
 			}
 			strncpy(test_options->ipv4_dst_s, optarg,
@@ -550,13 +546,13 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 	}
 
 	if (help == 0 && test_options->num_pktio == 0) {
-		printf("Error: At least one packet IO interface is needed.\n");
-		printf("       Use -i <name> to specify interfaces.\n");
+		ODPH_ERR("Error: At least one packet IO interface is needed.\n");
+		ODPH_ERR("       Use -i <name> to specify interfaces.\n");
 		ret = -1;
 	}
 
 	if (test_options->num_rx < 1 || test_options->num_tx < 1) {
-		printf("Error: At least one rx and tx thread needed.\n");
+		ODPH_ERR("Error: At least one rx and tx thread needed.\n");
 		ret = -1;
 	}
 
@@ -570,21 +566,21 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 		uint32_t req_pkts;
 
 		if (test_options->rand_pkt_len_max <= test_options->rand_pkt_len_min) {
-			printf("Error: Bad max packet length\n");
+			ODPH_ERR("Error: Bad max packet length\n");
 			ret = -1;
 		}
 		if (pkt_bins == 1) {
-			printf("Error: Invalid bins value\n");
+			ODPH_ERR("Error: Invalid bins value\n");
 			ret = -1;
 		}
 		if (pkt_sizes < pkt_bins) {
-			printf("Error: Not enough packet sizes for %" PRIu32 " bins\n", pkt_bins);
+			ODPH_ERR("Error: Not enough packet sizes for %" PRIu32 " bins\n", pkt_bins);
 			ret = -1;
 		}
 		if (pkt_bins && num_tx_pkt > pkt_bins && num_tx_pkt % pkt_bins)
-			printf("\nWARNING: Transmit packet count is not evenly divisible into packet length bins.\n\n");
+			ODPH_ERR("\nWARNING: Transmit packet count is not evenly divisible into packet length bins.\n\n");
 		else if (!pkt_bins && num_tx_pkt > pkt_sizes && num_tx_pkt % pkt_sizes)
-			printf("\nWARNING: Transmit packet count is not evenly divisible into packet lengths.\n\n");
+			ODPH_ERR("\nWARNING: Transmit packet count is not evenly divisible into packet lengths.\n\n");
 
 		req_pkts = pkt_bins ? pkt_bins : pkt_sizes;
 		if (req_pkts > num_tx_pkt)
@@ -599,8 +595,7 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 		      test_options->burst_size);
 
 	if (test_options->num_pkt < min_packets) {
-		printf("Error: Pool needs to have at least %u packets\n",
-		       min_packets);
+		ODPH_ERR("Error: Pool needs to have at least %u packets\n", min_packets);
 		ret = -1;
 	}
 
@@ -611,18 +606,18 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 		double gap_hz = 1000000000.0 / test_options->gap_nsec;
 
 		if (gap_hz > (double)odp_time_local_res()) {
-			printf("\nWARNING: Burst gap exceeds time counter resolution "
-			       "%" PRIu64 "\n\n", odp_time_local_res());
+			ODPH_ERR("\nWARNING: Burst gap exceeds time counter resolution "
+				 "%" PRIu64 "\n\n", odp_time_local_res());
 		}
 	}
 
 	if (test_options->c_mode.udp_dst &&
 	    num_tx_pkt % test_options->c_mode.udp_dst)
-		printf("\nWARNING: Transmit packet count is not evenly divisible by UDP destination port count.\n\n");
+		ODPH_ERR("\nWARNING: Transmit packet count is not evenly divisible by UDP destination port count.\n\n");
 
 	if (test_options->c_mode.udp_src &&
 	    num_tx_pkt % test_options->c_mode.udp_src)
-		printf("\nWARNING: Transmit packet count is not evenly divisible by UDP source port count.\n\n");
+		ODPH_ERR("\nWARNING: Transmit packet count is not evenly divisible by UDP source port count.\n\n");
 
 	test_options->hdr_len = ODPH_ETHHDR_LEN +
 				(test_options->num_vlan * ODPH_VLANHDR_LEN) +
@@ -631,7 +626,7 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 	pkt_len = test_options->use_rand_pkt_len ?
 			test_options->rand_pkt_len_min : test_options->pkt_len;
 	if (test_options->hdr_len >= pkt_len) {
-		printf("Error: Headers do not fit into packet length %" PRIu32 "\n", pkt_len);
+		ODPH_ERR("Error: Headers do not fit into packet length %" PRIu32 "\n", pkt_len);
 		ret = -1;
 	}
 
@@ -646,8 +641,8 @@ static int set_num_cpu(test_global_t *global)
 
 	/* One thread used for the main thread */
 	if (num_cpu > ODP_THREAD_COUNT_MAX - 1) {
-		printf("Error: Too many threads. API supports max %i.\n",
-		       ODP_THREAD_COUNT_MAX - 1);
+		ODPH_ERR("Error: Too many threads. API supports max %i.\n",
+			 ODP_THREAD_COUNT_MAX - 1);
 		return -1;
 	}
 
@@ -658,8 +653,7 @@ static int set_num_cpu(test_global_t *global)
 
 		/* Normally we want to use only worker threads */
 		if (ret > 1) {
-			printf("Error: Too many workers. Maximum supported %i.\n",
-			       ret);
+			ODPH_ERR("Error: Too many workers. Maximum supported %i.\n", ret);
 			return -1;
 		}
 
@@ -667,8 +661,7 @@ static int set_num_cpu(test_global_t *global)
 		 * we try to use any CPUs available. */
 		ret = odp_cpumask_all_available(&global->cpumask);
 		if (ret < num_cpu) {
-			printf("Error: Not enough CPUs. Maximum supported %i.\n",
-			       ret);
+			ODPH_ERR("Error: Not enough CPUs. Maximum supported %i.\n", ret);
 			return -1;
 		}
 
@@ -767,28 +760,26 @@ static int open_pktios(test_global_t *global)
 	global->pool = ODP_POOL_INVALID;
 
 	if (odp_pool_capability(&pool_capa)) {
-		printf("Error: Pool capability failed.\n");
+		ODPH_ERR("Error: Pool capability failed.\n");
 		return -1;
 	}
 
 	if (pool_capa.pkt.max_num &&
 	    num_pkt > pool_capa.pkt.max_num) {
-		printf("Error: Too many packets. Max %u supported.\n",
-		       pool_capa.pkt.max_num);
+		ODPH_ERR("Error: Too many packets. Max %u supported.\n", pool_capa.pkt.max_num);
 		return -1;
 	}
 
 	if (pool_capa.pkt.max_len && pkt_len > pool_capa.pkt.max_len) {
-		printf("Error: Too large packets. Max %u supported length.\n",
-		       pool_capa.pkt.max_len);
+		ODPH_ERR("Error: Too large packets. Max %u supported length.\n",
+			 pool_capa.pkt.max_len);
 		return -1;
 	}
 
 	seg_len = test_options->hdr_len;
 	if (pool_capa.pkt.max_seg_len &&
 	    seg_len > pool_capa.pkt.max_seg_len) {
-		printf("Error: Max segment length is too small %u\n",
-		       pool_capa.pkt.max_seg_len);
+		ODPH_ERR("Error: Max segment length is too small %u\n", pool_capa.pkt.max_seg_len);
 		return -1;
 	}
 
@@ -802,14 +793,14 @@ static int open_pktios(test_global_t *global)
 	pool = odp_pool_create("packet gen pool", &pool_param);
 
 	if (pool == ODP_POOL_INVALID) {
-		printf("Error: Pool create failed.\n");
+		ODPH_ERR("Error: Pool create failed.\n");
 		return -1;
 	}
 
 	global->pool = pool;
 
 	if (odp_pktio_max_index() >= MAX_PKTIO_INDEXES)
-		printf("Warning: max pktio index (%u) is too large\n", odp_pktio_max_index());
+		ODPH_ERR("Warning: max pktio index (%u) is too large\n", odp_pktio_max_index());
 
 	odp_pktio_param_init(&pktio_param);
 	pktio_param.in_mode  = ODP_PKTIN_MODE_SCHED;
@@ -824,7 +815,7 @@ static int open_pktios(test_global_t *global)
 		pktio = odp_pktio_open(name, pool, &pktio_param);
 
 		if (pktio == ODP_PKTIO_INVALID) {
-			printf("Error (%s): Pktio open failed.\n", name);
+			ODPH_ERR("Error (%s): Pktio open failed.\n", name);
 			return -1;
 		}
 
@@ -834,32 +825,32 @@ static int open_pktios(test_global_t *global)
 
 		pktio_idx = odp_pktio_index(pktio);
 		if (pktio_idx < 0 || pktio_idx >= MAX_PKTIO_INDEXES) {
-			printf("Error (%s): Bad pktio index: %i\n", name, pktio_idx);
+			ODPH_ERR("Error (%s): Bad pktio index: %i\n", name, pktio_idx);
 			return -1;
 		}
 		global->if_from_pktio_idx[pktio_idx] = i;
 
 		if (odp_pktio_capability(pktio, &pktio_capa)) {
-			printf("Error (%s): Pktio capability failed.\n", name);
+			ODPH_ERR("Error (%s): Pktio capability failed.\n", name);
 			return -1;
 		}
 
 		if (num_rx > pktio_capa.max_input_queues) {
-			printf("Error (%s): Too many RX threads. Interface supports max %u input queues.\n",
-			       name, pktio_capa.max_input_queues);
+			ODPH_ERR("Error (%s): Too many RX threads. Interface supports max %u input queues.\n",
+				 name, pktio_capa.max_input_queues);
 			return -1;
 		}
 
 		if (num_tx > (int)pktio_capa.max_output_queues) {
-			printf("Error (%s): Too many TX threads. Interface supports max %u output queues.\n",
-			       name, pktio_capa.max_output_queues);
+			ODPH_ERR("Error (%s): Too many TX threads. Interface supports max %u output queues.\n",
+				 name, pktio_capa.max_output_queues);
 			return -1;
 		}
 
 		if (odp_pktio_mac_addr(pktio,
 				       &global->pktio[i].eth_src.addr,
 				       ODPH_ETHADDR_LEN) != ODPH_ETHADDR_LEN) {
-			printf("Error (%s): MAC address read failed.\n", name);
+			ODPH_ERR("Error (%s): MAC address read failed.\n", name);
 			return -1;
 		}
 
@@ -925,7 +916,7 @@ static int open_pktios(test_global_t *global)
 		pktin_param.num_queues = num_rx;
 
 		if (odp_pktin_queue_config(pktio, &pktin_param)) {
-			printf("Error (%s): Pktin config failed.\n", name);
+			ODPH_ERR("Error (%s): Pktin config failed.\n", name);
 			return -1;
 		}
 
@@ -934,13 +925,12 @@ static int open_pktios(test_global_t *global)
 		pktout_param.num_queues = num_tx;
 
 		if (odp_pktout_queue_config(pktio, &pktout_param)) {
-			printf("Error (%s): Pktout config failed.\n", name);
+			ODPH_ERR("Error (%s): Pktout config failed.\n", name);
 			return -1;
 		}
 
 		if (odp_pktout_queue(pktio, pktout, num_tx) != num_tx) {
-			printf("Error (%s): Pktout queue request failed.\n",
-			       name);
+			ODPH_ERR("Error (%s): Pktout queue request failed.\n", name);
 			return -1;
 		}
 
@@ -956,7 +946,7 @@ static int print_link_info(odp_pktio_t pktio)
 	odp_pktio_link_info_t info;
 
 	if (odp_pktio_link_info(pktio, &info)) {
-		printf("Error: Pktio link info failed.\n");
+		ODPH_ERR("Error: Pktio link info failed.\n");
 		return -1;
 	}
 
@@ -986,8 +976,7 @@ static int start_pktios(test_global_t *global)
 
 	for (i = 0; i < num_pktio; i++) {
 		if (odp_pktio_start(global->pktio[i].pktio)) {
-			printf("Error (%s): Pktio start failed.\n",
-			       test_options->pktio_name[i]);
+			ODPH_ERR("Error (%s): Pktio start failed.\n", test_options->pktio_name[i]);
 
 			return -1;
 		}
@@ -1003,16 +992,16 @@ static int start_pktios(test_global_t *global)
 			if (odp_pktio_link_status(pktio) == ODP_PKTIO_LINK_STATUS_UP) {
 				printf("pktio:%s\n", test_options->pktio_name[i]);
 				if (print_link_info(pktio)) {
-					printf("Error (%s): Printing link info failed.\n",
-					       test_options->pktio_name[i]);
+					ODPH_ERR("Error (%s): Printing link info failed.\n",
+						 test_options->pktio_name[i]);
 					return -1;
 				}
 				break;
 			}
 			link_wait++;
 			if (link_wait > test_options->wait_sec) {
-				printf("Error (%s): Pktio link down.\n",
-				       test_options->pktio_name[i]);
+				ODPH_ERR("Error (%s): Pktio link down.\n",
+					 test_options->pktio_name[i]);
 				return -1;
 			}
 			odp_time_wait_ns(ODP_TIME_SEC_IN_NS);
@@ -1040,8 +1029,7 @@ static int stop_pktios(test_global_t *global)
 			continue;
 
 		if (odp_pktio_stop(pktio)) {
-			printf("Error (%s): Pktio stop failed.\n",
-			       test_options->pktio_name[i]);
+			ODPH_ERR("Error (%s): Pktio stop failed.\n", test_options->pktio_name[i]);
 			ret = -1;
 		}
 	}
@@ -1064,15 +1052,14 @@ static int close_pktios(test_global_t *global)
 			continue;
 
 		if (odp_pktio_close(pktio)) {
-			printf("Error (%s): Pktio close failed.\n",
-			       test_options->pktio_name[i]);
+			ODPH_ERR("Error (%s): Pktio close failed.\n", test_options->pktio_name[i]);
 			ret = -1;
 		}
 	}
 
 	if (global->pool != ODP_POOL_INVALID &&
 	    odp_pool_destroy(global->pool)) {
-		printf("Error: Pool destroy failed.\n");
+		ODPH_ERR("Error: Pool destroy failed.\n");
 		ret = -1;
 	}
 
@@ -1254,7 +1241,7 @@ static int init_packets(test_global_t *global, int pktio,
 		payload_len = pkt_len - hdr_len;
 
 		if (seg_len < hdr_len) {
-			printf("Error: First segment too short %u\n", seg_len);
+			ODPH_ERR("Error: First segment too short %u\n", seg_len);
 			return -1;
 		}
 
@@ -1358,12 +1345,12 @@ static inline int update_rand_data(uint8_t *data, uint32_t data_len)
 		int32_t  ret = odp_random_data(data, data_len - generated, ODP_RANDOM_BASIC);
 
 		if (odp_unlikely(ret < 0)) {
-			printf("Error: odp_random_data() failed: %" PRId32 "\n", ret);
+			ODPH_ERR("Error: odp_random_data() failed: %" PRId32 "\n", ret);
 			return -1;
 		} else if (odp_unlikely(ret == 0)) {
 			retries++;
 			if (odp_unlikely(retries > MAX_RAND_RETRIES)) {
-				printf("Error: Failed to create random data\n");
+				ODPH_ERR("Error: Failed to create random data\n");
 				return -1;
 			}
 			continue;
@@ -1489,7 +1476,7 @@ static int alloc_test_packets(odp_pool_t pool, odp_packet_t *pkt_tbl, int num_pk
 
 				pkt_tbl[num_alloc] = odp_packet_alloc(pool, pkt_len);
 				if (pkt_tbl[num_alloc] == ODP_PACKET_INVALID) {
-					printf("Error: Alloc of %dB packet failed\n", pkt_len);
+					ODPH_ERR("Error: Alloc of %dB packet failed\n", pkt_len);
 					break;
 				}
 				num_alloc++;
@@ -1505,7 +1492,7 @@ static int alloc_test_packets(odp_pool_t pool, odp_packet_t *pkt_tbl, int num_pk
 	}
 	num_alloc = odp_packet_alloc_multi(pool, test_options->pkt_len, pkt_tbl, num_pkt);
 	if (num_alloc != num_pkt)
-		printf("Error: Alloc of %u packets failed\n", num_pkt);
+		ODPH_ERR("Error: Alloc of %u packets failed\n", num_pkt);
 
 	return num_alloc;
 }
@@ -1721,7 +1708,7 @@ static int start_workers(test_global_t *global, odp_instance_t instance)
 				 num_cpu);
 
 	if (ret != num_cpu) {
-		printf("Error: thread create failed %i\n", ret);
+		ODPH_ERR("Error: thread create failed %i\n", ret);
 		return -1;
 	}
 
@@ -2004,13 +1991,13 @@ int main(int argc, char **argv)
 
 	/* Init ODP before calling anything else */
 	if (odp_init_global(&instance, &init, NULL)) {
-		printf("Error: Global init failed.\n");
+		ODPH_ERR("Error: Global init failed.\n");
 		return 1;
 	}
 
 	/* Init this thread */
 	if (odp_init_local(instance, ODP_THREAD_CONTROL)) {
-		printf("Error: Local init failed.\n");
+		ODPH_ERR("Error: Local init failed.\n");
 		return 1;
 	}
 
@@ -2018,7 +2005,7 @@ int main(int argc, char **argv)
 			      ODP_CACHE_LINE_SIZE, 0);
 
 	if (shm == ODP_SHM_INVALID) {
-		printf("Error: SHM reserve failed.\n");
+		ODPH_ERR("Error: SHM reserve failed.\n");
 		return 1;
 	}
 
@@ -2082,17 +2069,17 @@ int main(int argc, char **argv)
 
 term:
 	if (odp_shm_free(shm)) {
-		printf("Error: SHM free failed.\n");
+		ODPH_ERR("Error: SHM free failed.\n");
 		return 1;
 	}
 
 	if (odp_term_local()) {
-		printf("Error: term local failed.\n");
+		ODPH_ERR("Error: term local failed.\n");
 		return 1;
 	}
 
 	if (odp_term_global(instance)) {
-		printf("Error: term global failed.\n");
+		ODPH_ERR("Error: term global failed.\n");
 		return 1;
 	}
 
