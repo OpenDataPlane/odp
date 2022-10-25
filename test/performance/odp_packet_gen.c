@@ -721,6 +721,10 @@ static int open_pktios(test_global_t *global)
 	else
 		printf("interface default\n");
 	printf("  promisc mode:       %s\n", test_options->promisc_mode ? "enabled" : "disabled");
+	printf("  packet references:  %s\n", test_options->use_refs ? "enabled" : "disabled");
+	printf("  measure latency:    %s\n", test_options->calc_latency ? "enabled" : "disabled");
+	printf("  UDP checksum:       %s\n", test_options->calc_cs ? "enabled" : "disabled");
+	printf("  payload filling:    %s\n", test_options->fill_pl ? "enabled" : "disabled");
 	printf("  tx burst size       %u\n", test_options->burst_size);
 	printf("  tx bursts           %u\n", test_options->bursts);
 	printf("  tx burst gap        %" PRIu64 " nsec\n",
