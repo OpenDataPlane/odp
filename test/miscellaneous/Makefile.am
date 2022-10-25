@@ -33,13 +33,8 @@ PROGRAM_static = odp_api_headers_static
 
 installcheck-local: $(PROGRAM_static)
 
-# pkgconfig-0.27 (centos-7) returns linker options in the wrong order
-if PKGCONFIG_WORKAROUND
-WA_FLAGS = -l:libodphelper.a -l:lib@ODP_LIB_NAME@.a
-endif
-
 $(PROGRAM_static): $(srcdir)/$(odp_api_headers_SOURCES)
-	$(CC) $(AM_CFLAGS) $(CFLAGS) $^ -o $@ $(WA_FLAGS) \
+	$(CC) $(AM_CFLAGS) $(CFLAGS) $^ -o $@ \
 		`$(PKGCONFIG) --static libodphelper` `$(PKGCONFIG) --static lib$(ODP_LIB_NAME)`
 if ! cross_compile
 	./$@
