@@ -47,6 +47,7 @@
 #include <odp_libconfig_internal.h>
 #include <odp_macros_internal.h>
 #include <odp_pool_internal.h>
+#include <odp_print_internal.h>
 #include <odp_queue_if.h>
 #include <odp_timer_internal.h>
 #include <odp_types_internal.h>
@@ -1803,6 +1804,10 @@ void odp_timeout_free(odp_timeout_t tmo)
 void odp_timer_pool_print(odp_timer_pool_t timer_pool)
 {
 	timer_pool_t *tp;
+	int len = 0;
+	int max_len = 512;
+	int n = max_len - 1;
+	char str[max_len];
 
 	if (timer_pool == ODP_TIMER_POOL_INVALID) {
 		_ODP_ERR("Bad timer pool handle\n");
@@ -1811,15 +1816,20 @@ void odp_timer_pool_print(odp_timer_pool_t timer_pool)
 
 	tp = timer_pool_from_hdl(timer_pool);
 
-	_ODP_PRINT("\nTimer pool info\n");
-	_ODP_PRINT("---------------\n");
-	_ODP_PRINT("  timer pool     %p\n", (void *)tp);
-	_ODP_PRINT("  tp index       %u\n", tp->tp_idx);
-	_ODP_PRINT("  num timers     %u\n", tp->num_alloc);
-	_ODP_PRINT("  num tp         %i\n", timer_global->num_timer_pools);
-	_ODP_PRINT("  inline timers  %i\n", timer_global->use_inline_timers);
-	_ODP_PRINT("  periodic       %i\n", tp->periodic);
-	_ODP_PRINT("\n");
+	len += _odp_snprint(&str[len], n - len, "Timer pool info\n");
+	len += _odp_snprint(&str[len], n - len, "---------------\n");
+	len += _odp_snprint(&str[len], n - len, "  handle         0x%" PRIx64 "\n",
+			    odp_timer_pool_to_u64(timer_pool));
+	len += _odp_snprint(&str[len], n - len, "  tp index       %u\n", tp->tp_idx);
+	len += _odp_snprint(&str[len], n - len, "  num timers     %u\n", tp->num_alloc);
+	len += _odp_snprint(&str[len], n - len, "  num tp         %i\n",
+			    timer_global->num_timer_pools);
+	len += _odp_snprint(&str[len], n - len, "  inline timers  %i\n",
+			    timer_global->use_inline_timers);
+	len += _odp_snprint(&str[len], n - len, "  periodic       %i\n", tp->periodic);
+	str[len] = 0;
+
+	_ODP_PRINT("%s\n", str);
 }
 
 void odp_timer_print(odp_timer_t timer)
@@ -1827,6 +1837,10 @@ void odp_timer_print(odp_timer_t timer)
 	timer_pool_t *tp;
 	uint32_t idx;
 	_odp_timer_t *tim;
+	int len = 0;
+	int max_len = 512;
+	int n = max_len - 1;
+	char str[max_len];
 
 	if (timer == ODP_TIMER_INVALID) {
 		_ODP_ERR("Bad timer handle\n");
@@ -1837,20 +1851,29 @@ void odp_timer_print(odp_timer_t timer)
 	idx = handle_to_idx(timer, tp);
 	tim = &tp->timers[idx];
 
-	_ODP_PRINT("\nTimer info\n");
-	_ODP_PRINT("----------\n");
-	_ODP_PRINT("  timer pool     %p\n", (void *)tp);
-	_ODP_PRINT("  timer index    %u\n", idx);
-	_ODP_PRINT("  dest queue     0x%" PRIx64 "\n", odp_queue_to_u64(tim->queue));
-	_ODP_PRINT("  user ptr       %p\n", tim->user_ptr);
-	_ODP_PRINT("  periodic ticks %" PRIu64 "\n", tim->periodic_ticks & ~PERIODIC_CANCELLED);
-	_ODP_PRINT("\n");
+	len += _odp_snprint(&str[len], n - len, "Timer info\n");
+	len += _odp_snprint(&str[len], n - len, "----------\n");
+	len += _odp_snprint(&str[len], n - len, "  timer pool     0x%" PRIx64 "\n",
+			    odp_timer_pool_to_u64(timer_pool_to_hdl(tp)));
+	len += _odp_snprint(&str[len], n - len, "  timer index    %u\n", idx);
+	len += _odp_snprint(&str[len], n - len, "  dest queue     0x%" PRIx64 "\n",
+			    odp_queue_to_u64(tim->queue));
+	len += _odp_snprint(&str[len], n - len, "  user ptr       %p\n", tim->user_ptr);
+	len += _odp_snprint(&str[len], n - len, "  periodic ticks %" PRIu64 "\n",
+			    tim->periodic_ticks & ~PERIODIC_CANCELLED);
+	str[len] = 0;
+
+	_ODP_PRINT("%s\n", str);
 }
 
 void odp_timeout_print(odp_timeout_t tmo)
 {
 	const odp_timeout_hdr_t *tmo_hdr;
 	odp_timer_t timer;
+	int len = 0;
+	int max_len = 512;
+	int n = max_len - 1;
+	char str[max_len];
 
 	if (tmo == ODP_TIMEOUT_INVALID) {
 		_ODP_ERR("Bad timeout handle\n");
@@ -1860,22 +1883,26 @@ void odp_timeout_print(odp_timeout_t tmo)
 	tmo_hdr = timeout_hdr(tmo);
 	timer = tmo_hdr->timer;
 
-	_ODP_PRINT("\nTimeout info\n");
-	_ODP_PRINT("------------\n");
-	_ODP_PRINT("  tmo handle     0x%" PRIx64 "\n", odp_timeout_to_u64(tmo));
-	_ODP_PRINT("  expiration     %" PRIu64 "\n", tmo_hdr->expiration);
-	_ODP_PRINT("  user ptr       %p\n", tmo_hdr->user_ptr);
+	len += _odp_snprint(&str[len], n - len, "Timeout info\n");
+	len += _odp_snprint(&str[len], n - len, "------------\n");
+	len += _odp_snprint(&str[len], n - len, "  handle         0x%" PRIx64 "\n",
+			    odp_timeout_to_u64(tmo));
+	len += _odp_snprint(&str[len], n - len, "  expiration     %" PRIu64 "\n",
+			    tmo_hdr->expiration);
+	len += _odp_snprint(&str[len], n - len, "  user ptr       %p\n", tmo_hdr->user_ptr);
 
 	if (timer != ODP_TIMER_INVALID) {
 		timer_pool_t *tp = handle_to_tp(timer);
 		uint32_t idx = handle_to_idx(timer, tp);
 
-		_ODP_PRINT("  timer pool     %p\n", (void *)tp);
-		_ODP_PRINT("  timer index    %u\n", idx);
-		_ODP_PRINT("  periodic       %i\n", tp->periodic);
+		len += _odp_snprint(&str[len], n - len, "  timer pool     0x%" PRIx64 "\n",
+				    odp_timer_pool_to_u64(timer_pool_to_hdl(tp)));
+		len += _odp_snprint(&str[len], n - len, "  timer index    %u\n", idx);
+		len += _odp_snprint(&str[len], n - len, "  periodic       %i\n", tp->periodic);
 	}
+	str[len] = 0;
 
-	_ODP_PRINT("\n");
+	_ODP_PRINT("%s\n", str);
 }
 
 int _odp_timer_init_global(const odp_init_t *params)
