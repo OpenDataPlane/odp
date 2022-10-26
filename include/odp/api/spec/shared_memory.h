@@ -40,8 +40,6 @@ extern "C" {
  * Maximum shared memory block name length in chars including null char
  */
 
- /* Shared memory flags */
-
 /**
  * @def ODP_SHM_IOVA_INVALID
  * Invalid IOVA address
@@ -217,22 +215,25 @@ int odp_shm_capability(odp_shm_capability_t *capa);
  * Reserve a contiguous block of shared memory
  *
  * Reserve a contiguous block of shared memory that fulfills size, alignment
- * and shareability (ODP_SHM_* flags) requirements. In general, a name is
- * optional and does not need to be unique. However, if the block will be
+ * and shareability (ODP_SHM_* flags) requirements. By default (without flags), the memory
+ * block can be shared between all threads of the ODP instance. Memory address (odp_shm_addr())
+ * shareability depends on application memory model and #ODP_SHM_SINGLE_VA flag usage.
+ *
+ * Name is optional and does not need to be unique. However, if the block will be
  * searched with odp_shm_lookup() or odp_shm_import(), a unique name is needed
  * for correct match.
  *
- * @param name   Name of the block or NULL. Maximum string length is
- *               ODP_SHM_NAME_LEN.
+ * @param name   Name of the block or NULL. Maximum string length is ODP_SHM_NAME_LEN.
  * @param size   Block size in bytes
  * @param align  Block alignment in bytes
  * @param flags  Shared memory parameter flags (ODP_SHM_*). Default value is 0.
  *
  * @return Handle of the reserved block
  * @retval ODP_SHM_INVALID on failure
+ *
+ * @see odp_mem_model_t
  */
-odp_shm_t odp_shm_reserve(const char *name, uint64_t size, uint64_t align,
-			  uint32_t flags);
+odp_shm_t odp_shm_reserve(const char *name, uint64_t size, uint64_t align, uint32_t flags);
 
 /**
  * Free a contiguous block of shared memory
@@ -293,9 +294,7 @@ void *odp_shm_addr(odp_shm_t shm);
 /**
  * Shared memory block info
  *
- * Get information about the specified shared memory block. This is the only
- * shared memory API function which accepts invalid shm handles (any bit value)
- * without causing undefined behavior.
+ * Get information about the specified shared memory block.
  *
  * @param      shm   Block handle
  * @param[out] info  Block info pointer for output
