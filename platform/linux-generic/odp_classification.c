@@ -1557,6 +1557,8 @@ static inline void pmr_debug_print(pmr_t *pmr, cos_t *cos)
  */
 static cos_t *match_pmr_cos(cos_t *cos, const uint8_t *pkt_addr, odp_packet_hdr_t *hdr)
 {
+	pmr_t *pmr_match = NULL;
+
 	while (1) {
 		uint32_t i, num_rule = odp_atomic_load_u32(&cos->num_rule);
 
@@ -1570,18 +1572,13 @@ static cos_t *match_pmr_cos(cos_t *cos, const uint8_t *pkt_addr, odp_packet_hdr_
 			if (verify_pmr(pmr, pkt_addr, hdr)) {
 				/* PMR matched */
 
+				pmr_match = pmr;
 				cos = linked_cos;
 
 				pmr_debug_print(pmr, cos);
 
 				if (cos->stats_enable)
 					odp_atomic_inc_u64(&cos->stats.packets);
-
-				hdr->p.input_flags.cls_mark = 0;
-				if (pmr->mark) {
-					hdr->p.input_flags.cls_mark = 1;
-					hdr->cls_mark = pmr->mark;
-				}
 
 				break;
 			}
@@ -1590,6 +1587,14 @@ static cos_t *match_pmr_cos(cos_t *cos, const uint8_t *pkt_addr, odp_packet_hdr_
 		/* If no PMR matched, the current CoS is the best match. */
 		if (i == num_rule)
 			break;
+	}
+
+	if (pmr_match) {
+		hdr->p.input_flags.cls_mark = 0;
+		if (pmr_match->mark) {
+			hdr->p.input_flags.cls_mark = 1;
+			hdr->cls_mark = pmr_match->mark;
+		}
 	}
 
 	return cos;
