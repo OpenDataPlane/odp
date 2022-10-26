@@ -1445,6 +1445,8 @@ void odp_packet_print(odp_packet_t pkt)
 
 	len += _odp_snprint(&str[len], n - len, "Packet info\n");
 	len += _odp_snprint(&str[len], n - len, "-----------\n");
+	len += _odp_snprint(&str[len], n - len, "  handle         0x%" PRIx64 "\n",
+			    odp_packet_to_u64(pkt));
 	len += _odp_snprint(&str[len], n - len, "  pool index     %u\n", hdr->event_hdr.index.pool);
 	len += _odp_snprint(&str[len], n - len, "  buf index      %u\n",
 			    hdr->event_hdr.index.event);
@@ -1460,6 +1462,10 @@ void odp_packet_print(odp_packet_t pkt)
 			    "  flags          0x%" PRIx32 "\n", hdr->p.flags.all_flags);
 	len += _odp_snprint(&str[len], n - len,
 			    "  cls_mark       %" PRIu64 "\n", odp_packet_cls_mark(pkt));
+	len += _odp_snprint(&str[len], n - len,
+			    "  user ptr       %p\n", hdr->user_ptr);
+	len += _odp_snprint(&str[len], n - len,
+			    "  user area      %p\n", hdr->uarea_addr);
 	len += _odp_snprint(&str[len], n - len,
 			    "  l2_offset      %" PRIu32 "\n", hdr->p.l2_offset);
 	len += _odp_snprint(&str[len], n - len,
@@ -1517,6 +1523,8 @@ void odp_packet_print_data(odp_packet_t pkt, uint32_t offset,
 
 	len += _odp_snprint(&str[len], n - len, "Packet data\n");
 	len += _odp_snprint(&str[len], n - len, "-----------\n");
+	len += _odp_snprint(&str[len], n - len,
+			    "  handle         0x%" PRIx64 "\n", odp_packet_to_u64(pkt));
 	len += _odp_snprint(&str[len], n - len,
 			    "  pool index     %" PRIu32 "\n", pool->pool_idx);
 	len += _odp_snprint(&str[len], n - len,
