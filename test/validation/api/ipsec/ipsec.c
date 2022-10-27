@@ -16,11 +16,21 @@
 #include "test_vectors.h"
 #include "reass_test_vectors.h"
 
+#define EVENT_BUFFER_SIZE 3
+
+struct buffered_event_s {
+	odp_queue_t from;
+	odp_event_t event;
+};
+
+static struct buffered_event_s sched_ev_buffer[EVENT_BUFFER_SIZE];
 struct suite_context_s suite_context;
 static odp_ipsec_capability_t capa;
+static int sched_ev_buffer_tail;
 
 #define PKT_POOL_NUM  64
 #define EVENT_WAIT_TIME ODP_TIME_SEC_IN_NS
+#define SCHED_EVENT_RETRY_COUNT 2
 
 #define PACKET_USER_PTR	((void *)0x1212fefe)
 #define IPSEC_SA_CTX	((void *)0xfefefafa)
@@ -101,11 +111,68 @@ static int pktio_start(odp_pktio_t pktio, odp_bool_t in, odp_bool_t out)
 	return 1;
 }
 
-static odp_event_t sched_queue_deq(uint64_t wait_ns)
+static int sched_event_buffer_add(odp_queue_t from, odp_event_t event)
+{
+	if (sched_ev_buffer_tail + 1 == EVENT_BUFFER_SIZE)
+		return -ENOMEM;
+
+	sched_ev_buffer[sched_ev_buffer_tail].from = from;
+	sched_ev_buffer[sched_ev_buffer_tail].event = event;
+	sched_ev_buffer_tail++;
+
+	return 0;
+}
+
+static odp_event_t sched_event_buffer_get(odp_queue_t from)
+{
+	odp_event_t ev;
+	int i, j;
+
+	if (odp_queue_type(from) == ODP_QUEUE_TYPE_PLAIN)
+		return ODP_EVENT_INVALID;
+
+	/* Look for a matching entry */
+	for (i = 0; i < sched_ev_buffer_tail; i++)
+		if (sched_ev_buffer[i].from == from)
+			break;
+
+	/* Remove entry from buffer */
+	if (i != sched_ev_buffer_tail) {
+		ev = sched_ev_buffer[i].event;
+
+		for (j = 1; i + j < sched_ev_buffer_tail; j++)
+			sched_ev_buffer[i + j - 1] = sched_ev_buffer[i + j];
+
+		sched_ev_buffer_tail--;
+	} else {
+		ev = ODP_EVENT_INVALID;
+	}
+
+	return ev;
+}
+
+static odp_event_t sched_queue_deq(odp_queue_t queue, uint64_t wait_ns)
 {
 	uint64_t wait = odp_schedule_wait_time(wait_ns);
+	odp_event_t ev = ODP_EVENT_INVALID;
+	odp_queue_t from;
+	int retry = 0;
 
-	return odp_schedule(NULL, wait);
+	/* Check if buffered events are available */
+	ev = sched_event_buffer_get(queue);
+	if (ODP_EVENT_INVALID != ev)
+		return ev;
+
+	do {
+		ev = odp_schedule(&from, wait);
+
+		if ((ev != ODP_EVENT_INVALID) && (from != queue)) {
+			CU_ASSERT_FATAL(0 == sched_event_buffer_add(from, ev));
+			ev = ODP_EVENT_INVALID;
+		}
+	} while (ev == ODP_EVENT_INVALID && (++retry < SCHED_EVENT_RETRY_COUNT));
+
+	return ev;
 }
 
 static odp_event_t plain_queue_deq(odp_queue_t queue, uint64_t wait_ns)
@@ -131,7 +198,7 @@ static odp_event_t recv_event(odp_queue_t queue, uint64_t wait_ns)
 	if (odp_queue_type(queue) == ODP_QUEUE_TYPE_PLAIN)
 		event = plain_queue_deq(queue, wait_ns);
 	else
-		event = sched_queue_deq(wait_ns);
+		event = sched_queue_deq(queue, wait_ns);
 
 	return event;
 }
