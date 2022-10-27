@@ -26,7 +26,11 @@
 /* Default number of entries in the test lookup table */
 #define DEF_LOOKUP_TBL_SIZE (1024 * 1024)
 
-#define MAX_WORKERS      (ODP_THREAD_COUNT_MAX - 1)
+#define MAX_WORKERS                                                                                \
+	(((ODP_THREAD_COUNT_MAX - 1) > (MAX_GROUPS * QUEUES_PER_GROUP)) ?                          \
+		 (MAX_GROUPS * QUEUES_PER_GROUP) :                                                 \
+		 (ODP_THREAD_COUNT_MAX - 1))
+
 ODP_STATIC_ASSERT(MAX_WORKERS <= MAX_GROUPS * QUEUES_PER_GROUP,
 		  "Not enough queues for all workers");
 
