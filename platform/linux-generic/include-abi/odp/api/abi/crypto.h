@@ -19,7 +19,8 @@
 extern "C" {
 #endif
 
-/* Placeholder for inlined API functions */
+/* Inlined API functions */
+#include <odp/api/plat/crypto_inlines.h>
 
 #ifdef __cplusplus
 }
