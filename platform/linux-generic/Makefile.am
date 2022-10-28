@@ -75,6 +75,7 @@ odpapiabiarchinclude_HEADERS += \
 		  include-abi/odp/api/abi/comp.h \
 		  include-abi/odp/api/abi/cpumask.h \
 		  include-abi/odp/api/abi/crypto.h \
+		  include-abi/odp/api/abi/crypto_types.h \
 		  include-abi/odp/api/abi/debug.h \
 		  include-abi/odp/api/abi/dma_types.h \
 		  include-abi/odp/api/abi/errno.h \

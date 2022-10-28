@@ -1,10 +1,8 @@
-/* Copyright (c) 2015-2018, Linaro Limited
- * Copyright (c) 2022, Nokia
+/* Copyright (c) 2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
  */
-
 
 /**
  * @file
@@ -12,14 +10,16 @@
  * ODP crypto
  */
 
-#ifndef ODP_API_ABI_CRYPTO_H_
-#define ODP_API_ABI_CRYPTO_H_
+#ifndef ODP_API_CRYPTO_TYPES_H_
+#define ODP_API_CRYPTO_TYPES_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/* Placeholder for inlined API functions */
+#include <odp/api/abi/crypto_types.h>
+
+#include <odp/api/spec/crypto_types.h>
 
 #ifdef __cplusplus
 }

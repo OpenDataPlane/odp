@@ -17,19 +17,7 @@
 extern "C" {
 #endif
 
-#include <odp/api/std_types.h>
-#include <odp/api/abi/packet_types.h>
 #include <odp/api/abi/crypto.h>
-#include <odp/api/abi/buffer.h>
-#include <odp/api/abi/queue_types.h>
-
-/** @ingroup odp_crypto
- *  @{
- */
-
-/**
- * @}
- */
 
 #include <odp/api/spec/crypto.h>
 

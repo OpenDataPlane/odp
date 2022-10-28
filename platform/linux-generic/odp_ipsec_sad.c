@@ -6,6 +6,7 @@
  */
 
 #include <odp/api/atomic.h>
+#include <odp/api/crypto.h>
 #include <odp/api/ipsec.h>
 #include <odp/api/random.h>
 #include <odp/api/shared_memory.h>
