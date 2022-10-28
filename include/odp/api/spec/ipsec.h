@@ -19,7 +19,7 @@
 extern "C" {
 #endif
 
-#include <odp/api/crypto.h>
+#include <odp/api/crypto_types.h>
 #include <odp/api/event_types.h>
 #include <odp/api/ipsec_types.h>
 #include <odp/api/packet_types.h>
