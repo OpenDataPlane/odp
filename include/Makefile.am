@@ -31,6 +31,7 @@ odpapiinclude_HEADERS = \
 	odp/api/hints.h \
 	odp/api/init.h \
 	odp/api/ipsec.h \
+	odp/api/ipsec_types.h \
 	odp/api/packet.h \
 	odp/api/packet_types.h \
 	odp/api/packet_flags.h \
@@ -93,6 +94,7 @@ odpapispecinclude_HEADERS = \
 		  odp/api/spec/hints.h \
 		  odp/api/spec/init.h \
 		  odp/api/spec/ipsec.h \
+		  odp/api/spec/ipsec_types.h \
 		  odp/api/spec/packet.h \
 		  odp/api/spec/packet_types.h \
 		  odp/api/spec/packet_flags.h \
@@ -156,6 +158,7 @@ odpapiabidefaultinclude_HEADERS = \
 	odp/api/abi-default/hash.h \
 	odp/api/abi-default/init.h \
 	odp/api/abi-default/ipsec.h \
+	odp/api/abi-default/ipsec_types.h \
 	odp/api/abi-default/packet.h \
 	odp/api/abi-default/packet_types.h \
 	odp/api/abi-default/packet_flags.h \
@@ -213,6 +216,7 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/arm32-linux/odp/api/abi/hash.h \
 	odp/arch/arm32-linux/odp/api/abi/init.h \
 	odp/arch/arm32-linux/odp/api/abi/ipsec.h \
+	odp/arch/arm32-linux/odp/api/abi/ipsec_types.h \
 	odp/arch/arm32-linux/odp/api/abi/packet.h \
 	odp/arch/arm32-linux/odp/api/abi/packet_types.h \
 	odp/arch/arm32-linux/odp/api/abi/packet_flags.h \
@@ -266,6 +270,7 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/arm64-linux/odp/api/abi/hash.h \
 	odp/arch/arm64-linux/odp/api/abi/init.h \
 	odp/arch/arm64-linux/odp/api/abi/ipsec.h \
+	odp/arch/arm64-linux/odp/api/abi/ipsec_types.h \
 	odp/arch/arm64-linux/odp/api/abi/packet.h \
 	odp/arch/arm64-linux/odp/api/abi/packet_types.h \
 	odp/arch/arm64-linux/odp/api/abi/packet_flags.h \
@@ -319,6 +324,7 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/default-linux/odp/api/abi/hash.h \
 	odp/arch/default-linux/odp/api/abi/init.h \
 	odp/arch/default-linux/odp/api/abi/ipsec.h \
+	odp/arch/default-linux/odp/api/abi/ipsec_types.h \
 	odp/arch/default-linux/odp/api/abi/packet.h \
 	odp/arch/default-linux/odp/api/abi/packet_types.h \
 	odp/arch/default-linux/odp/api/abi/packet_flags.h \
@@ -372,6 +378,7 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/power64-linux/odp/api/abi/hash.h \
 	odp/arch/power64-linux/odp/api/abi/init.h \
 	odp/arch/power64-linux/odp/api/abi/ipsec.h \
+	odp/arch/power64-linux/odp/api/abi/ipsec_types.h \
 	odp/arch/power64-linux/odp/api/abi/packet.h \
 	odp/arch/power64-linux/odp/api/abi/packet_types.h \
 	odp/arch/power64-linux/odp/api/abi/packet_flags.h \
@@ -425,6 +432,7 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/x86_32-linux/odp/api/abi/hash.h \
 	odp/arch/x86_32-linux/odp/api/abi/init.h \
 	odp/arch/x86_32-linux/odp/api/abi/ipsec.h \
+	odp/arch/x86_32-linux/odp/api/abi/ipsec_types.h \
 	odp/arch/x86_32-linux/odp/api/abi/packet.h \
 	odp/arch/x86_32-linux/odp/api/abi/packet_types.h \
 	odp/arch/x86_32-linux/odp/api/abi/packet_flags.h \
@@ -478,6 +486,7 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/x86_64-linux/odp/api/abi/hash.h \
 	odp/arch/x86_64-linux/odp/api/abi/init.h \
 	odp/arch/x86_64-linux/odp/api/abi/ipsec.h \
+	odp/arch/x86_64-linux/odp/api/abi/ipsec_types.h \
 	odp/arch/x86_64-linux/odp/api/abi/packet.h \
 	odp/arch/x86_64-linux/odp/api/abi/packet_types.h \
 	odp/arch/x86_64-linux/odp/api/abi/packet_flags.h \
