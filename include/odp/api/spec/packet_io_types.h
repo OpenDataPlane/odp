@@ -73,6 +73,12 @@ extern "C" {
  */
 
 /**
+ * @def ODP_PKTIN_MAX_QUEUES
+ * Maximum number of packet input queues supported by the API. Use
+ * odp_pktio_capability() to check the maximum number of queues per interface.
+ */
+
+/**
  * @def ODP_PKTOUT_MAX_QUEUES
  * Maximum number of packet output queues supported by the API. Use
  * odp_pktio_capability() to check the maximum number of queues per interface.
@@ -819,7 +825,9 @@ typedef struct odp_pktin_vector_capability_t {
  * ODP_PKTOUT_MODE_DIRECT mode.
  */
 typedef struct odp_pktio_capability_t {
-	/** Maximum number of input queues */
+	/** Maximum number of input queues
+	 *
+	 * Value does not exceed ODP_PKTIN_MAX_QUEUES. */
 	uint32_t max_input_queues;
 
 	/** Maximum number of output queues

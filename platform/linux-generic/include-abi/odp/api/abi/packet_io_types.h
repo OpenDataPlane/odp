@@ -47,6 +47,8 @@ typedef struct odp_pktout_queue_t {
 
 #define ODP_PKTIN_NO_WAIT 0
 
+#define ODP_PKTIN_MAX_QUEUES 64
+
 #define ODP_PKTOUT_MAX_QUEUES 64
 
 #define ODP_PKTIO_STATS_EXTRA_NAME_LEN 64
