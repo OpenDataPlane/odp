@@ -580,14 +580,20 @@ typedef struct odp_cls_capability_t {
 
 } odp_cls_capability_t;
 
+#if ODP_DEPRECATED_API
+
 /**
  * class of service packet drop policies
+ *
+ * @deprecated Drop policy will be removed from the API.
  */
 typedef enum {
 	ODP_COS_DROP_POOL,      /**< Follow buffer pool drop policy */
 	ODP_COS_DROP_NEVER,     /**< Never drop, ignoring buffer pool policy */
 
 } odp_cls_drop_t;
+
+#endif
 
 /**
  * Enumeration of actions for CoS.
@@ -668,8 +674,10 @@ typedef struct odp_cls_cos_param {
 	/** Pool associated with CoS */
 	odp_pool_t pool;
 
+#if ODP_DEPRECATED_API
 	/** Drop policy associated with CoS */
 	odp_cls_drop_t drop_policy;
+#endif
 
 	/** Random Early Detection configuration */
 	odp_red_param_t red;
@@ -793,6 +801,8 @@ uint32_t odp_cls_cos_num_queue(odp_cos_t cos);
  */
 uint32_t odp_cls_cos_queues(odp_cos_t cos, odp_queue_t queue[], uint32_t num);
 
+#if ODP_DEPRECATED_API
+
 /**
  * Assign packet drop policy for specific class-of-service
  *
@@ -814,6 +824,8 @@ int odp_cos_drop_set(odp_cos_t cos, odp_cls_drop_t drop_policy);
 * @retval Drop policy configured with the given class-of-service
 */
 odp_cls_drop_t odp_cos_drop(odp_cos_t cos);
+
+#endif
 
 /**
  * Request to override per-port class of service

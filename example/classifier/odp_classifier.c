@@ -493,7 +493,7 @@ static odp_cos_t configure_default_cos(odp_pktio_t pktio, appl_args_t *args)
 	odp_cls_cos_param_init(&cls_param);
 	cls_param.pool = pool_default;
 	cls_param.queue = queue_default;
-	cls_param.drop_policy = ODP_COS_DROP_POOL;
+
 	cos_default = odp_cls_cos_create(cos_name, &cls_param);
 
 	if (cos_default == ODP_COS_INVALID) {
@@ -571,7 +571,7 @@ static void configure_cos(odp_cos_t default_cos, appl_args_t *args)
 		if (appl_args_gbl->cos_pools)
 			stats->pool = cls_param.pool;
 		cls_param.queue = stats->queue;
-		cls_param.drop_policy = ODP_COS_DROP_POOL;
+
 		stats->cos = odp_cls_cos_create(cos_name, &cls_param);
 
 		odp_atomic_init_u64(&stats->queue_pkt_count, 0);

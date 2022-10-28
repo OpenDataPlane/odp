@@ -53,7 +53,9 @@ static void classification_test_create_cos(void)
 	odp_cls_cos_param_init(&cls_param);
 	cls_param.pool = pool;
 	cls_param.queue = queue;
+#if ODP_DEPRECATED_API
 	cls_param.drop_policy = ODP_COS_DROP_POOL;
+#endif
 
 	cos = odp_cls_cos_create(NULL, &cls_param);
 	CU_ASSERT(odp_cos_to_u64(cos) != odp_cos_to_u64(ODP_COS_INVALID));
@@ -124,7 +126,9 @@ static void classification_test_destroy_cos(void)
 	odp_cls_cos_param_init(&cls_param);
 	cls_param.pool = pool;
 	cls_param.queue = queue;
+#if ODP_DEPRECATED_API
 	cls_param.drop_policy = ODP_COS_DROP_POOL;
+#endif
 
 	cos = odp_cls_cos_create(name, &cls_param);
 	CU_ASSERT_FATAL(cos != ODP_COS_INVALID);
@@ -172,7 +176,9 @@ static void classification_test_create_pmr_match(void)
 	odp_cls_cos_param_init(&cls_param);
 	cls_param.pool = pool;
 	cls_param.queue = queue;
+#if ODP_DEPRECATED_API
 	cls_param.drop_policy = ODP_COS_DROP_POOL;
+#endif
 
 	cos = odp_cls_cos_create("pmr_match", &cls_param);
 	CU_ASSERT(cos != ODP_COS_INVALID);
@@ -229,7 +235,9 @@ static void classification_test_cos_set_queue(void)
 	odp_cls_cos_param_init(&cls_param);
 	cls_param.pool = pool;
 	cls_param.queue = queue;
+#if ODP_DEPRECATED_API
 	cls_param.drop_policy = ODP_COS_DROP_POOL;
+#endif
 	cos_queue = odp_cls_cos_create(cosname, &cls_param);
 	CU_ASSERT_FATAL(cos_queue != ODP_COS_INVALID);
 
@@ -271,7 +279,9 @@ static void classification_test_cos_set_pool(void)
 	odp_cls_cos_param_init(&cls_param);
 	cls_param.pool = pool;
 	cls_param.queue = queue;
+#if ODP_DEPRECATED_API
 	cls_param.drop_policy = ODP_COS_DROP_POOL;
+#endif
 	cos = odp_cls_cos_create(cosname, &cls_param);
 	CU_ASSERT_FATAL(cos != ODP_COS_INVALID);
 
@@ -288,6 +298,8 @@ static void classification_test_cos_set_pool(void)
 	odp_pool_destroy(pool);
 	odp_pool_destroy(cos_pool);
 }
+
+#if ODP_DEPRECATED_API
 
 static void classification_test_cos_set_drop(void)
 {
@@ -323,6 +335,8 @@ static void classification_test_cos_set_drop(void)
 	odp_pool_destroy(pool);
 	odp_queue_destroy(queue);
 }
+
+#endif
 
 static void classification_test_pmr_composite_create(void)
 {
@@ -360,7 +374,9 @@ static void classification_test_pmr_composite_create(void)
 	odp_cls_cos_param_init(&cls_param);
 	cls_param.pool = pool;
 	cls_param.queue = queue;
+#if ODP_DEPRECATED_API
 	cls_param.drop_policy = ODP_COS_DROP_POOL;
+#endif
 
 	cos = odp_cls_cos_create("pmr_match", &cls_param);
 	CU_ASSERT(cos != ODP_COS_INVALID);
@@ -446,7 +462,9 @@ odp_testinfo_t classification_suite_basic[] = {
 	ODP_TEST_INFO(classification_test_destroy_cos),
 	ODP_TEST_INFO(classification_test_create_pmr_match),
 	ODP_TEST_INFO(classification_test_cos_set_queue),
+#if ODP_DEPRECATED_API
 	ODP_TEST_INFO(classification_test_cos_set_drop),
+#endif
 	ODP_TEST_INFO(classification_test_cos_set_pool),
 	ODP_TEST_INFO(classification_test_pmr_composite_create),
 	ODP_TEST_INFO_CONDITIONAL(classification_test_create_cos_with_hash_queues,
