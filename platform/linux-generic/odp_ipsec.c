@@ -9,8 +9,9 @@
 #include <odp/api/ipsec.h>
 #include <odp/api/chksum.h>
 
-#include <odp/api/plat/packet_inlines.h>
 #include <odp/api/plat/byteorder_inlines.h>
+#include <odp/api/plat/ipsec_inlines.h>
+#include <odp/api/plat/packet_inlines.h>
 #include <odp/api/plat/queue_inlines.h>
 
 #include <odp_global_data.h>
@@ -2617,18 +2618,6 @@ int odp_ipsec_result(odp_ipsec_packet_result_t *result, odp_packet_t packet)
 	*result = *res;
 
 	return 0;
-}
-
-odp_packet_t odp_ipsec_packet_from_event(odp_event_t ev)
-{
-	_ODP_ASSERT(odp_event_type(ev) == ODP_EVENT_PACKET);
-	_ODP_ASSERT(odp_event_subtype(ev) == ODP_EVENT_PACKET_IPSEC);
-	return odp_packet_from_event(ev);
-}
-
-odp_event_t odp_ipsec_packet_to_event(odp_packet_t pkt)
-{
-	return odp_packet_to_event(pkt);
 }
 
 int odp_ipsec_stats(odp_ipsec_sa_t sa, odp_ipsec_stats_t *stats)
