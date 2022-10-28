@@ -405,6 +405,15 @@ typedef struct odp_bp_param_t {
 	 */
 	odp_threshold_t threshold;
 
+	/**
+	 * PFC priority level
+	 *
+	 * When enabled (#ODP_PKTIO_LINK_PFC_ON), PFC frames are generated when the above
+	 * threshold is exceeded. The generated frames request the receiver to temporary halt
+	 * transmission of traffic on this priority level (0 .. 7).
+	 */
+	uint8_t pfc_level;
+
 } odp_bp_param_t;
 
 /**
