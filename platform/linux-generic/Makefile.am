@@ -34,6 +34,7 @@ odpapiplatinclude_HEADERS = \
 		  include/odp/api/plat/buffer_inline_types.h \
 		  include/odp/api/plat/byteorder_inlines.h \
 		  include/odp/api/plat/cpu_inlines.h \
+		  include/odp/api/plat/crypto_inlines.h \
 		  include/odp/api/plat/debug_inlines.h \
 		  include/odp/api/plat/event_inlines.h \
 		  include/odp/api/plat/event_inline_types.h \
@@ -294,6 +295,7 @@ __LIB__libodp_linux_la_SOURCES += \
 			   odp_buffer_api.c \
 			   odp_byteorder_api.c \
 			   odp_cpu_api.c \
+			   odp_crypto_api.c \
 			   odp_event_api.c \
 			   odp_hash_api.c \
 			   odp_ipsec_api.c \

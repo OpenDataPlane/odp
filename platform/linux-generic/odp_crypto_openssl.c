@@ -2778,20 +2778,6 @@ uint64_t odp_crypto_session_to_u64(odp_crypto_session_t hdl)
 	return (uint64_t)hdl;
 }
 
-odp_packet_t odp_crypto_packet_from_event(odp_event_t ev)
-{
-	/* This check not mandated by the API specification */
-	_ODP_ASSERT(odp_event_type(ev) == ODP_EVENT_PACKET);
-	_ODP_ASSERT(odp_event_subtype(ev) == ODP_EVENT_PACKET_CRYPTO);
-
-	return odp_packet_from_event(ev);
-}
-
-odp_event_t odp_crypto_packet_to_event(odp_packet_t pkt)
-{
-	return odp_packet_to_event(pkt);
-}
-
 static
 odp_crypto_packet_result_t *get_op_result_from_packet(odp_packet_t pkt)
 {
