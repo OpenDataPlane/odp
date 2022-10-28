@@ -911,39 +911,31 @@ void odp_cls_pmr_param_init(odp_pmr_param_t *param);
 void odp_cls_pmr_create_opt_init(odp_pmr_create_opt_t *opt);
 
 /**
- * Create a packet matching rule
+ * Create Packet Matching Rule (PMR)
  *
- * Create a packet match rule between source and destination class of service.
- * This packet matching rule is applied on all packets arriving at the source
- * class of service and packets satisfying this PMR are sent to the destination
- * class of service.
+ * Creates a PMR between source and destination Class of Service (CoS). A packet arriving to
+ * a CoS is matched against all the PMRs that define it as their source CoS. A PMR match moves
+ * the packet from the source to the destination CoS.
  *
- * A composite PMR rule is created when the number of terms in the match rule
- * is more than one. The composite rule is considered as matching only if
- * the packet satisfies all the terms in Packet Match Rule.
- * The underlying platform may not support all or any specific combination
- * of value match rules, and the application should take care
- * of inspecting the return value when installing such rules, and perform
- * appropriate fallback action.
+ * A composite PMR is created when PMR parameters define more than one term. A composite PMR is
+ * considered to match only if a packet matches with all its terms. It is implementation specific
+ * which term combinations are supported as composite PMRs. When creating a composite PMR,
+ * application should check the return value and perform appropriate fallback actions if the create
+ * call returns failure.
  *
- * Use odp_cls_pmr_param_init() to initialize parameters into their default
- * values.
+ * Use odp_cls_pmr_param_init() to initialize parameters into their default values.
+ *
+ * PMRs created with this function are equivant to PMRs created through odp_cls_pmr_create_opt()
+ * with the same PMR terms and with all additional options set to their default values (e.g.
+ * CLS mark is set to zero in all matching packets).
  *
  * @param terms        Array of odp_pmr_param_t entries, one entry per term
- *                     desired.
- * @param num_terms    Number of terms in the match rule.
+ * @param num_terms    Number of terms in the PMR.
  * @param src_cos      source CoS handle
  * @param dst_cos      destination CoS handle
  *
- * @return Handle to the Packet Match Rule.
+ * @return PMR handle on success
  * @retval ODP_PMR_INVALID on failure
- *
- * @note Matching PMR rule created through this function sets the CLS mark metadata
- * of the packet to zero.
- *
- * @note Rules created through this function are equivalent to rules created through
- * odp_cls_pmr_create_opt() with the same PMR terms and with the additional option
- * fields set to their default values.
  */
 odp_pmr_t odp_cls_pmr_create(const odp_pmr_param_t *terms, int num_terms,
 			     odp_cos_t src_cos, odp_cos_t dst_cos);
