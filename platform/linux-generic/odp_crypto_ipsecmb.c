@@ -151,14 +151,6 @@ void free_session(odp_crypto_generic_session_t *session)
 	odp_spinlock_unlock(&global->lock);
 }
 
-static
-odp_crypto_packet_result_t *get_op_result_from_packet(odp_packet_t pkt)
-{
-	odp_packet_hdr_t *hdr = packet_hdr(pkt);
-
-	return &hdr->crypto_op_result;
-}
-
 static odp_crypto_alg_err_t
 null_crypto_routine(odp_packet_t pkt ODP_UNUSED,
 		    const odp_crypto_packet_op_param_t *param ODP_UNUSED,
@@ -790,21 +782,6 @@ uint64_t odp_crypto_session_to_u64(odp_crypto_session_t hdl)
 	return (uint64_t)hdl;
 }
 
-int odp_crypto_result(odp_crypto_packet_result_t *result,
-		      odp_packet_t packet)
-{
-	odp_crypto_packet_result_t *op_result;
-
-	_ODP_ASSERT(odp_event_subtype(odp_packet_to_event(packet)) ==
-		   ODP_EVENT_PACKET_CRYPTO);
-
-	op_result = get_op_result_from_packet(packet);
-
-	memcpy(result, op_result, sizeof(*result));
-
-	return 0;
-}
-
 static int copy_data_and_metadata(odp_packet_t dst, odp_packet_t src)
 {
 	int md_copy;
@@ -884,7 +861,7 @@ int crypto_int(odp_packet_t pkt_in,
 	}
 
 	packet_subtype_set(out_pkt, ODP_EVENT_PACKET_CRYPTO);
-	op_result = get_op_result_from_packet(out_pkt);
+	op_result = &packet_hdr(out_pkt)->crypto_op_result;
 	op_result->cipher_status.alg_err = rc_cipher;
 	op_result->cipher_status.hw_err = ODP_CRYPTO_HW_ERR_NONE;
 	op_result->auth_status.alg_err = rc_auth;

@@ -53,6 +53,7 @@ typedef struct _odp_packet_inline_offset_t {
 	uint16_t subtype;
 	uint16_t cls_mark;
 	uint16_t ipsec_ctx;
+	uint16_t crypto_op;
 
 } _odp_packet_inline_offset_t;
 
