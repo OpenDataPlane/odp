@@ -145,7 +145,9 @@ typedef struct ODP_ALIGNED_CACHE cos_s {
 	bool queue_group;
 	odp_cls_hash_proto_t hash_proto;
 	odp_pktin_vector_config_t vector;	/* Packet vector config */
+#if ODP_DEPRECATED_API
 	odp_cls_drop_t drop_policy;	/* Associated Drop Policy */
+#endif
 	size_t headroom;		/* Headroom for this CoS */
 	odp_spinlock_t lock;		/* cos lock */
 	odp_queue_param_t queue_param;

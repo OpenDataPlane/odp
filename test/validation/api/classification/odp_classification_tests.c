@@ -259,7 +259,9 @@ void configure_cls_pmr_chain(odp_bool_t enable_pktv)
 	odp_cls_cos_param_init(&cls_param);
 	cls_param.pool = pool_list[CLS_PMR_CHAIN_SRC];
 	cls_param.queue = queue_list[CLS_PMR_CHAIN_SRC];
+#if ODP_DEPRECATED_API
 	cls_param.drop_policy = ODP_COS_DROP_POOL;
+#endif
 
 	if (enable_pktv) {
 		cls_param.vector.enable = true;
@@ -289,7 +291,9 @@ void configure_cls_pmr_chain(odp_bool_t enable_pktv)
 	odp_cls_cos_param_init(&cls_param);
 	cls_param.pool = pool_list[CLS_PMR_CHAIN_DST];
 	cls_param.queue = queue_list[CLS_PMR_CHAIN_DST];
+#if ODP_DEPRECATED_API
 	cls_param.drop_policy = ODP_COS_DROP_POOL;
+#endif
 
 	if (enable_pktv) {
 		cls_param.vector.enable = true;
@@ -409,7 +413,9 @@ void configure_pktio_default_cos(odp_bool_t enable_pktv)
 	odp_cls_cos_param_init(&cls_param);
 	cls_param.pool = pool_list[CLS_DEFAULT];
 	cls_param.queue = queue_list[CLS_DEFAULT];
+#if ODP_DEPRECATED_API
 	cls_param.drop_policy = ODP_COS_DROP_POOL;
+#endif
 
 	if (enable_pktv) {
 		cls_param.vector.enable = true;
@@ -623,7 +629,9 @@ void configure_pktio_error_cos(odp_bool_t enable_pktv)
 	odp_cls_cos_param_init(&cls_param);
 	cls_param.pool = pool_list[CLS_ERROR];
 	cls_param.queue = queue_list[CLS_ERROR];
+#if ODP_DEPRECATED_API
 	cls_param.drop_policy = ODP_COS_DROP_POOL;
+#endif
 
 	if (enable_pktv) {
 		cls_param.vector.enable = true;
@@ -742,7 +750,9 @@ void configure_cos_with_l2_priority(odp_bool_t enable_pktv)
 		odp_cls_cos_param_init(&cls_param);
 		cls_param.pool = pool;
 		cls_param.queue = queue_tbl[i];
+#if ODP_DEPRECATED_API
 		cls_param.drop_policy = ODP_COS_DROP_POOL;
+#endif
 
 		if (enable_pktv) {
 			cls_param.vector.enable = true;
@@ -827,7 +837,9 @@ void configure_pmr_cos(odp_bool_t enable_pktv)
 	odp_cls_cos_param_init(&cls_param);
 	cls_param.pool = pool_list[CLS_PMR];
 	cls_param.queue = queue_list[CLS_PMR];
+#if ODP_DEPRECATED_API
 	cls_param.drop_policy = ODP_COS_DROP_POOL;
+#endif
 
 	if (enable_pktv) {
 		cls_param.vector.enable = true;
@@ -910,7 +922,9 @@ void configure_pktio_pmr_composite(odp_bool_t enable_pktv)
 	odp_cls_cos_param_init(&cls_param);
 	cls_param.pool = pool_list[CLS_PMR_SET];
 	cls_param.queue = queue_list[CLS_PMR_SET];
+#if ODP_DEPRECATED_API
 	cls_param.drop_policy = ODP_COS_DROP_POOL;
+#endif
 
 	if (enable_pktv) {
 		cls_param.vector.enable = true;

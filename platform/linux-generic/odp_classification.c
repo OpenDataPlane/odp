@@ -137,7 +137,9 @@ void odp_cls_cos_param_init(odp_cls_cos_param_t *param)
 
 	param->queue = ODP_QUEUE_INVALID;
 	param->pool = ODP_POOL_INVALID;
+#if ODP_DEPRECATED_API
 	param->drop_policy = ODP_COS_DROP_NEVER;
+#endif
 	param->num_queue = 1;
 	param->vector.enable = false;
 	odp_queue_param_init(&param->queue_param);
@@ -234,9 +236,11 @@ static inline void _cls_queue_unwind(uint32_t tbl_index, uint32_t j)
 
 odp_cos_t odp_cls_cos_create(const char *name, const odp_cls_cos_param_t *param_in)
 {
+#if ODP_DEPRECATED_API
+	odp_cls_drop_t drop_policy;
+#endif
 	uint32_t i, j;
 	odp_queue_t queue;
-	odp_cls_drop_t drop_policy;
 	cos_t *cos;
 	uint32_t tbl_index;
 	odp_cls_cos_param_t param = *param_in;
@@ -275,7 +279,9 @@ odp_cos_t odp_cls_cos_create(const char *name, const odp_cls_cos_param_t *param_
 		}
 	}
 
+#if ODP_DEPRECATED_API
 	drop_policy = param.drop_policy;
+#endif
 
 	for (i = 0; i < CLS_COS_MAX_ENTRY; i++) {
 		cos = &cos_tbl->cos_entry[i];
@@ -336,7 +342,9 @@ odp_cos_t odp_cls_cos_create(const char *name, const odp_cls_cos_param_t *param_
 			cos->pool = param.pool;
 			cos->headroom = 0;
 			cos->valid = 1;
+#if ODP_DEPRECATED_API
 			cos->drop_policy = drop_policy;
+#endif
 			odp_atomic_init_u32(&cos->num_rule, 0);
 			cos->index = i;
 			cos->vector = param.vector;
@@ -493,6 +501,8 @@ uint32_t odp_cls_cos_queues(odp_cos_t cos_id, odp_queue_t queue[],
 	return cos->num_queue;
 }
 
+#if ODP_DEPRECATED_API
+
 int odp_cos_drop_set(odp_cos_t cos_id, odp_cls_drop_t drop_policy)
 {
 	cos_t *cos = get_cos_entry(cos_id);
@@ -518,6 +528,8 @@ odp_cls_drop_t odp_cos_drop(odp_cos_t cos_id)
 
 	return cos->drop_policy;
 }
+
+#endif
 
 int odp_pktio_default_cos_set(odp_pktio_t pktio_in, odp_cos_t default_cos)
 {
