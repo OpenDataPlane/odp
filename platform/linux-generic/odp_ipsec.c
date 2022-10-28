@@ -2604,22 +2604,6 @@ int odp_ipsec_test_sa_update(odp_ipsec_sa_t sa,
 	return 0;
 }
 
-int odp_ipsec_result(odp_ipsec_packet_result_t *result, odp_packet_t packet)
-{
-	odp_ipsec_packet_result_t *res;
-
-	_ODP_ASSERT(result != NULL);
-
-	res = ipsec_pkt_result(packet);
-
-	/* FIXME: maybe postprocess here, setting alg error in case of crypto
-	 * error instead of processing packet fully in ipsec_in/out_single */
-
-	*result = *res;
-
-	return 0;
-}
-
 int odp_ipsec_stats(odp_ipsec_sa_t sa, odp_ipsec_stats_t *stats)
 {
 	ipsec_sa_t *ipsec_sa;

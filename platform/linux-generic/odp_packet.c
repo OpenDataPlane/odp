@@ -67,8 +67,8 @@ const _odp_packet_inline_offset_t _odp_packet_inline ODP_ALIGNED_CACHE = {
 	.input_flags    = offsetof(odp_packet_hdr_t, p.input_flags),
 	.flags          = offsetof(odp_packet_hdr_t, p.flags),
 	.subtype        = offsetof(odp_packet_hdr_t, subtype),
-	.cls_mark       = offsetof(odp_packet_hdr_t, cls_mark)
-
+	.cls_mark       = offsetof(odp_packet_hdr_t, cls_mark),
+	.ipsec_ctx      = offsetof(odp_packet_hdr_t, ipsec_ctx),
 };
 
 #include <odp/visibility_end.h>
