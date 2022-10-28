@@ -265,6 +265,16 @@ typedef struct odp_pktin_queue_param_t {
 	  * Queue type is defined by the input mode. The default value is 1. */
 	uint32_t num_queues;
 
+	/** Input queue size array
+	  *
+	  * An array containing queue sizes for each 'num_queues' input queues
+	  * in ODP_PKTIN_MODE_DIRECT mode. The value of zero means
+	  * implementation specific default size. Nonzero values must be between
+	  * 'min_input_queue_size' and 'max_input_queue_size' capabilities. The
+	  * implementation may round-up given values. The default value is zero.
+	  */
+	uint32_t queue_size[ODP_PKTIN_MAX_QUEUES];
+
 	/** Queue parameters
 	  *
 	  * These are used for input queue creation in ODP_PKTIN_MODE_QUEUE
@@ -829,6 +839,16 @@ typedef struct odp_pktio_capability_t {
 	 *
 	 * Value does not exceed ODP_PKTIN_MAX_QUEUES. */
 	uint32_t max_input_queues;
+
+	/** Minimum input queue size
+	 *
+	 *  Zero if configuring queue size is not supported. */
+	uint32_t min_input_queue_size;
+
+	/** Maximum input queue size
+	 *
+	 *  Zero if configuring queue size is not supported. */
+	uint32_t max_input_queue_size;
 
 	/** Maximum number of output queues
 	 *
