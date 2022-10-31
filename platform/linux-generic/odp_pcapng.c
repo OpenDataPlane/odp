@@ -46,6 +46,9 @@
 #define INOTIFY_BUF_LEN (16 * (sizeof(struct inotify_event)))
 #define PCAPNG_WATCH_DIR "/var/run/odp/"
 
+#define PKTIO_MAX_QUEUES (ODP_PKTIN_MAX_QUEUES > ODP_PKTOUT_MAX_QUEUES ? \
+				ODP_PKTIN_MAX_QUEUES : ODP_PKTOUT_MAX_QUEUES)
+
 /* pcapng: enhanced packet block file encoding */
 typedef struct ODP_PACKED pcapng_section_hdr_block_s {
 	uint32_t block_type;

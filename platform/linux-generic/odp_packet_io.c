@@ -259,7 +259,7 @@ static void init_out_queues(pktio_entry_t *entry)
 {
 	int i;
 
-	for (i = 0; i < PKTIO_MAX_QUEUES; i++) {
+	for (i = 0; i < ODP_PKTOUT_MAX_QUEUES; i++) {
 		entry->out_queue[i].queue  = ODP_QUEUE_INVALID;
 		entry->out_queue[i].pktout = PKTOUT_INVALID;
 	}
@@ -279,7 +279,7 @@ static void init_pktio_entry(pktio_entry_t *entry)
 	odp_atomic_init_u64(&entry->stats_extra.out_discards, 0);
 	odp_atomic_init_u64(&entry->tx_ts, 0);
 
-	for (i = 0; i < PKTIO_MAX_QUEUES; i++) {
+	for (i = 0; i < ODP_PKTIN_MAX_QUEUES; i++) {
 		entry->in_queue[i].queue = ODP_QUEUE_INVALID;
 		entry->in_queue[i].pktin = PKTIN_INVALID;
 	}

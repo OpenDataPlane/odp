@@ -94,7 +94,7 @@ typedef struct {
 } xdp_umem_info_t;
 
 typedef struct {
-	xdp_sock_t qs[PKTIO_MAX_QUEUES];
+	xdp_sock_t qs[ODP_PKTOUT_MAX_QUEUES];
 	xdp_umem_info_t *umem_info;
 	uint32_t num_q;
 	int pktio_idx;
@@ -275,7 +275,7 @@ static int sock_xdp_open(odp_pktio_t pktio, pktio_entry_t *pktio_entry, const ch
 
 	priv->max_mtu = pool->seg_len;
 
-	for (int i = 0; i < PKTIO_MAX_QUEUES; ++i) {
+	for (int i = 0; i < ODP_PKTOUT_MAX_QUEUES; ++i) {
 		odp_ticketlock_init(&priv->qs[i].rx_lock);
 		odp_ticketlock_init(&priv->qs[i].tx_lock);
 	}
@@ -852,8 +852,8 @@ static int set_queue_capability(int fd, const char *devname, odp_pktio_capabilit
 		channels.max_combined = 1U;
 	}
 
-	max_channels = _ODP_MIN((uint32_t)PKTIO_MAX_QUEUES, channels.max_combined);
-	capa->max_input_queues = max_channels;
+	max_channels = _ODP_MIN((uint32_t)ODP_PKTOUT_MAX_QUEUES, channels.max_combined);
+	capa->max_input_queues = _ODP_MIN((uint32_t)ODP_PKTIN_MAX_QUEUES, max_channels);
 	capa->max_output_queues = max_channels;
 
 	return 0;

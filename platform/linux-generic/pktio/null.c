@@ -130,8 +130,8 @@ static int null_capability(pktio_entry_t *pktio_entry ODP_UNUSED,
 {
 	memset(capa, 0, sizeof(odp_pktio_capability_t));
 
-	capa->max_input_queues  = PKTIO_MAX_QUEUES;
-	capa->max_output_queues = PKTIO_MAX_QUEUES;
+	capa->max_input_queues  = ODP_PKTIN_MAX_QUEUES;
+	capa->max_output_queues = ODP_PKTOUT_MAX_QUEUES;
 	capa->set_op.op.promisc_mode = 0;
 
 	odp_pktio_config_init(&capa->config);
