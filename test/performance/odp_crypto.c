@@ -611,6 +611,7 @@ create_session_from_config(odp_crypto_session_t *session,
 	odp_crypto_session_param_init(&params);
 	memcpy(&params, &config->session, sizeof(odp_crypto_session_param_t));
 	params.op = ODP_CRYPTO_OP_ENCODE;
+	params.auth_cipher_text = true;
 
 	/* Lookup the packet pool */
 	pkt_pool = odp_pool_lookup("packet_pool");
