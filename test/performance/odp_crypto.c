@@ -26,6 +26,7 @@
 #define POOL_NUM_PKT  64
 
 #define AAD_LEN 8 /* typical AAD length used in IPsec when ESN is not in use */
+#define MAX_AUTH_DIGEST_LEN 32 /* maximum MAC length in bytes */
 
 static uint8_t test_aad[AAD_LEN] = "01234567";
 static uint8_t test_iv[16] = "0123456789abcdef";
@@ -688,6 +689,7 @@ run_measure_one(crypto_args_t *cargs,
 	odp_queue_t out_queue;
 	odp_packet_t pkt = ODP_PACKET_INVALID;
 	int rc = 0;
+	uint32_t packet_len = payload_length + MAX_AUTH_DIGEST_LEN;
 
 	pkt_pool = odp_pool_lookup("packet_pool");
 	if (pkt_pool == ODP_POOL_INVALID) {
@@ -704,7 +706,7 @@ run_measure_one(crypto_args_t *cargs,
 	}
 
 	if (cargs->reuse_packet) {
-		pkt = make_packet(pkt_pool, payload_length);
+		pkt = make_packet(pkt_pool, packet_len);
 		if (ODP_PACKET_INVALID == pkt)
 			return -1;
 	}
@@ -740,7 +742,7 @@ run_measure_one(crypto_args_t *cargs,
 			odp_packet_t out_pkt;
 
 			if (!cargs->reuse_packet) {
-				pkt = make_packet(pkt_pool, payload_length);
+				pkt = make_packet(pkt_pool, packet_len);
 				if (ODP_PACKET_INVALID == pkt)
 					return -1;
 			}
@@ -996,6 +998,11 @@ static int check_auth_params(const odp_crypto_capability_t *crypto_capa,
 {
 	int num, rc;
 
+	if (param->auth_digest_len > MAX_AUTH_DIGEST_LEN) {
+		ODPH_ERR("MAX_AUTH_DIGEST_LEN too low\n");
+		return 1;
+	}
+
 	if (check_auth_alg(crypto_capa, param->auth_alg))
 		return 1;
 
@@ -1164,7 +1171,7 @@ int main(int argc, char *argv[])
 	max_seg_len = pool_capa.pkt.max_seg_len;
 
 	for (i = 0; i < sizeof(payloads) / sizeof(unsigned int); i++) {
-		if (payloads[i] > max_seg_len)
+		if (payloads[i] + MAX_AUTH_DIGEST_LEN > max_seg_len)
 			break;
 	}
 
