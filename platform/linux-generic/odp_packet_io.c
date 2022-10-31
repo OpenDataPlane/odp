@@ -2172,12 +2172,12 @@ int odp_pktin_queue_config(odp_pktio_t pktio,
 
 	entry = get_pktio_entry(pktio);
 	if (entry == NULL) {
-		_ODP_DBG("pktio entry %" PRIuPTR " does not exist\n", (uintptr_t)pktio);
+		_ODP_ERR("pktio entry %" PRIuPTR " does not exist\n", (uintptr_t)pktio);
 		return -1;
 	}
 
 	if (entry->state == PKTIO_STATE_STARTED) {
-		_ODP_DBG("pktio %s: not stopped\n", entry->name);
+		_ODP_ERR("pktio %s: not stopped\n", entry->name);
 		return -1;
 	}
 
@@ -2188,7 +2188,7 @@ int odp_pktin_queue_config(odp_pktio_t pktio,
 		return 0;
 
 	if (!param->classifier_enable && param->num_queues == 0) {
-		_ODP_DBG("invalid num_queues for operation mode\n");
+		_ODP_ERR("invalid num_queues for operation mode\n");
 		return -1;
 	}
 
@@ -2196,15 +2196,37 @@ int odp_pktin_queue_config(odp_pktio_t pktio,
 
 	rc = odp_pktio_capability(pktio, &capa);
 	if (rc) {
-		_ODP_DBG("pktio %s: unable to read capabilities\n", entry->name);
+		_ODP_ERR("pktio %s: unable to read capabilities\n", entry->name);
 		return -1;
 	}
 
 	entry->enabled.cls = !!param->classifier_enable;
 
 	if (num_queues > capa.max_input_queues) {
-		_ODP_DBG("pktio %s: too many input queues\n", entry->name);
+		_ODP_ERR("pktio %s: too many input queues\n", entry->name);
 		return -1;
+	}
+
+	/* Check input queue sizes in direct mode */
+	for (i = 0; i < num_queues && mode == ODP_PKTIN_MODE_DIRECT; i++) {
+		uint32_t queue_size = param->queue_size[i];
+
+		if (queue_size == 0)
+			continue;
+
+		if (capa.max_input_queue_size == 0) {
+			_ODP_ERR("pktio %s: configuring input queue size not supported\n",
+				 entry->name);
+			return -1;
+		}
+		if (queue_size < capa.min_input_queue_size) {
+			_ODP_ERR("pktio %s: input queue size too small\n", entry->name);
+			return -1;
+		}
+		if (queue_size > capa.max_input_queue_size) {
+			_ODP_ERR("pktio %s: input queue size too large\n", entry->name);
+			return -1;
+		}
 	}
 
 	/* Validate packet vector parameters */
@@ -2282,7 +2304,7 @@ int odp_pktin_queue_config(odp_pktio_t pktio,
 			queue = odp_queue_create(name, &queue_param);
 
 			if (queue == ODP_QUEUE_INVALID) {
-				_ODP_DBG("pktio %s: event queue create failed\n", entry->name);
+				_ODP_ERR("pktio %s: event queue create failed\n", entry->name);
 				destroy_in_queues(entry, i + 1);
 				return -1;
 			}
