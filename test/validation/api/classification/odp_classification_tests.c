@@ -19,7 +19,10 @@ static odp_pool_t pool_default;
 static odp_pktio_t pktio_loop;
 static odp_pktio_capability_t pktio_capa;
 static odp_cls_testcase_u tc;
+
+#ifdef ODP_DEPRECATED
 static int global_num_l2_qos;
+#endif
 
 #define NUM_COS_PMR_CHAIN	2
 #define NUM_COS_DEFAULT	1
@@ -706,6 +709,8 @@ static void classification_test_pktio_set_headroom(void)
 	CU_ASSERT(retval < 0);
 }
 
+#ifdef ODP_DEPRECATED
+
 void configure_cos_with_l2_priority(odp_bool_t enable_pktv)
 {
 	uint8_t num_qos = CLS_L2_QOS_MAX;
@@ -750,9 +755,7 @@ void configure_cos_with_l2_priority(odp_bool_t enable_pktv)
 		odp_cls_cos_param_init(&cls_param);
 		cls_param.pool = pool;
 		cls_param.queue = queue_tbl[i];
-#if ODP_DEPRECATED_API
 		cls_param.drop_policy = ODP_COS_DROP_POOL;
-#endif
 
 		if (enable_pktv) {
 			cls_param.vector.enable = true;
@@ -807,6 +810,8 @@ void test_cos_with_l2_priority(odp_bool_t enable_pktv)
 		odp_packet_free(pkt);
 	}
 }
+
+#endif
 
 void configure_pmr_cos(odp_bool_t enable_pktv)
 {
@@ -1024,11 +1029,13 @@ static void classification_test_pktio_configure_common(odp_bool_t enable_pktv)
 		tc.pmr_chain = 1;
 		num_cos -= NUM_COS_PMR_CHAIN;
 	}
+#ifdef ODP_DEPRECATED
 	if (num_cos >= NUM_COS_L2_PRIO && TEST_L2_QOS) {
 		configure_cos_with_l2_priority(enable_pktv);
 		tc.l2_priority = 1;
 		num_cos -= NUM_COS_L2_PRIO;
 	}
+#endif
 	if (num_cos >= NUM_COS_PMR && TEST_PMR) {
 		configure_pmr_cos(enable_pktv);
 		tc.pmr_cos = 1;
@@ -1063,8 +1070,10 @@ static void classification_test_pktio_test_common(odp_bool_t enable_pktv)
 		test_pktio_error_cos(enable_pktv);
 	if (tc.pmr_chain && TEST_PMR_CHAIN)
 		test_cls_pmr_chain(enable_pktv);
+#ifdef ODP_DEPRECATED
 	if (tc.l2_priority && TEST_L2_QOS)
 		test_cos_with_l2_priority(enable_pktv);
+#endif
 	if (tc.pmr_cos && TEST_PMR)
 		test_pmr_cos(enable_pktv);
 	if (tc.pmr_composite_cos && TEST_PMR_SET)
