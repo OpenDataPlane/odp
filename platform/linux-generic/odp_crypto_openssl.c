@@ -2884,6 +2884,17 @@ int crypto_int(odp_packet_t pkt_in,
 	if (odp_unlikely(out_pkt == ODP_PACKET_INVALID))
 		return -1;
 
+	if (ODP_DEBUG) {
+		if (session->p.auth_alg != ODP_AUTH_ALG_NULL &&
+		    param->hash_result_offset + session->p.auth_digest_len
+		    > odp_packet_len(out_pkt)) {
+			_ODP_ERR("Invalid hash result offset\n");
+			rc_cipher = ODP_CRYPTO_ALG_ERR_DATA_SIZE;
+			rc_auth = ODP_CRYPTO_ALG_ERR_DATA_SIZE;
+			goto out;
+		}
+	}
+
 	crypto_init(session);
 
 	/* Invoke the functions */
@@ -2895,6 +2906,7 @@ int crypto_int(odp_packet_t pkt_in,
 		rc_cipher = session->cipher.func(out_pkt, param, session);
 	}
 
+out:
 	/* Fill in result */
 	packet_subtype_set(out_pkt, ODP_EVENT_PACKET_CRYPTO);
 	op_result = get_op_result_from_packet(out_pkt);
