@@ -1,5 +1,5 @@
 /* Copyright (c) 2018, Linaro Limited
- * Copyright (c) 2019, Nokia
+ * Copyright (c) 2019-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -11,11 +11,14 @@
 
 #if defined(_ODP_PCAPNG) && _ODP_PCAPNG == 1
 
+#include <odp/api/hints.h>
 #include <odp/api/shared_memory.h>
 #include <odp/api/spinlock.h>
 
 #include <odp/api/plat/packet_inlines.h>
+#include <odp/api/plat/packet_io_inlines.h>
 
+#include <odp_config_internal.h>
 #include <odp_global_data.h>
 #include <odp_init_internal.h>
 #include <odp_macros_internal.h>
@@ -73,18 +76,35 @@ typedef struct pcapng_enhanced_packet_block_s {
 	uint32_t packet_len;
 } pcapng_enhanced_packet_block_t;
 
+/** Pktio entry specific data */
+typedef struct {
+	pktio_entry_t *pktio_entry;
+
+	/* inotify instances for pcapng fifos */
+	enum {
+		PCAPNG_WR_STOP = 0,
+		PCAPNG_WR_PKT,
+	} state[PKTIO_MAX_QUEUES];
+	int fd[PKTIO_MAX_QUEUES];
+} pcapng_entry_t;
+
 typedef struct ODP_ALIGNED_CACHE {
 	odp_shm_t shm;
-	pktio_entry_t *entry[ODP_CONFIG_PKTIO_ENTRIES];
 	int num_entries;
 	pthread_t inotify_thread;
 	int inotify_fd;
 	int inotify_watch_fd;
 	int inotify_is_running;
 	odp_spinlock_t lock;
+	pcapng_entry_t entry[ODP_CONFIG_PKTIO_ENTRIES];
 } pcapng_global_t;
 
 static pcapng_global_t *pcapng_gbl;
+
+static inline pcapng_entry_t *pcapng_entry(pktio_entry_t *pktio_entry)
+{
+	return &pcapng_gbl->entry[odp_pktio_index(pktio_entry->handle)];
+}
 
 int write_pcapng_hdr(pktio_entry_t *entry, int qidx);
 
@@ -132,6 +152,7 @@ static void pcapng_drain_fifo(int fd)
 static void inotify_event_handle(pktio_entry_t *entry, int qidx,
 				 struct inotify_event *event)
 {
+	pcapng_entry_t *pcapng = pcapng_entry(entry);
 	int mtu = _ODP_MAX(odp_pktin_maxlen(entry->handle), odp_pktout_maxlen(entry->handle));
 
 	if (event->mask & IN_OPEN) {
@@ -140,23 +161,23 @@ static void inotify_event_handle(pktio_entry_t *entry, int qidx,
 		if (PIPE_BUF < mtu + sizeof(pcapng_enhanced_packet_block_t) +
 		    sizeof(uint32_t)) {
 			_ODP_ERR("PIPE_BUF:%d too small. Disabling pcap\n", PIPE_BUF);
-			entry->pcapng.state[qidx] = PCAPNG_WR_STOP;
+			pcapng->state[qidx] = PCAPNG_WR_STOP;
 
 			return;
 		}
 
 		ret = write_pcapng_hdr(entry, qidx);
 		if (ret) {
-			entry->pcapng.state[qidx] = PCAPNG_WR_STOP;
+			pcapng->state[qidx] = PCAPNG_WR_STOP;
 		} else {
-			entry->pcapng.state[qidx] = PCAPNG_WR_PKT;
+			pcapng->state[qidx] = PCAPNG_WR_PKT;
 			_ODP_DBG("Open %s for pcap tracing\n", event->name);
 		}
 	} else if (event->mask & IN_CLOSE) {
-		int fd = entry->pcapng.fd[qidx];
+		int fd = pcapng->fd[qidx];
 
 		pcapng_drain_fifo(fd);
-		entry->pcapng.state[qidx] = PCAPNG_WR_STOP;
+		pcapng->state[qidx] = PCAPNG_WR_STOP;
 		_ODP_DBG("Close %s for pcap tracing\n", event->name);
 	} else {
 		_ODP_ERR("Unknown inotify event 0x%08x\n", event->mask);
@@ -207,7 +228,7 @@ static pktio_entry_t *pktio_from_event(struct inotify_event *event)
 	odp_spinlock_lock(&pcapng_gbl->lock);
 
 	for (i = 0; i < ODP_CONFIG_PKTIO_ENTRIES; i++) {
-		pktio_entry_t *entry = pcapng_gbl->entry[i];
+		pktio_entry_t *entry = pcapng_gbl->entry[i].pktio_entry;
 
 		if (entry == NULL)
 			continue;
@@ -287,6 +308,7 @@ static int get_fifo_max_size(void)
 
 int _odp_pcapng_start(pktio_entry_t *entry)
 {
+	pcapng_entry_t *pcapng = pcapng_entry(entry);
 	int ret = -1, fd;
 	pthread_attr_t attr;
 	unsigned int i;
@@ -301,8 +323,8 @@ int _odp_pcapng_start(pktio_entry_t *entry)
 		char pcapng_name[128];
 		char pcapng_path[256];
 
-		entry->pcapng.fd[i] = -1;
-		entry->pcapng.state[i] = PCAPNG_WR_STOP;
+		pcapng->fd[i] = -1;
+		pcapng->state[i] = PCAPNG_WR_STOP;
 
 		get_pcapng_fifo_name(pcapng_name, sizeof(pcapng_name),
 				     entry->name, i);
@@ -320,7 +342,7 @@ int _odp_pcapng_start(pktio_entry_t *entry)
 		fd = open(pcapng_path, O_RDWR | O_NONBLOCK);
 		if (fd == -1) {
 			_ODP_ERR("Fail to open fifo\n");
-			entry->pcapng.state[i] = PCAPNG_WR_STOP;
+			pcapng->state[i] = PCAPNG_WR_STOP;
 			if (remove(pcapng_path) == -1)
 				_ODP_ERR("Can't remove fifo %s\n", pcapng_path);
 			continue;
@@ -333,14 +355,14 @@ int _odp_pcapng_start(pktio_entry_t *entry)
 				_ODP_DBG("set pcap fifo size %i\n", fifo_sz);
 		}
 
-		entry->pcapng.fd[i] = fd;
+		pcapng->fd[i] = fd;
 	}
 
 	odp_spinlock_lock(&pcapng_gbl->lock);
 
 	/* already running from a previous pktio */
 	if (pcapng_gbl->inotify_is_running == 1) {
-		pcapng_gbl->entry[odp_pktio_index(entry->handle)] = entry;
+		pcapng->pktio_entry = entry;
 		pcapng_gbl->num_entries++;
 		odp_spinlock_unlock(&pcapng_gbl->lock);
 		return 0;
@@ -371,7 +393,7 @@ int _odp_pcapng_start(pktio_entry_t *entry)
 	if (ret) {
 		_ODP_ERR("Can't start inotify thread (ret=%d). pcapng disabled.\n", ret);
 	} else {
-		pcapng_gbl->entry[odp_pktio_index(entry->handle)] = entry;
+		pcapng->pktio_entry = entry;
 		pcapng_gbl->num_entries++;
 		pcapng_gbl->inotify_is_running = 1;
 	}
@@ -390,13 +412,14 @@ out_destroy:
 
 void _odp_pcapng_stop(pktio_entry_t *entry)
 {
+	pcapng_entry_t *pcapng = pcapng_entry(entry);
 	int ret;
 	unsigned int i;
 	unsigned int max_queue = _ODP_MAX(entry->num_in_queue, entry->num_out_queue);
 
 	odp_spinlock_lock(&pcapng_gbl->lock);
 
-	pcapng_gbl->entry[odp_pktio_index(entry->handle)] = NULL;
+	pcapng->pktio_entry = NULL;
 	pcapng_gbl->num_entries--;
 
 	if (pcapng_gbl->inotify_is_running == 1 &&
@@ -427,8 +450,8 @@ void _odp_pcapng_stop(pktio_entry_t *entry)
 		char pcapng_name[128];
 		char pcapng_path[256];
 
-		entry->pcapng.state[i] = PCAPNG_WR_STOP;
-		close(entry->pcapng.fd[i]);
+		pcapng->state[i] = PCAPNG_WR_STOP;
+		close(pcapng->fd[i]);
 
 		get_pcapng_fifo_name(pcapng_name, sizeof(pcapng_name),
 				     entry->name, i);
@@ -442,10 +465,11 @@ void _odp_pcapng_stop(pktio_entry_t *entry)
 
 int write_pcapng_hdr(pktio_entry_t *entry, int qidx)
 {
+	pcapng_entry_t *pcapng = pcapng_entry(entry);
 	size_t len;
 	pcapng_section_hdr_block_t shb;
 	pcapng_interface_description_block_t idb;
-	int fd = entry->pcapng.fd[qidx];
+	int fd = pcapng->fd[qidx];
 
 	memset(&shb, 0, sizeof(shb));
 	memset(&idb, 0, sizeof(idb));
@@ -503,16 +527,20 @@ static ssize_t write_fifo(int fd, struct iovec *iov, int iovcnt)
 	return len;
 }
 
-int _odp_pcapng_write_pkts(pktio_entry_t *entry, int qidx,
-			   const odp_packet_t packets[], int num)
+int _odp_pcapng_dump_pkts(pktio_entry_t *entry, int qidx,
+			  const odp_packet_t packets[], int num)
 {
+	pcapng_entry_t *pcapng = pcapng_entry(entry);
 	int i = 0;
 	struct iovec packet_iov[3 * num];
 	pcapng_enhanced_packet_block_t epb[num];
 	int iovcnt = 0;
 	ssize_t block_len = 0;
-	int fd = entry->pcapng.fd[qidx];
+	int fd = pcapng->fd[qidx];
 	ssize_t len = 0, wlen;
+
+	if (odp_likely(pcapng->state[qidx] != PCAPNG_WR_PKT))
+		return 0;
 
 	for (i = 0; i < num; i++) {
 		odp_packet_hdr_t *pkt_hdr = packet_hdr(packets[i]);

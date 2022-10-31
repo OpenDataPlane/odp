@@ -2660,13 +2660,6 @@ int odp_pktout_queue(odp_pktio_t pktio, odp_pktout_queue_t queues[], int num)
 	return num_queues;
 }
 
-static inline void _odp_dump_pcapng_pkts(pktio_entry_t *entry, int qidx,
-					 const odp_packet_t packets[], int num)
-{
-	if (odp_unlikely(entry->pcapng.state[qidx] == PCAPNG_WR_PKT))
-		_odp_pcapng_write_pkts(entry, qidx, packets, num);
-}
-
 int odp_pktin_recv(odp_pktin_queue_t queue, odp_packet_t packets[], int num)
 {
 	pktio_entry_t *entry;
@@ -2684,7 +2677,7 @@ int odp_pktin_recv(odp_pktin_queue_t queue, odp_packet_t packets[], int num)
 
 	ret = entry->ops->recv(entry, queue.index, packets, num);
 	if (_ODP_PCAPNG)
-		_odp_dump_pcapng_pkts(entry, queue.index, packets, ret);
+		_odp_pcapng_dump_pkts(entry, queue.index, packets, ret);
 
 	return ret;
 }
@@ -2715,7 +2708,7 @@ int odp_pktin_recv_tmo(odp_pktin_queue_t queue, odp_packet_t packets[], int num,
 		ret = entry->ops->recv_tmo(entry, queue.index, packets, num,
 					      wait);
 		if (_ODP_PCAPNG)
-			_odp_dump_pcapng_pkts(entry, queue.index, packets, ret);
+			_odp_pcapng_dump_pkts(entry, queue.index, packets, ret);
 
 		return ret;
 	}
@@ -2723,7 +2716,7 @@ int odp_pktin_recv_tmo(odp_pktin_queue_t queue, odp_packet_t packets[], int num,
 	while (1) {
 		ret = entry->ops->recv(entry, queue.index, packets, num);
 		if (_ODP_PCAPNG)
-			_odp_dump_pcapng_pkts(entry, queue.index, packets, ret);
+			_odp_pcapng_dump_pkts(entry, queue.index, packets, ret);
 
 		if (ret != 0 || wait == 0)
 			return ret;
@@ -2791,8 +2784,7 @@ int odp_pktin_recv_mq_tmo(const odp_pktin_queue_t queues[], uint32_t num_q, uint
 
 			entry = get_pktio_entry(queues[lfrom].pktio);
 			if (entry)
-				_odp_dump_pcapng_pkts(entry, lfrom, packets,
-						      ret);
+				_odp_pcapng_dump_pkts(entry, lfrom, packets, ret);
 		}
 
 		return ret;
@@ -2910,7 +2902,7 @@ int odp_pktout_send(odp_pktout_queue_t queue, const odp_packet_t packets[],
 		return 0;
 
 	if (_ODP_PCAPNG)
-		_odp_dump_pcapng_pkts(entry, queue.index, packets, num);
+		_odp_pcapng_dump_pkts(entry, queue.index, packets, num);
 
 	if (odp_unlikely(_odp_pktio_tx_compl_enabled(entry))) {
 		for (int i = 0; i < num; i++)
