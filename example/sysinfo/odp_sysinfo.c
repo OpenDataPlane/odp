@@ -177,53 +177,55 @@ static const char *auth_alg_name(odp_auth_alg_t auth)
 	}
 }
 
-static void print_cipher_algos(odp_crypto_cipher_algos_t ciphers)
+typedef void (*cipher_op_t)(odp_cipher_alg_t alg);
+typedef void (*auth_op_t)(odp_auth_alg_t alg);
+
+static void foreach_cipher(odp_crypto_cipher_algos_t ciphers, cipher_op_t op)
 {
 	if (ciphers.bit.null)
-		printf("%s ", cipher_alg_name(ODP_CIPHER_ALG_NULL));
+		op(ODP_CIPHER_ALG_NULL);
 	if (ciphers.bit.des)
-		printf("%s ", cipher_alg_name(ODP_CIPHER_ALG_DES));
+		op(ODP_CIPHER_ALG_DES);
 	if (ciphers.bit.trides_cbc)
-		printf("%s ", cipher_alg_name(ODP_CIPHER_ALG_3DES_CBC));
+		op(ODP_CIPHER_ALG_3DES_CBC);
 	if (ciphers.bit.aes_cbc)
-		printf("%s ", cipher_alg_name(ODP_CIPHER_ALG_AES_CBC));
+		op(ODP_CIPHER_ALG_AES_CBC);
 	if (ciphers.bit.aes_ctr)
-		printf("%s ", cipher_alg_name(ODP_CIPHER_ALG_AES_CTR));
+		op(ODP_CIPHER_ALG_AES_CTR);
 	if (ciphers.bit.aes_gcm)
-		printf("%s ", cipher_alg_name(ODP_CIPHER_ALG_AES_GCM));
+		op(ODP_CIPHER_ALG_AES_GCM);
 	if (ciphers.bit.aes_ccm)
-		printf("%s ", cipher_alg_name(ODP_CIPHER_ALG_AES_CCM));
+		op(ODP_CIPHER_ALG_AES_CCM);
 	if (ciphers.bit.chacha20_poly1305)
-		printf("%s ",
-		       cipher_alg_name(ODP_CIPHER_ALG_CHACHA20_POLY1305));
+		op(ODP_CIPHER_ALG_CHACHA20_POLY1305);
 }
 
-static void print_auth_algos(odp_crypto_auth_algos_t auths)
+static void foreach_auth(odp_crypto_auth_algos_t auths, auth_op_t op)
 {
 	if (auths.bit.null)
-		printf("%s ", auth_alg_name(ODP_AUTH_ALG_NULL));
+		op(ODP_AUTH_ALG_NULL);
 	if (auths.bit.md5_hmac)
-		printf("%s ", auth_alg_name(ODP_AUTH_ALG_MD5_HMAC));
+		op(ODP_AUTH_ALG_MD5_HMAC);
 	if (auths.bit.sha1_hmac)
-		printf("%s ", auth_alg_name(ODP_AUTH_ALG_SHA1_HMAC));
+		op(ODP_AUTH_ALG_SHA1_HMAC);
 	if (auths.bit.sha256_hmac)
-		printf("%s ", auth_alg_name(ODP_AUTH_ALG_SHA256_HMAC));
+		op(ODP_AUTH_ALG_SHA256_HMAC);
 	if (auths.bit.sha384_hmac)
-		printf("%s ", auth_alg_name(ODP_AUTH_ALG_SHA384_HMAC));
+		op(ODP_AUTH_ALG_SHA384_HMAC);
 	if (auths.bit.sha512_hmac)
-		printf("%s ", auth_alg_name(ODP_AUTH_ALG_SHA512_HMAC));
+		op(ODP_AUTH_ALG_SHA512_HMAC);
 	if (auths.bit.aes_gcm)
-		printf("%s ", auth_alg_name(ODP_AUTH_ALG_AES_GCM));
+		op(ODP_AUTH_ALG_AES_GCM);
 	if (auths.bit.aes_gmac)
-		printf("%s ", auth_alg_name(ODP_AUTH_ALG_AES_GMAC));
+		op(ODP_AUTH_ALG_AES_GMAC);
 	if (auths.bit.aes_ccm)
-		printf("%s ", auth_alg_name(ODP_AUTH_ALG_AES_CCM));
+		op(ODP_AUTH_ALG_AES_CCM);
 	if (auths.bit.aes_cmac)
-		printf("%s ", auth_alg_name(ODP_AUTH_ALG_AES_CMAC));
+		op(ODP_AUTH_ALG_AES_CMAC);
 	if (auths.bit.aes_xcbc_mac)
-		printf("%s ", auth_alg_name(ODP_AUTH_ALG_AES_XCBC_MAC));
+		op(ODP_AUTH_ALG_AES_XCBC_MAC);
 	if (auths.bit.chacha20_poly1305)
-		printf("%s ", auth_alg_name(ODP_AUTH_ALG_CHACHA20_POLY1305));
+		op(ODP_AUTH_ALG_CHACHA20_POLY1305);
 }
 
 static void print_cipher_capa(odp_cipher_alg_t cipher)
@@ -275,52 +277,14 @@ static void print_auth_capa(odp_auth_alg_t auth)
 	}
 }
 
-static void print_cipher_caps(odp_crypto_cipher_algos_t ciphers)
+static void print_cipher(odp_cipher_alg_t alg)
 {
-	if (ciphers.bit.null)
-		print_cipher_capa(ODP_CIPHER_ALG_NULL);
-	if (ciphers.bit.des)
-		print_cipher_capa(ODP_CIPHER_ALG_DES);
-	if (ciphers.bit.trides_cbc)
-		print_cipher_capa(ODP_CIPHER_ALG_3DES_CBC);
-	if (ciphers.bit.aes_cbc)
-		print_cipher_capa(ODP_CIPHER_ALG_AES_CBC);
-	if (ciphers.bit.aes_ctr)
-		print_cipher_capa(ODP_CIPHER_ALG_AES_CTR);
-	if (ciphers.bit.aes_gcm)
-		print_cipher_capa(ODP_CIPHER_ALG_AES_GCM);
-	if (ciphers.bit.aes_ccm)
-		print_cipher_capa(ODP_CIPHER_ALG_AES_CCM);
-	if (ciphers.bit.chacha20_poly1305)
-		print_cipher_capa(ODP_CIPHER_ALG_CHACHA20_POLY1305);
+	printf("%s ", cipher_alg_name(alg));
 }
 
-static void print_auth_caps(odp_crypto_auth_algos_t auths)
+static void print_auth(odp_auth_alg_t alg)
 {
-	if (auths.bit.null)
-		print_auth_capa(ODP_AUTH_ALG_NULL);
-	if (auths.bit.md5_hmac)
-		print_auth_capa(ODP_AUTH_ALG_MD5_HMAC);
-	if (auths.bit.sha1_hmac)
-		print_auth_capa(ODP_AUTH_ALG_SHA1_HMAC);
-	if (auths.bit.sha256_hmac)
-		print_auth_capa(ODP_AUTH_ALG_SHA256_HMAC);
-	if (auths.bit.sha384_hmac)
-		print_auth_capa(ODP_AUTH_ALG_SHA384_HMAC);
-	if (auths.bit.sha512_hmac)
-		print_auth_capa(ODP_AUTH_ALG_SHA512_HMAC);
-	if (auths.bit.aes_gcm)
-		print_auth_capa(ODP_AUTH_ALG_AES_GCM);
-	if (auths.bit.aes_gmac)
-		print_auth_capa(ODP_AUTH_ALG_AES_GMAC);
-	if (auths.bit.aes_ccm)
-		print_auth_capa(ODP_AUTH_ALG_AES_CCM);
-	if (auths.bit.aes_cmac)
-		print_auth_capa(ODP_AUTH_ALG_AES_CMAC);
-	if (auths.bit.aes_xcbc_mac)
-		print_auth_capa(ODP_AUTH_ALG_AES_XCBC_MAC);
-	if (auths.bit.chacha20_poly1305)
-		print_auth_capa(ODP_AUTH_ALG_CHACHA20_POLY1305);
+	printf("%s ", auth_alg_name(alg));
 }
 
 int main(void)
@@ -626,13 +590,13 @@ int main(void)
 		printf("    queue_type_sched:     %i\n", crypto_capa.queue_type_sched);
 		printf("    queue_type_plain:     %i\n", crypto_capa.queue_type_plain);
 		printf("    cipher algorithms:    ");
-		print_cipher_algos(crypto_capa.ciphers);
+		foreach_cipher(crypto_capa.ciphers, print_cipher);
 		printf("\n");
-		print_cipher_caps(crypto_capa.ciphers);
+		foreach_cipher(crypto_capa.ciphers, print_cipher_capa);
 		printf("    auth algorithms:      ");
-		print_auth_algos(crypto_capa.auths);
+		foreach_auth(crypto_capa.auths, print_auth);
 		printf("\n");
-		print_auth_caps(crypto_capa.auths);
+		foreach_auth(crypto_capa.auths, print_auth_capa);
 		printf("\n");
 	}
 
@@ -675,10 +639,10 @@ int main(void)
 		printf("    inline TM pipelining:         %s\n",
 		       support_level(ipsec_capa.inline_ipsec_tm));
 		printf("    cipher algorithms:            ");
-		print_cipher_algos(ipsec_capa.ciphers);
+		foreach_cipher(ipsec_capa.ciphers, print_cipher);
 		printf("\n");
 		printf("    auth algorithms:              ");
-		print_auth_algos(ipsec_capa.auths);
+		foreach_auth(ipsec_capa.auths, print_auth);
 		printf("\n\n");
 	}
 
