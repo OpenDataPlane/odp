@@ -165,14 +165,6 @@ typedef struct ODP_ALIGNED_CACHE {
 		odp_pktout_queue_t pktout;
 	} out_queue[PKTIO_MAX_QUEUES];
 
-	/**< inotify instance for pcapng fifos */
-	struct {
-		enum {
-			PCAPNG_WR_STOP = 0,
-			PCAPNG_WR_PKT,
-		} state[PKTIO_MAX_QUEUES];
-		int fd[PKTIO_MAX_QUEUES];
-	} pcapng;
 } pktio_entry_t;
 
 typedef struct {
