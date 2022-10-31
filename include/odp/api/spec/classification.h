@@ -828,8 +828,9 @@ odp_cls_drop_t odp_cos_drop(odp_cos_t cos);
 #endif
 
 /**
- * Request to override per-port class of service
- * based on Layer-2 priority field if present.
+ * Request to override per-port class of service based on Layer-2 priority field if present.
+ *
+ * @deprecated Use #ODP_PMR_VLAN_PCP_0 instead.
  *
  * @param pktio_in     Ingress port identifier.
  * @param num_qos      Number of QoS levels, typically 8.
@@ -840,10 +841,8 @@ odp_cls_drop_t odp_cos_drop(odp_cos_t cos);
  * @retval  0 on success
  * @retval <0 on failure
  */
-int odp_cos_with_l2_priority(odp_pktio_t pktio_in,
-			     uint8_t num_qos,
-			     uint8_t qos_table[],
-			     odp_cos_t cos_table[]);
+int ODP_DEPRECATE(odp_cos_with_l2_priority)(odp_pktio_t pktio_in, uint8_t num_qos,
+					    uint8_t qos_table[], odp_cos_t cos_table[]);
 
 /**
  * Request to override per-port class of service based on Layer-3 priority field if present.

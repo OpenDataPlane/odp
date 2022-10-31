@@ -593,10 +593,8 @@ int odp_pktio_headroom_set(odp_pktio_t pktio_in, uint32_t headroom)
 	return 0;
 }
 
-int odp_cos_with_l2_priority(odp_pktio_t pktio_in,
-			     uint8_t num_qos,
-			     uint8_t qos_table[],
-			     odp_cos_t cos_table[])
+int ODP_DEPRECATE(odp_cos_with_l2_priority)(odp_pktio_t pktio_in, uint8_t num_qos,
+					    uint8_t qos_table[], odp_cos_t cos_table[])
 {
 	pmr_l2_cos_t *l2_cos;
 	uint32_t i;
