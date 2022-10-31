@@ -95,9 +95,9 @@ typedef struct {
 	odp_bool_t lockless_rx;		/**< no locking for rx */
 	odp_bool_t lockless_tx;		/**< no locking for tx */
 	/** mapping of pktin queues to netmap rx descriptors */
-	netmap_ring_t rx_desc_ring[PKTIO_MAX_QUEUES];
+	netmap_ring_t rx_desc_ring[ODP_PKTIN_MAX_QUEUES];
 	/** mapping of pktout queues to netmap tx descriptors */
-	netmap_ring_t tx_desc_ring[PKTIO_MAX_QUEUES];
+	netmap_ring_t tx_desc_ring[ODP_PKTOUT_MAX_QUEUES];
 	netmap_opt_t opt;               /**< options */
 } pkt_netmap_t;
 
@@ -314,13 +314,15 @@ static inline void netmap_close_descriptors(pktio_entry_t *pktio_entry)
 	int i, j;
 	pkt_netmap_t *pkt_nm = pkt_priv(pktio_entry);
 
-	for (i = 0; i < PKTIO_MAX_QUEUES; i++) {
+	for (i = 0; i < ODP_PKTIN_MAX_QUEUES; i++) {
 		for (j = 0; j < NM_MAX_DESC; j++) {
 			if (pkt_nm->rx_desc_ring[i].desc[j] != NULL) {
 				nm_close(pkt_nm->rx_desc_ring[i].desc[j]);
 				pkt_nm->rx_desc_ring[i].desc[j] = NULL;
 			}
 		}
+	}
+	for (i = 0; i < ODP_PKTOUT_MAX_QUEUES; i++) {
 		for (j = 0; j < NM_MAX_DESC; j++) {
 			if (pkt_nm->tx_desc_ring[i].desc[j] != NULL) {
 				nm_close(pkt_nm->tx_desc_ring[i].desc[j]);
@@ -422,8 +424,8 @@ static void netmap_init_capability(pktio_entry_t *pktio_entry)
 
 	memset(capa, 0, sizeof(odp_pktio_capability_t));
 
-	capa->max_input_queues = PKTIO_MAX_QUEUES;
-	if (pkt_nm->num_rx_rings < PKTIO_MAX_QUEUES)
+	capa->max_input_queues = ODP_PKTIN_MAX_QUEUES;
+	if (pkt_nm->num_rx_rings < ODP_PKTIN_MAX_QUEUES)
 		capa->max_input_queues = pkt_nm->num_rx_rings;
 	if (capa->max_input_queues > NM_MAX_DESC) {
 		/* Have to use a single descriptor to fetch packets from all
@@ -434,8 +436,8 @@ static void netmap_init_capability(pktio_entry_t *pktio_entry)
 			NM_MAX_DESC, capa->max_input_queues);
 	}
 
-	capa->max_output_queues = PKTIO_MAX_QUEUES;
-	if (pkt_nm->num_tx_rings < PKTIO_MAX_QUEUES)
+	capa->max_output_queues = ODP_PKTOUT_MAX_QUEUES;
+	if (pkt_nm->num_tx_rings < ODP_PKTOUT_MAX_QUEUES)
 		capa->max_output_queues = pkt_nm->num_tx_rings;
 	if (capa->max_output_queues > NM_MAX_DESC) {
 		capa->max_output_queues = NM_MAX_DESC;
@@ -578,10 +580,11 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 
 	nm_close(desc);
 
-	for (i = 0; i < PKTIO_MAX_QUEUES; i++) {
+	for (i = 0; i < ODP_PKTIN_MAX_QUEUES; i++)
 		odp_ticketlock_init(&pkt_nm->rx_desc_ring[i].lock);
+
+	for (i = 0; i < ODP_PKTOUT_MAX_QUEUES; i++)
 		odp_ticketlock_init(&pkt_nm->tx_desc_ring[i].lock);
-	}
 
 	if (pkt_nm->is_virtual) {
 		static unsigned int mac;

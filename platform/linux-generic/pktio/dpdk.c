@@ -141,7 +141,7 @@ typedef struct ODP_ALIGNED_CACHE {
 	/* Minimum RX burst size */
 	uint8_t min_rx_burst;
 	/* Cache for storing extra RX packets */
-	pkt_cache_t rx_cache[PKTIO_MAX_QUEUES];
+	pkt_cache_t rx_cache[ODP_PKTIN_MAX_QUEUES];
 
 	/* --- Control path data --- */
 
@@ -162,14 +162,14 @@ typedef struct ODP_ALIGNED_CACHE {
 	/* Use system call to get/set vdev promisc mode */
 	uint8_t vdev_sysc_promisc;
 	/* Number of TX descriptors per queue */
-	uint16_t num_tx_desc[PKTIO_MAX_QUEUES];
+	uint16_t num_tx_desc[ODP_PKTOUT_MAX_QUEUES];
 
 	/* --- Locks for MT safe operations --- */
 
 	/* RX queue locks */
-	odp_ticketlock_t rx_lock[PKTIO_MAX_QUEUES] ODP_ALIGNED_CACHE;
+	odp_ticketlock_t rx_lock[ODP_PKTIN_MAX_QUEUES] ODP_ALIGNED_CACHE;
 	/* TX queue locks */
-	odp_ticketlock_t tx_lock[PKTIO_MAX_QUEUES] ODP_ALIGNED_CACHE;
+	odp_ticketlock_t tx_lock[ODP_PKTOUT_MAX_QUEUES] ODP_ALIGNED_CACHE;
 } pkt_dpdk_t;
 
 ODP_STATIC_ASSERT(PKTIO_PRIVATE_SIZE >= sizeof(pkt_dpdk_t),
@@ -1264,7 +1264,7 @@ static int dpdk_close(pktio_entry_t *pktio_entry)
 	unsigned i, j;
 
 	/* Free cache packets */
-	for (i = 0; i < PKTIO_MAX_QUEUES; i++) {
+	for (i = 0; i < ODP_PKTIN_MAX_QUEUES; i++) {
 		idx = pkt_dpdk->rx_cache[i].idx;
 
 		for (j = 0; j < pkt_dpdk->rx_cache[i].count; j++)
@@ -1572,7 +1572,7 @@ static int dpdk_init_capability(pktio_entry_t *pktio_entry,
 	memset(capa, 0, sizeof(odp_pktio_capability_t));
 
 	capa->max_input_queues = RTE_MIN(dev_info->max_rx_queues,
-					 PKTIO_MAX_QUEUES);
+					 ODP_PKTIN_MAX_QUEUES);
 
 	/* ixgbe devices support only 16 rx queues in RSS mode */
 	if (!strncmp(dev_info->driver_name, IXGBE_DRV_NAME,
@@ -1581,7 +1581,7 @@ static int dpdk_init_capability(pktio_entry_t *pktio_entry,
 						 capa->max_input_queues);
 
 	capa->max_output_queues = RTE_MIN(dev_info->max_tx_queues,
-					  PKTIO_MAX_QUEUES);
+					  ODP_PKTOUT_MAX_QUEUES);
 	capa->min_output_queue_size = dev_info->tx_desc_lim.nb_min;
 	capa->max_output_queue_size = dev_info->tx_desc_lim.nb_max;
 
@@ -1845,10 +1845,11 @@ static int dpdk_open(odp_pktio_t id ODP_UNUSED,
 		return -1;
 	}
 
-	for (i = 0; i < PKTIO_MAX_QUEUES; i++) {
+	for (i = 0; i < ODP_PKTIN_MAX_QUEUES; i++)
 		odp_ticketlock_init(&pkt_dpdk->rx_lock[i]);
+
+	for (i = 0; i < ODP_PKTOUT_MAX_QUEUES; i++)
 		odp_ticketlock_init(&pkt_dpdk->tx_lock[i]);
-	}
 
 	rte_eth_stats_reset(pkt_dpdk->port_id);
 

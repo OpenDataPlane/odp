@@ -716,7 +716,7 @@ static void pktio_start(int pktio_idx,
 	_ODP_ASSERT(pktio_idx < ODP_CONFIG_PKTIO_ENTRIES);
 	for (i = 0; i < num_in_queue; i++) {
 		rxq = in_queue_idx[i];
-		_ODP_ASSERT(rxq < PKTIO_MAX_QUEUES);
+		_ODP_ASSERT(rxq < ODP_PKTIN_MAX_QUEUES);
 		__atomic_fetch_add(&global->poll_count[pktio_idx], 1,
 				   __ATOMIC_RELAXED);
 		qentry = _odp_qentry_from_ext(odpq[i]);
