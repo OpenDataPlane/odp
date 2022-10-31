@@ -408,6 +408,49 @@ static crypto_alg_config_t algs_config[] = {
 			.auth_aad_len = AAD_LEN,
 		},
 	},
+	{
+		.name = "zuc-eea3",
+		.session = {
+			.cipher_alg = ODP_CIPHER_ALG_ZUC_EEA3,
+			.cipher_key = {
+				.data = test_key16,
+				.length = sizeof(test_key16)
+			},
+			.cipher_iv_len = 16,
+			.auth_alg = ODP_AUTH_ALG_NULL,
+		},
+	},
+	{
+		.name = "zuc-eia3",
+		.session = {
+			.cipher_alg = ODP_CIPHER_ALG_NULL,
+			.auth_alg = ODP_AUTH_ALG_ZUC_EIA3,
+			.auth_key = {
+				.data = test_key16,
+				.length = sizeof(test_key16)
+			},
+			.auth_iv_len = 16,
+			.auth_digest_len = 4,
+		},
+	},
+	{
+		.name = "zuc-eea3-zuc-eia3",
+		.session = {
+			.cipher_alg = ODP_CIPHER_ALG_ZUC_EEA3,
+			.cipher_key = {
+				.data = test_key16,
+				.length = sizeof(test_key16)
+			},
+			.cipher_iv_len = 16,
+			.auth_alg = ODP_AUTH_ALG_ZUC_EIA3,
+			.auth_key = {
+				.data = test_key16,
+				.length = sizeof(test_key16)
+			},
+			.auth_iv_len = 16,
+			.auth_digest_len = 4,
+		},
+	},
 };
 
 /**
@@ -890,6 +933,9 @@ static int check_cipher_alg(const odp_crypto_capability_t *capa,
 		if (capa->ciphers.bit.chacha20_poly1305)
 			return 0;
 		break;
+	case ODP_CIPHER_ALG_ZUC_EEA3:
+		if (capa->ciphers.bit.zuc_eea3)
+			return 0;
 	default:
 		break;
 	}
@@ -941,6 +987,9 @@ static int check_auth_alg(const odp_crypto_capability_t *capa,
 		if (capa->auths.bit.chacha20_poly1305)
 			return 0;
 		break;
+	case ODP_AUTH_ALG_ZUC_EIA3:
+		if (capa->auths.bit.zuc_eia3)
+			return 0;
 	default:
 		break;
 	}
