@@ -516,7 +516,7 @@ get_elapsed_usec(time_record_t *start, time_record_t *end)
 	return e - s;
 }
 
-#define REPORT_HEADER	    "\n%30.30s %15s %15s %15s %15s %15s %15s\n"
+#define REPORT_HEADER	    "%30.30s %15s %15s %15s %15s %15s %15s\n"
 #define REPORT_LINE	    "%30.30s %15d %15d %15.3f %15.3f %15.3f %15d\n"
 
 /**
@@ -633,6 +633,19 @@ create_session_from_config(odp_crypto_session_t *session,
 	}
 	if (odp_crypto_session_create(&params, session,
 				      &ses_create_rc)) {
+		switch (ses_create_rc) {
+		case ODP_CRYPTO_SES_ERR_ALG_COMBO:
+			printf("    requested algorithm combination not supported\n");
+			return 1;
+		case ODP_CRYPTO_SES_ERR_ALG_ORDER:
+			printf("    requested algorithm order not supported\n");
+			return 1;
+		case ODP_CRYPTO_SES_ERR_PARAMS:
+			printf("    requested session parameters not supported\n");
+			return 1;
+		default:
+			break;
+		}
 		ODPH_ERR("crypto session create failed.\n");
 		return -1;
 	}
@@ -1026,6 +1039,8 @@ static int run_measure_one_config(test_run_arg_t *arg)
 	odp_crypto_capability_t crypto_capa = arg->crypto_capa;
 	int rc = 0;
 
+	printf("\n");
+
 	if (check_cipher_params(&crypto_capa, &config->session,
 				&config->cipher_in_bit_mode)) {
 		printf("    Cipher algorithm not supported\n");
@@ -1038,13 +1053,12 @@ static int run_measure_one_config(test_run_arg_t *arg)
 		rc = 1;
 	}
 
+	if (rc == 0)
+		rc = create_session_from_config(&session, config, cargs);
 	if (rc) {
-		printf("    => %s skipped\n\n", config->name);
-		return 0;
+		printf("    => %s skipped\n", config->name);
+		return rc > 0 ? 0 : -1;
 	}
-
-	if (create_session_from_config(&session, config, cargs))
-		return -1;
 
 	if (cargs->payload_length) {
 		rc = run_measure_one(cargs, config, &session,
