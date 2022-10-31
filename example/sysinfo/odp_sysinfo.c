@@ -188,16 +188,32 @@ static void foreach_cipher(odp_crypto_cipher_algos_t ciphers, cipher_op_t op)
 		op(ODP_CIPHER_ALG_DES);
 	if (ciphers.bit.trides_cbc)
 		op(ODP_CIPHER_ALG_3DES_CBC);
+	if (ciphers.bit.trides_ecb)
+		op(ODP_CIPHER_ALG_3DES_ECB);
 	if (ciphers.bit.aes_cbc)
 		op(ODP_CIPHER_ALG_AES_CBC);
 	if (ciphers.bit.aes_ctr)
 		op(ODP_CIPHER_ALG_AES_CTR);
+	if (ciphers.bit.aes_ecb)
+		op(ODP_CIPHER_ALG_AES_ECB);
+	if (ciphers.bit.aes_cfb128)
+		op(ODP_CIPHER_ALG_AES_CFB128);
+	if (ciphers.bit.aes_xts)
+		op(ODP_CIPHER_ALG_AES_XTS);
 	if (ciphers.bit.aes_gcm)
 		op(ODP_CIPHER_ALG_AES_GCM);
 	if (ciphers.bit.aes_ccm)
 		op(ODP_CIPHER_ALG_AES_CCM);
 	if (ciphers.bit.chacha20_poly1305)
 		op(ODP_CIPHER_ALG_CHACHA20_POLY1305);
+	if (ciphers.bit.kasumi_f8)
+		op(ODP_CIPHER_ALG_KASUMI_F8);
+	if (ciphers.bit.snow3g_uea2)
+		op(ODP_CIPHER_ALG_SNOW3G_UEA2);
+	if (ciphers.bit.aes_eea2)
+		op(ODP_CIPHER_ALG_AES_EEA2);
+	if (ciphers.bit.zuc_eea3)
+		op(ODP_CIPHER_ALG_ZUC_EEA3);
 }
 
 static void foreach_auth(odp_crypto_auth_algos_t auths, auth_op_t op)
@@ -208,6 +224,8 @@ static void foreach_auth(odp_crypto_auth_algos_t auths, auth_op_t op)
 		op(ODP_AUTH_ALG_MD5_HMAC);
 	if (auths.bit.sha1_hmac)
 		op(ODP_AUTH_ALG_SHA1_HMAC);
+	if (auths.bit.sha224_hmac)
+		op(ODP_AUTH_ALG_SHA224_HMAC);
 	if (auths.bit.sha256_hmac)
 		op(ODP_AUTH_ALG_SHA256_HMAC);
 	if (auths.bit.sha384_hmac)
@@ -226,6 +244,26 @@ static void foreach_auth(odp_crypto_auth_algos_t auths, auth_op_t op)
 		op(ODP_AUTH_ALG_AES_XCBC_MAC);
 	if (auths.bit.chacha20_poly1305)
 		op(ODP_AUTH_ALG_CHACHA20_POLY1305);
+	if (auths.bit.kasumi_f9)
+		op(ODP_AUTH_ALG_KASUMI_F9);
+	if (auths.bit.snow3g_uia2)
+		op(ODP_AUTH_ALG_SNOW3G_UIA2);
+	if (auths.bit.aes_eia2)
+		op(ODP_AUTH_ALG_AES_EIA2);
+	if (auths.bit.zuc_eia3)
+		op(ODP_AUTH_ALG_ZUC_EIA3);
+	if (auths.bit.md5)
+		op(ODP_AUTH_ALG_MD5);
+	if (auths.bit.sha1)
+		op(ODP_AUTH_ALG_SHA1);
+	if (auths.bit.sha224)
+		op(ODP_AUTH_ALG_SHA224);
+	if (auths.bit.sha256)
+		op(ODP_AUTH_ALG_SHA256);
+	if (auths.bit.sha384)
+		op(ODP_AUTH_ALG_SHA384);
+	if (auths.bit.sha512)
+		op(ODP_AUTH_ALG_SHA512);
 }
 
 static void print_cipher_capa(odp_cipher_alg_t cipher)
