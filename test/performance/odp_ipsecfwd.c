@@ -71,6 +71,7 @@ typedef struct pktio_s {
 		odp_queue_t out_ev_qs[MAX_QUEUES];
 	};
 
+	odp_pktin_queue_t in_dir_qs[MAX_QUEUES];
 	odph_ethaddr_t src_mac;
 	char *name;
 	odp_pktio_t handle;
@@ -99,7 +100,20 @@ typedef struct prog_config_s prog_config_t;
 typedef struct ODP_ALIGNED_CACHE {
 	stats_t stats;
 	prog_config_t *prog_config;
+	int thr_idx;
+	uint8_t pktio;
 } thread_config_t;
+
+typedef uint32_t (*rx_fn_t)(thread_config_t *config, odp_event_t evs[], int num);
+typedef void (*ipsec_fn_t)(odp_packet_t pkts[], int num, odph_table_t fwd_tbl, stats_t *stats);
+typedef void (*drain_fn_t)(prog_config_t *config);
+
+typedef struct {
+	rx_fn_t rx;
+	ipsec_fn_t proc;
+	ipsec_fn_t compl;
+	drain_fn_t drain;
+} ops_t;
 
 typedef struct prog_config_s {
 	odph_thread_t thread_tbl[MAX_WORKERS];
@@ -108,6 +122,7 @@ typedef struct prog_config_s {
 	fwd_entry_t fwd_entries[MAX_FWDS];
 	odp_queue_t sa_qs[MAX_SA_QUEUES];
 	pktio_t pktios[MAX_IFS];
+	ops_t ops;
 	char *sa_conf_file;
 	char *fwd_conf_file;
 	odp_instance_t odp_instance;
@@ -125,6 +140,7 @@ typedef struct prog_config_s {
 	uint32_t num_sas;
 	uint32_t num_fwds;
 	int num_thrs;
+	odp_bool_t is_dir_rx;
 	uint8_t mode;
 } prog_config_t;
 
@@ -329,6 +345,9 @@ static void print_usage(void)
 	       "  -I, --num_input_qs  Input queue count. 1 by default.\n"
 	       "  -S, --num_sa_qs     SA queue count. 1 by default.\n"
 	       "  -O, --num_output_qs Output queue count. 1 by default.\n"
+	       "  -d, --direct_rx     Use direct RX. Interfaces will be polled by workers\n"
+	       "                      directly. \"--mode\" and \"--num_input_qs\" options are\n"
+	       "                      ignored, input queue count will match worker count.\n"
 	       "  -h, --help          This help.\n"
 	       "\n");
 }
@@ -349,7 +368,7 @@ static inline odp_ipsec_sa_t *get_in_sa(odp_packet_t pkt)
 	return spi <= UINT16_MAX ? spi_to_sa_map[DIR_IN][spi] : NULL;
 }
 
-static inline int process_ipsec_in(odp_packet_t pkts[], const odp_ipsec_sa_t sas[], int num)
+static inline int process_ipsec_in_enq(odp_packet_t pkts[], const odp_ipsec_sa_t sas[], int num)
 {
 	odp_ipsec_in_param_t param;
 	int left, sent = 0, ret;
@@ -390,7 +409,7 @@ static inline odp_ipsec_sa_t *get_out_sa(odp_packet_t pkt)
 	return dst_port ? spi_to_sa_map[DIR_OUT][dst_port] : NULL;
 }
 
-static inline int process_ipsec_out(odp_packet_t pkts[], const odp_ipsec_sa_t sas[], int num)
+static inline int process_ipsec_out_enq(odp_packet_t pkts[], const odp_ipsec_sa_t sas[], int num)
 {
 	odp_ipsec_out_param_t param;
 	int left, sent = 0, ret;
@@ -470,7 +489,6 @@ static inline uint32_t forward_packets(odp_packet_t pkts[], int num, odph_table_
 			odp_packet_free(pkt);
 			continue;
 		}
-
 		if (odp_unlikely(!pktio->send_fn(pktio, hash % pktio->num_tx_qs, pkt))) {
 			odp_packet_free(pkt);
 			continue;
@@ -482,8 +500,8 @@ static inline uint32_t forward_packets(odp_packet_t pkts[], int num, odph_table_
 	return num_procd;
 }
 
-static inline void process_packets_out(odp_packet_t pkts[], int num, odph_table_t fwd_tbl,
-				       stats_t *stats)
+static inline void process_packets_out_enq(odp_packet_t pkts[], int num, odph_table_t fwd_tbl,
+					   stats_t *stats)
 {
 	odp_packet_t pkt, pkts_ips[MAX_BURST], pkts_fwd[MAX_BURST];
 	odp_ipsec_sa_t *sa, sas[MAX_BURST];
@@ -503,10 +521,9 @@ static inline void process_packets_out(odp_packet_t pkts[], int num, odph_table_
 	}
 
 	if (num_pkts_ips > 0) {
-		num_procd = process_ipsec_out(pkts_ips, sas, num_pkts_ips);
+		num_procd = process_ipsec_out_enq(pkts_ips, sas, num_pkts_ips);
 
 		if (odp_unlikely(num_procd < num_pkts_ips)) {
-			num_procd = num_procd < 0 ? 0 : num_procd;
 			stats->ipsec_out_errs += num_pkts_ips - num_procd;
 			odp_packet_free_multi(&pkts_ips[num_procd], num_pkts_ips - num_procd);
 		}
@@ -519,8 +536,8 @@ static inline void process_packets_out(odp_packet_t pkts[], int num, odph_table_
 	}
 }
 
-static inline void process_packets_in(odp_packet_t pkts[], int num, odph_table_t fwd_tbl,
-				      stats_t *stats)
+static void process_packets_in_enq(odp_packet_t pkts[], int num, odph_table_t fwd_tbl,
+				   stats_t *stats)
 {
 	odp_packet_t pkt, pkts_ips[MAX_BURST], pkts_out[MAX_BURST];
 	odp_ipsec_sa_t *sa, sas[MAX_BURST];
@@ -547,17 +564,16 @@ static inline void process_packets_in(odp_packet_t pkts[], int num, odph_table_t
 	}
 
 	if (num_pkts_ips > 0) {
-		num_procd = process_ipsec_in(pkts_ips, sas, num_pkts_ips);
+		num_procd = process_ipsec_in_enq(pkts_ips, sas, num_pkts_ips);
 
 		if (odp_unlikely(num_procd < num_pkts_ips)) {
-			num_procd = num_procd < 0 ? 0 : num_procd;
 			stats->ipsec_in_errs += num_pkts_ips - num_procd;
 			odp_packet_free_multi(&pkts_ips[num_procd], num_pkts_ips - num_procd);
 		}
 	}
 
 	if (num_pkts_out > 0)
-		process_packets_out(pkts_out, num_pkts_out, fwd_tbl, stats);
+		process_packets_out_enq(pkts_out, num_pkts_out, fwd_tbl, stats);
 }
 
 static inline odp_bool_t is_ipsec_in(odp_packet_t pkt)
@@ -565,8 +581,7 @@ static inline odp_bool_t is_ipsec_in(odp_packet_t pkt)
 	return odp_packet_user_ptr(pkt) == NULL;
 }
 
-static inline void complete_ipsec_ops(odp_packet_t pkts[], int num, odph_table_t fwd_tbl,
-				      stats_t *stats)
+static void complete_ipsec_ops(odp_packet_t pkts[], int num, odph_table_t fwd_tbl, stats_t *stats)
 {
 	odp_packet_t pkt, pkts_out[MAX_BURST], pkts_fwd[MAX_BURST];
 	odp_bool_t is_in;
@@ -599,7 +614,7 @@ static inline void complete_ipsec_ops(odp_packet_t pkts[], int num, odph_table_t
 	}
 
 	if (num_pkts_out > 0)
-		process_packets_out(pkts_out, num_pkts_out, fwd_tbl, stats);
+		process_packets_out_enq(pkts_out, num_pkts_out, fwd_tbl, stats);
 
 	if (num_pkts_fwd > 0) {
 		num_procd = forward_packets(pkts_fwd, num_pkts_fwd, fwd_tbl);
@@ -608,7 +623,7 @@ static inline void complete_ipsec_ops(odp_packet_t pkts[], int num, odph_table_t
 	}
 }
 
-static void drain_events(void)
+static void drain_scheduler(prog_config_t *config ODP_UNUSED)
 {
 	odp_event_t ev;
 
@@ -622,28 +637,218 @@ static void drain_events(void)
 	}
 }
 
+static inline int process_ipsec_in(odp_packet_t pkts[], const odp_ipsec_sa_t sas[], int num,
+				   odp_packet_t pkts_out[])
+{
+	odp_ipsec_in_param_t param;
+	int left, sent = 0, num_out, ret;
+
+	memset(&param, 0, sizeof(param));
+
+	while (sent < num) {
+		left = num - sent;
+		num_out = left;
+		param.num_sa = left;
+		param.sa = &sas[sent];
+		ret = odp_ipsec_in(&pkts[sent], left, &pkts_out[sent], &num_out, &param);
+
+		if (odp_unlikely(ret <= 0))
+			break;
+
+		sent += ret;
+	}
+
+	return sent;
+}
+
+static inline int process_ipsec_out(odp_packet_t pkts[], const odp_ipsec_sa_t sas[], int num,
+				    odp_packet_t pkts_out[])
+{
+	odp_ipsec_out_param_t param;
+	int left, sent = 0, num_out, ret;
+
+	memset(&param, 0, sizeof(param));
+
+	while (sent < num) {
+		left = num - sent;
+		num_out = left;
+		param.num_sa = left;
+		param.sa = &sas[sent];
+		ret = odp_ipsec_out(&pkts[sent], left, &pkts_out[sent], &num_out, &param);
+
+		if (odp_unlikely(ret <= 0))
+			break;
+
+		sent += ret;
+	}
+
+	return sent;
+}
+
+static inline void process_packets_out(odp_packet_t pkts[], int num, odph_table_t fwd_tbl,
+				       stats_t *stats)
+{
+	odp_packet_t pkt, pkts_ips[MAX_BURST], pkts_fwd[MAX_BURST], pkts_ips_out[MAX_BURST];
+	odp_ipsec_sa_t *sa, sas[MAX_BURST];
+	int num_pkts_ips = 0, num_pkts_fwd = 0, num_procd;
+	odp_ipsec_packet_result_t result;
+
+	for (int i = 0; i < num; ++i) {
+		pkt = pkts[i];
+		sa = get_out_sa(pkt);
+
+		if (sa != NULL) {
+			sas[num_pkts_ips] = *sa;
+			pkts_ips[num_pkts_ips] = pkt;
+			++num_pkts_ips;
+		} else {
+			pkts_fwd[num_pkts_fwd++] = pkt;
+		}
+	}
+
+	if (num_pkts_ips > 0) {
+		num_procd = process_ipsec_out(pkts_ips, sas, num_pkts_ips, pkts_ips_out);
+
+		if (odp_unlikely(num_procd < num_pkts_ips)) {
+			stats->ipsec_out_errs += num_pkts_ips - num_procd;
+			odp_packet_free_multi(&pkts_ips[num_procd], num_pkts_ips - num_procd);
+		}
+
+		for (int i = 0; i < num_procd; ++i) {
+			pkt = pkts_ips_out[i];
+
+			if (odp_unlikely(odp_ipsec_result(&result, pkt) < 0)) {
+				++stats->ipsec_out_errs;
+				odp_packet_free(pkt);
+				continue;
+			}
+
+			if (odp_unlikely(result.status.all != ODP_IPSEC_OK)) {
+				++stats->ipsec_out_errs;
+				odp_packet_free(pkt);
+				continue;
+			}
+
+			++stats->ipsec_out_pkts;
+			pkts_fwd[num_pkts_fwd++] = pkt;
+		}
+	}
+
+	if (num_pkts_fwd > 0) {
+		num_procd = forward_packets(pkts_fwd, num_pkts_fwd, fwd_tbl);
+		stats->discards += num_pkts_fwd - num_procd;
+		stats->fwd_pkts += num_procd;
+	}
+}
+
+static void process_packets_in(odp_packet_t pkts[], int num, odph_table_t fwd_tbl, stats_t *stats)
+{
+	odp_packet_t pkt, pkts_ips[MAX_BURST], pkts_out[MAX_BURST], pkts_ips_out[MAX_BURST];
+	odp_ipsec_sa_t *sa, sas[MAX_BURST];
+	int num_pkts_ips = 0, num_pkts_out = 0, num_procd;
+	odp_ipsec_packet_result_t result;
+
+	for (int i = 0; i < num; ++i) {
+		pkt = pkts[i];
+
+		if (odp_unlikely(odp_packet_has_error(pkt))) {
+			++stats->discards;
+			odp_packet_free(pkt);
+			continue;
+		}
+
+		sa = get_in_sa(pkt);
+
+		if (sa != NULL) {
+			sas[num_pkts_ips] = *sa;
+			pkts_ips[num_pkts_ips] = pkt;
+			++num_pkts_ips;
+		} else {
+			pkts_out[num_pkts_out++] = pkt;
+		}
+	}
+
+	if (num_pkts_ips > 0) {
+		num_procd = process_ipsec_in(pkts_ips, sas, num_pkts_ips, pkts_ips_out);
+
+		if (odp_unlikely(num_procd < num_pkts_ips)) {
+			stats->ipsec_in_errs += num_pkts_ips - num_procd;
+			odp_packet_free_multi(&pkts_ips[num_procd], num_pkts_ips - num_procd);
+		}
+
+		for (int i = 0; i < num_procd; ++i) {
+			pkt = pkts_ips_out[i];
+
+			if (odp_unlikely(odp_ipsec_result(&result, pkt) < 0)) {
+				++stats->ipsec_in_errs;
+				odp_packet_free(pkt);
+				continue;
+			}
+
+			if (odp_unlikely(result.status.all != ODP_IPSEC_OK)) {
+				++stats->ipsec_in_errs;
+				odp_packet_free(pkt);
+				continue;
+			}
+
+			++stats->ipsec_in_pkts;
+			pkts_out[num_pkts_out++] = pkt;
+		}
+	}
+
+	if (num_pkts_out > 0)
+		process_packets_out(pkts_out, num_pkts_out, fwd_tbl, stats);
+}
+
+static void drain_direct_inputs(prog_config_t *config)
+{
+	odp_packet_t pkt;
+
+	for (uint32_t i = 0U; i < config->num_ifs; ++i) {
+		for (uint32_t j = 0U; j < config->num_input_qs; ++j) {
+			while (odp_pktin_recv(config->pktios[i].in_dir_qs[j], &pkt, 1) == 1)
+				odp_packet_free(pkt);
+		}
+	}
+}
+
 static odp_bool_t setup_ipsec(prog_config_t *config)
 {
 	odp_queue_param_t q_param;
 	odp_ipsec_config_t ipsec_config;
 	char q_name[ODP_QUEUE_NAME_LEN];
 
-	snprintf(q_name, sizeof(q_name), SHORT_PROG_NAME "_sa_status");
-	odp_queue_param_init(&q_param);
-	q_param.type = ODP_QUEUE_TYPE_SCHED;
-	q_param.sched.prio = odp_schedule_default_prio();
-	q_param.sched.sync = ODP_SCHED_SYNC_PARALLEL;
-	q_param.sched.group = ODP_SCHED_GROUP_ALL;
-	config->compl_q = odp_queue_create(q_name, &q_param);
+	if (!config->is_dir_rx) {
+		snprintf(q_name, sizeof(q_name), SHORT_PROG_NAME "_sa_status");
+		odp_queue_param_init(&q_param);
+		q_param.type = ODP_QUEUE_TYPE_SCHED;
+		q_param.sched.prio = odp_schedule_default_prio();
+		q_param.sched.sync = ODP_SCHED_SYNC_PARALLEL;
+		q_param.sched.group = ODP_SCHED_GROUP_ALL;
+		config->compl_q = odp_queue_create(q_name, &q_param);
 
-	if (config->compl_q == ODP_QUEUE_INVALID) {
-		ODPH_ERR("Error creating IPsec completion queue\n");
-		return false;
+		if (config->compl_q == ODP_QUEUE_INVALID) {
+			ODPH_ERR("Error creating IPsec completion queue\n");
+			return false;
+		}
 	}
 
 	odp_ipsec_config_init(&ipsec_config);
-	ipsec_config.inbound_mode = ODP_IPSEC_OP_MODE_ASYNC;
-	ipsec_config.outbound_mode = ODP_IPSEC_OP_MODE_ASYNC;
+
+	if (!config->is_dir_rx) {
+		ipsec_config.inbound_mode = ODP_IPSEC_OP_MODE_ASYNC;
+		ipsec_config.outbound_mode = ODP_IPSEC_OP_MODE_ASYNC;
+		config->ops.proc = process_packets_in_enq;
+		config->ops.compl = complete_ipsec_ops;
+		config->ops.drain = drain_scheduler;
+	} else {
+		ipsec_config.inbound_mode = ODP_IPSEC_OP_MODE_SYNC;
+		ipsec_config.outbound_mode = ODP_IPSEC_OP_MODE_SYNC;
+		config->ops.proc = process_packets_in;
+		config->ops.compl = NULL;
+		config->ops.drain = drain_direct_inputs;
+	}
+
 	ipsec_config.inbound.default_queue = config->compl_q;
 	/* For tunnel to tunnel, we need to parse up to this to check the UDP port for SA. */
 	ipsec_config.inbound.parse_level = ODP_PROTO_LAYER_L4;
@@ -786,7 +991,7 @@ static void parse_sas(prog_config_t *config)
 	if (!setup_ipsec(config))
 		return;
 
-	if (!create_sa_dest_queues(&ipsec_capa, config))
+	if (!config->is_dir_rx && !create_sa_dest_queues(&ipsec_capa, config))
 		return;
 
 	file = fopen(config->sa_conf_file, "r");
@@ -929,6 +1134,9 @@ static parse_result_t check_options(prog_config_t *config)
 		return PRS_NOK;
 	}
 
+	if (config->is_dir_rx)
+		config->num_input_qs = config->num_thrs;
+
 	return PRS_OK;
 }
 
@@ -947,11 +1155,12 @@ static parse_result_t parse_options(int argc, char **argv, prog_config_t *config
 		{ "num_input_qs", required_argument, NULL, 'I' },
 		{ "num_sa_qs", required_argument, NULL, 'S' },
 		{ "num_output_qs", required_argument, NULL, 'O' },
+		{ "direct_rx", no_argument, NULL, 'd'},
 		{ "help", no_argument, NULL, 'h' },
 		{ NULL, 0, NULL, 0 }
 	};
 
-	static const char *shortopts = "i:n:l:c:m:s:f:I:S:O:h";
+	static const char *shortopts = "i:n:l:c:m:s:f:I:S:O:dh";
 
 	while (true) {
 		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
@@ -990,6 +1199,9 @@ static parse_result_t parse_options(int argc, char **argv, prog_config_t *config
 		case 'O':
 			config->num_output_qs = atoi(optarg);
 			break;
+		case 'd':
+			config->is_dir_rx = true;
+			break;
 		case 'h':
 			print_usage();
 			return PRS_TERM;
@@ -1019,6 +1231,29 @@ static parse_result_t setup_program(int argc, char **argv, prog_config_t *config
 	}
 
 	return parse_options(argc, argv, config);
+}
+
+static uint32_t schedule(thread_config_t *config ODP_UNUSED, odp_event_t evs[], int num)
+{
+	return odp_schedule_multi_no_wait(NULL, evs, num);
+}
+
+static uint32_t recv(thread_config_t *config, odp_event_t evs[], int num)
+{
+	prog_config_t *prog_config = config->prog_config;
+	pktio_t *pktio = &prog_config->pktios[config->pktio++ % prog_config->num_ifs];
+	odp_pktin_queue_t in_q = pktio->in_dir_qs[config->thr_idx % prog_config->num_input_qs];
+	odp_packet_t pkts[num];
+	int ret;
+
+	ret = odp_pktin_recv(in_q, pkts, num);
+
+	if (odp_unlikely(ret <= 0))
+		return 0U;
+
+	odp_packet_to_event_multi(pkts, evs, ret);
+
+	return ret;
 }
 
 static odp_bool_t send(const pktio_t *pktio, uint8_t index, odp_packet_t pkt)
@@ -1054,12 +1289,15 @@ static odp_bool_t setup_pktios(prog_config_t *config)
 		return false;
 	}
 
+	config->ops.rx = !config->is_dir_rx ? schedule : recv;
+
 	for (uint32_t i = 0U; i < config->num_ifs; ++i) {
 		pktio = &config->pktios[i];
 		odp_pktio_param_init(&pktio_param);
-		pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
-		pktio_param.out_mode = config->mode == ORDERED ? ODP_PKTOUT_MODE_QUEUE :
-								 ODP_PKTOUT_MODE_DIRECT;
+		pktio_param.in_mode = !config->is_dir_rx ?
+			ODP_PKTIN_MODE_SCHED : ODP_PKTIN_MODE_DIRECT;
+		pktio_param.out_mode = !config->is_dir_rx && config->mode == ORDERED ?
+			ODP_PKTOUT_MODE_QUEUE : ODP_PKTOUT_MODE_DIRECT;
 		pktio->handle = odp_pktio_open(pktio->name, config->pktio_pool, &pktio_param);
 
 		if (pktio->handle == ODP_PKTIO_INVALID) {
@@ -1090,7 +1328,7 @@ static odp_bool_t setup_pktios(prog_config_t *config)
 
 		odp_pktin_queue_param_init(&pktin_param);
 
-		if (config->mode == ORDERED)
+		if (!config->is_dir_rx && config->mode == ORDERED)
 			pktin_param.queue_param.sched.sync = ODP_SCHED_SYNC_ORDERED;
 
 		if (config->num_input_qs > 1U) {
@@ -1099,12 +1337,25 @@ static odp_bool_t setup_pktios(prog_config_t *config)
 			pktin_param.num_queues = config->num_input_qs;
 		}
 
+		pktin_param.op_mode = (config->is_dir_rx &&
+				       config->num_thrs > (int)config->num_input_qs) ?
+						ODP_PKTIO_OP_MT : ODP_PKTIO_OP_MT_UNSAFE;
+
 		if (odp_pktin_queue_config(pktio->handle, &pktin_param) < 0) {
 			ODPH_ERR("Error configuring packet I/O input queues (%s)\n", pktio->name);
 			return false;
 		}
 
-		pktio->send_fn = config->mode == ORDERED ? enqueue : send;
+		if (config->is_dir_rx) {
+			if (odp_pktin_queue(pktio->handle, pktio->in_dir_qs, config->num_input_qs)
+			    != (int)config->num_input_qs) {
+				ODPH_ERR("Error querying packet I/O input queue (%s)\n",
+					 pktio->name);
+				return false;
+			}
+		}
+
+		pktio->send_fn = !config->is_dir_rx && config->mode == ORDERED ? enqueue : send;
 		pktio->num_tx_qs = config->num_output_qs;
 		odp_pktout_queue_param_init(&pktout_param);
 		pktout_param.num_queues = pktio->num_tx_qs;
@@ -1114,7 +1365,7 @@ static odp_bool_t setup_pktios(prog_config_t *config)
 			return false;
 		}
 
-		if (config->mode == ORDERED) {
+		if (!config->is_dir_rx && config->mode == ORDERED) {
 			if (odp_pktout_event_queue(pktio->handle, pktio->out_ev_qs,
 						   pktio->num_tx_qs) != (int)pktio->num_tx_qs) {
 				ODPH_ERR("Error querying packet I/O output event queue (%s)\n",
@@ -1189,8 +1440,10 @@ static inline void check_ipsec_status_ev(odp_event_t ev, stats_t *stats)
 static int process_packets(void *args)
 {
 	thread_config_t *config = args;
+	config->thr_idx = odp_thread_id();
 	odp_event_t evs[MAX_BURST], ev;
-	int cnt;
+	ops_t ops = config->prog_config->ops;
+	uint32_t cnt;
 	odp_event_type_t type;
 	odp_event_subtype_t subtype;
 	odp_packet_t pkt, pkts_in[MAX_BURST], pkts_ips[MAX_BURST];
@@ -1202,12 +1455,12 @@ static int process_packets(void *args)
 	while (odp_atomic_load_u32(&is_running)) {
 		int num_pkts_in = 0, num_pkts_ips = 0;
 		/* TODO: Add possibility to configure scheduler and ipsec enq/deq burst sizes. */
-		cnt = odp_schedule_multi_no_wait(NULL, evs, MAX_BURST);
+		cnt = ops.rx(config, evs, MAX_BURST);
 
-		if (cnt == 0)
+		if (cnt == 0U)
 			continue;
 
-		for (int i = 0; i < cnt; ++i) {
+		for (uint32_t i = 0U; i < cnt; ++i) {
 			ev = evs[i];
 			type = odp_event_types(ev, &subtype);
 			pkt = odp_packet_from_event(ev);
@@ -1230,14 +1483,14 @@ static int process_packets(void *args)
 		}
 
 		if (num_pkts_in > 0)
-			process_packets_in(pkts_in, num_pkts_in, fwd_tbl, stats);
+			ops.proc(pkts_in, num_pkts_in, fwd_tbl, stats);
 
-		if (num_pkts_ips > 0)
-			complete_ipsec_ops(pkts_ips, num_pkts_ips, fwd_tbl, stats);
+		if (ops.compl && num_pkts_ips > 0)
+			ops.compl(pkts_ips, num_pkts_ips, fwd_tbl, stats);
 	}
 
 	odp_barrier_wait(&config->prog_config->term_barrier);
-	drain_events();
+	ops.drain(config->prog_config);
 
 	return 0;
 }
@@ -1346,8 +1599,9 @@ static void teardown_test(const prog_config_t *config)
 	for (uint32_t i = 0U; i < config->num_sas; ++i)
 		(void)odp_ipsec_sa_disable(config->sas[i]);
 
-	/* Drain SA status events. */
-	wait_sas_disabled(config->num_sas);
+	if (!config->is_dir_rx)
+		/* Drain SA status events. */
+		wait_sas_disabled(config->num_sas);
 
 	for (uint32_t i = 0U; i < config->num_sas; ++i)
 		(void)odp_ipsec_sa_destroy(config->sas[i]);
@@ -1403,7 +1657,7 @@ int main(int argc, char **argv)
 
 	init_config(&config);
 
-	if (odp_schedule_config(NULL) < 0) {
+	if (!config.is_dir_rx && odp_schedule_config(NULL) < 0) {
 		ODPH_ERR("Error configuring scheduler\n");
 		ret = EXIT_FAILURE;
 		goto out_test;
