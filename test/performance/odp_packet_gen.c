@@ -52,6 +52,7 @@ typedef struct test_options_t {
 	uint32_t num_pkt;
 	uint32_t pkt_len;
 	uint8_t  use_rand_pkt_len;
+	uint8_t  direct_rx;
 	uint32_t rand_pkt_len_min;
 	uint32_t rand_pkt_len_max;
 	uint32_t rand_pkt_len_bins;
@@ -94,6 +95,9 @@ typedef struct thread_arg_t {
 
 	/* pktout queue per pktio interface (per thread) */
 	odp_pktout_queue_t pktout[MAX_PKTIOS];
+
+	/* In direct_rx mode, pktin queue per pktio interface (per thread) */
+	odp_pktin_queue_t pktin[MAX_PKTIOS];
 
 } thread_arg_t;
 
@@ -138,6 +142,7 @@ typedef struct test_global_t {
 		odph_ethaddr_t eth_dst;
 		odp_pktio_t pktio;
 		odp_pktout_queue_t pktout[ODP_THREAD_COUNT_MAX];
+		odp_pktin_queue_t pktin[ODP_THREAD_COUNT_MAX];
 		int started;
 
 	} pktio[MAX_PKTIOS];
@@ -195,7 +200,10 @@ static void print_usage(void)
 	       "                            into the number of bins (bins >= 2). Bin value of 0 means\n"
 	       "                            that each packet length is used. Comma-separated (no spaces).\n"
 	       "                            Overrides standard packet length option.\n"
-	       "  -R, --no_pkt_refs         Do not use packet references. Always allocate a\n"
+	       "  -D, --direct_rx           Direct input mode (default: 0)\n"
+	       "                              0: Use scheduler for packet input\n"
+	       "                              1: Poll packet input in direct mode\n");
+	printf("  -R, --no_pkt_refs         Do not use packet references. Always allocate a\n"
 	       "                            fresh set of packets for a transmit burst. Some\n"
 	       "                            features may be available only with references\n"
 	       "                            disabled.\n"
@@ -291,6 +299,7 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 		{"num_pkt",     required_argument, NULL, 'n'},
 		{"len",         required_argument, NULL, 'l'},
 		{"len_range",   required_argument, NULL, 'L'},
+		{"direct_rx",   required_argument, NULL, 'D'},
 		{"no_pkt_refs", no_argument,       NULL, 'R'},
 		{"burst_size",  required_argument, NULL, 'b'},
 		{"bursts",      required_argument, NULL, 'x'},
@@ -314,7 +323,7 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+i:e:r:t:n:l:L:RM:b:x:g:v:s:d:o:p:c:CAq:u:w:W:Pah";
+	static const char *shortopts = "+i:e:r:t:n:l:L:D:RM:b:x:g:v:s:d:o:p:c:CAq:u:w:W:Pah";
 
 	test_options->num_pktio  = 0;
 	test_options->num_rx     = 1;
@@ -322,6 +331,7 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 	test_options->num_pkt    = 1000;
 	test_options->pkt_len    = 512;
 	test_options->use_rand_pkt_len = 0;
+	test_options->direct_rx  = 0;
 	test_options->use_refs   = 1;
 	test_options->burst_size = 8;
 	test_options->bursts     = 1;
@@ -468,6 +478,9 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 			val = strtoul(str, NULL, 0);
 			test_options->rand_pkt_len_bins = val;
 			test_options->use_rand_pkt_len = 1;
+			break;
+		case 'D':
+			test_options->direct_rx = atoi(optarg);
 			break;
 		case 'R':
 			test_options->use_refs = 0;
@@ -694,18 +707,19 @@ static int open_pktios(test_global_t *global)
 	uint32_t i, seg_len;
 	int j, pktio_idx;
 	test_options_t *test_options = &global->test_options;
-	uint32_t num_rx = test_options->num_rx;
+	int num_rx = test_options->num_rx;
 	int num_tx = test_options->num_tx;
 	uint32_t num_pktio = test_options->num_pktio;
 	uint32_t num_pkt = test_options->num_pkt;
 	uint32_t pkt_len = test_options->use_rand_pkt_len ?
 				test_options->rand_pkt_len_max : test_options->pkt_len;
 	odp_pktout_queue_t pktout[num_tx];
+	odp_pktin_queue_t pktin[num_rx];
 
 	printf("\nODP packet generator\n");
 	printf("  quit test after     %" PRIu64 " rounds\n",
 	       test_options->quit);
-	printf("  num rx threads      %u\n", num_rx);
+	printf("  num rx threads      %i\n", num_rx);
 	printf("  num tx threads      %i\n", num_tx);
 	printf("  num packets         %u\n", num_pkt);
 	if (test_options->use_rand_pkt_len)
@@ -720,6 +734,7 @@ static int open_pktios(test_global_t *global)
 		printf("%u bytes\n", test_options->mtu);
 	else
 		printf("interface default\n");
+	printf("  packet input mode:  %s\n", test_options->direct_rx ? "direct" : "scheduler");
 	printf("  promisc mode:       %s\n", test_options->promisc_mode ? "enabled" : "disabled");
 	printf("  packet references:  %s\n", test_options->use_refs ? "enabled" : "disabled");
 	printf("  measure latency:    %s\n", test_options->calc_latency ? "enabled" : "disabled");
@@ -807,7 +822,12 @@ static int open_pktios(test_global_t *global)
 		ODPH_ERR("Warning: max pktio index (%u) is too large\n", odp_pktio_max_index());
 
 	odp_pktio_param_init(&pktio_param);
-	pktio_param.in_mode  = ODP_PKTIN_MODE_SCHED;
+
+	if (test_options->direct_rx)
+		pktio_param.in_mode = ODP_PKTIN_MODE_DIRECT;
+	else
+		pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
+
 	pktio_param.out_mode = ODP_PKTOUT_MODE_DIRECT;
 
 	for (i = 0; i < num_pktio; i++)
@@ -839,7 +859,7 @@ static int open_pktios(test_global_t *global)
 			return -1;
 		}
 
-		if (num_rx > pktio_capa.max_input_queues) {
+		if (num_rx > (int)pktio_capa.max_input_queues) {
 			ODPH_ERR("Error (%s): Too many RX threads. Interface supports max %u input queues.\n",
 				 name, pktio_capa.max_input_queues);
 			return -1;
@@ -912,12 +932,20 @@ static int open_pktios(test_global_t *global)
 
 		odp_pktin_queue_param_init(&pktin_param);
 
-		pktin_param.queue_param.sched.prio  = odp_schedule_default_prio();
-		pktin_param.queue_param.sched.sync  = ODP_SCHED_SYNC_PARALLEL;
-		pktin_param.queue_param.sched.group = ODP_SCHED_GROUP_ALL;
-		pktin_param.hash_enable = 1;
-		pktin_param.hash_proto.proto.ipv4_udp = 1;
+		if (test_options->direct_rx) {
+			pktin_param.op_mode = ODP_PKTIO_OP_MT_UNSAFE;
+		} else {
+			pktin_param.queue_param.sched.prio  = odp_schedule_default_prio();
+			pktin_param.queue_param.sched.sync  = ODP_SCHED_SYNC_PARALLEL;
+			pktin_param.queue_param.sched.group = ODP_SCHED_GROUP_ALL;
+		}
+
 		pktin_param.num_queues = num_rx;
+
+		if (num_rx > 1) {
+			pktin_param.hash_enable = 1;
+			pktin_param.hash_proto.proto.ipv4_udp = 1;
+		}
 
 		if (odp_pktin_queue_config(pktio, &pktin_param)) {
 			ODPH_ERR("Error (%s): Pktin config failed.\n", name);
@@ -940,6 +968,16 @@ static int open_pktios(test_global_t *global)
 
 		for (j = 0; j < num_tx; j++)
 			global->pktio[i].pktout[j] = pktout[j];
+
+		if (test_options->direct_rx) {
+			if (odp_pktin_queue(pktio, pktin, num_rx) != num_rx) {
+				ODPH_ERR("Error (%s): Pktin queue request failed.\n", name);
+				return -1;
+			}
+
+			for (j = 0; j < num_rx; j++)
+				global->pktio[i].pktin[j] = pktin[j];
+		}
 	}
 
 	return 0;
@@ -1098,9 +1136,9 @@ static int rx_thread(void *arg)
 	uint32_t exit_test;
 	uint64_t bytes;
 	odp_time_t t1, t2, exit_time;
-	odp_packet_t pkt;
 	thread_arg_t *thread_arg = arg;
 	test_global_t *global = thread_arg->global;
+	int direct_rx = global->test_options.direct_rx;
 	int periodic_stat = global->test_options.update_msec ? 1 : 0;
 	uint64_t rx_timeouts = 0;
 	uint64_t rx_packets = 0;
@@ -1110,21 +1148,52 @@ static int rx_thread(void *arg)
 	int clock_started = 0;
 	int exit_timer_started = 0;
 	int paused = 0;
-	int max_num = 32;
-	odp_event_t ev[max_num];
+	const int max_num = 32;
+	int pktin = 0;
+	int num_pktio = global->test_options.num_pktio;
+	odp_pktin_queue_t pktin_queue[num_pktio];
+	odp_packet_t pkt[max_num];
 	uint32_t ts_off = global->test_options.calc_latency ? global->test_options.hdr_len : 0;
-	uint64_t rx_ts;
+	uint64_t rx_ts = 0;
 	rx_lat_data_t rx_lat_data = { .nsec = 0, .min = UINT64_MAX, .max = 0, .packets = 0 };
 
 	thr = odp_thread_id();
 	global->stat[thr].thread_type = RX_THREAD;
 
+	if (direct_rx) {
+		for (i = 0; i < num_pktio; i++)
+			pktin_queue[i] = thread_arg->pktin[i];
+	}
+
 	/* Start all workers at the same time */
 	odp_barrier_wait(&global->barrier);
 
 	while (1) {
-		num = odp_schedule_multi_no_wait(NULL, ev, max_num);
-		rx_ts = odp_time_global_ns();
+		if (direct_rx) {
+			num = odp_pktin_recv(pktin_queue[pktin], pkt, max_num);
+
+			if (odp_unlikely(num < 0)) {
+				ODPH_ERR("pktin (%i) recv failed: %i\n", pktin, num);
+				ret = -1;
+				num = 0;
+				break;
+			}
+
+			pktin++;
+			if (pktin >= num_pktio)
+				pktin = 0;
+		} else {
+			odp_event_t ev[max_num];
+
+			num = odp_schedule_multi_no_wait(NULL, ev, max_num);
+
+			if (num)
+				odp_packet_from_event_multi(pkt, ev, num);
+		}
+
+		if (ts_off && num)
+			rx_ts = odp_time_global_ns();
+
 		exit_test = odp_atomic_load_u32(&global->exit_test);
 		if (exit_test) {
 			/* Wait 1 second for possible in flight packets sent by the tx threads */
@@ -1134,11 +1203,11 @@ static int rx_thread(void *arg)
 				exit_timer_started = 1;
 			} else if (odp_time_diff_ns(odp_time_local(), exit_time) >
 				   ODP_TIME_SEC_IN_NS) {
-				if (paused == 0) {
+				if (direct_rx == 0 && paused == 0) {
 					odp_schedule_pause();
 					paused = 1;
 				} else if (num == 0) {
-					/* Exit schedule loop after schedule paused and no more
+					/* Exit main loop after (schedule paused and) no more
 					 * packets received */
 					break;
 				}
@@ -1152,7 +1221,9 @@ static int rx_thread(void *arg)
 		}
 
 		if (num == 0) {
-			rx_timeouts++;
+			if (direct_rx == 0)
+				rx_timeouts++;
+
 			continue;
 		}
 
@@ -1163,11 +1234,10 @@ static int rx_thread(void *arg)
 
 		bytes = 0;
 		for (i = 0; i < num; i++) {
-			pkt = odp_packet_from_event(ev[i]);
-			bytes += odp_packet_len(pkt);
+			bytes += odp_packet_len(pkt[i]);
 
 			if (ts_off)
-				get_timestamp(pkt, ts_off, &rx_lat_data, rx_ts);
+				get_timestamp(pkt[i], ts_off, &rx_lat_data, rx_ts);
 		}
 
 		rx_packets += num;
@@ -1175,7 +1245,7 @@ static int rx_thread(void *arg)
 
 		if (odp_unlikely(periodic_stat)) {
 			/* All packets from the same queue are from the same pktio interface */
-			int index = odp_packet_input_index(odp_packet_from_event(ev[0]));
+			int index = odp_packet_input_index(pkt[0]);
 
 			if (index >= 0) {
 				int if_idx = global->if_from_pktio_idx[index];
@@ -1184,7 +1254,7 @@ static int rx_thread(void *arg)
 			}
 		}
 
-		odp_event_free_multi(ev, num);
+		odp_packet_free_multi(pkt, num);
 	}
 
 	if (clock_started)
@@ -1203,7 +1273,7 @@ static int rx_thread(void *arg)
 	return ret;
 }
 
-static void drain_queues(test_global_t *global)
+static void drain_scheduler(test_global_t *global)
 {
 	odp_event_t ev;
 	uint64_t wait_time = odp_schedule_wait_time(100 * ODP_TIME_MSEC_IN_NS);
@@ -1211,6 +1281,26 @@ static void drain_queues(test_global_t *global)
 	while ((ev = odp_schedule(NULL, wait_time)) != ODP_EVENT_INVALID) {
 		global->drained++;
 		odp_event_free(ev);
+	}
+}
+
+static void drain_direct_input(test_global_t *global)
+{
+	odp_pktin_queue_t pktin;
+	odp_packet_t pkt;
+	int i, j;
+	int num_pktio = global->test_options.num_pktio;
+	int num_rx = global->test_options.num_rx;
+
+	for (i = 0; i < num_pktio; i++) {
+		for (j = 0; j < num_rx; j++) {
+			pktin = global->pktio[i].pktin[j];
+
+			while (odp_pktin_recv(pktin, &pkt, 1) == 1) {
+				global->drained++;
+				odp_packet_free(pkt);
+			}
+		}
 	}
 }
 
@@ -1681,6 +1771,10 @@ static int start_workers(test_global_t *global, odp_instance_t instance)
 
 	/* Receive threads */
 	for (i = 0; i < num_rx; i++) {
+		/* In direct mode, dedicate a pktin queue per pktio interface (per RX thread) */
+		for (j = 0; test_options->direct_rx && j < num_pktio; j++)
+			global->thread_arg[i].pktin[j] = global->pktio[j].pktin[i];
+
 		odph_thread_param_init(&thr_param[i]);
 		thr_param[i].start    = rx_thread;
 		thr_param[i].arg      = &global->thread_arg[i];
@@ -2029,7 +2123,9 @@ int main(int argc, char **argv)
 
 	odp_sys_info_print();
 
-	odp_schedule_config(NULL);
+	/* Avoid all scheduler API calls in direct input mode */
+	if (global->test_options.direct_rx == 0)
+		odp_schedule_config(NULL);
 
 	if (set_num_cpu(global)) {
 		ret = 1;
@@ -2063,7 +2159,10 @@ int main(int argc, char **argv)
 	if (stop_pktios(global))
 		ret = 1;
 
-	drain_queues(global);
+	if (global->test_options.direct_rx)
+		drain_direct_input(global);
+	else
+		drain_scheduler(global);
 
 	if (close_pktios(global))
 		ret = 1;
