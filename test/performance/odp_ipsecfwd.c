@@ -75,8 +75,9 @@ typedef struct pktio_s {
 	odph_ethaddr_t src_mac;
 	char *name;
 	odp_pktio_t handle;
-	odp_bool_t (*send_fn)(const pktio_t *pktio, uint8_t index, odp_packet_t pkt);
+	uint32_t (*send_fn)(const pktio_t *pktio, uint8_t index, odp_packet_t pkts[], int num);
 	uint32_t num_tx_qs;
+	uint8_t idx;
 } pktio_t;
 
 typedef struct {
@@ -149,6 +150,17 @@ typedef struct {
 	int idx;
 	int type;
 } exposed_alg_t;
+
+typedef struct {
+	odp_packet_t pkts[MAX_BURST];
+	const pktio_t *pktio;
+	uint32_t num;
+} pkt_vec_t;
+
+typedef struct {
+	pkt_vec_t vecs[MAX_QUEUES];
+	uint8_t num_qs;
+} pkt_out_t;
 
 static exposed_alg_t exposed_algs[] = {
 	ALG_ENTRY(ODP_CIPHER_ALG_NULL, CIPHER_TYPE),
@@ -435,7 +447,7 @@ static inline int process_ipsec_out_enq(odp_packet_t pkts[], const odp_ipsec_sa_
 }
 
 static inline const pktio_t *lookup_and_apply(odp_packet_t pkt, odph_table_t fwd_tbl,
-					      uint8_t *hash)
+					      uint8_t *q_idx)
 {
 	const uint32_t l3_off = odp_packet_l3_offset(pkt);
 	odph_ipv4hdr_t ipv4;
@@ -469,7 +481,7 @@ static inline const pktio_t *lookup_and_apply(odp_packet_t pkt, odph_table_t fwd
 		return NULL;
 
 	src_ip = odp_be_to_cpu_32(ipv4.src_addr);
-	*hash = src_ip ^ dst_ip;
+	*q_idx = (src_ip ^ dst_ip) % fwd->pktio->num_tx_qs;
 
 	return fwd->pktio;
 }
@@ -477,24 +489,53 @@ static inline const pktio_t *lookup_and_apply(odp_packet_t pkt, odph_table_t fwd
 static inline uint32_t forward_packets(odp_packet_t pkts[], int num, odph_table_t fwd_tbl)
 {
 	odp_packet_t pkt;
-	uint8_t hash = 0U;
+	uint8_t q_idx = 0U, qs_done;
 	const pktio_t *pktio;
-	uint32_t num_procd = 0U;
+	static __thread pkt_out_t outs[MAX_IFS];
+	pkt_out_t *out;
+	pkt_vec_t *vec;
+	uint32_t num_procd = 0U, ret;
 
 	for (int i = 0; i < num; ++i) {
 		pkt = pkts[i];
-		pktio = lookup_and_apply(pkt, fwd_tbl, &hash);
+		pktio = lookup_and_apply(pkt, fwd_tbl, &q_idx);
 
 		if (pktio == NULL) {
 			odp_packet_free(pkt);
 			continue;
 		}
-		if (odp_unlikely(!pktio->send_fn(pktio, hash % pktio->num_tx_qs, pkt))) {
-			odp_packet_free(pkt);
-			continue;
+
+		out = &outs[pktio->idx];
+		vec = &out->vecs[q_idx];
+
+		if (vec->num == 0U)
+			out->num_qs++;
+
+		vec->pkts[vec->num++] = pkt;
+		vec->pktio = pktio;
+	}
+
+	for (uint32_t i = 0U; i < MAX_IFS; ++i) {
+		qs_done = 0U;
+		out = &outs[i];
+
+		for (uint32_t j = 0U; j < MAX_QUEUES && qs_done < out->num_qs; ++j) {
+			if (out->vecs[j].num == 0U)
+				continue;
+
+			vec = &out->vecs[j];
+			pktio = vec->pktio;
+			ret = pktio->send_fn(pktio, j, vec->pkts, vec->num);
+
+			if (odp_unlikely(ret < vec->num))
+				odp_packet_free_multi(&vec->pkts[ret], vec->num - ret);
+
+			++qs_done;
+			vec->num = 0U;
+			num_procd += ret;
 		}
 
-		++num_procd;
+		out->num_qs = 0U;
 	}
 
 	return num_procd;
@@ -1256,14 +1297,23 @@ static uint32_t recv(thread_config_t *config, odp_event_t evs[], int num)
 	return ret;
 }
 
-static odp_bool_t send(const pktio_t *pktio, uint8_t index, odp_packet_t pkt)
+static uint32_t send(const pktio_t *pktio, uint8_t index, odp_packet_t pkts[], int num)
 {
-	return odp_pktout_send(pktio->out_dir_qs[index], &pkt, 1) == 1;
+	int ret = odp_pktout_send(pktio->out_dir_qs[index], pkts, num);
+
+	return ret < 0 ? 0U : (uint32_t)ret;
 }
 
-static odp_bool_t enqueue(const pktio_t *pktio, uint8_t index, odp_packet_t pkt)
+static uint32_t enqueue(const pktio_t *pktio, uint8_t index, odp_packet_t pkts[], int num)
 {
-	return odp_queue_enq(pktio->out_ev_qs[index], odp_packet_to_event(pkt)) == 0;
+	odp_event_t evs[MAX_BURST];
+	int ret;
+
+	odp_packet_to_event_multi(pkts, evs, num);
+
+	ret = odp_queue_enq_multi(pktio->out_ev_qs[index], evs, num);
+
+	return ret < 0 ? 0U : (uint32_t)ret;
 }
 
 static odp_bool_t setup_pktios(prog_config_t *config)
@@ -1293,6 +1343,7 @@ static odp_bool_t setup_pktios(prog_config_t *config)
 
 	for (uint32_t i = 0U; i < config->num_ifs; ++i) {
 		pktio = &config->pktios[i];
+		pktio->idx = i;
 		odp_pktio_param_init(&pktio_param);
 		pktio_param.in_mode = !config->is_dir_rx ?
 			ODP_PKTIN_MODE_SCHED : ODP_PKTIN_MODE_DIRECT;
