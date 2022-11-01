@@ -44,12 +44,15 @@
 #define LOOP_MTU_MIN 68
 #define LOOP_MTU_MAX UINT16_MAX
 
-#define LOOP_MAX_TX_QUEUE_SIZE 1024
+#define LOOP_MAX_QUEUE_SIZE 1024
 
 typedef struct {
 	odp_queue_t loopq;		/**< loopback queue for "loop" device */
+	uint32_t pktin_queue_size;	/**< input queue size */
+	uint32_t pktout_queue_size;	/**< output queue size */
 	uint16_t mtu;			/**< link MTU */
 	uint8_t idx;			/**< index of "loop" device */
+	uint8_t queue_create;		/**< create or re-create queue during start */
 } pkt_loop_t;
 
 ODP_STATIC_ASSERT(PKTIO_PRIVATE_SIZE >= sizeof(pkt_loop_t),
@@ -84,9 +87,11 @@ static int loopback_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 		return -1;
 	}
 
+	memset(pkt_loop, 0, sizeof(pkt_loop_t));
 	pkt_loop->idx = idx;
 	pkt_loop->mtu = LOOP_MTU_MAX;
 	pkt_loop->loopq = ODP_QUEUE_INVALID;
+	pkt_loop->queue_create = 1;
 
 	loopback_stats_reset(pktio_entry);
 	loopback_init_capability(pktio_entry);
@@ -112,19 +117,23 @@ static int loopback_queue_destroy(odp_queue_t queue)
 	return 0;
 }
 
-static int loopback_pktout_queue_config(pktio_entry_t *pktio_entry,
-					const odp_pktout_queue_param_t *param)
+static int loopback_start(pktio_entry_t *pktio_entry)
 {
 	pkt_loop_t *pkt_loop = pkt_priv(pktio_entry);
 	odp_queue_param_t queue_param;
 	char queue_name[ODP_QUEUE_NAME_LEN];
+
+	/* Re-create queue only when necessary */
+	if (!pkt_loop->queue_create)
+		return 0;
 
 	/* Destroy old queue */
 	if (pkt_loop->loopq != ODP_QUEUE_INVALID && loopback_queue_destroy(pkt_loop->loopq))
 		return -1;
 
 	odp_queue_param_init(&queue_param);
-	queue_param.size = param->queue_size[0];
+	queue_param.size = pkt_loop->pktin_queue_size > pkt_loop->pktout_queue_size ?
+				pkt_loop->pktin_queue_size : pkt_loop->pktout_queue_size;
 
 	snprintf(queue_name, sizeof(queue_name), "_odp_pktio_loopq-%" PRIu64 "",
 		 odp_pktio_to_u64(pktio_entry->handle));
@@ -134,6 +143,31 @@ static int loopback_pktout_queue_config(pktio_entry_t *pktio_entry,
 		_ODP_ERR("Creating loopback pktio queue failed\n");
 		return -1;
 	}
+	pkt_loop->queue_create = 0;
+
+	return 0;
+}
+
+static int loopback_pktin_queue_config(pktio_entry_t *pktio_entry,
+				       const odp_pktin_queue_param_t *param)
+{
+	pkt_loop_t *pkt_loop = pkt_priv(pktio_entry);
+
+	if (pktio_entry->param.in_mode == ODP_PKTIN_MODE_DIRECT) {
+		pkt_loop->pktin_queue_size = param->queue_size[0];
+		pkt_loop->queue_create = 1;
+	}
+
+	return 0;
+}
+
+static int loopback_pktout_queue_config(pktio_entry_t *pktio_entry,
+					const odp_pktout_queue_param_t *param)
+{
+	pkt_loop_t *pkt_loop = pkt_priv(pktio_entry);
+
+	pkt_loop->pktout_queue_size = param->queue_size[0];
+	pkt_loop->queue_create = 1;
 
 	return 0;
 }
@@ -485,10 +519,15 @@ static int loopback_init_capability(pktio_entry_t *pktio_entry)
 	capa->maxlen.min_output = LOOP_MTU_MIN;
 	capa->maxlen.max_output = LOOP_MTU_MAX;
 
+	capa->min_input_queue_size = 1;
+	capa->max_input_queue_size = queue_capa.plain.max_size;
+	if (capa->max_input_queue_size == 0)
+		capa->max_input_queue_size = LOOP_MAX_QUEUE_SIZE;
+
 	capa->min_output_queue_size = 1;
 	capa->max_output_queue_size = queue_capa.plain.max_size;
 	if (capa->max_output_queue_size == 0)
-		capa->max_output_queue_size = LOOP_MAX_TX_QUEUE_SIZE;
+		capa->max_output_queue_size = LOOP_MAX_QUEUE_SIZE;
 
 	odp_pktio_config_init(&capa->config);
 	capa->config.enable_loop = 1;
@@ -591,7 +630,7 @@ const pktio_if_ops_t _odp_loopback_pktio_ops = {
 	.term = NULL,
 	.open = loopback_open,
 	.close = loopback_close,
-	.start = NULL,
+	.start = loopback_start,
 	.stop = NULL,
 	.stats = loopback_stats,
 	.stats_reset = loopback_stats_reset,
@@ -612,6 +651,6 @@ const pktio_if_ops_t _odp_loopback_pktio_ops = {
 	.pktio_ts_from_ns = NULL,
 	.pktio_time = NULL,
 	.config = NULL,
-	.input_queues_config = NULL,
+	.input_queues_config = loopback_pktin_queue_config,
 	.output_queues_config = loopback_pktout_queue_config,
 };
