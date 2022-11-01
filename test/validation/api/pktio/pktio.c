@@ -1605,6 +1605,7 @@ static void test_defaults(uint8_t fill)
 	CU_ASSERT_EQUAL(qp_in.hash_enable, 0);
 	CU_ASSERT_EQUAL(qp_in.hash_proto.all_bits, 0);
 	CU_ASSERT_EQUAL(qp_in.num_queues, 1);
+	CU_ASSERT_EQUAL(qp_in.queue_size[0], 0);
 	CU_ASSERT_EQUAL(qp_in.queue_param.enq_mode, ODP_QUEUE_OP_MT);
 	CU_ASSERT_EQUAL(qp_in.queue_param.sched.prio, odp_schedule_default_prio());
 	CU_ASSERT_EQUAL(qp_in.queue_param.sched.sync, ODP_SCHED_SYNC_PARALLEL);
@@ -1959,28 +1960,33 @@ static void pktio_test_pktin_queue_config_queue(void)
 	odp_pktio_capability_t capa;
 	odp_pktin_queue_param_t queue_param;
 	odp_pktin_queue_t pktin_queues[MAX_QUEUES];
-	odp_queue_t in_queues[MAX_QUEUES];
 	int num_queues;
 
-	pktio = create_pktio(0, ODP_PKTIN_MODE_QUEUE, ODP_PKTOUT_MODE_DIRECT);
+	pktio = create_pktio(0, ODP_PKTIN_MODE_DIRECT, ODP_PKTOUT_MODE_DIRECT);
 	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
 
 	CU_ASSERT_FATAL(odp_pktio_capability(pktio, &capa) == 0 &&
 			capa.max_input_queues > 0);
 	num_queues = capa.max_input_queues;
+	CU_ASSERT_FATAL(num_queues <= ODP_PKTIN_MAX_QUEUES);
+
+	CU_ASSERT(capa.min_input_queue_size <= capa.max_input_queue_size);
 
 	odp_pktin_queue_param_init(&queue_param);
 
 	queue_param.hash_enable = (num_queues > 1) ? 1 : 0;
 	queue_param.hash_proto.proto.ipv4_udp = 1;
 	queue_param.num_queues  = num_queues;
+	for (int i = 0; i < num_queues; i++)
+		queue_param.queue_size[i] = capa.max_input_queue_size;
+
 	CU_ASSERT_FATAL(odp_pktin_queue_config(pktio, &queue_param) == 0);
 
-	CU_ASSERT(odp_pktin_event_queue(pktio, in_queues, MAX_QUEUES)
-		  == num_queues);
-	CU_ASSERT(odp_pktin_queue(pktio, pktin_queues, MAX_QUEUES) < 0);
+	CU_ASSERT(odp_pktin_queue(pktio, pktin_queues, MAX_QUEUES) == num_queues);
 
 	queue_param.num_queues = 1;
+	queue_param.queue_size[0] = capa.min_input_queue_size;
+
 	CU_ASSERT_FATAL(odp_pktin_queue_config(pktio, &queue_param) == 0);
 
 	queue_param.num_queues = capa.max_input_queues + 1;
