@@ -11,7 +11,6 @@
 
 /** @cond _ODP_HIDE_FROM_DOXYGEN_ */
 
-extern _odp_queue_inline_offset_t _odp_queue_inline_offset;
 extern const _odp_queue_api_fn_t *_odp_queue_api;
 
 #ifndef _ODP_NO_INLINE

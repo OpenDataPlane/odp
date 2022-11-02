@@ -111,9 +111,6 @@ int _odp_packet_copy_from_mem_seg(odp_packet_t pkt, uint32_t offset,
 int _odp_packet_copy_to_mem_seg(odp_packet_t pkt, uint32_t offset,
 				uint32_t len, void *dst);
 
-extern const _odp_packet_inline_offset_t _odp_packet_inline;
-extern const _odp_pool_inline_offset_t   _odp_pool_inline;
-
 _ODP_INLINE void *odp_packet_data(odp_packet_t pkt)
 {
 	return _odp_pkt_get(pkt, void *, seg_data);

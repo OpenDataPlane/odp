@@ -56,6 +56,8 @@ typedef struct _odp_packet_inline_offset_t {
 
 } _odp_packet_inline_offset_t;
 
+extern const _odp_packet_inline_offset_t _odp_packet_inline;
+
 /* Packet input & protocol flags */
 typedef union {
 	/* All input flags */
