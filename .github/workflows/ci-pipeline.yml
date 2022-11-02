@@ -94,7 +94,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="gcc-${{matrix.cc_ver}}" -e CXX="g++-${{matrix.cc_ver}}"
-               -e CONF="${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/build_static_${ARCH}.sh
+               -e CONF="${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/build_static.sh
       - name: Failure log
         if: ${{ failure() }}
         run: find . -name config.log -exec cat {} \;
@@ -112,7 +112,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="gcc-${{matrix.cc_ver}}" -e CXX="g++-${{matrix.cc_ver}}"
-               -e CONF="${CONF} ${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/build_static_${ARCH}.sh
+               -e CONF="${CONF} ${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/build_static.sh
       - name: Failure log
         if: ${{ failure() }}
         run: find . -name config.log -exec cat {} \;
