@@ -56,6 +56,8 @@ typedef struct {
 
 } _odp_queue_api_fn_t;
 
+extern _odp_queue_inline_offset_t _odp_queue_inline_offset;
+
 /** @endcond */
 
 #ifdef __cplusplus

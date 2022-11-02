@@ -40,6 +40,8 @@ typedef struct _odp_event_vector_inline_offset_t {
 
 } _odp_event_vector_inline_offset_t;
 
+extern const _odp_event_vector_inline_offset_t _odp_event_vector_inline;
+
 /** @endcond */
 
 #ifdef __cplusplus

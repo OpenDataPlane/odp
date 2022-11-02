@@ -29,6 +29,8 @@ typedef struct _odp_timeout_inline_offset_t {
 
 } _odp_timeout_inline_offset_t;
 
+extern const _odp_timeout_inline_offset_t _odp_timeout_inline_offset;
+
 /** @endcond */
 
 #ifdef __cplusplus

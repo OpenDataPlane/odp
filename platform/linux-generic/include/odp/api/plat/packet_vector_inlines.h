@@ -42,8 +42,6 @@
 	#define _ODP_INLINE
 #endif
 
-extern const _odp_event_vector_inline_offset_t _odp_event_vector_inline;
-
 _ODP_INLINE odp_packet_vector_t odp_packet_vector_from_event(odp_event_t ev)
 {
 	_ODP_ASSERT(odp_event_type(ev) == ODP_EVENT_PACKET_VECTOR);

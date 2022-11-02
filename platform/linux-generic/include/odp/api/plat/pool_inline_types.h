@@ -17,24 +17,27 @@
 extern "C" {
 #endif
 
-/** @internal Pool field accessor */
+#include <stdint.h>
+
+/** @cond _ODP_HIDE_FROM_DOXYGEN_ */
+
+/** Pool field accessor */
 #define _odp_pool_get(pool, cast, field) \
 	(*(cast *)(uintptr_t)((uint8_t *)pool + _odp_pool_inline.field))
 
-/** @internal Pool header field offsets for inline functions */
+/** Pool header field offsets for inline functions */
 typedef struct _odp_pool_inline_offset_t {
-	/** @internal field offset */
 	uint16_t index;
-	/** @internal field offset */
 	uint16_t seg_len;
-	/** @internal field offset */
 	uint16_t uarea_size;
-	/** @internal field offset */
 	uint16_t ext_head_offset;
-	/** @internal field offset */
 	uint16_t ext_pkt_buf_size;
 
 } _odp_pool_inline_offset_t;
+
+extern const _odp_pool_inline_offset_t _odp_pool_inline;
+
+/** @endcond */
 
 #ifdef __cplusplus
 }

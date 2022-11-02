@@ -26,6 +26,8 @@ typedef struct _odp_buffer_inline_offset_t {
 
 } _odp_buffer_inline_offset_t;
 
+extern const _odp_buffer_inline_offset_t _odp_buffer_inline_offset;
+
 /** @endcond */
 
 #ifdef __cplusplus
