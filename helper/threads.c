@@ -20,6 +20,7 @@
 #include <sys/mman.h>
 #include <sys/time.h>
 #include <sys/resource.h>
+#include <inttypes.h>
 
 #include <odp_api.h>
 #include <odp/helper/threads.h>
@@ -361,7 +362,10 @@ int odph_thread_create(odph_thread_t thread[],
 			} while (status != INIT_DONE && timeout == 0);
 
 			if (timeout) {
-				ODPH_ERR("Thread (i:%i) start up timeout\n", i);
+				ODPH_ERR("Thread (i:%i) start up timeout: sync timeout %" PRIu64 ""
+					 " , t1 %" PRIu64 ", t2 %" PRIu64 "\n", i,
+					 param->sync_timeout, odp_time_to_ns(t1),
+					 odp_time_to_ns(t2));
 				break;
 			}
 		}
