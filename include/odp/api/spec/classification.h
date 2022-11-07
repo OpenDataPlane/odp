@@ -915,7 +915,8 @@ void odp_cls_pmr_create_opt_init(odp_pmr_create_opt_t *opt);
  *
  * Creates a PMR between source and destination Class of Service (CoS). A packet arriving to
  * a CoS is matched against all the PMRs that define it as their source CoS. A PMR match moves
- * the packet from the source to the destination CoS.
+ * the packet from the source to the destination CoS. If multiple PMRs of a CoS match with
+ * the packet, it is implementation specific which PMR is selected.
  *
  * A composite PMR is created when PMR parameters define more than one term. A composite PMR is
  * considered to match only if a packet matches with all its terms. It is implementation specific
