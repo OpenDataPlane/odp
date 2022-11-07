@@ -110,16 +110,16 @@ static void set_option_defaults(test_config_t *config)
 static void parse_completion_modes(test_config_t *config, const char *optarg)
 {
 	char *tmp_str = strdup(optarg);
-	char *tmp = strtok(tmp_str, COMPL_DELIMITER);
+	char *tmp;
 	int mode;
 	uint32_t i = 0U;
 
 	config->compl_modes.num_modes = 0;
 
-	if (tmp == NULL) {
-		free(tmp_str);
+	if (tmp_str == NULL)
 		return;
-	}
+
+	tmp = strtok(tmp_str, COMPL_DELIMITER);
 
 	while (tmp) {
 		mode = atoi(tmp);
