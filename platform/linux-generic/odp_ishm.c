@@ -2174,3 +2174,71 @@ void _odp_ishm_print(int block_index)
 
 	odp_spinlock_unlock(&ishm_tbl->lock);
 }
+
+int32_t odp_system_meminfo(odp_system_meminfo_t *info, odp_system_memblock_t memblock[],
+			   int32_t max_num)
+{
+	ishm_block_t *block;
+	int name_len, proc_index;
+	int32_t i;
+	uintptr_t addr;
+	uint64_t len, lost, page_size;
+	uint64_t lost_total = 0;
+	uint64_t len_total = 0;
+	int32_t num = 0;
+	const uint64_t huge_sz = odp_sys_huge_page_size();
+	const uint64_t normal_sz = odp_sys_page_size();
+
+	odp_spinlock_lock(&ishm_tbl->lock);
+	procsync();
+
+	for (i = 0; i < ISHM_MAX_NB_BLOCKS; i++) {
+		block = &ishm_tbl->block[i];
+
+		len = block->len;
+		if (len == 0)
+			continue;
+
+		lost = len - block->user_len;
+
+		if (num < max_num) {
+			odp_system_memblock_t *mb = &memblock[num];
+
+			name_len = strlen(block->name);
+			if (name_len >= ODP_SYSTEM_MEMBLOCK_NAME_LEN)
+				name_len = ODP_SYSTEM_MEMBLOCK_NAME_LEN - 1;
+
+			memcpy(mb->name, block->name, name_len);
+			mb->name[name_len] = 0;
+
+			addr = 0;
+			proc_index = procfind_block(i);
+			if (proc_index >= 0)
+				addr = (uintptr_t)ishm_proctable->entry[proc_index].start;
+
+			page_size = 0;
+			if (block->huge == HUGE)
+				page_size = huge_sz;
+			else if (block->huge == NORMAL)
+				page_size = normal_sz;
+
+			mb->addr = addr;
+			mb->used = len;
+			mb->overhead = lost;
+			mb->page_size = page_size;
+		}
+
+		len_total  += len;
+		lost_total += lost;
+
+		num++;
+	}
+
+	odp_spinlock_unlock(&ishm_tbl->lock);
+
+	info->total_mapped   = len_total;
+	info->total_used     = len_total;
+	info->total_overhead = lost_total;
+
+	return num;
+}
