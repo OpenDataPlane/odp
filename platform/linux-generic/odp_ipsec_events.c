@@ -124,6 +124,7 @@ void _odp_ipsec_status_free(ipsec_status_t status)
 {
 	odp_event_t ev = ipsec_status_to_event(status);
 
+	_odp_event_type_set(ev, ODP_EVENT_BUFFER);
 	odp_buffer_free(buffer_from_event(ev));
 }
 
