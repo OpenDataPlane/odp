@@ -579,6 +579,51 @@ static void system_test_info(void)
 	}
 }
 
+static void system_test_meminfo(void)
+{
+	const int32_t max_num = 128;
+	odp_system_meminfo_t info, info_0;
+	int32_t ret, ret_0, num, i;
+	odp_system_memblock_t block[max_num];
+
+	/* Meminfo without blocks */
+	ret_0 = odp_system_meminfo(&info_0, NULL, 0);
+	CU_ASSERT_FATAL(ret_0 >= 0);
+
+	ret = odp_system_meminfo(&info, block, max_num);
+	CU_ASSERT_FATAL(ret >= 0);
+
+	/* Totals should match independent of per block output */
+	CU_ASSERT(ret == ret_0);
+	CU_ASSERT(info_0.total_mapped == info.total_mapped);
+	CU_ASSERT(info_0.total_used == info.total_used);
+	CU_ASSERT(info_0.total_overhead == info.total_overhead);
+
+	CU_ASSERT(info.total_mapped >= info.total_used);
+	CU_ASSERT(info.total_used >= info.total_overhead);
+
+	num = ret;
+	if (ret > max_num)
+		num = max_num;
+
+	printf("\n\n");
+	printf("System meminfo contain %i blocks, printing %i blocks:\n", ret, num);
+
+	printf("  %s %-32s %16s %14s %14s %12s\n", "index", "name", "addr",
+	       "used", "overhead", "page_size");
+
+	for (i = 0; i < num; i++) {
+		printf("  [%3i] %-32s %16" PRIxPTR " %14" PRIu64 " %14" PRIu64 " %12" PRIu64 "\n",
+		       i, block[i].name, block[i].addr, block[i].used, block[i].overhead,
+		       block[i].page_size);
+	}
+
+	printf("\n");
+	printf("Total mapped:   %" PRIu64 "\n", info.total_mapped);
+	printf("Total used:     %" PRIu64 "\n", info.total_used);
+	printf("Total overhead: %" PRIu64 "\n\n", info.total_overhead);
+}
+
 odp_testinfo_t system_suite[] = {
 	ODP_TEST_INFO(test_version_api_str),
 	ODP_TEST_INFO(test_version_str),
@@ -609,6 +654,7 @@ odp_testinfo_t system_suite[] = {
 	ODP_TEST_INFO_CONDITIONAL(system_test_cpu_cycles_long_period,
 				  system_check_cycle_counter),
 	ODP_TEST_INFO(system_test_info),
+	ODP_TEST_INFO(system_test_meminfo),
 	ODP_TEST_INFO(system_test_info_print),
 	ODP_TEST_INFO(system_test_config_print),
 	ODP_TEST_INFO_NULL,
