@@ -652,7 +652,7 @@ static odp_event_t timer_cancel(timer_pool_t *tp, uint32_t idx)
 static inline void timer_expire(timer_pool_t *tp, uint32_t idx, uint64_t tick)
 {
 	uint64_t exp_tck;
-	odp_queue_t queue;
+	odp_queue_t queue = ODP_QUEUE_INVALID;
 	_odp_timer_t *tim = &tp->timers[idx];
 	tick_buf_t *tb = &tp->tick_buf[idx];
 	odp_event_t tmo_event = ODP_EVENT_INVALID;
