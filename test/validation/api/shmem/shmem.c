@@ -261,6 +261,118 @@ static void shmem_test_reserve(void)
 	CU_ASSERT(odp_shm_free(shm) == 0);
 }
 
+static void shmem_test_info(void)
+{
+	odp_shm_t shm;
+	void *addr;
+	int ret;
+	uint32_t i;
+	uint64_t sum_len;
+	uintptr_t next;
+	odp_shm_info_t info;
+	const char *name = "info_test";
+	uint32_t num_seg = 32;
+	uint64_t size = 4 * 1024 * 1024;
+	uint64_t align = 64;
+	int support_pa = 0;
+	int support_iova = 0;
+
+	if (_global_shm_capa.max_size < size)
+		size = _global_shm_capa.max_size;
+
+	if (_global_shm_capa.max_align < align)
+		align = _global_shm_capa.max_align;
+
+	shm = odp_shm_reserve(name, size, align, 0);
+	CU_ASSERT_FATAL(shm != ODP_SHM_INVALID);
+
+	addr = odp_shm_addr(shm);
+	CU_ASSERT(addr != NULL);
+
+	if (addr)
+		memset(addr, 0, size);
+
+	memset(&info, 0, sizeof(odp_shm_info_t));
+	ret = odp_shm_info(shm, &info);
+
+	CU_ASSERT_FATAL(ret == 0);
+	CU_ASSERT(strcmp(name, info.name) == 0);
+	CU_ASSERT(info.addr == addr);
+	CU_ASSERT(info.size == size);
+	CU_ASSERT(info.page_size > 0);
+	CU_ASSERT(info.flags == 0);
+	CU_ASSERT(info.num_seg > 0);
+
+	/* Limit number of segments as it may get large with small page sizes */
+	if (info.num_seg < num_seg)
+		num_seg = info.num_seg;
+
+	/* all segments */
+	odp_shm_segment_info_t seginfo_a[num_seg];
+
+	memset(seginfo_a, 0, num_seg * sizeof(odp_shm_segment_info_t));
+
+	ret = odp_shm_segment_info(shm, 0, num_seg, seginfo_a);
+	CU_ASSERT_FATAL(ret == 0);
+
+	CU_ASSERT(seginfo_a[0].addr == (uintptr_t)addr);
+
+	sum_len = 0;
+	next = 0;
+
+	printf("\n\n");
+	printf("SHM segment info\n");
+	printf("%3s %16s %16s %16s %16s\n", "idx", "addr", "iova", "pa", "len");
+
+	for (i = 0; i < num_seg; i++) {
+		printf("%3u %16" PRIxPTR " %16" PRIx64 " %16" PRIx64 " %16" PRIu64 "\n",
+		       i, seginfo_a[i].addr, seginfo_a[i].iova, seginfo_a[i].pa, seginfo_a[i].len);
+
+		CU_ASSERT(seginfo_a[i].addr != 0);
+		CU_ASSERT(seginfo_a[i].len > 0);
+
+		if (next) {
+			CU_ASSERT(seginfo_a[i].addr == next);
+			next += seginfo_a[i].len;
+		} else {
+			next = seginfo_a[i].addr + seginfo_a[i].len;
+		}
+
+		if (seginfo_a[i].iova != ODP_SHM_IOVA_INVALID)
+			support_iova = 1;
+
+		if (seginfo_a[i].pa != ODP_SHM_PA_INVALID)
+			support_pa = 1;
+
+		sum_len += seginfo_a[i].len;
+	}
+
+	printf("\n");
+	printf("IOVA: %s, PA: %s\n\n", support_iova ? "supported" : "not supported",
+	       support_pa ? "supported" : "not supported");
+
+	CU_ASSERT(sum_len == size);
+
+	if (num_seg > 1) {
+		/* all, except the first one */
+		odp_shm_segment_info_t seginfo_b[num_seg];
+
+		memset(seginfo_b, 0xff, num_seg * sizeof(odp_shm_segment_info_t));
+
+		ret = odp_shm_segment_info(shm, 1, num_seg - 1, &seginfo_b[1]);
+		CU_ASSERT_FATAL(ret == 0);
+
+		for (i = 1; i < num_seg; i++) {
+			CU_ASSERT(seginfo_a[i].addr == seginfo_b[i].addr);
+			CU_ASSERT(seginfo_a[i].iova == seginfo_b[i].iova);
+			CU_ASSERT(seginfo_a[i].pa   == seginfo_b[i].pa);
+			CU_ASSERT(seginfo_a[i].len  == seginfo_b[i].len);
+		}
+	}
+
+	CU_ASSERT(odp_shm_free(shm) == 0);
+}
+
 static int shmem_check_flag_hp(void)
 {
 	if (_global_shm_capa.flags & ODP_SHM_HP)
@@ -1027,6 +1139,7 @@ static int shm_suite_init(void)
 odp_testinfo_t shmem_suite[] = {
 	ODP_TEST_INFO(shmem_test_capability),
 	ODP_TEST_INFO(shmem_test_reserve),
+	ODP_TEST_INFO(shmem_test_info),
 	ODP_TEST_INFO_CONDITIONAL(shmem_test_flag_hp, shmem_check_flag_hp),
 	ODP_TEST_INFO_CONDITIONAL(shmem_test_flag_no_hp, shmem_check_flag_no_hp),
 	ODP_TEST_INFO_CONDITIONAL(shmem_test_flag_proc, shmem_check_flag_proc),
