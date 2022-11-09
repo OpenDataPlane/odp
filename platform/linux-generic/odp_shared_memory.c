@@ -124,6 +124,31 @@ int odp_shm_info(odp_shm_t shm, odp_shm_info_t *info)
 	info->size = ishm_info.size;
 	info->page_size = ishm_info.page_size;
 	info->flags = ishm_info.user_flags;
+	info->num_seg = 1;
+
+	return 0;
+}
+
+int odp_shm_segment_info(odp_shm_t shm, uint32_t index, uint32_t num,
+			 odp_shm_segment_info_t seg_info[])
+{
+	odp_shm_info_t info;
+
+	/* No physical memory segment information available */
+	if (index != 0 || num != 1) {
+		_ODP_ERR("Only single segment supported (%u, %u)\n", index, num);
+		return -1;
+	}
+
+	if (odp_shm_info(shm, &info)) {
+		_ODP_ERR("SHM info call failed\n");
+		return -1;
+	}
+
+	seg_info[0].addr = (uintptr_t)info.addr;
+	seg_info[0].iova = ODP_SHM_IOVA_INVALID;
+	seg_info[0].pa   = ODP_SHM_PA_INVALID;
+	seg_info[0].len  = info.size;
 
 	return 0;
 }
