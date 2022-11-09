@@ -1197,6 +1197,7 @@ int main(int argc, char *argv[])
 	odp_init_local(instance, ODP_THREAD_WORKER);
 
 	odp_sys_info_print();
+	memset(&crypto_capa, 0, sizeof(crypto_capa));
 
 	if (odp_crypto_capability(&crypto_capa)) {
 		ODPH_ERR("Crypto capability request failed.\n");
