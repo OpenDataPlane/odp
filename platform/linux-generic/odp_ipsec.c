@@ -1404,10 +1404,6 @@ static int ipsec_out_iv(ipsec_state_t *state,
 		/* Both GCM and CTR use 8-bit counters */
 		_ODP_ASSERT(sizeof(seq_no) == ipsec_sa->esp_iv_len);
 
-		/* Check for overrun */
-		if (seq_no == 0)
-			return -1;
-
 		memcpy(state->iv, ipsec_sa->salt, ipsec_sa->salt_length);
 		memcpy(state->iv + ipsec_sa->salt_length, &seq_no,
 		       ipsec_sa->esp_iv_len);
