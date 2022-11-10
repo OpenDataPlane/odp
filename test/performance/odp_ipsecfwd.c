@@ -333,6 +333,295 @@ static void print_usage(void)
 	       "\n");
 }
 
+static inline odp_ipsec_sa_t *get_in_sa(odp_packet_t pkt)
+{
+	odph_esphdr_t esp;
+	uint32_t spi;
+
+	if (!odp_packet_has_ipsec(pkt))
+		return NULL;
+
+	if (odp_packet_copy_to_mem(pkt, odp_packet_l4_offset(pkt), ODPH_ESPHDR_LEN, &esp) < 0)
+		return NULL;
+
+	spi = odp_be_to_cpu_32(esp.spi);
+
+	return spi <= UINT16_MAX ? spi_to_sa_map[DIR_IN][spi] : NULL;
+}
+
+static inline int process_ipsec_in(odp_packet_t pkts[], const odp_ipsec_sa_t sas[], int num)
+{
+	odp_ipsec_in_param_t param;
+	int left, sent = 0, ret;
+
+	memset(&param, 0, sizeof(param));
+	/* IPsec in/out need to be identified somehow, so use user_ptr for this. */
+	for (int i = 0; i < num; ++i)
+		odp_packet_user_ptr_set(pkts[i], NULL);
+
+	while (sent < num) {
+		left = num - sent;
+		param.num_sa = left;
+		param.sa = &sas[sent];
+		ret = odp_ipsec_in_enq(&pkts[sent], left, &param);
+
+		if (odp_unlikely(ret <= 0))
+			break;
+
+		sent += ret;
+	}
+
+	return sent;
+}
+
+static inline odp_ipsec_sa_t *get_out_sa(odp_packet_t pkt)
+{
+	odph_udphdr_t udp;
+	uint16_t dst_port;
+
+	if (!odp_packet_has_udp(pkt))
+		return NULL;
+
+	if (odp_packet_copy_to_mem(pkt, odp_packet_l4_offset(pkt), ODPH_UDPHDR_LEN, &udp) < 0)
+		return NULL;
+
+	dst_port = odp_be_to_cpu_16(udp.dst_port);
+
+	return dst_port ? spi_to_sa_map[DIR_OUT][dst_port] : NULL;
+}
+
+static inline int process_ipsec_out(odp_packet_t pkts[], const odp_ipsec_sa_t sas[], int num)
+{
+	odp_ipsec_out_param_t param;
+	int left, sent = 0, ret;
+
+	memset(&param, 0, sizeof(param));
+	/* IPsec in/out need to be identified somehow, so use user_ptr for this. */
+	for (int i = 0; i < num; ++i)
+		odp_packet_user_ptr_set(pkts[i], &ipsec_out_mark);
+
+	while (sent < num) {
+		left = num - sent;
+		param.num_sa = left;
+		param.sa = &sas[sent];
+		ret = odp_ipsec_out_enq(&pkts[sent], left, &param);
+
+		if (odp_unlikely(ret <= 0))
+			break;
+
+		sent += ret;
+	}
+
+	return sent;
+}
+
+static inline const pktio_t *lookup_and_apply(odp_packet_t pkt, odph_table_t fwd_tbl,
+					      uint8_t *hash)
+{
+	const uint32_t l3_off = odp_packet_l3_offset(pkt);
+	odph_ipv4hdr_t ipv4;
+	uint32_t dst_ip, src_ip;
+	fwd_entry_t *fwd;
+	odph_ethhdr_t eth;
+
+	if (odp_packet_copy_to_mem(pkt, l3_off, ODPH_IPV4HDR_LEN, &ipv4) < 0)
+		return NULL;
+
+	dst_ip = odp_be_to_cpu_32(ipv4.dst_addr);
+
+	if (odph_iplookup_table_get_value(fwd_tbl, &dst_ip, &fwd, 0U) < 0 || fwd == NULL)
+		return NULL;
+
+	if (l3_off != ODPH_ETHHDR_LEN) {
+		if (l3_off > ODPH_ETHHDR_LEN) {
+			if (odp_packet_pull_head(pkt, l3_off - ODPH_ETHHDR_LEN) == NULL)
+				return NULL;
+		} else {
+			if (odp_packet_push_head(pkt, ODPH_ETHHDR_LEN - l3_off) == NULL)
+				return NULL;
+		}
+	}
+
+	eth.dst = fwd->dst_mac;
+	eth.src = fwd->pktio->src_mac;
+	eth.type = odp_cpu_to_be_16(ODPH_ETHTYPE_IPV4);
+
+	if (odp_packet_copy_from_mem(pkt, 0U, ODPH_ETHHDR_LEN, &eth) < 0)
+		return NULL;
+
+	src_ip = odp_be_to_cpu_32(ipv4.src_addr);
+	*hash = src_ip ^ dst_ip;
+
+	return fwd->pktio;
+}
+
+static inline uint32_t forward_packets(odp_packet_t pkts[], int num, odph_table_t fwd_tbl)
+{
+	odp_packet_t pkt;
+	uint8_t hash = 0U;
+	const pktio_t *pktio;
+	uint32_t num_procd = 0U;
+
+	for (int i = 0; i < num; ++i) {
+		pkt = pkts[i];
+		pktio = lookup_and_apply(pkt, fwd_tbl, &hash);
+
+		if (pktio == NULL) {
+			odp_packet_free(pkt);
+			continue;
+		}
+
+		if (odp_unlikely(!pktio->send_fn(pktio, hash % pktio->num_tx_qs, pkt))) {
+			odp_packet_free(pkt);
+			continue;
+		}
+
+		++num_procd;
+	}
+
+	return num_procd;
+}
+
+static inline void process_packets_out(odp_packet_t pkts[], int num, odph_table_t fwd_tbl,
+				       stats_t *stats)
+{
+	odp_packet_t pkt, pkts_ips[MAX_BURST], pkts_fwd[MAX_BURST];
+	odp_ipsec_sa_t *sa, sas[MAX_BURST];
+	int num_pkts_ips = 0, num_pkts_fwd = 0, num_procd;
+
+	for (int i = 0; i < num; ++i) {
+		pkt = pkts[i];
+		sa = get_out_sa(pkt);
+
+		if (sa != NULL) {
+			sas[num_pkts_ips] = *sa;
+			pkts_ips[num_pkts_ips] = pkt;
+			++num_pkts_ips;
+		} else {
+			pkts_fwd[num_pkts_fwd++] = pkt;
+		}
+	}
+
+	if (num_pkts_ips > 0) {
+		num_procd = process_ipsec_out(pkts_ips, sas, num_pkts_ips);
+
+		if (odp_unlikely(num_procd < num_pkts_ips)) {
+			num_procd = num_procd < 0 ? 0 : num_procd;
+			stats->ipsec_out_errs += num_pkts_ips - num_procd;
+			odp_packet_free_multi(&pkts_ips[num_procd], num_pkts_ips - num_procd);
+		}
+	}
+
+	if (num_pkts_fwd > 0) {
+		num_procd = forward_packets(pkts_fwd, num_pkts_fwd, fwd_tbl);
+		stats->discards += num_pkts_fwd - num_procd;
+		stats->fwd_pkts += num_procd;
+	}
+}
+
+static inline void process_packets_in(odp_packet_t pkts[], int num, odph_table_t fwd_tbl,
+				      stats_t *stats)
+{
+	odp_packet_t pkt, pkts_ips[MAX_BURST], pkts_out[MAX_BURST];
+	odp_ipsec_sa_t *sa, sas[MAX_BURST];
+	int num_pkts_ips = 0, num_pkts_out = 0, num_procd;
+
+	for (int i = 0; i < num; ++i) {
+		pkt = pkts[i];
+
+		if (odp_unlikely(odp_packet_has_error(pkt))) {
+			++stats->discards;
+			odp_packet_free(pkt);
+			continue;
+		}
+
+		sa = get_in_sa(pkt);
+
+		if (sa != NULL) {
+			sas[num_pkts_ips] = *sa;
+			pkts_ips[num_pkts_ips] = pkt;
+			++num_pkts_ips;
+		} else {
+			pkts_out[num_pkts_out++] = pkt;
+		}
+	}
+
+	if (num_pkts_ips > 0) {
+		num_procd = process_ipsec_in(pkts_ips, sas, num_pkts_ips);
+
+		if (odp_unlikely(num_procd < num_pkts_ips)) {
+			num_procd = num_procd < 0 ? 0 : num_procd;
+			stats->ipsec_in_errs += num_pkts_ips - num_procd;
+			odp_packet_free_multi(&pkts_ips[num_procd], num_pkts_ips - num_procd);
+		}
+	}
+
+	if (num_pkts_out > 0)
+		process_packets_out(pkts_out, num_pkts_out, fwd_tbl, stats);
+}
+
+static inline odp_bool_t is_ipsec_in(odp_packet_t pkt)
+{
+	return odp_packet_user_ptr(pkt) == NULL;
+}
+
+static inline void complete_ipsec_ops(odp_packet_t pkts[], int num, odph_table_t fwd_tbl,
+				      stats_t *stats)
+{
+	odp_packet_t pkt, pkts_out[MAX_BURST], pkts_fwd[MAX_BURST];
+	odp_bool_t is_in;
+	odp_ipsec_packet_result_t result;
+	int num_pkts_out = 0, num_pkts_fwd = 0, num_procd;
+
+	for (int i = 0; i < num; ++i) {
+		pkt = pkts[i];
+		is_in = is_ipsec_in(pkt);
+
+		if (odp_unlikely(odp_ipsec_result(&result, pkt) < 0)) {
+			is_in ? ++stats->ipsec_in_errs : ++stats->ipsec_out_errs;
+			odp_packet_free(pkt);
+			continue;
+		}
+
+		if (odp_unlikely(result.status.all != ODP_IPSEC_OK)) {
+			is_in ? ++stats->ipsec_in_errs : ++stats->ipsec_out_errs;
+			odp_packet_free(pkt);
+			continue;
+		}
+
+		if (is_in) {
+			++stats->ipsec_in_pkts;
+			pkts_out[num_pkts_out++] = pkt;
+		} else {
+			++stats->ipsec_out_pkts;
+			pkts_fwd[num_pkts_fwd++] = pkt;
+		}
+	}
+
+	if (num_pkts_out > 0)
+		process_packets_out(pkts_out, num_pkts_out, fwd_tbl, stats);
+
+	if (num_pkts_fwd > 0) {
+		num_procd = forward_packets(pkts_fwd, num_pkts_fwd, fwd_tbl);
+		stats->discards += num_pkts_fwd - num_procd;
+		stats->fwd_pkts += num_procd;
+	}
+}
+
+static void drain_events(void)
+{
+	odp_event_t ev;
+
+	while (true) {
+		ev = odp_schedule(NULL, ODP_SCHED_NO_WAIT);
+
+		if (ev == ODP_EVENT_INVALID)
+			break;
+
+		odp_event_free(ev);
+	}
+}
+
 static odp_bool_t setup_ipsec(prog_config_t *config)
 {
 	odp_queue_param_t q_param;
@@ -887,281 +1176,6 @@ static odp_bool_t setup_fwd_table(prog_config_t *config)
 	return true;
 }
 
-static inline odp_ipsec_sa_t *get_in_sa(odp_packet_t pkt)
-{
-	odph_esphdr_t esp;
-	uint32_t spi;
-
-	if (!odp_packet_has_ipsec(pkt))
-		return NULL;
-
-	if (odp_packet_copy_to_mem(pkt, odp_packet_l4_offset(pkt), ODPH_ESPHDR_LEN, &esp) < 0)
-		return NULL;
-
-	spi = odp_be_to_cpu_32(esp.spi);
-
-	return spi <= UINT16_MAX ? spi_to_sa_map[DIR_IN][spi] : NULL;
-}
-
-static inline int process_ipsec_in(odp_packet_t pkts[], const odp_ipsec_sa_t sas[], int num)
-{
-	odp_ipsec_in_param_t param;
-	int left, sent = 0, ret;
-
-	memset(&param, 0, sizeof(param));
-	/* IPsec in/out need to be identified somehow, so use user_ptr for this. */
-	for (int i = 0; i < num; ++i)
-		odp_packet_user_ptr_set(pkts[i], NULL);
-
-	while (sent < num) {
-		left = num - sent;
-		param.num_sa = left;
-		param.sa = &sas[sent];
-		ret = odp_ipsec_in_enq(&pkts[sent], left, &param);
-
-		if (odp_unlikely(ret <= 0))
-			break;
-
-		sent += ret;
-	}
-
-	return sent;
-}
-
-static inline odp_ipsec_sa_t *get_out_sa(odp_packet_t pkt)
-{
-	odph_udphdr_t udp;
-	uint16_t dst_port;
-
-	if (!odp_packet_has_udp(pkt))
-		return NULL;
-
-	if (odp_packet_copy_to_mem(pkt, odp_packet_l4_offset(pkt), ODPH_UDPHDR_LEN, &udp) < 0)
-		return NULL;
-
-	dst_port = odp_be_to_cpu_16(udp.dst_port);
-
-	return dst_port ? spi_to_sa_map[DIR_OUT][dst_port] : NULL;
-}
-
-static inline int process_ipsec_out(odp_packet_t pkts[], const odp_ipsec_sa_t sas[], int num)
-{
-	odp_ipsec_out_param_t param;
-	int left, sent = 0, ret;
-
-	memset(&param, 0, sizeof(param));
-	/* IPsec in/out need to be identified somehow, so use user_ptr for this. */
-	for (int i = 0; i < num; ++i)
-		odp_packet_user_ptr_set(pkts[i], &ipsec_out_mark);
-
-	while (sent < num) {
-		left = num - sent;
-		param.num_sa = left;
-		param.sa = &sas[sent];
-		ret = odp_ipsec_out_enq(&pkts[sent], left, &param);
-
-		if (odp_unlikely(ret <= 0))
-			break;
-
-		sent += ret;
-	}
-
-	return sent;
-}
-
-static inline const pktio_t *lookup_and_apply(odp_packet_t pkt, odph_table_t fwd_tbl,
-					      uint8_t *hash)
-{
-	const uint32_t l3_off = odp_packet_l3_offset(pkt);
-	odph_ipv4hdr_t ipv4;
-	uint32_t dst_ip, src_ip;
-	fwd_entry_t *fwd;
-	odph_ethhdr_t eth;
-
-	if (odp_packet_copy_to_mem(pkt, l3_off, ODPH_IPV4HDR_LEN, &ipv4) < 0)
-		return NULL;
-
-	dst_ip = odp_be_to_cpu_32(ipv4.dst_addr);
-
-	if (odph_iplookup_table_get_value(fwd_tbl, &dst_ip, &fwd, 0U) < 0 || fwd == NULL)
-		return NULL;
-
-	if (l3_off != ODPH_ETHHDR_LEN) {
-		if (l3_off > ODPH_ETHHDR_LEN) {
-			if (odp_packet_pull_head(pkt, l3_off - ODPH_ETHHDR_LEN) == NULL)
-				return NULL;
-		} else {
-			if (odp_packet_push_head(pkt, ODPH_ETHHDR_LEN - l3_off) == NULL)
-				return NULL;
-		}
-	}
-
-	eth.dst = fwd->dst_mac;
-	eth.src = fwd->pktio->src_mac;
-	eth.type = odp_cpu_to_be_16(ODPH_ETHTYPE_IPV4);
-
-	if (odp_packet_copy_from_mem(pkt, 0U, ODPH_ETHHDR_LEN, &eth) < 0)
-		return NULL;
-
-	src_ip = odp_be_to_cpu_32(ipv4.src_addr);
-	*hash = src_ip ^ dst_ip;
-
-	return fwd->pktio;
-}
-
-static inline uint32_t forward_packets(odp_packet_t pkts[], int num, odph_table_t fwd_tbl)
-{
-	odp_packet_t pkt;
-	uint8_t hash = 0U;
-	const pktio_t *pktio;
-	uint32_t num_procd = 0U;
-
-	for (int i = 0; i < num; ++i) {
-		pkt = pkts[i];
-		pktio = lookup_and_apply(pkt, fwd_tbl, &hash);
-
-		if (pktio == NULL) {
-			odp_packet_free(pkt);
-			continue;
-		}
-
-		if (odp_unlikely(!pktio->send_fn(pktio, hash % pktio->num_tx_qs, pkt))) {
-			odp_packet_free(pkt);
-			continue;
-		}
-
-		++num_procd;
-	}
-
-	return num_procd;
-}
-
-static inline void process_packets_out(odp_packet_t pkts[], int num, odph_table_t fwd_tbl,
-				       stats_t *stats)
-{
-	odp_packet_t pkt, pkts_ips[MAX_BURST], pkts_fwd[MAX_BURST];
-	odp_ipsec_sa_t *sa, sas[MAX_BURST];
-	int num_pkts_ips = 0, num_pkts_fwd = 0, num_procd;
-
-	for (int i = 0; i < num; ++i) {
-		pkt = pkts[i];
-		sa = get_out_sa(pkt);
-
-		if (sa != NULL) {
-			sas[num_pkts_ips] = *sa;
-			pkts_ips[num_pkts_ips] = pkt;
-			++num_pkts_ips;
-		} else {
-			pkts_fwd[num_pkts_fwd++] = pkt;
-		}
-	}
-
-	if (num_pkts_ips > 0) {
-		num_procd = process_ipsec_out(pkts_ips, sas, num_pkts_ips);
-
-		if (odp_unlikely(num_procd < num_pkts_ips)) {
-			num_procd = num_procd < 0 ? 0 : num_procd;
-			stats->ipsec_out_errs += num_pkts_ips - num_procd;
-			odp_packet_free_multi(&pkts_ips[num_procd], num_pkts_ips - num_procd);
-		}
-	}
-
-	if (num_pkts_fwd > 0) {
-		num_procd = forward_packets(pkts_fwd, num_pkts_fwd, fwd_tbl);
-		stats->discards += num_pkts_fwd - num_procd;
-		stats->fwd_pkts += num_procd;
-	}
-}
-
-static inline void process_packets_in(odp_packet_t pkts[], int num, odph_table_t fwd_tbl,
-				      stats_t *stats)
-{
-	odp_packet_t pkt, pkts_ips[MAX_BURST], pkts_out[MAX_BURST];
-	odp_ipsec_sa_t *sa, sas[MAX_BURST];
-	int num_pkts_ips = 0, num_pkts_out = 0, num_procd;
-
-	for (int i = 0; i < num; ++i) {
-		pkt = pkts[i];
-
-		if (odp_unlikely(odp_packet_has_error(pkt))) {
-			++stats->discards;
-			odp_packet_free(pkt);
-			continue;
-		}
-
-		sa = get_in_sa(pkt);
-
-		if (sa != NULL) {
-			sas[num_pkts_ips] = *sa;
-			pkts_ips[num_pkts_ips] = pkt;
-			++num_pkts_ips;
-		} else {
-			pkts_out[num_pkts_out++] = pkt;
-		}
-	}
-
-	if (num_pkts_ips > 0) {
-		num_procd = process_ipsec_in(pkts_ips, sas, num_pkts_ips);
-
-		if (odp_unlikely(num_procd < num_pkts_ips)) {
-			num_procd = num_procd < 0 ? 0 : num_procd;
-			stats->ipsec_in_errs += num_pkts_ips - num_procd;
-			odp_packet_free_multi(&pkts_ips[num_procd], num_pkts_ips - num_procd);
-		}
-	}
-
-	if (num_pkts_out > 0)
-		process_packets_out(pkts_out, num_pkts_out, fwd_tbl, stats);
-}
-
-static inline odp_bool_t is_ipsec_in(odp_packet_t pkt)
-{
-	return odp_packet_user_ptr(pkt) == NULL;
-}
-
-static inline void complete_ipsec_ops(odp_packet_t pkts[], int num, odph_table_t fwd_tbl,
-				      stats_t *stats)
-{
-	odp_packet_t pkt, pkts_out[MAX_BURST], pkts_fwd[MAX_BURST];
-	odp_bool_t is_in;
-	odp_ipsec_packet_result_t result;
-	int num_pkts_out = 0, num_pkts_fwd = 0, num_procd;
-
-	for (int i = 0; i < num; ++i) {
-		pkt = pkts[i];
-		is_in = is_ipsec_in(pkt);
-
-		if (odp_unlikely(odp_ipsec_result(&result, pkt) < 0)) {
-			is_in ? ++stats->ipsec_in_errs : ++stats->ipsec_out_errs;
-			odp_packet_free(pkt);
-			continue;
-		}
-
-		if (odp_unlikely(result.status.all != ODP_IPSEC_OK)) {
-			is_in ? ++stats->ipsec_in_errs : ++stats->ipsec_out_errs;
-			odp_packet_free(pkt);
-			continue;
-		}
-
-		if (is_in) {
-			++stats->ipsec_in_pkts;
-			pkts_out[num_pkts_out++] = pkt;
-		} else {
-			++stats->ipsec_out_pkts;
-			pkts_fwd[num_pkts_fwd++] = pkt;
-		}
-	}
-
-	if (num_pkts_out > 0)
-		process_packets_out(pkts_out, num_pkts_out, fwd_tbl, stats);
-
-	if (num_pkts_fwd > 0) {
-		num_procd = forward_packets(pkts_fwd, num_pkts_fwd, fwd_tbl);
-		stats->discards += num_pkts_fwd - num_procd;
-		stats->fwd_pkts += num_procd;
-	}
-}
-
 static inline void check_ipsec_status_ev(odp_event_t ev, stats_t *stats)
 {
 	odp_ipsec_status_t status;
@@ -1170,20 +1184,6 @@ static inline void check_ipsec_status_ev(odp_event_t ev, stats_t *stats)
 		++stats->status_errs;
 
 	odp_event_free(ev);
-}
-
-static void drain_events(void)
-{
-	odp_event_t ev;
-
-	while (true) {
-		ev = odp_schedule(NULL, ODP_SCHED_NO_WAIT);
-
-		if (ev == ODP_EVENT_INVALID)
-			break;
-
-		odp_event_free(ev);
-	}
 }
 
 static int process_packets(void *args)
