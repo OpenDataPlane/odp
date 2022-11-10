@@ -550,8 +550,13 @@ static int ipsec_in_iv(odp_packet_t pkt,
 		       ipsec_sa_t *ipsec_sa,
 		       uint16_t iv_offset)
 {
+	if (ipsec_sa->salt_length > 0) {
+		/* It is faster to just copy MAX_SALT_LEN bytes than the exact length */
+		ODP_STATIC_ASSERT(IPSEC_MAX_SALT_LEN <= IPSEC_MAX_IV_LEN,
+				  "IPSEC_MAX_SALT_LEN too large");
+		memcpy(state->iv, ipsec_sa->salt, IPSEC_MAX_SALT_LEN);
+	}
 	_ODP_ASSERT(ipsec_sa->salt_length + ipsec_sa->esp_iv_len <= IPSEC_MAX_IV_LEN);
-	memcpy(state->iv, ipsec_sa->salt, ipsec_sa->salt_length);
 	if (odp_packet_copy_to_mem(pkt,
 				   iv_offset,
 				   ipsec_sa->esp_iv_len,
@@ -1409,10 +1414,13 @@ static int ipsec_out_iv(ipsec_state_t *state,
 		/* Both GCM and CTR use 8-bit counters */
 		_ODP_ASSERT(sizeof(seq_no) == ipsec_sa->esp_iv_len);
 
-		_ODP_ASSERT(ipsec_sa->salt_length + ipsec_sa->esp_iv_len <= IPSEC_MAX_IV_LEN);
-		memcpy(state->iv, ipsec_sa->salt, ipsec_sa->salt_length);
-		memcpy(state->iv + ipsec_sa->salt_length, &seq_no,
-		       ipsec_sa->esp_iv_len);
+		/* It is faster to just copy MAX_SALT_LEN bytes than the exact length */
+		ODP_STATIC_ASSERT(IPSEC_MAX_SALT_LEN <= IPSEC_MAX_IV_LEN,
+				  "IPSEC_MAX_SALT_LEN too large");
+		memcpy(state->iv, ipsec_sa->salt, IPSEC_MAX_SALT_LEN);
+
+		_ODP_ASSERT(ipsec_sa->salt_length + sizeof(seq_no) <= IPSEC_MAX_IV_LEN);
+		memcpy(state->iv + ipsec_sa->salt_length, &seq_no, sizeof(seq_no));
 
 		if (ipsec_sa->aes_ctr_iv) {
 			ODP_STATIC_ASSERT(IPSEC_MAX_IV_LEN >= 16, "IPSEC_MAX_IV_LEN too small");
