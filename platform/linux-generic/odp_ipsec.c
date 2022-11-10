@@ -550,6 +550,7 @@ static int ipsec_in_iv(odp_packet_t pkt,
 		       ipsec_sa_t *ipsec_sa,
 		       uint16_t iv_offset)
 {
+	_ODP_ASSERT(ipsec_sa->salt_length + ipsec_sa->esp_iv_len <= IPSEC_MAX_IV_LEN);
 	memcpy(state->iv, ipsec_sa->salt, ipsec_sa->salt_length);
 	if (odp_packet_copy_to_mem(pkt,
 				   iv_offset,
@@ -558,6 +559,7 @@ static int ipsec_in_iv(odp_packet_t pkt,
 		return -1;
 
 	if (ipsec_sa->aes_ctr_iv) {
+		ODP_STATIC_ASSERT(IPSEC_MAX_IV_LEN >= 16, "IPSEC_MAX_IV_LEN too small");
 		state->iv[12] = 0;
 		state->iv[13] = 0;
 		state->iv[14] = 0;
@@ -1407,11 +1409,13 @@ static int ipsec_out_iv(ipsec_state_t *state,
 		/* Both GCM and CTR use 8-bit counters */
 		_ODP_ASSERT(sizeof(seq_no) == ipsec_sa->esp_iv_len);
 
+		_ODP_ASSERT(ipsec_sa->salt_length + ipsec_sa->esp_iv_len <= IPSEC_MAX_IV_LEN);
 		memcpy(state->iv, ipsec_sa->salt, ipsec_sa->salt_length);
 		memcpy(state->iv + ipsec_sa->salt_length, &seq_no,
 		       ipsec_sa->esp_iv_len);
 
 		if (ipsec_sa->aes_ctr_iv) {
+			ODP_STATIC_ASSERT(IPSEC_MAX_IV_LEN >= 16, "IPSEC_MAX_IV_LEN too small");
 			state->iv[12] = 0;
 			state->iv[13] = 0;
 			state->iv[14] = 0;
@@ -1437,6 +1441,7 @@ static int ipsec_out_iv(ipsec_state_t *state,
 		memcpy(state->iv, ipsec_sa->cbc_salt, CBC_SALT_LEN);
 		memcpy(state->iv + CBC_SALT_LEN, &seq_no, sizeof(seq_no));
 	} else if (odp_unlikely(ipsec_sa->esp_iv_len)) {
+		_ODP_ASSERT(ipsec_sa->esp_iv_len <= IPSEC_MAX_IV_LEN);
 		if (ipsec_random_data(state->iv, ipsec_sa->esp_iv_len))
 			return -1;
 	}
