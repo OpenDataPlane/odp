@@ -485,6 +485,25 @@ static void store_sa_info(ipsec_sa_t *ipsec_sa, const odp_ipsec_sa_param_t *p)
 		ipsec_sa->sa_info.out.mtu = p->outbound.mtu;
 }
 
+static int init_cbc_salt(ipsec_sa_t *ipsec_sa)
+{
+	int filled = 0;
+	int rc;
+
+	if (!ipsec_sa->use_cbc_iv)
+		return 0;
+
+	while (filled < CBC_SALT_LEN) {
+		rc = odp_random_data(&ipsec_sa->cbc_salt[filled],
+				     CBC_SALT_LEN - filled,
+				     ODP_RANDOM_CRYPTO);
+		if (rc < 0)
+			return -1;
+		filled += rc;
+	}
+	return 0;
+}
+
 odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 {
 	ipsec_sa_t *ipsec_sa;
@@ -656,6 +675,7 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 		ipsec_sa->esp_pad_mask = esp_block_len_to_mask(8);
 		break;
 	case ODP_CIPHER_ALG_AES_CBC:
+		ipsec_sa->use_cbc_iv = 1;
 		ipsec_sa->esp_iv_len = 16;
 		ipsec_sa->esp_pad_mask = esp_block_len_to_mask(16);
 		break;
@@ -745,6 +765,9 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 
 		memcpy(ipsec_sa->salt, salt_param->data, ipsec_sa->salt_length);
 	}
+
+	if (init_cbc_salt(ipsec_sa))
+		goto error;
 
 	if (odp_crypto_session_create(&crypto_param, &ipsec_sa->session,
 				      &ses_create_rc))

@@ -1396,6 +1396,9 @@ static int ipsec_random_data(uint8_t *data, uint32_t len)
 	return 0;
 }
 
+/*
+ * Generate cipher IV for outbound processing.
+ */
 static int ipsec_out_iv(ipsec_state_t *state,
 			ipsec_sa_t *ipsec_sa,
 			uint64_t seq_no)
@@ -1414,7 +1417,26 @@ static int ipsec_out_iv(ipsec_state_t *state,
 			state->iv[14] = 0;
 			state->iv[15] = 1;
 		}
-	} else if (ipsec_sa->esp_iv_len) {
+	} else if (ipsec_sa->use_cbc_iv) {
+		/*
+		 * For CBC mode ciphers with 16 byte IV we generate the cipher
+		 * IV by concatenating a per-session random salt value and
+		 * 64-bit sequence number. The ESP IV will be generated at
+		 * ciphering time by CBC-encrypting a zero block using the
+		 * cipher IV.
+		 *
+		 * This way each packet of an SA will have an unpredictable
+		 * IV and different SAs (e.g. manually keyed SAs across
+		 * restarts) will have different IV sequences (so one cannot
+		 * predict IVs of an SA by observing the IVs of another SA
+		 * with the same key).
+		 */
+		_ODP_ASSERT(CBC_SALT_LEN + sizeof(seq_no) == ipsec_sa->esp_iv_len);
+		ODP_STATIC_ASSERT(CBC_SALT_LEN + sizeof(seq_no) <= IPSEC_MAX_IV_LEN,
+				  "IPSEC_MAX_IV_LEN too small for CBC IV construction");
+		memcpy(state->iv, ipsec_sa->cbc_salt, CBC_SALT_LEN);
+		memcpy(state->iv + CBC_SALT_LEN, &seq_no, sizeof(seq_no));
+	} else if (odp_unlikely(ipsec_sa->esp_iv_len)) {
 		if (ipsec_random_data(state->iv, ipsec_sa->esp_iv_len))
 			return -1;
 	}
@@ -1555,10 +1577,13 @@ static int ipsec_out_esp(odp_packet_t *pkt,
 	odp_packet_copy_from_mem(*pkt,
 				 ipsec_offset, _ODP_ESPHDR_LEN,
 				 &esp);
-	odp_packet_copy_from_mem(*pkt,
-				 ipsec_offset + _ODP_ESPHDR_LEN,
-				 ipsec_sa->esp_iv_len,
-				 state->iv + ipsec_sa->salt_length);
+	if (!ipsec_sa->use_cbc_iv) {
+		/* copy the relevant part of cipher IV to ESP IV */
+		odp_packet_copy_from_mem(*pkt,
+					 ipsec_offset + _ODP_ESPHDR_LEN,
+					 ipsec_sa->esp_iv_len,
+					 state->iv + ipsec_sa->salt_length);
+	}
 	/* 0xa5 is a good value to fill data instead of generating random data
 	 * to create TFC padding */
 	_odp_packet_set_data(*pkt, esptrl_offset - esptrl.pad_len - tfc_len,
@@ -1609,6 +1634,21 @@ static int ipsec_out_esp(odp_packet_t *pkt,
 				   ipsec_sa->icv_len;
 
 	state->stats_length = param->cipher_range.length;
+
+	if (ipsec_sa->use_cbc_iv) {
+		/*
+		 * Encrypt zeroed ESP IV field using the special cipher IV
+		 * to create the final unpredictable ESP IV
+		 */
+		_ODP_ASSERT(ipsec_sa->esp_iv_len == CBC_IV_LEN);
+		param->cipher_range.offset -= CBC_IV_LEN;
+		param->cipher_range.length += CBC_IV_LEN;
+		_odp_packet_set_data(*pkt,
+				     ipsec_offset + _ODP_ESPHDR_LEN,
+				     0,
+				     CBC_IV_LEN);
+	}
+
 	param->session = ipsec_sa->session;
 
 	return 0;

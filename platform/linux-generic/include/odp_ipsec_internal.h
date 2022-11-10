@@ -87,6 +87,9 @@ int _odp_ipsec_status_send(odp_queue_t queue,
 
 #define IPSEC_MAX_SALT_LEN	4    /**< Maximum salt length in bytes */
 
+#define CBC_SALT_LEN		8
+#define CBC_IV_LEN		(CBC_SALT_LEN + sizeof(uint64_t))
+
 #define IPSEC_SEQ_HI_LEN	4    /**< ESN Higher bits length in bytes */
 
 /* The minimum supported AR window size */
@@ -167,7 +170,10 @@ struct ipsec_sa_s {
 	uint32_t	esp_iv_len;
 	uint32_t	esp_pad_mask;
 
-	uint8_t		salt[IPSEC_MAX_SALT_LEN];
+	union {
+		uint8_t		salt[IPSEC_MAX_SALT_LEN];
+		uint8_t         cbc_salt[CBC_SALT_LEN];
+	};
 	uint32_t	salt_length;
 	odp_ipsec_lookup_mode_t lookup_mode;
 
@@ -186,6 +192,7 @@ struct ipsec_sa_s {
 
 			/* Only for outbound */
 			unsigned	use_counter_iv : 1;
+			unsigned	use_cbc_iv : 1;
 			unsigned	tun_ipv4 : 1;
 
 			/* Only for inbound */
