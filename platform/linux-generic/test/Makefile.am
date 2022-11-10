@@ -17,8 +17,7 @@ TESTS += validation/api/pktio/pktio_run.sh \
 
 SUBDIRS += validation/api/pktio\
 	  validation/api/shmem\
-	  pktio_ipc \
-	  example
+	  pktio_ipc
 
 if ODP_PKTIO_PCAP
 TESTS += validation/api/pktio/pktio_run_pcap.sh
@@ -36,6 +35,10 @@ else
 if test_perf
 SUBDIRS += validation/api/pktio
 endif
+endif
+
+if test_example
+SUBDIRS += example
 endif
 
 TEST_EXTENSIONS = .sh
