@@ -83,7 +83,7 @@ int _odp_ipsec_status_send(odp_queue_t queue,
 			   int result,
 			   odp_ipsec_warn_t warn);
 
-#define IPSEC_MAX_IV_LEN	32   /**< Maximum IV length in bytes */
+#define IPSEC_MAX_IV_LEN	16   /**< Maximum cipher IV length in bytes */
 
 #define IPSEC_MAX_SALT_LEN	4    /**< Maximum salt length in bytes */
 
