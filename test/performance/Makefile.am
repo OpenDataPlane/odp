@@ -11,7 +11,8 @@ EXECUTABLES = odp_atomic_perf \
 	      odp_pktio_perf \
 	      odp_pool_perf \
 	      odp_queue_perf \
-	      odp_random
+	      odp_random \
+	      odp_stress
 
 COMPILE_ONLY = odp_cpu_bench \
 	       odp_crypto \
@@ -72,6 +73,7 @@ odp_pool_perf_SOURCES = odp_pool_perf.c
 odp_queue_perf_SOURCES = odp_queue_perf.c
 odp_random_SOURCES = odp_random.c
 odp_sched_perf_SOURCES = odp_sched_perf.c
+odp_stress_SOURCES = odp_stress.c
 odp_timer_perf_SOURCES = odp_timer_perf.c
 
 # l2fwd test depends on generator example
