@@ -142,6 +142,7 @@ typedef struct prog_config_s {
 	uint32_t num_fwds;
 	int num_thrs;
 	odp_bool_t is_dir_rx;
+	odp_bool_t is_hashed_tx;
 	uint8_t mode;
 } prog_config_t;
 
@@ -161,6 +162,12 @@ typedef struct {
 	pkt_vec_t vecs[MAX_QUEUES];
 	uint8_t num_qs;
 } pkt_out_t;
+
+typedef struct {
+	pkt_out_t ifs[MAX_IFS];
+	odp_bool_t is_hashed_tx;
+	uint8_t q_idx;
+} pkt_ifs_t;
 
 static exposed_alg_t exposed_algs[] = {
 	ALG_ENTRY(ODP_CIPHER_ALG_NULL, CIPHER_TYPE),
@@ -191,6 +198,7 @@ static exposed_alg_t exposed_algs[] = {
 static odp_ipsec_sa_t *spi_to_sa_map[2U][MAX_SPIS];
 static odp_atomic_u32_t is_running;
 static const int ipsec_out_mark;
+static __thread pkt_ifs_t ifs;
 
 static void init_config(prog_config_t *config)
 {
@@ -358,8 +366,9 @@ static void print_usage(void)
 	       "  -S, --num_sa_qs     SA queue count. 1 by default.\n"
 	       "  -O, --num_output_qs Output queue count. 1 by default.\n"
 	       "  -d, --direct_rx     Use direct RX. Interfaces will be polled by workers\n"
-	       "                      directly. \"--mode\" and \"--num_input_qs\" options are\n"
-	       "                      ignored, input queue count will match worker count.\n"
+	       "                      directly. \"--mode\", \"--num_input_qs\" and\n"
+	       "                      \"--num_output_qs\" options are ignored, input and output\n"
+	       "                      queue counts will match worker count.\n"
 	       "  -h, --help          This help.\n"
 	       "\n");
 }
@@ -480,8 +489,10 @@ static inline const pktio_t *lookup_and_apply(odp_packet_t pkt, odph_table_t fwd
 	if (odp_packet_copy_from_mem(pkt, 0U, ODPH_ETHHDR_LEN, &eth) < 0)
 		return NULL;
 
-	src_ip = odp_be_to_cpu_32(ipv4.src_addr);
-	*q_idx = (src_ip ^ dst_ip) % fwd->pktio->num_tx_qs;
+	if (q_idx != NULL) {
+		src_ip = odp_be_to_cpu_32(ipv4.src_addr);
+		*q_idx = (src_ip ^ dst_ip) % fwd->pktio->num_tx_qs;
+	}
 
 	return fwd->pktio;
 }
@@ -489,23 +500,24 @@ static inline const pktio_t *lookup_and_apply(odp_packet_t pkt, odph_table_t fwd
 static inline uint32_t forward_packets(odp_packet_t pkts[], int num, odph_table_t fwd_tbl)
 {
 	odp_packet_t pkt;
-	uint8_t q_idx = 0U, qs_done;
+	odp_bool_t is_hashed_tx = ifs.is_hashed_tx;
+	uint8_t q_idx = is_hashed_tx ? 0U : ifs.q_idx, qs_done;
+	uint8_t *q_idx_ptr = is_hashed_tx ? &q_idx : NULL;
 	const pktio_t *pktio;
-	static __thread pkt_out_t outs[MAX_IFS];
 	pkt_out_t *out;
 	pkt_vec_t *vec;
 	uint32_t num_procd = 0U, ret;
 
 	for (int i = 0; i < num; ++i) {
 		pkt = pkts[i];
-		pktio = lookup_and_apply(pkt, fwd_tbl, &q_idx);
+		pktio = lookup_and_apply(pkt, fwd_tbl, q_idx_ptr);
 
 		if (pktio == NULL) {
 			odp_packet_free(pkt);
 			continue;
 		}
 
-		out = &outs[pktio->idx];
+		out = &ifs.ifs[pktio->idx];
 		vec = &out->vecs[q_idx];
 
 		if (vec->num == 0U)
@@ -517,7 +529,7 @@ static inline uint32_t forward_packets(odp_packet_t pkts[], int num, odph_table_
 
 	for (uint32_t i = 0U; i < MAX_IFS; ++i) {
 		qs_done = 0U;
-		out = &outs[i];
+		out = &ifs.ifs[i];
 
 		for (uint32_t j = 0U; j < MAX_QUEUES && qs_done < out->num_qs; ++j) {
 			if (out->vecs[j].num == 0U)
@@ -1175,8 +1187,10 @@ static parse_result_t check_options(prog_config_t *config)
 		return PRS_NOK;
 	}
 
-	if (config->is_dir_rx)
+	if (config->is_dir_rx) {
 		config->num_input_qs = config->num_thrs;
+		config->num_output_qs = config->num_thrs;
+	}
 
 	return PRS_OK;
 }
@@ -1340,6 +1354,7 @@ static odp_bool_t setup_pktios(prog_config_t *config)
 	}
 
 	config->ops.rx = !config->is_dir_rx ? schedule : recv;
+	config->is_hashed_tx = !config->is_dir_rx && config->mode == ORDERED;
 
 	for (uint32_t i = 0U; i < config->num_ifs; ++i) {
 		pktio = &config->pktios[i];
@@ -1347,7 +1362,7 @@ static odp_bool_t setup_pktios(prog_config_t *config)
 		odp_pktio_param_init(&pktio_param);
 		pktio_param.in_mode = !config->is_dir_rx ?
 			ODP_PKTIN_MODE_SCHED : ODP_PKTIN_MODE_DIRECT;
-		pktio_param.out_mode = !config->is_dir_rx && config->mode == ORDERED ?
+		pktio_param.out_mode = config->is_hashed_tx ?
 			ODP_PKTOUT_MODE_QUEUE : ODP_PKTOUT_MODE_DIRECT;
 		pktio->handle = odp_pktio_open(pktio->name, config->pktio_pool, &pktio_param);
 
@@ -1379,7 +1394,7 @@ static odp_bool_t setup_pktios(prog_config_t *config)
 
 		odp_pktin_queue_param_init(&pktin_param);
 
-		if (!config->is_dir_rx && config->mode == ORDERED)
+		if (config->is_hashed_tx)
 			pktin_param.queue_param.sched.sync = ODP_SCHED_SYNC_ORDERED;
 
 		if (config->num_input_qs > 1U) {
@@ -1406,17 +1421,22 @@ static odp_bool_t setup_pktios(prog_config_t *config)
 			}
 		}
 
-		pktio->send_fn = !config->is_dir_rx && config->mode == ORDERED ? enqueue : send;
+		pktio->send_fn = config->is_hashed_tx ? enqueue : send;
 		pktio->num_tx_qs = config->num_output_qs;
 		odp_pktout_queue_param_init(&pktout_param);
 		pktout_param.num_queues = pktio->num_tx_qs;
+
+		if (!config->is_hashed_tx) {
+			pktout_param.op_mode = config->num_thrs > (int)pktio->num_tx_qs ?
+				ODP_PKTIO_OP_MT : ODP_PKTIO_OP_MT_UNSAFE;
+		}
 
 		if (odp_pktout_queue_config(pktio->handle, &pktout_param) < 0) {
 			ODPH_ERR("Error configuring packet I/O output queues (%s)\n", pktio->name);
 			return false;
 		}
 
-		if (!config->is_dir_rx && config->mode == ORDERED) {
+		if (config->is_hashed_tx) {
 			if (odp_pktout_event_queue(pktio->handle, pktio->out_ev_qs,
 						   pktio->num_tx_qs) != (int)pktio->num_tx_qs) {
 				ODPH_ERR("Error querying packet I/O output event queue (%s)\n",
@@ -1491,7 +1511,7 @@ static inline void check_ipsec_status_ev(odp_event_t ev, stats_t *stats)
 static int process_packets(void *args)
 {
 	thread_config_t *config = args;
-	config->thr_idx = odp_thread_id();
+	int thr_idx = odp_thread_id();
 	odp_event_t evs[MAX_BURST], ev;
 	ops_t ops = config->prog_config->ops;
 	uint32_t cnt;
@@ -1501,6 +1521,9 @@ static int process_packets(void *args)
 	odph_table_t fwd_tbl = config->prog_config->fwd_tbl;
 	stats_t *stats = &config->stats;
 
+	ifs.is_hashed_tx = config->prog_config->is_hashed_tx;
+	ifs.q_idx = thr_idx % config->prog_config->num_output_qs;
+	config->thr_idx = thr_idx;
 	odp_barrier_wait(&config->prog_config->init_barrier);
 
 	while (odp_atomic_load_u32(&is_running)) {
