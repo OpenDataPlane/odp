@@ -819,8 +819,6 @@ static odp_bool_t setup_pktios(prog_config_t *config)
 		pktio->num_tx_qs = config->num_output_qs;
 		odp_pktout_queue_param_init(&pktout_param);
 		pktout_param.num_queues = pktio->num_tx_qs;
-		pktout_param.op_mode = config->num_thrs > (int)pktio->num_tx_qs ?
-			ODP_PKTIO_OP_MT : ODP_PKTIO_OP_MT_UNSAFE;
 
 		if (odp_pktout_queue_config(pktio->handle, &pktout_param) < 0) {
 			ODPH_ERR("Error configuring packet I/O output queues (%s)\n", pktio->name);
