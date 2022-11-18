@@ -21,6 +21,7 @@
 
 #define DEFAULT_SEG_SIZE 1024U
 #define ROUNDS 1000000
+#define DEFAULT_WAIT_NS ODP_TIME_SEC_IN_NS
 #define COMPL_DELIMITER ","
 /* For now, a static maximum amount of input segments */
 #define MAX_NUM_IN_SEGS 64
@@ -51,6 +52,7 @@ typedef struct test_config_t {
 	int seg_type;
 	int num_rounds;
 	int dma_rounds;
+	uint64_t wait_ns;
 
 	struct {
 		int num_modes;
@@ -104,6 +106,7 @@ static void set_option_defaults(test_config_t *config)
 	config->num_in_seg = 1;
 	config->seg_size = DEFAULT_SEG_SIZE;
 	config->num_rounds = ROUNDS;
+	config->wait_ns = DEFAULT_WAIT_NS;
 	config->compl_modes.compl_mask = ODP_DMA_COMPL_SYNC;
 }
 
@@ -172,6 +175,8 @@ static void print_usage(void)
 	       "                                1: event\n"
 	       "  -r, --num_rounds          Number of times to run the test scenario. %d by\n"
 	       "                            default.\n"
+	       "  -w, --wait_nsec           Number of nanoseconds to wait for completion events.\n"
+	       "                            1 second (1000000000) by default.\n"
 	       "  -h, --help                This help.\n"
 	       "\n",
 	       MAX_NUM_IN_SEGS, ROUNDS);
@@ -254,11 +259,12 @@ static int parse_options(int argc, char **argv, test_config_t *config)
 		{ "in_seg_type", required_argument, NULL, 'T' },
 		{ "compl_modes", required_argument, NULL, 'm' },
 		{ "num_rounds", required_argument, NULL, 'r' },
+		{ "wait_nsec", required_argument, NULL, 'w' },
 		{ "help", no_argument, NULL, 'h' },
 		{ NULL, 0, NULL, 0 }
 	};
 
-	static const char *shortopts = "t:g:i:s:T:m:r:h";
+	static const char *shortopts = "t:g:i:s:T:m:r:w:h";
 
 	set_option_defaults(config);
 
@@ -289,6 +295,9 @@ static int parse_options(int argc, char **argv, test_config_t *config)
 			break;
 		case 'r':
 			config->num_rounds = atoi(optarg);
+			break;
+		case 'w':
+			config->wait_ns = atoll(optarg);
 			break;
 		case 'h':
 		default:
@@ -854,7 +863,7 @@ static void build_wait_list(const test_config_t *config, odp_dma_compl_param_t c
 static inline int wait_dma_transfers_ready(test_config_t *config, compl_wait_entry_t list[])
 {
 	odp_event_t ev;
-	const uint64_t wait_time = odp_schedule_wait_time(ODP_TIME_SEC_IN_NS * 5U);
+	const uint64_t wait_time = odp_schedule_wait_time(config->wait_ns);
 	int done = 0;
 
 	for (int i = 0; i < config->dma_rounds; ++i) {
