@@ -19,6 +19,7 @@
 
 #include <odp_api.h>
 #include <odp/helper/odph_api.h>
+#include <libconfig.h>
 
 #define PROG_NAME "odp_ipsecfwd"
 #define SHORT_PROG_NAME "ipsfwd"
@@ -105,6 +106,17 @@ typedef struct ODP_ALIGNED_CACHE {
 	uint8_t pktio;
 } thread_config_t;
 
+typedef struct {
+	odp_ipsec_sa_param_t sa_param;
+	char cipher_key[65U];
+	char cipher_key_extra[5U];
+	char auth_key[65U];
+	char auth_key_extra[5U];
+	odp_u32be_t lkp_dst_ip;
+	odp_u32be_t src_ip;
+	odp_u32be_t dst_ip;
+} sa_config_t;
+
 typedef uint32_t (*rx_fn_t)(thread_config_t *config, odp_event_t evs[], int num);
 typedef void (*ipsec_fn_t)(odp_packet_t pkts[], int num, odph_table_t fwd_tbl, stats_t *stats);
 typedef void (*drain_fn_t)(prog_config_t *config);
@@ -123,9 +135,9 @@ typedef struct prog_config_s {
 	fwd_entry_t fwd_entries[MAX_FWDS];
 	odp_queue_t sa_qs[MAX_SA_QUEUES];
 	pktio_t pktios[MAX_IFS];
+	sa_config_t default_cfg;
 	ops_t ops;
-	char *sa_conf_file;
-	char *fwd_conf_file;
+	char *conf_file;
 	odp_instance_t odp_instance;
 	odp_queue_t compl_q;
 	odp_pool_t pktio_pool;
@@ -203,6 +215,7 @@ static __thread pkt_ifs_t ifs;
 static void init_config(prog_config_t *config)
 {
 	memset(config, 0, sizeof(*config));
+	odp_ipsec_sa_param_init(&config->default_cfg.sa_param);
 	config->compl_q = ODP_QUEUE_INVALID;
 	config->pktio_pool = ODP_POOL_INVALID;
 	config->num_input_qs = 1;
@@ -315,14 +328,50 @@ static void print_usage(void)
 	       "Simple IPsec performance tester. Forward and process plain and ipsec packets.\n"
 	       "\n"
 	       "Examples:\n"
-	       "    %s -i ens9f1 -s /etc/odp/sa.conf -f /etc/odp/fwd.conf\n"
+	       "    %s -i ens9f1 -C /etc/odp/ipsecfwd.conf\n"
 	       "\n"
-	       "    With sa.conf containing, for example:\n"
-	       "        0 222 192.168.1.10 192.168.1.16 4 jWnZr4t7w!zwC*F- 0 2"
-	       " n2r5u7x!A%%D*G-KaPdSg 0 12\n"
+	       "    With ipsecfwd.conf containing, for example:\n"
+	       "        default: {\n"
+	       "            dir = 1\n"
+	       "            proto = 0\n"
+	       "            mode = 0\n"
+	       "            crypto: {\n"
+	       "                cipher_alg = 4\n"
+	       "                cipher_key = \"jWnZr4t7w!zwC*F-\"\n"
+	       "                auth_alg = 2\n"
+	       "                auth_key = \"n2r5u7x!A%%D*\"\n"
+	       "                icv_len = 12\n"
+	       "            };\n"
+	       "        };\n"
 	       "\n"
-	       "    With fwd.conf containing, for example:\n"
-	       "        192.168.1.0/24 ens9f1 aa:bb:cc:dd:11:22\n"
+	       "        sa: (\n"
+	       "            {\n"
+	       "                spi = 1337\n"
+	       "                outbound: {\n"
+	       "                    tunnel: {\n"
+	       "                        src_addr = \"192.168.1.10\"\n"
+	       "                        dst_addr = \"192.168.1.16\"\n"
+	       "                    };\n"
+	       "                };\n"
+	       "            },\n"
+	       "            {\n"
+	       "                spi = 1338\n"
+	       "                outbound: {\n"
+	       "                    tunnel: {\n"
+	       "                        src_addr = \"192.168.3.110\"\n"
+	       "                        dst_addr = \"192.168.3.116\"\n"
+	       "                    };\n"
+	       "                };\n"
+	       "            }\n"
+	       "        );\n"
+	       "\n"
+	       "        fwd: (\n"
+	       "            {\n"
+	       "                prefix: \"192.168.1.0/24\"\n"
+	       "                if: \"ens9f1\"\n"
+	       "                dst_mac: \"00:00:05:00:07:00\"\n"
+	       "            }\n"
+	       "        );\n"
 	       "\n"
 	       "Usage: %s [options]\n"
 	       "\n"
@@ -336,39 +385,35 @@ static void print_usage(void)
 	       "  -m, --mode          Queueing mode.\n"
 	       "                          0: ordered (default)\n"
 	       "                          1: parallel\n"
-	       "  -s, --sa            SA configuration file. Individual SA configuration is\n"
-	       "                      expected to be within a single line, values whitespace\n"
-	       "                      separated:\n"
+	       "  -C, --conf          Configuration file. 'libconfig' syntax is expected.\n"
+	       "                      SA configuration supports default fallback, i.e.\n"
+	       "                      individual SA configuration blocks may omit some\n"
+	       "                      parameters and instead set these once in default block\n"
+	       "                      which then are used to fill missing parameters. The only\n"
+	       "                      required argument for an SA is the 'spi' parameter.\n"
+	       "                      Individual SA parameter blocks are expected to be in\n"
+	       "                      'sa'-named list. Parameter naming follows API\n"
+	       "                      specification, see 'odp_ipsec_sa_param_t' for parameter\n"
+	       "                      names and hierarchy. Traffic is mapped to SAs based on UDP\n"
+	       "                      port: the port is used as the SPI. For forwarding entries,\n"
+	       "                      individual parameter blocks are similarly expected to be\n"
+	       "                      in 'fwd'-named list. With forwarding entries, every\n"
+	       "                      parameter is always required and interfaces present in\n"
+	       "                      forwarding entries should be one of the interfaces passed\n"
+	       "                      with '--interfaces' option. See example above for\n"
+	       "                      potential SA and forwarding configuration.\n"
 	       "\n"
-	       "                          <line in file> Dir SPI TunSrcIPv4 TunDstIPv4"
-	       " CipherAlgoIdx CipherKey CipherKeyExtra AuthAlgIdx AuthKey AuthKeyExtra ICVLen\n"
-	       "\n"
-	       "                      With combined algorithms, authentication data is ignored.\n"
-	       "                      Traffic is mapped to SAs based on UDP port: the port is\n"
-	       "                      used as the SPI. Non-zero Dir value declares an outbound\n"
-	       "                      SA whereas zero Dir value declares an inbound SA.\n"
-	       "\n"
-	       "                      Supported cipher and authentication algorithms:\n",
+	       "                      Supported cipher and authentication algorithms for SAs:\n",
 	       PROG_NAME, PROG_NAME, MIN(pool_capa.pkt.max_num, PKT_CNT),
 	       MIN(pool_capa.pkt.max_len, PKT_SIZE));
 	print_supported_algos(&ipsec_capa);
-	printf("  -f, --fwd_table     Forwarding configuration file. Individual forwarding\n"
-	       "                      configuration is expected to be within a single line,\n"
-	       "                      values whitespace separated:\n"
-	       "\n"
-	       "                          <line in file> IPv4Prefix/MaskLen NetIf DstMac\n"
-	       "\n"
-	       "                      IPv4Prefix and MaskLen define a matchable prefix and NetIf\n"
-	       "                      and DstMac define the outgoing interface and destination\n"
-	       "                      MAC address for a match. NetIf should be one of the\n"
-	       "                      interfaces passed with \"--interfaces\" option\n"
-	       "  -I, --num_input_qs  Input queue count. 1 by default.\n"
+	printf("  -I, --num_input_qs  Input queue count. 1 by default.\n"
 	       "  -S, --num_sa_qs     SA queue count. 1 by default.\n"
 	       "  -O, --num_output_qs Output queue count. 1 by default.\n"
 	       "  -d, --direct_rx     Use direct RX. Interfaces will be polled by workers\n"
-	       "                      directly. \"--mode\", \"--num_input_qs\" and\n"
-	       "                      \"--num_output_qs\" options are ignored, input and output\n"
-	       "                      queue counts will match worker count.\n"
+	       "                      directly. '--mode', '--num_input_qs' and '--num_output_qs'\n"
+	       "                      options are ignored, input and output queue counts will\n"
+	       "                      match worker count.\n"
 	       "  -h, --help          This help.\n"
 	       "\n");
 }
@@ -949,25 +994,206 @@ static odp_bool_t create_sa_dest_queues(odp_ipsec_capability_t *ipsec_capa,
 	return true;
 }
 
-static void create_sa_entry(uint32_t dir, uint32_t spi, const char *src_ip_str,
-			    const char *dst_ip_str, int cipher_idx, uint8_t *cipher_key,
-			    uint8_t *cipher_key_extra, int auth_idx, uint8_t *auth_key,
-			    uint8_t *auth_key_extra, uint32_t icv_len, uint32_t ar_ws,
-			    uint32_t max_num_sa, prog_config_t *config)
+static void parse_crypto(config_setting_t *cfg, sa_config_t *config)
 {
-	uint32_t src_ip, dst_ip;
-	odp_ipsec_sa_param_t sa_param;
-	odp_ipsec_crypto_param_t crypto_param;
+	int val;
+	const char *val_str;
+	config_setting_t *cs = config_setting_lookup(cfg, "crypto");
+
+	if (cs == NULL)
+		return;
+
+	if (config_setting_lookup_int(cs, "cipher_alg", &val) == CONFIG_TRUE)
+		config->sa_param.crypto.cipher_alg = val;
+
+	if (config_setting_lookup_string(cs, "cipher_key", &val_str) == CONFIG_TRUE) {
+		strcpy(config->cipher_key, val_str);
+		config->sa_param.crypto.cipher_key.data = (uint8_t *)config->cipher_key;
+		config->sa_param.crypto.cipher_key.length =
+			strlen((const char *)config->cipher_key);
+	}
+
+	if (config_setting_lookup_string(cs, "cipher_key_extra", &val_str) == CONFIG_TRUE) {
+		strcpy(config->cipher_key_extra, val_str);
+		config->sa_param.crypto.cipher_key_extra.data =
+			(uint8_t *)config->cipher_key_extra;
+		config->sa_param.crypto.cipher_key_extra.length =
+			strlen((const char *)config->cipher_key_extra);
+	}
+
+	if (config_setting_lookup_int(cs, "auth_alg", &val) == CONFIG_TRUE)
+		config->sa_param.crypto.auth_alg = val;
+
+	if (config_setting_lookup_string(cs, "auth_key", &val_str) == CONFIG_TRUE) {
+		strcpy(config->auth_key, val_str);
+		config->sa_param.crypto.auth_key.data = (uint8_t *)config->auth_key;
+		config->sa_param.crypto.auth_key.length = strlen((const char *)config->auth_key);
+	}
+
+	if (config_setting_lookup_string(cs, "auth_key_extra", &val_str) == CONFIG_TRUE) {
+		strcpy(config->auth_key_extra, val_str);
+		config->sa_param.crypto.auth_key_extra.data = (uint8_t *)config->auth_key_extra;
+		config->sa_param.crypto.auth_key_extra.length =
+			strlen((const char *)config->auth_key_extra);
+	}
+
+	if (config_setting_lookup_int(cs, "icv_len", &val) == CONFIG_TRUE)
+		config->sa_param.crypto.icv_len = val;
+}
+
+static void parse_opt(config_setting_t *cfg, sa_config_t *config)
+{
+	int val;
+	config_setting_t *cs = config_setting_lookup(cfg, "opt");
+
+	if (cs == NULL)
+		return;
+
+	if (config_setting_lookup_int(cs, "esn", &val) == CONFIG_TRUE)
+		config->sa_param.opt.esn = val;
+
+	if (config_setting_lookup_int(cs, "udp_encap", &val) == CONFIG_TRUE)
+		config->sa_param.opt.udp_encap = val;
+
+	if (config_setting_lookup_int(cs, "copy_dscp", &val) == CONFIG_TRUE)
+		config->sa_param.opt.copy_dscp = val;
+
+	if (config_setting_lookup_int(cs, "copy_flabel", &val) == CONFIG_TRUE)
+		config->sa_param.opt.copy_flabel = val;
+
+	if (config_setting_lookup_int(cs, "copy_df", &val) == CONFIG_TRUE)
+		config->sa_param.opt.copy_df = val;
+
+	if (config_setting_lookup_int(cs, "dec_ttl", &val) == CONFIG_TRUE)
+		config->sa_param.opt.dec_ttl = val;
+}
+
+static void parse_limits(config_setting_t *cfg, sa_config_t *config)
+{
+	config_setting_t *cs = config_setting_lookup(cfg, "lifetime"), *soft, *hard;
+	long long val;
+
+	if (cs == NULL)
+		return;
+
+	soft = config_setting_lookup(cs, "soft_limit");
+	hard = config_setting_lookup(cs, "hard_limit");
+
+	if (soft != NULL) {
+		if (config_setting_lookup_int64(soft, "bytes", &val) == CONFIG_TRUE)
+			config->sa_param.lifetime.soft_limit.bytes = val;
+
+		if (config_setting_lookup_int64(soft, "packets", &val) == CONFIG_TRUE)
+			config->sa_param.lifetime.soft_limit.packets = val;
+	}
+
+	if (hard != NULL) {
+		if (config_setting_lookup_int64(hard, "bytes", &val) == CONFIG_TRUE)
+			config->sa_param.lifetime.hard_limit.bytes = val;
+
+		if (config_setting_lookup_int64(hard, "packets", &val) == CONFIG_TRUE)
+			config->sa_param.lifetime.hard_limit.packets = val;
+	}
+}
+
+static void parse_inbound(config_setting_t *cfg, sa_config_t *config)
+{
+	config_setting_t *cs = config_setting_lookup(cfg, "inbound");
+	int val;
+	const char *val_str;
+
+	if (cs == NULL)
+		return;
+
+	if (config_setting_lookup_int(cs, "lookup_mode", &val) == CONFIG_TRUE)
+		config->sa_param.inbound.lookup_mode = val;
+
+	if (config_setting_lookup_string(cs, "lookup_dst_addr", &val_str) == CONFIG_TRUE) {
+		odph_ipv4_addr_parse(&config->lkp_dst_ip, val_str);
+		config->lkp_dst_ip = odp_cpu_to_be_32(config->lkp_dst_ip);
+		config->sa_param.inbound.lookup_param.dst_addr = &config->lkp_dst_ip;
+	}
+
+	if (config_setting_lookup_int(cs, "antireplay_ws", &val) == CONFIG_TRUE)
+		config->sa_param.inbound.antireplay_ws = val;
+
+	if (config_setting_lookup_int(cs, "reassembly_en", &val) == CONFIG_TRUE)
+		config->sa_param.inbound.reassembly_en = val;
+}
+
+static void parse_outbound(config_setting_t *cfg, sa_config_t *config)
+{
+	config_setting_t *cs = config_setting_lookup(cfg, "outbound"), *tunnel;
+	const char *val_str;
+	int val;
+
+	if (cs == NULL)
+		return;
+
+	tunnel = config_setting_lookup(cs, "tunnel");
+
+	if (tunnel != NULL) {
+		if (config_setting_lookup_string(tunnel, "src_addr", &val_str) == CONFIG_TRUE) {
+			odph_ipv4_addr_parse(&config->src_ip, val_str);
+			config->src_ip = odp_cpu_to_be_32(config->src_ip);
+			config->sa_param.outbound.tunnel.ipv4.src_addr = &config->src_ip;
+		}
+
+		if (config_setting_lookup_string(tunnel, "dst_addr", &val_str) == CONFIG_TRUE) {
+			odph_ipv4_addr_parse(&config->dst_ip, val_str);
+			config->dst_ip = odp_cpu_to_be_32(config->dst_ip);
+			config->sa_param.outbound.tunnel.ipv4.dst_addr = &config->dst_ip;
+		}
+
+		if (config_setting_lookup_int(tunnel, "dscp", &val) == CONFIG_TRUE)
+			config->sa_param.outbound.tunnel.ipv4.dscp = val;
+
+		if (config_setting_lookup_int(tunnel, "df", &val) == CONFIG_TRUE)
+			config->sa_param.outbound.tunnel.ipv4.df = val;
+
+		if (config_setting_lookup_int(tunnel, "ttl", &val) == CONFIG_TRUE)
+			config->sa_param.outbound.tunnel.ipv4.ttl = val;
+	}
+
+	if (config_setting_lookup_int(cs, "frag_mode", &val) == CONFIG_TRUE)
+		config->sa_param.outbound.frag_mode = val;
+
+	if (config_setting_lookup_int(cs, "mtu", &val) == CONFIG_TRUE)
+		config->sa_param.outbound.mtu = val;
+}
+
+static void parse_sa_entry(config_setting_t *cfg, sa_config_t *config)
+{
+	int val;
+
+	if (config_setting_lookup_int(cfg, "dir", &val) == CONFIG_TRUE)
+		config->sa_param.dir = val;
+
+	if (config_setting_lookup_int(cfg, "proto", &val) == CONFIG_TRUE)
+		config->sa_param.proto = val;
+
+	if (config_setting_lookup_int(cfg, "mode", &val) == CONFIG_TRUE)
+		config->sa_param.mode = val;
+
+	if (config_setting_lookup_int(cfg, "spi", &val) == CONFIG_TRUE)
+		config->sa_param.spi = val;
+
+	parse_crypto(cfg, config);
+	parse_opt(cfg, config);
+	parse_limits(cfg, config);
+	parse_inbound(cfg, config);
+	parse_outbound(cfg, config);
+}
+
+static void create_sa_entry(odp_ipsec_sa_param_t *sa_param, prog_config_t *config,
+			    uint32_t max_num_sa)
+{
+	uint32_t dir = sa_param->dir;
+	uint32_t spi = sa_param->spi;
 	odp_ipsec_sa_t sa;
 
 	if (config->num_sas == max_num_sa) {
 		ODPH_ERR("Maximum number of SAs parsed (%u), ignoring rest\n", max_num_sa);
-		return;
-	}
-
-	if (odph_ipv4_addr_parse(&src_ip, src_ip_str) < 0 ||
-	    odph_ipv4_addr_parse(&dst_ip, dst_ip_str) < 0) {
-		ODPH_ERR("Error parsing IP addresses for SA %u\n", spi);
 		return;
 	}
 
@@ -981,37 +1207,8 @@ static void create_sa_entry(uint32_t dir, uint32_t spi, const char *src_ip_str,
 		return;
 	}
 
-	src_ip = odp_cpu_to_be_32(src_ip);
-	dst_ip = odp_cpu_to_be_32(dst_ip);
-	odp_ipsec_sa_param_init(&sa_param);
-	sa_param.proto = ODP_IPSEC_ESP;
-	sa_param.mode = ODP_IPSEC_MODE_TUNNEL;
-	sa_param.spi = spi;
-	sa_param.dest_queue = config->sa_qs[config->num_sas % config->num_sa_qs];
-
-	if (dir > 0U) {
-		sa_param.dir = ODP_IPSEC_DIR_OUTBOUND;
-		sa_param.outbound.tunnel.ipv4.src_addr = &src_ip;
-		sa_param.outbound.tunnel.ipv4.dst_addr = &dst_ip;
-	} else {
-		sa_param.dir = ODP_IPSEC_DIR_INBOUND;
-		sa_param.inbound.lookup_mode = ODP_IPSEC_LOOKUP_DISABLED;
-		sa_param.inbound.antireplay_ws = ar_ws;
-	}
-
-	crypto_param.cipher_alg = cipher_idx;
-	crypto_param.cipher_key.data = cipher_key;
-	crypto_param.cipher_key.length = strlen((const char *)cipher_key);
-	crypto_param.cipher_key_extra.data = cipher_key_extra;
-	crypto_param.cipher_key_extra.length = strlen((const char *)cipher_key_extra);
-	crypto_param.auth_alg = auth_idx;
-	crypto_param.auth_key.data = auth_key;
-	crypto_param.auth_key.length = strlen((const char *)auth_key);
-	crypto_param.auth_key_extra.data = auth_key_extra;
-	crypto_param.auth_key_extra.length = strlen((const char *)auth_key_extra);
-	crypto_param.icv_len = icv_len;
-	sa_param.crypto = crypto_param;
-	sa = odp_ipsec_sa_create(&sa_param);
+	sa_param->dest_queue = config->sa_qs[config->num_sas % config->num_sa_qs];
+	sa = odp_ipsec_sa_create(sa_param);
 
 	if (sa == ODP_IPSEC_SA_INVALID) {
 		ODPH_ERR("Error creating SA handle for SA %u\n", spi);
@@ -1023,18 +1220,45 @@ static void create_sa_entry(uint32_t dir, uint32_t spi, const char *src_ip_str,
 	++config->num_sas;
 }
 
-static void parse_sas(prog_config_t *config)
+static void parse_and_create_sa_entries(config_t *cfg, prog_config_t *config, uint32_t max_num_sa)
+{
+	config_setting_t *cs;
+	int count;
+
+	cs = config_lookup(cfg, "default");
+
+	if (cs != NULL)
+		parse_sa_entry(cs, &config->default_cfg);
+
+	cs = config_lookup(cfg, "sa");
+
+	if (cs == NULL)
+		return;
+
+	count = config_setting_length(cs);
+
+	for (int i = 0; i < count; i++) {
+		sa_config_t sa_cfg;
+		config_setting_t *sa;
+		int val;
+
+		sa_cfg = config->default_cfg;
+		sa = config_setting_get_elem(cs, i);
+
+		if (sa == NULL)
+			continue;
+
+		if (config_setting_lookup_int(sa, "spi", &val) == CONFIG_TRUE) {
+			parse_sa_entry(sa, &sa_cfg);
+			create_sa_entry(&sa_cfg.sa_param, config, max_num_sa);
+		}
+	}
+}
+
+static void parse_sas(config_t *cfg, prog_config_t *config)
 {
 	odp_ipsec_capability_t ipsec_capa;
-	FILE *file;
-	int cipher_idx, auth_idx;
-	uint32_t ar_ws, max_num_sa, dir, spi, icv_len;
-	char src_ip[16U] = { 0 }, dst_ip[16U] = { 0 };
-	uint8_t cipher_key[65U] = { 0U }, cipher_key_extra[5U] = { 0U }, auth_key[65U] = { 0U },
-	auth_key_extra[5U] = { 0U };
-
-	if (config->sa_conf_file == NULL)
-		return;
+	uint32_t max_num_sa;
 
 	if (odp_ipsec_capability(&ipsec_capa) < 0) {
 		ODPH_ERR("Error querying IPsec capabilities\n");
@@ -1047,24 +1271,8 @@ static void parse_sas(prog_config_t *config)
 	if (!config->is_dir_rx && !create_sa_dest_queues(&ipsec_capa, config))
 		return;
 
-	file = fopen(config->sa_conf_file, "r");
-
-	if (file == NULL) {
-		ODPH_ERR("Error opening SA configuration file: %s\n", strerror(errno));
-		return;
-	}
-
-	ar_ws = MIN(32U, ipsec_capa.max_antireplay_ws);
 	max_num_sa = MIN(MAX_SAS, ipsec_capa.max_num_sa);
-
-	while (fscanf(file, "%u%u%s%s%d%s%s%d%s%s%u", &dir, &spi, src_ip, dst_ip,
-		      &cipher_idx, cipher_key, cipher_key_extra, &auth_idx, auth_key,
-		      auth_key_extra, &icv_len) == 11)
-		create_sa_entry(!!dir, spi, src_ip, dst_ip, cipher_idx, cipher_key,
-				cipher_key_extra, auth_idx, auth_key, auth_key_extra, icv_len,
-				ar_ws, max_num_sa, config);
-
-	(void)fclose(file);
+	parse_and_create_sa_entries(cfg, config, max_num_sa);
 }
 
 static const pktio_t *get_pktio(const char *iface, const prog_config_t *config)
@@ -1077,12 +1285,14 @@ static const pktio_t *get_pktio(const char *iface, const prog_config_t *config)
 	return NULL;
 }
 
-static void create_fwd_table_entry(const char *dst_ip_str, const char *iface,
-				   const char *dst_mac_str, uint8_t mask, prog_config_t *config)
+static void create_fwd_table_entry(config_setting_t *cfg, prog_config_t *config)
 {
-	fwd_entry_t *entry;
+	const char *val_str;
+	char dst_ip_str[16U] = { 0 };
+	uint32_t mask, dst_ip;
 	odph_ethaddr_t dst_mac;
-	uint32_t dst_ip;
+	const pktio_t *pktio = NULL;
+	fwd_entry_t *entry;
 	odph_iplookup_prefix_t prefix;
 
 	if (config->num_fwds == MAX_FWDS) {
@@ -1091,50 +1301,69 @@ static void create_fwd_table_entry(const char *dst_ip_str, const char *iface,
 		return;
 	}
 
+	if (config_setting_lookup_string(cfg, "prefix", &val_str) == CONFIG_TRUE) {
+		if (sscanf(val_str, "%[^/]/%u", dst_ip_str, &mask) != 2) {
+			ODPH_ERR("Error parsing IP and subnet mask for forwarding entry\n");
+			return;
+		}
+
+		if (odph_ipv4_addr_parse(&dst_ip, dst_ip_str) < 0) {
+			ODPH_ERR("Syntax error in IP address for forwarding entry\n");
+			return;
+		}
+	} else {
+		return;
+	}
+
+	if (config_setting_lookup_string(cfg, "if", &val_str) == CONFIG_TRUE) {
+		pktio = get_pktio(val_str, config);
+
+		if (pktio == NULL) {
+			ODPH_ERR("Error parsing next interface for forwarding entry\n");
+			return;
+		}
+	} else {
+		return;
+	}
+
+	if (config_setting_lookup_string(cfg, "dst_mac", &val_str) == CONFIG_TRUE) {
+		if (odph_eth_addr_parse(&dst_mac, val_str) < 0) {
+			ODPH_ERR("Syntax error in destination MAC for forwarding entry\n");
+			return;
+		}
+	} else {
+		return;
+	}
+
 	entry = &config->fwd_entries[config->num_fwds];
-
-	if (odph_eth_addr_parse(&dst_mac, dst_mac_str) < 0 ||
-	    odph_ipv4_addr_parse(&dst_ip, dst_ip_str) < 0) {
-		ODPH_ERR("Error parsing MAC and IP addresses for forwarding entry\n");
-		return;
-	}
-
-	entry->pktio = get_pktio(iface, config);
-
-	if (entry->pktio == NULL) {
-		ODPH_ERR("Invalid interface in forwarding entry: %s\n", iface);
-		return;
-	}
-
 	entry->dst_mac = dst_mac;
+	entry->pktio = pktio;
 	prefix.ip = dst_ip;
 	prefix.cidr = mask;
 	entry->prefix = prefix;
 	++config->num_fwds;
 }
 
-static void parse_fwd_table(prog_config_t *config)
+static void parse_fwd_table(config_t *cfg, prog_config_t *config)
 {
-	FILE *file;
-	char dst_ip[16U] = { 0 }, iface[64U] = { 0 }, dst_mac[18U] = { 0 };
-	uint32_t mask;
+	config_setting_t *cs;
+	int count;
 
-	if (config->fwd_conf_file == NULL) {
-		ODPH_ERR("Invalid forwarding configuration file\n");
+	cs = config_lookup(cfg, "fwd");
+
+	if (cs == NULL)
 		return;
+
+	count = config_setting_length(cs);
+
+	for (int i = 0; i < count; i++) {
+		config_setting_t *fwd = config_setting_get_elem(cs, i);
+
+		if (fwd == NULL)
+			continue;
+
+		create_fwd_table_entry(fwd, config);
 	}
-
-	file = fopen(config->fwd_conf_file, "r");
-
-	if (file == NULL) {
-		ODPH_ERR("Error opening forwarding configuration file: %s\n", strerror(errno));
-		return;
-	}
-
-	while (fscanf(file, " %[^/]/%u%s%s", dst_ip, &mask, iface, dst_mac) == 4)
-		create_fwd_table_entry(dst_ip, iface, dst_mac, mask, config);
-
-	(void)fclose(file);
 }
 
 static parse_result_t check_options(prog_config_t *config)
@@ -1149,11 +1378,6 @@ static parse_result_t check_options(prog_config_t *config)
 	if (config->num_ifs == 0U) {
 		ODPH_ERR("Invalid number of interfaces: %u (min: 1, max: %u)\n", config->num_ifs,
 			 MAX_IFS);
-		return PRS_NOK;
-	}
-
-	if (config->sa_conf_file != NULL && config->num_sas == 0U) {
-		ODPH_ERR("Invalid SA configuration\n");
 		return PRS_NOK;
 	}
 
@@ -1198,24 +1422,24 @@ static parse_result_t check_options(prog_config_t *config)
 static parse_result_t parse_options(int argc, char **argv, prog_config_t *config)
 {
 	int opt, long_index;
+	config_t cfg;
 
 	static const struct option longopts[] = {
-		{ "interfaces", required_argument, NULL, 'i'},
-		{ "num_pkts", required_argument, NULL, 'n'},
-		{ "pkt_len", required_argument, NULL, 'l'},
+		{ "interfaces", required_argument, NULL, 'i' },
+		{ "num_pkts", required_argument, NULL, 'n' },
+		{ "pkt_len", required_argument, NULL, 'l' },
 		{ "count", required_argument, NULL, 'c' },
 		{ "mode", required_argument, NULL, 'm' },
-		{ "sa", required_argument, NULL, 's'},
-		{ "fwd_table", required_argument, NULL, 'f' },
+		{ "conf", required_argument, NULL, 'C' },
 		{ "num_input_qs", required_argument, NULL, 'I' },
 		{ "num_sa_qs", required_argument, NULL, 'S' },
 		{ "num_output_qs", required_argument, NULL, 'O' },
-		{ "direct_rx", no_argument, NULL, 'd'},
+		{ "direct_rx", no_argument, NULL, 'd' },
 		{ "help", no_argument, NULL, 'h' },
 		{ NULL, 0, NULL, 0 }
 	};
 
-	static const char *shortopts = "i:n:l:c:m:s:f:I:S:O:dh";
+	static const char *shortopts = "i:n:l:c:m:C:I:S:O:dh";
 
 	while (true) {
 		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
@@ -1239,11 +1463,8 @@ static parse_result_t parse_options(int argc, char **argv, prog_config_t *config
 		case 'm':
 			config->mode = !!atoi(optarg);
 			break;
-		case 's':
-			config->sa_conf_file = strdup(optarg);
-			break;
-		case 'f':
-			config->fwd_conf_file = strdup(optarg);
+		case 'C':
+			config->conf_file = strdup(optarg);
 			break;
 		case 'I':
 			config->num_input_qs = atoi(optarg);
@@ -1267,8 +1488,17 @@ static parse_result_t parse_options(int argc, char **argv, prog_config_t *config
 		}
 	}
 
-	parse_sas(config);
-	parse_fwd_table(config);
+	config_init(&cfg);
+
+	if (config_read_file(&cfg, config->conf_file) == CONFIG_FALSE) {
+		ODPH_ERR("Error opening SA configuration file: %s\n",  config_error_text(&cfg));
+		config_destroy(&cfg);
+		return PRS_NOK;
+	}
+
+	parse_sas(&cfg, config);
+	parse_fwd_table(&cfg, config);
+	config_destroy(&cfg);
 
 	return check_options(config);
 }
@@ -1686,8 +1916,7 @@ static void teardown_test(const prog_config_t *config)
 	if (config->compl_q != ODP_QUEUE_INVALID)
 		(void)odp_queue_destroy(config->compl_q);
 
-	free(config->sa_conf_file);
-	free(config->fwd_conf_file);
+	free(config->conf_file);
 }
 
 static void print_stats(const prog_config_t *config)
