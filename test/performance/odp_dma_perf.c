@@ -723,6 +723,7 @@ static int run_dma_sync(test_config_t *config)
 	uint32_t trs_lengths[config->dma_rounds];
 	odp_time_t start, end;
 	uint32_t num_rounds = config->num_rounds, offset;
+	int done = 0;
 
 	config->test_case_api.trs_base_fn(config, trs_params, trs_lengths);
 	start = odp_time_local_strict();
@@ -733,8 +734,16 @@ static int run_dma_sync(test_config_t *config)
 		for (int i = 0; i < config->dma_rounds; ++i) {
 			config->test_case_api.trs_dyn_fn(config, offset, trs_lengths[i]);
 
-			if (odp_dma_transfer(config->dma_config.handle, &trs_params[i], NULL)
-			    <= 0) {
+			while (1) {
+				done = odp_dma_transfer(config->dma_config.handle, &trs_params[i],
+							NULL);
+
+				if (done > 0)
+					break;
+
+				if (done == 0)
+					continue;
+
 				ODPH_ERR("Error starting a sync DMA transfer.\n");
 				return -1;
 			}
@@ -916,7 +925,7 @@ static int run_dma_async_transfer(test_config_t *config)
 	odp_dma_transfer_param_t trs_params[config->dma_rounds];
 	uint32_t trs_lengths[config->dma_rounds];
 	odp_dma_compl_param_t compl_params[config->dma_rounds];
-	int ret = 0;
+	int ret = 0, started;
 	compl_wait_entry_t compl_wait_list[config->dma_rounds];
 	odp_time_t start, end;
 	uint32_t num_rounds = config->num_rounds, offset;
@@ -937,8 +946,16 @@ static int run_dma_async_transfer(test_config_t *config)
 		for (int i = 0; i < config->dma_rounds; ++i) {
 			config->test_case_api.trs_dyn_fn(config, offset, trs_lengths[i]);
 
-			if (odp_dma_transfer_start(config->dma_config.handle, &trs_params[i],
-						   &compl_params[i]) <= 0) {
+			while (1) {
+				started = odp_dma_transfer_start(config->dma_config.handle,
+								 &trs_params[i], &compl_params[i]);
+
+				if (started > 0)
+					break;
+
+				if (started == 0)
+					continue;
+
 				ODPH_ERR("Error starting an async DMA transfer.\n");
 				ret = -1;
 				goto out_trs_ids;
