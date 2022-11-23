@@ -401,7 +401,6 @@ static int test_schedule(int thr, test_globals_t *globals)
 	odp_time_t time;
 	odp_event_t ev;
 	odp_buffer_t buf;
-	odp_queue_t src_queue;
 	odp_queue_t dst_queue;
 	uint64_t latency;
 	uint64_t i;
@@ -417,8 +416,10 @@ static int test_schedule(int thr, test_globals_t *globals)
 
 	change_queue = globals->args.forward_mode != EVENT_FORWARD_NONE ? 1 : 0;
 
+	odp_barrier_wait(&globals->barrier);
+
 	for (i = 0; i < test_rounds; i++) {
-		ev = odp_schedule(&src_queue, ODP_SCHED_WAIT);
+		ev = odp_schedule(NULL, ODP_SCHED_WAIT);
 
 		buf = odp_buffer_from_event(ev);
 		event = odp_buffer_addr(buf);
@@ -475,6 +476,8 @@ static int test_schedule(int thr, test_globals_t *globals)
 	odp_schedule_pause();
 
 	while (1) {
+		odp_queue_t src_queue;
+
 		ev = odp_schedule(&src_queue, ODP_SCHED_NO_WAIT);
 
 		if (ev == ODP_EVENT_INVALID)
@@ -545,8 +548,6 @@ static int run_thread(void *arg ODP_UNUSED)
 				   globals))
 			return -1;
 	}
-
-	odp_barrier_wait(&globals->barrier);
 
 	if (test_schedule(thr, globals))
 		return -1;
