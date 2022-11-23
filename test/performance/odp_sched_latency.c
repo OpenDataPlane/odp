@@ -103,6 +103,7 @@ typedef struct {
 	uint64_t tot;	   /**< Total event latency. Sum of all events. */
 	uint64_t min;	   /**< Minimum event latency */
 	uint64_t max;	   /**< Maximum event latency */
+	uint64_t max_idx;  /**< Index of the maximum latency sample event */
 } test_stat_t;
 
 /** Performance test statistics (per core) */
@@ -310,8 +311,8 @@ static void print_results(test_globals_t *globals)
 		total.min = UINT64_MAX;
 
 		printf("%s priority\n"
-		       "Thread   Avg[ns]    Min[ns]    Max[ns]    Samples    Total\n"
-		       "---------------------------------------------------------------\n",
+		       "Thread   Avg[ns]    Min[ns]    Max[ns]    Samples    Total      Max idx\n"
+		       "-----------------------------------------------------------------------\n",
 		       i == HI_PRIO ? "HIGH" : "LOW");
 		for (j = 1; j <= args->cpu_count; j++) {
 			lat = &globals->core_stat[j].prio[i];
@@ -331,11 +332,11 @@ static void print_results(test_globals_t *globals)
 
 			avg = lat->events ? lat->tot / lat->sample_events : 0;
 			printf("%-8d %-10" PRIu64 " %-10" PRIu64 " "
-			       "%-10" PRIu64 " %-10" PRIu64 " %-10" PRIu64 "\n",
+			       "%-10" PRIu64 " %-10" PRIu64 " %-10" PRIu64 " %-10" PRIu64 "\n",
 			       j, avg, lat->min, lat->max, lat->sample_events,
-			       lat->events);
+			       lat->events, lat->max_idx);
 		}
-		printf("---------------------------------------------------------------\n");
+		printf("-----------------------------------------------------------------------\n");
 		if (total.sample_events == 0) {
 			printf("Total    N/A\n\n");
 			continue;
@@ -431,8 +432,10 @@ static int test_schedule(int thr, test_globals_t *globals)
 		if (event->type == SAMPLE) {
 			latency = odp_time_to_ns(time) - odp_time_to_ns(event->time_stamp);
 
-			if (latency > stats->max)
+			if (latency > stats->max) {
 				stats->max = latency;
+				stats->max_idx = stats->sample_events;
+			}
 			if (latency < stats->min)
 				stats->min = latency;
 			stats->tot += latency;
