@@ -421,14 +421,14 @@ static int test_schedule(int thr, test_globals_t *globals)
 	for (i = 0; i < test_rounds; i++) {
 		ev = odp_schedule(NULL, ODP_SCHED_WAIT);
 
+		time = odp_time_global_strict();
+
 		buf = odp_buffer_from_event(ev);
 		event = odp_buffer_addr(buf);
 
 		stats = &globals->core_stat[thr].prio[event->prio];
 
 		if (event->type == SAMPLE) {
-			time = odp_time_global_strict();
-
 			latency = odp_time_to_ns(time) - odp_time_to_ns(event->time_stamp);
 
 			if (latency > stats->max)
