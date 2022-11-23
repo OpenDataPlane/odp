@@ -70,7 +70,7 @@ typedef enum {
 
 /** Test event */
 typedef struct {
-	uint64_t ts;		/**< Send timestamp */
+	odp_time_t time_stamp;	/**< Send timestamp */
 	event_type_t type;	/**< Message type */
 	int src_idx[NUM_PRIOS]; /**< Source ODP queue */
 	int prio;		/**< Source queue priority */
@@ -398,6 +398,7 @@ static int join_groups(test_globals_t *globals, int thr)
  */
 static int test_schedule(int thr, test_globals_t *globals)
 {
+	odp_time_t time;
 	odp_event_t ev;
 	odp_buffer_t buf;
 	odp_queue_t src_queue;
@@ -425,7 +426,9 @@ static int test_schedule(int thr, test_globals_t *globals)
 		stats = &globals->core_stat[thr].prio[event->prio];
 
 		if (event->type == SAMPLE) {
-			latency = odp_time_to_ns(odp_time_global()) - event->ts;
+			time = odp_time_global_strict();
+
+			latency = odp_time_to_ns(time) - odp_time_to_ns(event->time_stamp);
 
 			if (latency > stats->max)
 				stats->max = latency;
@@ -459,7 +462,7 @@ static int test_schedule(int thr, test_globals_t *globals)
 		dst_queue = globals->queue[event->prio][dst_idx];
 
 		if (event->type == SAMPLE)
-			event->ts = odp_time_to_ns(odp_time_global());
+			event->time_stamp = odp_time_global_strict();
 
 		if (odp_queue_enq(dst_queue, ev)) {
 			ODPH_ERR("[%i] Queue enqueue failed.\n", thr);
