@@ -1750,6 +1750,8 @@ static void pktio_test_pktio_config(void)
 	CU_ASSERT(!config.reassembly.en_ipv6);
 	CU_ASSERT(config.reassembly.max_wait_time == 0);
 	CU_ASSERT(config.reassembly.max_num_frags == 2);
+	CU_ASSERT(config.flow_control.pause_rx == ODP_PKTIO_LINK_PAUSE_OFF);
+	CU_ASSERT(config.flow_control.pause_tx == ODP_PKTIO_LINK_PAUSE_OFF);
 
 	/* Indicate packet refs might be used */
 	config.pktout.bit.no_packet_refs = 0;
@@ -1823,11 +1825,13 @@ static void pktio_test_link_info(void)
 			  link_info.duplex == ODP_PKTIO_LINK_DUPLEX_HALF ||
 			  link_info.duplex == ODP_PKTIO_LINK_DUPLEX_FULL);
 		CU_ASSERT(link_info.pause_rx == ODP_PKTIO_LINK_PAUSE_UNKNOWN ||
+			  link_info.pause_rx == ODP_PKTIO_LINK_PAUSE_OFF ||
 			  link_info.pause_rx == ODP_PKTIO_LINK_PAUSE_ON ||
-			  link_info.pause_rx == ODP_PKTIO_LINK_PAUSE_OFF);
+			  link_info.pause_rx == ODP_PKTIO_LINK_PFC_ON);
 		CU_ASSERT(link_info.pause_tx == ODP_PKTIO_LINK_PAUSE_UNKNOWN ||
+			  link_info.pause_tx == ODP_PKTIO_LINK_PAUSE_OFF ||
 			  link_info.pause_tx == ODP_PKTIO_LINK_PAUSE_ON ||
-			  link_info.pause_tx == ODP_PKTIO_LINK_PAUSE_OFF);
+			  link_info.pause_tx == ODP_PKTIO_LINK_PFC_ON);
 		CU_ASSERT(link_info.status == ODP_PKTIO_LINK_STATUS_UNKNOWN ||
 			  link_info.status == ODP_PKTIO_LINK_STATUS_UP ||
 			  link_info.status == ODP_PKTIO_LINK_STATUS_DOWN);
