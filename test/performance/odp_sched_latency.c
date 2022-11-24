@@ -27,24 +27,7 @@
 #define MAX_QUEUES	  4096		/**< Maximum number of queues */
 #define MAX_GROUPS        64
 #define EVENT_POOL_SIZE	  (1024 * 1024) /**< Event pool size */
-#define TEST_ROUNDS	  10	/**< Test rounds for each thread (millions) */
 #define MAIN_THREAD	  1	/**< Thread ID performing maintenance tasks */
-
-/* Default values for command line arguments */
-#define SAMPLE_EVENT_PER_PRIO	  0 /**< Allocate a separate sample event for
-					 each priority */
-#define HI_PRIO_EVENTS		  0 /**< Number of high priority events */
-#define LO_PRIO_EVENTS		 32 /**< Number of low priority events */
-#define HI_PRIO_QUEUES		 16 /**< Number of high priority queues */
-#define LO_PRIO_QUEUES		 64 /**< Number of low priority queues */
-#define WARM_UP_ROUNDS		100 /**< Number of warm-up rounds */
-
-#define EVENTS_PER_HI_PRIO_QUEUE 0  /**< Alloc HI_PRIO_QUEUES x HI_PRIO_EVENTS
-					 events */
-#define EVENTS_PER_LO_PRIO_QUEUE 1  /**< Alloc LO_PRIO_QUEUES x LO_PRIO_EVENTS
-					 events */
-ODP_STATIC_ASSERT(HI_PRIO_QUEUES <= MAX_QUEUES, "Too many HI priority queues");
-ODP_STATIC_ASSERT(LO_PRIO_QUEUES <= MAX_QUEUES, "Too many LO priority queues");
 
 #define CACHE_ALIGN_ROUNDUP(x)\
 	((ODP_CACHE_LINE_SIZE) * \
@@ -89,6 +72,7 @@ typedef struct {
 	struct {
 		int queues;	/**< Number of scheduling queues */
 		int events;	/**< Number of events */
+		int sample_events;
 		odp_bool_t events_per_queue; /**< Allocate 'queues' x 'events'
 						  test events */
 	} prio[NUM_PRIOS];
@@ -299,12 +283,16 @@ static void print_results(test_globals_t *globals)
 	else
 		printf("  LO_PRIO events: %i\n", args->prio[LO_PRIO].events);
 
+	printf("  LO_PRIO sample events: %i\n", args->prio[LO_PRIO].sample_events);
+
 	printf("  HI_PRIO queues: %i\n", args->prio[HI_PRIO].queues);
 	if (args->prio[HI_PRIO].events_per_queue)
 		printf("  HI_PRIO event per queue: %i\n\n",
 		       args->prio[HI_PRIO].events);
 	else
-		printf("  HI_PRIO events: %i\n\n", args->prio[HI_PRIO].events);
+		printf("  HI_PRIO events: %i\n", args->prio[HI_PRIO].events);
+
+	printf("  HI_PRIO sample events: %i\n\n", args->prio[HI_PRIO].sample_events);
 
 	for (i = 0; i < NUM_PRIOS; i++) {
 		memset(&total, 0, sizeof(test_stat_t));
@@ -518,7 +506,6 @@ static int run_thread(void *arg ODP_UNUSED)
 	test_globals_t *globals;
 	test_args_t *args;
 	int thr;
-	int sample_events = 0;
 
 	thr = odp_thread_id();
 
@@ -537,16 +524,13 @@ static int run_thread(void *arg ODP_UNUSED)
 		args = &globals->args;
 
 		if (enqueue_events(HI_PRIO, args->prio[HI_PRIO].queues,
-				   args->prio[HI_PRIO].events, 1,
+				   args->prio[HI_PRIO].events, args->prio[HI_PRIO].sample_events,
 				   !args->prio[HI_PRIO].events_per_queue,
 				   globals))
 			return -1;
 
-		if (!args->prio[HI_PRIO].queues || args->sample_per_prio)
-			sample_events = 1;
-
 		if (enqueue_events(LO_PRIO, args->prio[LO_PRIO].queues,
-				   args->prio[LO_PRIO].events, sample_events,
+				   args->prio[LO_PRIO].events, args->prio[LO_PRIO].sample_events,
 				   !args->prio[LO_PRIO].events_per_queue,
 				   globals))
 			return -1;
@@ -569,7 +553,7 @@ static void usage(void)
 	       "Usage: ./odp_sched_latency [options]\n"
 	       "Optional OPTIONS:\n"
 	       "  -c, --count <number> CPU count, 0=all available, default=1\n"
-	       "  -d, --duration <number> Test duration in scheduling rounds (millions), default=%d, min=1\n"
+	       "  -d, --duration <number> Test duration in scheduling rounds (millions), default=10, min=1\n"
 	       "  -f, --forward-mode <mode> Selection of target queue\n"
 	       "               0: Random (default)\n"
 	       "               1: Incremental\n"
@@ -580,14 +564,16 @@ static void usage(void)
 	       "  -i, --isolate <mode> Select if shared or isolated groups are used. Ignored when num_group <= 0.\n"
 	       "                       0: All queues share groups (default)\n"
 	       "                       1: Separate groups for high and low priority queues. Creates 2xnum_group groups.\n"
-	       "  -l, --lo-prio-queues <number> Number of low priority scheduled queues\n"
-	       "  -t, --hi-prio-queues <number> Number of high priority scheduled queues\n"
-	       "  -m, --lo-prio-events-per-queue <number> Number of events per low priority queue\n"
-	       "  -n, --hi-prio-events-per-queue <number> Number of events per high priority queues\n"
-	       "  -o, --lo-prio-events <number> Total number of low priority events (overrides the\n"
-	       "				number of events per queue)\n"
-	       "  -p, --hi-prio-events <number> Total number of high priority events (overrides the\n"
-	       "				number of events per queue)\n"
+	       "  -l, --lo-prio-queues <number> Number of low priority scheduled queues (default=64)\n"
+	       "  -t, --hi-prio-queues <number> Number of high priority scheduled queues (default=16)\n"
+	       "  -m, --lo-prio-events-per-queue <number> Number of events per low priority queue (default=32).\n"
+	       "                                          Does not include sample event.\n"
+	       "  -n, --hi-prio-events-per-queue <number> Number of events per high priority queues (default=0)\n"
+	       "                                          Does not include sample event.\n"
+	       "  -o, --lo-prio-events <number> Total number of low priority events. Overrides the\n"
+	       "				number of events per queue, does not include sample event.\n"
+	       "  -p, --hi-prio-events <number> Total number of high priority events. Overrides the\n"
+	       "				number of events per queue, does not include sample event.\n"
 	       "  -r  --sample-per-prio Allocate a separate sample event for each priority. By default\n"
 	       "			a single sample event is used and its priority is changed after\n"
 	       "			each processing round.\n"
@@ -595,9 +581,8 @@ static void usage(void)
 	       "               0: ODP_SCHED_SYNC_PARALLEL (default)\n"
 	       "               1: ODP_SCHED_SYNC_ATOMIC\n"
 	       "               2: ODP_SCHED_SYNC_ORDERED\n"
-	       "  -w, --warm-up <number> Number of warm-up rounds, default=%d, min=1\n"
-	       "  -h, --help   Display help and exit.\n\n"
-	       , TEST_ROUNDS, WARM_UP_ROUNDS);
+	       "  -w, --warm-up <number> Number of warm-up rounds, default=100, min=1\n"
+	       "  -h, --help   Display help and exit.\n\n");
 }
 
 /**
@@ -638,16 +623,18 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 	args->forward_mode = EVENT_FORWARD_RAND;
 	args->num_group = 0;
 	args->isolate = 0;
-	args->test_rounds = TEST_ROUNDS;
-	args->warm_up_rounds = WARM_UP_ROUNDS;
+	args->test_rounds = 10;
+	args->warm_up_rounds = 100;
 	args->sync_type = ODP_SCHED_SYNC_PARALLEL;
-	args->sample_per_prio = SAMPLE_EVENT_PER_PRIO;
-	args->prio[LO_PRIO].queues = LO_PRIO_QUEUES;
-	args->prio[HI_PRIO].queues = HI_PRIO_QUEUES;
-	args->prio[LO_PRIO].events = LO_PRIO_EVENTS;
-	args->prio[HI_PRIO].events = HI_PRIO_EVENTS;
-	args->prio[LO_PRIO].events_per_queue = EVENTS_PER_LO_PRIO_QUEUE;
-	args->prio[HI_PRIO].events_per_queue = EVENTS_PER_HI_PRIO_QUEUE;
+	args->sample_per_prio = 0;
+	args->prio[LO_PRIO].queues = 64;
+	args->prio[HI_PRIO].queues = 16;
+	args->prio[LO_PRIO].events = 32;
+	args->prio[HI_PRIO].events = 0;
+	args->prio[LO_PRIO].events_per_queue = 1;
+	args->prio[HI_PRIO].events_per_queue = 0;
+	args->prio[LO_PRIO].sample_events = 0;
+	args->prio[HI_PRIO].sample_events = 1;
 
 	while (1) {
 		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
@@ -744,6 +731,9 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 		ODPH_ERR("Too many groups. Max supported %i.\n", MAX_GROUPS);
 		exit(EXIT_FAILURE);
 	}
+
+	if (args->prio[HI_PRIO].queues == 0 || args->sample_per_prio)
+		args->prio[LO_PRIO].sample_events = 1;
 }
 
 static void randomize_queues(odp_queue_t queues[], uint32_t num, uint64_t *seed)
