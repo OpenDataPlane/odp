@@ -44,6 +44,8 @@
 #define MEGAS 1000000
 #define KILOS 1000
 
+#define RETRIES 1000U
+
 typedef struct test_config_t {
 	int trs_type;
 	int trs_grn;
@@ -677,7 +679,7 @@ static void print_humanised_speed(uint64_t speed)
 		printf("%" PRIu64 " B/s\n", speed);
 }
 
-static void print_results(const test_config_t *config, uint64_t time)
+static void print_results(const test_config_t *config, uint64_t time, uint32_t retries)
 {
 	const int is_sync = config->trs_type == TRS_TYPE_SYNC;
 	const uint64_t avg_time = time / config->num_rounds;
@@ -714,6 +716,7 @@ static void print_results(const test_config_t *config, uint64_t time)
 	       "    average transfer speed:       ",
 	       config->num_rounds, avg_time);
 	print_humanised_speed(avg_speed);
+	printf("    retries with usec sleep:      %u\n", retries);
 	printf("\n=============================================\n");
 }
 
@@ -722,7 +725,7 @@ static int run_dma_sync(test_config_t *config)
 	odp_dma_transfer_param_t trs_params[config->dma_rounds];
 	uint32_t trs_lengths[config->dma_rounds];
 	odp_time_t start, end;
-	uint32_t num_rounds = config->num_rounds, offset;
+	uint32_t num_rounds = config->num_rounds, offset, retries = 0U;
 	int done = 0;
 
 	config->test_case_api.trs_base_fn(config, trs_params, trs_lengths);
@@ -741,8 +744,10 @@ static int run_dma_sync(test_config_t *config)
 				if (done > 0)
 					break;
 
-				if (done == 0)
+				if (done == 0 && retries++ < RETRIES) {
+					odp_time_wait_ns(1000U);
 					continue;
+				}
 
 				ODPH_ERR("Error starting a sync DMA transfer.\n");
 				return -1;
@@ -753,7 +758,7 @@ static int run_dma_sync(test_config_t *config)
 	}
 
 	end = odp_time_local_strict();
-	print_results(config, odp_time_diff_ns(end, start));
+	print_results(config, odp_time_diff_ns(end, start), retries);
 	return 0;
 }
 
@@ -873,6 +878,7 @@ static inline int wait_dma_transfers_ready(test_config_t *config, compl_wait_ent
 {
 	odp_event_t ev;
 	const uint64_t wait_time = odp_schedule_wait_time(config->wait_ns);
+	uint64_t start, end;
 	int done = 0;
 
 	for (int i = 0; i < config->dma_rounds; ++i) {
@@ -884,6 +890,9 @@ static inline int wait_dma_transfers_ready(test_config_t *config, compl_wait_ent
 				return -1;
 			}
 		} else {
+			start = odp_time_local_ns();
+			end = start + ODP_TIME_SEC_IN_NS;
+
 			while (1) {
 				done = odp_dma_transfer_done(config->dma_config.handle, list[i].id,
 							     NULL);
@@ -891,7 +900,7 @@ static inline int wait_dma_transfers_ready(test_config_t *config, compl_wait_ent
 				if (done > 0)
 					break;
 
-				if (done == 0)
+				if (done == 0 && odp_time_local_ns() < end)
 					continue;
 
 				ODPH_ERR("Error waiting poll completion.\n");
@@ -928,7 +937,7 @@ static int run_dma_async_transfer(test_config_t *config)
 	int ret = 0, started;
 	compl_wait_entry_t compl_wait_list[config->dma_rounds];
 	odp_time_t start, end;
-	uint32_t num_rounds = config->num_rounds, offset;
+	uint32_t num_rounds = config->num_rounds, offset, retries = 0U;
 
 	config->test_case_api.trs_base_fn(config, trs_params, trs_lengths);
 
@@ -953,8 +962,10 @@ static int run_dma_async_transfer(test_config_t *config)
 				if (started > 0)
 					break;
 
-				if (started == 0)
+				if (started == 0 && retries++ < RETRIES) {
+					odp_time_wait_ns(1000U);
 					continue;
+				}
 
 				ODPH_ERR("Error starting an async DMA transfer.\n");
 				ret = -1;
@@ -972,7 +983,7 @@ static int run_dma_async_transfer(test_config_t *config)
 	}
 
 	end = odp_time_local_strict();
-	print_results(config, odp_time_diff_ns(end, start));
+	print_results(config, odp_time_diff_ns(end, start), retries);
 
 out_compl_evs:
 	free_dma_completion_events(config, compl_params);
