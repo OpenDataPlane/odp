@@ -1,5 +1,5 @@
 /* Copyright (c) 2018, Linaro Limited
- * Copyright (c) 2019-2021, Nokia
+ * Copyright (c) 2019-2022, Nokia
  *
  * All rights reserved.
  *
@@ -16,6 +16,13 @@
 #include <odp_api.h>
 #include <odp/helper/odph_api.h>
 
+#define STAT_AVAILABLE  0x1
+#define STAT_CACHE      0x2
+#define STAT_THR_CACHE  0x4
+#define STAT_ALLOC_OPS  0x10
+#define STAT_FREE_OPS   0x20
+#define STAT_TOTAL_OPS  0x40
+
 typedef struct test_options_t {
 	uint32_t num_cpu;
 	uint32_t num_event;
@@ -24,6 +31,7 @@ typedef struct test_options_t {
 	uint32_t num_burst;
 	uint32_t data_size;
 	uint32_t cache_size;
+	uint32_t stats_mode;
 	int      pool_type;
 
 } test_options_t;
@@ -61,6 +69,14 @@ static void print_usage(void)
 	       "  -b, --burst            Maximum number of events per operation\n"
 	       "  -n, --num_burst        Number of bursts allocated/freed back-to-back\n"
 	       "  -s, --data_size        Data size in bytes\n"
+	       "  -S, --stats_mode       Pool statistics usage. Enable counters with combination of these flags:\n"
+	       "                              0: no pool statistics (default)\n"
+	       "                            0x1: available\n"
+	       "                            0x2: cache_available\n"
+	       "                            0x4: thread_cache_available\n"
+	       "                           0x10: alloc_ops\n"
+	       "                           0x20: free_ops\n"
+	       "                           0x40: total_ops\n"
 	       "  -t, --pool_type        0: Buffer pool (default)\n"
 	       "                         1: Packet pool\n"
 	       "  -C, --cache_size       Pool cache size (per thread)\n"
@@ -81,13 +97,14 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 		{"burst",      required_argument, NULL, 'b'},
 		{"num_burst",  required_argument, NULL, 'n'},
 		{"data_size",  required_argument, NULL, 's'},
+		{"stats_mode", required_argument, NULL, 'S'},
 		{"pool_type",  required_argument, NULL, 't'},
 		{"cache_size", required_argument, NULL, 'C'},
 		{"help",       no_argument,       NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+c:e:r:b:n:s:t:C:h";
+	static const char *shortopts = "+c:e:r:b:n:s:S:t:C:h";
 
 	test_options->num_cpu    = 1;
 	test_options->num_event  = 1000;
@@ -95,6 +112,7 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 	test_options->max_burst  = 100;
 	test_options->num_burst  = 1;
 	test_options->data_size  = 64;
+	test_options->stats_mode = 0;
 	test_options->pool_type  = 0;
 	test_options->cache_size = UINT32_MAX;
 
@@ -122,6 +140,9 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 			break;
 		case 's':
 			test_options->data_size = atoi(optarg);
+			break;
+		case 'S':
+			test_options->stats_mode = strtoul(optarg, NULL, 0);
 			break;
 		case 't':
 			test_options->pool_type = atoi(optarg);
@@ -186,6 +207,7 @@ static int create_pool(test_global_t *global)
 	odp_pool_capability_t pool_capa;
 	odp_pool_param_t pool_param;
 	odp_pool_t pool;
+	odp_pool_stats_opt_t stats, stats_capa;
 	uint32_t max_num, max_size, min_cache_size, max_cache_size;
 	test_options_t *test_options = &global->test_options;
 	uint32_t num_event  = test_options->num_event;
@@ -195,13 +217,29 @@ static int create_pool(test_global_t *global)
 	uint32_t num_cpu    = test_options->num_cpu;
 	uint32_t data_size  = test_options->data_size;
 	uint32_t cache_size = test_options->cache_size;
+	uint32_t stats_mode = test_options->stats_mode;
 	int packet_pool = test_options->pool_type;
+
+	stats.all = 0;
 
 	odp_pool_param_init(&pool_param);
 
 	if (cache_size == UINT32_MAX)
 		cache_size = packet_pool ? pool_param.pkt.cache_size :
 				pool_param.buf.cache_size;
+
+	if (stats_mode & STAT_AVAILABLE)
+		stats.bit.available = 1;
+	if (stats_mode & STAT_CACHE)
+		stats.bit.cache_available = 1;
+	if (stats_mode & STAT_THR_CACHE)
+		stats.bit.thread_cache_available = 1;
+	if (stats_mode & STAT_ALLOC_OPS)
+		stats.bit.alloc_ops = 1;
+	if (stats_mode & STAT_FREE_OPS)
+		stats.bit.free_ops = 1;
+	if (stats_mode & STAT_TOTAL_OPS)
+		stats.bit.total_ops = 1;
 
 	printf("\nPool performance test\n");
 	printf("  num cpu    %u\n", num_cpu);
@@ -211,6 +249,7 @@ static int create_pool(test_global_t *global)
 	printf("  num bursts %u\n", num_burst);
 	printf("  data size  %u\n", data_size);
 	printf("  cache size %u\n", cache_size);
+	printf("  stats mode 0x%x\n", stats_mode);
 	printf("  pool type  %s\n\n", packet_pool ? "packet" : "buffer");
 
 	if (odp_pool_capability(&pool_capa)) {
@@ -223,11 +262,19 @@ static int create_pool(test_global_t *global)
 		max_size       = pool_capa.pkt.max_len;
 		max_cache_size = pool_capa.pkt.max_cache_size;
 		min_cache_size = pool_capa.pkt.min_cache_size;
+		stats_capa     = pool_capa.pkt.stats;
 	} else {
 		max_num        = pool_capa.buf.max_num;
 		max_size       = pool_capa.buf.max_size;
 		max_cache_size = pool_capa.buf.max_cache_size;
 		min_cache_size = pool_capa.buf.min_cache_size;
+		stats_capa     = pool_capa.buf.stats;
+	}
+
+	if ((stats_capa.all & stats.all) != stats.all) {
+		printf("Error: requested statistics not supported (0x%" PRIx64 " / 0x%" PRIx64 ")\n",
+		       stats.all, stats_capa.all);
+		return -1;
 	}
 
 	if (cache_size < min_cache_size) {
@@ -257,13 +304,14 @@ static int create_pool(test_global_t *global)
 		pool_param.pkt.max_num    = num_event;
 		pool_param.pkt.max_len    = data_size;
 		pool_param.pkt.cache_size = cache_size;
-
 	} else {
 		pool_param.type           = ODP_POOL_BUFFER;
 		pool_param.buf.num        = num_event;
 		pool_param.buf.size       = data_size;
 		pool_param.buf.cache_size = cache_size;
 	}
+
+	pool_param.stats.all = stats.all;
 
 	pool = odp_pool_create("pool perf", &pool_param);
 
@@ -472,6 +520,56 @@ static int start_workers(test_global_t *global, odp_instance_t instance)
 	return 0;
 }
 
+static void test_stats_perf(test_global_t *global)
+{
+	odp_pool_stats_t stats;
+	odp_time_t t1, t2;
+	uint64_t nsec;
+	int i;
+	int num_thr = global->test_options.num_cpu + 1; /* workers + main thread */
+	odp_pool_t pool = global->pool;
+	double nsec_ave = 0.0;
+	const int rounds = 1000;
+
+	if (num_thr > ODP_POOL_MAX_THREAD_STATS)
+		num_thr = ODP_POOL_MAX_THREAD_STATS;
+
+	memset(&stats, 0, sizeof(odp_pool_stats_t));
+	stats.thread.first = 0;
+	stats.thread.last  = num_thr - 1;
+
+	t1 = odp_time_local_strict();
+
+	for (i = 0; i < rounds; i++) {
+		if (odp_pool_stats(pool, &stats)) {
+			printf("Error: Stats request failed on round %i\n", i);
+			break;
+		}
+	}
+
+	t2 = odp_time_local_strict();
+	nsec = odp_time_diff_ns(t2, t1);
+
+	if (i > 0)
+		nsec_ave = (double)nsec / i;
+
+	printf("Pool statistics:\n");
+	printf("  odp_pool_stats() calls   %i\n", i);
+	printf("  ave call latency         %.2f nsec\n", nsec_ave);
+	printf("  num threads              %i\n", num_thr);
+	printf("  alloc_ops                %" PRIu64 "\n", stats.alloc_ops);
+	printf("  free_ops                 %" PRIu64 "\n", stats.free_ops);
+	printf("  total_ops                %" PRIu64 "\n", stats.total_ops);
+	printf("  available                %" PRIu64 "\n", stats.available);
+	printf("  cache_available          %" PRIu64 "\n", stats.cache_available);
+	for (i = 0; i < num_thr; i++) {
+		printf("  thr[%2i] cache_available  %" PRIu64 "\n",
+		       i, stats.thread.cache_available[i]);
+	}
+
+	printf("\n");
+}
+
 static void print_stat(test_global_t *global)
 {
 	int i, num;
@@ -614,6 +712,9 @@ int main(int argc, char **argv)
 
 	/* Wait workers to exit */
 	odph_thread_join(global->thread_tbl, global->test_options.num_cpu);
+
+	if (global->test_options.stats_mode)
+		test_stats_perf(global);
 
 	print_stat(global);
 
