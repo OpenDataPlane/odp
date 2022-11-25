@@ -7,7 +7,6 @@
 #include <malloc.h>
 #include <odp_api.h>
 #include <odp/helper/odph_api.h>
-#include <CUnit/Basic.h>
 #include <odp_cunit_common.h>
 #include <unistd.h>
 
