@@ -602,6 +602,12 @@ int odp_pktio_config(odp_pktio_t hdl, const odp_pktio_config_t *config)
 		return -1;
 	}
 
+	if (config->flow_control.pause_rx != ODP_PKTIO_LINK_PAUSE_OFF ||
+	    config->flow_control.pause_tx != ODP_PKTIO_LINK_PAUSE_OFF) {
+		_ODP_ERR("Link flow control is not supported\n");
+		return -1;
+	}
+
 	lock_entry(entry);
 	if (entry->state == PKTIO_STATE_STARTED) {
 		unlock_entry(entry);
@@ -1509,6 +1515,8 @@ void odp_pktio_config_init(odp_pktio_config_t *config)
 
 	config->parser.layer = ODP_PROTO_LAYER_ALL;
 	config->reassembly.max_num_frags = 2;
+	config->flow_control.pause_rx = ODP_PKTIO_LINK_PAUSE_OFF;
+	config->flow_control.pause_tx = ODP_PKTIO_LINK_PAUSE_OFF;
 }
 
 int odp_pktio_info(odp_pktio_t hdl, odp_pktio_info_t *info)
@@ -1813,6 +1821,10 @@ int odp_pktio_capability(odp_pktio_t pktio, odp_pktio_capability_t *capa)
 	capa->reassembly.ip = false;
 	capa->reassembly.ipv4 = false;
 	capa->reassembly.ipv6 = false;
+	capa->flow_control.pause_rx = 0;
+	capa->flow_control.pfc_rx = 0;
+	capa->flow_control.pause_tx = 0;
+	capa->flow_control.pfc_tx = 0;
 
 	return ret;
 }
