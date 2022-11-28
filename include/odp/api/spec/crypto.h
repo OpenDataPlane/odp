@@ -812,7 +812,7 @@ typedef struct odp_crypto_packet_op_param_t {
 	 *  In case of encode sessions the calculated hash will be stored in
 	 *  this offset.
 	 *
-	 *  If the hash_result_not_in_auth_range session parameter is false,
+	 *  If the hash_result_in_auth_range session parameter is true,
 	 *  the hash result location may overlap auth_range. In that case the
 	 *  result location will be zeroed in decode sessions before hash
 	 *  calculation. Zeroing is not done in encode sessions.
