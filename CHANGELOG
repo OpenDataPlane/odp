@@ -1,3 +1,58 @@
+== OpenDataPlane (1.39.0.0)
+
+=== Backward incompatible API changes
+==== Classifier
+* Deprecate `odp_cos_with_l2_priority()` function. Use `ODP_PMR_VLAN_PCP_0`
+instead.
+* Deprecate packet drop policy option (`odp_cls_cos_param_t.drop_policy`) and
+related functions `odp_cos_drop()` and `odp_cos_drop_set()`.
+
+==== Shared Memory
+* Change `odp_shm_info()` specification to disallow usage of invalid SHM
+handles.
+
+=== Backward compatible API changes
+==== Buffer
+* Add multi variants of event conversion functions
+(`odp_buffer_from_event_multi()` and `odp_buffer_to_event_multi()`).
+
+==== Classifier
+* Add PFC priority level (`odp_bp_param_t.pfc_level`) to back pressure
+parameters.
+* Clarify PMR specification to state that in case of multiple PMRs matching
+within a CoS, it is implementation specific which PMR is selected.
+
+==== Crypto
+* Fix a stale reference to the renamed `hash_result_not_in_auth_range`
+session parameter to use the correct name (`hash_result_in_auth_range`)
+in the comment text of `hash_result_offset`.
+
+==== Packet
+* Add support for additional L3 and L4 protocol types.
+
+==== Packet IO
+* Add `ODP_PKTIN_MAX_QUEUES` define for maximum number of packet input queues.
+* Add new packet input queue size configuration option
+`odp_pktin_queue_param_t.queue_size` and matching capabilities
+`odp_pktio_capability_t.min_input_queue_size` and
+`odp_pktio_capability_t.max_input_queue_size`.
+* Add missing documentation to `odp_pktio_link_status_t`,
+`odp_pktio_link_duplex_t`, and `odp_pktio_link_pause_t` enumerations.
+* Add `ODP_PKTIO_LINK_PFC_ON` enumeration for PFC flow control mode.
+* Add capabilities (`odp_pktio_capability_t.flow_control`) and configuration
+parameters to control reception (`odp_pktio_config_t.flow_control.pause_rx`) and
+transmission (`odp_pktio_config_t.flow_control.pause_tx`) of Ethernet pause
+frames.
+
+==== Shared Memory
+* Add `odp_shm_segment_info()` function for retrieving information about each
+memory segment of an SHM block.
+* Clarified `odp_shm_reserve()` operation with the default options (no flags).
+
+==== System
+* Add `odp_system_meminfo()` function for retrieving information about ODP
+memory usage.
+
 == OpenDataPlane (1.38.0.0)
 
 === Backward incompatible API changes
