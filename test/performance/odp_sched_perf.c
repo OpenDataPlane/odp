@@ -1375,6 +1375,9 @@ int main(int argc, char **argv)
 	if (create_queues(global))
 		return -1;
 
+	if (global->test_options.verbose)
+		odp_shm_print_all();
+
 	/* Start workers */
 	start_workers(global, instance);
 
