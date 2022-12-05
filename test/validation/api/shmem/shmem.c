@@ -277,7 +277,7 @@ static void shmem_test_info(void)
 	int support_pa = 0;
 	int support_iova = 0;
 
-	if (_global_shm_capa.max_size < size)
+	if (_global_shm_capa.max_size && _global_shm_capa.max_size < size)
 		size = _global_shm_capa.max_size;
 
 	if (_global_shm_capa.max_align < align)
