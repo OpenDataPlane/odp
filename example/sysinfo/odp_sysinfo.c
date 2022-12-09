@@ -134,12 +134,26 @@ static const char *cipher_alg_name(odp_cipher_alg_t cipher)
 		return "aes_cbc";
 	case ODP_CIPHER_ALG_AES_CTR:
 		return "aes_ctr";
+	case ODP_CIPHER_ALG_AES_ECB:
+		return "aes_ecb";
+	case ODP_CIPHER_ALG_AES_CFB128:
+		return "aes_cfb128";
+	case ODP_CIPHER_ALG_AES_XTS:
+		return "aes_xts";
 	case ODP_CIPHER_ALG_AES_GCM:
 		return "aes_gcm";
 	case ODP_CIPHER_ALG_AES_CCM:
 		return "aes_ccm";
 	case ODP_CIPHER_ALG_CHACHA20_POLY1305:
 		return "chacha20_poly1305";
+	case ODP_CIPHER_ALG_KASUMI_F8:
+		return "kasumi_f8";
+	case ODP_CIPHER_ALG_SNOW3G_UEA2:
+		return "snow3g_uea2";
+	case ODP_CIPHER_ALG_AES_EEA2:
+		return "aes_eea2";
+	case ODP_CIPHER_ALG_ZUC_EEA3:
+		return "zuc_eea3";
 	default:
 		return "Unknown";
 	}
@@ -154,14 +168,14 @@ static const char *auth_alg_name(odp_auth_alg_t auth)
 		return "md5_hmac";
 	case ODP_AUTH_ALG_SHA1_HMAC:
 		return "sha1_hmac";
+	case ODP_AUTH_ALG_SHA224_HMAC:
+		return "sha224_hmac";
 	case ODP_AUTH_ALG_SHA256_HMAC:
 		return "sha256_hmac";
 	case ODP_AUTH_ALG_SHA384_HMAC:
 		return "sha384_hmac";
 	case ODP_AUTH_ALG_SHA512_HMAC:
 		return "sha512_hmac";
-	case ODP_AUTH_ALG_AES_XCBC_MAC:
-		return "aes_xcbc_mac";
 	case ODP_AUTH_ALG_AES_GCM:
 		return "aes_gcm";
 	case ODP_AUTH_ALG_AES_GMAC:
@@ -170,8 +184,30 @@ static const char *auth_alg_name(odp_auth_alg_t auth)
 		return "aes_ccm";
 	case ODP_AUTH_ALG_AES_CMAC:
 		return "aes_cmac";
+	case ODP_AUTH_ALG_AES_XCBC_MAC:
+		return "aes_xcbc_mac";
 	case ODP_AUTH_ALG_CHACHA20_POLY1305:
 		return "chacha20_poly1305";
+	case ODP_AUTH_ALG_KASUMI_F9:
+		return "kasumi_f9";
+	case ODP_AUTH_ALG_SNOW3G_UIA2:
+		return "snow3g_uia2";
+	case ODP_AUTH_ALG_AES_EIA2:
+		return "aes_eia2";
+	case ODP_AUTH_ALG_ZUC_EIA3:
+		return "zuc_eia3";
+	case ODP_AUTH_ALG_MD5:
+		return "md5";
+	case ODP_AUTH_ALG_SHA1:
+		return "sha1";
+	case ODP_AUTH_ALG_SHA224:
+		return "sha224";
+	case ODP_AUTH_ALG_SHA256:
+		return "sha256";
+	case ODP_AUTH_ALG_SHA384:
+		return "sha384";
+	case ODP_AUTH_ALG_SHA512:
+		return "sha512";
 	default:
 		return "Unknown";
 	}
