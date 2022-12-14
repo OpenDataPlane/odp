@@ -34,6 +34,7 @@
 #define IPSEC_MB_CRYPTO_MAX_AUTH_KEY_LENGTH        32
 #define IPSEC_MB_CRYPTO_MAX_DATA_LENGTH            65536
 #define ZUC_DIGEST_LENGTH 4
+#define SNOW3G_DIGEST_LENGTH 4
 
 #define ODP_CRYPTO_IPSEC_MB_SHM_NAME "_odp_crypto_ipsecmb"
 /*
@@ -48,6 +49,9 @@ static const odp_crypto_cipher_capability_t cipher_capa_zuc_eea3[] = {
 {.key_len = 16, .iv_len = 16},
 {.key_len = 32, .iv_len = 25} };
 
+static const odp_crypto_cipher_capability_t cipher_capa_snow3g_uea2[] = {
+{.key_len = 16, .iv_len = 16} };
+
 /*
  * Authentication algorithm capabilities
  *
@@ -61,6 +65,10 @@ static const odp_crypto_auth_capability_t auth_capa_zuc_eia3[] = {
 	.iv_len = 16},
 {.digest_len = 4, .key_len = 32, .aad_len = {.min = 0, .max = 0, .inc = 0},
 	.iv_len = 25} };
+
+static const odp_crypto_auth_capability_t auth_capa_snow3g_uia2[] = {
+{.digest_len = SNOW3G_DIGEST_LENGTH, .key_len = 16, .aad_len = {.min = 0, .max = 0, .inc = 0},
+	.iv_len = 16} };
 
 /** Forward declaration of session structure */
 typedef struct odp_crypto_generic_session_t odp_crypto_generic_session_t;
@@ -84,12 +92,18 @@ struct odp_crypto_generic_session_t {
 	odp_bool_t do_cipher_first;
 
 	struct {
-		uint8_t key_data[IPSEC_MB_CRYPTO_MAX_CIPHER_KEY_LENGTH];
+		union {
+			uint8_t key_data[IPSEC_MB_CRYPTO_MAX_CIPHER_KEY_LENGTH];
+			snow3g_key_schedule_t key_sched;
+		};
 		crypto_func_t func;
 	} cipher;
 
 	struct {
-		uint8_t  key[IPSEC_MB_CRYPTO_MAX_AUTH_KEY_LENGTH];
+		union {
+			uint8_t key[IPSEC_MB_CRYPTO_MAX_AUTH_KEY_LENGTH];
+			snow3g_key_schedule_t key_sched;
+		};
 		crypto_func_t func;
 	} auth;
 
@@ -152,7 +166,7 @@ null_crypto_routine(odp_packet_t pkt ODP_UNUSED,
 }
 
 static
-odp_crypto_alg_err_t zuc_eea3_cipher_op(odp_packet_t pkt,
+odp_crypto_alg_err_t ipsec_mb_cipher_op(odp_packet_t pkt,
 					const odp_crypto_packet_op_param_t *param,
 					odp_crypto_generic_session_t *session)
 {
@@ -177,22 +191,32 @@ odp_crypto_alg_err_t zuc_eea3_cipher_op(odp_packet_t pkt,
 		data = local.buffer;
 	}
 
-	if (session->p.cipher_key.length == 16) {
-		/* ZUC128 EEA3 */
-		IMB_ZUC_EEA3_1_BUFFER(mb_mgr, session->cipher.key_data,
-				      iv_ptr,
-				      data,
-				      data,
-				      in_len);
+	if (session->p.cipher_alg == ODP_CIPHER_ALG_ZUC_EEA3) {
+		if (session->p.cipher_key.length == 16) {
+			/* ZUC128 EEA3 */
+			IMB_ZUC_EEA3_1_BUFFER(mb_mgr, session->cipher.key_data,
+					      iv_ptr,
+					      data,
+					      data,
+					      in_len);
+		} else {
+			/* Only 16 and 32 byte keys are supported
+			* ZUC256 EEA3 */
+			IMB_ZUC256_EEA3_1_BUFFER(mb_mgr, session->cipher.key_data,
+						 iv_ptr,
+						 data,
+						 data,
+						 in_len);
+		}
 	} else {
-		/* Only 16 and 32 byte keys are supported
-		 * ZUC256 EEA3 */
-		IMB_ZUC256_EEA3_1_BUFFER(mb_mgr, session->cipher.key_data,
-					 iv_ptr,
-					 data,
-					 data,
-					 in_len);
+		/* Only ODP_CIPHER_ALG_SNOW3G_UEA2 */
+		IMB_SNOW3G_F8_1_BUFFER(mb_mgr, &session->cipher.key_sched,
+				       iv_ptr,
+				       data,
+				       data,
+				       in_len);
 	}
+
 	if (odp_unlikely(imb_get_errno(mb_mgr) != 0))
 		return ODP_CRYPTO_ALG_ERR_DATA_SIZE;
 
@@ -213,13 +237,13 @@ static int process_zuc_eea3_param(odp_crypto_generic_session_t *session)
 	memcpy(session->cipher.key_data, session->p.cipher_key.data,
 	       session->p.cipher_key.length);
 
-	session->cipher.func = zuc_eea3_cipher_op;
+	session->cipher.func = ipsec_mb_cipher_op;
 
 	return 0;
 }
 
 static
-odp_crypto_alg_err_t auth_zuc_eia3_gen(odp_packet_t pkt,
+odp_crypto_alg_err_t auth_ipsec_mb_gen(odp_packet_t pkt,
 				       const odp_crypto_packet_op_param_t *param,
 				       odp_crypto_generic_session_t *session)
 {
@@ -245,22 +269,32 @@ odp_crypto_alg_err_t auth_zuc_eia3_gen(odp_packet_t pkt,
 		data = local.buffer;
 	}
 
-	if (session->p.auth_key.length == 16) {
-		/* ZUC128 EIA3 */
-		IMB_ZUC_EIA3_1_BUFFER(mb_mgr, session->auth.key,
-				      iv_ptr,
-				      data,
-				      param->auth_range.length * 8,
-				      &auth_tag);
+	if (session->p.auth_alg == ODP_AUTH_ALG_ZUC_EIA3) {
+		if (session->p.auth_key.length == 16) {
+			/* ZUC128 EIA3 */
+			IMB_ZUC_EIA3_1_BUFFER(mb_mgr, session->auth.key,
+					      iv_ptr,
+					      data,
+					      param->auth_range.length * 8,
+					      &auth_tag);
+		} else {
+			/* Only 16 and 32 byte keys are supported
+			* ZUC256 EIA3 */
+			IMB_ZUC256_EIA3_1_BUFFER(mb_mgr, session->auth.key,
+						 iv_ptr,
+						 data,
+						 param->auth_range.length * 8,
+						 &auth_tag);
+		}
 	} else {
-		/* Only 16 and 32 byte keys are supported
-		 * ZUC256 EIA3 */
-		IMB_ZUC256_EIA3_1_BUFFER(mb_mgr, session->auth.key,
-					 iv_ptr,
-					 data,
-					 param->auth_range.length * 8,
-					 &auth_tag);
+		/* Only ODP_AUTH_ALG_SNOW3G_UIA2 */
+		IMB_SNOW3G_F9_1_BUFFER(mb_mgr, &session->auth.key_sched,
+				       iv_ptr,
+				       data,
+				       param->auth_range.length * 8,
+				       &auth_tag);
 	}
+
 	if (odp_unlikely(imb_get_errno(mb_mgr) != 0))
 		return ODP_CRYPTO_ALG_ERR_DATA_SIZE;
 
@@ -273,7 +307,7 @@ odp_crypto_alg_err_t auth_zuc_eia3_gen(odp_packet_t pkt,
 }
 
 static
-odp_crypto_alg_err_t auth_zuc_eia3_check(odp_packet_t pkt,
+odp_crypto_alg_err_t auth_ipsec_mb_check(odp_packet_t pkt,
 					 const odp_crypto_packet_op_param_t *param,
 					 odp_crypto_generic_session_t *session)
 {
@@ -308,22 +342,32 @@ odp_crypto_alg_err_t auth_zuc_eia3_check(odp_packet_t pkt,
 		data = local.buffer;
 	}
 
-	if (session->p.auth_key.length == 16) {
-		/* ZUC128 EIA3 */
-		IMB_ZUC_EIA3_1_BUFFER(mb_mgr, session->auth.key,
-				      iv_ptr,
-				      data,
-				      param->auth_range.length * 8,
-				      &hash_out);
+	if (session->p.auth_alg == ODP_AUTH_ALG_ZUC_EIA3) {
+		if (session->p.auth_key.length == 16) {
+			/* ZUC128 EIA3 */
+			IMB_ZUC_EIA3_1_BUFFER(mb_mgr, session->auth.key,
+					      iv_ptr,
+					      data,
+					      param->auth_range.length * 8,
+					      &hash_out);
+		} else {
+			/* Only 16 and 32 byte keys are supported
+			* ZUC256 EIA3 */
+			IMB_ZUC256_EIA3_1_BUFFER(mb_mgr, session->auth.key,
+						 iv_ptr,
+						 data,
+						 param->auth_range.length * 8,
+						 &hash_out);
+		}
 	} else {
-		/* Only 16 and 32 byte keys are supported
-		 * ZUC256 EIA3 */
-		IMB_ZUC256_EIA3_1_BUFFER(mb_mgr, session->auth.key,
-					 iv_ptr,
-					 data,
-					 param->auth_range.length * 8,
-					 &hash_out);
+		/* Only ODP_AUTH_ALG_SNOW3G_UIA2 */
+		IMB_SNOW3G_F9_1_BUFFER(mb_mgr, &session->auth.key_sched,
+				       iv_ptr,
+				       data,
+				       param->auth_range.length * 8,
+				       &hash_out);
 	}
+
 	if (odp_unlikely(imb_get_errno(mb_mgr) != 0))
 		return ODP_CRYPTO_ALG_ERR_DATA_SIZE;
 
@@ -343,9 +387,9 @@ static int process_auth_zuc_eia3_param(odp_crypto_generic_session_t *session)
 		return -1;
 
 	if (ODP_CRYPTO_OP_ENCODE == session->p.op)
-		session->auth.func = auth_zuc_eia3_gen;
+		session->auth.func = auth_ipsec_mb_gen;
 	else
-		session->auth.func = auth_zuc_eia3_check;
+		session->auth.func = auth_ipsec_mb_check;
 
 	if (session->p.auth_digest_len != ZUC_DIGEST_LENGTH)
 		return -1;
@@ -354,6 +398,42 @@ static int process_auth_zuc_eia3_param(odp_crypto_generic_session_t *session)
 	       session->p.auth_key.length);
 
 	return 0;
+}
+
+static int process_snow3g_uea2_param(odp_crypto_generic_session_t *session)
+{
+	if (!(16 == session->p.cipher_key.length &&
+	      16 == session->p.cipher_iv_len))
+		return -1;
+
+	memcpy(session->cipher.key_data, session->p.cipher_key.data,
+	       session->p.cipher_key.length);
+
+	session->cipher.func = ipsec_mb_cipher_op;
+
+	return IMB_SNOW3G_INIT_KEY_SCHED(local.mb_mgr, session->p.cipher_key.data,
+				  &session->cipher.key_sched);
+}
+
+static int process_auth_snow3g_uia2_param(odp_crypto_generic_session_t *session)
+{
+	if (!(16 == session->p.auth_key.length &&
+	      16 == session->p.auth_iv_len))
+		return -1;
+
+	if (ODP_CRYPTO_OP_ENCODE == session->p.op)
+		session->auth.func = auth_ipsec_mb_gen;
+	else
+		session->auth.func = auth_ipsec_mb_check;
+
+	if (session->p.auth_digest_len != SNOW3G_DIGEST_LENGTH)
+		return -1;
+
+	memcpy(session->auth.key, session->p.auth_key.data,
+	       session->p.auth_key.length);
+
+	return IMB_SNOW3G_INIT_KEY_SCHED(local.mb_mgr, session->p.auth_key.data,
+				  &session->auth.key_sched);
 }
 
 int odp_crypto_capability(odp_crypto_capability_t *capa)
@@ -373,6 +453,9 @@ int odp_crypto_capability(odp_crypto_capability_t *capa)
 
 	capa->ciphers.bit.zuc_eea3   = 1;
 	capa->auths.bit.zuc_eia3     = 1;
+
+	capa->ciphers.bit.snow3g_uea2 = 1;
+	capa->auths.bit.snow3g_uia2   = 1;
 
 	capa->max_sessions = MAX_SESSIONS;
 
@@ -395,6 +478,10 @@ int odp_crypto_cipher_capability(odp_cipher_alg_t cipher,
 	case ODP_CIPHER_ALG_ZUC_EEA3:
 		src = cipher_capa_zuc_eea3;
 		num = sizeof(cipher_capa_zuc_eea3) / size;
+		break;
+	case ODP_CIPHER_ALG_SNOW3G_UEA2:
+		src = cipher_capa_snow3g_uea2;
+		num = sizeof(cipher_capa_snow3g_uea2) / size;
 		break;
 	default:
 		return -1;
@@ -423,6 +510,10 @@ int odp_crypto_auth_capability(odp_auth_alg_t auth,
 	case ODP_AUTH_ALG_ZUC_EIA3:
 		src = auth_capa_zuc_eia3;
 		num = sizeof(auth_capa_zuc_eia3) / size;
+		break;
+	case ODP_AUTH_ALG_SNOW3G_UIA2:
+		src = auth_capa_snow3g_uia2;
+		num = sizeof(auth_capa_snow3g_uia2) / size;
 		break;
 	default:
 		return -1;
@@ -482,6 +573,9 @@ odp_crypto_session_create(const odp_crypto_session_param_t *param,
 	case ODP_CIPHER_ALG_ZUC_EEA3:
 		rc = process_zuc_eea3_param(session);
 		break;
+	case ODP_CIPHER_ALG_SNOW3G_UEA2:
+		rc = process_snow3g_uea2_param(session);
+		break;
 	default:
 		rc = -1;
 	}
@@ -499,6 +593,9 @@ odp_crypto_session_create(const odp_crypto_session_param_t *param,
 		break;
 	case ODP_AUTH_ALG_ZUC_EIA3:
 		rc = process_auth_zuc_eia3_param(session);
+		break;
+	case ODP_AUTH_ALG_SNOW3G_UIA2:
+		rc = process_auth_snow3g_uia2_param(session);
 		break;
 	default:
 		rc = -1;
