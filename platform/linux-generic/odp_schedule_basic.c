@@ -238,13 +238,13 @@ typedef struct {
 	struct {
 		uint8_t burst_default[NUM_SCHED_SYNC][NUM_PRIO];
 		uint8_t burst_max[NUM_SCHED_SYNC][NUM_PRIO];
+		uint16_t order_stash_size;
 		uint8_t num_spread;
 		uint8_t prefer_ratio;
 	} config;
-
-	uint8_t          load_balance;
-	uint16_t         max_spread;
 	uint32_t         ring_mask;
+	uint16_t         max_spread;
+	uint8_t          load_balance;
 	odp_atomic_u32_t grp_epoch;
 	odp_shm_t        shm;
 	odp_ticketlock_t mask_lock[NUM_SCHED_GRPS];
@@ -436,6 +436,20 @@ static int read_config_file(sched_global_t *sched)
 	sched->load_balance = 1;
 	if (val == 0 || sched->config.num_spread == 1)
 		sched->load_balance = 0;
+
+	str = "sched_basic.order_stash_size";
+	if (!_odp_libconfig_lookup_int(str, &val)) {
+		_ODP_ERR("Config option '%s' not found.\n", str);
+		return -1;
+	}
+
+	if (val > MAX_ORDERED_STASH || val < 0) {
+		_ODP_ERR("Bad value %s = %i [min: 0, max: %u]\n", str, val, MAX_ORDERED_STASH);
+		return -1;
+	}
+
+	sched->config.order_stash_size = val;
+	_ODP_PRINT("  %s: %i\n", str, val);
 
 	/* Initialize default values for all queue types */
 	str = "sched_basic.burst_size_default";
@@ -1204,7 +1218,7 @@ static int schedule_ord_enq_multi(odp_queue_t dst_queue, void *event_hdr[],
 
 	/* Pktout may drop packets, so the operation cannot be stashed. */
 	if (dst_qentry->pktout.pktio != ODP_PKTIO_INVALID ||
-	    odp_unlikely(stash_num >=  MAX_ORDERED_STASH)) {
+	    odp_unlikely(stash_num >=  sched->config.order_stash_size)) {
 		/* If the local stash is full, wait until it is our turn and
 		 * then release the stash and do enqueue directly. */
 		wait_for_order(src_queue);
