@@ -139,7 +139,7 @@ Prerequisites for building the OpenDataPlane (ODP) API
    # Checkout and build Arm code
    $ git clone https://git.gitlab.arm.com/arm-reference-solutions/ipsec-mb.git
    $ cd ipsec-mb/
-   $ git checkout SECLIB-IPSEC-2022.05.25
+   $ git checkout SECLIB-IPSEC-2022.12.13
    $ make
    $ sudo make install
 
