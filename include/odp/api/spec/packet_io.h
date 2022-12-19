@@ -833,22 +833,6 @@ int odp_pktio_info(odp_pktio_t pktio, odp_pktio_info_t *info);
 int odp_pktio_link_info(odp_pktio_t pktio, odp_pktio_link_info_t *info);
 
 /**
- * Packet input timestamp resolution in hertz
- *
- * @deprecated Use odp_pktio_ts_res() instead, which returns resolution for
- * both packet input and output timestamps.
- *
- * This is the resolution of packet input timestamps. Returns zero on a failure
- * or when timestamping is disabled.
- *
- * @param      pktio   Packet IO handle
- *
- * @return Packet input timestamp resolution in hertz
- * @retval 0 on failure
- */
-uint64_t ODP_DEPRECATE(odp_pktin_ts_res)(odp_pktio_t pktio);
-
-/**
  * Convert nanoseconds to packet input time
  *
  * @deprecated Use odp_pktio_ts_from_ns() instead, which can be used with both

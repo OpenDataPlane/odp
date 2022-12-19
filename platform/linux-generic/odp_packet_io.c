@@ -1613,11 +1613,6 @@ odp_time_t odp_pktio_time(odp_pktio_t hdl, odp_time_t *global_ts)
 	return ts;
 }
 
-uint64_t ODP_DEPRECATE(odp_pktin_ts_res)(odp_pktio_t hdl)
-{
-	return odp_pktio_ts_res(hdl);
-}
-
 odp_time_t ODP_DEPRECATE(odp_pktin_ts_from_ns)(odp_pktio_t hdl, uint64_t ns)
 {
 	return odp_pktio_ts_from_ns(hdl, ns);
