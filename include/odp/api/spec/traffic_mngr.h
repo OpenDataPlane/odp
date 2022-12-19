@@ -1061,11 +1061,7 @@ typedef struct {
 	 * for this integer is in bits per second when packet_mode is
 	 * not TRUE while packets per second when packet mode is TRUE.
 	 */
-	union {
-		/** @deprecated Use commit_rate instead */
-		uint64_t ODP_DEPRECATE(commit_bps);
-		uint64_t commit_rate; /**< Commit information rate */
-	};
+	uint64_t commit_rate;
 
 	/** The peak information rate for this shaper profile.  The units for
 	 * this integer is in bits per second when packet_mode is
