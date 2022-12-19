@@ -121,14 +121,19 @@ static void test_abs_timeouts(int thr, test_globals_t *gbls)
 		int wait = 0;
 		odp_event_t ev;
 		odp_timer_set_t rc;
+		odp_timer_start_t start_param;
 
 		if (ttp) {
 			tick += period;
-			rc = odp_timer_set_abs(ttp->tim, tick, &ttp->ev);
+
+			start_param.tick_type = ODP_TIMER_TICK_ABS;
+			start_param.tick = tick;
+			start_param.tmo_ev = ttp->ev;
+
+			rc = odp_timer_start(ttp->tim, &start_param);
 			if (odp_unlikely(rc != ODP_TIMER_SUCCESS)) {
 				/* Too early or too late timeout requested */
-				ODPH_ABORT("odp_timer_set_abs() failed: %s\n",
-					   timerset2str(rc));
+				ODPH_ABORT("odp_timer_start() failed: %s\n", timerset2str(rc));
 			}
 		}
 
