@@ -438,6 +438,7 @@ static int set_timers(test_global_t *global)
 			odp_event_t ev;
 			int status;
 			timer_ctx_t *ctx = &global->timer_ctx[i][j];
+			odp_timer_start_t start_param;
 
 			/* Set timers backwards, the last timer is set first */
 			if (j == 0)
@@ -456,9 +457,11 @@ static int set_timers(test_global_t *global)
 			tick_ns = odp_timer_ns_to_tick(tp, nsec);
 			nsec    = nsec - period_ns;
 
-			status = odp_timer_set_abs(timer, tick_cur + tick_ns,
-						   &ev);
+			start_param.tick_type = ODP_TIMER_TICK_ABS;
+			start_param.tick = tick_cur + tick_ns;
+			start_param.tmo_ev = ev;
 
+			status = odp_timer_start(timer, &start_param);
 			if (status != ODP_TIMER_SUCCESS) {
 				ODPH_ERR("Timer set %i/%i (ret %i)\n", i, j, status);
 				return -1;
@@ -656,6 +659,7 @@ static int set_cancel_mode_worker(void *arg)
 	odp_timer_t timer;
 	odp_timer_pool_t tp;
 	odp_timeout_t tmo;
+	odp_timer_start_t start_param;
 	thread_arg_t *thread_arg = arg;
 	test_global_t *global = thread_arg->global;
 	test_options_t *test_options = &global->test_options;
@@ -746,7 +750,11 @@ static int set_cancel_mode_worker(void *arg)
 				if (status < 0)
 					continue;
 
-				status = odp_timer_set_abs(timer, tick + j * period_tick, &ev);
+				start_param.tick_type = ODP_TIMER_TICK_ABS;
+				start_param.tick = tick + j * period_tick;
+				start_param.tmo_ev = ev;
+
+				status = odp_timer_start(timer, &start_param);
 				num_set++;
 
 				if (status != ODP_TIMER_SUCCESS) {
