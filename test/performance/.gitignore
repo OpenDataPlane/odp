@@ -3,6 +3,7 @@
 odp_atomic
 odp_atomic_perf
 odp_bench_buffer
+odp_bench_misc
 odp_bench_packet
 odp_cpu_bench
 odp_crc
