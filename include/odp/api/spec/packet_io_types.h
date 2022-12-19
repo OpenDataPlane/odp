@@ -889,6 +889,19 @@ typedef struct odp_pktin_vector_capability_t {
  * ODP_PKTOUT_MODE_DIRECT mode.
  */
 typedef struct odp_pktio_capability_t {
+	/** Equal number of input and output queues
+	 *
+	 * When set, the same number of input and output queues has to be used.
+	 * This applies only if both directions are enabled. If one direction
+	 * is disabled, queue count is limited only by the capabilities of the
+	 * enabled direction.
+	 *
+	 * @see odp_pktin_queue_param_t and odp_pktout_queue_param_t for input
+	 * and output queue count configuration.
+	 * @see odp_pktin_mode_t and odp_pktout_mode_t for direction mode
+	 * configuration. */
+	odp_bool_t equal_num_queues;
+
 	/** Maximum number of input queues
 	 *
 	 * Value does not exceed ODP_PKTIN_MAX_QUEUES. */
