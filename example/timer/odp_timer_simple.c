@@ -129,13 +129,19 @@ int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 
 	for (i = 0; i < 5; i++) {
 		odp_time_t time;
+		odp_timer_start_t start_param;
 
 		/* Program timeout action on current tick + period */
 		tick = odp_timer_current_tick(timer_pool);
-		rc = odp_timer_set_abs(tim, tick + period, &ev);
+
+		start_param.tick_type = ODP_TIMER_TICK_ABS;
+		start_param.tick = tick + period;
+		start_param.tmo_ev = ev;
+
+		rc = odp_timer_start(tim, &start_param);
 		/* Too early or too late timeout requested */
 		if (odp_unlikely(rc != ODP_TIMER_SUCCESS))
-			ODPH_ABORT("odp_timer_set_abs() failed: %d\n", rc);
+			ODPH_ABORT("odp_timer_start() failed: %d\n", rc);
 
 		/* Wait for 2 seconds for timeout action to be generated */
 		ev = odp_schedule(&queue, sched_tmo);
