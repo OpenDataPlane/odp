@@ -19,7 +19,6 @@
 extern "C" {
 #endif
 
-#include <odp/api/deprecated.h>
 #include <odp/api/queue_types.h>
 
 /** @addtogroup odp_packet_io
@@ -67,20 +66,6 @@ typedef struct odp_pktio_stats_t {
 	/** Number of inbound packets with errors. Depending on packet input
 	 *  configuration, packets with errors may be dropped or not. */
 	uint64_t in_errors;
-
-	/**
-	 * For packet-oriented interfaces, the number of packets received via
-	 * the interface which were discarded because of an unknown or
-	 * unsupported protocol.  For character-oriented or fixed-length
-	 * interfaces that support protocol multiplexing the number of
-	 * transmission units received via the interface which were discarded
-	 * because of an unknown or unsupported protocol.  For any interface
-	 * that does not support protocol multiplexing, this counter will always
-	 * be 0. See ifInUnknownProtos in RFC 2863, RFC 3635.
-	 *
-	 * @deprecated This counter has been deprecated.
-	 */
-	uint64_t ODP_DEPRECATE(in_unknown_protos);
 
 	/** Number of octets in successfully transmitted packets. In case of
 	 *  Ethernet, packet size includes MAC header. */
