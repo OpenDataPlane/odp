@@ -135,6 +135,7 @@ static void system_test_cpu_cycles_resolution(void)
 	int i;
 	uint64_t res;
 	uint64_t c2, c1, max;
+	uint64_t test_cycles = odp_cpu_hz() / 100; /* CPU cycles in 10 msec */
 
 	max = odp_cpu_cycles_max();
 
@@ -144,11 +145,16 @@ static void system_test_cpu_cycles_resolution(void)
 
 	for (i = 0; i < RES_TRY_NUM; i++) {
 		c1 = odp_cpu_cycles();
-		odp_time_wait_ns(100 * ODP_TIME_MSEC_IN_NS + i);
+		odp_time_wait_ns(10 * ODP_TIME_MSEC_IN_NS + i);
 		c2 = odp_cpu_cycles();
 
-		CU_ASSERT(c1 % res == 0);
-		CU_ASSERT(c2 % res == 0);
+		/* Diff may be zero with low resolution */
+		if (test_cycles && test_cycles > res) {
+			uint64_t diff = odp_cpu_cycles_diff(c2, c1);
+
+			CU_ASSERT(diff >= res);
+		}
+
 	}
 }
 
@@ -185,13 +191,11 @@ static void system_test_cpu_cycles_diff(void)
 	tmp = c2 + (max - c1) + res;
 	diff = odp_cpu_cycles_diff(c2, c1);
 	CU_ASSERT(diff == tmp);
-	CU_ASSERT(diff % res == 0);
 
 	/* no wrap, revert args */
 	tmp = c1 - c2;
 	diff = odp_cpu_cycles_diff(c1, c2);
 	CU_ASSERT(diff == tmp);
-	CU_ASSERT(diff % res == 0);
 }
 
 static void system_test_cpu_cycles_long_period(void)
@@ -221,8 +225,6 @@ static void system_test_cpu_cycles_long_period(void)
 		c2 = odp_cpu_cycles();
 
 		CU_ASSERT(c2 != c1);
-		CU_ASSERT(c1 % res == 0);
-		CU_ASSERT(c2 % res == 0);
 		CU_ASSERT(c1 <= max && c2 <= max);
 
 		if (c2 > c1)
@@ -232,7 +234,6 @@ static void system_test_cpu_cycles_long_period(void)
 
 		diff = odp_cpu_cycles_diff(c2, c1);
 		CU_ASSERT(diff == tmp);
-		CU_ASSERT(diff % res == 0);
 
 		/* wrap is detected and verified */
 		if (c2 < c1)
