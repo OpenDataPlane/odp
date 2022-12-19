@@ -8,7 +8,6 @@
 #include <odp_config_internal.h>
 #include <odp_debug_internal.h>
 #include <odp/api/debug.h>
-#include <odp/api/deprecated.h>
 #include <odp/api/std_types.h>
 #include <odp/api/shared_memory.h>
 #include <odp/api/plat/strong_types.h>
@@ -18,14 +17,8 @@
 #include <string.h>
 
 /* Supported ODP_SHM_* flags */
-#if ODP_DEPRECATED_API
-	#define DEPRECATED_SHM_FLAGS (ODP_SHM_SW_ONLY)
-#else
-	#define DEPRECATED_SHM_FLAGS 0
-#endif
-
 #define SUPPORTED_SHM_FLAGS (ODP_SHM_PROC | ODP_SHM_SINGLE_VA | ODP_SHM_EXPORT | \
-			     ODP_SHM_HP | ODP_SHM_NO_HP | DEPRECATED_SHM_FLAGS)
+			     ODP_SHM_HP | ODP_SHM_NO_HP)
 
 static inline uint32_t from_handle(odp_shm_t shm)
 {

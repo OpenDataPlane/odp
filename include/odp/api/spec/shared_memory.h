@@ -51,19 +51,6 @@ extern "C" {
  */
 
 /**
- * Application SW only, no HW access
- *
- * @deprecated  When set, application will not share the reserved memory with HW
- * accelerators. However, leaving this flag to zero does not guarantee that
- * the reserved memory can be accessed from HW, and thus usage of this flag is
- * considered deprecated. If HW accessible memory is required, set
- * ODP_SHM_HW_ACCESS instead.
- *
- * This flag must not be combined with ODP_SHM_HW_ACCESS.
- */
-#define ODP_SHM_SW_ONLY		0x1
-
-/**
  * Share with external processes
  */
 #define ODP_SHM_PROC		0x2
