@@ -233,7 +233,7 @@ static int start_timers(test_global_t *test_global)
 	odp_timer_t timer;
 	odp_queue_t queue;
 	odp_queue_param_t queue_param;
-	uint64_t tick, start_tick;
+	uint64_t start_tick;
 	uint64_t period_ns, res_ns, res_hz, start_ns, nsec, offset_ns;
 	uint64_t max_res_ns, max_res_hz;
 	odp_event_t event;
@@ -452,17 +452,17 @@ static int start_timers(test_global_t *test_global)
 
 	for (i = 0; i < num_tmo; i++) {
 		for (j = 0; j < burst; j++) {
-			nsec = offset_ns + (i * period_ns) + (j * burst_gap);
-			tick = start_tick + odp_timer_ns_to_tick(timer_pool,
-								 nsec);
-
 			timer_ctx_t *ctx = &test_global->timer_ctx[idx];
+			odp_timer_start_t start_param;
 
-			timer = ctx->timer;
-			event = ctx->event;
+			nsec = offset_ns + (i * period_ns) + (j * burst_gap);
 			ctx->nsec = start_ns + nsec;
 
-			ret = odp_timer_set_abs(timer, tick, &event);
+			start_param.tick_type = ODP_TIMER_TICK_ABS;
+			start_param.tick = start_tick + odp_timer_ns_to_tick(timer_pool, nsec);
+			start_param.tmo_ev = ctx->event;
+
+			ret = odp_timer_start(ctx->timer, &start_param);
 
 			if (ret != ODP_TIMER_SUCCESS) {
 				printf("Timer[%" PRIu64 "] set failed: %i\n",
@@ -647,6 +647,7 @@ static void run_test(test_global_t *test_global)
 			odp_timer_pool_t tp = test_global->timer_pool;
 			unsigned int retries = test_global->opt.early_retry;
 			uint64_t start_ns = test_global->start_ns;
+			odp_timer_start_t start_param;
 
 			tim = ctx->timer;
 
@@ -659,18 +660,20 @@ static void run_test(test_global_t *test_global)
 					nsec = ctx->nsec - start_ns;
 					tick = test_global->start_tick +
 					       odp_timer_ns_to_tick(tp, nsec);
-
-					ret = odp_timer_set_abs(tim, tick, &ev);
+					start_param.tick_type = ODP_TIMER_TICK_ABS;
 				} else {
 					/* Relative time */
 					tick = test_global->period_tick;
 					time = odp_time_local();
 					time_ns = odp_time_to_ns(time);
 					ctx->nsec = time_ns + period_ns;
-
-					ret = odp_timer_set_rel(tim, tick, &ev);
+					start_param.tick_type = ODP_TIMER_TICK_REL;
 				}
 
+				start_param.tmo_ev = ev;
+				start_param.tick = tick;
+
+				ret = odp_timer_start(tim, &start_param);
 				if (ret == ODP_TIMER_TOO_NEAR)
 					stat->num_too_near++;
 				else
