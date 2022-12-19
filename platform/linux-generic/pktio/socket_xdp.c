@@ -852,8 +852,10 @@ static int set_queue_capability(int fd, const char *devname, odp_pktio_capabilit
 		channels.max_combined = 1U;
 	}
 
-	max_channels = _ODP_MIN((uint32_t)ODP_PKTOUT_MAX_QUEUES, channels.max_combined);
-	capa->max_input_queues = _ODP_MIN((uint32_t)ODP_PKTIN_MAX_QUEUES, max_channels);
+	max_channels = _ODP_MIN((uint32_t)ODP_PKTIN_MAX_QUEUES,
+				_ODP_MIN((uint32_t)ODP_PKTOUT_MAX_QUEUES, channels.max_combined));
+	capa->equal_num_queues = true;
+	capa->max_input_queues = max_channels;
 	capa->max_output_queues = max_channels;
 
 	return 0;
