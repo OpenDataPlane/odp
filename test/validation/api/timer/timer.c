@@ -1332,6 +1332,7 @@ static void timer_test_queue_type(odp_queue_type_t queue_type, int priv, int exp
 	odp_queue_param_t queue_param;
 	odp_timer_pool_param_t tparam;
 	odp_timer_pool_t tp;
+	odp_timer_start_t start_param;
 	odp_queue_t queue;
 	odp_timer_t tim;
 	int i, ret, num_tmo;
@@ -1411,7 +1412,12 @@ static void timer_test_queue_type(odp_queue_type_t queue_type, int priv, int exp
 		timer[i] = tim;
 
 		tick = tick_base + ((i + 1) * period_tick);
-		ret = odp_timer_set_abs(tim, tick, &ev);
+
+		start_param.tick_type = ODP_TIMER_TICK_ABS;
+		start_param.tick = tick;
+		start_param.tmo_ev = ev;
+
+		ret = odp_timer_start(tim, &start_param);
 		target_tick[i] = tick;
 		target_nsec[i] = nsec_base + ((i + 1) * period_ns);
 
@@ -1943,6 +1949,7 @@ static int worker_entrypoint(void *arg ODP_UNUSED)
 	struct timespec ts;
 	uint32_t nstale;
 	odp_timer_set_t timer_rc;
+	odp_timer_start_t start_param;
 	odp_timer_pool_t tp = global_mem->tp;
 	odp_pool_t tbp = global_mem->tbp;
 	uint32_t num_timers = global_mem->timers_per_thread;
@@ -2008,7 +2015,13 @@ static int worker_entrypoint(void *arg ODP_UNUSED)
 		       (rand_r(&seed) % RANGE_MS) * 1000000ULL;
 		tck = odp_timer_current_tick(tp) +
 		      odp_timer_ns_to_tick(tp, nsec);
-		timer_rc = odp_timer_set_abs(tt[i].tim, tck, &tt[i].ev);
+
+		start_param.tick_type = ODP_TIMER_TICK_ABS;
+		start_param.tick = tck;
+		start_param.tmo_ev = tt[i].ev;
+		tt[i].ev = ODP_EVENT_INVALID;
+
+		timer_rc = odp_timer_start(tt[i].tim, &start_param);
 		if (timer_rc == ODP_TIMER_TOO_NEAR) {
 			ODPH_ERR("Missed tick, setting timer\n");
 		} else if (timer_rc != ODP_TIMER_SUCCESS) {
