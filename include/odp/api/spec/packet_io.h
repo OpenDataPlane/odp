@@ -20,7 +20,6 @@ extern "C" {
 #endif
 
 #include <odp/api/classification.h>
-#include <odp/api/deprecated.h>
 #include <odp/api/packet_types.h>
 #include <odp/api/packet_io_stats.h>
 #include <odp/api/packet_io_types.h>
@@ -831,22 +830,6 @@ int odp_pktio_info(odp_pktio_t pktio, odp_pktio_info_t *info);
  * @retval <0 on failure
  */
 int odp_pktio_link_info(odp_pktio_t pktio, odp_pktio_link_info_t *info);
-
-/**
- * Convert nanoseconds to packet input time
- *
- * @deprecated Use odp_pktio_ts_from_ns() instead, which can be used with both
- * packet input and output timestamps.
- *
- * Packet input time source is used for timestamping incoming packets.
- * This function is used convert nanosecond time to packet input timestamp time.
- *
- * @param      pktio   Packet IO handle
- * @param      ns      Time in nanoseconds
- *
- * @return Packet input timestamp
- */
-odp_time_t ODP_DEPRECATE(odp_pktin_ts_from_ns)(odp_pktio_t pktio, uint64_t ns);
 
 /**
  * Packet IO timestamp resolution in hertz
