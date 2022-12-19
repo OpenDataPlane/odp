@@ -745,39 +745,6 @@ void odp_tm_requirements_init(odp_tm_requirements_t *requirements);
  */
 void odp_tm_egress_init(odp_tm_egress_t *egress);
 
-/** Query All TM Capabilities
- *
- * @deprecated Use odp_tm_egress_capabilities() instead that also additionally
- * takes egress as input to provide capabilities specific to a given egress.
- *
- * This function returns the set of TM capabilities that are common for all
- * egresses. The reason that this returns a SET of capabilities and not just
- * one, is because it is expected that many HW based implementations may have
- * one set of limits for the HW and also support a SW TM implementation with a
- * (presumably larger) different set of limits. There are also cases where
- * there could be more than one SW implementation (one supporting say tens of
- * thousands of tm_queues and a variant supporting tens of millions of
- * tm_queues). It returns capabilities that are valid for all egresses.
- * The caller passes in an array of odp_tm_capabilities_t records and the
- * maximum number of such records to output. If number of such records
- * implementation supports is larger than caller requested number, then
- * only caller requested number of records are written and return value is
- * max number of records implementation supports.
- * Caller then may again call with larger number of records to be returned.
- *
- * @param[out] capabilities      An array of odp_tm_capabilities_t records to
- *                               be filled in.
- * @param      capabilities_size The number of odp_tm_capabilities_t records
- *                               in the capabilities array.
- * @return                       Returns < 0 upon failure.  Returns N > 0,
- *                               where N is the maximum number of different
- *                               odp_tm_capabilities_t records that the
- *                               implementations supports. *NOTE* that this
- *                               number can be > capabilities_size!
- */
-int ODP_DEPRECATE(odp_tm_capabilities)(odp_tm_capabilities_t capabilities[],
-				       uint32_t              capabilities_size);
-
 /** Query TM Capabilities specific to an egress
  *
  * The function returns the set of TM limits supported by this implementation
