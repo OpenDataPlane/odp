@@ -19,7 +19,6 @@
 extern "C" {
 #endif
 
-#include <odp/api/deprecated.h>
 #include <odp/api/packet_types.h>
 #include <odp/api/packet_io_stats.h>
 #include <odp/api/pool_types.h>
