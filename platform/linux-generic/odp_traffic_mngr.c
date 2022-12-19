@@ -2665,12 +2665,6 @@ static int tm_capabilities(odp_tm_capabilities_t capabilities[],
 	return 1;
 }
 
-int ODP_DEPRECATE(odp_tm_capabilities)(odp_tm_capabilities_t capabilities[],
-				       uint32_t              capabilities_size)
-{
-	return tm_capabilities(capabilities, capabilities_size);
-}
-
 int odp_tm_egress_capabilities(odp_tm_capabilities_t *capabilities,
 			       const odp_tm_egress_t *egress)
 {
