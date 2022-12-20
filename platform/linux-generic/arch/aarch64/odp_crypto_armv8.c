@@ -239,6 +239,7 @@ void aes_gcm_encrypt(odp_packet_t pkt,
 			.d = {0, 0}
 		}
 	};
+	uint8_t iv_data[ARM_CRYPTO_MAX_IV_LENGTH];
 	uint8_t *iv_ptr;
 	uint64_t iv_bit_length = AES_GCM_IV_LEN * 8;
 	uint64_t plaintext_bit_length = param->cipher_range.length * 8;
@@ -267,6 +268,9 @@ void aes_gcm_encrypt(odp_packet_t pkt,
 	iv_ptr = param->cipher_iv_ptr;
 	_ODP_ASSERT(iv_ptr != NULL);
 #endif
+	/* The crypto lib may read 16 bytes. Copy to a big enough buffer */
+	memcpy(iv_data, iv_ptr, AES_GCM_IV_LEN);
+	iv_ptr = iv_data;
 
 	cs.constants = &session->cc;
 
@@ -339,6 +343,7 @@ void aes_gcm_decrypt(odp_packet_t pkt,
 			.d = {0, 0}
 		}
 	};
+	uint8_t iv_data[ARM_CRYPTO_MAX_IV_LENGTH];
 	uint8_t *iv_ptr;
 	uint8_t tag[AES_GCM_TAG_LEN];
 	uint64_t iv_bit_length = AES_GCM_IV_LEN * 8;
@@ -367,6 +372,9 @@ void aes_gcm_decrypt(odp_packet_t pkt,
 	iv_ptr = param->cipher_iv_ptr;
 	_ODP_ASSERT(iv_ptr != NULL);
 #endif
+	/* The crypto lib may read 16 bytes. Copy to a big enough buffer */
+	memcpy(iv_data, iv_ptr, AES_GCM_IV_LEN);
+	iv_ptr = iv_data;
 
 	cs.constants = &session->cc;
 
