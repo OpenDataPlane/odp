@@ -372,6 +372,7 @@ static int timer_debug(void)
 	odp_timer_capability_t timer_capa;
 	odp_timer_pool_t timer_pool;
 	odp_timer_pool_param_t timer_param;
+	odp_timer_start_t start_param;
 	odp_timer_t timer;
 	odp_queue_t queue;
 	odp_queue_param_t queue_param;
@@ -452,8 +453,13 @@ static int timer_debug(void)
 	odp_timeout_print(timeout);
 
 	event = odp_timeout_to_event(timeout);
-	if (odp_timer_set_rel(timer, tick, &event) != ODP_TIMER_SUCCESS)
-		ODPH_ERR("Timer set failed.\n");
+
+	start_param.tick_type = ODP_TIMER_TICK_REL;
+	start_param.tick = tick;
+	start_param.tmo_ev = event;
+
+	if (odp_timer_start(timer, &start_param) != ODP_TIMER_SUCCESS)
+		ODPH_ERR("Timer start failed.\n");
 
 	printf("\n");
 	odp_timer_print(timer);
