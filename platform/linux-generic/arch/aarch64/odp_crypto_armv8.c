@@ -38,6 +38,10 @@
 #define ARM_CRYPTO_MAX_DATA_LENGTH	      65536
 #define ARM_CRYPTO_MAX_DIGEST_LENGTH          16
 
+#define AES_GCM_IV_LEN 12
+ODP_STATIC_ASSERT(AES_GCM_IV_LEN <= ARM_CRYPTO_MAX_IV_LENGTH,
+		  "AES_GCM_IV_LEN exceeds ARM_CRYPTO_MAX_IV_LENGTH");
+
 /*
  * ARM crypto library may read up to 15 bytes past the end of input
  * data and AAD and write up to 15 bytes past the end of output data.
@@ -70,9 +74,9 @@ static const odp_crypto_cipher_capability_t cipher_capa_null[] = {
 
 #ifdef __ARM_FEATURE_AES
 static const odp_crypto_cipher_capability_t cipher_capa_aes_gcm[] = {
-{.key_len = 16, .iv_len = 12},
-{.key_len = 24, .iv_len = 12},
-{.key_len = 32, .iv_len = 12} };
+{.key_len = 16, .iv_len = AES_GCM_IV_LEN},
+{.key_len = 24, .iv_len = AES_GCM_IV_LEN},
+{.key_len = 32, .iv_len = AES_GCM_IV_LEN} };
 #endif
 
 /*
@@ -236,7 +240,7 @@ void aes_gcm_encrypt(odp_packet_t pkt,
 		}
 	};
 	uint8_t *iv_ptr;
-	uint64_t iv_bit_length = session->p.cipher_iv_len * 8;
+	uint64_t iv_bit_length = AES_GCM_IV_LEN * 8;
 	uint64_t plaintext_bit_length = param->cipher_range.length * 8;
 	uint64_t aad_bit_length = session->p.auth_aad_len * 8;
 	uint32_t in_pos = param->cipher_range.offset;
@@ -261,7 +265,7 @@ void aes_gcm_encrypt(odp_packet_t pkt,
 		goto err;
 #else
 	iv_ptr = param->cipher_iv_ptr;
-	_ODP_ASSERT(session->p.cipher_iv_len == 0 || iv_ptr != NULL);
+	_ODP_ASSERT(iv_ptr != NULL);
 #endif
 
 	cs.constants = &session->cc;
@@ -337,7 +341,7 @@ void aes_gcm_decrypt(odp_packet_t pkt,
 	};
 	uint8_t *iv_ptr;
 	uint8_t tag[AES_GCM_TAG_LEN];
-	uint64_t iv_bit_length = session->p.cipher_iv_len * 8;
+	uint64_t iv_bit_length = AES_GCM_IV_LEN * 8;
 	uint64_t plaintext_bit_length = param->cipher_range.length * 8;
 	uint64_t aad_bit_length = session->p.auth_aad_len * 8;
 	uint32_t in_pos = param->cipher_range.offset;
@@ -361,7 +365,7 @@ void aes_gcm_decrypt(odp_packet_t pkt,
 		goto err;
 #else
 	iv_ptr = param->cipher_iv_ptr;
-	_ODP_ASSERT(session->p.cipher_iv_len == 0 || iv_ptr != NULL);
+	_ODP_ASSERT(iv_ptr != NULL);
 #endif
 
 	cs.constants = &session->cc;
@@ -433,7 +437,7 @@ static int process_aes_gcm_param(odp_crypto_generic_session_t *session)
 		return -1;
 
 	/* Verify IV len is correct */
-	if (12 != session->p.cipher_iv_len)
+	if (session->p.cipher_iv_len != AES_GCM_IV_LEN)
 		return -1;
 
 	if (ARM_CRYPTO_MAX_CIPHER_KEY_LENGTH < session->p.cipher_key.length)
