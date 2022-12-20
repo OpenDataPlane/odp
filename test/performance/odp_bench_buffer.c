@@ -199,7 +199,7 @@ static int run_benchmarks(void *arg)
 			/* Skip unsupported tests */
 			if (args->bench[j].cond != NULL && !args->bench[j].cond()) {
 				j++;
-				k = 0;
+				k = 1;
 				if (i > 0)
 					printf("[%02d] odp_%-26s:      n/a\n", j, desc);
 				continue;
@@ -236,7 +236,7 @@ static int run_benchmarks(void *arg)
 					printf("[%02d] odp_%-26s: %8.1f\n", j + 1, desc, cycles);
 
 				j++;
-				k = 0;
+				k = 1;
 				tot_cycles = 0;
 			}
 		}

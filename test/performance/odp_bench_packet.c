@@ -275,7 +275,7 @@ static int run_benchmarks(void *arg)
 				printf("odp_%-26s: %8.1f\n", desc, cycles);
 
 				j++;
-				k = 0;
+				k = 1;
 				tot_cycles = 0;
 			}
 		}
