@@ -425,6 +425,7 @@ static int worker_thread_timers(void *arg)
 	pktin_queue_context_t *queue_context;
 	odp_timer_t timer;
 	odp_timer_set_t ret;
+	odp_timer_start_t start_param;
 	worker_arg_t *worker_arg = arg;
 	test_global_t *test_global = worker_arg->test_global_ptr;
 	int worker_id = worker_arg->worker_id;
@@ -460,12 +461,17 @@ static int worker_thread_timers(void *arg)
 		src_pktio = queue_context->src_pktio;
 		src_queue = queue_context->src_queue;
 		timer = test_global->timer.timer[src_pktio][src_queue];
+		start_param.tick_type = ODP_TIMER_TICK_REL;
+		start_param.tick = tick;
+		start_param.tmo_ev = ODP_EVENT_INVALID;
 
 		for (i = 0; i < num; i++) {
 			if (odp_unlikely(odp_event_type(ev[i]) ==
 					 ODP_EVENT_TIMEOUT)) {
 				tmos++;
-				ret = odp_timer_set_rel(timer, tick, &ev[i]);
+
+				start_param.tmo_ev = ev[i];
+				ret = odp_timer_start(timer, &start_param);
 
 				if (odp_unlikely(ret != ODP_TIMER_SUCCESS)) {
 					/* Should never happen. Timeout event
@@ -487,7 +493,7 @@ static int worker_thread_timers(void *arg)
 
 		if (tmos == 0) {
 			/* Reset timer with existing timeout event */
-			ret = odp_timer_set_rel(timer, tick, NULL);
+			ret = odp_timer_restart(timer, &start_param);
 
 			if (odp_unlikely(ret != ODP_TIMER_SUCCESS &&
 					 ret != ODP_TIMER_FAIL)) {
@@ -1318,10 +1324,10 @@ static int create_timers(test_global_t *test_global)
 static int start_timers(test_global_t *test_global)
 {
 	int i, j;
-	odp_event_t event;
 	odp_timeout_t timeout;
 	odp_timer_t timer;
 	odp_timer_set_t ret;
+	odp_timer_start_t start_param;
 	uint64_t timeout_tick = test_global->timer.timeout_tick;
 	int num_pktio = test_global->opt.num_pktio;
 	int num_queue = test_global->opt.num_pktio_queue;
@@ -1335,6 +1341,9 @@ static int start_timers(test_global_t *test_global)
 	timeout_tick += odp_timer_ns_to_tick(test_global->timer.timer_pool,
 					     TIMEOUT_OFFSET_NS);
 
+	start_param.tick_type = ODP_TIMER_TICK_REL;
+	start_param.tick = timeout_tick;
+
 	for (i = 0; i < num_pktio; i++) {
 		for (j = 0; j < num_queue; j++) {
 			timer = test_global->timer.timer[i][j];
@@ -1345,10 +1354,9 @@ static int start_timers(test_global_t *test_global)
 				return -1;
 			}
 
-			event = odp_timeout_to_event(timeout);
+			start_param.tmo_ev = odp_timeout_to_event(timeout);
 
-			ret = odp_timer_set_rel(timer, timeout_tick, &event);
-
+			ret = odp_timer_start(timer, &start_param);
 			if (ret != ODP_TIMER_SUCCESS) {
 				printf("Timer set failed\n");
 				return -1;
