@@ -666,6 +666,7 @@ static void timer_pool_max_res(void)
 	odp_queue_param_t queue_param;
 	odp_timer_pool_t tp;
 	odp_timer_t timer;
+	odp_timer_start_t start_param;
 	odp_pool_param_t pool_param;
 	odp_pool_t pool;
 	odp_queue_t queue;
@@ -729,7 +730,11 @@ static void timer_pool_max_res(void)
 		ev  = odp_timeout_to_event(tmo);
 		CU_ASSERT_FATAL(ev != ODP_EVENT_INVALID);
 
-		ret = odp_timer_set_rel(timer, tick, &ev);
+		start_param.tick_type = ODP_TIMER_TICK_REL;
+		start_param.tick = tick;
+		start_param.tmo_ev = ev;
+
+		ret = odp_timer_start(timer, &start_param);
 		CU_ASSERT(ret == ODP_TIMER_SUCCESS);
 
 		ev = ODP_EVENT_INVALID;
@@ -1145,6 +1150,7 @@ static void timer_test_event_type(odp_queue_type_t queue_type,
 	odp_queue_param_t queue_param;
 	odp_timer_pool_param_t timer_param;
 	odp_timer_pool_t timer_pool;
+	odp_timer_start_t start_param;
 	odp_queue_t queue;
 	odp_timeout_t tmo;
 	odp_buffer_t buf;
@@ -1231,7 +1237,11 @@ static void timer_test_event_type(odp_queue_type_t queue_type,
 		timer[i] = odp_timer_alloc(timer_pool, queue, user_ctx);
 		CU_ASSERT_FATAL(timer[i] != ODP_TIMER_INVALID);
 
-		ret = odp_timer_set_rel(timer[i], (i + 1) * period_tick, &ev);
+		start_param.tick_type = ODP_TIMER_TICK_REL;
+		start_param.tick = (i + 1) * period_tick;
+		start_param.tmo_ev = ev;
+
+		ret = odp_timer_start(timer[i], &start_param);
 
 		if (ret == ODP_TIMER_TOO_NEAR)
 			ODPH_DBG("Timer set failed. Too near %i.\n", i);
@@ -1547,12 +1557,12 @@ static void timer_test_cancel(void)
 	odp_queue_param_t queue_param;
 	odp_timer_capability_t capa;
 	odp_timer_pool_t tp;
+	odp_timer_start_t start_param;
 	odp_queue_t queue;
 	odp_timer_t tim;
 	odp_event_t ev;
 	odp_timeout_t tmo;
 	odp_timer_set_t rc;
-	uint64_t tick;
 	int ret;
 
 	memset(&capa, 0, sizeof(capa));
@@ -1603,9 +1613,11 @@ static void timer_test_cancel(void)
 	if (ev == ODP_EVENT_INVALID)
 		CU_FAIL_FATAL("Failed to allocate timeout");
 
-	tick = odp_timer_ns_to_tick(tp, tparam.max_tmo / 2);
+	start_param.tick_type = ODP_TIMER_TICK_REL;
+	start_param.tick = odp_timer_ns_to_tick(tp, tparam.max_tmo / 2);
+	start_param.tmo_ev = ev;
 
-	rc = odp_timer_set_rel(tim, tick, &ev);
+	rc = odp_timer_start(tim, &start_param);
 	if (rc != ODP_TIMER_SUCCESS)
 		CU_FAIL_FATAL("Failed to set timer (relative time)");
 
@@ -1651,6 +1663,7 @@ static void timer_test_tmo_limit(odp_queue_type_t queue_type,
 	odp_queue_param_t queue_param;
 	odp_timer_pool_param_t timer_param;
 	odp_timer_pool_t timer_pool;
+	odp_timer_start_t start_param;
 	odp_queue_t queue;
 	odp_timeout_t tmo;
 	odp_event_t ev;
@@ -1737,7 +1750,12 @@ static void timer_test_tmo_limit(odp_queue_type_t queue_type,
 		CU_ASSERT(ev != ODP_EVENT_INVALID);
 
 		t1  = odp_time_local();
-		ret = odp_timer_set_rel(timer[i], tmo_tick, &ev);
+
+		start_param.tick_type = ODP_TIMER_TICK_REL;
+		start_param.tick = tmo_tick;
+		start_param.tmo_ev = ev;
+
+		ret = odp_timer_start(timer[i], &start_param);
 
 		if (ret == ODP_TIMER_TOO_NEAR)
 			ODPH_DBG("Timer set failed. Too near %i.\n", i);
@@ -2071,23 +2089,34 @@ static int worker_entrypoint(void *arg ODP_UNUSED)
 			odp_timer_set_t rc;
 			uint64_t cur_tick;
 			uint64_t tck;
+			int reset_timer = 0;
 
-			if (tt[i].ev != ODP_EVENT_INVALID)
+			if (tt[i].ev != ODP_EVENT_INVALID) {
 				/* Timer inactive => set */
 				nset++;
-			else if (odp_timer_current_tick(tp) >= tt[i].tick)
+			} else if (odp_timer_current_tick(tp) >= tt[i].tick) {
 				/* Timer just expired. */
 				goto sleep;
-			else
+			} else {
 				/* Timer active => reset */
 				nreset++;
+				reset_timer = 1;
+			}
 
 			nsec = min_tmo + THREE_POINT_THREE_MSEC +
 			       (rand_r(&seed) % RANGE_MS) * 1000000ULL;
 			tck  = odp_timer_ns_to_tick(tp, nsec);
 
 			cur_tick = odp_timer_current_tick(tp);
-			rc = odp_timer_set_rel(tt[i].tim, tck, &tt[i].ev);
+
+			start_param.tick_type = ODP_TIMER_TICK_REL;
+			start_param.tick = tck;
+			start_param.tmo_ev = tt[i].ev;
+
+			if (reset_timer)
+				rc = odp_timer_restart(tt[i].tim, &start_param);
+			else
+				rc = odp_timer_start(tt[i].tim, &start_param);
 
 			if (rc == ODP_TIMER_TOO_NEAR) {
 				CU_FAIL("Failed to set timer: TOO NEAR");
