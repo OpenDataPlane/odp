@@ -698,7 +698,11 @@ static int set_cancel_mode_worker(void *arg)
 			period_tick = global->timer_pool[i].period_tick;
 			tick = start_tick + j * period_tick;
 
-			status = odp_timer_set_rel(timer, tick, &ev);
+			start_param.tick_type = ODP_TIMER_TICK_REL;
+			start_param.tick = tick;
+			start_param.tmo_ev = ev;
+
+			status = odp_timer_start(timer, &start_param);
 			num_tmo++;
 			num_set++;
 
