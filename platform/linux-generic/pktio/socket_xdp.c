@@ -173,7 +173,7 @@ static int umem_create(xdp_umem_info_t *umem_info, pool_t *pool)
 	parse_options(umem_info);
 	umem_info->pool = pool;
 	/* Fill queue size is recommended to be >= HW RX ring size + AF_XDP RX
-	* ring size, so use size twice the size of AF_XDP RX ring. */
+	 * ring size, so use size twice the size of AF_XDP RX ring. */
 	cfg.fill_size = umem_info->num_rx_desc * 2U;
 	cfg.comp_size = umem_info->num_tx_desc;
 	cfg.frame_size = pool->block_size;
@@ -900,17 +900,6 @@ static int sock_xdp_capability(pktio_entry_t *pktio_entry, odp_pktio_capability_
 	return 0;
 }
 
-static int sock_xdp_input_queues_config(pktio_entry_t *pktio_entry,
-					const odp_pktin_queue_param_t *param)
-{
-	xdp_sock_info_t *priv = pkt_priv(pktio_entry);
-
-	priv->lockless_rx = pktio_entry->param.in_mode == ODP_PKTIN_MODE_SCHED ||
-			    param->op_mode == ODP_PKTIO_OP_MT_UNSAFE;
-
-	return 0;
-}
-
 static void fill_socket_config(struct xsk_socket_config *config, xdp_umem_info_t *umem_info)
 {
 	config->rx_size = umem_info->num_rx_desc;
@@ -920,23 +909,19 @@ static void fill_socket_config(struct xsk_socket_config *config, xdp_umem_info_t
 	config->bind_flags = XDP_ZEROCOPY; /* TODO: XDP_COPY */
 }
 
-static int sock_xdp_output_queues_config(pktio_entry_t *pktio_entry,
-					 const odp_pktout_queue_param_t *param)
+static int create_sockets(const char *devname, xdp_sock_info_t *priv, uint32_t num_queues)
 {
-	xdp_sock_info_t *priv = pkt_priv(pktio_entry);
 	struct xsk_socket_config config;
-	const char *devname = pktio_entry->name;
 	uint32_t bind_q, i;
 	struct xsk_umem *umem;
 	xdp_sock_t *sock;
 	int ret;
 
-	priv->lockless_tx = param->op_mode == ODP_PKTIO_OP_MT_UNSAFE;
 	fill_socket_config(&config, priv->umem_info);
 	bind_q = priv->bind_q;
 	umem = priv->umem_info->umem;
 
-	for (i = 0U; i < param->num_queues;) {
+	for (i = 0U; i < num_queues;) {
 		sock = &priv->qs[i];
 		ret = xsk_socket__create_shared(&sock->xsk, devname, bind_q, umem, &sock->rx,
 						&sock->tx, &sock->fill_q, &sock->compl_q, &config);
@@ -971,6 +956,38 @@ err:
 	}
 
 	return -1;
+}
+
+static int configure_queues(const char *devname, xdp_sock_info_t *priv, uint32_t num_queues)
+{
+	if (priv->num_q > 0U && priv->num_q != num_queues) {
+		_ODP_ERR("Different amount of input and output queues, configured: %u, "
+			 "requested: %u.\n", priv->num_q, num_queues);
+		return -1;
+	}
+
+	return priv->num_q == 0U ? create_sockets(devname, priv, num_queues) : 0;
+}
+
+static int sock_xdp_input_queues_config(pktio_entry_t *pktio_entry,
+					const odp_pktin_queue_param_t *param)
+{
+	xdp_sock_info_t *priv = pkt_priv(pktio_entry);
+
+	priv->lockless_rx = pktio_entry->param.in_mode == ODP_PKTIN_MODE_SCHED ||
+			    param->op_mode == ODP_PKTIO_OP_MT_UNSAFE;
+
+	return configure_queues(pktio_entry->name, priv, param->num_queues);
+}
+
+static int sock_xdp_output_queues_config(pktio_entry_t *pktio_entry,
+					 const odp_pktout_queue_param_t *param)
+{
+	xdp_sock_info_t *priv = pkt_priv(pktio_entry);
+
+	priv->lockless_tx = param->op_mode == ODP_PKTIO_OP_MT_UNSAFE;
+
+	return configure_queues(pktio_entry->name, priv, param->num_queues);
 }
 
 const pktio_if_ops_t _odp_sock_xdp_pktio_ops = {
