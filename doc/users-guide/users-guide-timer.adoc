@@ -46,11 +46,11 @@ as an input parameter to enable the pool-specific conversion ratios to be
 used.
 
 Associated with each timer pool is a free running tick counter that can be
-sampled at any time via the `odp_timer_current_tick()` API. Timers can be set
-to an absolute future tick value via `odp_timer_set_abs()` or to a future tick
-value relative to the current tick via `odp_timer_set_rel()`.  Implementations
-may impose minimum and maximum future values supported by a given timer pool
-and timer set operations will fail if the requested value is outside of the
+sampled at any time via the `odp_timer_current_tick()` API. Timers are started
+with `odp_timer_start()` and the expiration time can be an absolute future tick
+value or a future tick value relative to the current tick. Implementations may
+impose minimum and maximum future values supported by a given timer pool and
+timer start operations will fail if the requested value is outside of the
 supported range.
 
 Before a set timer expires, it can be canceled via the `odp_timer_cancel()`
