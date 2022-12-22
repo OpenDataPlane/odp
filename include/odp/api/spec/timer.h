@@ -20,6 +20,7 @@
 extern "C" {
 #endif
 
+#include <odp/api/deprecated.h>
 #include <odp/api/timer_types.h>
 #include <odp/api/event_types.h>
 #include <odp/api/pool_types.h>
@@ -387,7 +388,7 @@ int odp_timer_periodic_cancel(odp_timer_t timer);
  *
  * @deprecated Use odp_timer_start() or odp_timer_restart() instead
  */
-int odp_timer_set_abs(odp_timer_t timer, uint64_t abs_tick, odp_event_t *tmo_ev);
+int ODP_DEPRECATE(odp_timer_set_abs)(odp_timer_t timer, uint64_t abs_tick, odp_event_t *tmo_ev);
 
 /**
  * Set (or reset) a timer with relative expiration time
@@ -416,7 +417,7 @@ int odp_timer_set_abs(odp_timer_t timer, uint64_t abs_tick, odp_event_t *tmo_ev)
  *
  * @deprecated Use odp_timer_start() or odp_timer_restart() instead
  */
-int odp_timer_set_rel(odp_timer_t timer, uint64_t rel_tick, odp_event_t *tmo_ev);
+int ODP_DEPRECATE(odp_timer_set_rel)(odp_timer_t timer, uint64_t rel_tick, odp_event_t *tmo_ev);
 
 /**
  * Cancel a timer
