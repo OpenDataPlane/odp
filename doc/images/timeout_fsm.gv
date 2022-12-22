@@ -8,17 +8,13 @@ digraph timer_state_machine {
 	TO_Unalloc -> TO_Alloc [label="odp_timeout_alloc()"];
 	TO_Alloc -> TO_Unalloc [label="odp_timeout_free()"];
 	TO_Alloc -> TO_Pending [fontcolor=green,
-			       label="odp_timer_set_abs()"];
-	TO_Alloc -> TO_Pending [fontcolor=green,
-			       label="odp_timer_set_rel()"];
+			       label="odp_timer_start()"];
 	TO_Pending -> TO_Alloc [fontcolor=green,
 			       label="odp_timer_cancel()"];
 	TO_Pending -> TO_Enqueued [fontcolor=green, label="timer expires"];
 	TO_Enqueued -> TO_Delivered [label="odp_schedule()"];
 	TO_Delivered -> TO_Pending [fontcolor=green,
-				   label="odp_timer_set_abs()"];
-	TO_Delivered -> TO_Pending [fontcolor=green,
-				   label="odp_timer_set_rel()"];
+				   label="odp_timer_start()"];
 	TO_Delivered -> TO_Delivered [label="odp_timeout_from_event()"];
 	TO_Delivered -> TO_Delivered [label="odp_timeout_timer()"];
 	TO_Delivered -> TO_Unalloc
