@@ -17,6 +17,7 @@
 #include <odp/api/atomic.h>
 #include <odp/api/cpu.h>
 #include <odp/api/debug.h>
+#include <odp/api/deprecated.h>
 #include <odp/api/event.h>
 #include <odp/api/hints.h>
 #include <odp/api/pool.h>
@@ -1494,9 +1495,7 @@ odp_event_t odp_timer_free(odp_timer_t hdl)
 	return timer_free(tp, idx);
 }
 
-int odp_timer_set_abs(odp_timer_t hdl,
-		      uint64_t abs_tck,
-		      odp_event_t *tmo_ev)
+int ODP_DEPRECATE(odp_timer_set_abs)(odp_timer_t hdl, uint64_t abs_tck, odp_event_t *tmo_ev)
 {
 	timer_pool_t *tp = handle_to_tp(hdl);
 	uint64_t cur_tick = current_nsec(tp);
@@ -1512,9 +1511,7 @@ int odp_timer_set_abs(odp_timer_t hdl,
 		return ODP_TIMER_FAIL;
 }
 
-int odp_timer_set_rel(odp_timer_t hdl,
-		      uint64_t rel_tck,
-		      odp_event_t *tmo_ev)
+int ODP_DEPRECATE(odp_timer_set_rel)(odp_timer_t hdl, uint64_t rel_tck, odp_event_t *tmo_ev)
 {
 	timer_pool_t *tp = handle_to_tp(hdl);
 	uint64_t cur_tick = current_nsec(tp);
