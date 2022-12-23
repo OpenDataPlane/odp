@@ -20,8 +20,9 @@
 extern "C" {
 #endif
 
-#include <odp/api/std_types.h>
+#include <odp/api/deprecated.h>
 #include <odp/api/event_types.h>
+#include <odp/api/std_types.h>
 
 /** @defgroup odp_timer ODP TIMER
  *  Timer generating timeout events.
@@ -245,13 +246,21 @@ typedef enum {
 /** The default clock source */
 #define ODP_CLOCK_DEFAULT ODP_CLOCK_SRC_0
 
-/** For backwards compatibility, ODP_CLOCK_CPU is synonym of ODP_CLOCK_DEFAULT.
- *  This will be deprecated in the future. */
+#if ODP_DEPRECATED_API
+/**
+ * For backwards compatibility, ODP_CLOCK_CPU is synonym of ODP_CLOCK_DEFAULT.
+ *
+ * @deprecated Use #ODP_CLOCK_DEFAULT instead.
+ */
 #define ODP_CLOCK_CPU ODP_CLOCK_DEFAULT
 
-/** For backwards compatibility, ODP_CLOCK_EXT is synonym of ODP_CLOCK_SRC_1.
- *  This will be deprecated in the future. */
+/**
+ * For backwards compatibility, ODP_CLOCK_EXT is synonym of ODP_CLOCK_SRC_1.
+ *
+ * @deprecated Use #ODP_CLOCK_SRC_1 instead.
+ */
 #define ODP_CLOCK_EXT ODP_CLOCK_SRC_1
+#endif
 
 /**
  * Timer expiration mode
