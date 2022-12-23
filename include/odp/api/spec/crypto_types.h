@@ -240,8 +240,8 @@ typedef enum {
 	 *  require the data to be contiguous in memory, are ignored with
 	 *  AES-GMAC.
 	 *
-	 *  GMAC needs an initialization vector, which can be passed via
-	 *  session (auth_iv) or packet (auth_iv_ptr) level parameters.
+	 *  GMAC needs an initialization vector, which must be passed via
+	 *  operation parameters (auth_iv_ptr).
 	 */
 	ODP_AUTH_ALG_AES_GMAC,
 
@@ -512,28 +512,6 @@ typedef struct odp_crypto_key {
 } odp_crypto_key_t;
 
 /**
- * Crypto API IV structure
- *
- * @deprecated Use per-packet IV in crypto operation parameters
- */
-typedef struct odp_crypto_iv {
-	/** IV data
-	 *
-	 *  Ignored when length is zero. Null value indicates that an
-	 *  IV will be provided for each packet through the crypto
-	 *  operation parameters. In that case the per-operation
-	 *  IV parameter must always point to a valid IV.
-	 *
-	 *  Default value is NULL.
-	 */
-	uint8_t *data;
-
-	/** IV length in bytes. Default value is zero. */
-	uint32_t length;
-
-} ODP_DEPRECATE(odp_crypto_iv_t);
-
-/**
  * Crypto API session creation parameters
  */
 typedef struct odp_crypto_session_param_t {
@@ -602,32 +580,8 @@ typedef struct odp_crypto_session_param_t {
 	 */
 	odp_crypto_key_t cipher_key;
 
-	/** Cipher Initialization Vector (IV)
-	 *
-	 *  Unless using the deprecated API, this specifies the length of
-	 *  the IV only. The actual IV must then be provided in per-packet
-	 *  parameters of crypto operations.
-	 */
-	union {
-#if ODP_DEPRECATED_API
-		/** @deprecated Cipher IV */
-		odp_crypto_iv_t ODP_DEPRECATE(cipher_iv);
-#endif
-		/** Cipher IV length */
-		struct {
-#if ODP_DEPRECATED_API
-			/** @cond
-			 *  Unused padding field
-			 */
-			uint8_t *dummy_padding_0;
-			/** @endcond */
-#endif
-			/** Length of cipher initialization vector.
-			 *  Default value is zero.
-			 */
-			uint32_t cipher_iv_len;
-		};
-	};
+	/** Cipher IV length. The default value is zero. */
+	uint32_t cipher_iv_len;
 
 	/** Authentication algorithm
 	 *
@@ -652,32 +606,8 @@ typedef struct odp_crypto_session_param_t {
 	 */
 	odp_crypto_key_t auth_key;
 
-	/** Authentication Initialization Vector (IV)
-	 *
-	 *  Unless using the deprecated API, this specifies the length of
-	 *  the IV only. The actual IV must then be provided in per-packet
-	 *  parameters of crypto operations.
-	 */
-	union {
-#if ODP_DEPRECATED_API
-		/** @deprecated Authentication IV */
-		odp_crypto_iv_t ODP_DEPRECATE(auth_iv);
-#endif
-		/** Authentication IV length */
-		struct {
-#if ODP_DEPRECATED_API
-			/** @cond
-			 *  Unused padding field
-			 */
-			uint8_t *dummy_padding_1;
-			/** @endcond */
-#endif
-			/** Length of authentication initialization vector.
-			 *  Default value is zero.
-			 */
-			uint32_t auth_iv_len;
-		};
-	};
+	/** Authentication IV length. The default value is zero. */
+	uint32_t auth_iv_len;
 
 	/** Authentication digest length in bytes
 	 *
