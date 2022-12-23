@@ -523,17 +523,28 @@ typedef enum {
 
 } odp_timer_set_t;
 
-/** For backwards compatibility, ODP_TIMER_TOOEARLY is synonym of ODP_TIMER_TOO_NEAR.
- *  This will be deprecated in the future. */
+#if ODP_DEPRECATED_API
+/**
+ * For backwards compatibility, ODP_TIMER_TOOEARLY is synonym of ODP_TIMER_TOO_NEAR.
+ *
+ * @deprecated Use #ODP_TIMER_TOO_NEAR instead.
+ */
 #define ODP_TIMER_TOOEARLY ODP_TIMER_TOO_NEAR
 
-/** For backwards compatibility, ODP_TIMER_TOOLATE is synonym of ODP_TIMER_TOO_FAR.
- *  This will be deprecated in the future. */
+/**
+ * For backwards compatibility, ODP_TIMER_TOOLATE is synonym of ODP_TIMER_TOO_FAR.
+ *
+ * @deprecated Use #ODP_TIMER_TOO_FAR instead.
+ */
 #define ODP_TIMER_TOOLATE  ODP_TIMER_TOO_FAR
 
-/** For backwards compatibility, ODP_TIMER_NOEVENT is synonym of ODP_TIMER_FAIL.
- *  This will be deprecated in the future. */
+/**
+ * For backwards compatibility, ODP_TIMER_NOEVENT is synonym of ODP_TIMER_FAIL.
+ *
+ * @deprecated Use #ODP_TIMER_FAIL instead.
+ */
 #define ODP_TIMER_NOEVENT ODP_TIMER_FAIL
+#endif
 
 /**
  * Timer tick information
