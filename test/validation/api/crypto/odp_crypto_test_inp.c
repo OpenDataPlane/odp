@@ -46,13 +46,6 @@ static void test_defaults(uint8_t fill)
 	CU_ASSERT_EQUAL(param.auth_alg, ODP_AUTH_ALG_NULL);
 	CU_ASSERT_EQUAL(param.auth_iv_len, 0);
 	CU_ASSERT_EQUAL(param.auth_aad_len, 0);
-
-#if ODP_DEPRECATED_API
-	CU_ASSERT_EQUAL(param.cipher_iv.data, NULL);
-	CU_ASSERT_EQUAL(param.cipher_iv.length, 0);
-	CU_ASSERT_EQUAL(param.auth_iv.data, NULL);
-	CU_ASSERT_EQUAL(param.auth_iv.length, 0);
-#endif
 }
 
 static void test_default_values(void)
@@ -478,7 +471,6 @@ typedef struct alg_test_param_t {
 	odp_auth_alg_t auth_alg;
 	crypto_test_reference_t *ref;
 	uint32_t digest_offset;
-	odp_bool_t override_iv;
 	odp_bool_t is_bit_mode_cipher;
 	odp_bool_t is_bit_mode_auth;
 	odp_bool_t adjust_segmentation;
@@ -496,8 +488,8 @@ static void alg_test_execute(const alg_test_param_t *param)
 	odp_packet_data_range_t zero_range = {.offset = 0, .length = 0};
 	odp_packet_data_range_t cipher_range;
 	odp_packet_data_range_t auth_range;
-	uint8_t *cipher_iv = param->override_iv ? ref->cipher_iv : NULL;
-	uint8_t *auth_iv   = param->override_iv ? ref->auth_iv : NULL;
+	uint8_t *cipher_iv = ref->cipher_iv;
+	uint8_t *auth_iv   = ref->auth_iv;
 	test_packet_md_t md_in, md_out;
 
 	cipher_range.offset = param->header_len;
@@ -625,12 +617,6 @@ static void alg_test_execute(const alg_test_param_t *param)
 }
 
 typedef enum {
-	PACKET_IV,
-	OLD_PACKET_IV,
-	OLD_SESSION_IV,
-} iv_test_mode_t;
-
-typedef enum {
 	HASH_NO_OVERLAP,
 	HASH_OVERLAP,
 } hash_test_mode_t;
@@ -639,7 +625,6 @@ static odp_crypto_session_t session_create(odp_crypto_op_t op,
 					   odp_cipher_alg_t cipher_alg,
 					   odp_auth_alg_t auth_alg,
 					   crypto_test_reference_t *ref,
-					   iv_test_mode_t iv_mode,
 					   hash_test_mode_t hash_mode)
 {
 	odp_crypto_session_t session = ODP_CRYPTO_SESSION_INVALID;
@@ -656,23 +641,6 @@ static odp_crypto_session_t session_create(odp_crypto_op_t op,
 		.data = auth_key_data,
 		.length = ref->auth_key_length
 	};
-#if ODP_DEPRECATED_API
-	uint8_t cipher_iv_data[ref->cipher_iv_length];
-	uint8_t auth_iv_data[ref->auth_iv_length];
-	odp_crypto_iv_t cipher_iv = {
-		.length = ref->cipher_iv_length
-	};
-	odp_crypto_iv_t auth_iv = {
-		.length = ref->auth_iv_length
-	};
-
-	if (iv_mode == OLD_SESSION_IV) {
-		memcpy(cipher_iv_data, ref->cipher_iv, ref->cipher_iv_length);
-		memcpy(auth_iv_data, ref->auth_iv, ref->auth_iv_length);
-		cipher_iv.data = cipher_iv_data;
-		auth_iv.data = auth_iv_data;
-	}
-#endif
 
 	memcpy(cipher_key_data, ref->cipher_key, ref->cipher_key_length);
 	memcpy(auth_key_data, ref->auth_key, ref->auth_key_length);
@@ -690,15 +658,8 @@ static odp_crypto_session_t session_create(odp_crypto_op_t op,
 	ses_params.compl_queue = suite_context.queue;
 	ses_params.output_pool = suite_context.pool;
 	ses_params.cipher_key = cipher_key;
-	if (iv_mode == PACKET_IV) {
-		ses_params.cipher_iv_len = ref->cipher_iv_length;
-		ses_params.auth_iv_len = ref->auth_iv_length;
-	} else {
-#if ODP_DEPRECATED_API
-		ses_params.cipher_iv = cipher_iv;
-		ses_params.auth_iv = auth_iv;
-#endif
-	}
+	ses_params.cipher_iv_len = ref->cipher_iv_length;
+	ses_params.auth_iv_len = ref->auth_iv_length;
 	ses_params.auth_key = auth_key;
 	ses_params.auth_digest_len = ref->digest_length;
 	ses_params.auth_aad_len = ref->aad_length;
@@ -736,10 +697,6 @@ static odp_crypto_session_t session_create(odp_crypto_op_t op,
 	 */
 	memset(cipher_key_data, 0, sizeof(cipher_key_data));
 	memset(auth_key_data, 0, sizeof(auth_key_data));
-#if ODP_DEPRECATED_API
-	memset(cipher_iv_data, 0, sizeof(cipher_iv_data));
-	memset(auth_iv_data, 0, sizeof(auth_iv_data));
-#endif
 	memset(&ses_params, 0, sizeof(ses_params));
 
 	return session;
@@ -750,7 +707,6 @@ static void alg_test(odp_crypto_op_t op,
 		     odp_auth_alg_t auth_alg,
 		     crypto_test_reference_t *ref,
 		     uint32_t digest_offset,
-		     iv_test_mode_t iv_mode,
 		     odp_bool_t is_bit_mode_cipher,
 		     odp_bool_t is_bit_mode_auth)
 {
@@ -764,7 +720,7 @@ static void alg_test(odp_crypto_op_t op,
 	uint32_t max_shift;
 	alg_test_param_t test_param;
 
-	session = session_create(op, cipher_alg, auth_alg, ref, iv_mode, hash_mode);
+	session = session_create(op, cipher_alg, auth_alg, ref, hash_mode);
 	if (session == ODP_CRYPTO_SESSION_INVALID)
 		return;
 
@@ -774,7 +730,6 @@ static void alg_test(odp_crypto_op_t op,
 	test_param.cipher_alg = cipher_alg;
 	test_param.auth_alg = auth_alg;
 	test_param.ref = ref;
-	test_param.override_iv = (iv_mode != OLD_SESSION_IV);
 	test_param.is_bit_mode_cipher = is_bit_mode_cipher;
 	test_param.is_bit_mode_auth = is_bit_mode_auth;
 	test_param.digest_offset = digest_offset;
@@ -923,18 +878,8 @@ static void check_alg(odp_crypto_op_t op,
 			continue;
 		}
 
-		/* test with per-packet IV */
 		alg_test(op, cipher_alg, auth_alg, &ref[idx], digest_offs,
-			 PACKET_IV, is_bit_mode_cipher, is_bit_mode_auth);
-#if ODP_DEPRECATED_API
-		/* test with per-packet IV using the old API*/
-		alg_test(op, cipher_alg, auth_alg, &ref[idx], digest_offs,
-			 OLD_PACKET_IV, is_bit_mode_cipher, is_bit_mode_auth);
-
-		/* test with per-session IV */
-		alg_test(op, cipher_alg, auth_alg, &ref[idx], digest_offs,
-			 OLD_SESSION_IV, is_bit_mode_cipher, is_bit_mode_auth);
-#endif
+			 is_bit_mode_cipher, is_bit_mode_auth);
 
 		cipher_tested[cipher_idx] = true;
 		auth_tested[auth_idx] = true;
@@ -1239,7 +1184,7 @@ static int create_hash_test_reference(odp_auth_alg_t auth,
 	CU_ASSERT(rc == 0);
 
 	session = session_create(ODP_CRYPTO_OP_ENCODE, ODP_CIPHER_ALG_NULL,
-				 auth, ref, PACKET_IV, HASH_NO_OVERLAP);
+				 auth, ref, HASH_NO_OVERLAP);
 	if (session == ODP_CRYPTO_SESSION_INVALID)
 		return -1;
 
@@ -1295,7 +1240,6 @@ static void test_auth_hash_in_auth_range(odp_auth_alg_t auth,
 		 auth,
 		 &ref,
 		 digest_offset,
-		 PACKET_IV,
 		 false,
 		 capa->bit_mode);
 
@@ -1318,7 +1262,6 @@ static void test_auth_hash_in_auth_range(odp_auth_alg_t auth,
 		 auth,
 		 &ref,
 		 digest_offset,
-		 PACKET_IV,
 		 false,
 		 capa->bit_mode);
 }
