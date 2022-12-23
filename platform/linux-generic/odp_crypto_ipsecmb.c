@@ -32,7 +32,6 @@
 /* Length in bytes */
 #define IPSEC_MB_CRYPTO_MAX_CIPHER_KEY_LENGTH      32
 #define IPSEC_MB_CRYPTO_MAX_AUTH_KEY_LENGTH        32
-#define IPSEC_MB_CRYPTO_MAX_IV_LENGTH              32
 #define IPSEC_MB_CRYPTO_MAX_DATA_LENGTH            65536
 #define ZUC_DIGEST_LENGTH 4
 
@@ -85,19 +84,12 @@ struct odp_crypto_generic_session_t {
 	odp_bool_t do_cipher_first;
 
 	struct {
-#if ODP_DEPRECATED_API
-		/* Copy of session IV data */
-		uint8_t iv_data[IPSEC_MB_CRYPTO_MAX_IV_LENGTH];
-#endif
 		uint8_t key_data[IPSEC_MB_CRYPTO_MAX_CIPHER_KEY_LENGTH];
 		crypto_func_t func;
 	} cipher;
 
 	struct {
 		uint8_t  key[IPSEC_MB_CRYPTO_MAX_AUTH_KEY_LENGTH];
-#if ODP_DEPRECATED_API
-		uint8_t  iv_data[IPSEC_MB_CRYPTO_MAX_IV_LENGTH];
-#endif
 		crypto_func_t func;
 	} auth;
 
@@ -165,21 +157,11 @@ odp_crypto_alg_err_t zuc_eea3_cipher_op(odp_packet_t pkt,
 					odp_crypto_generic_session_t *session)
 {
 	IMB_MGR *mb_mgr = local.mb_mgr;
-	uint8_t *iv_ptr;
+	uint8_t *iv_ptr = param->cipher_iv_ptr;
 	uint32_t in_pos = param->cipher_range.offset;
 	uint32_t in_len = param->cipher_range.length;
 
-#if ODP_DEPRECATED_API
-	if (param->cipher_iv_ptr)
-		iv_ptr = param->cipher_iv_ptr;
-	else if (session->p.cipher_iv.data)
-		iv_ptr = session->cipher.iv_data;
-	else
-		return ODP_CRYPTO_ALG_ERR_IV_INVALID;
-#else
-	iv_ptr = param->cipher_iv_ptr;
-	_ODP_ASSERT(session->p.cipher_iv_len == 0 || iv_ptr != NULL);
-#endif
+	_ODP_ASSERT(iv_ptr != NULL);
 
 	uint32_t seg_len = 0;
 	uint8_t *data = odp_packet_offset(pkt, in_pos, &seg_len, NULL);
@@ -242,22 +224,12 @@ odp_crypto_alg_err_t auth_zuc_eia3_gen(odp_packet_t pkt,
 				       odp_crypto_generic_session_t *session)
 {
 	IMB_MGR *mb_mgr = local.mb_mgr;
-	uint8_t *iv_ptr;
+	uint8_t *iv_ptr = param->auth_iv_ptr;
 	uint32_t in_pos = param->auth_range.offset;
 	uint32_t in_len = param->auth_range.length;
 	uint32_t auth_tag;
 
-#if ODP_DEPRECATED_API
-	if (param->auth_iv_ptr)
-		iv_ptr = param->auth_iv_ptr;
-	else if (session->p.auth_iv.data)
-		iv_ptr = session->auth.iv_data;
-	else
-		return ODP_CRYPTO_ALG_ERR_IV_INVALID;
-#else
-	iv_ptr = param->auth_iv_ptr;
-	_ODP_ASSERT(session->p.auth_iv_len == 0 || iv_ptr != NULL);
-#endif
+	_ODP_ASSERT(iv_ptr != NULL);
 
 	uint32_t seg_len = 0;
 	uint8_t *data = odp_packet_offset(pkt, in_pos, &seg_len, NULL);
@@ -306,7 +278,7 @@ odp_crypto_alg_err_t auth_zuc_eia3_check(odp_packet_t pkt,
 					 odp_crypto_generic_session_t *session)
 {
 	IMB_MGR *mb_mgr = local.mb_mgr;
-	uint8_t *iv_ptr;
+	uint8_t *iv_ptr = param->auth_iv_ptr;
 	uint32_t in_pos = param->auth_range.offset;
 	uint32_t in_len = param->auth_range.length;
 	uint32_t bytes = ZUC_DIGEST_LENGTH;
@@ -320,17 +292,7 @@ odp_crypto_alg_err_t auth_zuc_eia3_check(odp_packet_t pkt,
 	if (odp_unlikely(session->p.hash_result_in_auth_range))
 		_odp_packet_set_data(pkt, param->hash_result_offset, 0, bytes);
 
-#if ODP_DEPRECATED_API
-	if (param->auth_iv_ptr)
-		iv_ptr = param->auth_iv_ptr;
-	else if (session->p.auth_iv.data)
-		iv_ptr = session->auth.iv_data;
-	else
-		return ODP_CRYPTO_ALG_ERR_IV_INVALID;
-#else
-	iv_ptr = param->auth_iv_ptr;
-	_ODP_ASSERT(session->p.auth_iv_len == 0 || iv_ptr != NULL);
-#endif
+	_ODP_ASSERT(iv_ptr != NULL);
 
 	uint32_t seg_len = 0;
 	uint8_t *data = odp_packet_offset(pkt, in_pos, &seg_len, NULL);
@@ -498,29 +460,6 @@ odp_crypto_session_create(const odp_crypto_session_param_t *param,
 	}
 
 	session->p = *param;
-
-	if (session->p.cipher_iv_len > IPSEC_MB_CRYPTO_MAX_IV_LENGTH) {
-		_ODP_DBG("Maximum IV length exceeded\n");
-		*status = ODP_CRYPTO_SES_ERR_CIPHER;
-		goto err;
-	}
-
-	if (session->p.auth_iv_len > IPSEC_MB_CRYPTO_MAX_IV_LENGTH) {
-		_ODP_DBG("Maximum auth IV length exceeded\n");
-		*status = ODP_CRYPTO_SES_ERR_CIPHER;
-		goto err;
-	}
-
-#if ODP_DEPRECATED_API
-	/* Copy IV data */
-	if (session->p.cipher_iv.data)
-		memcpy(session->cipher.iv_data, session->p.cipher_iv.data,
-		       session->p.cipher_iv.length);
-
-	if (session->p.auth_iv.data)
-		memcpy(session->auth.iv_data, session->p.auth_iv.data,
-		       session->p.auth_iv.length);
-#endif
 
 	/* Derive order */
 	if (ODP_CRYPTO_OP_ENCODE == param->op)
