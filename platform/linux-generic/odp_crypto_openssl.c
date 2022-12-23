@@ -219,12 +219,7 @@ struct odp_crypto_generic_session_t {
 	odp_bool_t do_cipher_first;
 
 	struct {
-#if ODP_DEPRECATED_API
-		/* Copy of session IV data */
-		uint8_t iv_data[EVP_MAX_IV_LENGTH];
-#endif
 		uint8_t key_data[EVP_MAX_KEY_LENGTH];
-
 		const EVP_CIPHER *evp_cipher;
 		crypto_func_t func;
 		crypto_init_func_t init;
@@ -232,9 +227,6 @@ struct odp_crypto_generic_session_t {
 
 	struct {
 		uint8_t  key[EVP_MAX_KEY_LENGTH];
-#if ODP_DEPRECATED_API
-		uint8_t  iv_data[EVP_MAX_IV_LENGTH];
-#endif
 		union {
 			const EVP_MD *evp_md;
 			const EVP_CIPHER *evp_cipher;
@@ -710,22 +702,10 @@ int packet_cmac_eia2(odp_packet_t pkt,
 		     uint8_t *hash)
 {
 	CMAC_CTX *ctx = local.cmac_ctx[session->idx];
-	void *iv_ptr;
+	void *iv_ptr    = param->auth_iv_ptr;
 	uint32_t offset = param->auth_range.offset;
 	uint32_t len    = param->auth_range.length;
 	size_t outlen;
-
-#if ODP_DEPRECATED_API
-	if (param->auth_iv_ptr)
-		iv_ptr = param->auth_iv_ptr;
-	else if (session->p.auth_iv.data)
-		iv_ptr = session->auth.iv_data;
-	else
-		return ODP_CRYPTO_ALG_ERR_IV_INVALID;
-#else
-	iv_ptr = param->auth_iv_ptr;
-	_ODP_ASSERT(session->p.auth_iv_len == 0 || iv_ptr != NULL);
-#endif
 
 	_ODP_ASSERT(offset + len <= odp_packet_len(pkt));
 
@@ -1073,22 +1053,9 @@ odp_crypto_alg_err_t cipher_encrypt(odp_packet_t pkt,
 				    odp_crypto_generic_session_t *session)
 {
 	EVP_CIPHER_CTX *ctx = local.cipher_ctx[session->idx];
-	void *iv_ptr;
 	int ret;
 
-#if ODP_DEPRECATED_API
-	if (param->cipher_iv_ptr)
-		iv_ptr = param->cipher_iv_ptr;
-	else if (session->p.cipher_iv.data)
-		iv_ptr = session->cipher.iv_data;
-	else
-		return ODP_CRYPTO_ALG_ERR_IV_INVALID;
-#else
-	iv_ptr = param->cipher_iv_ptr;
-	_ODP_ASSERT(session->p.cipher_iv_len == 0 || iv_ptr != NULL);
-#endif
-
-	EVP_EncryptInit_ex(ctx, NULL, NULL, NULL, iv_ptr);
+	EVP_EncryptInit_ex(ctx, NULL, NULL, NULL, param->cipher_iv_ptr);
 
 	ret = internal_encrypt(ctx, pkt, param);
 
@@ -1112,22 +1079,9 @@ odp_crypto_alg_err_t cipher_decrypt(odp_packet_t pkt,
 				    odp_crypto_generic_session_t *session)
 {
 	EVP_CIPHER_CTX *ctx = local.cipher_ctx[session->idx];
-	void *iv_ptr;
 	int ret;
 
-#if ODP_DEPRECATED_API
-	if (param->cipher_iv_ptr)
-		iv_ptr = param->cipher_iv_ptr;
-	else if (session->p.cipher_iv.data)
-		iv_ptr = session->cipher.iv_data;
-	else
-		return ODP_CRYPTO_ALG_ERR_IV_INVALID;
-#else
-	iv_ptr = param->cipher_iv_ptr;
-	_ODP_ASSERT(session->p.cipher_iv_len == 0 || iv_ptr != NULL);
-#endif
-
-	EVP_DecryptInit_ex(ctx, NULL, NULL, NULL, iv_ptr);
+	EVP_DecryptInit_ex(ctx, NULL, NULL, NULL, param->cipher_iv_ptr);
 
 	ret = internal_decrypt(ctx, pkt, param);
 
@@ -1172,7 +1126,6 @@ odp_crypto_alg_err_t cipher_encrypt_bits(odp_packet_t pkt,
 					 odp_crypto_generic_session_t *session)
 {
 	EVP_CIPHER_CTX *ctx = local.cipher_ctx[session->idx];
-	void *iv_ptr;
 	int dummy_len = 0;
 	int cipher_len;
 	uint32_t in_len = (param->cipher_range.length + 7) / 8;
@@ -1183,18 +1136,7 @@ odp_crypto_alg_err_t cipher_encrypt_bits(odp_packet_t pkt,
 	/* Range offset is in bits in bit mode but must be divisible by 8. */
 	offset = param->cipher_range.offset / 8;
 
-#if ODP_DEPRECATED_API
-	if (param->cipher_iv_ptr)
-		iv_ptr = param->cipher_iv_ptr;
-	else if (session->p.cipher_iv.data)
-		iv_ptr = session->cipher.iv_data;
-	else
-		return ODP_CRYPTO_ALG_ERR_IV_INVALID;
-#else
-	iv_ptr = param->cipher_iv_ptr;
-	_ODP_ASSERT(session->p.cipher_iv_len == 0 || iv_ptr != NULL);
-#endif
-	EVP_EncryptInit_ex(ctx, NULL, NULL, NULL, iv_ptr);
+	EVP_EncryptInit_ex(ctx, NULL, NULL, NULL, param->cipher_iv_ptr);
 
 	odp_packet_copy_to_mem(pkt, offset, in_len, data);
 
@@ -1216,7 +1158,6 @@ odp_crypto_alg_err_t cipher_decrypt_bits(odp_packet_t pkt,
 					 odp_crypto_generic_session_t *session)
 {
 	EVP_CIPHER_CTX *ctx = local.cipher_ctx[session->idx];
-	void *iv_ptr;
 	int dummy_len = 0;
 	int cipher_len;
 	uint32_t in_len = (param->cipher_range.length + 7) / 8;
@@ -1227,18 +1168,7 @@ odp_crypto_alg_err_t cipher_decrypt_bits(odp_packet_t pkt,
 	/* Range offset is in bits in bit mode but must be divisible by 8. */
 	offset = param->cipher_range.offset / 8;
 
-#if ODP_DEPRECATED_API
-	if (param->cipher_iv_ptr)
-		iv_ptr = param->cipher_iv_ptr;
-	else if (session->p.cipher_iv.data)
-		iv_ptr = session->cipher.iv_data;
-	else
-		return ODP_CRYPTO_ALG_ERR_IV_INVALID;
-#else
-	iv_ptr = param->cipher_iv_ptr;
-	_ODP_ASSERT(session->p.cipher_iv_len == 0 || iv_ptr != NULL);
-#endif
-	EVP_DecryptInit_ex(ctx, NULL, NULL, NULL, iv_ptr);
+	EVP_DecryptInit_ex(ctx, NULL, NULL, NULL, param->cipher_iv_ptr);
 
 	odp_packet_copy_to_mem(pkt, offset, in_len, data);
 
@@ -1303,24 +1233,11 @@ odp_crypto_alg_err_t aes_gcm_encrypt(odp_packet_t pkt,
 	EVP_CIPHER_CTX *ctx = local.cipher_ctx[session->idx];
 	const uint8_t *aad_head = param->aad_ptr;
 	uint32_t aad_len = session->p.auth_aad_len;
-	void *iv_ptr;
 	int dummy_len = 0;
 	uint8_t block[EVP_MAX_MD_SIZE];
 	int ret;
 
-#if ODP_DEPRECATED_API
-	if (param->cipher_iv_ptr)
-		iv_ptr = param->cipher_iv_ptr;
-	else if (session->p.cipher_iv.data)
-		iv_ptr = session->cipher.iv_data;
-	else
-		return ODP_CRYPTO_ALG_ERR_IV_INVALID;
-#else
-	iv_ptr = param->cipher_iv_ptr;
-	_ODP_ASSERT(session->p.cipher_iv_len == 0 || iv_ptr != NULL);
-#endif
-
-	EVP_EncryptInit_ex(ctx, NULL, NULL, NULL, iv_ptr);
+	EVP_EncryptInit_ex(ctx, NULL, NULL, NULL, param->cipher_iv_ptr);
 
 	/* Authenticate header data (if any) without encrypting them */
 	if (aad_len > 0)
@@ -1359,23 +1276,10 @@ odp_crypto_alg_err_t aes_gcm_decrypt(odp_packet_t pkt,
 	const uint8_t *aad_head = param->aad_ptr;
 	uint32_t aad_len = session->p.auth_aad_len;
 	int dummy_len = 0;
-	void *iv_ptr;
 	uint8_t block[EVP_MAX_MD_SIZE];
 	int ret;
 
-#if ODP_DEPRECATED_API
-	if (param->cipher_iv_ptr)
-		iv_ptr = param->cipher_iv_ptr;
-	else if (session->p.cipher_iv.data)
-		iv_ptr = session->cipher.iv_data;
-	else
-		return ODP_CRYPTO_ALG_ERR_IV_INVALID;
-#else
-	iv_ptr = param->cipher_iv_ptr;
-	_ODP_ASSERT(session->p.cipher_iv_len == 0 || iv_ptr != NULL);
-#endif
-
-	EVP_DecryptInit_ex(ctx, NULL, NULL, NULL, iv_ptr);
+	EVP_DecryptInit_ex(ctx, NULL, NULL, NULL, param->cipher_iv_ptr);
 
 	odp_packet_copy_to_mem(pkt, param->hash_result_offset,
 			       session->p.auth_digest_len, block);
@@ -1440,23 +1344,10 @@ odp_crypto_alg_err_t aes_gmac_gen(odp_packet_t pkt,
 				  odp_crypto_generic_session_t *session)
 {
 	EVP_CIPHER_CTX *ctx = local.mac_cipher_ctx[session->idx];
-	void *iv_ptr;
 	uint8_t block[EVP_MAX_MD_SIZE];
 	int ret;
 
-#if ODP_DEPRECATED_API
-	if (param->auth_iv_ptr)
-		iv_ptr = param->auth_iv_ptr;
-	else if (session->p.auth_iv.data)
-		iv_ptr = session->auth.iv_data;
-	else
-		return ODP_CRYPTO_ALG_ERR_IV_INVALID;
-#else
-	iv_ptr = param->auth_iv_ptr;
-	_ODP_ASSERT(session->p.auth_iv_len == 0 || iv_ptr != NULL);
-#endif
-
-	EVP_EncryptInit_ex(ctx, NULL, NULL, NULL, iv_ptr);
+	EVP_EncryptInit_ex(ctx, NULL, NULL, NULL, param->auth_iv_ptr);
 
 	ret = internal_aad(ctx, pkt, param, true);
 
@@ -1487,23 +1378,10 @@ odp_crypto_alg_err_t aes_gmac_check(odp_packet_t pkt,
 				    odp_crypto_generic_session_t *session)
 {
 	EVP_CIPHER_CTX *ctx = local.mac_cipher_ctx[session->idx];
-	void *iv_ptr;
 	uint8_t block[EVP_MAX_MD_SIZE];
 	int ret;
 
-#if ODP_DEPRECATED_API
-	if (param->auth_iv_ptr)
-		iv_ptr = param->auth_iv_ptr;
-	else if (session->p.auth_iv.data)
-		iv_ptr = session->auth.iv_data;
-	else
-		return ODP_CRYPTO_ALG_ERR_IV_INVALID;
-#else
-	iv_ptr = param->auth_iv_ptr;
-	_ODP_ASSERT(session->p.auth_iv_len == 0 || iv_ptr != NULL);
-#endif
-
-	EVP_DecryptInit_ex(ctx, NULL, NULL, NULL, iv_ptr);
+	EVP_DecryptInit_ex(ctx, NULL, NULL, NULL, param->auth_iv_ptr);
 
 	odp_packet_copy_to_mem(pkt, param->hash_result_offset,
 			       session->p.auth_digest_len, block);
@@ -1568,7 +1446,6 @@ odp_crypto_alg_err_t aes_ccm_encrypt(odp_packet_t pkt,
 	EVP_CIPHER_CTX *ctx = local.cipher_ctx[session->idx];
 	const uint8_t *aad_head = param->aad_ptr;
 	uint32_t aad_len = session->p.auth_aad_len;
-	void *iv_ptr;
 	int dummy_len = 0;
 	int cipher_len;
 	uint32_t in_len = param->cipher_range.length;
@@ -1576,21 +1453,9 @@ odp_crypto_alg_err_t aes_ccm_encrypt(odp_packet_t pkt,
 	uint8_t block[EVP_MAX_MD_SIZE];
 	int ret;
 
-#if ODP_DEPRECATED_API
-	if (param->cipher_iv_ptr)
-		iv_ptr = param->cipher_iv_ptr;
-	else if (session->p.cipher_iv.data)
-		iv_ptr = session->cipher.iv_data;
-	else
-		return ODP_CRYPTO_ALG_ERR_IV_INVALID;
-#else
-	iv_ptr = param->cipher_iv_ptr;
-	_ODP_ASSERT(session->p.cipher_iv_len == 0 || iv_ptr != NULL);
-#endif
-
 	EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_CCM_SET_TAG,
 			    session->p.auth_digest_len, NULL);
-	EVP_EncryptInit_ex(ctx, NULL, NULL, session->cipher.key_data, iv_ptr);
+	EVP_EncryptInit_ex(ctx, NULL, NULL, session->cipher.key_data, param->cipher_iv_ptr);
 
 	/* Set len */
 	EVP_EncryptUpdate(ctx, NULL, &dummy_len, NULL, in_len);
@@ -1640,7 +1505,6 @@ odp_crypto_alg_err_t aes_ccm_decrypt(odp_packet_t pkt,
 	EVP_CIPHER_CTX *ctx = local.cipher_ctx[session->idx];
 	const uint8_t *aad_head = param->aad_ptr;
 	uint32_t aad_len = session->p.auth_aad_len;
-	void *iv_ptr;
 	int dummy_len = 0;
 	int cipher_len;
 	uint32_t in_len = param->cipher_range.length;
@@ -1648,23 +1512,11 @@ odp_crypto_alg_err_t aes_ccm_decrypt(odp_packet_t pkt,
 	uint8_t block[EVP_MAX_MD_SIZE];
 	int ret;
 
-#if ODP_DEPRECATED_API
-	if (param->cipher_iv_ptr)
-		iv_ptr = param->cipher_iv_ptr;
-	else if (session->p.cipher_iv.data)
-		iv_ptr = session->cipher.iv_data;
-	else
-		return ODP_CRYPTO_ALG_ERR_IV_INVALID;
-#else
-	iv_ptr = param->cipher_iv_ptr;
-	_ODP_ASSERT(session->p.cipher_iv_len == 0 || iv_ptr != NULL);
-#endif
-
 	odp_packet_copy_to_mem(pkt, param->hash_result_offset,
 			       session->p.auth_digest_len, block);
 	EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_CCM_SET_TAG,
 			    session->p.auth_digest_len, block);
-	EVP_DecryptInit_ex(ctx, NULL, NULL, session->cipher.key_data, iv_ptr);
+	EVP_DecryptInit_ex(ctx, NULL, NULL, session->cipher.key_data, param->cipher_iv_ptr);
 
 	/* Set len */
 	EVP_DecryptUpdate(ctx, NULL, &dummy_len, NULL, in_len);
@@ -1725,26 +1577,13 @@ odp_crypto_alg_err_t xts_encrypt(odp_packet_t pkt,
 				 odp_crypto_generic_session_t *session)
 {
 	EVP_CIPHER_CTX *ctx = local.cipher_ctx[session->idx];
-	void *iv_ptr;
 	int dummy_len = 0;
 	int cipher_len;
 	uint32_t in_len = param->cipher_range.length;
 	uint8_t data[in_len];
 	int ret;
 
-#if ODP_DEPRECATED_API
-	if (param->cipher_iv_ptr)
-		iv_ptr = param->cipher_iv_ptr;
-	else if (session->p.cipher_iv.data)
-		iv_ptr = session->cipher.iv_data;
-	else
-		return ODP_CRYPTO_ALG_ERR_IV_INVALID;
-#else
-	iv_ptr = param->cipher_iv_ptr;
-	_ODP_ASSERT(session->p.cipher_iv_len == 0 || iv_ptr != NULL);
-#endif
-
-	EVP_EncryptInit_ex(ctx, NULL, NULL, NULL, iv_ptr);
+	EVP_EncryptInit_ex(ctx, NULL, NULL, NULL, param->cipher_iv_ptr);
 
 	odp_packet_copy_to_mem(pkt, param->cipher_range.offset, in_len,
 			       data);
@@ -1767,26 +1606,13 @@ odp_crypto_alg_err_t xts_decrypt(odp_packet_t pkt,
 				 odp_crypto_generic_session_t *session)
 {
 	EVP_CIPHER_CTX *ctx = local.cipher_ctx[session->idx];
-	void *iv_ptr;
 	int dummy_len = 0;
 	int cipher_len;
 	uint32_t in_len = param->cipher_range.length;
 	uint8_t data[in_len];
 	int ret;
 
-#if ODP_DEPRECATED_API
-	if (param->cipher_iv_ptr)
-		iv_ptr = param->cipher_iv_ptr;
-	else if (session->p.cipher_iv.data)
-		iv_ptr = session->cipher.iv_data;
-	else
-		return ODP_CRYPTO_ALG_ERR_IV_INVALID;
-#else
-	iv_ptr = param->cipher_iv_ptr;
-	_ODP_ASSERT(session->p.cipher_iv_len == 0 || iv_ptr != NULL);
-#endif
-
-	EVP_DecryptInit_ex(ctx, NULL, NULL, NULL, iv_ptr);
+	EVP_DecryptInit_ex(ctx, NULL, NULL, NULL, param->cipher_iv_ptr);
 
 	odp_packet_copy_to_mem(pkt, param->cipher_range.offset, in_len,
 			       data);
@@ -2233,17 +2059,6 @@ odp_crypto_session_create(const odp_crypto_session_param_t *param,
 		*status = ODP_CRYPTO_SES_ERR_CIPHER;
 		goto err;
 	}
-
-#if ODP_DEPRECATED_API
-	/* Copy IV data */
-	if (session->p.cipher_iv.data)
-		memcpy(session->cipher.iv_data, session->p.cipher_iv.data,
-		       session->p.cipher_iv.length);
-
-	if (session->p.auth_iv.data)
-		memcpy(session->auth.iv_data, session->p.auth_iv.data,
-		       session->p.auth_iv.length);
-#endif
 
 	/* Derive order */
 	if (ODP_CRYPTO_OP_ENCODE == param->op)
@@ -2857,6 +2672,8 @@ int crypto_int(odp_packet_t pkt_in,
 			goto out;
 		}
 	}
+	_ODP_ASSERT(session->p.cipher_iv_len == 0 || param->cipher_iv_ptr != NULL);
+	_ODP_ASSERT(session->p.auth_iv_len == 0 || param->auth_iv_ptr != NULL);
 
 	crypto_init(session);
 
