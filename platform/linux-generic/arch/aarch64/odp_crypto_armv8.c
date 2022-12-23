@@ -115,18 +115,11 @@ struct odp_crypto_generic_session_t {
 	odp_crypto_session_param_t p;
 
 	struct {
-#if ODP_DEPRECATED_API
-		/* Copy of session IV data */
-		uint8_t iv_data[ARM_CRYPTO_MAX_IV_LENGTH];
-#endif
 		uint8_t key_data[ARM_CRYPTO_MAX_CIPHER_KEY_LENGTH];
 	} cipher;
 
 	struct {
 		uint8_t  key[ARM_CRYPTO_MAX_AUTH_KEY_LENGTH];
-#if ODP_DEPRECATED_API
-		uint8_t  iv_data[ARM_CRYPTO_MAX_IV_LENGTH];
-#endif
 	} auth;
 
 	crypto_func_t func;
@@ -232,7 +225,6 @@ void aes_gcm_encrypt(odp_packet_t pkt,
 		}
 	};
 	uint8_t iv_data[ARM_CRYPTO_MAX_IV_LENGTH];
-	uint8_t *iv_ptr;
 	uint64_t iv_bit_length = AES_GCM_IV_LEN * 8;
 	uint64_t plaintext_bit_length = param->cipher_range.length * 8;
 	uint64_t aad_bit_length = session->p.auth_aad_len * 8;
@@ -249,24 +241,13 @@ void aes_gcm_encrypt(odp_packet_t pkt,
 		goto err;
 	}
 
-#if ODP_DEPRECATED_API
-	if (param->cipher_iv_ptr)
-		iv_ptr = param->cipher_iv_ptr;
-	else if (session->p.cipher_iv.data)
-		iv_ptr = session->cipher.iv_data;
-	else
-		goto err;
-#else
-	iv_ptr = param->cipher_iv_ptr;
-	_ODP_ASSERT(iv_ptr != NULL);
-#endif
 	/* The crypto lib may read 16 bytes. Copy to a big enough buffer */
-	memcpy(iv_data, iv_ptr, AES_GCM_IV_LEN);
-	iv_ptr = iv_data;
+	_ODP_ASSERT(param->cipher_iv_ptr != NULL);
+	memcpy(iv_data, param->cipher_iv_ptr, AES_GCM_IV_LEN);
 
 	cs.constants = &session->cc;
 
-	rc = armv8_aes_gcm_set_counter(iv_ptr, iv_bit_length, &cs);
+	rc = armv8_aes_gcm_set_counter(iv_data, iv_bit_length, &cs);
 	if (odp_unlikely(rc)) {
 		_ODP_DBG("ARM Crypto: Failure while setting nonce\n");
 		goto err;
@@ -336,7 +317,6 @@ void aes_gcm_decrypt(odp_packet_t pkt,
 		}
 	};
 	uint8_t iv_data[ARM_CRYPTO_MAX_IV_LENGTH];
-	uint8_t *iv_ptr;
 	uint8_t tag[AES_GCM_TAG_LEN];
 	uint64_t iv_bit_length = AES_GCM_IV_LEN * 8;
 	uint64_t plaintext_bit_length = param->cipher_range.length * 8;
@@ -353,24 +333,13 @@ void aes_gcm_decrypt(odp_packet_t pkt,
 		goto err;
 	}
 
-#if ODP_DEPRECATED_API
-	if (param->cipher_iv_ptr)
-		iv_ptr = param->cipher_iv_ptr;
-	else if (session->p.cipher_iv.data)
-		iv_ptr = session->cipher.iv_data;
-	else
-		goto err;
-#else
-	iv_ptr = param->cipher_iv_ptr;
-	_ODP_ASSERT(iv_ptr != NULL);
-#endif
 	/* The crypto lib may read 16 bytes. Copy to a big enough buffer */
-	memcpy(iv_data, iv_ptr, AES_GCM_IV_LEN);
-	iv_ptr = iv_data;
+	_ODP_ASSERT(param->cipher_iv_ptr != NULL);
+	memcpy(iv_data, param->cipher_iv_ptr, AES_GCM_IV_LEN);
 
 	cs.constants = &session->cc;
 
-	rc = armv8_aes_gcm_set_counter(iv_ptr, iv_bit_length, &cs);
+	rc = armv8_aes_gcm_set_counter(iv_data, iv_bit_length, &cs);
 	if (odp_unlikely(rc)) {
 		_ODP_DBG("ARM Crypto: Failure while setting nonce\n");
 		goto err;
@@ -580,17 +549,6 @@ odp_crypto_session_create(const odp_crypto_session_param_t *param,
 		*status = ODP_CRYPTO_SES_ERR_CIPHER;
 		goto err;
 	}
-
-#if ODP_DEPRECATED_API
-	/* Copy IV data */
-	if (session->p.cipher_iv.data)
-		memcpy(session->cipher.iv_data, session->p.cipher_iv.data,
-		       session->p.cipher_iv.length);
-
-	if (session->p.auth_iv.data)
-		memcpy(session->auth.iv_data, session->p.auth_iv.data,
-		       session->p.auth_iv.length);
-#endif
 
 	/* Process based on cipher */
 	switch (param->cipher_alg) {
