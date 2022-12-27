@@ -1,5 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
- * Copyright (c) 2013-2022, Nokia Solutions and Networks
+ * Copyright (c) 2013-2023, Nokia Solutions and Networks
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -11,7 +11,6 @@
 #include <odp/api/packet.h>
 #include <odp/api/packet_io.h>
 #include <odp/api/queue.h>
-#include <odp/api/ticketlock.h>
 #include <odp/api/time.h>
 
 #include <odp/api/plat/byteorder_inlines.h>
@@ -46,13 +45,28 @@
 
 #define LOOP_MAX_QUEUE_SIZE 1024
 
+typedef struct ODP_ALIGNED_CACHE {
+	/* queue handle as the "wire" */
+	odp_queue_t queue;
+	/* config input queue size */
+	uint32_t in_size;
+	/* config output queue size */
+	uint32_t out_size;
+} loop_queue_t;
+
 typedef struct {
-	odp_queue_t loopq;		/**< loopback queue for "loop" device */
-	uint32_t pktin_queue_size;	/**< input queue size */
-	uint32_t pktout_queue_size;	/**< output queue size */
-	uint16_t mtu;			/**< link MTU */
-	uint8_t idx;			/**< index of "loop" device */
-	uint8_t queue_create;		/**< create or re-create queue during start */
+	/* loopback entries for "loop" device */
+	loop_queue_t loopqs[ODP_PKTIN_MAX_QUEUES];
+	/* config queue count */
+	uint32_t num_conf_qs;
+	/* actual number queues */
+	uint32_t num_qs;
+	/* link MTU */
+	uint16_t mtu;
+	/* index of "loop" device */
+	uint8_t idx;
+	/* create or re-create queue during start */
+	uint8_t queue_create;
 } pkt_loop_t;
 
 ODP_STATIC_ASSERT(PKTIO_PRIVATE_SIZE >= sizeof(pkt_loop_t),
@@ -88,11 +102,9 @@ static int loopback_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 	}
 
 	memset(pkt_loop, 0, sizeof(pkt_loop_t));
-	pkt_loop->idx = idx;
 	pkt_loop->mtu = LOOP_MTU_MAX;
-	pkt_loop->loopq = ODP_QUEUE_INVALID;
+	pkt_loop->idx = idx;
 	pkt_loop->queue_create = 1;
-
 	loopback_stats_reset(pktio_entry);
 	loopback_init_capability(pktio_entry);
 
@@ -117,6 +129,18 @@ static int loopback_queue_destroy(odp_queue_t queue)
 	return 0;
 }
 
+static int loopback_queues_destroy(loop_queue_t *queues, uint32_t num_queues)
+{
+	int ret = 0;
+
+	for (uint32_t i = 0; i < num_queues; i++) {
+		if (loopback_queue_destroy(queues[i].queue))
+			ret = -1;
+	}
+
+	return ret;
+}
+
 static int loopback_start(pktio_entry_t *pktio_entry)
 {
 	pkt_loop_t *pkt_loop = pkt_priv(pktio_entry);
@@ -127,23 +151,28 @@ static int loopback_start(pktio_entry_t *pktio_entry)
 	if (!pkt_loop->queue_create)
 		return 0;
 
-	/* Destroy old queue */
-	if (pkt_loop->loopq != ODP_QUEUE_INVALID && loopback_queue_destroy(pkt_loop->loopq))
+	/* Destroy old queues */
+	if (loopback_queues_destroy(pkt_loop->loopqs, pkt_loop->num_qs))
 		return -1;
 
-	odp_queue_param_init(&queue_param);
-	queue_param.size = pkt_loop->pktin_queue_size > pkt_loop->pktout_queue_size ?
-				pkt_loop->pktin_queue_size : pkt_loop->pktout_queue_size;
+	pkt_loop->num_qs = 0;
 
-	snprintf(queue_name, sizeof(queue_name), "_odp_pktio_loopq-%" PRIu64 "",
-		 odp_pktio_to_u64(pktio_entry->handle));
+	for (uint32_t i = 0; i < pkt_loop->num_conf_qs; i++) {
+		odp_queue_param_init(&queue_param);
+		queue_param.size = _ODP_MAX(pkt_loop->loopqs[i].in_size,
+					    pkt_loop->loopqs[i].out_size);
+		snprintf(queue_name, sizeof(queue_name), "_odp_pktio_loopq-%" PRIu64 "-%u",
+			 odp_pktio_to_u64(pktio_entry->handle), i);
+		pkt_loop->loopqs[i].queue = odp_queue_create(queue_name, &queue_param);
 
-	pkt_loop->loopq = odp_queue_create(queue_name, &queue_param);
-	if (pkt_loop->loopq == ODP_QUEUE_INVALID) {
-		_ODP_ERR("Creating loopback pktio queue failed\n");
-		return -1;
+		if (pkt_loop->loopqs[i].queue == ODP_QUEUE_INVALID) {
+			_ODP_ERR("Creating loopback pktio queue %s failed\n", queue_name);
+			(void)loopback_queues_destroy(pkt_loop->loopqs, i);
+			return -1;
+		}
 	}
-	pkt_loop->queue_create = 0;
+
+	pkt_loop->num_qs = pkt_loop->num_conf_qs;
 
 	return 0;
 }
@@ -153,9 +182,16 @@ static int loopback_pktin_queue_config(pktio_entry_t *pktio_entry,
 {
 	pkt_loop_t *pkt_loop = pkt_priv(pktio_entry);
 
+	pkt_loop->num_conf_qs = param->num_queues;
+	pkt_loop->queue_create = 1;
+
 	if (pktio_entry->param.in_mode == ODP_PKTIN_MODE_DIRECT) {
-		pkt_loop->pktin_queue_size = param->queue_size[0];
-		pkt_loop->queue_create = 1;
+		for (uint32_t i = 0; i < ODP_PKTIN_MAX_QUEUES; i++) {
+			if (i < pkt_loop->num_conf_qs)
+				pkt_loop->loopqs[i].in_size = param->queue_size[i];
+			else
+				pkt_loop->loopqs[i].in_size = 0;
+		}
 	}
 
 	return 0;
@@ -166,8 +202,14 @@ static int loopback_pktout_queue_config(pktio_entry_t *pktio_entry,
 {
 	pkt_loop_t *pkt_loop = pkt_priv(pktio_entry);
 
-	pkt_loop->pktout_queue_size = param->queue_size[0];
 	pkt_loop->queue_create = 1;
+
+	for (uint32_t i = 0; i < ODP_PKTIN_MAX_QUEUES; i++) {
+		if (i < param->num_queues)
+			pkt_loop->loopqs[i].out_size = param->queue_size[i];
+		else
+			pkt_loop->loopqs[i].out_size = 0;
+	}
 
 	return 0;
 }
@@ -176,14 +218,10 @@ static int loopback_close(pktio_entry_t *pktio_entry)
 {
 	pkt_loop_t *pkt_loop = pkt_priv(pktio_entry);
 
-	if (pkt_loop->loopq != ODP_QUEUE_INVALID)
-		return loopback_queue_destroy(pkt_loop->loopq);
-
-	return 0;
+	return loopback_queues_destroy(pkt_loop->loopqs, pkt_loop->num_qs);
 }
 
-static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
-			 odp_packet_t pkts[], int num)
+static int loopback_recv(pktio_entry_t *pktio_entry, int index, odp_packet_t pkts[], int num)
 {
 	int nbr, i;
 	_odp_event_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
@@ -201,9 +239,7 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	if (odp_unlikely(num > QUEUE_MULTI_MAX))
 		num = QUEUE_MULTI_MAX;
 
-	odp_ticketlock_lock(&pktio_entry->rxl);
-
-	queue = pkt_priv(pktio_entry)->loopq;
+	queue = pkt_priv(pktio_entry)->loopqs[index].queue;
 	nbr = odp_queue_deq_multi(queue, (odp_event_t *)hdr_tbl, num);
 
 	if (opt.bit.ts_all || opt.bit.ts_ptp) {
@@ -287,8 +323,6 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 
 	pktio_entry->stats.in_octets += octets;
 	pktio_entry->stats.in_packets += packets;
-
-	odp_ticketlock_unlock(&pktio_entry->rxl);
 
 	return num_rx;
 }
@@ -381,8 +415,8 @@ static inline void loopback_fix_checksums(odp_packet_t pkt,
 		_odp_packet_sctp_chksum_insert(pkt);
 }
 
-static int loopback_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
-			 const odp_packet_t pkt_tbl[], int num)
+static int loopback_send(pktio_entry_t *pktio_entry, int index, const odp_packet_t pkt_tbl[],
+			 int num)
 {
 	pkt_loop_t *pkt_loop = pkt_priv(pktio_entry);
 	_odp_event_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
@@ -395,8 +429,12 @@ static int loopback_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	uint32_t bytes = 0;
 	uint32_t out_octets_tbl[num];
 	odp_pktout_config_opt_t *pktout_cfg = &pktio_entry->config.pktout;
-	odp_pktout_config_opt_t *pktout_capa =
-		&pktio_entry->capa.config.pktout;
+	odp_pktout_config_opt_t *pktout_capa = &pktio_entry->capa.config.pktout;
+
+	if (pkt_loop->num_qs == 0)
+		return 0;
+
+	memset(hdr_tbl, 0, sizeof(hdr_tbl));
 
 	if (odp_unlikely(num > QUEUE_MULTI_MAX))
 		num = QUEUE_MULTI_MAX;
@@ -430,9 +468,7 @@ static int loopback_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 		loopback_fix_checksums(pkt_tbl[i], pktout_cfg, pktout_capa);
 	}
 
-	odp_ticketlock_lock(&pktio_entry->txl);
-
-	queue = pkt_priv(pktio_entry)->loopq;
+	queue = pkt_loop->loopqs[index % pkt_loop->num_qs].queue;
 	ret = odp_queue_enq_multi(queue, (odp_event_t *)hdr_tbl, nb_tx);
 
 	if (ret > 0) {
@@ -445,8 +481,6 @@ static int loopback_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 		_ODP_DBG("queue enqueue failed %i\n", ret);
 		ret = -1;
 	}
-
-	odp_ticketlock_unlock(&pktio_entry->txl);
 
 	return ret;
 }
@@ -508,8 +542,8 @@ static int loopback_init_capability(pktio_entry_t *pktio_entry)
 
 	memset(capa, 0, sizeof(odp_pktio_capability_t));
 
-	capa->max_input_queues  = 1;
-	capa->max_output_queues = 1;
+	capa->max_input_queues = ODP_PKTIN_MAX_QUEUES;
+	capa->max_output_queues = ODP_PKTOUT_MAX_QUEUES;
 	capa->set_op.op.promisc_mode = 0;
 	capa->set_op.op.maxlen = 1;
 

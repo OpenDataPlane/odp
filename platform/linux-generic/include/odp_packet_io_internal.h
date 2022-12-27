@@ -1,5 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
- * Copyright (c) 2019-2022, Nokia
+ * Copyright (c) 2019-2023, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -68,12 +68,8 @@ struct pktio_if_ops;
 #define PKTIO_PRIVATE_SIZE 33792
 #elif defined(_ODP_PKTIO_XDP)
 #define PKTIO_PRIVATE_SIZE 29696
-#elif defined(_ODP_PKTIO_DPDK) && ODP_CACHE_LINE_SIZE == 128
-#define PKTIO_PRIVATE_SIZE 4160
-#elif defined(_ODP_PKTIO_DPDK)
-#define PKTIO_PRIVATE_SIZE 3968
 #else
-#define PKTIO_PRIVATE_SIZE 384
+#define PKTIO_PRIVATE_SIZE 9216
 #endif
 
 typedef struct ODP_ALIGNED_CACHE {
