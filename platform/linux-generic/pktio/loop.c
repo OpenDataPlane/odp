@@ -38,6 +38,9 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#define MAX_QUEUES (ODP_PKTIN_MAX_QUEUES > ODP_PKTOUT_MAX_QUEUES ? \
+			ODP_PKTIN_MAX_QUEUES : ODP_PKTOUT_MAX_QUEUES)
+
 #define MAX_LOOP 16
 
 #define LOOP_MTU_MIN 68
@@ -45,9 +48,20 @@
 
 #define LOOP_MAX_QUEUE_SIZE 1024
 
+typedef struct {
+	odp_atomic_u64_t in_octets;
+	odp_atomic_u64_t in_packets;
+	odp_atomic_u64_t in_discards;
+	odp_atomic_u64_t in_errors;
+	odp_atomic_u64_t out_octets;
+	odp_atomic_u64_t out_packets;
+} stats_t;
+
 typedef struct ODP_ALIGNED_CACHE {
 	/* queue handle as the "wire" */
 	odp_queue_t queue;
+	/* queue specific statistics */
+	stats_t stats;
 	/* config input queue size */
 	uint32_t in_size;
 	/* config output queue size */
@@ -56,7 +70,7 @@ typedef struct ODP_ALIGNED_CACHE {
 
 typedef struct {
 	/* loopback entries for "loop" device */
-	loop_queue_t loopqs[ODP_PKTIN_MAX_QUEUES];
+	loop_queue_t loopqs[MAX_QUEUES];
 	/* config queue count */
 	uint32_t num_conf_qs;
 	/* actual number queues */
@@ -80,7 +94,6 @@ static inline pkt_loop_t *pkt_priv(pktio_entry_t *pktio_entry)
 /* MAC address for the "loop" interface */
 static const uint8_t pktio_loop_mac[] = {0x02, 0xe9, 0x34, 0x80, 0x73, 0x01};
 
-static int loopback_stats_reset(pktio_entry_t *pktio_entry);
 static int loopback_init_capability(pktio_entry_t *pktio_entry);
 
 static int loopback_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
@@ -105,8 +118,16 @@ static int loopback_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 	pkt_loop->mtu = LOOP_MTU_MAX;
 	pkt_loop->idx = idx;
 	pkt_loop->queue_create = 1;
-	loopback_stats_reset(pktio_entry);
 	loopback_init_capability(pktio_entry);
+
+	for (uint32_t i = 0; i < MAX_QUEUES; i++) {
+		odp_atomic_init_u64(&pkt_loop->loopqs[i].stats.in_octets, 0);
+		odp_atomic_init_u64(&pkt_loop->loopqs[i].stats.in_packets, 0);
+		odp_atomic_init_u64(&pkt_loop->loopqs[i].stats.in_discards, 0);
+		odp_atomic_init_u64(&pkt_loop->loopqs[i].stats.in_errors, 0);
+		odp_atomic_init_u64(&pkt_loop->loopqs[i].stats.out_octets, 0);
+		odp_atomic_init_u64(&pkt_loop->loopqs[i].stats.out_packets, 0);
+	}
 
 	return 0;
 }
@@ -186,7 +207,7 @@ static int loopback_pktin_queue_config(pktio_entry_t *pktio_entry,
 	pkt_loop->queue_create = 1;
 
 	if (pktio_entry->param.in_mode == ODP_PKTIN_MODE_DIRECT) {
-		for (uint32_t i = 0; i < ODP_PKTIN_MAX_QUEUES; i++) {
+		for (uint32_t i = 0; i < MAX_QUEUES; i++) {
 			if (i < pkt_loop->num_conf_qs)
 				pkt_loop->loopqs[i].in_size = param->queue_size[i];
 			else
@@ -204,7 +225,7 @@ static int loopback_pktout_queue_config(pktio_entry_t *pktio_entry,
 
 	pkt_loop->queue_create = 1;
 
-	for (uint32_t i = 0; i < ODP_PKTIN_MAX_QUEUES; i++) {
+	for (uint32_t i = 0; i < MAX_QUEUES; i++) {
 		if (i < param->num_queues)
 			pkt_loop->loopqs[i].out_size = param->queue_size[i];
 		else
@@ -224,8 +245,10 @@ static int loopback_close(pktio_entry_t *pktio_entry)
 static int loopback_recv(pktio_entry_t *pktio_entry, int index, odp_packet_t pkts[], int num)
 {
 	int nbr, i;
+	loop_queue_t *entry = &pkt_priv(pktio_entry)->loopqs[index];
+	odp_queue_t queue = entry->queue;
+	stats_t *stats = &entry->stats;
 	_odp_event_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
-	odp_queue_t queue;
 	odp_packet_hdr_t *pkt_hdr;
 	odp_packet_t pkt;
 	odp_time_t ts_val;
@@ -239,7 +262,6 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index, odp_packet_t pkt
 	if (odp_unlikely(num > QUEUE_MULTI_MAX))
 		num = QUEUE_MULTI_MAX;
 
-	queue = pkt_priv(pktio_entry)->loopqs[index].queue;
 	nbr = odp_queue_deq_multi(queue, (odp_event_t *)hdr_tbl, num);
 
 	if (opt.bit.ts_all || opt.bit.ts_ptp) {
@@ -275,7 +297,7 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index, odp_packet_t pkt
 			ret = _odp_packet_parse_common(pkt_hdr, pkt_addr, pkt_len,
 						       seg_len, layer, opt);
 			if (ret)
-				odp_atomic_inc_u64(&pktio_entry->stats_extra.in_errors);
+				odp_atomic_inc_u64(&stats->in_errors);
 
 			if (ret < 0) {
 				odp_packet_free(pkt);
@@ -288,7 +310,7 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index, odp_packet_t pkt
 				ret = _odp_cls_classify_packet(pktio_entry, pkt_addr,
 							       &new_pool, pkt_hdr);
 				if (ret < 0)
-					odp_atomic_inc_u64(&pktio_entry->stats_extra.in_discards);
+					odp_atomic_inc_u64(&stats->in_discards);
 
 				if (ret) {
 					odp_packet_free(pkt);
@@ -298,7 +320,7 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index, odp_packet_t pkt
 				if (odp_unlikely(_odp_pktio_packet_to_pool(
 					    &pkt, &pkt_hdr, new_pool))) {
 					odp_packet_free(pkt);
-					odp_atomic_inc_u64(&pktio_entry->stats_extra.in_discards);
+					odp_atomic_inc_u64(&stats->in_discards);
 					continue;
 				}
 			}
@@ -321,8 +343,8 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index, odp_packet_t pkt
 		pkts[num_rx++] = pkt;
 	}
 
-	pktio_entry->stats.in_octets += octets;
-	pktio_entry->stats.in_packets += packets;
+	odp_atomic_add_u64(&stats->in_octets, octets);
+	odp_atomic_add_u64(&stats->in_packets, packets);
 
 	return num_rx;
 }
@@ -421,6 +443,7 @@ static int loopback_send(pktio_entry_t *pktio_entry, int index, const odp_packet
 	pkt_loop_t *pkt_loop = pkt_priv(pktio_entry);
 	_odp_event_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
 	odp_queue_t queue;
+	stats_t *stats;
 	int i;
 	int ret;
 	int nb_tx = 0;
@@ -469,14 +492,15 @@ static int loopback_send(pktio_entry_t *pktio_entry, int index, const odp_packet
 	}
 
 	queue = pkt_loop->loopqs[index % pkt_loop->num_qs].queue;
+	stats = &pkt_loop->loopqs[index].stats;
 	ret = odp_queue_enq_multi(queue, (odp_event_t *)hdr_tbl, nb_tx);
 
 	if (ret > 0) {
 		if (odp_unlikely(tx_ts_idx) && ret >= tx_ts_idx)
 			_odp_pktio_tx_ts_set(pktio_entry);
 
-		pktio_entry->stats.out_packets += ret;
-		pktio_entry->stats.out_octets += out_octets_tbl[ret - 1];
+		odp_atomic_add_u64(&stats->out_packets, ret);
+		odp_atomic_add_u64(&stats->out_octets, out_octets_tbl[ret - 1]);
 	} else {
 		_ODP_DBG("queue enqueue failed %i\n", ret);
 		ret = -1;
@@ -600,6 +624,7 @@ static int loopback_init_capability(pktio_entry_t *pktio_entry)
 	capa->stats.pktin_queue.counter.octets = 1;
 	capa->stats.pktin_queue.counter.packets = 1;
 	capa->stats.pktin_queue.counter.errors = 1;
+	capa->stats.pktin_queue.counter.discards = 1;
 	capa->stats.pktout_queue.counter.octets = 1;
 	capa->stats.pktout_queue.counter.packets = 1;
 	return 0;
@@ -616,37 +641,67 @@ static int loopback_promisc_mode_get(pktio_entry_t *pktio_entry ODP_UNUSED)
 	return 1;
 }
 
-static int loopback_stats(pktio_entry_t *pktio_entry,
-			  odp_pktio_stats_t *stats)
+static int loopback_stats(pktio_entry_t *pktio_entry, odp_pktio_stats_t *stats)
 {
-	memcpy(stats, &pktio_entry->stats, sizeof(odp_pktio_stats_t));
+	pkt_loop_t *pkt_loop = pkt_priv(pktio_entry);
+
+	memset(stats, 0, sizeof(odp_pktio_stats_t));
+
+	for (uint32_t i = 0; i < MAX_QUEUES; i++) {
+		stats_t *qs = &pkt_loop->loopqs[i].stats;
+
+		stats->in_octets += odp_atomic_load_u64(&qs->in_octets);
+		stats->in_packets += odp_atomic_load_u64(&qs->in_packets);
+		stats->in_discards += odp_atomic_load_u64(&qs->in_discards);
+		stats->in_errors += odp_atomic_load_u64(&qs->in_errors);
+		stats->out_octets += odp_atomic_load_u64(&qs->out_octets);
+		stats->out_packets += odp_atomic_load_u64(&qs->out_packets);
+	}
+
 	return 0;
 }
 
 static int loopback_stats_reset(pktio_entry_t *pktio_entry)
 {
-	memset(&pktio_entry->stats, 0, sizeof(odp_pktio_stats_t));
+	pkt_loop_t *pkt_loop = pkt_priv(pktio_entry);
+
+	for (uint32_t i = 0; i < MAX_QUEUES; i++) {
+		stats_t *qs = &pkt_loop->loopqs[i].stats;
+
+		odp_atomic_store_u64(&qs->in_octets, 0);
+		odp_atomic_store_u64(&qs->in_packets, 0);
+		odp_atomic_store_u64(&qs->in_discards, 0);
+		odp_atomic_store_u64(&qs->in_errors, 0);
+		odp_atomic_store_u64(&qs->out_octets, 0);
+		odp_atomic_store_u64(&qs->out_packets, 0);
+	}
+
 	return 0;
 }
 
-static int loopback_pktin_stats(pktio_entry_t *pktio_entry,
-				uint32_t index ODP_UNUSED,
+static int loopback_pktin_stats(pktio_entry_t *pktio_entry, uint32_t index,
 				odp_pktin_queue_stats_t *pktin_stats)
 {
+	stats_t *qs = &pkt_priv(pktio_entry)->loopqs[index].stats;
+
 	memset(pktin_stats, 0, sizeof(odp_pktin_queue_stats_t));
-	pktin_stats->octets = pktio_entry->stats.in_octets;
-	pktin_stats->packets = pktio_entry->stats.in_packets;
-	pktin_stats->errors = pktio_entry->stats.in_errors;
+	pktin_stats->octets = odp_atomic_load_u64(&qs->in_octets);
+	pktin_stats->packets = odp_atomic_load_u64(&qs->in_packets);
+	pktin_stats->discards = odp_atomic_load_u64(&qs->in_discards);
+	pktin_stats->errors = odp_atomic_load_u64(&qs->in_errors);
+
 	return 0;
 }
 
-static int loopback_pktout_stats(pktio_entry_t *pktio_entry,
-				 uint32_t index ODP_UNUSED,
+static int loopback_pktout_stats(pktio_entry_t *pktio_entry, uint32_t index,
 				 odp_pktout_queue_stats_t *pktout_stats)
 {
+	stats_t *qs = &pkt_priv(pktio_entry)->loopqs[index].stats;
+
 	memset(pktout_stats, 0, sizeof(odp_pktout_queue_stats_t));
-	pktout_stats->octets = pktio_entry->stats.out_octets;
-	pktout_stats->packets = pktio_entry->stats.out_packets;
+	pktout_stats->octets = odp_atomic_load_u64(&qs->out_octets);
+	pktout_stats->packets = odp_atomic_load_u64(&qs->out_packets);
+
 	return 0;
 }
 
