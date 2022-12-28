@@ -42,11 +42,17 @@ typedef enum {
 	_ODP_EV_PACKET_FREE_MULTI,
 	_ODP_EV_PACKET_FREE_SP,
 	_ODP_EV_PACKET_IS_VALID,
+	_ODP_EV_QUEUE_ENQ,
+	_ODP_EV_QUEUE_ENQ_MULTI,
 	_ODP_EV_MAX
 } _odp_ev_id_t;
 
 /* Implementation internal event validation functions */
 #if _ODP_EVENT_VALIDATION
+
+int _odp_event_validate(odp_event_t event, _odp_ev_id_t id);
+
+int _odp_event_validate_multi(const odp_event_t event[], int num, _odp_ev_id_t id);
 
 int _odp_buffer_validate(odp_buffer_t buf, _odp_ev_id_t ev_id);
 
@@ -57,6 +63,18 @@ int _odp_packet_validate(odp_packet_t pkt, _odp_ev_id_t ev_id);
 int _odp_packet_validate_multi(const odp_packet_t pkt[], int num, _odp_ev_id_t ev_id);
 
 #else
+
+static inline int _odp_event_validate(odp_event_t event ODP_UNUSED, _odp_ev_id_t ev_id ODP_UNUSED)
+{
+	return 0;
+}
+
+static inline int _odp_event_validate_multi(const odp_event_t event[] ODP_UNUSED,
+					    int num ODP_UNUSED,
+					    _odp_ev_id_t ev_id ODP_UNUSED)
+{
+	return 0;
+}
 
 static inline int _odp_buffer_validate(odp_buffer_t buf ODP_UNUSED, _odp_ev_id_t ev_id ODP_UNUSED)
 {

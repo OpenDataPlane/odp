@@ -1,4 +1,5 @@
 /* Copyright (c) 2018, Linaro Limited
+ * Copyright (c) 2023, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -7,6 +8,9 @@
 #ifndef ODP_PLAT_QUEUE_INLINES_H_
 #define ODP_PLAT_QUEUE_INLINES_H_
 
+#include <odp/api/hints.h>
+
+#include <odp/api/plat/event_validation_external.h>
 #include <odp/api/plat/queue_inline_types.h>
 
 /** @cond _ODP_HIDE_FROM_DOXYGEN_ */
@@ -37,12 +41,18 @@ _ODP_INLINE void *odp_queue_context(odp_queue_t handle)
 
 _ODP_INLINE int odp_queue_enq(odp_queue_t queue, odp_event_t ev)
 {
+	if (odp_unlikely(_odp_event_validate(ev, _ODP_EV_QUEUE_ENQ)))
+		return -1;
+
 	return _odp_queue_api->queue_enq(queue, ev);
 }
 
 _ODP_INLINE int odp_queue_enq_multi(odp_queue_t queue,
 				    const odp_event_t events[], int num)
 {
+	if (odp_unlikely(_odp_event_validate_multi(events, num, _ODP_EV_QUEUE_ENQ_MULTI)))
+		return -1;
+
 	return _odp_queue_api->queue_enq_multi(queue, events, num);
 }
 
