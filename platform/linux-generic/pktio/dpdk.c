@@ -49,6 +49,7 @@
 #include <rte_tcp.h>
 #include <rte_udp.h>
 #include <rte_version.h>
+#include <rte_vfio.h>
 
 /* NUMA is not supported on all platforms */
 #ifdef _ODP_HAVE_NUMA_LIBRARY
@@ -436,6 +437,15 @@ static struct rte_mempool *mbuf_pool_create(const char *name,
 		_ODP_ERR("Failed to populate mempool with all requested blocks, populated: %u, "
 			 "requested: %u\n", populated, num);
 		goto fail;
+	}
+
+	/* Map pages for DMA access to enable VFIO usage */
+	for (uint64_t i = 0; i < pool_entry->shm_size; i += page_size) {
+		addr = pool_entry->base_addr + i;
+
+		rte_vfio_container_dma_map(RTE_VFIO_DEFAULT_CONTAINER_FD,
+					   (uint64_t)(uintptr_t)addr,
+					   rte_mem_virt2iova(addr), page_size);
 	}
 
 	rte_mempool_obj_iter(mp, pktmbuf_init, NULL);
