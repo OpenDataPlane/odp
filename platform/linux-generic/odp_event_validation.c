@@ -57,7 +57,9 @@ static const _odp_ev_info_t ev_info_tbl[] = {
 	[_ODP_EV_PACKET_FREE]       = {.str = "odp_packet_free()"},
 	[_ODP_EV_PACKET_FREE_MULTI] = {.str = "odp_packet_free_multi()"},
 	[_ODP_EV_PACKET_FREE_SP]    = {.str = "odp_packet_free_sp()"},
-	[_ODP_EV_PACKET_IS_VALID]   = {.str = "odp_packet_is_valid()"}
+	[_ODP_EV_PACKET_IS_VALID]   = {.str = "odp_packet_is_valid()"},
+	[_ODP_EV_QUEUE_ENQ]         = {.str = "odp_queue_enq()"},
+	[_ODP_EV_QUEUE_ENQ_MULTI]   = {.str = "odp_queue_enq_multi()"}
 };
 
 ODP_STATIC_ASSERT(_ODP_ARRAY_SIZE(ev_info_tbl) == _ODP_EV_MAX, "ev_info_tbl missing entries");
@@ -147,6 +149,15 @@ static inline int packet_validate(odp_packet_t pkt, _odp_ev_id_t id)
 	return validate_event_endmark(odp_packet_to_event(pkt), id, ODP_EVENT_PACKET);
 }
 
+static inline int event_validate(odp_event_t event, int id)
+{
+	if (odp_event_type(event) == ODP_EVENT_BUFFER)
+		return buffer_validate(odp_buffer_from_event(event), id);
+	if (odp_event_type(event) == ODP_EVENT_PACKET)
+		return packet_validate(odp_packet_from_event(event), id);
+	return 0;
+}
+
 /* Enable usage from API inline files */
 #include <odp/visibility_begin.h>
 
@@ -175,6 +186,21 @@ int _odp_packet_validate_multi(const odp_packet_t pkt[], int num,
 {
 	for (int i = 0; i < num; i++) {
 		if (odp_unlikely(packet_validate(pkt[i], id)))
+			return -1;
+	}
+	return 0;
+}
+
+int _odp_event_validate(odp_event_t event, _odp_ev_id_t id)
+{
+	return event_validate(event, id);
+}
+
+int _odp_event_validate_multi(const odp_event_t event[], int num,
+			      _odp_ev_id_t id)
+{
+	for (int i = 0; i < num; i++) {
+		if (odp_unlikely(event_validate(event[i], id)))
 			return -1;
 	}
 	return 0;
