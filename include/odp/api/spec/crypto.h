@@ -1,5 +1,5 @@
 /* Copyright (c) 2014-2018, Linaro Limited
- * Copyright (c) 2021-2022, Nokia
+ * Copyright (c) 2021-2023, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -257,15 +257,15 @@ odp_packet_t odp_crypto_packet_from_event(odp_event_t ev);
 odp_event_t odp_crypto_packet_to_event(odp_packet_t pkt);
 
 /**
- * Get crypto operation results from an crypto processed packet
+ * Get crypto operation results from a crypto processed packet
  *
  * Successful crypto operations of all types (SYNC and ASYNC) produce packets
  * which contain crypto result metadata. This function copies the operation
- * results from an crypto processed packet. Event subtype of this kind of
+ * results from a crypto processed packet. Event subtype of this kind of
  * packet is ODP_EVENT_PACKET_CRYPTO. Results are undefined if a non-crypto
  * processed packet is passed as input.
  *
- * @param         packet  An crypto processed packet (ODP_EVENT_PACKET_CRYPTO)
+ * @param         packet  A crypto processed packet (ODP_EVENT_PACKET_CRYPTO)
  * @param[out]    result  Pointer to operation result for output
  *
  * @retval  0     On success
@@ -362,6 +362,10 @@ int odp_crypto_op(const odp_packet_t pkt_in[],
  * Performs the ASYNC cryptographic operations specified during session
  * creation on the packets. Behaves otherwise like odp_crypto_op() but
  * returns output packets through events.
+ *
+ * With operation types other than ODP_CRYPTO_OP_TYPE_LEGACY, packet
+ * data of processed packets may not be valid before odp_crypto_result()
+ * has been called.
  *
  * With ODP_CRYPTO_OP_TYPE_OOP, an enqueued input packet is consumed but
  * returned back unmodified after the crypto operation is complete. The
