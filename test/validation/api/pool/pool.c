@@ -1,6 +1,6 @@
 /* Copyright (c) 2014-2018, Linaro Limited
  * Copyright (c) 2020, Marvell
- * Copyright (c) 2020-2022, Nokia
+ * Copyright (c) 2020-2023, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:	BSD-3-Clause
@@ -326,13 +326,19 @@ static void alloc_packet_vector(uint32_t cache_size)
 
 	num = 0;
 	for (i = 0; i < max_num; i++) {
-		pkt_vec[num] = odp_packet_vector_alloc(pool);
-		CU_ASSERT(pkt_vec[num] != ODP_PACKET_VECTOR_INVALID);
-		CU_ASSERT(odp_packet_vector_valid(pkt_vec[num]) == 1);
-		CU_ASSERT(odp_event_is_valid(odp_packet_vector_to_event(pkt_vec[num])) == 1);
+		odp_packet_vector_t pktv = odp_packet_vector_alloc(pool);
 
-		if (pkt_vec[num] != ODP_PACKET_VECTOR_INVALID)
-			num++;
+		CU_ASSERT(pktv != ODP_PACKET_VECTOR_INVALID);
+
+		if (pktv == ODP_PACKET_VECTOR_INVALID)
+			continue;
+
+		CU_ASSERT(odp_packet_vector_valid(pktv) == 1);
+		CU_ASSERT(odp_event_is_valid(odp_packet_vector_to_event(pktv)) == 1);
+		CU_ASSERT(odp_packet_vector_size(pktv) == 0);
+
+		pkt_vec[num] = pktv;
+		num++;
 	}
 
 	for (i = 0; i < num; i++)
