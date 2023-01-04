@@ -1,5 +1,5 @@
 /* Copyright (c) 2014-2018, Linaro Limited
- * Copyright (c) 2019-2022, Nokia
+ * Copyright (c) 2019-2023, Nokia
  * Copyright (c) 2020, Marvell
  * All rights reserved.
  *
@@ -3104,17 +3104,31 @@ static void packet_vector_test_alloc_free(void)
 	CU_ASSERT(odp_packet_vector_to_u64(pktv) !=
 		  odp_packet_vector_to_u64(ODP_PACKET_VECTOR_INVALID));
 
-	/* User flag should be initially zero */
+	/* Vector size and user flag should be initially zero */
+	CU_ASSERT(odp_packet_vector_size(pktv) == 0);
 	CU_ASSERT(odp_packet_vector_user_flag(pktv) == 0);
 	odp_packet_vector_user_flag_set(pktv, 1);
 	CU_ASSERT(odp_packet_vector_user_flag(pktv) != 0);
 	odp_packet_vector_user_flag_set(pktv, 0);
 	CU_ASSERT(odp_packet_vector_user_flag(pktv) == 0);
 
+	/* Included packet should not be freed by odp_packet_vector_free() */
+	pkt = odp_packet_alloc(default_pool, default_param.pkt.len);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+
+	CU_ASSERT(odp_packet_vector_tbl(pktv, &pkts_tbl) == 0);
+	pkts_tbl[0] = pkt;
+	odp_packet_vector_size_set(pktv, 1);
+
 	/* Free with flag still set, alloc should clear it. */
 	odp_packet_vector_user_flag_set(pktv, 1);
 	odp_packet_vector_free(pktv);
+
+	/* Check that included packet is still valid */
+	CU_ASSERT(odp_packet_is_valid(pkt));
+
 	pktv = odp_packet_vector_alloc(pool);
+	CU_ASSERT(odp_packet_vector_size(pktv) == 0);
 	CU_ASSERT(odp_packet_vector_user_flag(pktv) == 0);
 
 	/* Since it was only one buffer pool, more vector packets can't be
@@ -3130,10 +3144,7 @@ static void packet_vector_test_alloc_free(void)
 	CU_ASSERT_FATAL(pktv != ODP_PACKET_VECTOR_INVALID);
 	CU_ASSERT(odp_packet_vector_size(pktv) == 0);
 
-	/* Free packet vector using odp_event_free()  */
-	pkt = odp_packet_alloc(default_pool, default_param.pkt.len);
-	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
-
+	/* Free packet vector and included packet using odp_event_free() */
 	CU_ASSERT(odp_packet_vector_tbl(pktv, &pkts_tbl) == 0);
 	pkts_tbl[0] = pkt;
 	odp_packet_vector_size_set(pktv, 1);
