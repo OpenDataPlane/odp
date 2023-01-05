@@ -139,6 +139,7 @@ static void time_test_monotony(void)
 	lns_t2 = odp_time_local_ns();
 	gns_t2 = odp_time_global_ns();
 
+	count = 0;
 	while (count < BUSY_LOOP_CNT) {
 		count++;
 	};
