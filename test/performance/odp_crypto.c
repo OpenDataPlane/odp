@@ -451,6 +451,49 @@ static crypto_alg_config_t algs_config[] = {
 			.auth_digest_len = 4,
 		},
 	},
+	{
+		.name = "snow3g-uea2",
+		.session = {
+			.cipher_alg = ODP_CIPHER_ALG_SNOW3G_UEA2,
+			.cipher_key = {
+				.data = test_key16,
+				.length = sizeof(test_key16)
+			},
+			.cipher_iv_len = 16,
+			.auth_alg = ODP_AUTH_ALG_NULL,
+		},
+	},
+	{
+		.name = "snow3g-uia2",
+		.session = {
+			.cipher_alg = ODP_CIPHER_ALG_NULL,
+			.auth_alg = ODP_AUTH_ALG_SNOW3G_UIA2,
+			.auth_key = {
+				.data = test_key16,
+				.length = sizeof(test_key16)
+			},
+			.auth_iv_len = 16,
+			.auth_digest_len = 4,
+		},
+	},
+	{
+		.name = "snow3g-uea2-snow3g-uia2",
+		.session = {
+			.cipher_alg = ODP_CIPHER_ALG_SNOW3G_UEA2,
+			.cipher_key = {
+				.data = test_key16,
+				.length = sizeof(test_key16)
+			},
+			.cipher_iv_len = 16,
+			.auth_alg = ODP_AUTH_ALG_SNOW3G_UIA2,
+			.auth_key = {
+				.data = test_key16,
+				.length = sizeof(test_key16)
+			},
+			.auth_iv_len = 16,
+			.auth_digest_len = 4,
+		},
+	},
 };
 
 /**
@@ -948,6 +991,11 @@ static int check_cipher_alg(const odp_crypto_capability_t *capa,
 	case ODP_CIPHER_ALG_ZUC_EEA3:
 		if (capa->ciphers.bit.zuc_eea3)
 			return 0;
+		break;
+	case ODP_CIPHER_ALG_SNOW3G_UEA2:
+		if (capa->ciphers.bit.snow3g_uea2)
+			return 0;
+		break;
 	default:
 		break;
 	}
@@ -1002,6 +1050,11 @@ static int check_auth_alg(const odp_crypto_capability_t *capa,
 	case ODP_AUTH_ALG_ZUC_EIA3:
 		if (capa->auths.bit.zuc_eia3)
 			return 0;
+		break;
+	case ODP_AUTH_ALG_SNOW3G_UIA2:
+		if (capa->auths.bit.snow3g_uia2)
+			return 0;
+		break;
 	default:
 		break;
 	}
