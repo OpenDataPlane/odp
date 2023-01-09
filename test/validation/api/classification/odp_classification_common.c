@@ -399,10 +399,10 @@ odp_packet_t create_packet(cls_packet_info_t pkt_info)
 			vlan_hdr->type = odp_cpu_to_be_16(ODPH_ETHTYPE_VLAN);
 			vlan_hdr++;
 		} else {
+			odp_packet_has_vlan_set(pkt, 1);
 			ethhdr->type = odp_cpu_to_be_16(ODPH_ETHTYPE_VLAN);
 		}
 		/* Default vlan header */
-		odp_packet_has_vlan_set(pkt, 1);
 		vlan_hdr->tci = odp_cpu_to_be_16(0);
 		vlan_hdr->type = odp_cpu_to_be_16(eth_type);
 	} else {
