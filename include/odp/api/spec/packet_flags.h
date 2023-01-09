@@ -179,6 +179,8 @@ int odp_packet_has_jumbo(odp_packet_t pkt);
 /**
  * Check for VLAN
  *
+ * Check if packet contains normal or QinQ VLAN header.
+ *
  * @param pkt          Packet handle
  *
  * @retval non-zero    Packet contains a VLAN header
@@ -188,6 +190,8 @@ int odp_packet_has_vlan(odp_packet_t pkt);
 
 /**
  * Check for VLAN QinQ (stacked VLAN)
+ *
+ * Check if packet contains QinQ VLAN header.
  *
  * @param pkt          Packet handle
  *
@@ -408,7 +412,8 @@ void odp_packet_has_jumbo_set(odp_packet_t pkt, int val);
 /**
  * Set flag for VLAN
  *
- * Only one VLAN flag (VLAN/VLAN QinQ) can be set simultaneously.
+ * Set when packet contains normal VLAN header. Only one VLAN flag
+ * (VLAN/VLAN QinQ) can be set simultaneously.
  *
  * @param pkt Packet handle
  * @param val Value
@@ -418,7 +423,8 @@ void odp_packet_has_vlan_set(odp_packet_t pkt, int val);
 /**
  * Set flag for VLAN QinQ (stacked VLAN)
  *
- * Only one VLAN flag (VLAN/VLAN QinQ) can be set simultaneously.
+ * Set when packet contains QinQ VLAN header. Only one VLAN flag
+ * (VLAN/VLAN QinQ) can be set simultaneously.
  *
  * @param pkt Packet handle
  * @param val Value
