@@ -329,7 +329,8 @@ static int packet_suite_term(void)
 	return 0;
 }
 
-static void packet_set_inflags(odp_packet_t pkt, int val)
+/* Set all non-conflicting metadata flags */
+static void packet_set_inflags_common(odp_packet_t pkt, int val)
 {
 	odp_packet_has_l2_set(pkt, val);
 	odp_packet_has_l3_set(pkt, val);
@@ -339,23 +340,37 @@ static void packet_set_inflags(odp_packet_t pkt, int val)
 	odp_packet_has_eth_mcast_set(pkt, val);
 	odp_packet_has_jumbo_set(pkt, val);
 	odp_packet_has_vlan_set(pkt, val);
-	odp_packet_has_vlan_qinq_set(pkt, val);
-	odp_packet_has_arp_set(pkt, val);
 	odp_packet_has_ipv4_set(pkt, val);
-	odp_packet_has_ipv6_set(pkt, val);
 	odp_packet_has_ip_bcast_set(pkt, val);
-	odp_packet_has_ip_mcast_set(pkt, val);
 	odp_packet_has_ipfrag_set(pkt, val);
 	odp_packet_has_ipopt_set(pkt, val);
 	odp_packet_has_ipsec_set(pkt, val);
 	odp_packet_has_udp_set(pkt, val);
-	odp_packet_has_tcp_set(pkt, val);
-	odp_packet_has_sctp_set(pkt, val);
-	odp_packet_has_icmp_set(pkt, val);
 	odp_packet_user_flag_set(pkt, val);
 }
 
-static void packet_check_inflags(odp_packet_t pkt, int val)
+/* Check all non-conflicting metadata flags */
+static void packet_check_inflags_common(odp_packet_t pkt, int val)
+{
+	CU_ASSERT(odp_packet_has_l2(pkt) == !!val);
+	CU_ASSERT(odp_packet_has_l3(pkt) == !!val);
+	CU_ASSERT(odp_packet_has_l4(pkt) == !!val);
+	CU_ASSERT(odp_packet_has_eth(pkt) == !!val);
+	CU_ASSERT(odp_packet_has_eth_bcast(pkt) == !!val);
+	CU_ASSERT(odp_packet_has_eth_mcast(pkt) == !!val);
+	CU_ASSERT(odp_packet_has_jumbo(pkt) == !!val);
+	CU_ASSERT(odp_packet_has_vlan(pkt) == !!val);
+	CU_ASSERT(odp_packet_has_ipv4(pkt) == !!val);
+	CU_ASSERT(odp_packet_has_ip_bcast(pkt) == !!val);
+	CU_ASSERT(odp_packet_has_ipfrag(pkt) == !!val);
+	CU_ASSERT(odp_packet_has_ipopt(pkt) == !!val);
+	CU_ASSERT(odp_packet_has_ipsec(pkt) == !!val);
+	CU_ASSERT(odp_packet_has_udp(pkt) == !!val);
+	CU_ASSERT(odp_packet_user_flag(pkt) == !!val);
+}
+
+/* Check all metadata flags */
+static void packet_check_inflags_all(odp_packet_t pkt, int val)
 {
 	CU_ASSERT(odp_packet_has_l2(pkt) == !!val);
 	CU_ASSERT(odp_packet_has_l3(pkt) == !!val);
@@ -418,7 +433,7 @@ static void packet_test_alloc_free(void)
 	CU_ASSERT(odp_packet_user_ptr(packet) == NULL);
 
 	/* Packet flags should be zero */
-	packet_check_inflags(packet, 0);
+	packet_check_inflags_all(packet, 0);
 
 	/* Pool should have only one packet */
 	CU_ASSERT_FATAL(odp_packet_alloc(pool, packet_len)
@@ -937,10 +952,10 @@ static void packet_test_reset(void)
 	CU_ASSERT(odp_packet_reset(pkt, len) == 0);
 	CU_ASSERT(odp_packet_len(pkt) == len);
 
-	packet_set_inflags(pkt, 1);
-	packet_check_inflags(pkt, 1);
+	packet_set_inflags_common(pkt, 1);
+	packet_check_inflags_common(pkt, 1);
 	CU_ASSERT(odp_packet_reset(pkt, len) == 0);
-	packet_check_inflags(pkt, 0);
+	packet_check_inflags_all(pkt, 0);
 
 	CU_ASSERT(odp_packet_reset(pkt, len - 1) == 0);
 	CU_ASSERT(odp_packet_len(pkt) == (len - 1));
@@ -1374,10 +1389,10 @@ static void packet_test_in_flags(void)
 {
 	odp_packet_t pkt = test_packet;
 
-	packet_set_inflags(pkt, 0);
-	packet_check_inflags(pkt, 0);
-	packet_set_inflags(pkt, 1);
-	packet_check_inflags(pkt, 1);
+	packet_set_inflags_common(pkt, 0);
+	packet_check_inflags_common(pkt, 0);
+	packet_set_inflags_common(pkt, 1);
+	packet_check_inflags_common(pkt, 1);
 
 	TEST_INFLAG(pkt, has_l2);
 	TEST_INFLAG(pkt, has_l3);
@@ -1402,8 +1417,8 @@ static void packet_test_in_flags(void)
 	TEST_INFLAG(pkt, has_icmp);
 	TEST_INFLAG(pkt, user_flag);
 
-	packet_set_inflags(pkt, 0);
-	packet_check_inflags(pkt, 0);
+	packet_set_inflags_common(pkt, 0);
+	packet_check_inflags_common(pkt, 0);
 }
 
 static void packet_test_error_flags(void)
@@ -1628,15 +1643,15 @@ static void packet_test_meta_data_copy(void)
 	pkt = odp_packet_alloc(pool, packet_len);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 
-	packet_check_inflags(pkt, 0);
+	packet_check_inflags_all(pkt, 0);
 
 	CU_ASSERT(odp_packet_input(pkt) == ODP_PKTIO_INVALID);
 	CU_ASSERT(odp_packet_l3_offset(pkt) == ODP_PACKET_OFFSET_INVALID);
 	CU_ASSERT(odp_packet_l4_offset(pkt) == ODP_PACKET_OFFSET_INVALID);
 	CU_ASSERT(odp_packet_payload_offset(pkt) == ODP_PACKET_OFFSET_INVALID);
 
-	packet_set_inflags(pkt, 1);
-	packet_check_inflags(pkt, 1);
+	packet_set_inflags_common(pkt, 1);
+	packet_check_inflags_common(pkt, 1);
 
 	odp_packet_input_set(pkt, pktio);
 	odp_packet_user_ptr_set(pkt, (void *)(uintptr_t)0xdeadbeef);
