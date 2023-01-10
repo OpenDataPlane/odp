@@ -1421,6 +1421,30 @@ static void packet_test_in_flags(void)
 	packet_check_inflags_common(pkt, 0);
 }
 
+static void packet_test_vlan_flags(void)
+{
+	odp_packet_t pkt = test_packet;
+
+	odp_packet_reset(pkt, odp_packet_len(test_packet));
+
+	CU_ASSERT(!odp_packet_has_vlan(pkt));
+	CU_ASSERT(!odp_packet_has_vlan_qinq(pkt));
+
+	odp_packet_has_vlan_qinq_set(pkt, 1);
+	CU_ASSERT(odp_packet_has_vlan(pkt));
+	CU_ASSERT(odp_packet_has_vlan_qinq(pkt));
+
+	odp_packet_has_vlan_qinq_set(pkt, 0);
+	CU_ASSERT(!odp_packet_has_vlan(pkt));
+	CU_ASSERT(!odp_packet_has_vlan_qinq(pkt));
+
+	odp_packet_has_vlan_set(pkt, 1);
+	CU_ASSERT(odp_packet_has_vlan(pkt));
+	CU_ASSERT(!odp_packet_has_vlan_qinq(pkt));
+
+	odp_packet_reset(pkt, odp_packet_len(test_packet));
+}
+
 static void packet_test_error_flags(void)
 {
 	odp_packet_t pkt = test_packet;
@@ -4448,6 +4472,7 @@ odp_testinfo_t packet_suite[] = {
 	ODP_TEST_INFO(packet_test_layer_offsets),
 	ODP_TEST_INFO(packet_test_segment_last),
 	ODP_TEST_INFO(packet_test_in_flags),
+	ODP_TEST_INFO(packet_test_vlan_flags),
 	ODP_TEST_INFO(packet_test_error_flags),
 	ODP_TEST_INFO(packet_test_add_rem_data),
 	ODP_TEST_INFO(packet_test_meta_data_copy),
