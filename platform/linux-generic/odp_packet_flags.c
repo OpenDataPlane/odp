@@ -72,10 +72,12 @@ void odp_packet_has_jumbo_set(odp_packet_t pkt, int val)
 void odp_packet_has_vlan_set(odp_packet_t pkt, int val)
 {
 	setflag(pkt, input_flags.vlan, val);
+	setflag(pkt, input_flags.vlan_qinq, 0);
 }
 
 void odp_packet_has_vlan_qinq_set(odp_packet_t pkt, int val)
 {
+	setflag(pkt, input_flags.vlan, val);
 	setflag(pkt, input_flags.vlan_qinq, val);
 }
 
