@@ -1,5 +1,5 @@
 /* Copyright (c) 2016-2018, Linaro Limited
- * Copyright (c) 2019-2021, Nokia
+ * Copyright (c) 2019-2023, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -66,7 +66,7 @@ extern "C" {
 /*
  * Maximum number of stashes
  */
-#define CONFIG_MAX_STASHES 128
+#define CONFIG_MAX_STASHES 2048
 
 /*
  * Maximum number of packet IO resources
@@ -134,10 +134,10 @@ extern "C" {
 /*
  * Number of shared memory blocks reserved for implementation internal use.
  *
- * Each stash requires one SHM block, each pool requires three blocks (buffers,
- * ring, user area), and 20 blocks are reserved for per ODP module global data.
+ * Each pool requires three blocks (buffers, ring, user area), and 20 blocks
+ * are reserved for per ODP module global data.
  */
-#define CONFIG_INTERNAL_SHM_BLOCKS (CONFIG_MAX_STASHES + (ODP_CONFIG_POOLS * 3)  + 20)
+#define CONFIG_INTERNAL_SHM_BLOCKS ((ODP_CONFIG_POOLS * 3) + 20)
 
 /*
  * Maximum number of shared memory blocks.
