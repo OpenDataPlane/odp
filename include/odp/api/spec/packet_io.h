@@ -103,7 +103,7 @@ extern "C" {
  *	 the odp_pktio_default_cos_set() routine, or because a matching PMR
  *	 assigned the packet to a specific CoS. The default pool specified
  *	 here is applicable only for those packets that are not assigned to a
- *	 more specific CoS.
+ *	 more specific CoS that specifies another pool.
  *
  * @see odp_pktio_start(), odp_pktio_stop(), odp_pktio_close()
  */

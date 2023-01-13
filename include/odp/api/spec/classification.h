@@ -671,7 +671,15 @@ typedef struct odp_cls_cos_param {
 			odp_pktin_hash_proto_t hash_proto;
 		};
 	};
-	/** Pool associated with CoS */
+	/** Pool associated with CoS
+	 *
+	 * May be set to ODP_POOL_INVALID, in which case the default pool of
+	 * the originating packet input is used (@see odp_pktio_open()). If
+	 * there is no originating packet input (e.g. with lookaside IPsec),
+	 * then this parameter must be set to a valid pool.
+	 *
+	 * Default is ODP_POOL_INVALID.
+	 */
 	odp_pool_t pool;
 
 #if ODP_DEPRECATED_API
@@ -1017,7 +1025,7 @@ int odp_cls_cos_pool_set(odp_cos_t cos, odp_pool_t pool_id);
 * @param cos        CoS handle
 *
 * @retval pool handle of the associated pool
-* @retval ODP_POOL_INVALID if no associated pool found or in case of an error
+* @retval ODP_POOL_INVALID on failure, or if the pool has not been set
 */
 odp_pool_t odp_cls_cos_pool(odp_cos_t cos);
 
