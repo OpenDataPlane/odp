@@ -1,4 +1,4 @@
-/* Copyright (c) 2020-2022, Nokia
+/* Copyright (c) 2020-2023, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -15,6 +15,7 @@
 #include <odp_debug_internal.h>
 #include <odp_global_data.h>
 #include <odp_init_internal.h>
+#include <odp_libconfig_internal.h>
 #include <odp_macros_internal.h>
 #include <odp_ring_u32_internal.h>
 #include <odp_ring_u64_internal.h>
@@ -26,14 +27,18 @@
 
 ODP_STATIC_ASSERT(CONFIG_INTERNAL_STASHES < CONFIG_MAX_STASHES, "TOO_MANY_INTERNAL_STASHES");
 
-#define MAX_RING_SIZE (1024 * 1024)
 #define MIN_RING_SIZE 64
+
+enum {
+	STASH_FREE = 0,
+	STASH_RESERVED,
+	STASH_ACTIVE
+};
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpedantic"
 typedef struct stash_t {
 	char      name[ODP_STASH_NAME_LEN];
-	odp_shm_t shm;
 	int       index;
 	uint32_t  ring_mask;
 	uint32_t  obj_size;
@@ -57,8 +62,12 @@ typedef struct stash_t {
 typedef struct stash_global_t {
 	odp_ticketlock_t  lock;
 	odp_shm_t         shm;
-	uint8_t           stash_reserved[CONFIG_MAX_STASHES];
+	uint32_t          max_num;
+	uint32_t          max_num_obj;
+	uint32_t          num_internal;
+	uint8_t           stash_state[CONFIG_MAX_STASHES];
 	stash_t           *stash[CONFIG_MAX_STASHES];
+	uint8_t           data[] ODP_ALIGNED_CACHE;
 
 } stash_global_t;
 
@@ -67,13 +76,58 @@ static stash_global_t *stash_global;
 int _odp_stash_init_global(void)
 {
 	odp_shm_t shm;
+	uint32_t max_num, max_num_obj;
+	const char *str;
+	uint64_t ring_max_size, stash_max_size, stash_data_size, offset;
+	const uint32_t internal_stashes = odp_global_ro.disable.dma ? 0 : CONFIG_INTERNAL_STASHES;
+	uint8_t *stash_data;
+	int val = 0;
 
-	if (odp_global_ro.disable.stash) {
+	if (odp_global_ro.disable.stash && odp_global_ro.disable.dma) {
 		_ODP_PRINT("Stash is DISABLED\n");
 		return 0;
 	}
 
-	shm = odp_shm_reserve("_odp_stash_global", sizeof(stash_global_t),
+	_ODP_PRINT("Stash config:\n");
+
+	str = "stash.max_num";
+	if (!_odp_libconfig_lookup_int(str, &val)) {
+		_ODP_ERR("Config option '%s' not found.\n", str);
+		return -1;
+	}
+	_ODP_PRINT("  %s: %i\n", str, val);
+	max_num = val;
+
+	str = "stash.max_num_obj";
+	if (!_odp_libconfig_lookup_int(str, &val)) {
+		_ODP_ERR("Config option '%s' not found.\n", str);
+		return -1;
+	}
+	_ODP_PRINT("  %s: %i\n", str, val);
+	max_num_obj = val;
+
+	_ODP_PRINT("\n");
+
+	/* Reserve resources for implementation internal stashes */
+	if (max_num > CONFIG_MAX_STASHES - internal_stashes) {
+		_ODP_ERR("Maximum supported number of stashes: %d\n",
+			 CONFIG_MAX_STASHES - internal_stashes);
+		return -1;
+	}
+	max_num += internal_stashes;
+
+	/* Must have room for minimum sized ring */
+	if (max_num_obj < MIN_RING_SIZE)
+		max_num_obj = MIN_RING_SIZE - 1;
+
+	/* Ring size must be larger than the number of items stored */
+	ring_max_size = _ODP_ROUNDUP_POWER2_U32(max_num_obj + 1);
+
+	stash_max_size = _ODP_ROUNDUP_CACHE_LINE(sizeof(stash_t) +
+						 (ring_max_size * sizeof(uint64_t)));
+	stash_data_size = max_num * stash_max_size;
+
+	shm = odp_shm_reserve("_odp_stash_global", sizeof(stash_global_t) + stash_data_size,
 			      ODP_CACHE_LINE_SIZE, 0);
 
 	stash_global = odp_shm_addr(shm);
@@ -85,7 +139,19 @@ int _odp_stash_init_global(void)
 
 	memset(stash_global, 0, sizeof(stash_global_t));
 	stash_global->shm = shm;
+	stash_global->max_num = max_num;
+	stash_global->max_num_obj = max_num_obj;
+	stash_global->num_internal = internal_stashes;
 	odp_ticketlock_init(&stash_global->lock);
+
+	/* Initialize stash pointers */
+	stash_data = stash_global->data;
+	offset = 0;
+
+	for (uint32_t i = 0; i < max_num; i++) {
+		stash_global->stash[i] = (stash_t *)(uintptr_t)(stash_data + offset);
+		offset += stash_max_size;
+	}
 
 	return 0;
 }
@@ -108,17 +174,21 @@ int _odp_stash_term_global(void)
 
 int odp_stash_capability(odp_stash_capability_t *capa, odp_stash_type_t type)
 {
+	uint32_t max_stashes;
+
 	if (odp_global_ro.disable.stash) {
 		_ODP_ERR("Stash is disabled\n");
 		return -1;
 	}
 
 	(void)type;
+	max_stashes = stash_global->max_num - stash_global->num_internal;
+
 	memset(capa, 0, sizeof(odp_stash_capability_t));
 
-	capa->max_stashes_any_type = CONFIG_MAX_STASHES - CONFIG_INTERNAL_STASHES;
-	capa->max_stashes          = CONFIG_MAX_STASHES - CONFIG_INTERNAL_STASHES;
-	capa->max_num_obj          = MAX_RING_SIZE;
+	capa->max_stashes_any_type = max_stashes;
+	capa->max_stashes          = max_stashes;
+	capa->max_num_obj          = stash_global->max_num_obj;
 	capa->max_obj_size         = sizeof(uint64_t);
 	capa->max_get_batch        = MIN_RING_SIZE;
 	capa->max_put_batch        = MIN_RING_SIZE;
@@ -137,15 +207,14 @@ void odp_stash_param_init(odp_stash_param_t *param)
 
 static int reserve_index(void)
 {
-	int i;
 	int index = -1;
 
 	odp_ticketlock_lock(&stash_global->lock);
 
-	for (i = 0; i < CONFIG_MAX_STASHES; i++) {
-		if (stash_global->stash_reserved[i] == 0) {
+	for (uint32_t i = 0; i < stash_global->max_num; i++) {
+		if (stash_global->stash_state[i] == STASH_FREE) {
 			index = i;
-			stash_global->stash_reserved[i] = 1;
+			stash_global->stash_state[i] = STASH_RESERVED;
 			break;
 		}
 	}
@@ -159,20 +228,16 @@ static void free_index(int i)
 {
 	odp_ticketlock_lock(&stash_global->lock);
 
-	stash_global->stash[i] = NULL;
-	stash_global->stash_reserved[i] = 0;
+	stash_global->stash_state[i] = STASH_FREE;
 
 	odp_ticketlock_unlock(&stash_global->lock);
 }
 
 odp_stash_t odp_stash_create(const char *name, const odp_stash_param_t *param)
 {
-	odp_shm_t shm;
 	stash_t *stash;
-	uint64_t i, ring_size, shm_size;
+	uint64_t i, ring_size;
 	int ring_u64, index;
-	char shm_name[ODP_STASH_NAME_LEN + 8];
-	uint32_t shm_flags = 0;
 
 	if (odp_global_ro.disable.stash) {
 		_ODP_ERR("Stash is disabled\n");
@@ -184,7 +249,7 @@ odp_stash_t odp_stash_create(const char *name, const odp_stash_param_t *param)
 		return ODP_STASH_INVALID;
 	}
 
-	if (param->num_obj > MAX_RING_SIZE) {
+	if (param->num_obj > stash_global->max_num_obj) {
 		_ODP_ERR("Too many objects.\n");
 		return ODP_STASH_INVALID;
 	}
@@ -213,26 +278,7 @@ odp_stash_t odp_stash_create(const char *name, const odp_stash_param_t *param)
 	else
 		ring_size = _ODP_ROUNDUP_POWER2_U32(ring_size + 1);
 
-	memset(shm_name, 0, sizeof(shm_name));
-	snprintf(shm_name, sizeof(shm_name) - 1, "_stash_%s", name);
-
-	if (ring_u64)
-		shm_size = sizeof(stash_t) + (ring_size * sizeof(uint64_t));
-	else
-		shm_size = sizeof(stash_t) + (ring_size * sizeof(uint32_t));
-
-	if (odp_global_ro.shm_single_va)
-		shm_flags |= ODP_SHM_SINGLE_VA;
-
-	shm = odp_shm_reserve(shm_name, shm_size, ODP_CACHE_LINE_SIZE, shm_flags);
-
-	if (shm == ODP_SHM_INVALID) {
-		_ODP_ERR("SHM reserve failed.\n");
-		free_index(index);
-		return ODP_STASH_INVALID;
-	}
-
-	stash = odp_shm_addr(shm);
+	stash = stash_global->stash[index];
 	memset(stash, 0, sizeof(stash_t));
 
 	if (ring_u64) {
@@ -251,13 +297,12 @@ odp_stash_t odp_stash_create(const char *name, const odp_stash_param_t *param)
 		strcpy(stash->name, name);
 
 	stash->index        = index;
-	stash->shm          = shm;
 	stash->obj_size     = param->obj_size;
 	stash->ring_mask    = ring_size - 1;
 
 	/* This makes stash visible to lookups */
 	odp_ticketlock_lock(&stash_global->lock);
-	stash_global->stash[index] = stash;
+	stash_global->stash_state[index] = STASH_ACTIVE;
 	odp_ticketlock_unlock(&stash_global->lock);
 
 	return (odp_stash_t)stash;
@@ -266,22 +311,13 @@ odp_stash_t odp_stash_create(const char *name, const odp_stash_param_t *param)
 int odp_stash_destroy(odp_stash_t st)
 {
 	stash_t *stash;
-	int index;
-	odp_shm_t shm;
 
 	if (st == ODP_STASH_INVALID)
 		return -1;
 
 	stash = (stash_t *)(uintptr_t)st;
-	index = stash->index;
-	shm   = stash->shm;
 
-	free_index(index);
-
-	if (odp_shm_free(shm)) {
-		_ODP_ERR("SHM free failed.\n");
-		return -1;
-	}
+	free_index(stash->index);
 
 	return 0;
 }
@@ -293,7 +329,6 @@ uint64_t odp_stash_to_u64(odp_stash_t st)
 
 odp_stash_t odp_stash_lookup(const char *name)
 {
-	int i;
 	stash_t *stash;
 
 	if (name == NULL)
@@ -301,10 +336,11 @@ odp_stash_t odp_stash_lookup(const char *name)
 
 	odp_ticketlock_lock(&stash_global->lock);
 
-	for (i = 0; i < CONFIG_MAX_STASHES; i++) {
+	for (uint32_t i = 0; i < stash_global->max_num; i++) {
 		stash = stash_global->stash[i];
 
-		if (stash && strcmp(stash->name, name) == 0) {
+		if (stash_global->stash_state[i] == STASH_ACTIVE &&
+		    strcmp(stash->name, name) == 0) {
 			odp_ticketlock_unlock(&stash_global->lock);
 			return (odp_stash_t)stash;
 		}
