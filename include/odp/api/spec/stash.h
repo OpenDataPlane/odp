@@ -1,4 +1,4 @@
-/* Copyright (c) 2020-2022, Nokia
+/* Copyright (c) 2020-2023, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -109,8 +109,7 @@ uint64_t odp_stash_to_u64(odp_stash_t stash);
  * Store object handles into the stash. Handle values are opaque data to
  * ODP implementation and may be e.g. pointers or indexes to arbitrary objects.
  * Application specifies object handle size and maximum number of handles to be
- * stored in stash creation parameters. Application must not attempt to store
- * more handles into the stash than it specifies in the creation parameters.
+ * stored in stash creation parameters.
  *
  * A successful operation returns the actual number of object handles stored.
  * If the return value is less than 'num', the remaining handles at the end of
