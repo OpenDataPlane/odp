@@ -50,9 +50,9 @@ odp_queue_t odp_queue_create(const char *name, const odp_queue_param_t *param);
  * Destroy ODP queue
  *
  * Destroys ODP queue. The queue must be empty and detached from other
- * ODP API (crypto, pktio, etc). Application must ensure that no other
- * operations on this queue are invoked in parallel. Otherwise behavior
- * is undefined.
+ * ODP API (crypto, pktio, classifier, timer, etc). Application must ensure
+ * that no other operations on this queue are invoked in parallel. Otherwise
+ * behavior is undefined.
  *
  * @param queue    Queue handle
  *
