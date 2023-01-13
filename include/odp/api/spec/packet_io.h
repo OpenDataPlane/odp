@@ -663,8 +663,8 @@ int odp_pktio_mac_addr_set(odp_pktio_t pktio, const void *mac_addr,
  *
  * @param pktio        Ingress port pktio handle.
  * @param default_cos  Class-of-service set to all packets arriving at this
- *                     ingress port, unless overridden by subsequent
- *                     header-based filters.
+ *                     ingress port. Use ODP_COS_INVALID to remove the default
+ *                     CoS.
  *
  * @retval  0 on success
  * @retval <0 on failure
