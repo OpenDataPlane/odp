@@ -59,15 +59,16 @@ odp_pool_t odp_pool_create(const char *name, const odp_pool_param_t *param);
 /**
  * Destroy a pool previously created by odp_pool_create()
  *
+ * This routine destroys a previously created pool, and will destroy any
+ * internal shared memory objects associated with the pool. The pool must not
+ * be in use (in pktio, classifier, timer, etc.) when calling this function.
+ * Results are undefined if an attempt is made to destroy a pool that contains
+ * allocated or otherwise active buffers.
+ *
  * @param pool    Handle of the pool to be destroyed
  *
  * @retval 0 Success
  * @retval -1 Failure
- *
- * @note This routine destroys a previously created pool, and will destroy any
- * internal shared memory objects associated with the pool. Results are
- * undefined if an attempt is made to destroy a pool that contains allocated
- * or otherwise active buffers.
  */
 int odp_pool_destroy(odp_pool_t pool);
 
