@@ -1,4 +1,4 @@
-/* Copyright (c) 2020-2022, Nokia
+/* Copyright (c) 2020-2023, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -219,10 +219,11 @@ typedef struct odp_stash_param_t {
 	 */
 	odp_stash_op_mode_t get_mode;
 
-	/** Maximum number of object handles
+	/** Number of object handles
 	 *
-	 *  This is the maximum number of object handles application will store
-	 *  in the stash. The value must not exceed 'max_num_obj' capability.
+	 *  Application must be able to store at least this many object handles
+	 *  into the stash. An implementation may round up the value. The given
+	 *  value must not exceed 'max_num_obj' capability.
 	 */
 	uint64_t num_obj;
 
@@ -264,6 +265,15 @@ typedef struct odp_stash_param_t {
 	 * actually used. All counters are disabled by default.
 	 */
 	odp_stash_stats_opt_t stats;
+
+	/**
+	 * Strict size
+	 *
+	 * If true, application never attempts to store more handles into the stash than specified
+	 * in the 'num_obj' parameter. Implementation may use this value as a hint for performance
+	 * optimizations. The default value is false.
+	 */
+	odp_bool_t strict_size;
 
 } odp_stash_param_t;
 
