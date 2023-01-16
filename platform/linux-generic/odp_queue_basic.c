@@ -1,5 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
- * Copyright (c) 2021-2022, Nokia
+ * Copyright (c) 2021-2023, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -408,7 +408,7 @@ static int queue_destroy(odp_queue_t handle)
 	else if (queue->type == ODP_QUEUE_TYPE_SCHED)
 		empty = ring_st_is_empty(&queue->ring_st);
 	else
-		empty = ring_mpmc_is_empty(&queue->ring_mpmc);
+		empty = ring_mpmc_u32_is_empty(&queue->ring_mpmc);
 
 	if (!empty) {
 		UNLOCK(queue);
@@ -497,7 +497,7 @@ static inline int _plain_queue_enq_multi(odp_queue_t handle,
 {
 	queue_entry_t *queue;
 	int ret, num_enq;
-	ring_mpmc_t *ring_mpmc;
+	ring_mpmc_u32_t *ring_mpmc;
 	uint32_t event_idx[num];
 
 	queue = qentry_from_handle(handle);
@@ -508,8 +508,8 @@ static inline int _plain_queue_enq_multi(odp_queue_t handle,
 
 	event_index_from_hdr(event_idx, event_hdr, num);
 
-	num_enq = ring_mpmc_enq_multi(ring_mpmc, queue->ring_data,
-				      queue->ring_mask, event_idx, num);
+	num_enq = ring_mpmc_u32_enq_multi(ring_mpmc, queue->ring_data,
+					  queue->ring_mask, event_idx, num);
 
 	return num_enq;
 }
@@ -519,14 +519,14 @@ static inline int _plain_queue_deq_multi(odp_queue_t handle,
 {
 	int num_deq;
 	queue_entry_t *queue;
-	ring_mpmc_t *ring_mpmc;
+	ring_mpmc_u32_t *ring_mpmc;
 	uint32_t event_idx[num];
 
 	queue = qentry_from_handle(handle);
 	ring_mpmc = &queue->ring_mpmc;
 
-	num_deq = ring_mpmc_deq_multi(ring_mpmc, queue->ring_data,
-				      queue->ring_mask, event_idx, num);
+	num_deq = ring_mpmc_u32_deq_multi(ring_mpmc, queue->ring_data,
+					  queue->ring_mask, event_idx, num);
 
 	if (num_deq == 0)
 		return 0;
@@ -754,7 +754,7 @@ static void queue_print(odp_queue_t handle)
 	} else {
 		_ODP_PRINT("  implementation  ring_mpmc\n");
 		_ODP_PRINT("  length          %" PRIu32 "/%" PRIu32 "\n",
-			   ring_mpmc_length(&queue->ring_mpmc), queue->ring_mask + 1);
+			   ring_mpmc_u32_len(&queue->ring_mpmc), queue->ring_mask + 1);
 	}
 	_ODP_PRINT("\n");
 
@@ -820,7 +820,7 @@ static void queue_print_all(void)
 			if (_odp_sched_id == _ODP_SCHED_ID_BASIC)
 				spr = _odp_sched_basic_get_spread(index);
 		} else {
-			len     = ring_mpmc_length(&queue->ring_mpmc);
+			len     = ring_mpmc_u32_len(&queue->ring_mpmc);
 			max_len = queue->ring_mask + 1;
 		}
 
@@ -1073,7 +1073,7 @@ static int queue_init(queue_entry_t *queue, const char *name,
 
 			queue->ring_data = &_odp_queue_glb->ring_data[offset];
 			queue->ring_mask = queue_size - 1;
-			ring_mpmc_init(&queue->ring_mpmc);
+			ring_mpmc_u32_init(&queue->ring_mpmc);
 
 		} else {
 			queue->enqueue            = sched_queue_enq;
