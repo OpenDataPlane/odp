@@ -1,5 +1,5 @@
 /* Copyright (c) 2017-2018, Linaro Limited
- * Copyright (c) 2018-2022, Nokia
+ * Copyright (c) 2018-2023, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -19,7 +19,7 @@
 #include <odp_debug_internal.h>
 #include <odp_ipsec_internal.h>
 #include <odp_macros_internal.h>
-#include <odp_ring_mpmc_internal.h>
+#include <odp_ring_mpmc_u32_internal.h>
 #include <odp_global_data.h>
 
 #include <string.h>
@@ -103,7 +103,7 @@ typedef struct ODP_ALIGNED_CACHE ipsec_thread_local_s {
 typedef struct ipsec_sa_table_t {
 	ipsec_sa_t ipsec_sa[CONFIG_IPSEC_MAX_NUM_SA];
 	struct ODP_ALIGNED_CACHE {
-		ring_mpmc_t ipv4_id_ring;
+		ring_mpmc_u32_t ipv4_id_ring;
 		uint32_t ipv4_id_data[IPV4_ID_RING_SIZE] ODP_ALIGNED_CACHE;
 	} hot;
 	struct {
@@ -193,7 +193,7 @@ int _odp_ipsec_sad_init_global(void)
 	ipsec_sa_tbl->shm = shm;
 	ipsec_sa_tbl->max_num_sa = max_num_sa;
 
-	ring_mpmc_init(&ipsec_sa_tbl->hot.ipv4_id_ring);
+	ring_mpmc_u32_init(&ipsec_sa_tbl->hot.ipv4_id_ring);
 	for (i = 0; i < thread_count_max; i++) {
 		/*
 		 * Make the current ID block fully used, forcing allocation
@@ -211,11 +211,11 @@ int _odp_ipsec_sad_init_global(void)
 	for (i = 0; i < IPV4_ID_RING_SIZE - 1; i++) {
 		uint32_t data = i * IPV4_ID_BLOCK_SIZE;
 
-		ring_mpmc_enq_multi(&ipsec_sa_tbl->hot.ipv4_id_ring,
-				    ipsec_sa_tbl->hot.ipv4_id_data,
-				    IPV4_ID_RING_MASK,
-				    &data,
-				    1);
+		ring_mpmc_u32_enq_multi(&ipsec_sa_tbl->hot.ipv4_id_ring,
+					ipsec_sa_tbl->hot.ipv4_id_data,
+					IPV4_ID_RING_MASK,
+					&data,
+					1);
 	}
 
 	for (i = 0; i < ipsec_sa_tbl->max_num_sa; i++) {
@@ -1119,17 +1119,17 @@ uint16_t _odp_ipsec_sa_alloc_ipv4_id(ipsec_sa_t *ipsec_sa)
 			 tl->first_ipv4_id + IPV4_ID_BLOCK_SIZE)) {
 		/* Return used ID block to the ring */
 		data = tl->first_ipv4_id;
-		ring_mpmc_enq_multi(&ipsec_sa_tbl->hot.ipv4_id_ring,
-				    ipsec_sa_tbl->hot.ipv4_id_data,
-				    IPV4_ID_RING_MASK,
-				    &data,
-				    1);
+		ring_mpmc_u32_enq_multi(&ipsec_sa_tbl->hot.ipv4_id_ring,
+					ipsec_sa_tbl->hot.ipv4_id_data,
+					IPV4_ID_RING_MASK,
+					&data,
+					1);
 		/* Get new ID block */
-		ring_mpmc_deq_multi(&ipsec_sa_tbl->hot.ipv4_id_ring,
-				    ipsec_sa_tbl->hot.ipv4_id_data,
-				    IPV4_ID_RING_MASK,
-				    &data,
-				    1);
+		ring_mpmc_u32_deq_multi(&ipsec_sa_tbl->hot.ipv4_id_ring,
+					ipsec_sa_tbl->hot.ipv4_id_data,
+					IPV4_ID_RING_MASK,
+					&data,
+					1);
 		tl->first_ipv4_id = data;
 		tl->next_ipv4_id = data;
 	}
