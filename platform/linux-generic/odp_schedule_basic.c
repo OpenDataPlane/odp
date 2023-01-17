@@ -292,6 +292,11 @@ typedef struct {
 
 	order_context_t order[CONFIG_MAX_SCHED_QUEUES];
 
+	struct {
+		uint32_t poll_time;
+		struct timespec sleep_time;
+	} powersave;
+
 	/* Scheduler interface config options (not used in fast path) */
 	schedule_config_t config_if;
 	uint32_t max_queues;
@@ -519,6 +524,26 @@ static int read_config_file(sched_global_t *sched)
 	}
 
 	sched->config_if.group_enable.control = val;
+	_ODP_PRINT("  %s: %i\n", str, val);
+
+	str = "sched_basic.powersave.poll_time_nsec";
+	if (!_odp_libconfig_lookup_int(str, &val)) {
+		_ODP_ERR("Config option '%s' not found.\n", str);
+		return -1;
+	}
+
+	sched->powersave.poll_time = _ODP_MAX(0, val);
+	_ODP_PRINT("  %s: %i\n", str, val);
+
+	str = "sched_basic.powersave.sleep_time_nsec";
+	if (!_odp_libconfig_lookup_int(str, &val)) {
+		_ODP_ERR("Config option '%s' not found.\n", str);
+		return -1;
+	}
+
+	val = _ODP_MAX(0, val);
+	sched->powersave.sleep_time.tv_sec = val / 1000000000;
+	sched->powersave.sleep_time.tv_nsec = val % 1000000000;
 	_ODP_PRINT("  %s: %i\n", str, val);
 
 	_ODP_PRINT("  dynamic load balance: %s\n", sched->load_balance ? "ON" : "OFF");
