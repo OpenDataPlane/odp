@@ -73,6 +73,16 @@ typedef struct stash_global_t {
 
 static stash_global_t *stash_global;
 
+static inline stash_t *stash_entry(odp_stash_t st)
+{
+	return (stash_t *)(uintptr_t)st;
+}
+
+static inline odp_stash_t stash_handle(stash_t *stash)
+{
+	return (odp_stash_t)(uintptr_t)stash;
+}
+
 int _odp_stash_init_global(void)
 {
 	odp_shm_t shm;
@@ -305,19 +315,15 @@ odp_stash_t odp_stash_create(const char *name, const odp_stash_param_t *param)
 	stash_global->stash_state[index] = STASH_ACTIVE;
 	odp_ticketlock_unlock(&stash_global->lock);
 
-	return (odp_stash_t)stash;
+	return stash_handle(stash);
 }
 
 int odp_stash_destroy(odp_stash_t st)
 {
-	stash_t *stash;
-
 	if (st == ODP_STASH_INVALID)
 		return -1;
 
-	stash = (stash_t *)(uintptr_t)st;
-
-	free_index(stash->index);
+	free_index(stash_entry(st)->index);
 
 	return 0;
 }
@@ -342,7 +348,7 @@ odp_stash_t odp_stash_lookup(const char *name)
 		if (stash_global->stash_state[i] == STASH_ACTIVE &&
 		    strcmp(stash->name, name) == 0) {
 			odp_ticketlock_unlock(&stash_global->lock);
-			return (odp_stash_t)stash;
+			return stash_handle(stash);
 		}
 	}
 
@@ -353,11 +359,9 @@ odp_stash_t odp_stash_lookup(const char *name)
 
 static inline int32_t stash_put(odp_stash_t st, const void *obj, int32_t num)
 {
-	stash_t *stash;
+	stash_t *stash = stash_entry(st);
 	uint32_t obj_size;
 	int32_t i;
-
-	stash = (stash_t *)(uintptr_t)st;
 
 	if (odp_unlikely(st == ODP_STASH_INVALID))
 		return -1;
@@ -421,7 +425,7 @@ int32_t odp_stash_put_batch(odp_stash_t st, const void *obj, int32_t num)
 static inline int32_t stash_put_u32(odp_stash_t st, const uint32_t val[],
 				    int32_t num)
 {
-	stash_t *stash = (stash_t *)(uintptr_t)st;
+	stash_t *stash = stash_entry(st);
 
 	if (odp_unlikely(st == ODP_STASH_INVALID))
 		return -1;
@@ -448,7 +452,7 @@ int32_t odp_stash_put_u32_batch(odp_stash_t st, const uint32_t val[],
 static inline int32_t stash_put_u64(odp_stash_t st, const uint64_t val[],
 				    int32_t num)
 {
-	stash_t *stash = (stash_t *)(uintptr_t)st;
+	stash_t *stash = stash_entry(st);
 
 	if (odp_unlikely(st == ODP_STASH_INVALID))
 		return -1;
@@ -475,7 +479,7 @@ int32_t odp_stash_put_u64_batch(odp_stash_t st, const uint64_t val[],
 static inline int32_t stash_put_ptr(odp_stash_t st, const uintptr_t ptr[],
 				    int32_t num)
 {
-	stash_t *stash = (stash_t *)(uintptr_t)st;
+	stash_t *stash = stash_entry(st);
 
 	if (odp_unlikely(st == ODP_STASH_INVALID))
 		return -1;
@@ -508,11 +512,9 @@ int32_t odp_stash_put_ptr_batch(odp_stash_t st,	const uintptr_t ptr[],
 
 static inline int32_t stash_get(odp_stash_t st, void *obj, int32_t num, odp_bool_t batch)
 {
-	stash_t *stash;
+	stash_t *stash = stash_entry(st);
 	uint32_t obj_size;
 	uint32_t i, num_deq;
-
-	stash = (stash_t *)(uintptr_t)st;
 
 	if (odp_unlikely(st == ODP_STASH_INVALID))
 		return -1;
@@ -584,7 +586,7 @@ int32_t odp_stash_get_batch(odp_stash_t st, void *obj, int32_t num)
 
 int32_t odp_stash_get_u32(odp_stash_t st, uint32_t val[], int32_t num)
 {
-	stash_t *stash = (stash_t *)(uintptr_t)st;
+	stash_t *stash = stash_entry(st);
 
 	if (odp_unlikely(st == ODP_STASH_INVALID))
 		return -1;
@@ -597,7 +599,7 @@ int32_t odp_stash_get_u32(odp_stash_t st, uint32_t val[], int32_t num)
 
 int32_t odp_stash_get_u32_batch(odp_stash_t st, uint32_t val[], int32_t num)
 {
-	stash_t *stash = (stash_t *)(uintptr_t)st;
+	stash_t *stash = stash_entry(st);
 
 	if (odp_unlikely(st == ODP_STASH_INVALID))
 		return -1;
@@ -609,7 +611,7 @@ int32_t odp_stash_get_u32_batch(odp_stash_t st, uint32_t val[], int32_t num)
 
 int32_t odp_stash_get_u64(odp_stash_t st, uint64_t val[], int32_t num)
 {
-	stash_t *stash = (stash_t *)(uintptr_t)st;
+	stash_t *stash = stash_entry(st);
 
 	if (odp_unlikely(st == ODP_STASH_INVALID))
 		return -1;
@@ -622,7 +624,7 @@ int32_t odp_stash_get_u64(odp_stash_t st, uint64_t val[], int32_t num)
 
 int32_t odp_stash_get_u64_batch(odp_stash_t st, uint64_t val[], int32_t num)
 {
-	stash_t *stash = (stash_t *)(uintptr_t)st;
+	stash_t *stash = stash_entry(st);
 
 	if (odp_unlikely(st == ODP_STASH_INVALID))
 		return -1;
@@ -634,7 +636,7 @@ int32_t odp_stash_get_u64_batch(odp_stash_t st, uint64_t val[], int32_t num)
 
 int32_t odp_stash_get_ptr(odp_stash_t st, uintptr_t ptr[], int32_t num)
 {
-	stash_t *stash = (stash_t *)(uintptr_t)st;
+	stash_t *stash = stash_entry(st);
 
 	if (odp_unlikely(st == ODP_STASH_INVALID))
 		return -1;
@@ -654,7 +656,7 @@ int32_t odp_stash_get_ptr(odp_stash_t st, uintptr_t ptr[], int32_t num)
 
 int32_t odp_stash_get_ptr_batch(odp_stash_t st, uintptr_t ptr[], int32_t num)
 {
-	stash_t *stash = (stash_t *)(uintptr_t)st;
+	stash_t *stash = stash_entry(st);
 
 	if (odp_unlikely(st == ODP_STASH_INVALID))
 		return -1;
@@ -696,7 +698,7 @@ static uint32_t stash_obj_count(stash_t *stash)
 
 void odp_stash_print(odp_stash_t st)
 {
-	stash_t *stash = (stash_t *)(uintptr_t)st;
+	stash_t *stash = stash_entry(st);
 
 	if (st == ODP_STASH_INVALID) {
 		_ODP_ERR("Bad stash handle\n");
@@ -716,7 +718,7 @@ void odp_stash_print(odp_stash_t st)
 
 int odp_stash_stats(odp_stash_t st, odp_stash_stats_t *stats)
 {
-	stash_t *stash = (stash_t *)(uintptr_t)st;
+	stash_t *stash = stash_entry(st);
 
 	if (st == ODP_STASH_INVALID) {
 		_ODP_ERR("Bad stash handle\n");
