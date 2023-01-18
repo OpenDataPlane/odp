@@ -13,6 +13,8 @@
 #pragma GCC diagnostic ignored "-Wzero-length-bounds"
 #endif
 
+#include <odp_posix_extensions.h>
+
 #include <odp/api/schedule.h>
 #include <odp_schedule_if.h>
 #include <odp/api/align.h>
@@ -41,6 +43,7 @@
 #include <odp_print_internal.h>
 
 #include <string.h>
+#include <time.h>
 
 /* No synchronization context */
 #define NO_SYNC_CONTEXT ODP_SCHED_SYNC_PARALLEL
@@ -1657,6 +1660,51 @@ static inline int schedule_loop(odp_queue_t *out_queue, uint64_t wait,
 	return ret;
 }
 
+static inline int schedule_loop_sleep(odp_queue_t *out_queue, uint64_t wait,
+				      odp_event_t out_ev[], uint32_t max_num)
+{
+	int ret;
+	odp_time_t start, end, current, start_sleep;
+	int first = 1, sleep = 0;
+
+	while (1) {
+		ret = do_schedule(out_queue, out_ev, max_num);
+		if (ret) {
+			timer_run(2);
+			break;
+		}
+		timer_run(1);
+
+		if (first) {
+			start = odp_time_local();
+			start_sleep =
+				odp_time_sum(start,
+					     odp_time_local_from_ns(sched->powersave.poll_time));
+			if (wait != ODP_SCHED_WAIT)
+				end = odp_time_sum(start, odp_time_local_from_ns(wait));
+			first = 0;
+			continue;
+		}
+
+		if (sleep)
+			nanosleep(&sched->powersave.sleep_time, NULL);
+
+		if (wait != ODP_SCHED_WAIT || !sleep) {
+			current = odp_time_local();
+			if (odp_time_cmp(start_sleep, current) < 0)
+				sleep = 1;
+		}
+
+		if (wait == ODP_SCHED_WAIT)
+			continue;
+
+		if (odp_time_cmp(end, current) < 0)
+			break;
+	}
+
+	return ret;
+}
+
 static odp_event_t schedule(odp_queue_t *out_queue, uint64_t wait)
 {
 	odp_event_t ev;
@@ -1668,10 +1716,33 @@ static odp_event_t schedule(odp_queue_t *out_queue, uint64_t wait)
 	return ev;
 }
 
+static odp_event_t schedule_sleep(odp_queue_t *out_queue, uint64_t wait)
+{
+	odp_event_t ev;
+
+	ev = ODP_EVENT_INVALID;
+
+	if (wait == ODP_SCHED_NO_WAIT)
+		schedule_loop(out_queue, wait, &ev, 1);
+	else
+		schedule_loop_sleep(out_queue, wait, &ev, 1);
+
+	return ev;
+}
+
 static int schedule_multi(odp_queue_t *out_queue, uint64_t wait,
 			  odp_event_t events[], int num)
 {
 	return schedule_loop(out_queue, wait, events, num);
+}
+
+static int schedule_multi_sleep(odp_queue_t *out_queue, uint64_t wait,
+				odp_event_t events[], int num)
+{
+	if (wait == ODP_SCHED_NO_WAIT)
+		return schedule_loop(out_queue, wait, events, num);
+
+	return schedule_loop_sleep(out_queue, wait, events, num);
 }
 
 static int schedule_multi_no_wait(odp_queue_t *out_queue, odp_event_t events[],
@@ -1690,6 +1761,12 @@ static int schedule_multi_wait(odp_queue_t *out_queue, odp_event_t events[],
 	} while (ret == 0);
 
 	return ret;
+}
+
+static int schedule_multi_wait_sleep(odp_queue_t *out_queue, odp_event_t events[],
+				     int num)
+{
+	return schedule_loop_sleep(out_queue, ODP_SCHED_WAIT, events, num);
 }
 
 static inline void order_lock(void)
@@ -2225,9 +2302,13 @@ int _odp_sched_basic_get_spread(uint32_t queue_index)
 }
 
 const _odp_schedule_api_fn_t _odp_schedule_basic_api;
+const _odp_schedule_api_fn_t _odp_schedule_basic_sleep_api;
 
 static const _odp_schedule_api_fn_t *sched_api(void)
 {
+	if (sched->powersave.poll_time > 0)
+		return &_odp_schedule_basic_sleep_api;
+
 	return &_odp_schedule_basic_api;
 }
 
@@ -2261,6 +2342,43 @@ const _odp_schedule_api_fn_t _odp_schedule_basic_api = {
 	.schedule                 = schedule,
 	.schedule_multi           = schedule_multi,
 	.schedule_multi_wait      = schedule_multi_wait,
+	.schedule_multi_no_wait   = schedule_multi_no_wait,
+	.schedule_pause           = schedule_pause,
+	.schedule_resume          = schedule_resume,
+	.schedule_release_atomic  = schedule_release_atomic,
+	.schedule_release_ordered = schedule_release_ordered,
+	.schedule_prefetch        = schedule_prefetch,
+	.schedule_min_prio        = schedule_min_prio,
+	.schedule_max_prio        = schedule_max_prio,
+	.schedule_default_prio    = schedule_default_prio,
+	.schedule_num_prio        = schedule_num_prio,
+	.schedule_group_create    = schedule_group_create,
+	.schedule_group_destroy   = schedule_group_destroy,
+	.schedule_group_lookup    = schedule_group_lookup,
+	.schedule_group_join      = schedule_group_join,
+	.schedule_group_leave     = schedule_group_leave,
+	.schedule_group_thrmask   = schedule_group_thrmask,
+	.schedule_group_info      = schedule_group_info,
+	.schedule_order_lock      = schedule_order_lock,
+	.schedule_order_unlock    = schedule_order_unlock,
+	.schedule_order_unlock_lock = schedule_order_unlock_lock,
+	.schedule_order_lock_start  = schedule_order_lock_start,
+	.schedule_order_lock_wait   = schedule_order_lock_wait,
+	.schedule_order_wait      = order_lock,
+	.schedule_print           = schedule_print
+};
+
+/* API functions used when powersave is enabled in the config file. */
+const _odp_schedule_api_fn_t _odp_schedule_basic_sleep_api = {
+	.schedule_wait_time       = schedule_wait_time,
+	.schedule_capability      = schedule_capability,
+	.schedule_config_init     = schedule_config_init,
+	.schedule_config          = schedule_config,
+	/* Only the following *_sleep functions differ from _odp_schedule_basic_api */
+	.schedule                 = schedule_sleep,
+	.schedule_multi           = schedule_multi_sleep,
+	.schedule_multi_wait      = schedule_multi_wait_sleep,
+	/* End of powersave specific functions */
 	.schedule_multi_no_wait   = schedule_multi_no_wait,
 	.schedule_pause           = schedule_pause,
 	.schedule_resume          = schedule_resume,
