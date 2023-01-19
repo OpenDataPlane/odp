@@ -18,6 +18,8 @@
 #include <odp_init_internal.h>
 #include <odp_libconfig_internal.h>
 #include <odp_macros_internal.h>
+#include <odp_ring_mpmc_u32_internal.h>
+#include <odp_ring_mpmc_u64_internal.h>
 #include <odp_ring_u32_internal.h>
 #include <odp_ring_u64_internal.h>
 
@@ -94,6 +96,16 @@ typedef struct ODP_ALIGNED_CACHE stash_t {
 			ring_u64_t hdr;
 			uint64_t   data[];
 		} ring_u64;
+
+		struct ODP_ALIGNED_CACHE {
+			ring_mpmc_u32_t hdr;
+			uint32_t   data[];
+		} ring_mpmc_u32;
+
+		struct ODP_ALIGNED_CACHE {
+			ring_mpmc_u64_t hdr;
+			uint64_t   data[];
+		} ring_mpmc_u64;
 	};
 
 } stash_t;
@@ -105,6 +117,7 @@ typedef struct stash_global_t {
 	uint32_t          max_num;
 	uint32_t          max_num_obj;
 	uint32_t          num_internal;
+	uint8_t           strict_size;
 	uint8_t           stash_state[CONFIG_MAX_STASHES];
 	stash_t           *stash[CONFIG_MAX_STASHES];
 	uint8_t           data[] ODP_ALIGNED_CACHE;
@@ -131,6 +144,7 @@ int _odp_stash_init_global(void)
 	uint64_t ring_max_size, stash_max_size, stash_data_size, offset;
 	const uint32_t internal_stashes = odp_global_ro.disable.dma ? 0 : CONFIG_INTERNAL_STASHES;
 	uint8_t *stash_data;
+	uint8_t strict_size;
 	int val = 0;
 
 	if (odp_global_ro.disable.stash && odp_global_ro.disable.dma) {
@@ -155,6 +169,14 @@ int _odp_stash_init_global(void)
 	}
 	_ODP_PRINT("  %s: %i\n", str, val);
 	max_num_obj = val;
+
+	str = "stash.strict_size";
+	if (!_odp_libconfig_lookup_int(str, &val)) {
+		_ODP_ERR("Config option '%s' not found.\n", str);
+		return -1;
+	}
+	_ODP_PRINT("  %s: %i\n", str, val);
+	strict_size = !!val;
 
 	_ODP_PRINT("\n");
 
@@ -191,6 +213,7 @@ int _odp_stash_init_global(void)
 	stash_global->shm = shm;
 	stash_global->max_num = max_num;
 	stash_global->max_num_obj = max_num_obj;
+	stash_global->strict_size = strict_size;
 	stash_global->num_internal = internal_stashes;
 	odp_ticketlock_init(&stash_global->lock);
 
@@ -345,6 +368,80 @@ static inline int32_t strict_ring_u64_len(stash_t *stash)
 	return ring_u64_len(&stash->ring_u64.hdr);
 }
 
+static inline void mpmc_ring_u32_init(stash_t *stash)
+{
+	ring_mpmc_u32_init(&stash->ring_mpmc_u32.hdr);
+
+	for (uint32_t i = 0; i < stash->ring_size; i++)
+		stash->ring_mpmc_u32.data[i] = 0;
+}
+
+static inline void mpmc_ring_u64_init(stash_t *stash)
+{
+	ring_mpmc_u64_init(&stash->ring_mpmc_u64.hdr);
+
+	for (uint32_t i = 0; i < stash->ring_size; i++)
+		stash->ring_mpmc_u64.data[i] = 0;
+}
+
+static inline int32_t mpmc_ring_u32_enq_multi(stash_t *stash, const uint32_t val[], int32_t num)
+{
+	return ring_mpmc_u32_enq_multi(&stash->ring_mpmc_u32.hdr, stash->ring_mpmc_u32.data,
+				       stash->ring_mask, val, num);
+}
+
+static inline int32_t mpmc_ring_u64_enq_multi(stash_t *stash, const uint64_t val[], int32_t num)
+{
+	return ring_mpmc_u64_enq_multi(&stash->ring_mpmc_u64.hdr, stash->ring_mpmc_u64.data,
+				       stash->ring_mask, val, num);
+}
+
+static inline int32_t mpmc_ring_u32_enq_batch(stash_t *stash, const uint32_t val[], int32_t num)
+{
+	return ring_mpmc_u32_enq_batch(&stash->ring_mpmc_u32.hdr, stash->ring_mpmc_u32.data,
+				       stash->ring_mask, val, num);
+}
+
+static inline int32_t mpmc_ring_u64_enq_batch(stash_t *stash, const uint64_t val[], int32_t num)
+{
+	return ring_mpmc_u64_enq_batch(&stash->ring_mpmc_u64.hdr, stash->ring_mpmc_u64.data,
+				       stash->ring_mask, val, num);
+}
+
+static inline int32_t mpmc_ring_u32_deq_multi(stash_t *stash, uint32_t val[], int32_t num)
+{
+	return ring_mpmc_u32_deq_multi(&stash->ring_mpmc_u32.hdr, stash->ring_mpmc_u32.data,
+				       stash->ring_mask, val, num);
+}
+
+static inline int32_t mpmc_ring_u64_deq_multi(stash_t *stash, uint64_t val[], int32_t num)
+{
+	return ring_mpmc_u64_deq_multi(&stash->ring_mpmc_u64.hdr, stash->ring_mpmc_u64.data,
+				       stash->ring_mask, val, num);
+}
+
+static inline int32_t mpmc_ring_u32_deq_batch(stash_t *stash, uint32_t val[], int32_t num)
+{
+	return ring_mpmc_u32_deq_batch(&stash->ring_mpmc_u32.hdr, stash->ring_mpmc_u32.data,
+				       stash->ring_mask, val, num);
+}
+
+static inline int32_t mpmc_ring_u64_deq_batch(stash_t *stash, uint64_t val[], int32_t num)
+{
+	return ring_mpmc_u64_deq_batch(&stash->ring_mpmc_u64.hdr, stash->ring_mpmc_u64.data,
+				       stash->ring_mask, val, num);
+}
+
+static inline int32_t mpmc_ring_u32_len(stash_t *stash)
+{
+	return ring_mpmc_u32_len(&stash->ring_mpmc_u32.hdr);
+}
+
+static inline int32_t mpmc_ring_u64_len(stash_t *stash)
+{
+	return ring_mpmc_u64_len(&stash->ring_mpmc_u64.hdr);
+}
+
 odp_stash_t odp_stash_create(const char *name, const odp_stash_param_t *param)
 {
 	stash_t *stash;
@@ -394,20 +491,38 @@ odp_stash_t odp_stash_create(const char *name, const odp_stash_param_t *param)
 	memset(stash, 0, sizeof(stash_t));
 
 	/* Set ring function pointers */
-	if (ring_u64) {
-		stash->ring_fn.u64.init      = strict_ring_u64_init;
-		stash->ring_fn.u64.enq_multi = strict_ring_u64_enq_multi;
-		stash->ring_fn.u64.enq_batch = strict_ring_u64_enq_multi;
-		stash->ring_fn.u64.deq_multi = strict_ring_u64_deq_multi;
-		stash->ring_fn.u64.deq_batch = strict_ring_u64_deq_batch;
-		stash->ring_fn.u64.len       = strict_ring_u64_len;
+	if (stash_global->strict_size) {
+		if (ring_u64) {
+			stash->ring_fn.u64.init      = strict_ring_u64_init;
+			stash->ring_fn.u64.enq_multi = strict_ring_u64_enq_multi;
+			stash->ring_fn.u64.enq_batch = strict_ring_u64_enq_multi;
+			stash->ring_fn.u64.deq_multi = strict_ring_u64_deq_multi;
+			stash->ring_fn.u64.deq_batch = strict_ring_u64_deq_batch;
+			stash->ring_fn.u64.len       = strict_ring_u64_len;
+		} else {
+			stash->ring_fn.u32.init      = strict_ring_u32_init;
+			stash->ring_fn.u32.enq_multi = strict_ring_u32_enq_multi;
+			stash->ring_fn.u32.enq_batch = strict_ring_u32_enq_multi;
+			stash->ring_fn.u32.deq_multi = strict_ring_u32_deq_multi;
+			stash->ring_fn.u32.deq_batch = strict_ring_u32_deq_batch;
+			stash->ring_fn.u32.len       = strict_ring_u32_len;
+		}
 	} else {
-		stash->ring_fn.u32.init      = strict_ring_u32_init;
-		stash->ring_fn.u32.enq_multi = strict_ring_u32_enq_multi;
-		stash->ring_fn.u32.enq_batch = strict_ring_u32_enq_multi;
-		stash->ring_fn.u32.deq_multi = strict_ring_u32_deq_multi;
-		stash->ring_fn.u32.deq_batch = strict_ring_u32_deq_batch;
-		stash->ring_fn.u32.len       = strict_ring_u32_len;
+		if (ring_u64) {
+			stash->ring_fn.u64.init      = mpmc_ring_u64_init;
+			stash->ring_fn.u64.enq_multi = mpmc_ring_u64_enq_multi;
+			stash->ring_fn.u64.enq_batch = mpmc_ring_u64_enq_batch;
+			stash->ring_fn.u64.deq_multi = mpmc_ring_u64_deq_multi;
+			stash->ring_fn.u64.deq_batch = mpmc_ring_u64_deq_batch;
+			stash->ring_fn.u64.len       = mpmc_ring_u64_len;
+		} else {
+			stash->ring_fn.u32.init      = mpmc_ring_u32_init;
+			stash->ring_fn.u32.enq_multi = mpmc_ring_u32_enq_multi;
+			stash->ring_fn.u32.enq_batch = mpmc_ring_u32_enq_batch;
+			stash->ring_fn.u32.deq_multi = mpmc_ring_u32_deq_multi;
+			stash->ring_fn.u32.deq_batch = mpmc_ring_u32_deq_batch;
+			stash->ring_fn.u32.len       = mpmc_ring_u32_len;
+		}
 	}
 
 	if (name)
