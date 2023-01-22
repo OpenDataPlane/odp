@@ -534,17 +534,20 @@ odp_cls_drop_t odp_cos_drop(odp_cos_t cos_id)
 int odp_pktio_default_cos_set(odp_pktio_t pktio_in, odp_cos_t default_cos)
 {
 	pktio_entry_t *entry;
-	cos_t *cos;
+	cos_t *cos = NULL;
 
 	entry = get_pktio_entry(pktio_in);
 	if (entry == NULL) {
 		_ODP_ERR("Invalid odp_pktio_t handle\n");
 		return -1;
 	}
-	cos = get_cos_entry(default_cos);
-	if (cos == NULL) {
-		_ODP_ERR("Invalid odp_cos_t handle\n");
-		return -1;
+
+	if (default_cos != ODP_COS_INVALID) {
+		cos = get_cos_entry(default_cos);
+		if (cos == NULL) {
+			_ODP_ERR("Invalid odp_cos_t handle\n");
+			return -1;
+		}
 	}
 
 	entry->cls.default_cos = cos;
