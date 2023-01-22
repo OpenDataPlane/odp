@@ -1718,13 +1718,15 @@ int _odp_cls_classify_packet(pktio_entry_t *entry, const uint8_t *base,
 	if (cos->action == ODP_COS_ACTION_DROP)
 		return 1;
 
-	if (cos->queue == ODP_QUEUE_INVALID && cos->num_queue == 1)
-		goto error;
-
-	if (cos->pool == ODP_POOL_INVALID)
-		goto error;
+	if (cos->queue == ODP_QUEUE_INVALID && cos->num_queue == 1) {
+		odp_atomic_inc_u64(&cos->stats.discards);
+		return 1;
+	}
 
 	*pool = cos->pool;
+	if (*pool == ODP_POOL_INVALID)
+		*pool = entry->pool;
+
 	pkt_hdr->p.input_flags.dst_queue = 1;
 	pkt_hdr->cos = cos->index;
 
@@ -1740,10 +1742,6 @@ int _odp_cls_classify_packet(pktio_entry_t *entry, const uint8_t *base,
 							  cos->num_queue);
 	pkt_hdr->dst_queue = queue_grp_tbl->queue[tbl_index];
 	return 0;
-
-error:
-	odp_atomic_inc_u64(&cos->stats.discards);
-	return 1;
 }
 
 static uint32_t packet_rss_hash(odp_packet_hdr_t *pkt_hdr,
