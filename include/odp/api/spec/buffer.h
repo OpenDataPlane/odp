@@ -1,5 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
- * Copyright (c) 2022, Nokia
+ * Copyright (c) 2022-2023, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -8,7 +8,7 @@
 /**
  * @file
  *
- * ODP buffer descriptor
+ * ODP buffer
  */
 
 #ifndef ODP_API_SPEC_BUFFER_H_
@@ -19,6 +19,7 @@
 extern "C" {
 #endif
 
+#include <odp/api/buffer_types.h>
 #include <odp/api/event_types.h>
 #include <odp/api/pool_types.h>
 #include <odp/api/std_types.h>
@@ -26,16 +27,6 @@ extern "C" {
 /** @defgroup odp_buffer ODP BUFFER
  *  Buffer event metadata and operations.
  *  @{
- */
-
-/**
- * @typedef odp_buffer_t
- * ODP buffer
- */
-
-/**
- * @def ODP_BUFFER_INVALID
- * Invalid buffer
  */
 
 /**

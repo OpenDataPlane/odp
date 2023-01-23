@@ -72,6 +72,7 @@ odpapiabiarchinclude_HEADERS += \
 		  include-abi/odp/api/abi/atomic.h \
 		  include-abi/odp/api/abi/barrier.h \
 		  include-abi/odp/api/abi/buffer.h \
+		  include-abi/odp/api/abi/buffer_types.h \
 		  include-abi/odp/api/abi/byteorder.h \
 		  include-abi/odp/api/abi/classification.h \
 		  include-abi/odp/api/abi/comp.h \
