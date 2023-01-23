@@ -780,7 +780,7 @@ int odp_cos_queue_set(odp_cos_t cos, odp_queue_t queue);
 * @param cos           CoS handle
 *
 * @retval Queue handle associated with the given class-of-service
-* @retval ODP_QUEUE_INVALID on failure
+* @retval ODP_QUEUE_INVALID on failure, or if the queue has not been set
 */
 odp_queue_t odp_cos_queue(odp_cos_t cos);
 
