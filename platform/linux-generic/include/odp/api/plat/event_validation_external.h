@@ -18,7 +18,7 @@
 
 #include <odp/autoheader_external.h>
 
-#include <odp/api/buffer.h>
+#include <odp/api/buffer_types.h>
 #include <odp/api/event_types.h>
 #include <odp/api/hints.h>
 #include <odp/api/packet_types.h>
