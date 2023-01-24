@@ -134,7 +134,7 @@ typedef enum {
 	 *
 	 *  SNOW 3G-based UEA2 algorithm (also known as 128-EEA1).
 	 *
-	 *  IV (128 bit) should be formatted according to the ETSI/SAGE
+	 *  IV (128 bits) should be formatted according to the ETSI/SAGE
 	 *  UEA2 & UIA2 specification:
 	 *  COUNT || BEARER || DIRECTION || 0...0 ||
 	 *  COUNT || BEARER || DIRECTION || 0...0 ||
@@ -145,10 +145,9 @@ typedef enum {
 	 *
 	 *  AES-CTR-based 128-EEA2 algorithm.
 	 *
-	 *  IV (128 bit) should be formatted according to the ETSI/SAGE
-	 *  128-EA2 & 128-EIA2 specification:
-	 *  COUNT || BEARER ||
-	 *  DIRECTION || 0....0
+	 *  IV (128 bits) should be formatted according to the ETSI/SAGE
+	 *  128-EAA2 & 128-EIA2 specification:
+	 *  COUNT || BEARER || DIRECTION || 0....0
 	 */
 	ODP_CIPHER_ALG_AES_EEA2,
 
@@ -156,7 +155,7 @@ typedef enum {
 	 *
 	 *  128-EEA3/128-NEA3 algorithm when key length is 128 bits.
 	 *
-	 *  IV (128 bit) should be formatted according to the ETSI/SAGE
+	 *  IV (128 bits) should be formatted according to the ETSI/SAGE
 	 *  128-EEA3 & 128-EIA3 specification:
 	 *  COUNT || BEARER || DIRECTION || 0...0 ||
 	 *  COUNT || BEARER || DIRECTION || 0...0 ||
@@ -292,7 +291,7 @@ typedef enum {
 	/** Integrity UIA2 algorithm (128-EIA1)
 	 *
 	 *  SNOW 3G-based UIA2 algorithm (also known as 128-EIA1).
-	 *  IV (128 bit) should be formatted according to the ETSI/SAGE
+	 *  IV (128 bits) should be formatted according to the ETSI/SAGE
 	 *  UEA2 & UIA2 specification:
 	 *  COUNT || FRESH ||
 	 *  DIRECTION XOR COUNT0 || COUNT1 .. COUNT31 ||
@@ -304,10 +303,9 @@ typedef enum {
 	 *
 	 *  AES_CMAC-based 128-EIA2 algorithm.
 	 *
-	 *  IV (128 bit) should be formatted according to the ETSI/SAGE
-	 *  128-EA2 & 128-EIA2 specification:
-	 *  COUNT || BEARER ||
-	 *  DIRECTION || 0....0
+	 *  IV (64 bits) should be formatted according to the ETSI/SAGE
+	 *  128-EEA2 & 128-EIA2 specification:
+	 *  COUNT || BEARER || DIRECTION || 0....0
 	 */
 	ODP_AUTH_ALG_AES_EIA2,
 
@@ -315,8 +313,8 @@ typedef enum {
 	 *
 	 *  128-EIA3/128-NIA3 algorithm when key length is 128 bits.
 	 *
-	 *  IV (128 bit) should be formatted according to the ETSI/SAGE
-	 *  128-EA3 & 128-EIA2 specification:
+	 *  IV (128 bits) should be formatted according to the ETSI/SAGE
+	 *  128-EEA3 & 128-EIA2 specification:
 	 *  COUNT || BEARER ||
 	 *  DIRECTION XOR COUNT0 || COUNT1 .. COUNT31 ||
 	 *  BEARER || 0...0 || DIRECTION || 0...0
