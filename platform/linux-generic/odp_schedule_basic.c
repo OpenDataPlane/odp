@@ -2199,6 +2199,13 @@ int _odp_sched_basic_get_spread(uint32_t queue_index)
 	return sched->queue[queue_index].spread;
 }
 
+const _odp_schedule_api_fn_t _odp_schedule_basic_api;
+
+static const _odp_schedule_api_fn_t *sched_api(void)
+{
+	return &_odp_schedule_basic_api;
+}
+
 /* Fill in scheduler interface */
 const schedule_fn_t _odp_schedule_basic_fn = {
 	.pktio_start = schedule_pktio_start,
@@ -2216,7 +2223,8 @@ const schedule_fn_t _odp_schedule_basic_fn = {
 	.order_lock = order_lock,
 	.order_unlock = order_unlock,
 	.max_ordered_locks = schedule_max_ordered_locks,
-	.get_config = schedule_get_config
+	.get_config = schedule_get_config,
+	.sched_api = sched_api,
 };
 
 /* Fill in scheduler API calls */

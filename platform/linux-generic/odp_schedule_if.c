@@ -30,14 +30,8 @@ int _odp_schedule_configured(void)
 #include <odp/visibility_end.h>
 
 extern const schedule_fn_t _odp_schedule_sp_fn;
-extern const _odp_schedule_api_fn_t _odp_schedule_sp_api;
-
 extern const schedule_fn_t _odp_schedule_basic_fn;
-extern const _odp_schedule_api_fn_t _odp_schedule_basic_api;
-
-extern const schedule_fn_t  _odp_schedule_scalable_fn;
-extern const _odp_schedule_api_fn_t _odp_schedule_scalable_api;
-
+extern const schedule_fn_t _odp_schedule_scalable_fn;
 const schedule_fn_t *_odp_sched_fn;
 int _odp_sched_id;
 
@@ -153,21 +147,23 @@ int _odp_schedule_init_global(void)
 	if (!strcmp(sched, "basic")) {
 		_odp_sched_id = _ODP_SCHED_ID_BASIC;
 		_odp_sched_fn = &_odp_schedule_basic_fn;
-		_odp_sched_api = &_odp_schedule_basic_api;
 	} else if (!strcmp(sched, "sp")) {
 		_odp_sched_id = _ODP_SCHED_ID_SP;
 		_odp_sched_fn = &_odp_schedule_sp_fn;
-		_odp_sched_api = &_odp_schedule_sp_api;
 	} else if (!strcmp(sched, "scalable")) {
 		_odp_sched_id = _ODP_SCHED_ID_SCALABLE;
 		_odp_sched_fn = &_odp_schedule_scalable_fn;
-		_odp_sched_api = &_odp_schedule_scalable_api;
 	} else {
 		_ODP_ABORT("Unknown scheduler specified via ODP_SCHEDULER\n");
 		return -1;
 	}
 
-	return _odp_sched_fn->init_global();
+	if (_odp_sched_fn->init_global())
+		return -1;
+
+	_odp_sched_api = _odp_sched_fn->sched_api();
+
+	return 0;
 }
 
 int _odp_schedule_term_global(void)
