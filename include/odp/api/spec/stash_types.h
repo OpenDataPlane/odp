@@ -156,8 +156,37 @@ typedef struct odp_stash_capability_t {
 	 */
 	uint32_t max_stashes;
 
-	/** Maximum number of object handles per stash */
+	/** Maximum common number of object handles per stash for any object size
+	 *
+	 *  An application is able to store at least this many objects when using any of the
+	 *  supported object sizes. Some of the per object size values listed in 'max_num' may be
+	 *  larger than this common value.
+	 */
 	uint64_t max_num_obj;
+
+	/** Maximum number of object handles per stash for each object size
+	 *
+	 *  Values for unsupported object handle sizes are set to zero.
+	 */
+	struct {
+		/** Maximum number of 1 byte object handles */
+		uint64_t u8;
+
+		/** Maximum number of 2 byte object handles */
+		uint64_t u16;
+
+		/** Maximum number of 4 byte object handles */
+		uint64_t u32;
+
+		/** Maximum number of 8 byte object handles */
+		uint64_t u64;
+
+		/** Maximum number of 16 byte object handles */
+		uint64_t u128;
+
+		/** Maximum number of 'max_obj_size' object handles */
+		uint64_t max_obj_size;
+	} max_num;
 
 	/** Maximum object handle size in bytes
 	 *
@@ -219,7 +248,7 @@ typedef struct odp_stash_param_t {
 	 *
 	 *  Application must be able to store at least this many object handles
 	 *  into the stash. An implementation may round up the value. The given
-	 *  value must not exceed 'max_num_obj' capability.
+	 *  value must not exceed 'max_num' capability.
 	 */
 	uint64_t num_obj;
 
