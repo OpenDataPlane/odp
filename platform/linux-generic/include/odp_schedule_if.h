@@ -14,6 +14,7 @@ extern "C" {
 
 #include <odp/api/queue.h>
 #include <odp/api/schedule.h>
+#include <odp/api/plat/schedule_inline_types.h>
 
 #include <odp_event_internal.h>
 #include <odp_queue_if.h>
@@ -59,6 +60,7 @@ typedef void (*schedule_order_lock_start_fn_t)(void);
 typedef void (*schedule_order_lock_wait_fn_t)(void);
 typedef uint32_t (*schedule_max_ordered_locks_fn_t)(void);
 typedef void (*schedule_get_config_fn_t)(schedule_config_t *config);
+typedef const _odp_schedule_api_fn_t *(*schedule_sched_api_fn_t)(void);
 
 typedef struct schedule_fn_t {
 	schedule_pktio_start_fn_t   pktio_start;
@@ -80,6 +82,7 @@ typedef struct schedule_fn_t {
 	schedule_order_unlock_lock_fn_t  order_unlock_lock;
 	schedule_max_ordered_locks_fn_t max_ordered_locks;
 	schedule_get_config_fn_t        get_config;
+	schedule_sched_api_fn_t		sched_api;
 
 } schedule_fn_t;
 

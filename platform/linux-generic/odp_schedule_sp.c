@@ -1059,6 +1059,13 @@ static void get_config(schedule_config_t *config)
 	*config = sched_global->config_if;
 }
 
+const _odp_schedule_api_fn_t _odp_schedule_sp_api;
+
+static const _odp_schedule_api_fn_t *sched_api(void)
+{
+	return &_odp_schedule_sp_api;
+}
+
 /* Fill in scheduler interface */
 const schedule_fn_t _odp_schedule_sp_fn = {
 	.pktio_start   = pktio_start,
@@ -1076,7 +1083,8 @@ const schedule_fn_t _odp_schedule_sp_fn = {
 	.order_lock    = order_lock,
 	.order_unlock  = order_unlock,
 	.max_ordered_locks = max_ordered_locks,
-	.get_config    = get_config
+	.get_config    = get_config,
+	.sched_api     = sched_api,
 };
 
 /* Fill in scheduler API calls */

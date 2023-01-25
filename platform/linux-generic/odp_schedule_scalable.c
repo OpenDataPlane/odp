@@ -1846,19 +1846,19 @@ static int schedule_init_global(void)
 	 * GROUP_CONTROL groups.
 	 */
 	odp_thrmask_zero(&mask);
-	tmp_all = odp_schedule_group_create("__group_all", &mask);
+	tmp_all = schedule_group_create("__group_all", &mask);
 	if (tmp_all != ODP_SCHED_GROUP_ALL) {
 		_ODP_ERR("Could not create ODP_SCHED_GROUP_ALL()\n");
 		goto failed_create_group_all;
 	}
 
-	tmp_wrkr = odp_schedule_group_create("__group_worker", &mask);
+	tmp_wrkr = schedule_group_create("__group_worker", &mask);
 	if (tmp_wrkr != ODP_SCHED_GROUP_WORKER) {
 		_ODP_ERR("Could not create ODP_SCHED_GROUP_WORKER()\n");
 		goto failed_create_group_worker;
 	}
 
-	tmp_ctrl = odp_schedule_group_create("__group_control", &mask);
+	tmp_ctrl = schedule_group_create("__group_control", &mask);
 	if (tmp_ctrl != ODP_SCHED_GROUP_CONTROL) {
 		_ODP_ERR("Could not create ODP_SCHED_GROUP_CONTROL()\n");
 		goto failed_create_group_control;
@@ -1872,15 +1872,15 @@ static int schedule_init_global(void)
 
 failed_create_group_control:
 	if (tmp_ctrl != ODP_SCHED_GROUP_INVALID)
-		odp_schedule_group_destroy(ODP_SCHED_GROUP_CONTROL);
+		schedule_group_destroy(ODP_SCHED_GROUP_CONTROL);
 
 failed_create_group_worker:
 	if (tmp_wrkr != ODP_SCHED_GROUP_INVALID)
-		odp_schedule_group_destroy(ODP_SCHED_GROUP_WORKER);
+		schedule_group_destroy(ODP_SCHED_GROUP_WORKER);
 
 failed_create_group_all:
 	if (tmp_all != ODP_SCHED_GROUP_INVALID)
-		odp_schedule_group_destroy(ODP_SCHED_GROUP_ALL);
+		schedule_group_destroy(ODP_SCHED_GROUP_ALL);
 
 failed_sched_shm_pool_create:
 
@@ -1892,15 +1892,15 @@ static int schedule_term_global(void)
 	/* Destroy enabled sched groups for default GROUP_ALL, GROUP_WORKER and
 	 * GROUP_CONTROL groups. */
 	if (global->config_if.group_enable.all) {
-		if (odp_schedule_group_destroy(ODP_SCHED_GROUP_ALL) != 0)
+		if (schedule_group_destroy(ODP_SCHED_GROUP_ALL) != 0)
 			_ODP_ERR("Failed to destroy ODP_SCHED_GROUP_ALL\n");
 	}
 	if (global->config_if.group_enable.worker) {
-		if (odp_schedule_group_destroy(ODP_SCHED_GROUP_WORKER) != 0)
+		if (schedule_group_destroy(ODP_SCHED_GROUP_WORKER) != 0)
 			_ODP_ERR("Failed to destroy ODP_SCHED_GROUP_WORKER\n");
 	}
 	if (global->config_if.group_enable.control) {
-		if (odp_schedule_group_destroy(ODP_SCHED_GROUP_CONTROL) != 0)
+		if (schedule_group_destroy(ODP_SCHED_GROUP_CONTROL) != 0)
 			_ODP_ERR("Failed to destroy ODP_SCHED_GROUP_CONTROL\n");
 	}
 
@@ -1932,21 +1932,19 @@ static int schedule_init_local(void)
 	odp_spinlock_lock(&global->init_lock);
 
 	if (global->config_if.group_enable.all) {
-		if (odp_schedule_group_join(ODP_SCHED_GROUP_ALL, &mask) != 0) {
+		if (schedule_group_join(ODP_SCHED_GROUP_ALL, &mask) != 0) {
 			_ODP_ERR("Failed to join ODP_SCHED_GROUP_ALL\n");
 			goto failed_to_join_grp_all;
 		}
 	}
 	if (global->config_if.group_enable.control && thr_type == ODP_THREAD_CONTROL) {
-		if (odp_schedule_group_join(ODP_SCHED_GROUP_CONTROL,
-					    &mask) != 0) {
+		if (schedule_group_join(ODP_SCHED_GROUP_CONTROL, &mask) != 0) {
 			_ODP_ERR("Failed to join ODP_SCHED_GROUP_CONTROL\n");
 			goto failed_to_join_grp_ctrl;
 		}
 	}
 	if (global->config_if.group_enable.worker && thr_type == ODP_THREAD_WORKER) {
-		if (odp_schedule_group_join(ODP_SCHED_GROUP_WORKER,
-					    &mask) != 0) {
+		if (schedule_group_join(ODP_SCHED_GROUP_WORKER, &mask) != 0) {
 			_ODP_ERR("Failed to join ODP_SCHED_GROUP_WORKER\n");
 			goto failed_to_join_grp_wrkr;
 		}
@@ -1959,7 +1957,7 @@ static int schedule_init_local(void)
 failed_to_join_grp_wrkr:
 failed_to_join_grp_ctrl:
 	if (global->config_if.group_enable.all)
-		odp_schedule_group_leave(ODP_SCHED_GROUP_ALL, &mask);
+		schedule_group_leave(ODP_SCHED_GROUP_ALL, &mask);
 
 failed_to_join_grp_all:
 	odp_spinlock_unlock(&global->init_lock);
@@ -1982,17 +1980,15 @@ static int schedule_term_local(void)
 	odp_thrmask_set(&mask, thr_id);
 
 	if (global->config_if.group_enable.all) {
-		if (odp_schedule_group_leave(ODP_SCHED_GROUP_ALL, &mask) != 0)
+		if (schedule_group_leave(ODP_SCHED_GROUP_ALL, &mask) != 0)
 			_ODP_ERR("Failed to leave ODP_SCHED_GROUP_ALL\n");
 	}
 	if (global->config_if.group_enable.control && thr_type == ODP_THREAD_CONTROL) {
-		if (odp_schedule_group_leave(ODP_SCHED_GROUP_CONTROL,
-					     &mask) != 0)
+		if (schedule_group_leave(ODP_SCHED_GROUP_CONTROL, &mask) != 0)
 			_ODP_ERR("Failed to leave ODP_SCHED_GROUP_CONTROL\n");
 	}
 	if (global->config_if.group_enable.worker && thr_type == ODP_THREAD_WORKER) {
-		if (odp_schedule_group_leave(ODP_SCHED_GROUP_WORKER,
-					     &mask) != 0)
+		if (schedule_group_leave(ODP_SCHED_GROUP_WORKER, &mask) != 0)
 			_ODP_ERR("Failed to leave ODP_SCHED_GROUP_WORKER\n");
 	}
 
@@ -2026,16 +2022,16 @@ static int schedule_config(const odp_schedule_config_t *config)
 
 	/* Destroy disabled predefined scheduling groups. */
 	if (!config->sched_group.all) {
-		if (odp_schedule_group_destroy(ODP_SCHED_GROUP_ALL) != 0)
+		if (schedule_group_destroy(ODP_SCHED_GROUP_ALL) != 0)
 			_ODP_ERR("Failed to destroy ODP_SCHED_GROUP_ALL\n");
 	}
 	if (!config->sched_group.worker) {
-		if (odp_schedule_group_destroy(ODP_SCHED_GROUP_WORKER) != 0)
+		if (schedule_group_destroy(ODP_SCHED_GROUP_WORKER) != 0)
 			_ODP_ERR("Failed to destroy ODP_SCHED_GROUP_WORKER\n");
 	}
 
 	if (!config->sched_group.control) {
-		if (odp_schedule_group_destroy(ODP_SCHED_GROUP_CONTROL) != 0)
+		if (schedule_group_destroy(ODP_SCHED_GROUP_CONTROL) != 0)
 			_ODP_ERR("Failed to destroy ODP_SCHED_GROUP_CONTROL\n");
 	}
 
@@ -2187,6 +2183,13 @@ static void schedule_print(void)
 	_ODP_PRINT("\n");
 }
 
+const _odp_schedule_api_fn_t _odp_schedule_scalable_api;
+
+static const _odp_schedule_api_fn_t *sched_api(void)
+{
+	return &_odp_schedule_scalable_api;
+}
+
 const schedule_fn_t _odp_schedule_scalable_fn = {
 	.pktio_start	= pktio_start,
 	.thr_add	= thr_add,
@@ -2203,6 +2206,7 @@ const schedule_fn_t _odp_schedule_scalable_fn = {
 	.order_lock	= order_lock,
 	.order_unlock	= order_unlock,
 	.max_ordered_locks = schedule_max_ordered_locks,
+	.sched_api	= sched_api,
 };
 
 const _odp_schedule_api_fn_t _odp_schedule_scalable_api = {
