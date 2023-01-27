@@ -1,5 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
- * Copyright (c) 2013-2022, Nokia Solutions and Networks
+ * Copyright (c) 2013-2023, Nokia Solutions and Networks
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -138,13 +138,15 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 {
 	odp_time_t ts_val;
 	odp_time_t *ts = NULL;
-	unsigned frame_num, next_frame_num;
+	unsigned int frame_num, next_frame_num;
 	uint8_t *pkt_buf, *next_ptr;
 	int pkt_len;
 	uint32_t alloc_len;
 	struct ethhdr *eth_hdr;
-	unsigned i;
-	unsigned nb_rx;
+	unsigned int i;
+	unsigned int nb_rx = 0;
+	unsigned int nb_cls = 0;
+	const int cls_enabled = pktio_cls_enabled(pktio_entry);
 	struct ring *ring;
 	odp_pool_t pool = pkt_sock->pool;
 	uint16_t frame_offset = pktio_entry->pktin_frame_offset;
@@ -159,7 +161,7 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 	frame_num = ring->frame_num;
 	next_ptr = ring->rd[frame_num].iov_base;
 
-	for (i = 0, nb_rx = 0; i < num; i++) {
+	for (i = 0; i < num; i++) {
 		struct tpacket2_hdr *tp_hdr;
 		odp_packet_t pkt;
 		odp_packet_hdr_t *hdr;
@@ -276,7 +278,7 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 				continue;
 			}
 
-			if (pktio_cls_enabled(pktio_entry)) {
+			if (cls_enabled) {
 				odp_pool_t new_pool;
 
 				ret = _odp_cls_classify_packet(pktio_entry, pkt_buf,
@@ -308,11 +310,21 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 		tp_hdr->tp_status = TP_STATUS_KERNEL;
 		frame_num = next_frame_num;
 
-		pkt_table[nb_rx] = pkt;
-		nb_rx++;
+		if (cls_enabled) {
+			/* Enqueue packets directly to classifier destination queue */
+			pkt_table[nb_cls++] = pkt;
+			nb_cls = _odp_cls_enq(pkt_table, nb_cls, (i + 1 == num));
+		} else {
+			pkt_table[nb_rx++] = pkt;
+		}
 	}
 
+	/* Enqueue remaining classified packets */
+	if (odp_unlikely(nb_cls))
+		_odp_cls_enq(pkt_table, nb_cls, true);
+
 	ring->frame_num = frame_num;
+
 	return nb_rx;
 }
 

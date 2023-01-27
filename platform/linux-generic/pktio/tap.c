@@ -1,5 +1,5 @@
 /* Copyright (c) 2015, Ilya Maximets <i.maximets@samsung.com>
- * Copyright (c) 2021-2022, Nokia
+ * Copyright (c) 2021-2023, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -331,6 +331,9 @@ static int tap_pktio_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	odp_time_t ts_val;
 	odp_time_t *ts = NULL;
 	int num_rx = 0;
+	int num_cls = 0;
+	const int cls_enabled = pktio_cls_enabled(pktio_entry);
+	odp_packet_t pkt;
 
 	odp_ticketlock_lock(&pktio_entry->rxl);
 
@@ -350,11 +353,22 @@ static int tap_pktio_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			break;
 		}
 
-		pkts[num_rx] = pack_odp_pkt(pktio_entry, buf, retval, ts);
-		if (pkts[num_rx] == ODP_PACKET_INVALID)
+		pkt = pack_odp_pkt(pktio_entry, buf, retval, ts);
+		if (pkt == ODP_PACKET_INVALID)
 			break;
-		num_rx++;
+
+		if (cls_enabled) {
+			/* Enqueue packets directly to classifier destination queue */
+			pkts[num_cls++] = pkt;
+			num_cls = _odp_cls_enq(pkts, num_cls, (i + 1 == num));
+		} else {
+			pkts[num_rx++] = pkt;
+		}
 	}
+
+	/* Enqueue remaining classified packets */
+	if (odp_unlikely(num_cls))
+		_odp_cls_enq(pkts, num_cls, true);
 
 	odp_ticketlock_unlock(&pktio_entry->rxl);
 
