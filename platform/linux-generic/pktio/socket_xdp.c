@@ -777,6 +777,9 @@ static uint32_t process_received(pktio_entry_t *pktio_entry, xdp_sock_t *sock, p
 	uint64_t errors = 0U, octets = 0U;
 	odp_pktio_t pktio_hdl = pktio_entry->handle;
 	uint32_t num_rx = 0U;
+	uint32_t num_cls = 0U;
+	uint32_t num_pkts = 0U;
+	const int cls_enabled = pktio_cls_enabled(pktio_entry);
 
 	for (int i = 0; i < num; ++i) {
 		extract_data(xsk_ring_cons__rx_desc(rx, start_idx++), base_addr, &pkt_data);
@@ -798,7 +801,7 @@ static uint32_t process_received(pktio_entry_t *pktio_entry, xdp_sock_t *sock, p
 				continue;
 			}
 
-			if (pktio_cls_enabled(pktio_entry)) {
+			if (cls_enabled) {
 				odp_pool_t new_pool;
 
 				ret = _odp_cls_classify_packet(pktio_entry, pkt_data.data,
@@ -817,12 +820,24 @@ static uint32_t process_received(pktio_entry_t *pktio_entry, xdp_sock_t *sock, p
 		}
 
 		pkt_data.pkt_hdr->input = pktio_hdl;
-		packets[num_rx++] = pkt_data.pkt;
+		num_pkts++;
 		octets += pkt_data.len;
+
+		if (cls_enabled) {
+			/* Enqueue packets directly to classifier destination queue */
+			packets[num_cls++] = pkt_data.pkt;
+			num_cls = _odp_cls_enq(packets, num_cls, (i + 1 == num));
+		} else {
+			packets[num_rx++] = pkt_data.pkt;
+		}
 	}
 
+	/* Enqueue remaining classified packets */
+	if (odp_unlikely(num_cls))
+		_odp_cls_enq(packets, num_cls, true);
+
 	sock->qi_stats.octets += octets;
-	sock->qi_stats.packets += num_rx;
+	sock->qi_stats.packets += num_pkts;
 	sock->qi_stats.errors += errors;
 
 	return num_rx;

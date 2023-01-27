@@ -1,5 +1,5 @@
 /* Copyright (c) 2015-2018, Linaro Limited
- * Copyright (c) 2021-2022, Nokia
+ * Copyright (c) 2021-2023, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -291,6 +291,9 @@ static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	odp_time_t *ts = NULL;
 	int packets = 0;
 	uint32_t octets = 0;
+	int num_pkts = 0;
+	int num_cls = 0;
+	const int cls_enabled = pktio_cls_enabled(pktio_entry);
 	uint16_t frame_offset = pktio_entry->pktin_frame_offset;
 	const odp_proto_layer_t layer = pktio_entry->parse_layer;
 	const odp_pktin_config_opt_t opt = pktio_entry->config.pktin;
@@ -304,7 +307,7 @@ static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	if (opt.bit.ts_all || opt.bit.ts_ptp)
 		ts = &ts_val;
 
-	for (i = 0; i < num; ) {
+	for (i = 0; i < num; i++) {
 		int ret;
 
 		ret = pcap_next_ex(pcap->rx, &hdr, &data);
@@ -346,7 +349,7 @@ static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 				continue;
 			}
 
-			if (pktio_cls_enabled(pktio_entry)) {
+			if (cls_enabled) {
 				odp_pool_t new_pool;
 
 				ret = _odp_cls_classify_packet(pktio_entry, data,
@@ -376,17 +379,25 @@ static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			packets++;
 		}
 
-		pkts[i] = pkt;
-
-		i++;
+		/* Enqueue packets directly to classifier destination queue */
+		if (cls_enabled) {
+			pkts[num_cls++] = pkt;
+			num_cls = _odp_cls_enq(pkts, num_cls, (i + 1 == num));
+		} else {
+			pkts[num_pkts++] = pkt;
+		}
 	}
+
+	/* Enqueue remaining classified packets */
+	if (odp_unlikely(num_cls))
+		_odp_cls_enq(pkts, num_cls, true);
 
 	pktio_entry->stats.in_octets += octets;
 	pktio_entry->stats.in_packets += packets;
 
 	odp_ticketlock_unlock(&pktio_entry->rxl);
 
-	return i;
+	return num_pkts;
 }
 
 static int _pcapif_dump_pkt(pkt_pcap_t *pcap, odp_packet_t pkt)

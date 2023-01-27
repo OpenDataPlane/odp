@@ -251,12 +251,15 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index, odp_packet_t pkt
 	odp_queue_t queue = entry->queue;
 	stats_t *stats = &entry->stats;
 	_odp_event_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
+	odp_packet_t cls_tbl[QUEUE_MULTI_MAX];
 	odp_packet_hdr_t *pkt_hdr;
 	odp_packet_t pkt;
 	odp_time_t ts_val;
 	odp_time_t *ts = NULL;
 	int num_rx = 0;
 	int packets = 0;
+	int num_cls = 0;
+	const int cls_enabled = pktio_cls_enabled(pktio_entry);
 	uint32_t octets = 0;
 	const odp_proto_layer_t layer = pktio_entry->parse_layer;
 	const odp_pktin_config_opt_t opt = pktio_entry->config.pktin;
@@ -273,6 +276,7 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index, odp_packet_t pkt
 
 	for (i = 0; i < nbr; i++) {
 		uint32_t pkt_len;
+		int do_ipsec_enq = 0;
 
 		pkt = packet_from_event_hdr(hdr_tbl[i]);
 		pkt_len = odp_packet_len(pkt);
@@ -306,7 +310,7 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index, odp_packet_t pkt
 				continue;
 			}
 
-			if (pktio_cls_enabled(pktio_entry)) {
+			if (cls_enabled) {
 				odp_pool_t new_pool;
 
 				ret = _odp_cls_classify_packet(pktio_entry, pkt_addr,
@@ -335,7 +339,7 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index, odp_packet_t pkt
 		if (pktio_entry->config.inbound_ipsec &&
 		    !pkt_hdr->p.flags.ip_err &&
 		    odp_packet_has_ipsec(pkt)) {
-			_odp_ipsec_try_inline(&pkt);
+			do_ipsec_enq = !_odp_ipsec_try_inline(&pkt);
 			pkt_hdr = packet_hdr(pkt);
 		}
 
@@ -344,8 +348,28 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index, odp_packet_t pkt
 			packets++;
 		}
 
-		pkts[num_rx++] = pkt;
+		if (do_ipsec_enq) {
+			if (odp_unlikely(odp_queue_enq(pkt_hdr->dst_queue,
+						       odp_packet_to_event(pkt)))) {
+				odp_atomic_inc_u64(&stats->in_discards);
+				if (!pkt_hdr->p.flags.all.error) {
+					octets -= pkt_len;
+					packets--;
+				}
+				odp_packet_free(pkt);
+			}
+		} else if (cls_enabled) {
+			/* Enqueue packets directly to classifier destination queue */
+			cls_tbl[num_cls++] = pkt;
+			num_cls = _odp_cls_enq(cls_tbl, num_cls, (i + 1 == nbr));
+		} else {
+			pkts[num_rx++] = pkt;
+		}
 	}
+
+	/* Enqueue remaining classified packets */
+	if (odp_unlikely(num_cls))
+		_odp_cls_enq(cls_tbl, num_cls, true);
 
 	odp_atomic_add_u64(&stats->in_octets, octets);
 	odp_atomic_add_u64(&stats->in_packets, packets);

@@ -667,6 +667,8 @@ static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 	int i, j, num;
 	uint32_t max_len;
 	int nb_pkts = 0;
+	int nb_cls = 0;
+	const int cls_enabled = pktio_cls_enabled(pktio_entry);
 	pkt_dpdk_t *pkt_dpdk = pkt_priv(pktio_entry);
 	odp_pool_t pool = pkt_dpdk->pool;
 	odp_pktin_config_opt_t pktin_cfg = pktio_entry->config.pktin;
@@ -715,7 +717,7 @@ static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 				continue;
 			}
 
-			if (pktio_cls_enabled(pktio_entry)) {
+			if (cls_enabled) {
 				odp_pool_t new_pool;
 
 				ret = _odp_cls_classify_packet(pktio_entry, (const uint8_t *)data,
@@ -753,10 +755,20 @@ static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 
 		packet_set_ts(pkt_hdr, ts);
 
-		pkt_table[nb_pkts++] = pkt;
-
 		rte_pktmbuf_free(mbuf);
+
+		if (cls_enabled) {
+			/* Enqueue packets directly to classifier destination queue */
+			pkt_table[nb_cls++] = pkt;
+			nb_cls = _odp_cls_enq(pkt_table, nb_cls, (i + 1 == num));
+		} else {
+			pkt_table[nb_pkts++] = pkt;
+		}
 	}
+
+	/* Enqueue remaining classified packets */
+	if (odp_unlikely(nb_cls))
+		_odp_cls_enq(pkt_table, nb_cls, true);
 
 	return nb_pkts;
 
@@ -948,7 +960,7 @@ static inline int mbuf_to_pkt_zero(pktio_entry_t *pktio_entry,
 	uint8_t set_flow_hash;
 	struct rte_mbuf *mbuf;
 	void *data;
-	int i, nb_pkts;
+	int i, nb_pkts, nb_cls;
 	odp_pktin_config_opt_t pktin_cfg;
 	odp_pktio_t input;
 	pkt_dpdk_t *pkt_dpdk = pkt_priv(pktio_entry);
@@ -956,6 +968,7 @@ static inline int mbuf_to_pkt_zero(pktio_entry_t *pktio_entry,
 
 	prefetch_pkt(mbuf_table[0]);
 
+	nb_cls = 0;
 	nb_pkts = 0;
 	set_flow_hash = pkt_dpdk->flags.set_flow_hash;
 	pktin_cfg = pktio_entry->config.pktin;
@@ -986,6 +999,12 @@ static inline int mbuf_to_pkt_zero(pktio_entry_t *pktio_entry,
 		/* Init buffer segments. Currently, only single segment packets
 		 * are supported. */
 		pkt_hdr->seg_data = data;
+		pkt_hdr->input = input;
+
+		if (set_flow_hash && (mbuf->ol_flags & RTE_MBUF_F_RX_RSS_HASH))
+			packet_set_flow_hash(pkt_hdr, mbuf->hash.rss);
+
+		packet_set_ts(pkt_hdr, ts);
 
 		if (layer) {
 			int ret;
@@ -1013,24 +1032,26 @@ static inline int mbuf_to_pkt_zero(pktio_entry_t *pktio_entry,
 					continue;
 				}
 
-				if (odp_unlikely(_odp_pktio_packet_to_pool(
-					    &pkt, &pkt_hdr, new_pool))) {
+				if (odp_unlikely(_odp_pktio_packet_to_pool(&pkt, &pkt_hdr,
+									   new_pool))) {
 					rte_pktmbuf_free(mbuf);
 					odp_atomic_inc_u64(&pktio_entry->stats_extra.in_discards);
 					continue;
 				}
+
+				/* Enqueue packet directly to CoS destination queue */
+				pkt_table[nb_cls++] = pkt;
+				nb_cls = _odp_cls_enq(pkt_table, nb_cls, (i + 1 == mbuf_num));
+				continue;
 			}
 		}
 
-		pkt_hdr->input = input;
-
-		if (set_flow_hash && (mbuf->ol_flags & RTE_MBUF_F_RX_RSS_HASH))
-			packet_set_flow_hash(pkt_hdr, mbuf->hash.rss);
-
-		packet_set_ts(pkt_hdr, ts);
-
 		pkt_table[nb_pkts++] = pkt;
 	}
+
+	/* Enqueue remaining classified packets */
+	if (odp_unlikely(nb_cls))
+		_odp_cls_enq(pkt_table, nb_cls, true);
 
 	return nb_pkts;
 }

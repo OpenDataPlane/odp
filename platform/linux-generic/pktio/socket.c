@@ -1,5 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
- * Copyright (c) 2013-2022, Nokia Solutions and Networks
+ * Copyright (c) 2013-2023, Nokia Solutions and Networks
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -224,9 +224,11 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	struct mmsghdr msgvec[num];
 	struct iovec iovecs[num][PKT_MAX_SEGS];
 	int nb_rx = 0;
+	int nb_cls = 0;
 	int nb_pkts;
 	int recv_msgs;
 	int i;
+	const int cls_enabled = pktio_cls_enabled(pktio_entry);
 	uint16_t frame_offset = pktio_entry->pktin_frame_offset;
 	uint32_t alloc_len = pkt_sock->mtu + frame_offset;
 	const odp_proto_layer_t layer = pktio_entry->parse_layer;
@@ -296,7 +298,7 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 				continue;
 			}
 
-			if (pktio_cls_enabled(pktio_entry)) {
+			if (cls_enabled) {
 				odp_pool_t new_pool;
 
 				ret = _odp_cls_classify_packet(pktio_entry, base,
@@ -328,8 +330,18 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 		pkt_hdr->input = pktio_entry->handle;
 		packet_set_ts(pkt_hdr, ts);
 
-		pkt_table[nb_rx++] = pkt;
+		if (cls_enabled) {
+			/* Enqueue packets directly to classifier destination queue */
+			pkt_table[nb_cls++] = pkt;
+			nb_cls = _odp_cls_enq(pkt_table, nb_cls, (i + 1 == recv_msgs));
+		} else {
+			pkt_table[nb_rx++] = pkt;
+		}
 	}
+
+	/* Enqueue remaining classified packets */
+	if (odp_unlikely(nb_cls))
+		_odp_cls_enq(pkt_table, nb_cls, true);
 
 	/* Free unused pkt buffers */
 	if (i < nb_pkts)

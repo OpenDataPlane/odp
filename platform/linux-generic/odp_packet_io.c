@@ -1,5 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
- * Copyright (c) 2019-2022, Nokia
+ * Copyright (c) 2019-2023, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -774,62 +774,6 @@ odp_pktio_t odp_pktio_lookup(const char *name)
 	return hdl;
 }
 
-static void packet_vector_enq_cos(odp_queue_t queue, odp_event_t events[],
-				  uint32_t num, cos_t *cos_hdr)
-{
-	odp_packet_vector_t pktv;
-	odp_pool_t pool = cos_hdr->vector.pool;
-	uint32_t max_size = cos_hdr->vector.max_size;
-	uint32_t num_enq;
-	int num_pktv = (num + max_size - 1) / max_size;
-	int ret;
-	int i;
-	odp_packet_vector_t pktv_tbl[num_pktv];
-	odp_event_t event_tbl[num_pktv];
-
-	for (i = 0; i < num_pktv; i++) {
-		pktv = odp_packet_vector_alloc(pool);
-		if (odp_unlikely(pktv == ODP_PACKET_VECTOR_INVALID))
-			break;
-		pktv_tbl[i] = pktv;
-		event_tbl[i] = odp_packet_vector_to_event(pktv);
-	}
-	if (odp_unlikely(i == 0)) {
-		odp_event_free_multi(events, num);
-		_odp_cos_queue_stats_add(cos_hdr, queue, 0, num);
-		return;
-	}
-	num_pktv = i;
-	num_enq = 0;
-	for (i = 0; i < num_pktv; i++) {
-		odp_packet_t *pkt_tbl;
-		int pktv_size = max_size;
-
-		pktv = pktv_tbl[i];
-
-		if (num_enq + max_size > num)
-			pktv_size = num - num_enq;
-
-		odp_packet_vector_tbl(pktv, &pkt_tbl);
-		odp_packet_from_event_multi(pkt_tbl, &events[num_enq], pktv_size);
-		odp_packet_vector_size_set(pktv, pktv_size);
-		num_enq += pktv_size;
-	}
-
-	ret = odp_queue_enq_multi(queue, event_tbl, num_pktv);
-	if (odp_likely(ret == num_pktv)) {
-		_odp_cos_queue_stats_add(cos_hdr, queue, num_enq, num - num_enq);
-	} else {
-		uint32_t enqueued;
-
-		if (ret < 0)
-			ret = 0;
-		enqueued = max_size * ret;
-		_odp_cos_queue_stats_add(cos_hdr, queue, enqueued, num - enqueued);
-		odp_event_free_multi(&event_tbl[ret], num_pktv - ret);
-	}
-}
-
 static void packet_vector_enq(odp_queue_t queue, odp_event_t events[],
 			      uint32_t num, odp_pool_t pool)
 {
@@ -969,7 +913,7 @@ static inline int pktin_recv_buf(pktio_entry_t *entry, int pktin_index,
 			cos_hdr = _odp_cos_entry_from_idx(cos[i]);
 
 			if (cos_hdr->vector.enable) {
-				packet_vector_enq_cos(dst[i], &ev[idx], num_enq, cos_hdr);
+				_odp_cos_vector_enq(dst[i], &ev[idx], num_enq, cos_hdr);
 				continue;
 			}
 		} else if (vector_enabled) {
