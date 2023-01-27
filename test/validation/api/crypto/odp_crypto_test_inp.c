@@ -8,6 +8,7 @@
 #include <odp_api.h>
 #include <odp/helper/odph_api.h>
 #include <odp_cunit_common.h>
+#include <packet_common.h>
 #include "test_vectors.h"
 
 #define PKT_POOL_NUM  64
@@ -497,6 +498,7 @@ static void alg_test_execute(const alg_test_param_t *param)
 	odp_packet_data_range_t auth_range;
 	uint8_t *cipher_iv = param->override_iv ? ref->cipher_iv : NULL;
 	uint8_t *auth_iv   = param->override_iv ? ref->auth_iv : NULL;
+	test_packet_md_t md_in, md_out;
 
 	cipher_range.offset = param->header_len;
 	cipher_range.length = reflength;
@@ -564,11 +566,24 @@ static void alg_test_execute(const alg_test_param_t *param)
 			}
 		}
 
+		test_packet_set_md(pkt);
+		test_packet_get_md(pkt, &md_in);
+
 		if (crypto_op(pkt, &ok, param->session,
 			      cipher_iv, auth_iv,
 			      &cipher_range, &auth_range,
 			      ref->aad, digest_offset))
 			break;
+
+		/*
+		 * API is not explicit about whether a failed crypto op
+		 * sets the has_error packet flag or leaves it unchanged.
+		 * Let's allow both behaviours.
+		 */
+		test_packet_get_md(pkt, &md_out);
+		if (iteration == WRONG_DIGEST_TEST)
+			md_out.has_error = 0;
+		CU_ASSERT(test_packet_is_md_equal(&md_in, &md_out));
 
 		if (iteration == WRONG_DIGEST_TEST) {
 			CU_ASSERT(!ok);
