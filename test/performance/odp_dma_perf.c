@@ -1,4 +1,4 @@
-/* Copyright (c) 2021-2022, Nokia
+/* Copyright (c) 2021-2023, Nokia
  *
  * All rights reserved.
  *
@@ -9,266 +9,514 @@
 #define _GNU_SOURCE
 #endif
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <inttypes.h>
+#include <stdlib.h>
+#include <signal.h>
+#include <stdint.h>
+#include <unistd.h>
 
 #include <odp_api.h>
 #include <odp/helper/odph_api.h>
 
 #define EXIT_NOT_SUP 2
+#define PROG_NAME "odp_dma_perf"
 
-#define DEFAULT_SEG_SIZE 1024U
-#define ROUNDS 1000000
-#define DEFAULT_WAIT_NS ODP_TIME_SEC_IN_NS
-#define COMPL_DELIMITER ","
-/* For now, a static maximum amount of input segments */
-#define MAX_NUM_IN_SEGS 64
-#define SHM_SRC "odp_dma_perf_shm_src"
-#define SHM_DST "odp_dma_perf_shm_dst"
+enum {
+	SYNC = 0U,
+	ASYNC
+};
 
-#define TRS_TYPE_SYNC 0
-#define TRS_TYPE_ASYNC 1
+enum {
+	PACKET = 0U,
+	MEMORY
+};
 
-#define GRN_ALL 0
-#define GRN_IND 1
+enum {
+	POLL = 0U,
+	EVENT
+};
 
-#define TYPE_PKT 0
-#define TYPE_MEM 1
+enum {
+	SINGLE = 0U,
+	MANY
+};
 
-#define COMPL_MODE_POLL 0
-#define COMPL_MODE_EVENT 1
+#define DEF_TRS_TYPE SYNC
+#define DEF_SEG_CNT 1U
+#define DEF_LEN 1024U
+#define DEF_SEG_TYPE PACKET
+#define DEF_MODE POLL
+#define DEF_INFLIGHT 1U
+#define DEF_TIME 10U
+#define DEF_WORKERS 1U
+#define DEF_POLICY SINGLE
+
+#define MAX_SEGS 1024U
+#define MAX_WORKERS 24
+
+#define MIN(a, b)  (((a) < (b)) ? (a) : (b))
+#define MAX(a, b)  (((a) < (b)) ? (b) : (a))
 
 #define GIGAS 1000000000
 #define MEGAS 1000000
 #define KILOS 1000
 
-#define RETRIES 1000U
+typedef enum {
+	PRS_OK,
+	PRS_NOK,
+	PRS_TERM,
+	PRS_NOT_SUP
+} parse_result_t;
 
-typedef struct test_config_t {
-	int trs_type;
-	int trs_grn;
-	int num_in_seg;
-	uint32_t seg_size;
-	int seg_type;
-	int num_rounds;
-	int dma_rounds;
-	uint64_t wait_ns;
+typedef struct {
+	uint64_t completed;
+	uint64_t start_errs;
+	uint64_t poll_errs;
+	uint64_t scheduler_timeouts;
+	uint64_t transfer_errs;
+	uint64_t tot_tm;
+	uint64_t trs_tm;
+	uint64_t max_trs_tm;
+	uint64_t min_trs_tm;
+	uint64_t start_cc;
+	uint64_t max_start_cc;
+	uint64_t min_start_cc;
+	uint64_t wait_cc;
+	uint64_t max_wait_cc;
+	uint64_t min_wait_cc;
+	uint64_t trs_cc;
+	uint64_t max_trs_cc;
+	uint64_t min_trs_cc;
+	uint64_t start_cnt;
+	uint64_t wait_cnt;
+	uint64_t trs_poll_cnt;
+	uint64_t trs_cnt;
+} stats_t;
 
+typedef struct {
+	odp_dma_transfer_param_t trs_param;
+	odp_dma_compl_param_t compl_param;
+	odp_ticketlock_t lock;
+	uint64_t trs_start_tm;
+	uint64_t trs_start_cc;
+	uint64_t trs_poll_cnt;
+	odp_bool_t is_running;
+} trs_info_t;
+
+typedef struct ODP_ALIGNED_CACHE {
 	struct {
-		int num_modes;
-		uint32_t compl_mask;
-		int modes[MAX_NUM_IN_SEGS];
-	} compl_modes;
-
-	struct {
+		trs_info_t infos[MAX_SEGS];
+		odp_dma_seg_t src_seg[MAX_SEGS];
+		odp_dma_seg_t dst_seg[MAX_SEGS];
+		odp_dma_t handle;
 		odp_pool_t pool;
 		odp_queue_t compl_q;
-		odp_dma_t handle;
-		odp_dma_seg_t dst_seg;
-		odp_dma_seg_t src_seg[MAX_NUM_IN_SEGS];
-	} dma_config;
-
-	union {
-		struct {
-			odp_shm_t shm_src;
-			odp_shm_t shm_dst;
-			void *src;
-			void *dst;
-		};
-
-		struct {
-			odp_pool_t pool;
-			odp_packet_t pkts[MAX_NUM_IN_SEGS + 1];
-		};
-	} seg_config;
+		uint32_t num_in_segs;
+		uint32_t num_out_segs;
+		uint32_t src_seg_len;
+		uint32_t dst_seg_len;
+		uint32_t num_inflight;
+		uint8_t trs_type;
+		uint8_t compl_mode;
+	} dma;
 
 	struct {
-		int (*setup_fn)(struct test_config_t *config);
-		void (*trs_base_fn)(struct test_config_t *config,
-				    odp_dma_transfer_param_t *trs_params, uint32_t *trs_lengths);
-		void (*trs_dyn_fn)(struct test_config_t *config, uint32_t offset, uint32_t len);
-		int (*verify_fn)(const struct test_config_t *config);
-		void (*free_fn)(struct test_config_t *config);
-		int (*run_fn)(struct test_config_t *config);
-	} test_case_api;
-} test_config_t;
+		odp_packet_t src_pkt[MAX_SEGS];
+		odp_packet_t dst_pkt[MAX_SEGS];
+		odp_pool_t src_pool;
+		odp_pool_t dst_pool;
+		odp_shm_t src_shm;
+		odp_shm_t dst_shm;
+		void *src;
+		void *dst;
+	} seg;
 
-typedef struct compl_wait_entry_t {
-	int type;
-	odp_dma_transfer_id_t id;
-} compl_wait_entry_t;
+	odp_schedule_group_t grp;
+} sd_t;
 
-static const int compl_mode_map[] = { ODP_DMA_COMPL_POLL, ODP_DMA_COMPL_EVENT };
+typedef struct prog_config_s prog_config_t;
 
-static void set_option_defaults(test_config_t *config)
+typedef struct ODP_ALIGNED_CACHE {
+	stats_t stats;
+	prog_config_t *prog_config;
+	sd_t *sd;
+} thread_config_t;
+
+typedef struct {
+	/* Configure DMA session specific resources. */
+	odp_bool_t (*session_cfg_fn)(sd_t *sd);
+	/* Setup transfer elements (memory/packet segments). */
+	odp_bool_t (*setup_fn)(sd_t *sd);
+	/* Configure DMA transfers (segment addresses etc.). */
+	void (*trs_fn)(sd_t *sd);
+	/* Configure transfer completion resources (transfer IDs, events etc.). */
+	odp_bool_t (*compl_fn)(sd_t *sd);
+	/* Initiate required initial transfers. */
+	odp_bool_t (*bootstrap_fn)(sd_t *sd);
+	/* Wait and handle finished transfer. */
+	void (*wait_fn)(sd_t *sd, stats_t *stats);
+	/* Handle all unfinished transfers after main test has been stopped. */
+	void (*drain_fn)(void);
+	/* Free any resources that might have been allocated during setup phase. */
+	void (*free_fn)(const sd_t *sd);
+} test_api_t;
+
+typedef struct prog_config_s {
+	odph_thread_t threads[MAX_WORKERS];
+	thread_config_t thread_config[MAX_WORKERS];
+	sd_t sds[MAX_WORKERS];
+	test_api_t api;
+	odp_atomic_u32_t is_running;
+	odp_instance_t odp_instance;
+	odp_barrier_t init_barrier;
+	odp_barrier_t term_barrier;
+	odp_dma_compl_mode_t compl_mode_mask;
+	odp_pool_t src_pool;
+	odp_pool_t dst_pool;
+	uint32_t num_in_segs;
+	uint32_t num_out_segs;
+	uint32_t src_seg_len;
+	uint32_t dst_seg_len;
+	uint32_t num_inflight;
+	uint32_t time_sec;
+	uint32_t num_sessions;
+	int num_workers;
+	uint8_t trs_type;
+	uint8_t seg_type;
+	uint8_t compl_mode;
+	uint8_t policy;
+} prog_config_t;
+
+static prog_config_t *prog_conf;
+
+static const int mode_map[] = { ODP_DMA_COMPL_POLL, ODP_DMA_COMPL_EVENT };
+
+static void terminate(int signal ODP_UNUSED)
 {
-	memset(config, 0, sizeof(*config));
-	config->num_in_seg = 1;
-	config->seg_size = DEFAULT_SEG_SIZE;
-	config->num_rounds = ROUNDS;
-	config->wait_ns = DEFAULT_WAIT_NS;
-	config->compl_modes.compl_mask = ODP_DMA_COMPL_SYNC;
+	odp_atomic_store_u32(&prog_conf->is_running, 0U);
 }
 
-static void parse_completion_modes(test_config_t *config, const char *optarg)
+static void init_config(prog_config_t *config)
 {
-	char *tmp_str = strdup(optarg);
-	char *tmp;
-	int mode;
-	uint32_t i = 0U;
+	sd_t *sd;
+	trs_info_t *info;
+	stats_t *stats;
 
-	config->compl_modes.num_modes = 0;
+	memset(config, 0, sizeof(*config));
+	config->compl_mode_mask |= ODP_DMA_COMPL_SYNC;
+	config->src_pool = ODP_POOL_INVALID;
+	config->dst_pool = ODP_POOL_INVALID;
+	config->num_in_segs = DEF_SEG_CNT;
+	config->num_out_segs = DEF_SEG_CNT;
+	config->src_seg_len = DEF_LEN;
+	config->num_inflight = DEF_INFLIGHT;
+	config->time_sec = DEF_TIME;
+	config->num_workers = DEF_WORKERS;
+	config->trs_type = DEF_TRS_TYPE;
+	config->seg_type = DEF_SEG_TYPE;
+	config->compl_mode = DEF_MODE;
+	config->policy = DEF_POLICY;
 
-	if (tmp_str == NULL)
-		return;
+	for (uint32_t i = 0U; i < MAX_WORKERS; ++i) {
+		sd = &config->sds[i];
+		stats = &config->thread_config[i].stats;
+		memset(sd, 0, sizeof(*sd));
 
-	tmp = strtok(tmp_str, COMPL_DELIMITER);
+		for (uint32_t i = 0U; i < MAX_SEGS; ++i) {
+			info = &sd->dma.infos[i];
+			info->compl_param.transfer_id = ODP_DMA_TRANSFER_ID_INVALID;
+			info->compl_param.event = ODP_EVENT_INVALID;
+			info->compl_param.queue = ODP_QUEUE_INVALID;
+			odp_ticketlock_init(&info->lock);
+			sd->seg.src_pkt[i] = ODP_PACKET_INVALID;
+			sd->seg.dst_pkt[i] = ODP_PACKET_INVALID;
+		}
 
-	while (tmp) {
-		mode = atoi(tmp);
-		config->compl_modes.modes[i] = mode;
-		config->compl_modes.compl_mask |= compl_mode_map[mode];
-		++i;
-		++config->compl_modes.num_modes;
-		tmp = strtok(NULL, COMPL_DELIMITER);
+		sd->dma.handle = ODP_DMA_INVALID;
+		sd->dma.pool = ODP_POOL_INVALID;
+		sd->dma.compl_q = ODP_QUEUE_INVALID;
+		sd->seg.src_shm = ODP_SHM_INVALID;
+		sd->seg.dst_shm = ODP_SHM_INVALID;
+		sd->grp = ODP_SCHED_GROUP_INVALID;
+		stats->min_trs_tm = UINT64_MAX;
+		stats->min_start_cc = UINT64_MAX;
+		stats->min_wait_cc = UINT64_MAX;
+		stats->min_trs_cc = UINT64_MAX;
 	}
-
-	free(tmp_str);
 }
 
 static void print_usage(void)
 {
 	printf("\n"
-	       "DMA performance test. Transfers a set of source segments to a single destination\n"
-	       "segment.\n"
+	       "DMA performance test. Load DMA subsystem from several workers.\n"
 	       "\n"
 	       "Examples:\n"
-	       "    odp_dma_perf\n"
-	       "    odp_dma_perf -t 0 -g 1 -i 2\n"
-	       "    odp_dma_perf -t 1 -g 1 -i 4 -m 0,0,0,0\n"
-	       "    odp_dma_perf -t 1 -g 1 -i 7 -m 0,0,0,0,0,0,1 -T 1 -r 1000 -s 2048\n"
+	       "    " PROG_NAME "\n"
+	       "    " PROG_NAME " -s 10240\n"
+	       "    " PROG_NAME " -t 0 -i 1 -o 1 -s 51200 -S 1 -f 64 -T 10\n"
+	       "    " PROG_NAME " -t 1 -i 10 -o 10 -s 4096 -S 0 -m 1 -f 10 -c 4 -p 1\n"
 	       "\n"
-	       "Usage: odp_dma_perf [options]\n"
+	       "Usage: " PROG_NAME " [options]\n"
 	       "\n"
-	       "  -t, --trs_type            Transfer type for test data. Synchronous by default.\n"
+	       "  -t, --trs_type            Transfer type for test data. %u by default.\n"
 	       "                            Types:\n"
 	       "                                0: synchronous\n"
 	       "                                1: asynchronous\n"
-	       "  -g, --trs_grn             Transfer granularity for source segments. All\n"
-	       "                            segments are sent in one transfer by default.\n"
-	       "                            Options:\n"
-	       "                                0: all segments in a single transfer\n"
-	       "                                1: individual transfers for segments\n"
-	       "  -i, --num_in_seg          Number of input segments to transfer. 1 by\n"
-	       "                            default. Maximum supported amount is %d.\n"
-	       "  -s, --in_seg_size	    Segment size for all input segments in bytes. 1024\n"
-	       "                            bytes by default. Maximum allowed destination\n"
-	       "                            segment size may limit this choice.\n"
-	       "  -T, --in_seg_type         Input segment data type. Packet by default.\n"
+	       "  -i, --num_in_seg          Number of input segments to transfer. 0 means the\n"
+	       "                            maximum count supported by the implementation. %u by\n"
+	       "                            default.\n"
+	       "  -o, --num_out_seg         Number of output segments to transfer to. 0 means\n"
+	       "                            the maximum count supported by the implementation.\n"
+	       "                            %u by default.\n"
+	       "  -s, --in_seg_len	    Input segment length in bytes. 0 length means\n"
+	       "                            maximum segment length supported by implementation.\n"
+	       "                            The actual maximum might be limited by what type of\n"
+	       "                            data is transferred (packet/memory).\n"
+	       "                            %u by default.\n"
+	       "  -S, --in_seg_type         Input segment data type. %u by default.\n"
 	       "                            Types:\n"
 	       "                                0: packet\n"
 	       "                                1: memory\n"
-	       "  -m, --compl_modes         Completion mode(s) for transfers delimited by a\n"
-	       "                            comma. Only applicable in asynchronous mode.\n"
+	       "  -m, --compl_mode          Completion mode for transfers. %u by default.\n"
 	       "                            Modes:\n"
 	       "                                0: poll\n"
 	       "                                1: event\n"
-	       "  -r, --num_rounds          Number of times to run the test scenario. %d by\n"
+	       "  -f, --max_in_flight       Max transfers in-flight per session. 0 means the\n"
+	       "                            maximum supported by tester/implementation. %u by\n"
 	       "                            default.\n"
-	       "  -w, --wait_nsec           Number of nanoseconds to wait for completion events.\n"
-	       "                            1 second (1000000000) by default.\n"
+	       "  -T, --time_sec            Time in seconds to run. 0 means infinite. %u by\n"
+	       "                            default.\n"
+	       "  -c, --worker_count        Amount of workers. %u by default.\n"
+	       "  -p, --policy              DMA session policy. %u by default.\n"
+	       "                            Policies:\n"
+	       "                                0: One session shared by workers\n"
+	       "                                1: One session per worker\n"
 	       "  -h, --help                This help.\n"
-	       "\n",
-	       MAX_NUM_IN_SEGS, ROUNDS);
+	       "\n", DEF_TRS_TYPE, DEF_SEG_CNT, DEF_SEG_CNT, DEF_LEN, DEF_SEG_TYPE, DEF_MODE,
+	       DEF_INFLIGHT, DEF_TIME, DEF_WORKERS, DEF_POLICY);
 }
 
-static int check_completion_modes(test_config_t *config)
+static parse_result_t check_options(prog_config_t *config)
 {
-	if (config->trs_type == TRS_TYPE_SYNC)
-		return 0;
+	int max_workers;
+	odp_dma_capability_t dma_capa;
+	uint32_t num_sessions, max_seg_len, max_trs, max_in, max_out, max_segs;
+	odp_schedule_capability_t sched_capa;
+	odp_pool_capability_t pool_capa;
+	odp_shm_capability_t shm_capa;
+	uint64_t shm_size = 0U;
 
-	if (config->compl_modes.num_modes > MAX_NUM_IN_SEGS)
-		return -1;
-
-	if (config->trs_grn == GRN_IND &&
-	    config->num_in_seg != config->compl_modes.num_modes)
-		return -1;
-
-	if (config->trs_grn == GRN_ALL &&
-	    config->compl_modes.num_modes != 1)
-		return -1;
-
-	for (int i = 0; i < config->compl_modes.num_modes; ++i) {
-		if (config->compl_modes.modes[i] != COMPL_MODE_POLL &&
-		    config->compl_modes.modes[i] != COMPL_MODE_EVENT)
-			return -1;
-
-		config->compl_modes.modes[i] = compl_mode_map[config->compl_modes.modes[i]];
+	if (config->trs_type != SYNC && config->trs_type != ASYNC) {
+		ODPH_ERR("Invalid transfer type: %u\n", config->trs_type);
+		return PRS_NOK;
 	}
 
-	return 0;
+	if (config->seg_type != PACKET && config->seg_type != MEMORY) {
+		ODPH_ERR("Invalid segment type: %u\n", config->seg_type);
+		return PRS_NOK;
+	}
+
+	max_workers = MIN(odp_thread_count_max() - 1, MAX_WORKERS);
+
+	if (config->num_workers <= 0 || config->num_workers > max_workers) {
+		ODPH_ERR("Invalid thread count: %d (min: 1, max: %d)\n", config->num_workers,
+			 max_workers);
+		return PRS_NOK;
+	}
+
+	if (config->policy != SINGLE && config->policy != MANY) {
+		ODPH_ERR("Invalid DMA session policy: %u\n", config->policy);
+		return PRS_NOK;
+	}
+
+	if (odp_dma_capability(&dma_capa) < 0) {
+		ODPH_ERR("Error querying DMA capabilities\n");
+		return PRS_NOK;
+	}
+
+	num_sessions = config->policy == SINGLE ? 1 : config->num_workers;
+
+	if (num_sessions > dma_capa.max_sessions) {
+		ODPH_ERR("Not enough DMA sessions supported: %u (max: %u)\n", num_sessions,
+			 dma_capa.max_sessions);
+		return PRS_NOT_SUP;
+	}
+
+	config->num_sessions = num_sessions;
+
+	if (config->num_in_segs == 0U)
+		config->num_in_segs = dma_capa.max_src_segs;
+
+	if (config->num_out_segs == 0U)
+		config->num_out_segs = dma_capa.max_dst_segs;
+
+	if (config->num_in_segs > dma_capa.max_src_segs ||
+	    config->num_out_segs > dma_capa.max_dst_segs ||
+	    config->num_in_segs + config->num_out_segs > dma_capa.max_segs) {
+		ODPH_ERR("Unsupported segment count configuration, in: %u, out: %u (max in: %u, "
+			 "max out: %u, max tot: %u)\n", config->num_in_segs, config->num_out_segs,
+			 dma_capa.max_src_segs, dma_capa.max_dst_segs, dma_capa.max_segs);
+		return PRS_NOT_SUP;
+	}
+
+	if (config->src_seg_len == 0U)
+		config->src_seg_len = dma_capa.max_seg_len;
+
+	config->dst_seg_len = config->src_seg_len * config->num_in_segs /
+			      config->num_out_segs + config->src_seg_len *
+			      config->num_in_segs % config->num_out_segs;
+
+	max_seg_len = MAX(config->src_seg_len, config->dst_seg_len);
+
+	if (max_seg_len > dma_capa.max_seg_len) {
+		ODPH_ERR("Unsupported total DMA segment length: %u (max: %u)\n", max_seg_len,
+			 dma_capa.max_seg_len);
+		return PRS_NOT_SUP;
+	}
+
+	if (config->trs_type == ASYNC) {
+		if (config->compl_mode != POLL && config->compl_mode != EVENT) {
+			ODPH_ERR("Invalid completion mode: %u\n", config->compl_mode);
+			return PRS_NOK;
+		}
+
+		if (config->compl_mode == POLL && (dma_capa.compl_mode_mask & ODP_DMA_COMPL_POLL)
+		    == 0U) {
+			ODPH_ERR("Unsupported DMA completion mode, poll\n");
+			return PRS_NOT_SUP;
+		}
+
+		if (config->compl_mode == EVENT) {
+			if (config->num_sessions > dma_capa.pool.max_pools) {
+				ODPH_ERR("Unsupported amount of completion pools: %u (max: %u)\n",
+					 config->num_sessions, dma_capa.pool.max_pools);
+				return PRS_NOT_SUP;
+			}
+
+			if ((dma_capa.compl_mode_mask & ODP_DMA_COMPL_EVENT) == 0U) {
+				ODPH_ERR("Unsupported DMA completion mode, event\n");
+				return PRS_NOT_SUP;
+			}
+
+			if (dma_capa.queue_type_sched == 0) {
+				ODPH_ERR("Unsupported DMA queueing type, scheduled\n");
+				return PRS_NOT_SUP;
+			}
+
+			if (config->num_inflight > dma_capa.pool.max_num) {
+				ODPH_ERR("Unsupported amount of completion events: %u (max: %u)\n",
+					 config->num_inflight, dma_capa.pool.max_num);
+				return PRS_NOT_SUP;
+			}
+
+			if (odp_schedule_capability(&sched_capa) < 0) {
+				ODPH_ERR("Error querying scheduler capabilities\n");
+				return PRS_NOK;
+			}
+
+			if (config->num_sessions > sched_capa.max_groups - 3U) {
+				ODPH_ERR("Unsupported amount of scheduler groups: %u (max: %u)\n",
+					 config->num_sessions, sched_capa.max_groups - 3U);
+				return PRS_NOT_SUP;
+			}
+		}
+
+		config->compl_mode_mask |= mode_map[config->compl_mode];
+	}
+
+	max_trs = MIN(dma_capa.max_transfers, MAX_SEGS);
+
+	if (config->num_inflight == 0U)
+		config->num_inflight = max_trs;
+
+	if (config->num_inflight > max_trs) {
+		ODPH_ERR("Unsupported amount of in-flight DMA transfers: %u (max: %u)\n",
+			 config->num_inflight, max_trs);
+		return PRS_NOT_SUP;
+	}
+
+	max_in = config->num_in_segs * config->num_inflight;
+	max_out = config->num_out_segs * config->num_inflight;
+	max_segs = MAX(max_in, max_out);
+
+	if (max_segs > MAX_SEGS) {
+		ODPH_ERR("Unsupported input/output * inflight segment combination: %u (max: %u)\n",
+			 max_segs, MAX_SEGS);
+		return PRS_NOT_SUP;
+	}
+
+	if (config->seg_type == PACKET) {
+		if (odp_pool_capability(&pool_capa) < 0) {
+			ODPH_ERR("Error querying pool capabilities\n");
+			return PRS_NOK;
+		}
+
+		if (pool_capa.pkt.max_pools < 2U) {
+			ODPH_ERR("Unsupported amount of packet pools: 2 (max: %u)\n",
+				 pool_capa.pkt.max_pools);
+			return PRS_NOT_SUP;
+		}
+
+		if (pool_capa.pkt.max_len != 0U && max_seg_len > pool_capa.pkt.max_len) {
+			ODPH_ERR("Unsupported packet size: %u (max: %u)\n", max_seg_len,
+				 pool_capa.pkt.max_len);
+			return PRS_NOT_SUP;
+		}
+
+		if (pool_capa.pkt.max_num != 0U &&
+		    max_segs * num_sessions > pool_capa.pkt.max_num) {
+			ODPH_ERR("Unsupported amount of packet pool elements: %u (max: %u)\n",
+				 max_segs * num_sessions, pool_capa.pkt.max_num);
+			return PRS_NOT_SUP;
+		}
+	} else {
+		/* If SHM implementation capabilities are very puny, program will have already
+		 * failed when reserving memory for global program configuration. */
+		if (odp_shm_capability(&shm_capa) < 0) {
+			ODPH_ERR("Error querying SHM capabilities\n");
+			return PRS_NOK;
+		}
+
+		/* One block for program configuration, one for source memory and one for
+		 * destination memory. */
+		if (shm_capa.max_blocks < 3U) {
+			ODPH_ERR("Unsupported amount of SHM blocks: 3 (max: %u)\n",
+				 shm_capa.max_blocks);
+			return PRS_NOT_SUP;
+		}
+
+		shm_size = config->dst_seg_len * config->num_out_segs * config->num_inflight;
+
+		if (shm_capa.max_size != 0U && shm_size > shm_capa.max_size) {
+			ODPH_ERR("Unsupported total SHM block size: %" PRIu64 ""
+				 " (max: %" PRIu64 ")\n", shm_size, shm_capa.max_size);
+			return PRS_NOT_SUP;
+		}
+	}
+
+	return PRS_OK;
 }
 
-static int check_options(test_config_t *config)
-{
-	if (config->trs_type != TRS_TYPE_SYNC &&
-	    config->trs_type != TRS_TYPE_ASYNC) {
-		ODPH_ERR("Invalid transfer type: %d.\n", config->trs_type);
-		return -1;
-	}
-
-	if (config->trs_grn != GRN_ALL && config->trs_grn != GRN_IND) {
-		ODPH_ERR("Invalid granularity: %d.\n", config->trs_grn);
-		return -1;
-	}
-
-	config->dma_rounds = config->trs_grn == GRN_IND ? config->num_in_seg : 1;
-
-	if (config->num_in_seg < 1 || config->num_in_seg > MAX_NUM_IN_SEGS) {
-		ODPH_ERR("Invalid number of input segments: %d.\n", config->num_in_seg);
-		return -1;
-	}
-
-	if (config->seg_type != TYPE_PKT && config->seg_type != TYPE_MEM) {
-		ODPH_ERR("Invalid input segment type: %d.\n", config->seg_type);
-		return -1;
-	}
-
-	if (check_completion_modes(config)) {
-		ODPH_ERR("Invalid completion modes.\n");
-		return -1;
-	}
-
-	if (config->num_rounds < 1) {
-		ODPH_ERR("Invalid number of rounds: %d.\n", config->num_rounds);
-		return -1;
-	}
-
-	return 0;
-}
-
-static int parse_options(int argc, char **argv, test_config_t *config)
+static parse_result_t parse_options(int argc, char **argv, prog_config_t *config)
 {
 	int opt, long_index;
-
 	static const struct option longopts[] = {
 		{ "trs_type", required_argument, NULL, 't' },
-		{ "trs_grn", required_argument, NULL, 'g' },
 		{ "num_in_seg", required_argument, NULL, 'i' },
-		{ "in_seg_size", required_argument, NULL, 's' },
-		{ "in_seg_type", required_argument, NULL, 'T' },
-		{ "compl_modes", required_argument, NULL, 'm' },
-		{ "num_rounds", required_argument, NULL, 'r' },
-		{ "wait_nsec", required_argument, NULL, 'w' },
+		{ "num_out_seg", required_argument, NULL, 'o' },
+		{ "in_seg_len", required_argument, NULL, 's' },
+		{ "in_seg_type", required_argument, NULL, 'S' },
+		{ "compl_mode", required_argument, NULL, 'm' },
+		{ "max_in_flight", required_argument, NULL, 'f'},
+		{ "time_sec", required_argument, NULL, 'T' },
+		{ "worker_count", required_argument, NULL, 'c' },
+		{ "policy", required_argument, NULL, 'p' },
 		{ "help", no_argument, NULL, 'h' },
 		{ NULL, 0, NULL, 0 }
 	};
+	static const char *shortopts = "t:i:o:s:S:m:f:T:c:p:h";
 
-	static const char *shortopts = "t:g:i:s:T:m:r:w:h";
-
-	set_option_defaults(config);
+	init_config(config);
 
 	while (1) {
 		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
@@ -280,862 +528,1076 @@ static int parse_options(int argc, char **argv, test_config_t *config)
 		case 't':
 			config->trs_type = atoi(optarg);
 			break;
-		case 'g':
-			config->trs_grn = atoi(optarg);
-			break;
 		case 'i':
-			config->num_in_seg = atoi(optarg);
+			config->num_in_segs = atoi(optarg);
+			break;
+		case 'o':
+			config->num_out_segs = atoi(optarg);
 			break;
 		case 's':
-			config->seg_size = atoi(optarg);
+			config->src_seg_len = atoi(optarg);
 			break;
-		case 'T':
+		case 'S':
 			config->seg_type = atoi(optarg);
 			break;
 		case 'm':
-			parse_completion_modes(config, optarg);
+			config->compl_mode = atoi(optarg);
 			break;
-		case 'r':
-			config->num_rounds = atoi(optarg);
+		case 'f':
+			config->num_inflight = atoi(optarg);
 			break;
-		case 'w':
-			config->wait_ns = atoll(optarg);
+		case 'T':
+			config->time_sec = atoi(optarg);
+			break;
+		case 'c':
+			config->num_workers = atoi(optarg);
+			break;
+		case 'p':
+			config->policy = atoi(optarg);
 			break;
 		case 'h':
+			print_usage();
+			return PRS_TERM;
+		case '?':
 		default:
 			print_usage();
-			return -1;
+			return PRS_NOK;
 		}
 	}
 
-	if (check_options(config))
-		return -1;
-
-	return 0;
+	return check_options(config);
 }
 
-static int check_shm_capabilities(const test_config_t *config)
+static parse_result_t setup_program(int argc, char **argv, prog_config_t *config)
 {
-	odp_shm_capability_t capa;
+	struct sigaction action = { .sa_handler = terminate };
 
-	if (odp_shm_capability(&capa)) {
-		ODPH_ERR("Error querying SHM capabilities.\n");
-		return -1;
+	if (sigemptyset(&action.sa_mask) == -1 || sigaddset(&action.sa_mask, SIGINT) == -1 ||
+	    sigaddset(&action.sa_mask, SIGTERM) == -1 ||
+	    sigaddset(&action.sa_mask, SIGHUP) == -1 || sigaction(SIGINT, &action, NULL) == -1 ||
+	    sigaction(SIGTERM, &action, NULL) == -1 || sigaction(SIGHUP, &action, NULL) == -1) {
+		ODPH_ERR("Error installing signal handler\n");
+		return PRS_NOK;
 	}
 
-	if (capa.max_blocks < 2U) {
-		ODPH_ERR("Unsupported amount of SHM blocks.\n");
-		return -1;
-	}
-
-	if (capa.max_size != 0U && config->num_in_seg * config->seg_size > capa.max_size) {
-		ODPH_ERR("Unsupported total SHM block size.\n");
-		return -1;
-	}
-
-	if (capa.max_align != 0U && capa.max_align < ODP_CACHE_LINE_SIZE) {
-		ODPH_ERR("Unsupported SHM block alignment size.\n");
-		return -1;
-	}
-
-	return 0;
+	return parse_options(argc, argv, config);
 }
 
-static int check_dma_capabilities(const test_config_t *config)
-{
-	odp_dma_capability_t capa;
-	const int is_event = config->compl_modes.compl_mask & ODP_DMA_COMPL_EVENT;
-	uint32_t event_compl_count = 0U;
-
-	if (odp_dma_capability(&capa)) {
-		ODPH_ERR("Error querying DMA capabilities.\n");
-		return -1;
-	}
-
-	if (capa.max_sessions == 0U) {
-		ODPH_ERR("DMA not supported.\n");
-		return -1;
-	}
-
-	if (config->trs_type == TRS_TYPE_ASYNC) {
-		if ((config->compl_modes.compl_mask & ODP_DMA_COMPL_POLL) &&
-		    (capa.compl_mode_mask & ODP_DMA_COMPL_POLL) == 0U) {
-			ODPH_ERR("Unsupported DMA completion mode, poll.\n");
-			return -1;
-		}
-
-		if (is_event && (capa.compl_mode_mask & ODP_DMA_COMPL_EVENT) == 0U) {
-			ODPH_ERR("Unsupported DMA completion mode, event.\n");
-			return -1;
-		}
-
-		if (is_event && capa.queue_type_sched == 0) {
-			ODPH_ERR("Unsupported DMA queueing type.\n");
-			return -1;
-		}
-
-		if (config->trs_grn == GRN_IND) {
-			if ((uint32_t)config->num_in_seg > capa.max_transfers) {
-				ODPH_ERR("Unsupported amount of in-flight DMA transfers.\n");
-				return -1;
-			}
-
-			for (int i = 0; i < config->compl_modes.num_modes; ++i)
-				if (config->compl_modes.modes[i] == ODP_DMA_COMPL_EVENT)
-					++event_compl_count;
-
-			if (event_compl_count > capa.pool.max_num) {
-				ODPH_ERR("Unsupported amount of completion events.\n");
-				return -1;
-			}
-		}
-	}
-
-	if (config->trs_grn == GRN_ALL) {
-		if ((uint32_t)config->num_in_seg > capa.max_src_segs) {
-			ODPH_ERR("Unsupported amount of DMA source segments.\n");
-			return -1;
-		}
-
-		if (config->num_in_seg + 1U > capa.max_segs) {
-			ODPH_ERR("Unsupported total amount of DMA segments.\n");
-			return -1;
-		}
-	}
-
-	if (config->trs_grn == GRN_IND && capa.max_segs < 2U) {
-		ODPH_ERR("Unsupported total amount of DMA segments.\n");
-		return -1;
-	}
-
-	if (config->num_in_seg * config->seg_size > capa.max_seg_len) {
-		ODPH_ERR("Unsupported total DMA segment size.\n");
-		return -1;
-	}
-
-	return 0;
-}
-
-static int check_capabilities(const test_config_t *config)
-{
-	return check_shm_capabilities(config) ||
-	       check_dma_capabilities(config);
-}
-
-static int configure_packets(test_config_t *config)
+static odp_pool_t get_src_packet_pool(void)
 {
 	odp_pool_param_t param;
 
-	for (int i = 0; i < config->num_in_seg + 1; ++i)
-		config->seg_config.pkts[i] = ODP_PACKET_INVALID;
+	if (prog_conf->src_pool != ODP_POOL_INVALID)
+		return prog_conf->src_pool;
 
 	odp_pool_param_init(&param);
 	param.type = ODP_POOL_PACKET;
-	/* Configured amount of input segments and one output segment */
-	param.pkt.num = config->num_in_seg + 1U;
-	param.pkt.len = config->num_in_seg * config->seg_size;
-	config->seg_config.pool = odp_pool_create("odp_dma_perf_packets", &param);
+	param.pkt.num = prog_conf->num_inflight * prog_conf->num_in_segs * prog_conf->num_sessions;
+	param.pkt.len = prog_conf->src_seg_len;
+	param.pkt.seg_len = prog_conf->src_seg_len;
+	prog_conf->src_pool = odp_pool_create(PROG_NAME "_src_pkts", &param);
 
-	if (config->seg_config.pool == ODP_POOL_INVALID) {
-		ODPH_ERR("Error creating packet pool.\n");
-		return -1;
-	}
-
-	return 0;
+	return prog_conf->src_pool;
 }
 
-static int allocate_packets(test_config_t *config)
+static odp_pool_t get_dst_packet_pool(void)
 {
-	for (int i = 0; i < config->num_in_seg; ++i) {
-		config->seg_config.pkts[i] = odp_packet_alloc(config->seg_config.pool,
-							      config->seg_size);
+	odp_pool_param_t param;
 
-		if (config->seg_config.pkts[i] == ODP_PACKET_INVALID) {
-			ODPH_ERR("Error allocating input test packets.\n");
-			return -1;
+	if (prog_conf->dst_pool != ODP_POOL_INVALID)
+		return prog_conf->dst_pool;
+
+	odp_pool_param_init(&param);
+	param.type = ODP_POOL_PACKET;
+	param.pkt.num = prog_conf->num_inflight * prog_conf->num_out_segs *
+			prog_conf->num_sessions;
+	param.pkt.len = prog_conf->dst_seg_len;
+	param.pkt.seg_len = prog_conf->dst_seg_len;
+	prog_conf->dst_pool = odp_pool_create(PROG_NAME "_dst_pkts", &param);
+
+	return prog_conf->dst_pool;
+}
+
+static odp_bool_t configure_packets(sd_t *sd)
+{
+	sd->seg.src_pool = get_src_packet_pool();
+
+	if (sd->seg.src_pool == ODP_POOL_INVALID) {
+		ODPH_ERR("Error creating source packet pool\n");
+		return false;
+	}
+
+	sd->seg.dst_pool = get_dst_packet_pool();
+
+	if (sd->seg.dst_pool == ODP_POOL_INVALID) {
+		ODPH_ERR("Error creating destination packet pool\n");
+		return false;
+	}
+
+	return true;
+}
+
+static odp_bool_t allocate_packets(sd_t *sd)
+{
+	for (uint32_t i = 0U; i < sd->dma.num_inflight * sd->dma.num_in_segs; ++i) {
+		sd->seg.src_pkt[i] = odp_packet_alloc(sd->seg.src_pool, sd->dma.src_seg_len);
+
+		if (sd->seg.src_pkt[i] == ODP_PACKET_INVALID) {
+			ODPH_ERR("Error allocating source segment packets\n");
+			return false;
 		}
 	}
 
-	config->seg_config.pkts[config->num_in_seg] =
-		odp_packet_alloc(config->seg_config.pool, config->num_in_seg * config->seg_size);
+	for (uint32_t i = 0U; i < sd->dma.num_inflight * sd->dma.num_out_segs; ++i) {
+		sd->seg.dst_pkt[i] = odp_packet_alloc(sd->seg.dst_pool, sd->dma.dst_seg_len);
 
-	if (config->seg_config.pkts[config->num_in_seg] == ODP_PACKET_INVALID) {
-		ODPH_ERR("Error allocating output test packet.\n");
-		return -1;
-	}
-
-	return 0;
-}
-
-static int populate_packets(test_config_t *config)
-{
-	for (int i = 0; i < config->num_in_seg; ++i) {
-		uint8_t data[odp_packet_len(config->seg_config.pkts[i])];
-
-		memset(data, i + 1, sizeof(data));
-
-		if (odp_packet_copy_from_mem(config->seg_config.pkts[i], 0U, sizeof(data), data))
-			return -1;
-	}
-
-	return 0;
-}
-
-static int setup_packet_segments(test_config_t *config)
-{
-	return configure_packets(config) ||
-	       allocate_packets(config) ||
-	       populate_packets(config);
-}
-
-static void configure_packet_dma_transfer_base(test_config_t *config,
-					       odp_dma_transfer_param_t trs_params[],
-					       uint32_t trs_lengths[])
-{
-	memset(trs_lengths, 0, sizeof(*trs_lengths) * config->dma_rounds);
-
-	for (int i = 0; i < config->num_in_seg; ++i) {
-		config->dma_config.src_seg[i].packet = config->seg_config.pkts[i];
-		config->dma_config.src_seg[i].offset = 0U;
-		config->dma_config.src_seg[i].len = odp_packet_len(config->seg_config.pkts[i]);
-	}
-
-	config->dma_config.dst_seg.packet = config->seg_config.pkts[config->num_in_seg];
-
-	for (int i = 0; i < config->dma_rounds; ++i) {
-		odp_dma_transfer_param_init(&trs_params[i]);
-		trs_params[i].src_format = ODP_DMA_FORMAT_PACKET;
-		trs_params[i].dst_format = ODP_DMA_FORMAT_PACKET;
-		trs_params[i].num_src = config->trs_grn == GRN_IND ? 1 : config->num_in_seg;
-		trs_params[i].num_dst = 1U;
-		trs_params[i].src_seg = &config->dma_config.src_seg[i];
-		trs_params[i].dst_seg = &config->dma_config.dst_seg;
-		trs_lengths[i] = config->trs_grn == GRN_IND ?
-						    config->dma_config.src_seg[i].len :
-						    config->num_in_seg * config->seg_size;
-	}
-}
-
-static inline void configure_packet_dma_transfer_dynamic(test_config_t *config, uint32_t offset,
-							 uint32_t len)
-{
-	config->dma_config.dst_seg.offset = offset;
-	config->dma_config.dst_seg.len = len;
-}
-
-static int verify_packet_transfer(const test_config_t *config)
-{
-	uint32_t len, offset = 0U;
-
-	for (int i = 0; i < config->num_in_seg; ++i) {
-		len = odp_packet_len(config->seg_config.pkts[i]);
-		uint8_t src_data[len];
-		uint8_t dst_data[len];
-
-		if (odp_packet_copy_to_mem(config->seg_config.pkts[i], 0U, len, src_data) ||
-		    odp_packet_copy_to_mem(config->seg_config.pkts[config->num_in_seg], offset,
-					   len, dst_data)) {
-			ODPH_ERR("Error verifying DMA transfer.\n");
-			return -1;
-		}
-
-		if (memcmp(src_data, dst_data, len)) {
-			ODPH_ERR("Error in DMA transfer, source and destination data do not match.\n");
-			return -1;
-		}
-
-		offset += len;
-	}
-
-	return 0;
-}
-
-static void free_packets(test_config_t *config)
-{
-	/* Configured amount of input segments and one output segment */
-	for (int i = 0; i < config->num_in_seg + 1; ++i)
-		if (config->seg_config.pkts[i] != ODP_PACKET_INVALID)
-			odp_packet_free(config->seg_config.pkts[i]);
-
-	if (config->seg_config.pool != ODP_POOL_INVALID)
-		(void)odp_pool_destroy(config->seg_config.pool);
-}
-
-static int allocate_memory(test_config_t *config)
-{
-	const uint64_t size = config->num_in_seg * (uint64_t)config->seg_size;
-
-	config->seg_config.shm_src = ODP_SHM_INVALID;
-	config->seg_config.shm_dst = ODP_SHM_INVALID;
-	config->seg_config.src = NULL;
-	config->seg_config.dst = NULL;
-
-	config->seg_config.shm_src = odp_shm_reserve(SHM_SRC, size, ODP_CACHE_LINE_SIZE, 0);
-	config->seg_config.shm_dst = odp_shm_reserve(SHM_DST, size, ODP_CACHE_LINE_SIZE, 0);
-
-	if (config->seg_config.shm_src == ODP_SHM_INVALID ||
-	    config->seg_config.shm_dst == ODP_SHM_INVALID) {
-		ODPH_ERR("Error allocating SHM block.\n");
-		return -1;
-	}
-
-	config->seg_config.src = odp_shm_addr(config->seg_config.shm_src);
-	config->seg_config.dst = odp_shm_addr(config->seg_config.shm_dst);
-
-	if (config->seg_config.src == NULL || config->seg_config.dst == NULL) {
-		ODPH_ERR("Error resolving SHM block address.\n");
-		return -1;
-	}
-
-	return 0;
-}
-
-static int populate_memory(test_config_t *config)
-{
-	uint8_t val;
-	uint8_t *addr;
-
-	for (int i = 0; i < config->num_in_seg; ++i) {
-		val = 0U;
-		addr = (uint8_t *)config->seg_config.src + i * config->seg_size;
-
-		for (uint32_t i = 0U; i < config->seg_size; ++i)
-			addr[i] = val++;
-	}
-
-	return 0;
-}
-
-static int setup_memory_segments(test_config_t *config)
-{
-	return allocate_memory(config) ||
-	       populate_memory(config);
-}
-
-static void configure_address_dma_transfer_base(test_config_t *config,
-						odp_dma_transfer_param_t trs_params[],
-						uint32_t trs_lengths[])
-{
-	memset(trs_lengths, 0, sizeof(*trs_lengths) * config->dma_rounds);
-
-	for (int i = 0; i < config->num_in_seg; ++i) {
-		config->dma_config.src_seg[i].addr =
-			(uint8_t *)config->seg_config.src + i * config->seg_size;
-		config->dma_config.src_seg[i].len = config->seg_size;
-	}
-
-	config->dma_config.dst_seg.addr = config->seg_config.dst;
-
-	for (int i = 0; i < config->dma_rounds; ++i) {
-		odp_dma_transfer_param_init(&trs_params[i]);
-		trs_params[i].src_format = ODP_DMA_FORMAT_ADDR;
-		trs_params[i].dst_format = ODP_DMA_FORMAT_ADDR;
-		trs_params[i].num_src = config->trs_grn == GRN_IND ? 1 : config->num_in_seg;
-		trs_params[i].num_dst = 1U;
-		trs_params[i].src_seg = &config->dma_config.src_seg[i];
-		trs_params[i].dst_seg = &config->dma_config.dst_seg;
-		trs_lengths[i] = config->trs_grn == GRN_IND ?
-						    config->dma_config.src_seg[i].len :
-						    config->num_in_seg * config->seg_size;
-	}
-}
-
-static inline void configure_address_dma_transfer_dynamic(test_config_t *config, uint32_t offset,
-							  uint32_t len)
-{
-	config->dma_config.dst_seg.addr = (uint8_t *)config->seg_config.dst + offset;
-	config->dma_config.dst_seg.len = len;
-}
-
-static int verify_memory_transfer(const test_config_t *config)
-{
-	if (memcmp(config->seg_config.src, config->seg_config.dst,
-		   config->num_in_seg * config->seg_size)) {
-		ODPH_ERR("Error in DMA transfer, source and destination data do not match.\n");
-		return -1;
-	}
-
-	return 0;
-}
-
-static void free_memory(test_config_t *config)
-{
-	if (config->seg_config.shm_src != ODP_SHM_INVALID)
-		(void)odp_shm_free(config->seg_config.shm_src);
-
-	if (config->seg_config.shm_dst != ODP_SHM_INVALID)
-		(void)odp_shm_free(config->seg_config.shm_dst);
-}
-
-static void print_humanised_speed(uint64_t speed)
-{
-	if (speed > GIGAS)
-		printf("%.2f GB/s\n", (double)speed / GIGAS);
-	else if (speed > MEGAS)
-		printf("%.2f MB/s\n", (double)speed / MEGAS);
-	else if (speed > KILOS)
-		printf("%.2f KB/s\n", (double)speed / KILOS);
-	else
-		printf("%" PRIu64 " B/s\n", speed);
-}
-
-static void print_results(const test_config_t *config, uint64_t time, uint32_t retries)
-{
-	const int is_sync = config->trs_type == TRS_TYPE_SYNC;
-	const uint64_t avg_time = time / config->num_rounds;
-	uint64_t avg_speed = 0U;
-
-	printf("\n"
-	       "=============================================\n\n"
-	       "DMA transfer test done\n\n"
-	       "    mode:                         %s\n"
-	       "    granularity:                  %s\n"
-	       "    input segment count:          %d\n"
-	       "    segment size:                 %u\n"
-	       "    segment type:                 %s\n",
-	       is_sync ? "synchronous" : "asynchronous",
-	       config->trs_grn == GRN_IND ? "individual" : "all",
-	       config->num_in_seg, config->seg_size,
-	       config->seg_type == TYPE_PKT ? "packet" : "memory");
-
-	if (!is_sync) {
-		printf("    completion modes in order:    ");
-
-		for (int i = 0; i < config->compl_modes.num_modes; ++i)
-			printf("%s", config->compl_modes.modes[i] == ODP_DMA_COMPL_POLL ?
-								     "poll " : "event ");
-
-		printf("\n");
-	}
-
-	if (avg_time > 0U)
-		avg_speed = config->num_in_seg * config->seg_size * ODP_TIME_SEC_IN_NS / avg_time;
-
-	printf("    rounds run:                   %d\n"
-	       "    average time per transfer:    %" PRIu64 " ns\n"
-	       "    average transfer speed:       ",
-	       config->num_rounds, avg_time);
-	print_humanised_speed(avg_speed);
-	printf("    retries with usec sleep:      %u\n", retries);
-	printf("\n=============================================\n");
-}
-
-static int run_dma_sync(test_config_t *config)
-{
-	odp_dma_transfer_param_t trs_params[config->dma_rounds];
-	uint32_t trs_lengths[config->dma_rounds];
-	odp_time_t start, end;
-	uint32_t num_rounds = config->num_rounds, offset, retries = 0U;
-	int done = 0;
-
-	config->test_case_api.trs_base_fn(config, trs_params, trs_lengths);
-	start = odp_time_local_strict();
-
-	while (num_rounds--) {
-		offset = 0U;
-
-		for (int i = 0; i < config->dma_rounds; ++i) {
-			config->test_case_api.trs_dyn_fn(config, offset, trs_lengths[i]);
-
-			while (1) {
-				done = odp_dma_transfer(config->dma_config.handle, &trs_params[i],
-							NULL);
-
-				if (done > 0)
-					break;
-
-				if (done == 0 && retries++ < RETRIES) {
-					odp_time_wait_ns(1000U);
-					continue;
-				}
-
-				ODPH_ERR("Error starting a sync DMA transfer.\n");
-				return -1;
-			}
-
-			offset += trs_lengths[i];
+		if (sd->seg.dst_pkt[i] == ODP_PACKET_INVALID) {
+			ODPH_ERR("Error allocating destination segment packets\n");
+			return false;
 		}
 	}
 
-	end = odp_time_local_strict();
-	print_results(config, odp_time_diff_ns(end, start), retries);
-	return 0;
+	return true;
 }
 
-static int configure_dma_event_completion(test_config_t *config)
+static odp_bool_t setup_packet_segments(sd_t *sd)
 {
+	return configure_packets(sd) && allocate_packets(sd);
+}
+
+static void configure_packet_dma_transfer(sd_t *sd)
+{
+	odp_dma_seg_t *start_src_seg, *start_dst_seg, *seg;
+	uint32_t k = 0U, z = 0U, len;
+	odp_packet_t pkt;
+	odp_dma_transfer_param_t *param;
+
+	for (uint32_t i = 0U; i < sd->dma.num_inflight; ++i) {
+		start_src_seg = &sd->dma.src_seg[k];
+		start_dst_seg = &sd->dma.dst_seg[z];
+
+		for (uint32_t j = 0U; j < sd->dma.num_in_segs; ++j, ++k) {
+			pkt = sd->seg.src_pkt[k];
+			seg = &start_src_seg[j];
+			seg->packet = pkt;
+			seg->offset = 0U;
+			seg->len = sd->dma.src_seg_len;
+		}
+
+		len = sd->dma.num_in_segs * sd->dma.src_seg_len;
+
+		for (uint32_t j = 0U; j < sd->dma.num_out_segs; ++j, ++z) {
+			pkt = sd->seg.dst_pkt[z];
+			seg = &start_dst_seg[j];
+			seg->packet = pkt;
+			seg->offset = 0U;
+			seg->len = MIN(len, sd->dma.dst_seg_len);
+			len -= sd->dma.dst_seg_len;
+		}
+
+		param = &sd->dma.infos[i].trs_param;
+		odp_dma_transfer_param_init(param);
+		param->src_format = ODP_DMA_FORMAT_PACKET;
+		param->dst_format = ODP_DMA_FORMAT_PACKET;
+		param->num_src = sd->dma.num_in_segs;
+		param->num_dst = sd->dma.num_out_segs;
+		param->src_seg = start_src_seg;
+		param->dst_seg = start_dst_seg;
+	}
+}
+
+static void free_packets(const sd_t *sd)
+{
+	for (uint32_t i = 0U; i < sd->dma.num_inflight * sd->dma.num_in_segs; ++i) {
+		if (sd->seg.src_pkt[i] != ODP_PACKET_INVALID)
+			odp_packet_free(sd->seg.src_pkt[i]);
+	}
+
+	for (uint32_t i = 0U; i < sd->dma.num_inflight * sd->dma.num_out_segs; ++i) {
+		if (sd->seg.dst_pkt[i] != ODP_PACKET_INVALID)
+			odp_packet_free(sd->seg.dst_pkt[i]);
+	}
+}
+
+static odp_bool_t allocate_memory(sd_t *sd)
+{
+	const uint64_t num_segs = sd->dma.num_in_segs * sd->dma.num_inflight;
+
+	sd->seg.src_shm = odp_shm_reserve(PROG_NAME "_src_shm", sd->dma.src_seg_len * num_segs,
+					  ODP_CACHE_LINE_SIZE, 0U);
+	sd->seg.dst_shm = odp_shm_reserve(PROG_NAME "_dst_shm", sd->dma.dst_seg_len * num_segs,
+					  ODP_CACHE_LINE_SIZE, 0U);
+
+	if (sd->seg.src_shm == ODP_SHM_INVALID || sd->seg.dst_shm == ODP_SHM_INVALID) {
+		ODPH_ERR("Error allocating SHM block\n");
+		return false;
+	}
+
+	sd->seg.src = odp_shm_addr(sd->seg.src_shm);
+	sd->seg.dst = odp_shm_addr(sd->seg.dst_shm);
+
+	if (sd->seg.src == NULL || sd->seg.dst == NULL) {
+		ODPH_ERR("Error resolving SHM block address\n");
+		return false;
+	}
+
+	return true;
+}
+
+static odp_bool_t setup_memory_segments(sd_t *sd)
+{
+	return allocate_memory(sd);
+}
+
+static void configure_address_dma_transfer(sd_t *sd)
+{
+	odp_dma_seg_t *start_src_seg, *start_dst_seg, *seg;
+	uint32_t k = 0U, z = 0U, len;
+	odp_dma_transfer_param_t *param;
+
+	for (uint32_t i = 0U; i < sd->dma.num_inflight; ++i) {
+		start_src_seg = &sd->dma.src_seg[k];
+		start_dst_seg = &sd->dma.dst_seg[z];
+
+		for (uint32_t j = 0U; j < sd->dma.num_in_segs; ++j, ++k) {
+			seg = &start_src_seg[j];
+			seg->addr = (uint8_t *)sd->seg.src + k * sd->dma.src_seg_len;
+			seg->len = sd->dma.src_seg_len;
+		}
+
+		len = sd->dma.num_in_segs * sd->dma.src_seg_len;
+
+		for (uint32_t j = 0U; j < sd->dma.num_out_segs; ++j, ++z) {
+			seg = &start_dst_seg[j];
+			seg->addr = (uint8_t *)sd->seg.dst + z * sd->dma.dst_seg_len;
+			seg->len = MIN(len, sd->dma.dst_seg_len);
+			len -= sd->dma.dst_seg_len;
+		}
+
+		param = &sd->dma.infos[i].trs_param;
+		odp_dma_transfer_param_init(param);
+		param->src_format = ODP_DMA_FORMAT_ADDR;
+		param->dst_format = ODP_DMA_FORMAT_ADDR;
+		param->num_src = sd->dma.num_in_segs;
+		param->num_dst = sd->dma.num_out_segs;
+		param->src_seg = start_src_seg;
+		param->dst_seg = start_dst_seg;
+	}
+}
+
+static void free_memory(const sd_t *sd)
+{
+	if (sd->seg.src_shm != ODP_SHM_INVALID)
+		(void)odp_shm_free(sd->seg.src_shm);
+
+	if (sd->seg.dst_shm != ODP_SHM_INVALID)
+		(void)odp_shm_free(sd->seg.dst_shm);
+}
+
+static void run_transfer(odp_dma_t handle, trs_info_t *info, stats_t *stats)
+{
+	uint64_t start_tm, end_tm, start_cc, end_cc, trs_tm, trs_cc, start_cc_diff;
+	odp_dma_result_t res;
 	int ret;
+
+	start_tm = odp_time_local_strict_ns();
+	start_cc = odp_cpu_cycles();
+	ret = odp_dma_transfer(handle, &info->trs_param, &res);
+	end_cc = odp_cpu_cycles();
+	end_tm = odp_time_local_strict_ns();
+
+	if (odp_unlikely(ret <= 0)) {
+		++stats->start_errs;
+	} else {
+		trs_tm = end_tm - start_tm;
+		stats->max_trs_tm = MAX(trs_tm, stats->max_trs_tm);
+		stats->min_trs_tm = MIN(trs_tm, stats->min_trs_tm);
+		stats->trs_tm += trs_tm;
+		trs_cc = odp_cpu_cycles_diff(end_cc, start_cc);
+		stats->max_trs_cc = MAX(trs_cc, stats->max_trs_cc);
+		stats->min_trs_cc = MIN(trs_cc, stats->min_trs_cc);
+		stats->trs_cc += trs_cc;
+		++stats->trs_cnt;
+		start_cc_diff = odp_cpu_cycles_diff(end_cc, start_cc);
+		stats->max_start_cc = MAX(start_cc_diff, stats->max_start_cc);
+		stats->min_start_cc = MIN(start_cc_diff, stats->min_start_cc);
+		stats->start_cc += start_cc_diff;
+		++stats->start_cnt;
+
+		if (odp_unlikely(!res.success))
+			++stats->transfer_errs;
+		else
+			++stats->completed;
+	}
+}
+
+static void run_transfers_mt_unsafe(sd_t *sd, stats_t *stats)
+{
+	const uint32_t count = sd->dma.num_inflight;
+	odp_dma_t handle = sd->dma.handle;
+	trs_info_t *infos = sd->dma.infos;
+
+	for (uint32_t i = 0U; i < count; ++i)
+		run_transfer(handle, &infos[i], stats);
+}
+
+static void run_transfers_mt_safe(sd_t *sd, stats_t *stats)
+{
+	const uint32_t count = sd->dma.num_inflight;
+	odp_dma_t handle = sd->dma.handle;
+	trs_info_t *infos = sd->dma.infos, *info;
+
+	for (uint32_t i = 0U; i < count; ++i) {
+		info = &infos[i];
+
+		if (odp_ticketlock_trylock(&info->lock)) {
+			run_transfer(handle, info, stats);
+			odp_ticketlock_unlock(&info->lock);
+		}
+	}
+}
+
+static odp_bool_t configure_poll_compl(sd_t *sd)
+{
+	odp_dma_compl_param_t *param;
+
+	for (uint32_t i = 0U; i < sd->dma.num_inflight; ++i) {
+		param = &sd->dma.infos[i].compl_param;
+
+		odp_dma_compl_param_init(param);
+		param->compl_mode = mode_map[sd->dma.compl_mode];
+		param->transfer_id = odp_dma_transfer_id_alloc(sd->dma.handle);
+
+		if (param->transfer_id == ODP_DMA_TRANSFER_ID_INVALID) {
+			ODPH_ERR("Error allocating transfer ID\n");
+			return false;
+		}
+	}
+
+	return true;
+}
+
+static void poll_transfer(odp_dma_t handle, trs_info_t *info, stats_t *stats)
+{
+	uint64_t start_cc, end_cc, trs_tm, trs_cc, wait_cc, start_tm, start_cc_diff;
+	odp_dma_result_t res;
+	int ret;
+
+	if (info->is_running) {
+		start_cc = odp_cpu_cycles();
+		ret = odp_dma_transfer_done(handle, info->compl_param.transfer_id, &res);
+		end_cc = odp_cpu_cycles();
+
+		if (odp_unlikely(ret < 0)) {
+			++stats->poll_errs;
+			return;
+		}
+
+		++info->trs_poll_cnt;
+		wait_cc = odp_cpu_cycles_diff(end_cc, start_cc);
+		stats->max_wait_cc = MAX(wait_cc, stats->max_wait_cc);
+		stats->min_wait_cc = MIN(wait_cc, stats->min_wait_cc);
+		stats->wait_cc += wait_cc;
+		++stats->wait_cnt;
+
+		if (ret == 0)
+			return;
+
+		trs_tm = odp_time_global_strict_ns() - info->trs_start_tm;
+		stats->max_trs_tm = MAX(trs_tm, stats->max_trs_tm);
+		stats->min_trs_tm = MIN(trs_tm, stats->min_trs_tm);
+		stats->trs_tm += trs_tm;
+		trs_cc = odp_cpu_cycles_diff(odp_cpu_cycles(), info->trs_start_cc);
+		stats->max_trs_cc = MAX(trs_cc, stats->max_trs_cc);
+		stats->min_trs_cc = MIN(trs_cc, stats->min_trs_cc);
+		stats->trs_cc += trs_cc;
+		stats->trs_poll_cnt += info->trs_poll_cnt;
+		++stats->trs_cnt;
+
+		if (odp_unlikely(!res.success))
+			++stats->transfer_errs;
+		else
+			++stats->completed;
+
+		info->is_running = false;
+	} else {
+		start_tm = odp_time_global_strict_ns();
+		start_cc = odp_cpu_cycles();
+		ret = odp_dma_transfer_start(handle, &info->trs_param, &info->compl_param);
+		end_cc = odp_cpu_cycles();
+
+		if (odp_unlikely(ret <= 0)) {
+			++stats->start_errs;
+		} else {
+			info->trs_start_tm = start_tm;
+			info->trs_start_cc = start_cc;
+			info->trs_poll_cnt = 0U;
+			start_cc_diff = odp_cpu_cycles_diff(end_cc, start_cc);
+			stats->max_start_cc = MAX(start_cc_diff, stats->max_start_cc);
+			stats->min_start_cc = MIN(start_cc_diff, stats->min_start_cc);
+			stats->start_cc += start_cc_diff;
+			++stats->start_cnt;
+			info->is_running = true;
+		}
+	}
+}
+
+static void poll_transfers_mt_unsafe(sd_t *sd, stats_t *stats)
+{
+	const uint32_t count = sd->dma.num_inflight;
+	odp_dma_t handle = sd->dma.handle;
+	trs_info_t *infos = sd->dma.infos;
+
+	for (uint32_t i = 0U; i < count; ++i)
+		poll_transfer(handle, &infos[i], stats);
+}
+
+static void poll_transfers_mt_safe(sd_t *sd, stats_t *stats)
+{
+	const uint32_t count = sd->dma.num_inflight;
+	odp_dma_t handle = sd->dma.handle;
+	trs_info_t *infos = sd->dma.infos, *info;
+
+	for (uint32_t i = 0U; i < count; ++i) {
+		info = &infos[i];
+
+		if (odp_ticketlock_trylock(&info->lock)) {
+			poll_transfer(handle, info, stats);
+			odp_ticketlock_unlock(&info->lock);
+		}
+	}
+}
+
+static odp_bool_t configure_event_compl_session(sd_t *sd)
+{
+	odp_thrmask_t zero;
 	odp_dma_pool_param_t pool_param;
 	odp_queue_param_t queue_param;
 
-	config->dma_config.pool = ODP_POOL_INVALID;
-	config->dma_config.compl_q = ODP_QUEUE_INVALID;
+	odp_thrmask_zero(&zero);
+	sd->grp = odp_schedule_group_create(PROG_NAME "_scd_grp", &zero);
 
-	ret = odp_schedule_config(NULL);
-
-	if (ret < 0) {
-		ODPH_ERR("Error configuring scheduler.\n");
-		return -1;
+	if (sd->grp == ODP_SCHED_GROUP_INVALID) {
+		ODPH_ERR("Error creating scheduler group for DMA session\n");
+		return false;
 	}
 
 	odp_dma_pool_param_init(&pool_param);
-	pool_param.num = config->num_in_seg;
-	config->dma_config.pool = odp_dma_pool_create("odp_dma_perf_events", &pool_param);
+	pool_param.num = sd->dma.num_inflight;
+	sd->dma.pool = odp_dma_pool_create(PROG_NAME "_dma_evs", &pool_param);
 
-	if (config->dma_config.pool == ODP_POOL_INVALID) {
-		ODPH_ERR("Error creating DMA event completion pool.\n");
-		return -1;
+	if (sd->dma.pool == ODP_POOL_INVALID) {
+		ODPH_ERR("Error creating DMA event completion pool\n");
+		return false;
 	}
 
 	odp_queue_param_init(&queue_param);
 	queue_param.type = ODP_QUEUE_TYPE_SCHED;
 	queue_param.sched.sync = ODP_SCHED_SYNC_PARALLEL;
 	queue_param.sched.prio = odp_schedule_default_prio();
-	queue_param.sched.group = ODP_SCHED_GROUP_ALL;
-	config->dma_config.compl_q = odp_queue_create("odp_dma_perf_queue", &queue_param);
+	queue_param.sched.group = sd->grp;
+	sd->dma.compl_q = odp_queue_create(PROG_NAME, &queue_param);
 
-	if (config->dma_config.compl_q == ODP_QUEUE_INVALID) {
-		ODPH_ERR("Error creating DMA completion queue.\n");
-		return -1;
+	if (sd->dma.compl_q == ODP_QUEUE_INVALID) {
+		ODPH_ERR("Error creating DMA completion queue\n");
+		return false;
 	}
 
-	return 0;
+	return true;
 }
 
-static int configure_dma_completion_params(test_config_t *config,
-					   odp_dma_compl_param_t compl_params[])
+static odp_bool_t configure_event_compl(sd_t *sd)
 {
-	odp_dma_compl_t compl_ev;
+	odp_dma_compl_param_t *param;
+	odp_dma_compl_t c_ev;
 
-	for (int i = 0; i < config->dma_rounds; ++i)
-		odp_dma_compl_param_init(&compl_params[i]);
+	for (uint32_t i = 0U; i < sd->dma.num_inflight; ++i) {
+		param = &sd->dma.infos[i].compl_param;
 
-	for (int i = 0; i < config->dma_rounds; ++i) {
-		if (config->compl_modes.modes[i] == ODP_DMA_COMPL_EVENT) {
-			compl_params[i].compl_mode = ODP_DMA_COMPL_EVENT;
-			compl_ev = odp_dma_compl_alloc(config->dma_config.pool);
+		odp_dma_compl_param_init(param);
+		param->compl_mode = mode_map[sd->dma.compl_mode];
+		c_ev = odp_dma_compl_alloc(sd->dma.pool);
 
-			if (compl_ev == ODP_DMA_COMPL_INVALID) {
-				ODPH_ERR("Error creating DMA completion event.\n");
-				return -1;
-			}
-
-			compl_params[i].event = odp_dma_compl_to_event(compl_ev);
-			compl_params[i].queue = config->dma_config.compl_q;
-		} else if (config->compl_modes.modes[i] == ODP_DMA_COMPL_POLL) {
-			compl_params[i].compl_mode = ODP_DMA_COMPL_POLL;
-			compl_params[i].transfer_id =
-				odp_dma_transfer_id_alloc(config->dma_config.handle);
-
-			if (compl_params[i].transfer_id == ODP_DMA_TRANSFER_ID_INVALID) {
-				ODPH_ERR("Error creating DMA transfer ID.\n");
-				return -1;
-			}
+		if (c_ev == ODP_DMA_COMPL_INVALID) {
+			ODPH_ERR("Error allocating completion event\n");
+			return false;
 		}
 
-		compl_params[i].user_ptr = NULL;
+		param->event = odp_dma_compl_to_event(c_ev);
+		param->queue = sd->dma.compl_q;
+		param->user_ptr = &sd->dma.infos[i];
 	}
 
-	return 0;
+	return true;
 }
 
-static void build_wait_list(const test_config_t *config, odp_dma_compl_param_t compl_params[],
-			    compl_wait_entry_t list[])
+static odp_bool_t start_initial_transfers(sd_t *sd)
 {
-	int last_ev_idx, has_events = 0;
+	uint64_t start_tm, start_cc;
+	trs_info_t *info;
+	int ret;
 
-	memset(list, 0, sizeof(*list) * config->dma_rounds);
+	for (uint32_t i = 0U; i < sd->dma.num_inflight; ++i) {
+		info = &sd->dma.infos[i];
+		start_tm = odp_time_global_strict_ns();
+		start_cc = odp_cpu_cycles();
+		ret = odp_dma_transfer_start(sd->dma.handle, &info->trs_param, &info->compl_param);
 
-	for (int i = 0, j = 0, k = 0; i < config->dma_rounds; ++i) {
-		if (config->compl_modes.modes[i] == ODP_DMA_COMPL_EVENT) {
-			compl_wait_entry_t entry = { .type = ODP_DMA_COMPL_EVENT };
-
-			list[j] = entry;
-			++j;
-
-			for (; k < i; ++k) {
-				entry.type = ODP_DMA_COMPL_POLL;
-				entry.id = compl_params[k].transfer_id;
-				list[j++] = entry;
-			}
-
-			++k;
-			last_ev_idx = i;
-			has_events = 1;
+		if (ret <= 0) {
+			ODPH_ERR("Error starting DMA transfer\n");
+			return false;
 		}
+
+		info->trs_start_tm = start_tm;
+		info->trs_start_cc = start_cc;
 	}
 
-	last_ev_idx = has_events ? last_ev_idx + 1 : 0;
+	return true;
+}
 
-	for (int i = last_ev_idx; i < config->dma_rounds; ++i) {
-		compl_wait_entry_t entry = { .type = ODP_DMA_COMPL_POLL,
-					     .id = compl_params[i].transfer_id };
-		list[i] = entry;
+static void wait_compl_event(sd_t *sd, stats_t *stats)
+{
+	uint64_t start_cc, end_cc, wait_cc, trs_tm, trs_cc, start_tm, start_cc_diff;
+	odp_event_t ev;
+	odp_dma_result_t res;
+	trs_info_t *info;
+	int ret;
+
+	start_cc = odp_cpu_cycles();
+	ev = odp_schedule(NULL, odp_schedule_wait_time(ODP_TIME_SEC_IN_NS));
+	end_cc = odp_cpu_cycles();
+
+	if (odp_unlikely(ev == ODP_EVENT_INVALID)) {
+		++stats->scheduler_timeouts;
+		return;
+	}
+
+	odp_dma_compl_result(odp_dma_compl_from_event(ev), &res);
+	info = res.user_ptr;
+	trs_tm = odp_time_global_strict_ns() - info->trs_start_tm;
+	stats->max_trs_tm = MAX(trs_tm, stats->max_trs_tm);
+	stats->min_trs_tm = MIN(trs_tm, stats->min_trs_tm);
+	stats->trs_tm += trs_tm;
+	trs_cc = odp_cpu_cycles_diff(odp_cpu_cycles(), info->trs_start_cc);
+	stats->max_trs_cc = MAX(trs_cc, stats->max_trs_cc);
+	stats->min_trs_cc = MIN(trs_cc, stats->min_trs_cc);
+	stats->trs_cc += trs_cc;
+	++stats->trs_cnt;
+	wait_cc = odp_cpu_cycles_diff(end_cc, start_cc);
+	stats->max_wait_cc = MAX(wait_cc, stats->max_wait_cc);
+	stats->min_wait_cc = MIN(wait_cc, stats->min_wait_cc);
+	stats->wait_cc += wait_cc;
+	++stats->wait_cnt;
+
+	if (odp_unlikely(!res.success))
+		++stats->transfer_errs;
+	else
+		++stats->completed;
+
+	start_tm = odp_time_global_strict_ns();
+	start_cc = odp_cpu_cycles();
+	ret = odp_dma_transfer_start(sd->dma.handle, &info->trs_param, &info->compl_param);
+	end_cc = odp_cpu_cycles();
+
+	if (odp_unlikely(ret <= 0)) {
+		++stats->start_errs;
+	} else {
+		info->trs_start_tm = start_tm;
+		info->trs_start_cc = start_cc;
+		start_cc_diff = odp_cpu_cycles_diff(end_cc, start_cc);
+		stats->max_start_cc = MAX(start_cc_diff, stats->max_start_cc);
+		stats->min_start_cc = MIN(start_cc_diff, stats->min_start_cc);
+		stats->start_cc += start_cc_diff;
+		++stats->start_cnt;
 	}
 }
 
-static inline int wait_dma_transfers_ready(test_config_t *config, compl_wait_entry_t list[])
+static void drain_compl_events(void)
 {
 	odp_event_t ev;
-	const uint64_t wait_time = odp_schedule_wait_time(config->wait_ns);
-	uint64_t start, end;
-	int done = 0;
 
-	for (int i = 0; i < config->dma_rounds; ++i) {
-		if (list[i].type == ODP_DMA_COMPL_EVENT) {
-			ev = odp_schedule(NULL, wait_time);
+	while (true) {
+		ev = odp_schedule(NULL, odp_schedule_wait_time(ODP_TIME_SEC_IN_NS));
 
-			if (ev == ODP_EVENT_INVALID) {
-				ODPH_ERR("Error waiting event completion.\n");
-				return -1;
-			}
+		if (ev == ODP_EVENT_INVALID)
+			break;
+	}
+}
+
+static void setup_api(prog_config_t *config)
+{
+	if (config->seg_type == PACKET) {
+		config->api.setup_fn = setup_packet_segments;
+		config->api.trs_fn = configure_packet_dma_transfer;
+		config->api.free_fn = free_packets;
+	} else {
+		config->api.setup_fn = setup_memory_segments;
+		config->api.trs_fn = configure_address_dma_transfer;
+		config->api.free_fn = free_memory;
+	}
+
+	if (config->trs_type == SYNC) {
+		config->api.compl_fn = NULL;
+		config->api.wait_fn = config->num_workers == 1 || config->policy == MANY ?
+					run_transfers_mt_unsafe : run_transfers_mt_safe;
+		config->api.drain_fn = NULL;
+	} else {
+		if (config->compl_mode == POLL) {
+			config->api.session_cfg_fn = NULL;
+			config->api.compl_fn = configure_poll_compl;
+			config->api.bootstrap_fn = NULL;
+			config->api.wait_fn = config->num_workers == 1 || config->policy == MANY ?
+						poll_transfers_mt_unsafe : poll_transfers_mt_safe;
+			config->api.drain_fn = NULL;
 		} else {
-			start = odp_time_local_ns();
-			end = start + ODP_TIME_SEC_IN_NS;
-
-			while (1) {
-				done = odp_dma_transfer_done(config->dma_config.handle, list[i].id,
-							     NULL);
-
-				if (done > 0)
-					break;
-
-				if (done == 0 && odp_time_local_ns() < end)
-					continue;
-
-				ODPH_ERR("Error waiting poll completion.\n");
-				return -1;
-			}
+			config->api.session_cfg_fn = configure_event_compl_session;
+			config->api.compl_fn = configure_event_compl;
+			config->api.bootstrap_fn = start_initial_transfers;
+			config->api.wait_fn = wait_compl_event;
+			config->api.drain_fn = drain_compl_events;
 		}
 	}
-
-	return 0;
 }
 
-static void free_dma_completion_events(test_config_t *config, odp_dma_compl_param_t compl_params[])
+static odp_bool_t setup_session_descriptors(prog_config_t *config)
 {
-	for (int i = 0; i < config->dma_rounds; ++i)
-		if (config->compl_modes.modes[i] == ODP_DMA_COMPL_EVENT &&
-		    compl_params[i].event != ODP_EVENT_INVALID)
-			odp_dma_compl_free(odp_dma_compl_from_event(compl_params[i].event));
-}
+	sd_t *sd;
+	const odp_dma_param_t dma_params = {
+		.direction = ODP_DMA_MAIN_TO_MAIN,
+		.type = ODP_DMA_TYPE_COPY,
+		.compl_mode_mask = config->compl_mode_mask,
+		.mt_mode = config->num_workers == 1 || config->policy == MANY ?
+				ODP_DMA_MT_SERIAL : ODP_DMA_MT_SAFE,
+		.order = ODP_DMA_ORDER_NONE };
 
-static void free_dma_transfer_ids(test_config_t *config, odp_dma_compl_param_t compl_params[])
-{
-	for (int i = 0; i < config->dma_rounds; ++i)
-		if (config->compl_modes.modes[i] == ODP_DMA_COMPL_POLL &&
-		    compl_params[i].transfer_id != ODP_DMA_TRANSFER_ID_INVALID)
-			odp_dma_transfer_id_free(config->dma_config.handle,
-						 compl_params[i].transfer_id);
-}
+	for (uint32_t i = 0U; i < config->num_sessions; ++i) {
+		char name[ODP_DMA_NAME_LEN];
 
-static int run_dma_async_transfer(test_config_t *config)
-{
-	odp_dma_transfer_param_t trs_params[config->dma_rounds];
-	uint32_t trs_lengths[config->dma_rounds];
-	odp_dma_compl_param_t compl_params[config->dma_rounds];
-	int ret = 0, started;
-	compl_wait_entry_t compl_wait_list[config->dma_rounds];
-	odp_time_t start, end;
-	uint32_t num_rounds = config->num_rounds, offset, retries = 0U;
+		sd = &config->sds[i];
+		sd->dma.num_in_segs = config->num_in_segs;
+		sd->dma.num_out_segs = config->num_out_segs;
+		sd->dma.src_seg_len = config->src_seg_len;
+		sd->dma.dst_seg_len = config->dst_seg_len;
+		sd->dma.num_inflight = config->num_inflight;
+		sd->dma.trs_type = config->trs_type;
+		sd->dma.compl_mode = config->compl_mode;
+		snprintf(name, sizeof(name), PROG_NAME "_dma_%u", i);
+		sd->dma.handle = odp_dma_create(name, &dma_params);
 
-	config->test_case_api.trs_base_fn(config, trs_params, trs_lengths);
-
-	if (configure_dma_completion_params(config, compl_params)) {
-		ret = -1;
-		goto out_compl_evs;
-	}
-
-	build_wait_list(config, compl_params, compl_wait_list);
-	start = odp_time_local_strict();
-
-	while (num_rounds--) {
-		offset = 0U;
-
-		for (int i = 0; i < config->dma_rounds; ++i) {
-			config->test_case_api.trs_dyn_fn(config, offset, trs_lengths[i]);
-
-			while (1) {
-				started = odp_dma_transfer_start(config->dma_config.handle,
-								 &trs_params[i], &compl_params[i]);
-
-				if (started > 0)
-					break;
-
-				if (started == 0 && retries++ < RETRIES) {
-					odp_time_wait_ns(1000U);
-					continue;
-				}
-
-				ODPH_ERR("Error starting an async DMA transfer.\n");
-				ret = -1;
-				goto out_trs_ids;
-			}
-
-			offset += trs_lengths[i];
+		if (sd->dma.handle == ODP_DMA_INVALID) {
+			ODPH_ERR("Error creating DMA session\n");
+			return false;
 		}
 
-		if (wait_dma_transfers_ready(config, compl_wait_list)) {
-			ODPH_ERR("Error finishing an async DMA transfer.\n");
-			ret = -1;
-			goto out_trs_ids;
-		}
+		if (config->api.session_cfg_fn != NULL && !config->api.session_cfg_fn(sd))
+			return false;
 	}
 
-	end = odp_time_local_strict();
-	print_results(config, odp_time_diff_ns(end, start), retries);
-
-out_compl_evs:
-	free_dma_completion_events(config, compl_params);
-
-out_trs_ids:
-	free_dma_transfer_ids(config, compl_params);
-	return ret;
+	return true;
 }
 
-static void free_dma_event_completion(test_config_t *config)
+static odp_bool_t setup_data(prog_config_t *config)
 {
-	if (config->dma_config.compl_q != ODP_QUEUE_INVALID)
-		(void)odp_queue_destroy(config->dma_config.compl_q);
+	sd_t *sd;
 
-	if (config->dma_config.pool != ODP_POOL_INVALID)
-		(void)odp_pool_destroy(config->dma_config.pool);
+	for (uint32_t i = 0U; i < config->num_sessions; ++i) {
+		sd = &config->sds[i];
+
+		if (!config->api.setup_fn(sd))
+			return false;
+
+		config->api.trs_fn(sd);
+
+		if (config->api.compl_fn != NULL && !config->api.compl_fn(sd))
+			return false;
+	}
+
+	return true;
 }
 
-static int run_dma_async(test_config_t *config)
+static int transfer(void *args)
 {
-	const int is_event_compl = config->compl_modes.compl_mask & ODP_DMA_COMPL_EVENT;
-	int ret = 0;
+	thread_config_t *thr_config = args;
+	prog_config_t *prog_config = thr_config->prog_config;
+	sd_t *sd = thr_config->sd;
+	stats_t *stats = &thr_config->stats;
+	test_api_t *api = &prog_conf->api;
+	odp_thrmask_t mask;
+	uint64_t start_tm, end_tm;
 
-	if (is_event_compl)
-		if (configure_dma_event_completion(config)) {
-			ret = -1;
+	odp_barrier_wait(&prog_config->init_barrier);
+
+	if (sd->grp != ODP_SCHED_GROUP_INVALID) {
+		odp_thrmask_zero(&mask);
+		odp_thrmask_set(&mask, odp_thread_id());
+
+		if (odp_schedule_group_join(sd->grp, &mask) < 0) {
+			ODPH_ERR("Error joining scheduler group\n");
 			goto out;
 		}
+	}
 
-	if (run_dma_async_transfer(config))
-		ret = -1;
+	start_tm = odp_time_local_strict_ns();
+
+	while (odp_atomic_load_u32(&prog_config->is_running))
+		api->wait_fn(sd, stats);
+
+	end_tm = odp_time_local_strict_ns();
+	thr_config->stats.tot_tm = end_tm - start_tm;
+
+	if (api->drain_fn != NULL)
+		api->drain_fn();
 
 out:
-	if (is_event_compl)
-		free_dma_event_completion(config);
-
-	return ret;
-}
-
-static void setup_test_case_api(test_config_t *config)
-{
-	switch (config->seg_type) {
-	case TYPE_PKT:
-		config->test_case_api.setup_fn = setup_packet_segments;
-		config->test_case_api.trs_base_fn = configure_packet_dma_transfer_base;
-		config->test_case_api.trs_dyn_fn = configure_packet_dma_transfer_dynamic;
-		config->test_case_api.verify_fn = verify_packet_transfer;
-		config->test_case_api.free_fn = free_packets;
-		break;
-	case TYPE_MEM:
-		config->test_case_api.setup_fn = setup_memory_segments;
-		config->test_case_api.trs_base_fn = configure_address_dma_transfer_base;
-		config->test_case_api.trs_dyn_fn = configure_address_dma_transfer_dynamic;
-		config->test_case_api.verify_fn = verify_memory_transfer;
-		config->test_case_api.free_fn = free_memory;
-		break;
-	default:
-		break;
-	}
-
-	config->test_case_api.run_fn = config->trs_type == TRS_TYPE_SYNC ?
-							   run_dma_sync :
-							   run_dma_async;
-}
-
-static int configure_dma_session(test_config_t *config)
-{
-	const odp_dma_param_t params = { .direction = ODP_DMA_MAIN_TO_MAIN,
-					 .type = ODP_DMA_TYPE_COPY,
-					 .compl_mode_mask = config->compl_modes.compl_mask,
-					 .mt_mode = ODP_DMA_MT_SERIAL,
-					 .order = ODP_DMA_ORDER_NONE };
-
-	config->dma_config.handle = odp_dma_create("odp_dma_perf", &params);
-
-	if (config->dma_config.handle == ODP_DMA_INVALID) {
-		ODPH_ERR("Error creating DMA session.\n");
-		return -1;
-	}
+	odp_barrier_wait(&prog_config->term_barrier);
 
 	return 0;
 }
 
-static void free_dma_session(test_config_t *config)
+static odp_bool_t setup_workers(prog_config_t *config)
 {
-	if (config->dma_config.handle != ODP_DMA_INVALID)
-		(void)odp_dma_destroy(config->dma_config.handle);
+	odp_cpumask_t cpumask;
+	int num_workers;
+	odph_thread_common_param_t thr_common;
+	odph_thread_param_t thr_params[config->num_workers], *thr_param;
+	thread_config_t *thr_config;
+	sd_t *sd;
+
+	/* Barrier init count for control and worker. */
+	odp_barrier_init(&config->init_barrier, config->num_workers + 1);
+	odp_barrier_init(&config->term_barrier, config->num_workers);
+	num_workers = odp_cpumask_default_worker(&cpumask, config->num_workers);
+	odph_thread_common_param_init(&thr_common);
+	thr_common.instance = config->odp_instance;
+	thr_common.cpumask = &cpumask;
+
+	for (int i = 0; i < config->num_workers; ++i) {
+		thr_param = &thr_params[i];
+		thr_config = &config->thread_config[i];
+		sd = config->policy == SINGLE ? &config->sds[0U] : &config->sds[i];
+
+		odph_thread_param_init(thr_param);
+		thr_param->start = transfer;
+		thr_param->thr_type = ODP_THREAD_WORKER;
+		thr_config->prog_config = config;
+		thr_config->sd = sd;
+		thr_param->arg = thr_config;
+	}
+
+	num_workers = odph_thread_create(config->threads, &thr_common, thr_params, num_workers);
+
+	if (num_workers != config->num_workers) {
+		ODPH_ERR("Error configuring worker threads\n");
+		return false;
+	}
+
+	for (uint32_t i = 0U; i < config->num_sessions; ++i) {
+		if (config->api.bootstrap_fn != NULL && !config->api.bootstrap_fn(&config->sds[i]))
+			return false;
+	}
+
+	odp_barrier_wait(&config->init_barrier);
+
+	return true;
+}
+
+static odp_bool_t setup_test(prog_config_t *config)
+{
+	setup_api(config);
+
+	return setup_session_descriptors(config) && setup_data(config) && setup_workers(config);
+}
+
+static void stop_test(prog_config_t *config)
+{
+	(void)odph_thread_join(config->threads, config->num_workers);
+}
+
+static void teardown_data(const sd_t *sd, void (*free_fn)(const sd_t *sd))
+{
+	const odp_dma_compl_param_t *compl_param;
+
+	for (uint32_t i = 0U; i < MAX_SEGS; ++i) {
+		compl_param = &sd->dma.infos[i].compl_param;
+
+		if (compl_param->transfer_id != ODP_DMA_TRANSFER_ID_INVALID)
+			odp_dma_transfer_id_free(sd->dma.handle, compl_param->transfer_id);
+
+		if (compl_param->event != ODP_EVENT_INVALID)
+			odp_event_free(compl_param->event);
+	}
+
+	free_fn(sd);
+}
+
+static void teardown_test(prog_config_t *config)
+{
+	sd_t *sd;
+
+	for (uint32_t i = 0U; i < config->num_sessions; ++i) {
+		sd = &config->sds[i];
+		teardown_data(sd, config->api.free_fn);
+
+		if (sd->dma.compl_q != ODP_QUEUE_INVALID)
+			(void)odp_queue_destroy(sd->dma.compl_q);
+
+		if (sd->dma.pool != ODP_POOL_INVALID)
+			(void)odp_pool_destroy(sd->dma.pool);
+
+		if (sd->grp != ODP_SCHED_GROUP_INVALID)
+			(void)odp_schedule_group_destroy(sd->grp);
+
+		if (sd->dma.handle != ODP_DMA_INVALID)
+			(void)odp_dma_destroy(sd->dma.handle);
+	}
+
+	if (config->src_pool != ODP_POOL_INVALID)
+		(void)odp_pool_destroy(config->src_pool);
+
+	if (config->dst_pool != ODP_POOL_INVALID)
+		(void)odp_pool_destroy(config->dst_pool);
+}
+
+static void print_humanised(uint64_t value, const char *type)
+{
+	if (value > GIGAS)
+		printf("%.2f G%s\n", (double)value / GIGAS, type);
+	else if (value > MEGAS)
+		printf("%.2f M%s\n", (double)value / MEGAS, type);
+	else if (value > KILOS)
+		printf("%.2f K%s\n", (double)value / KILOS, type);
+	else
+		printf("%" PRIu64 " %s\n", value, type);
+}
+
+static void print_stats(const prog_config_t *config)
+{
+	const stats_t *stats;
+	uint64_t data_cnt = config->num_in_segs * config->src_seg_len, tot_completed = 0U,
+	tot_tm = 0U, tot_trs_tm = 0U, tot_trs_cc = 0U, tot_trs_cnt = 0U, tot_min_tm = UINT64_MAX,
+	tot_max_tm = 0U, tot_min_cc = UINT64_MAX, tot_max_cc = 0U, avg_start_cc, avg_wait_cc,
+	avg_tot_tm;
+
+	printf("\n======================\n\n"
+	       "DMA performance test done\n\n"
+	       "    mode:                 %s\n"
+	       "    input segment count:  %u\n"
+	       "    output segment count: %u\n"
+	       "    segment length:       %u\n"
+	       "    segment type:         %s\n"
+	       "    inflight count:       %u\n"
+	       "    session policy:       %s\n\n",
+	       config->trs_type == SYNC ? "synchronous" : config->compl_mode == POLL ?
+			"asynchronous-poll" : "asynchronous-event", config->num_in_segs,
+	       config->num_out_segs, config->src_seg_len,
+	       config->seg_type == PACKET ? "packet" : "memory", config->num_inflight,
+	       config->policy == SINGLE ? "shared" : "per-worker");
+
+	for (int i = 0; i < config->num_workers; ++i) {
+		stats = &config->thread_config[i].stats;
+		tot_completed += stats->completed;
+		tot_tm += stats->tot_tm;
+		tot_trs_tm += stats->trs_tm;
+		tot_trs_cc += stats->trs_cc;
+		tot_trs_cnt += stats->trs_cnt;
+		tot_min_tm = MIN(tot_min_tm, stats->min_trs_tm);
+		tot_max_tm = MAX(tot_max_tm, stats->max_trs_tm);
+		tot_min_cc = MIN(tot_min_cc, stats->min_trs_cc);
+		tot_max_cc = MAX(tot_max_cc, stats->max_trs_cc);
+
+		printf("    worker %d:\n", i);
+		printf("        successful transfers: %" PRIu64 "\n"
+		       "        start errors:         %" PRIu64 "\n",
+		       stats->completed, stats->start_errs);
+
+		if (config->trs_type == ASYNC) {
+			if (config->compl_mode == POLL)
+				printf("        poll errors:          %" PRIu64 "\n",
+				       stats->poll_errs);
+			else
+				printf("        scheduler timeouts:   %" PRIu64 "\n",
+				       stats->scheduler_timeouts);
+		}
+
+		printf("        transfer errors:      %" PRIu64 "\n"
+		       "        run time:             %" PRIu64 " ns\n",
+		       stats->transfer_errs, stats->tot_tm);
+
+		if (config->policy == MANY) {
+			printf("        DMA session:\n"
+			       "            average time per transfer:   %" PRIu64 " "
+			       "(min: %" PRIu64 ", max: %" PRIu64 ") ns\n"
+			       "            average cycles per transfer: %" PRIu64 " "
+			       "(min: %" PRIu64 ", max: %" PRIu64 ")\n"
+			       "            ops:                         ",
+			       stats->trs_cnt > 0U ? stats->trs_tm / stats->trs_cnt : 0U,
+			       stats->trs_cnt > 0U ? stats->min_trs_tm : 0U,
+			       stats->trs_cnt > 0U ? stats->max_trs_tm : 0U,
+			       stats->trs_cnt > 0U ? stats->trs_cc / stats->trs_cnt : 0U,
+			       stats->trs_cnt > 0U ? stats->min_trs_cc : 0U,
+			       stats->trs_cnt > 0U ? stats->max_trs_cc : 0U);
+			print_humanised(stats->completed / (stats->tot_tm / ODP_TIME_SEC_IN_NS),
+					"OPS");
+			printf("            speed:                       ");
+			print_humanised(stats->completed * data_cnt /
+					(stats->tot_tm / ODP_TIME_SEC_IN_NS), "B/s");
+		}
+
+		avg_start_cc = stats->start_cnt > 0U ? stats->start_cc / stats->start_cnt : 0U;
+		printf("        average cycles breakdown:\n");
+
+		if (config->trs_type == SYNC) {
+			printf("            odp_dma_transfer(): %" PRIu64 " "
+			       "(min: %" PRIu64 ", max: %" PRIu64 ")\n", avg_start_cc,
+			       avg_start_cc > 0U ? stats->min_start_cc : 0U,
+			       avg_start_cc > 0U ? stats->max_start_cc : 0U);
+		} else {
+			printf("            odp_dma_transfer_start(): %" PRIu64 " "
+			       "(min: %" PRIu64 ", max: %" PRIu64 ")\n", avg_start_cc,
+			       avg_start_cc > 0U ? stats->min_start_cc : 0U,
+			       avg_start_cc > 0U ? stats->max_start_cc : 0U);
+
+			avg_wait_cc = stats->wait_cnt > 0U ? stats->wait_cc / stats->wait_cnt : 0U;
+
+			if (config->compl_mode == POLL) {
+				printf("            odp_dma_transfer_done():  %" PRIu64 ""
+				       " (min: %" PRIu64 ", max: %" PRIu64 ", x %" PRIu64 ""
+				       " per transfer)\n", avg_wait_cc,
+				       avg_wait_cc > 0U ? stats->min_wait_cc : 0U,
+				       avg_wait_cc > 0U ? stats->max_wait_cc : 0U,
+				       stats->trs_cnt > 0U ?
+						stats->trs_poll_cnt / stats->trs_cnt : 0U);
+			} else {
+				printf("            odp_schedule():           %" PRIu64 " "
+				       " (min: %" PRIu64 ", max: %" PRIu64 ")\n", avg_wait_cc,
+				       avg_wait_cc > 0U ? stats->min_wait_cc : 0U,
+				       avg_wait_cc > 0U ? stats->max_wait_cc : 0U);
+			}
+		}
+
+		printf("\n");
+	}
+
+	avg_tot_tm = tot_tm / config->num_workers / ODP_TIME_SEC_IN_NS;
+	printf("    total:\n"
+	       "        average time per transfer:   %" PRIu64 " (min: %" PRIu64
+	       ", max: %" PRIu64 ") ns\n"
+	       "        average cycles per transfer: %" PRIu64 " (min: %" PRIu64
+	       ", max: %" PRIu64 ")\n"
+	       "        ops:                         ",
+	       tot_trs_cnt > 0U ? tot_trs_tm / tot_trs_cnt : 0U,
+	       tot_trs_cnt > 0U ? tot_min_tm : 0U,
+	       tot_trs_cnt > 0U ? tot_max_tm : 0U,
+	       tot_trs_cnt > 0U ? tot_trs_cc / tot_trs_cnt : 0U,
+	       tot_trs_cnt > 0U ? tot_min_cc : 0U,
+	       tot_trs_cnt > 0U ? tot_max_cc : 0U);
+	print_humanised(avg_tot_tm > 0U ? tot_completed / avg_tot_tm : 0U, "OPS");
+	printf("        speed:                       ");
+	print_humanised(avg_tot_tm > 0U ? tot_completed * data_cnt / avg_tot_tm : 0U, "B/s");
+	printf("\n");
+	printf("======================\n");
 }
 
 int main(int argc, char **argv)
 {
 	odph_helper_options_t odph_opts;
-	test_config_t test_config;
+	odp_init_t init_param;
 	odp_instance_t odp_instance;
+	odp_shm_t shm_cfg = ODP_SHM_INVALID;
+	parse_result_t parse_res;
 	int ret = EXIT_SUCCESS;
 
 	argc = odph_parse_options(argc, argv);
 
 	if (odph_options(&odph_opts)) {
-		ODPH_ERR("Error while reading ODP helper options, exiting.\n");
+		ODPH_ERR("Error while reading ODP helper options, exiting\n");
 		exit(EXIT_FAILURE);
 	}
 
-	if (parse_options(argc, argv, &test_config))
-		exit(EXIT_FAILURE);
+	odp_init_param_init(&init_param);
+	init_param.mem_model = odph_opts.mem_model;
 
-	if (odp_init_global(&odp_instance, NULL, NULL)) {
-		ODPH_ERR("ODP global init failed, exiting.\n");
+	if (odp_init_global(&odp_instance, &init_param, NULL)) {
+		ODPH_ERR("ODP global init failed, exiting\n");
 		exit(EXIT_FAILURE);
 	}
 
 	if (odp_init_local(odp_instance, ODP_THREAD_CONTROL)) {
-		ODPH_ERR("ODP local init failed, exiting.\n");
+		ODPH_ERR("ODP local init failed, exiting\n");
 		exit(EXIT_FAILURE);
 	}
 
-	if (check_capabilities(&test_config)) {
-		ODPH_ERR("Unsupported scenario attempted, exiting.\n");
+	shm_cfg = odp_shm_reserve(PROG_NAME "_cfg", sizeof(prog_config_t), ODP_CACHE_LINE_SIZE,
+				  0U);
+
+	if (shm_cfg == ODP_SHM_INVALID) {
+		ODPH_ERR("Error reserving shared memory\n");
+		ret = EXIT_FAILURE;
+		goto out;
+	}
+
+	prog_conf = odp_shm_addr(shm_cfg);
+
+	if (prog_conf == NULL) {
+		ODPH_ERR("Error resolving shared memory address\n");
+		ret = EXIT_FAILURE;
+		goto out;
+	}
+
+	parse_res = setup_program(argc, argv, prog_conf);
+
+	if (parse_res == PRS_NOK) {
+		ret = EXIT_FAILURE;
+		goto out;
+	}
+
+	if (parse_res == PRS_TERM) {
+		ret = EXIT_SUCCESS;
+		goto out;
+	}
+
+	if (parse_res == PRS_NOT_SUP) {
 		ret = EXIT_NOT_SUP;
-		goto out_odp;
+		goto out;
 	}
 
-	setup_test_case_api(&test_config);
-
-	if (configure_dma_session(&test_config)) {
+	if (odp_schedule_config(NULL) < 0) {
+		ODPH_ERR("Error configuring scheduler\n");
 		ret = EXIT_FAILURE;
-		goto out_dma;
+		goto out;
 	}
 
-	if (test_config.test_case_api.setup_fn(&test_config)) {
+	prog_conf->odp_instance = odp_instance;
+	odp_atomic_init_u32(&prog_conf->is_running, 1U);
+
+	if (!setup_test(prog_conf)) {
 		ret = EXIT_FAILURE;
-		goto out_test_case;
+		goto out_test;
 	}
 
-	if (test_config.test_case_api.run_fn(&test_config) ||
-	    test_config.test_case_api.verify_fn(&test_config))
-		ret = EXIT_FAILURE;
+	if (prog_conf->time_sec) {
+		sleep(prog_conf->time_sec);
+		odp_atomic_store_u32(&prog_conf->is_running, 0U);
+	}
 
-out_test_case:
-	test_config.test_case_api.free_fn(&test_config);
+	stop_test(prog_conf);
+	print_stats(prog_conf);
 
-out_dma:
-	free_dma_session(&test_config);
+out_test:
+	/* Release all resources that have been allocated during 'setup_test()'. */
+	teardown_test(prog_conf);
 
-out_odp:
+out:
+	if (shm_cfg != ODP_SHM_INVALID)
+		(void)odp_shm_free(shm_cfg);
+
 	if (odp_term_local()) {
-		ODPH_ERR("ODP local terminate failed, exiting.\n");
+		ODPH_ERR("ODP local terminate failed, exiting\n");
 		exit(EXIT_FAILURE);
 	}
 
 	if (odp_term_global(odp_instance)) {
-		ODPH_ERR("ODP global terminate failed, exiting.\n");
+		ODPH_ERR("ODP global terminate failed, exiting\n");
 		exit(EXIT_FAILURE);
 	}
 
