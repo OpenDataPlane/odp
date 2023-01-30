@@ -9,6 +9,7 @@ odp_cpu_bench
 odp_crc
 odp_crypto
 odp_dma_perf
+odp_dma_stress
 odp_ipsec
 odp_ipsecfwd
 odp_l2fwd
