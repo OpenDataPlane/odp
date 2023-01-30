@@ -1,6 +1,6 @@
 /* Copyright (c) 2014-2018, Linaro Limited
  * Copyright (c) 2021, ARM Limited
- * Copyright (c) 2022, Nokia
+ * Copyright (c) 2022-2023, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -667,6 +667,10 @@ odp_crypto_operation(odp_crypto_op_param_t *param,
 	odp_crypto_op_result_t local_result;
 	int rc;
 
+	if (((odp_crypto_generic_session_t *)(intptr_t)param->session)->p.op_type !=
+	    ODP_CRYPTO_OP_TYPE_LEGACY)
+		return -1;
+
 	packet_param.session = param->session;
 	packet_param.cipher_iv_ptr = param->cipher_iv_ptr;
 	packet_param.auth_iv_ptr = param->auth_iv_ptr;
@@ -867,6 +871,9 @@ static odp_packet_t get_output_packet(const odp_crypto_generic_session_t *sessio
 {
 	int rc;
 
+	if (odp_likely(session->p.op_type == ODP_CRYPTO_OP_TYPE_BASIC))
+		return pkt_in;
+
 	if (odp_likely(pkt_in == pkt_out))
 		return pkt_out;
 
@@ -951,7 +958,9 @@ int odp_crypto_op_enq(const odp_packet_t pkt_in[],
 		_ODP_ASSERT(ODP_CRYPTO_ASYNC == session->p.op_mode);
 		_ODP_ASSERT(ODP_QUEUE_INVALID != session->p.compl_queue);
 
-		pkt = pkt_out[i];
+		if (session->p.op_type != ODP_CRYPTO_OP_TYPE_BASIC)
+			pkt = pkt_out[i];
+
 		rc = crypto_int(pkt_in[i], &pkt, &param[i]);
 		if (rc < 0)
 			break;
