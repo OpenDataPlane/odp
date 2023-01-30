@@ -528,6 +528,12 @@ odp_crypto_session_create(const odp_crypto_session_param_t *param,
 		return -1;
 	}
 
+	if (param->op_type == ODP_CRYPTO_OP_TYPE_OOP) {
+		*status = ODP_CRYPTO_SES_ERR_PARAMS;
+		*session_out = ODP_CRYPTO_SESSION_INVALID;
+		return -1;
+	}
+
 	/* Allocate memory for this session */
 	session = alloc_session();
 	if (NULL == session) {
