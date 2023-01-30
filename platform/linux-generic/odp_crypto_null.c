@@ -201,7 +201,7 @@ odp_crypto_session_create(const odp_crypto_session_param_t *param,
 		_ODP_ERR("Crypto is disabled\n");
 		/* Dummy output to avoid compiler warning about uninitialized
 		 * variables */
-		*status = ODP_CRYPTO_SES_CREATE_ERR_ENOMEM;
+		*status = ODP_CRYPTO_SES_ERR_ENOMEM;
 		*session_out = ODP_CRYPTO_SESSION_INVALID;
 		return -1;
 	}
@@ -209,7 +209,7 @@ odp_crypto_session_create(const odp_crypto_session_param_t *param,
 	/* Allocate memory for this session */
 	session = alloc_session();
 	if (NULL == session) {
-		*status = ODP_CRYPTO_SES_CREATE_ERR_ENOMEM;
+		*status = ODP_CRYPTO_SES_ERR_ENOMEM;
 		goto err;
 	}
 
@@ -227,7 +227,7 @@ odp_crypto_session_create(const odp_crypto_session_param_t *param,
 
 	/* Check result */
 	if (rc) {
-		*status = ODP_CRYPTO_SES_CREATE_ERR_INV_CIPHER;
+		*status = ODP_CRYPTO_SES_ERR_CIPHER;
 		goto err;
 	}
 
@@ -242,13 +242,13 @@ odp_crypto_session_create(const odp_crypto_session_param_t *param,
 
 	/* Check result */
 	if (rc) {
-		*status = ODP_CRYPTO_SES_CREATE_ERR_INV_AUTH;
+		*status = ODP_CRYPTO_SES_ERR_AUTH;
 		goto err;
 	}
 
 	/* We're happy */
 	*session_out = (intptr_t)session;
-	*status = ODP_CRYPTO_SES_CREATE_ERR_NONE;
+	*status = ODP_CRYPTO_SES_ERR_NONE;
 	return 0;
 
 err:
