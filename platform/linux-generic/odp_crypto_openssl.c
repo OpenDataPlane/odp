@@ -217,6 +217,9 @@ struct odp_crypto_generic_session_t {
 	odp_crypto_session_param_t p;
 
 	odp_bool_t do_cipher_first;
+	uint8_t cipher_bit_mode : 1;
+	uint8_t cipher_range_used : 1;
+	uint8_t auth_range_used : 1;
 
 	struct {
 		uint8_t key_data[EVP_MAX_KEY_LENGTH];
@@ -1196,6 +1199,7 @@ static int process_cipher_param_bits(odp_crypto_generic_session_t *session,
 	       session->p.cipher_iv_len)
 		return -1;
 
+	session->cipher_bit_mode = 1;
 	session->cipher.evp_cipher = cipher;
 
 	memcpy(session->cipher.key_data, session->p.cipher_key.data,
@@ -2048,6 +2052,10 @@ odp_crypto_session_create(const odp_crypto_session_param_t *param,
 	/* Copy parameters */
 	session->p = *param;
 
+	session->cipher_bit_mode = 0;
+	session->auth_range_used = 1;
+	session->cipher_range_used = 1;
+
 	if (session->p.cipher_iv_len > EVP_MAX_IV_LENGTH) {
 		_ODP_DBG("Maximum IV length exceeded\n");
 		*status = ODP_CRYPTO_SES_ERR_CIPHER;
@@ -2071,6 +2079,7 @@ odp_crypto_session_create(const odp_crypto_session_param_t *param,
 	case ODP_CIPHER_ALG_NULL:
 		session->cipher.func = null_crypto_routine;
 		session->cipher.init = null_crypto_init_routine;
+		session->cipher_range_used = 0;
 		rc = 0;
 		break;
 	case ODP_CIPHER_ALG_3DES_CBC:
@@ -2191,6 +2200,7 @@ odp_crypto_session_create(const odp_crypto_session_param_t *param,
 	case ODP_AUTH_ALG_NULL:
 		session->auth.func = null_crypto_routine;
 		session->auth.init = null_crypto_init_routine;
+		session->auth_range_used = 0;
 		rc = 0;
 		break;
 	case ODP_AUTH_ALG_MD5_HMAC:
@@ -2224,6 +2234,7 @@ odp_crypto_session_create(const odp_crypto_session_param_t *param,
 		} else {
 			rc = -1;
 		}
+		session->auth_range_used = 0;
 		break;
 	case ODP_AUTH_ALG_AES_GMAC:
 		if (param->auth_key.length == 16)
@@ -2245,6 +2256,7 @@ odp_crypto_session_create(const odp_crypto_session_param_t *param,
 		} else {
 			rc = -1;
 		}
+		session->auth_range_used = 0;
 		break;
 	case ODP_AUTH_ALG_AES_CMAC:
 		if (param->auth_key.length == 16)
@@ -2270,6 +2282,7 @@ odp_crypto_session_create(const odp_crypto_session_param_t *param,
 		} else {
 			rc = -1;
 		}
+		session->auth_range_used = 0;
 		break;
 #endif
 	case ODP_AUTH_ALG_AES_EIA2:
@@ -2711,6 +2724,113 @@ out:
 	return 0;
 }
 
+/*
+ * Copy cipher range and auth range from src to dst,
+ * with shifting by dst_offset_shift.
+ */
+static void copy_ranges(odp_packet_t dst,
+			odp_packet_t src,
+			const odp_crypto_generic_session_t *session,
+			const odp_crypto_packet_op_param_t *param)
+{
+	odp_packet_data_range_t c_range = param->cipher_range;
+	odp_packet_data_range_t a_range = param->auth_range;
+	int32_t shift = param->dst_offset_shift;
+	int rc;
+
+	if (session->cipher_bit_mode) {
+		c_range.offset /= 8;
+		c_range.length = (c_range.length + 7) / 8;
+	}
+
+	if (session->cipher_range_used) {
+		rc = odp_packet_copy_from_pkt(dst, c_range.offset + shift,
+					      src, c_range.offset,
+					      c_range.length);
+		if (rc) {
+			_ODP_ERR("cipher range copying failed\n");
+			return;
+		}
+	}
+	if (session->auth_range_used) {
+		rc = odp_packet_copy_from_pkt(dst, a_range.offset + shift,
+					      src, a_range.offset,
+					      a_range.length);
+		if (rc) {
+			_ODP_ERR("auth range copying failed\n");
+			return;
+		}
+	}
+}
+
+static int crypto_int_oop_encode(odp_packet_t pkt_in,
+				 odp_packet_t *pkt_out,
+				 const odp_crypto_generic_session_t *session,
+				 const odp_crypto_packet_op_param_t *param)
+{
+	odp_crypto_packet_op_param_t new_param = *param;
+	const uint32_t scale = session->cipher_bit_mode ? 8 : 1;
+
+	copy_ranges(*pkt_out, pkt_in, session, param);
+
+	new_param.cipher_range.offset += param->dst_offset_shift * scale;
+	new_param.auth_range.offset += param->dst_offset_shift;
+
+	return crypto_int(*pkt_out, pkt_out, &new_param);
+}
+
+static int crypto_int_oop_decode(odp_packet_t pkt_in,
+				 odp_packet_t *pkt_out,
+				 const odp_crypto_generic_session_t *session,
+				 const odp_crypto_packet_op_param_t *param)
+{
+	odp_packet_t copy;
+	int rc;
+
+	copy = odp_packet_copy(pkt_in, odp_packet_pool(pkt_in));
+	if (copy == ODP_PACKET_INVALID)
+		return -1;
+
+	rc = crypto_int(copy, &copy, param);
+	if (rc < 0) {
+		odp_packet_free(copy);
+		return rc;
+	}
+
+	copy_ranges(*pkt_out, copy, session, param);
+
+	packet_subtype_set(*pkt_out, ODP_EVENT_PACKET_CRYPTO);
+	packet_hdr(*pkt_out)->crypto_op_result = packet_hdr(copy)->crypto_op_result;
+	odp_packet_free(copy);
+
+	return 0;
+}
+
+/*
+ * Slow out-of-place operation implemented using copying and in-place operation
+ */
+static int crypto_int_oop(odp_packet_t pkt_in,
+			  odp_packet_t *pkt_out,
+			  const odp_crypto_packet_op_param_t *param)
+{
+	odp_crypto_generic_session_t *session;
+	int rc;
+
+	session = (odp_crypto_generic_session_t *)(intptr_t)param->session;
+
+	if (session->p.op == ODP_CRYPTO_OP_ENCODE)
+		rc = crypto_int_oop_encode(pkt_in, pkt_out, session, param);
+	else
+		rc = crypto_int_oop_decode(pkt_in, pkt_out, session, param);
+	if (rc)
+		return rc;
+
+	if (session->p.op_mode == ODP_CRYPTO_ASYNC)
+		packet_hdr(*pkt_out)->crypto_op_result.pkt_in = pkt_in;
+
+	return 0;
+}
+
 int odp_crypto_op(const odp_packet_t pkt_in[],
 		  odp_packet_t pkt_out[],
 		  const odp_crypto_packet_op_param_t param[],
@@ -2723,7 +2843,10 @@ int odp_crypto_op(const odp_packet_t pkt_in[],
 		session = (odp_crypto_generic_session_t *)(intptr_t)param[i].session;
 		_ODP_ASSERT(ODP_CRYPTO_SYNC == session->p.op_mode);
 
-		rc = crypto_int(pkt_in[i], &pkt_out[i], &param[i]);
+		if (odp_unlikely(session->p.op_type == ODP_CRYPTO_OP_TYPE_OOP))
+			rc = crypto_int_oop(pkt_in[i], &pkt_out[i], &param[i]);
+		else
+			rc = crypto_int(pkt_in[i], &pkt_out[i], &param[i]);
 		if (rc < 0)
 			break;
 	}
@@ -2749,7 +2872,10 @@ int odp_crypto_op_enq(const odp_packet_t pkt_in[],
 		if (session->p.op_type != ODP_CRYPTO_OP_TYPE_BASIC)
 			pkt = pkt_out[i];
 
-		rc = crypto_int(pkt_in[i], &pkt, &param[i]);
+		if (odp_unlikely(session->p.op_type == ODP_CRYPTO_OP_TYPE_OOP))
+			rc = crypto_int_oop(pkt_in[i], &pkt, &param[i]);
+		else
+			rc = crypto_int(pkt_in[i], &pkt, &param[i]);
 		if (rc < 0)
 			break;
 
