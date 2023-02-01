@@ -476,13 +476,6 @@ static void do_header_and_trailer(odp_packet_t pkt,
 	}
 }
 
-typedef enum crypto_test {
-	NORMAL_TEST = 0,   /**< Plain execution */
-	REPEAT_TEST,       /**< Rerun without reinitializing the session */
-	WRONG_DIGEST_TEST, /**< Check against wrong digest */
-	MAX_TEST,          /**< Final mark */
-} crypto_test;
-
 typedef struct alg_test_param_t {
 	odp_crypto_session_t session;
 	odp_crypto_op_t op;
@@ -494,147 +487,173 @@ typedef struct alg_test_param_t {
 	odp_bool_t is_bit_mode_cipher;
 	odp_bool_t is_bit_mode_auth;
 	odp_bool_t adjust_segmentation;
+	odp_bool_t wrong_digest;
 	uint32_t first_seg_len;
 	uint32_t header_len;
 	uint32_t trailer_len;
 } alg_test_param_t;
 
-static void alg_test_execute(const alg_test_param_t *param)
+static void prepare_crypto_ranges(const alg_test_param_t *param,
+				  odp_packet_data_range_t *cipher_range,
+				  odp_packet_data_range_t *auth_range)
 {
-	odp_bool_t ok = false;
-	int iteration;
-	crypto_test_reference_t *ref = param->ref;
-	uint32_t reflength = ref_length_in_bytes(ref);
 	odp_packet_data_range_t zero_range = {.offset = 0, .length = 0};
-	odp_packet_data_range_t cipher_range;
-	odp_packet_data_range_t auth_range;
-	uint8_t *cipher_iv = ref->cipher_iv;
-	uint8_t *auth_iv   = ref->auth_iv;
-	test_packet_md_t md_in, md_out;
 
-	cipher_range.offset = param->header_len;
-	cipher_range.length = reflength;
-	auth_range.offset = param->header_len;
-	auth_range.length = reflength;
+	cipher_range->offset = param->header_len;
+	cipher_range->length = ref_length_in_bytes(param->ref);
+	auth_range->offset = param->header_len;
+	auth_range->length = ref_length_in_bytes(param->ref);
 	if (param->is_bit_mode_cipher) {
-		cipher_range.offset *= 8;
-		cipher_range.length = ref_length_in_bits(ref);
+		cipher_range->offset *= 8;
+		cipher_range->length = ref_length_in_bits(param->ref);
 	}
 	if (param->is_bit_mode_auth) {
-		auth_range.offset *= 8;
-		auth_range.length = ref_length_in_bits(ref);
+		auth_range->offset *= 8;
+		auth_range->length = ref_length_in_bits(param->ref);
 	}
 	/*
 	 * We did not check the bit mode of the null algorithms, so let's
 	 * not pass potentially invalid ranges to them.
 	 */
 	if (param->cipher_alg == ODP_CIPHER_ALG_NULL)
-		cipher_range = zero_range;
+		*cipher_range = zero_range;
 	if (param->auth_alg == ODP_AUTH_ALG_NULL)
-		auth_range = zero_range;
-	for (iteration = NORMAL_TEST; iteration < MAX_TEST; iteration++) {
-		odp_packet_t pkt;
-		uint32_t digest_offset = param->digest_offset;
-		uint32_t pkt_len;
+		*auth_range = zero_range;
+}
 
-		/*
-		 * Test detection of wrong digest value in input packet
-		 * only when decoding and using non-null auth algorithm.
-		 */
-		if (iteration == WRONG_DIGEST_TEST &&
-		    (param->auth_alg == ODP_AUTH_ALG_NULL ||
-		     param->op == ODP_CRYPTO_OP_ENCODE))
-			continue;
+static int prepare_input_packet(const alg_test_param_t *param,
+				odp_packet_t *pkt_in)
+{
+	crypto_test_reference_t *ref = param->ref;
+	uint32_t reflength = ref_length_in_bytes(ref);
+	odp_packet_t pkt;
+	uint32_t digest_offset = param->digest_offset;
+	uint32_t pkt_len;
 
-		pkt_len = param->header_len + reflength + param->trailer_len;
-		if (param->digest_offset == param->header_len + reflength)
-			pkt_len += ref->digest_length;
+	pkt_len = param->header_len + reflength + param->trailer_len;
+	if (param->digest_offset == param->header_len + reflength)
+		pkt_len += ref->digest_length;
 
-		pkt = odp_packet_alloc(suite_context.pool, pkt_len);
+	pkt = odp_packet_alloc(suite_context.pool, pkt_len);
 
-		CU_ASSERT(pkt != ODP_PACKET_INVALID);
-		if (pkt == ODP_PACKET_INVALID)
-			continue;
+	CU_ASSERT(pkt != ODP_PACKET_INVALID);
+	if (pkt == ODP_PACKET_INVALID)
+		return -1;
 
-		if (param->adjust_segmentation)
-			adjust_segments(&pkt, param->first_seg_len);
+	if (param->adjust_segmentation)
+		adjust_segments(&pkt, param->first_seg_len);
 
-		do_header_and_trailer(pkt, param->header_len, param->trailer_len, false);
+	do_header_and_trailer(pkt, param->header_len, param->trailer_len, false);
 
-		if (param->op == ODP_CRYPTO_OP_ENCODE) {
-			odp_packet_copy_from_mem(pkt, param->header_len,
-						 reflength, ref->plaintext);
-		} else {
-			odp_packet_copy_from_mem(pkt, param->header_len,
-						 reflength, ref->ciphertext);
-			odp_packet_copy_from_mem(pkt, digest_offset,
-						 ref->digest_length,
-						 ref->digest);
-			if (iteration == WRONG_DIGEST_TEST) {
-				uint8_t byte = ~ref->digest[0];
+	if (param->op == ODP_CRYPTO_OP_ENCODE) {
+		odp_packet_copy_from_mem(pkt, param->header_len,
+					 reflength, ref->plaintext);
+	} else {
+		odp_packet_copy_from_mem(pkt, param->header_len,
+					 reflength, ref->ciphertext);
+		odp_packet_copy_from_mem(pkt, digest_offset,
+					 ref->digest_length,
+					 ref->digest);
+		if (param->wrong_digest) {
+			uint8_t byte = ~ref->digest[0];
 
-				odp_packet_copy_from_mem(pkt, digest_offset,
-							 1, &byte);
-			}
+			odp_packet_copy_from_mem(pkt, digest_offset, 1, &byte);
 		}
-
-		test_packet_set_md(pkt);
-		test_packet_get_md(pkt, &md_in);
-
-		if (crypto_op(pkt, &pkt, &ok, param->session,
-			      param->op_type,
-			      cipher_iv, auth_iv,
-			      &cipher_range, &auth_range,
-			      ref->aad, digest_offset))
-			break;
-
-		/*
-		 * API is not explicit about whether a failed crypto op
-		 * sets the has_error packet flag or leaves it unchanged.
-		 * Let's allow both behaviours.
-		 */
-		test_packet_get_md(pkt, &md_out);
-		if (iteration == WRONG_DIGEST_TEST)
-			md_out.has_error = 0;
-		CU_ASSERT(test_packet_is_md_equal(&md_in, &md_out));
-
-		if (iteration == WRONG_DIGEST_TEST) {
-			CU_ASSERT(!ok);
-			odp_packet_free(pkt);
-			continue;
-		}
-
-		CU_ASSERT(ok);
-
-		do_header_and_trailer(pkt, param->header_len, param->trailer_len, true);
-
-		if (param->op == ODP_CRYPTO_OP_ENCODE) {
-			CU_ASSERT(!packet_cmp_mem(pkt, param->header_len,
-						  ref->ciphertext,
-						  ref->length,
-						  ref->is_length_in_bits));
-			CU_ASSERT(!packet_cmp_mem_bytes(pkt, digest_offset,
-							ref->digest,
-							ref->digest_length));
-		} else {
-			/*
-			 * Hash result in the packet is left to undefined
-			 * values. Restore it from the plaintext packet
-			 * to make the subsequent comparison work even
-			 * if the hash result is within the auth_range.
-			 */
-			odp_packet_copy_from_mem(pkt, digest_offset,
-						 ref->digest_length,
-						 ref->plaintext +
-						 digest_offset - param->header_len);
-
-			CU_ASSERT(!packet_cmp_mem(pkt, param->header_len,
-						  ref->plaintext,
-						  ref->length,
-						  ref->is_length_in_bits));
-		}
-		odp_packet_free(pkt);
 	}
+	*pkt_in = pkt;
+	return 0;
+}
+
+static void check_output_packet_data(odp_packet_t pkt,
+				     const alg_test_param_t *param)
+{
+	crypto_test_reference_t *ref = param->ref;
+	uint8_t *expected_bytes;
+
+	/* crypto output is undefined if authentication fails */
+	if (param->wrong_digest)
+		return;
+
+	do_header_and_trailer(pkt, param->header_len, param->trailer_len, true);
+
+	if (param->op == ODP_CRYPTO_OP_ENCODE) {
+		CU_ASSERT(!packet_cmp_mem_bytes(pkt, param->digest_offset,
+						ref->digest,
+						ref->digest_length));
+		expected_bytes = ref->ciphertext;
+	} else {
+		/*
+		 * Hash result in the packet is left to undefined
+		 * values. Restore it from the plaintext packet
+		 * to make the subsequent comparison work even
+		 * if the hash result is within the auth_range.
+		 */
+		odp_packet_copy_from_mem(pkt, param->digest_offset,
+					 ref->digest_length,
+					 ref->plaintext +
+					 param->digest_offset - param->header_len);
+		expected_bytes = ref->plaintext;
+	}
+	CU_ASSERT(!packet_cmp_mem(pkt, param->header_len,
+				  expected_bytes,
+				  ref->length,
+				  ref->is_length_in_bits));
+}
+
+static void alg_test_execute(const alg_test_param_t *param)
+{
+	odp_bool_t ok = false;
+	odp_packet_data_range_t cipher_range;
+	odp_packet_data_range_t auth_range;
+	odp_packet_t pkt;
+	test_packet_md_t md_in, md_out;
+
+	/*
+	 * Test detection of wrong digest value in input packet
+	 * only when decoding and using non-null auth algorithm.
+	 */
+	if (param->wrong_digest &&
+	    (param->auth_alg == ODP_AUTH_ALG_NULL ||
+	     param->op == ODP_CRYPTO_OP_ENCODE))
+		return;
+
+	prepare_crypto_ranges(param, &cipher_range, &auth_range);
+	if (prepare_input_packet(param, &pkt))
+		return;
+
+	test_packet_set_md(pkt);
+	test_packet_get_md(pkt, &md_in);
+
+	if (crypto_op(pkt, &pkt, &ok, param->session,
+		      param->op_type,
+		      param->ref->cipher_iv,
+		      param->ref->auth_iv,
+		      &cipher_range, &auth_range,
+		      param->ref->aad, param->digest_offset))
+		return;
+
+	/*
+	 * API is not explicit about whether a failed crypto op
+	 * sets the has_error packet flag or leaves it unchanged.
+	 * Let's allow both behaviours.
+	 */
+	test_packet_get_md(pkt, &md_out);
+	if (param->wrong_digest)
+		md_out.has_error = 0;
+	CU_ASSERT(test_packet_is_md_equal(&md_in, &md_out));
+
+	CU_ASSERT(!!ok == !param->wrong_digest);
+	check_output_packet_data(pkt, param);
+	odp_packet_free(pkt);
+}
+
+static void alg_test_op(alg_test_param_t *param)
+{
+	param->wrong_digest = false;
+	alg_test_execute(param);
+	alg_test_execute(param); /* rerun with the same parameters */
+	param->wrong_digest = true;
+	alg_test_execute(param);
 }
 
 typedef enum {
@@ -759,7 +778,7 @@ static void alg_test_ses(odp_crypto_op_t op,
 	test_param.is_bit_mode_auth = is_bit_mode_auth;
 	test_param.digest_offset = digest_offset;
 
-	alg_test_execute(&test_param);
+	alg_test_op(&test_param);
 
 	max_shift = reflength + ref->digest_length;
 
@@ -780,13 +799,13 @@ static void alg_test_ses(odp_crypto_op_t op,
 		test_param.header_len = 0;
 		test_param.trailer_len = 0;
 		test_param.digest_offset = digest_offset;
-		alg_test_execute(&test_param);
+		alg_test_op(&test_param);
 
 		/* Test partial packet crypto with odd alignment. */
 		test_param.header_len = 3;
 		test_param.trailer_len = 32;
 		test_param.digest_offset = test_param.header_len + digest_offset;
-		alg_test_execute(&test_param);
+		alg_test_op(&test_param);
 	}
 
 	rc = odp_crypto_session_destroy(session);
