@@ -641,6 +641,15 @@ static void prepare_ignore_info(const alg_test_param_t *param,
 					  param->ref->digest_length);
 		}
 	}
+
+	/* Decrypted bytes are undefined if authentication fails. */
+	if (param->op == ODP_CRYPTO_OP_DECODE &&
+	    param->wrong_digest) {
+		add_ignored_range(ignore, cipher_offset + shift, cipher_len);
+		/* In OOP case, auth range may not get copied */
+		if (param->op_type == ODP_CRYPTO_OP_TYPE_OOP)
+			add_ignored_range(ignore, auth_offset + shift, auth_len);
+	}
 }
 
 /* Add room for bytes that are not included in ref->length */
@@ -848,11 +857,10 @@ static void alg_test_execute(const alg_test_param_t *param)
 
 	if (param->wrong_digest) {
 		CU_ASSERT(!ok);
-		/* output packet data is undefined, skip check  */
 	} else {
 		CU_ASSERT(ok);
-		check_output_packet_data(pkt_out, &expected);
 	}
+	check_output_packet_data(pkt_out, &expected);
 	odp_packet_free(pkt_out);
 }
 
