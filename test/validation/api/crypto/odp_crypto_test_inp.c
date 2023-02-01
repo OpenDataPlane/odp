@@ -1,5 +1,5 @@
 /* Copyright (c) 2014-2018, Linaro Limited
- * Copyright (c) 2021-2022, Nokia
+ * Copyright (c) 2021-2023, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:	BSD-3-Clause
@@ -13,6 +13,7 @@
 
 #define PKT_POOL_NUM  64
 #define PKT_POOL_LEN  (1 * 1024)
+#define UAREA_SIZE 8
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 
@@ -36,6 +37,7 @@ static void test_defaults(uint8_t fill)
 	odp_crypto_session_param_init(&param);
 
 	CU_ASSERT_EQUAL(param.op, ODP_CRYPTO_OP_ENCODE);
+	CU_ASSERT_EQUAL(param.op_type, ODP_CRYPTO_OP_TYPE_LEGACY);
 	CU_ASSERT_EQUAL(param.auth_cipher_text, false);
 #if ODP_DEPRECATED_API
 	CU_ASSERT_EQUAL(param.pref_mode, ODP_CRYPTO_SYNC);
@@ -277,9 +279,11 @@ static int alg_op(odp_packet_t pkt,
 }
 #endif
 
-static int alg_packet_op(odp_packet_t pkt,
+static int alg_packet_op(odp_packet_t pkt_in,
+			 odp_packet_t *pkt_out,
 			 odp_bool_t *ok,
 			 odp_crypto_session_t session,
+			 odp_crypto_op_type_t op_type,
 			 uint8_t *cipher_iv_ptr,
 			 uint8_t *auth_iv_ptr,
 			 odp_packet_data_range_t *cipher_range,
@@ -292,7 +296,11 @@ static int alg_packet_op(odp_packet_t pkt,
 	odp_crypto_packet_result_t result;
 	odp_crypto_packet_op_param_t op_params;
 	odp_event_subtype_t subtype;
-	odp_packet_t out_pkt = pkt;
+
+	if (op_type == ODP_CRYPTO_OP_TYPE_LEGACY)
+		*pkt_out = pkt_in;
+	else
+		*pkt_out = ODP_PACKET_INVALID;
 
 	/* Prepare input/output params */
 	memset(&op_params, 0, sizeof(op_params));
@@ -310,13 +318,18 @@ static int alg_packet_op(odp_packet_t pkt,
 	op_params.hash_result_offset = hash_result_offset;
 
 	if (suite_context.op_mode == ODP_CRYPTO_SYNC) {
-		rc = odp_crypto_op(&pkt, &out_pkt, &op_params, 1);
+		rc = odp_crypto_op(&pkt_in, pkt_out, &op_params, 1);
 		if (rc <= 0) {
 			CU_FAIL("Failed odp_crypto_packet_op()");
 			return rc;
 		}
 	} else {
-		rc = odp_crypto_op_enq(&pkt, &pkt, &op_params, 1);
+		odp_packet_t *out_param = pkt_out;
+
+		if (op_type == ODP_CRYPTO_OP_TYPE_BASIC)
+			out_param = NULL;
+
+		rc = odp_crypto_op_enq(&pkt_in, out_param, &op_params, 1);
 		if (rc <= 0) {
 			CU_FAIL("Failed odp_crypto_op_enq()");
 			return rc;
@@ -333,33 +346,37 @@ static int alg_packet_op(odp_packet_t pkt,
 		CU_ASSERT(ODP_EVENT_PACKET == odp_event_types(event, &subtype));
 		CU_ASSERT(ODP_EVENT_PACKET_CRYPTO == subtype);
 
-		pkt = odp_crypto_packet_from_event(event);
+		*pkt_out = odp_crypto_packet_from_event(event);
 	}
 
-	CU_ASSERT(out_pkt == pkt);
+	if (op_type != ODP_CRYPTO_OP_TYPE_BASIC)
+		CU_ASSERT(*pkt_out == pkt_in);
 	CU_ASSERT(ODP_EVENT_PACKET ==
-		  odp_event_type(odp_packet_to_event(pkt)));
+		  odp_event_type(odp_packet_to_event(*pkt_out)));
 	CU_ASSERT(ODP_EVENT_PACKET_CRYPTO ==
-		  odp_event_subtype(odp_packet_to_event(pkt)));
+		  odp_event_subtype(odp_packet_to_event(*pkt_out)));
 	CU_ASSERT(ODP_EVENT_PACKET ==
-		  odp_event_types(odp_packet_to_event(pkt), &subtype));
+		  odp_event_types(odp_packet_to_event(*pkt_out), &subtype));
 	CU_ASSERT(ODP_EVENT_PACKET_CRYPTO == subtype);
-	CU_ASSERT(odp_packet_subtype(pkt) == ODP_EVENT_PACKET_CRYPTO);
+	CU_ASSERT(odp_packet_subtype(*pkt_out) == ODP_EVENT_PACKET_CRYPTO);
 
-	rc = odp_crypto_result(&result, pkt);
+	rc = odp_crypto_result(&result, *pkt_out);
 	if (rc < 0) {
 		CU_FAIL("Failed odp_crypto_packet_result()");
 		return rc;
 	}
+	CU_ASSERT(rc == 0);
 
 	*ok = result.ok;
 
 	return 0;
 }
 
-static int crypto_op(odp_packet_t pkt,
+static int crypto_op(odp_packet_t pkt_in,
+		     odp_packet_t *pkt_out,
 		     odp_bool_t *ok,
 		     odp_crypto_session_t session,
+		     odp_crypto_op_type_t op_type,
 		     uint8_t *cipher_iv,
 		     uint8_t *auth_iv,
 		     odp_packet_data_range_t *cipher_range,
@@ -369,23 +386,25 @@ static int crypto_op(odp_packet_t pkt,
 {
 	int rc;
 
-	if (!suite_context.packet)
+	if (!suite_context.packet) {
 #if ODP_DEPRECATED_API
-		rc = alg_op(pkt, ok, session,
+		rc = alg_op(pkt_in, ok, session,
 			    cipher_iv, auth_iv,
 			    cipher_range, auth_range,
 			    aad, hash_result_offset);
+		*pkt_out = pkt_in;
 #else
 		rc = -1;
 #endif
-	else
-		rc = alg_packet_op(pkt, ok, session,
+	} else {
+		rc = alg_packet_op(pkt_in, pkt_out, ok, session, op_type,
 				   cipher_iv, auth_iv,
 				   cipher_range, auth_range,
 				   aad, hash_result_offset);
+	}
 
 	if (rc < 0)
-		odp_packet_free(pkt);
+		odp_packet_free(pkt_in);
 
 	return rc;
 }
@@ -467,6 +486,7 @@ typedef enum crypto_test {
 typedef struct alg_test_param_t {
 	odp_crypto_session_t session;
 	odp_crypto_op_t op;
+	odp_crypto_op_type_t op_type;
 	odp_cipher_alg_t cipher_alg;
 	odp_auth_alg_t auth_alg;
 	crypto_test_reference_t *ref;
@@ -561,7 +581,8 @@ static void alg_test_execute(const alg_test_param_t *param)
 		test_packet_set_md(pkt);
 		test_packet_get_md(pkt, &md_in);
 
-		if (crypto_op(pkt, &ok, param->session,
+		if (crypto_op(pkt, &pkt, &ok, param->session,
+			      param->op_type,
 			      cipher_iv, auth_iv,
 			      &cipher_range, &auth_range,
 			      ref->aad, digest_offset))
@@ -622,6 +643,7 @@ typedef enum {
 } hash_test_mode_t;
 
 static odp_crypto_session_t session_create(odp_crypto_op_t op,
+					   odp_crypto_op_type_t op_type,
 					   odp_cipher_alg_t cipher_alg,
 					   odp_auth_alg_t auth_alg,
 					   crypto_test_reference_t *ref,
@@ -648,6 +670,7 @@ static odp_crypto_session_t session_create(odp_crypto_op_t op,
 	/* Create a crypto session */
 	odp_crypto_session_param_init(&ses_params);
 	ses_params.op = op;
+	ses_params.op_type = op_type;
 	ses_params.auth_cipher_text = false;
 	ses_params.op_mode = suite_context.op_mode;
 #if ODP_DEPRECATED_API
@@ -702,13 +725,14 @@ static odp_crypto_session_t session_create(odp_crypto_op_t op,
 	return session;
 }
 
-static void alg_test(odp_crypto_op_t op,
-		     odp_cipher_alg_t cipher_alg,
-		     odp_auth_alg_t auth_alg,
-		     crypto_test_reference_t *ref,
-		     uint32_t digest_offset,
-		     odp_bool_t is_bit_mode_cipher,
-		     odp_bool_t is_bit_mode_auth)
+static void alg_test_ses(odp_crypto_op_t op,
+			 odp_crypto_op_type_t op_type,
+			 odp_cipher_alg_t cipher_alg,
+			 odp_auth_alg_t auth_alg,
+			 crypto_test_reference_t *ref,
+			 uint32_t digest_offset,
+			 odp_bool_t is_bit_mode_cipher,
+			 odp_bool_t is_bit_mode_auth)
 {
 	unsigned int initial_num_failures = CU_get_number_of_failures();
 	const uint32_t reflength = ref_length_in_bytes(ref);
@@ -720,13 +744,14 @@ static void alg_test(odp_crypto_op_t op,
 	uint32_t max_shift;
 	alg_test_param_t test_param;
 
-	session = session_create(op, cipher_alg, auth_alg, ref, hash_mode);
+	session = session_create(op, op_type, cipher_alg, auth_alg, ref, hash_mode);
 	if (session == ODP_CRYPTO_SESSION_INVALID)
 		return;
 
 	memset(&test_param, 0, sizeof(test_param));
 	test_param.session = session;
 	test_param.op = op;
+	test_param.op_type = op_type;
 	test_param.cipher_alg = cipher_alg;
 	test_param.auth_alg = auth_alg;
 	test_param.ref = ref;
@@ -766,6 +791,34 @@ static void alg_test(odp_crypto_op_t op,
 
 	rc = odp_crypto_session_destroy(session);
 	CU_ASSERT(!rc);
+}
+
+static void alg_test(odp_crypto_op_t op,
+		     odp_cipher_alg_t cipher_alg,
+		     odp_auth_alg_t auth_alg,
+		     crypto_test_reference_t *ref,
+		     uint32_t digest_offset,
+		     odp_bool_t is_bit_mode_cipher,
+		     odp_bool_t is_bit_mode_auth)
+{
+	odp_crypto_op_type_t op_types[] = {
+		ODP_CRYPTO_OP_TYPE_LEGACY,
+		ODP_CRYPTO_OP_TYPE_BASIC,
+	};
+
+	for (unsigned int n = 0; n < ARRAY_SIZE(op_types); n++) {
+		if (!suite_context.packet &&
+		    op_types[n] != ODP_CRYPTO_OP_TYPE_LEGACY)
+			continue;
+		alg_test_ses(op,
+			     op_types[n],
+			     cipher_alg,
+			     auth_alg,
+			     ref,
+			     digest_offset,
+			     is_bit_mode_cipher,
+			     is_bit_mode_auth);
+	}
 }
 
 static odp_bool_t aad_len_ok(const odp_crypto_auth_capability_t *capa, uint32_t len)
@@ -1183,12 +1236,15 @@ static int create_hash_test_reference(odp_auth_alg_t auth,
 	rc = odp_packet_copy_from_mem(pkt, 0, auth_bytes, ref->plaintext);
 	CU_ASSERT(rc == 0);
 
-	session = session_create(ODP_CRYPTO_OP_ENCODE, ODP_CIPHER_ALG_NULL,
+	session = session_create(ODP_CRYPTO_OP_ENCODE,
+				 ODP_CRYPTO_OP_TYPE_LEGACY,
+				 ODP_CIPHER_ALG_NULL,
 				 auth, ref, HASH_NO_OVERLAP);
 	if (session == ODP_CRYPTO_SESSION_INVALID)
 		return -1;
 
-	rc = crypto_op(pkt, &ok, session, ref->cipher_iv, ref->auth_iv,
+	rc = crypto_op(pkt, &pkt, &ok, session, ODP_CRYPTO_OP_TYPE_LEGACY,
+		       ref->cipher_iv, ref->auth_iv,
 		       &cipher_range, &auth_range, ref->aad, enc_digest_offset);
 	CU_ASSERT(rc == 0);
 	CU_ASSERT(ok);
@@ -2459,6 +2515,15 @@ static int crypto_init(odp_instance_t *inst)
 	params.pkt.len     = PKT_POOL_LEN;
 	params.pkt.num     = PKT_POOL_NUM;
 	params.type        = ODP_POOL_PACKET;
+
+	/*
+	 * Let's have a user area so that we can check that its
+	 * content gets copied along with other metadata when needed.
+	 */
+	if (pool_capa.pkt.max_uarea_size >= UAREA_SIZE)
+		params.pkt.uarea_size = UAREA_SIZE;
+	else
+		printf("Warning: could not request packet user area\n");
 
 	if (pool_capa.pkt.max_seg_len &&
 	    PKT_POOL_LEN > pool_capa.pkt.max_seg_len) {
