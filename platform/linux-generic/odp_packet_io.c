@@ -774,26 +774,6 @@ odp_pktio_t odp_pktio_lookup(const char *name)
 	return hdl;
 }
 
-static void packet_vector_enq(odp_queue_t queue, odp_event_t events[],
-			      uint32_t num, odp_pool_t pool)
-{
-	odp_packet_vector_t pktv;
-	odp_packet_t *pkt_tbl;
-
-	pktv = odp_packet_vector_alloc(pool);
-	if (odp_unlikely(pktv == ODP_PACKET_VECTOR_INVALID)) {
-		odp_event_free_multi(events, num);
-		return;
-	}
-
-	odp_packet_vector_tbl(pktv, &pkt_tbl);
-	odp_packet_from_event_multi(pkt_tbl, events, num);
-	odp_packet_vector_size_set(pktv, num);
-
-	if (odp_unlikely(odp_queue_enq(queue, odp_packet_vector_to_event(pktv))))
-		odp_event_free(odp_packet_vector_to_event(pktv));
-}
-
 static inline odp_packet_vector_t packet_vector_create(odp_packet_t packets[], uint32_t num,
 						       odp_pool_t pool)
 {
@@ -818,19 +798,9 @@ static inline odp_packet_vector_t packet_vector_create(odp_packet_t packets[], u
 static inline int pktin_recv_buf(pktio_entry_t *entry, int pktin_index,
 				 _odp_event_hdr_t *event_hdrs[], int num)
 {
-	odp_packet_t pkt;
-	odp_packet_t packets[num];
-	odp_packet_hdr_t *pkt_hdr;
+	const odp_bool_t vector_enabled = entry->in_queue[pktin_index].vector.enable;
 	odp_pool_t pool = ODP_POOL_INVALID;
-	_odp_event_hdr_t *event_hdr;
-	int i, pkts, num_rx, num_ev, num_dst;
-	odp_queue_t cur_queue;
-	odp_event_t ev[num];
-	odp_queue_t dst[num];
-	uint16_t cos[num];
-	uint16_t cur_cos = 0;
-	int dst_idx[num];
-	odp_bool_t vector_enabled = entry->in_queue[pktin_index].vector.enable;
+	int num_rx;
 
 	if (vector_enabled) {
 		/* Make sure all packets will fit into a single packet vector */
@@ -839,102 +809,18 @@ static inline int pktin_recv_buf(pktio_entry_t *entry, int pktin_index,
 		pool = entry->in_queue[pktin_index].vector.pool;
 	}
 
-	num_rx = 0;
-	num_dst = 0;
-	num_ev = 0;
+	num_rx = entry->ops->recv(entry, pktin_index, (odp_packet_t *)event_hdrs, num);
 
-	/* Some compilers need this dummy initialization */
-	cur_queue = ODP_QUEUE_INVALID;
+	if (!vector_enabled || num_rx < 2)
+		return num_rx;
 
-	pkts = entry->ops->recv(entry, pktin_index, packets, num);
+	odp_packet_vector_t pktv = packet_vector_create((odp_packet_t *)event_hdrs, num_rx, pool);
 
-	for (i = 0; i < pkts; i++) {
-		pkt = packets[i];
-		pkt_hdr = packet_hdr(pkt);
-		event_hdr = packet_to_event_hdr(pkt);
+	if (odp_unlikely(pktv == ODP_PACKET_VECTOR_INVALID))
+		return 0;
 
-		if (odp_unlikely(pkt_hdr->p.input_flags.dst_queue)) {
-			/* Sort events for enqueue multi operation(s) based on CoS
-			 * and destination queue. */
-			if (odp_unlikely(num_dst == 0)) {
-				num_dst = 1;
-				cur_queue = pkt_hdr->dst_queue;
-				cur_cos = pkt_hdr->cos;
-				dst[0] = cur_queue;
-				cos[0] = cur_cos;
-				dst_idx[0] = 0;
-			}
-
-			ev[num_ev] = odp_packet_to_event(pkt);
-
-			if (cur_queue != pkt_hdr->dst_queue || cur_cos != pkt_hdr->cos) {
-				cur_queue = pkt_hdr->dst_queue;
-				cur_cos = pkt_hdr->cos;
-				dst[num_dst] = cur_queue;
-				cos[num_dst] = cur_cos;
-				dst_idx[num_dst] = num_ev;
-				num_dst++;
-			}
-
-			num_ev++;
-			continue;
-		}
-		event_hdrs[num_rx++] = event_hdr;
-	}
-
-	/* Optimization for the common case */
-	if (odp_likely(num_dst == 0)) {
-		if (!vector_enabled || num_rx < 1)
-			return num_rx;
-
-		/* Create packet vector */
-		odp_packet_vector_t pktv = packet_vector_create((odp_packet_t *)event_hdrs,
-								num_rx, pool);
-
-		if (odp_unlikely(pktv == ODP_PACKET_VECTOR_INVALID))
-			return 0;
-
-		event_hdrs[0] = packet_vector_to_event_hdr(pktv);
-		return 1;
-	}
-
-	for (i = 0; i < num_dst; i++) {
-		cos_t *cos_hdr = NULL;
-		int num_enq, ret;
-		int idx = dst_idx[i];
-
-		if (i == (num_dst - 1))
-			num_enq = num_ev - idx;
-		else
-			num_enq = dst_idx[i + 1] - idx;
-
-		if (cos[i] != CLS_COS_IDX_NONE) {
-			/* Packets from classifier */
-			cos_hdr = _odp_cos_entry_from_idx(cos[i]);
-
-			if (cos_hdr->vector.enable) {
-				_odp_cos_vector_enq(dst[i], &ev[idx], num_enq, cos_hdr);
-				continue;
-			}
-		} else if (vector_enabled) {
-			/* Packets from inline IPsec */
-			packet_vector_enq(dst[i], &ev[idx], num_enq, pool);
-			continue;
-		}
-
-		ret = odp_queue_enq_multi(dst[i], &ev[idx], num_enq);
-
-		if (ret < 0)
-			ret = 0;
-
-		if (ret < num_enq)
-			odp_event_free_multi(&ev[idx + ret], num_enq - ret);
-
-		/* Update CoS statistics */
-		if (cos[i] != CLS_COS_IDX_NONE)
-			_odp_cos_queue_stats_add(cos_hdr, dst[i], ret, num_enq - ret);
-	}
-	return num_rx;
+	event_hdrs[0] = packet_vector_to_event_hdr(pktv);
+	return 1;
 }
 
 static inline int packet_vector_send(odp_pktout_queue_t pktout_queue, odp_event_t event)
