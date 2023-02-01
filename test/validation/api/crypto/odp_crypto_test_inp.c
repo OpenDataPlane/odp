@@ -56,53 +56,6 @@ static void test_default_values(void)
 	test_defaults(0xff);
 }
 
-static int packet_cmp_mem_bits(odp_packet_t pkt, uint32_t offset,
-			       uint8_t *s, uint32_t len)
-{
-	int rc = -1;
-	uint32_t len_bytes = ((len + 7) / 8);
-	uint8_t leftover_bits = len % 8;
-	uint8_t buf[len_bytes];
-
-	odp_packet_copy_to_mem(pkt, offset, len_bytes, buf);
-
-	/* Compare till the last full byte */
-	rc = memcmp(buf, s, leftover_bits ? len_bytes - 1 : len_bytes);
-
-	if (rc == 0 && leftover_bits) {
-		/* Do masked comparison for the leftover bits */
-		uint8_t mask = 0xff << (8 - leftover_bits);
-
-		rc = !((mask & buf[len_bytes - 1]) ==
-		       (mask & s[len_bytes - 1]));
-	}
-
-	return rc;
-}
-
-static int packet_cmp_mem_bytes(odp_packet_t pkt, uint32_t offset,
-				uint8_t *s, uint32_t len)
-{
-	uint8_t buf[len];
-
-	odp_packet_copy_to_mem(pkt, offset, len, buf);
-
-	return memcmp(buf, s, len);
-}
-
-static int packet_cmp_mem(odp_packet_t pkt, uint32_t offset,
-			  uint8_t *s, uint32_t len, odp_bool_t bit_mode)
-{
-	int rc = -1;
-
-	if (bit_mode)
-		rc = packet_cmp_mem_bits(pkt, offset, s, len);
-	else
-		rc = packet_cmp_mem_bytes(pkt, offset, s, len);
-
-	return rc;
-}
-
 static const char *auth_alg_name(odp_auth_alg_t auth)
 {
 	switch (auth) {
@@ -447,12 +400,8 @@ static void fill_with_pattern(uint8_t *buf, uint32_t len)
 		buf[n] = n;
 }
 
-/*
- * Generate or verify header and trailer bytes
- */
-static void do_header_and_trailer(odp_packet_t pkt,
-				  uint32_t header_len, uint32_t trailer_len,
-				  odp_bool_t check)
+static void write_header_and_trailer(odp_packet_t pkt,
+				     uint32_t header_len, uint32_t trailer_len)
 {
 	uint32_t trailer_offset = odp_packet_len(pkt) - trailer_len;
 	uint32_t max_len = header_len > trailer_len ? header_len : trailer_len;
@@ -461,19 +410,10 @@ static void do_header_and_trailer(odp_packet_t pkt,
 
 	fill_with_pattern(buffer, sizeof(buffer));
 
-	if (check) {
-		CU_ASSERT(!packet_cmp_mem_bytes(pkt, 0,
-						buffer, header_len));
-		CU_ASSERT(!packet_cmp_mem_bytes(pkt, trailer_offset,
-						buffer, trailer_len));
-	} else {
-		rc = odp_packet_copy_from_mem(pkt, 0,
-					      header_len, buffer);
-		CU_ASSERT(rc == 0);
-		rc = odp_packet_copy_from_mem(pkt, trailer_offset,
-					      trailer_len, buffer);
-		CU_ASSERT(rc == 0);
-	}
+	rc = odp_packet_copy_from_mem(pkt, 0, header_len, buffer);
+	CU_ASSERT(rc == 0);
+	rc = odp_packet_copy_from_mem(pkt, trailer_offset, trailer_len, buffer);
+	CU_ASSERT(rc == 0);
 }
 
 typedef struct alg_test_param_t {
@@ -543,7 +483,7 @@ static int prepare_input_packet(const alg_test_param_t *param,
 	if (param->adjust_segmentation)
 		adjust_segments(&pkt, param->first_seg_len);
 
-	do_header_and_trailer(pkt, param->header_len, param->trailer_len, false);
+	write_header_and_trailer(pkt, param->header_len, param->trailer_len);
 
 	if (param->op == ODP_CRYPTO_OP_ENCODE) {
 		odp_packet_copy_from_mem(pkt, param->header_len,
@@ -564,40 +504,168 @@ static int prepare_input_packet(const alg_test_param_t *param,
 	return 0;
 }
 
-static void check_output_packet_data(odp_packet_t pkt,
-				     const alg_test_param_t *param)
+#define MAX_IGNORED_RANGES 3
+
+/*
+ * Output packet parts that we ignore since they have undefined values
+ */
+typedef struct ignore_t {
+	uint32_t byte_offset;	/* offset to a byte which has bits to be ignored */
+	uint32_t byte_mask;	/* mask of ignored bits in the byte */
+	struct {
+		uint32_t offset;
+		uint32_t length;
+	} ranges[MAX_IGNORED_RANGES]; /* byte ranges to be ignored */
+	uint32_t num_ranges;
+} ignore_t;
+
+static void add_ignored_range(ignore_t *ign, uint32_t offs, uint32_t len)
 {
-	crypto_test_reference_t *ref = param->ref;
-	uint8_t *expected_bytes;
-
-	/* crypto output is undefined if authentication fails */
-	if (param->wrong_digest)
+	if (len == 0)
 		return;
+	CU_ASSERT_FATAL(ign->num_ranges < MAX_IGNORED_RANGES);
+	ign->ranges[ign->num_ranges].offset = offs;
+	ign->ranges[ign->num_ranges].length = len;
+	ign->num_ranges++;
+}
 
-	do_header_and_trailer(pkt, param->header_len, param->trailer_len, true);
+static void clear_ignored_data(const ignore_t *ign, uint8_t *data, uint32_t data_len)
+{
+	CU_ASSERT_FATAL(ign->byte_offset < data_len);
+	data[ign->byte_offset] &= ~ign->byte_mask;
+
+	for (uint32_t n = 0; n < ign->num_ranges; n++) {
+		uint32_t offset = ign->ranges[n].offset;
+		uint32_t length = ign->ranges[n].length;
+
+		CU_ASSERT(offset + length <= data_len);
+		memset(data + offset, 0, length);
+	}
+}
+
+static void prepare_ignore_info(const alg_test_param_t *param,
+				uint32_t cipher_offset,
+				uint32_t cipher_len,
+				ignore_t *ignore)
+{
+	memset(ignore, 0, sizeof(*ignore));
+
+	/*
+	 * Leftover bits in the last byte of the cipher range of bit mode
+	 * ciphers have undefined values.
+	 */
+	if (param->is_bit_mode_cipher &&
+	    param->cipher_alg != ODP_CIPHER_ALG_NULL) {
+		uint8_t leftover_bits = param->ref->length % 8;
+
+		ignore->byte_offset = cipher_offset + cipher_len - 1;
+		ignore->byte_mask = ~(0xff << (8 - leftover_bits));
+	}
+
+	/*
+	 * In decode sessions the bytes in the hash location have
+	 * undefined values.
+	 */
+	if (param->auth_alg != ODP_AUTH_ALG_NULL &&
+	    param->op == ODP_CRYPTO_OP_DECODE) {
+		add_ignored_range(ignore,
+				  param->digest_offset,
+				  param->ref->digest_length);
+	}
+}
+
+/* Add room for bytes that are not included in ref->length */
+#define MAX_EXP_DATA_LEN (MAX_DATA_LEN + 200)
+
+/*
+ * Expected packet data
+ */
+typedef struct expected_t {
+	uint8_t data[MAX_EXP_DATA_LEN];
+	uint32_t len;
+	ignore_t ignore;
+} expected_t;
+
+static void prepare_expected_data(const alg_test_param_t *param,
+				  const odp_packet_data_range_t *cipher_range,
+				  odp_packet_t pkt_in,
+				  expected_t *ex)
+{
+	uint32_t digest_offset = param->digest_offset;
+	uint32_t cipher_offset = cipher_range->offset;
+	uint32_t cipher_len = cipher_range->length;
+	int rc;
+
+	if (param->is_bit_mode_cipher) {
+		cipher_offset /= 8;
+		cipher_len = (cipher_len + 7) / 8;
+	}
+	if (param->cipher_alg == ODP_CIPHER_ALG_NULL)
+		cipher_len = 0;
+
+	/* copy all data from input packet */
+	ex->len = odp_packet_len(pkt_in);
+	CU_ASSERT_FATAL(ex->len <= sizeof(ex->data));
+	rc = odp_packet_copy_to_mem(pkt_in, 0, ex->len, ex->data);
+	CU_ASSERT(rc == 0);
 
 	if (param->op == ODP_CRYPTO_OP_ENCODE) {
-		CU_ASSERT(!packet_cmp_mem_bytes(pkt, param->digest_offset,
-						ref->digest,
-						ref->digest_length));
-		expected_bytes = ref->ciphertext;
-	} else {
+		/* copy hash first */
+		memcpy(ex->data + digest_offset,
+		       param->ref->digest,
+		       param->ref->digest_length);
 		/*
-		 * Hash result in the packet is left to undefined
-		 * values. Restore it from the plaintext packet
-		 * to make the subsequent comparison work even
-		 * if the hash result is within the auth_range.
+		 * Copy ciphertext, possibly overwriting hash.
+		 * The other order (hash overwriting some cipher
+		 * text) does not work in any real use case anyway.
 		 */
-		odp_packet_copy_from_mem(pkt, param->digest_offset,
-					 ref->digest_length,
-					 ref->plaintext +
-					 param->digest_offset - param->header_len);
-		expected_bytes = ref->plaintext;
+		memcpy(ex->data + cipher_offset,
+		       param->ref->ciphertext,
+		       cipher_len);
+	} else {
+		memcpy(ex->data + cipher_offset,
+		       param->ref->plaintext,
+		       cipher_len);
 	}
-	CU_ASSERT(!packet_cmp_mem(pkt, param->header_len,
-				  expected_bytes,
-				  ref->length,
-				  ref->is_length_in_bits));
+
+	prepare_ignore_info(param,
+			    cipher_offset, cipher_len,
+			    &ex->ignore);
+}
+
+static void print_data(const char *title, uint8_t *data, uint32_t len)
+{
+	static uint64_t limit;
+
+	if (limit++ > 20)
+		return;
+
+	printf("%s\n", title);
+	for (uint32_t n = 0; n < len ; n++) {
+		printf(" %02x", data[n]);
+		if ((n + 1) % 16 == 0)
+			printf("\n");
+	}
+	printf("\n");
+}
+
+static void check_output_packet_data(odp_packet_t pkt, expected_t *ex)
+{
+	int rc;
+	uint8_t pkt_data[ex->len];
+
+	CU_ASSERT(odp_packet_len(pkt) == ex->len);
+	rc = odp_packet_copy_to_mem(pkt, 0, ex->len, pkt_data);
+	CU_ASSERT(rc == 0);
+
+	clear_ignored_data(&ex->ignore, pkt_data, sizeof(pkt_data));
+	clear_ignored_data(&ex->ignore, ex->data, sizeof(ex->data));
+
+	if (memcmp(pkt_data, ex->data, ex->len)) {
+		CU_FAIL("packet data does not match expected data");
+		print_data("packet:", pkt_data, ex->len);
+		print_data("expected:", ex->data, ex->len);
+	}
 }
 
 static void alg_test_execute(const alg_test_param_t *param)
@@ -607,6 +675,7 @@ static void alg_test_execute(const alg_test_param_t *param)
 	odp_packet_data_range_t auth_range;
 	odp_packet_t pkt;
 	test_packet_md_t md_in, md_out;
+	expected_t expected;
 
 	/*
 	 * Test detection of wrong digest value in input packet
@@ -620,6 +689,8 @@ static void alg_test_execute(const alg_test_param_t *param)
 	prepare_crypto_ranges(param, &cipher_range, &auth_range);
 	if (prepare_input_packet(param, &pkt))
 		return;
+
+	prepare_expected_data(param, &cipher_range, pkt, &expected);
 
 	test_packet_set_md(pkt);
 	test_packet_get_md(pkt, &md_in);
@@ -642,8 +713,13 @@ static void alg_test_execute(const alg_test_param_t *param)
 		md_out.has_error = 0;
 	CU_ASSERT(test_packet_is_md_equal(&md_in, &md_out));
 
-	CU_ASSERT(!!ok == !param->wrong_digest);
-	check_output_packet_data(pkt, param);
+	if (param->wrong_digest) {
+		CU_ASSERT(!ok);
+		/* output packet data is undefined, skip check  */
+	} else {
+		CU_ASSERT(ok);
+		check_output_packet_data(pkt, &expected);
+	}
 	odp_packet_free(pkt);
 }
 
@@ -1278,11 +1354,11 @@ static int create_hash_test_reference(odp_auth_alg_t auth,
 	/* copy the calculated digest in the ciphertext packet in ref */
 	rc = odp_packet_copy_to_mem(pkt, enc_digest_offset, ref->digest_length,
 				    &ref->ciphertext[digest_offset]);
+	CU_ASSERT(rc == 0);
 
 	/* copy the calculated digest the digest field in ref */
 	rc = odp_packet_copy_to_mem(pkt, enc_digest_offset, ref->digest_length,
 				    &ref->digest);
-
 	CU_ASSERT(rc == 0);
 
 	odp_packet_free(pkt);
