@@ -19,6 +19,7 @@
 #define TRAILER      10
 #define MULTI        1
 #define RESULT       1
+#define USER_DATA    0xdeadbeef
 
 typedef struct global_t {
 	odp_dma_capability_t dma_capa;
@@ -385,12 +386,13 @@ static int do_transfer_async(odp_dma_t dma, const odp_dma_transfer_param_t *trs_
 	odp_dma_compl_param_t compl_param;
 	odp_event_t ev;
 	odp_dma_compl_t compl;
-	int i, ret, done, dummy;
+	int i, ret, done;
+	uint32_t user_data = USER_DATA;
 	odp_dma_result_t result;
 	odp_dma_transfer_id_t transfer_id = ODP_DMA_TRANSFER_ID_INVALID;
 	uint64_t wait_ns = 500 * ODP_TIME_MSEC_IN_NS;
 	uint64_t sched_wait = odp_schedule_wait_time(wait_ns);
-	void *user_ptr = &dummy;
+	void *user_ptr = &user_data;
 
 	odp_dma_compl_param_init(&compl_param);
 	compl_param.compl_mode = compl_mode;
@@ -452,6 +454,7 @@ static int do_transfer_async(odp_dma_t dma, const odp_dma_transfer_param_t *trs_
 		CU_ASSERT(done == 1);
 		CU_ASSERT(result.success);
 		CU_ASSERT(result.user_ptr == user_ptr);
+		CU_ASSERT(user_data == USER_DATA);
 
 		odp_dma_transfer_id_free(dma, transfer_id);
 
@@ -479,6 +482,7 @@ static int do_transfer_async(odp_dma_t dma, const odp_dma_transfer_param_t *trs_
 		CU_ASSERT(odp_dma_compl_result(compl, &result) == 0);
 		CU_ASSERT(result.success);
 		CU_ASSERT(result.user_ptr == user_ptr);
+		CU_ASSERT(user_data == USER_DATA);
 
 		/* Test also without result struct output */
 		CU_ASSERT(odp_dma_compl_result(compl, NULL) == 0);
