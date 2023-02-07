@@ -1,3 +1,71 @@
+== OpenDataPlane (1.40.0.0)
+
+=== Backward incompatible API changes
+==== Packet
+* Specify which packet metadata flags cannot be set simultaneously using
+`odp_packet_has_XX_set()` functions.
+
+==== Timer
+* Use `ODP_DEPRECATE()` macro for `odp_timer_set_abs()` and
+`odp_timer_set_rel()` functions. Previously, the deprecation was only mentioned
+in the function documentation.
+* Deprecate old timer pool clock sources `ODP_CLOCK_CPU` and `ODP_CLOCK_EXT`,
+which have been replaced by `ODP_CLOCK_DEFAULT` and `ODP_CLOCK_SRC_1`.
+* Deprecate old timer set return values `ODP_TIMER_TOOEARLY`,
+`ODP_TIMER_TOOLATE`, and `ODP_TIMER_NOEVENT`, which have been replaced by
+`ODP_TIMER_TOO_NEAR`, `ODP_TIMER_TOO_FAR`, and `ODP_TIMER_FAIL`.
+
+=== Backward compatible API changes
+==== Crypto
+* Add new operation type session parameter
+(`odp_crypto_session_param_t.op_type`) that controls how crypto operations
+interpret their parameters and handle output packets. Defaults to backward
+compatible `ODP_CRYPTO_OP_TYPE_LEGACY` mode.
+* Add `ODP_CRYPTO_OP_TYPE_BASIC` operation type with simplified interface
+compared to `ODP_CRYPTO_OP_TYPE_LEGACY`.
+* Add `ODP_CRYPTO_OP_TYPE_OOP` operation type that writes the output of the
+crypto operation into a caller provided output packet and does not consume the
+input packet.
+* Clarify that `odp_crypto_op()` copies all packet data and metadata from the
+input packet to the output packet in `ODP_CRYPTO_OP_TYPE_LEGACY` and
+`ODP_CRYPTO_OP_TYPE_BASIC` modes.
+* Require that `odp_crypto_result()` is called before packet data of
+asynchronously processed packets can be assumed to be valid in non-legacy modes.
+* Fix EIA2 IV length in API documentation. EIA2 uses 64-bit IV, not 128-bit as
+previously mentioned in the API text.
+
+==== Packet
+* Clarify `odp_packet_has_vlan()` and `odp_packet_has_vlan_qinq()`
+specifications.
+
+=== Remove deprecated APIs
+==== Crypto
+* Remove deprecated per-session IV configuration.
+
+==== Packet IO
+* Remove deprecated `in_unknown_protos` field from `odp_pktio_stats_t`.
+* Remove deprecated `odp_pktin_ts_res()` function.
+* Remove deprecated `odp_pktin_ts_from_ns()` function.
+
+==== Shared Memory
+* Remove deprecated `ODP_SHM_SW_ONLY` define.
+
+==== Traffic Manager
+* Remove deprecated `odp_tm_capabilities()` function.
+* Remove deprecated `commit_bps` field from `odp_tm_shaper_params_t`.
+* Remove deprecated `peak_bps` field from `odp_tm_shaper_params_t`.
+
+=== Implementation
+==== Crypto
+* Add Multi-Buffer Crypto for IPsec library (Arm optimized) based crypto
+implementation. See `DEPENDENCIES` for additional information.
+
+==== Debug
+* Add support for runtime event validation (buffer endmark checking). Event
+validation can be enabled during configure with
+`--enable-event-validation [warn/abort]` or  with `--enabled-debug=full`. See
+`README` for additional information.
+
 == OpenDataPlane (1.39.0.0)
 
 === Backward incompatible API changes
