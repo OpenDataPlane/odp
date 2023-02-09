@@ -160,6 +160,9 @@ typedef struct {
 typedef struct ODP_ALIGNED_CACHE {
 	/* --- Fast path data --- */
 
+	/* Function for mbuf to ODP packet conversion */
+	int (*mbuf_to_pkt_fn)(pktio_entry_t *pktio_entry, odp_packet_t pkt_table[],
+			      struct rte_mbuf *mbuf_table[], uint16_t mbuf_num, odp_time_t *ts);
 	/* Packet output capabilities */
 	odp_pktout_config_opt_t pktout_capa;
 	/* DPDK port identifier */
@@ -950,6 +953,9 @@ static inline void prefetch_pkt(struct rte_mbuf *mbuf)
 	odp_prefetch(data);
 }
 
+/**
+ * Convert mbufs when packet parsing is required
+ */
 static inline int mbuf_to_pkt_zero(pktio_entry_t *pktio_entry,
 				   odp_packet_t pkt_table[],
 				   struct rte_mbuf *mbuf_table[],
@@ -1052,6 +1058,60 @@ static inline int mbuf_to_pkt_zero(pktio_entry_t *pktio_entry,
 	/* Enqueue remaining classified packets */
 	if (odp_unlikely(nb_cls))
 		_odp_cls_enq(pkt_table, nb_cls, true);
+
+	return nb_pkts;
+}
+
+/**
+ * Convert mbufs when packet parsing and classifier are disabled
+ */
+static inline int mbuf_to_pkt_zero_minimal(pktio_entry_t *pktio_entry,
+					   odp_packet_t pkt_table[], struct rte_mbuf *mbuf_table[],
+					   uint16_t mbuf_num, odp_time_t *ts)
+{
+	pkt_dpdk_t *pkt_dpdk = pkt_priv(pktio_entry);
+	const uint8_t set_flow_hash = pkt_dpdk->flags.set_flow_hash;
+	const odp_pktio_t input = pktio_entry->handle;
+	uint16_t nb_pkts = 0;
+
+	_ODP_ASSERT(pktio_entry->parse_layer == ODP_PROTO_LAYER_NONE);
+
+	prefetch_pkt(mbuf_table[0]);
+
+	if (odp_likely(mbuf_num > 1))
+		prefetch_pkt(mbuf_table[1]);
+
+	for (int i = 0; i < mbuf_num; i++) {
+		odp_packet_hdr_t *pkt_hdr;
+		struct rte_mbuf *mbuf;
+		uint16_t pkt_len;
+
+		if (odp_likely((i + 2) < mbuf_num))
+			prefetch_pkt(mbuf_table[i + 2]);
+
+		mbuf = mbuf_table[i];
+		if (odp_unlikely(mbuf->nb_segs != 1)) {
+			_ODP_ERR("Segmented buffers not supported\n");
+			rte_pktmbuf_free(mbuf);
+			continue;
+		}
+
+		pkt_len = rte_pktmbuf_pkt_len(mbuf);
+		pkt_hdr = pkt_hdr_from_mbuf(mbuf);
+		packet_init(pkt_hdr, pkt_len);
+
+		/* Init buffer segments. Currently, only single segment packets
+		 * are supported. */
+		pkt_hdr->seg_data = rte_pktmbuf_mtod(mbuf, uint8_t *);
+		pkt_hdr->input = input;
+
+		if (set_flow_hash && (mbuf->ol_flags & RTE_MBUF_F_RX_RSS_HASH))
+			packet_set_flow_hash(pkt_hdr, mbuf->hash.rss);
+
+		packet_set_ts(pkt_hdr, ts);
+
+		pkt_table[nb_pkts++] = packet_handle(pkt_hdr);
+	}
 
 	return nb_pkts;
 }
@@ -2054,6 +2114,18 @@ static int dpdk_start(pktio_entry_t *pktio_entry)
 			return -1;
 		}
 	}
+
+	if (_ODP_DPDK_ZERO_COPY) {
+		/* Use simpler function when packet parsing and classifying are not required */
+		if (pktio_entry->parse_layer == ODP_PROTO_LAYER_NONE)
+			pkt_dpdk->mbuf_to_pkt_fn = mbuf_to_pkt_zero_minimal;
+		else
+			pkt_dpdk->mbuf_to_pkt_fn = mbuf_to_pkt_zero;
+
+	} else {
+		pkt_dpdk->mbuf_to_pkt_fn = mbuf_to_pkt;
+	}
+
 	/* Start device */
 	ret = rte_eth_dev_start(port_id);
 	if (ret < 0) {
@@ -2131,12 +2203,8 @@ static int dpdk_recv(pktio_entry_t *pktio_entry, int index,
 			ts_val = odp_time_global();
 			ts = &ts_val;
 		}
-		if (_ODP_DPDK_ZERO_COPY)
-			nb_rx = mbuf_to_pkt_zero(pktio_entry, pkt_table,
-						 rx_mbufs, nb_rx, ts);
-		else
-			nb_rx = mbuf_to_pkt(pktio_entry, pkt_table, rx_mbufs,
-					    nb_rx, ts);
+
+		nb_rx = pkt_dpdk->mbuf_to_pkt_fn(pktio_entry, pkt_table, rx_mbufs, nb_rx, ts);
 	}
 
 	return nb_rx;
