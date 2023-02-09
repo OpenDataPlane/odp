@@ -5,7 +5,8 @@ AC_DEFUN([ODP_LIBCONFIG],
 ##########################################################################
 # Check for libconfig availability
 ##########################################################################
-PKG_CHECK_MODULES([LIBCONFIG], [libconfig])
+PKG_CHECK_MODULES([LIBCONFIG], [libconfig], [have_libconfig=yes])
+AM_CONDITIONAL([LIBCONFIG], [test x$have_libconfig = xyes])
 
 ##########################################################################
 # Check for od availability
