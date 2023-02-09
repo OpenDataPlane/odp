@@ -19,7 +19,6 @@ COMPILE_ONLY = odp_cpu_bench \
 	       odp_crypto \
 	       odp_dma_perf \
 	       odp_ipsec \
-	       odp_ipsecfwd \
 	       odp_l2fwd \
 	       odp_packet_gen \
 	       odp_pktio_ordered \
@@ -28,6 +27,10 @@ COMPILE_ONLY = odp_cpu_bench \
 	       odp_sched_pktio \
 	       odp_scheduling \
 	       odp_timer_perf
+
+if LIBCONFIG
+COMPILE_ONLY += odp_ipsecfwd
+endif
 
 TESTSCRIPTS = odp_cpu_bench_run.sh \
 	      odp_crypto_run.sh \
@@ -62,7 +65,6 @@ odp_crc_SOURCES = odp_crc.c
 odp_crypto_SOURCES = odp_crypto.c
 odp_dma_perf_SOURCES = odp_dma_perf.c
 odp_ipsec_SOURCES = odp_ipsec.c
-odp_ipsecfwd_SOURCES = odp_ipsecfwd.c
 odp_lock_perf_SOURCES = odp_lock_perf.c
 odp_mem_perf_SOURCES = odp_mem_perf.c
 odp_packet_gen_SOURCES = odp_packet_gen.c
@@ -77,6 +79,10 @@ odp_random_SOURCES = odp_random.c
 odp_sched_perf_SOURCES = odp_sched_perf.c
 odp_stress_SOURCES = odp_stress.c
 odp_timer_perf_SOURCES = odp_timer_perf.c
+
+if LIBCONFIG
+odp_ipsecfwd_SOURCES = odp_ipsecfwd.c
+endif
 
 # l2fwd test depends on generator example
 EXTRA_odp_l2fwd_DEPENDENCIES = $(top_builddir)/example/generator/odp_generator$(EXEEXT)
