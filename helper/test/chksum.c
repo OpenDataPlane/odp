@@ -107,6 +107,9 @@ int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 				       ODPH_IPV4HDR_LEN);
 	ip->proto = ODPH_IPPROTO_UDP;
 	ip->id = odp_cpu_to_be_16(1);
+	ip->tos = 0;
+	ip->frag_offset = 0;
+	ip->ttl = 0;
 	odp_packet_has_ipv4_set(test_packet, 1);
 	if (odph_ipv4_csum_update(test_packet) < 0)
 		status = -1;
