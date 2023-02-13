@@ -300,6 +300,8 @@ static void pktio_init_packet_eth_ipv4(odp_packet_t pkt, uint8_t proto)
 	seq = odp_atomic_fetch_inc_u32(&ip_seq);
 	ip->id = odp_cpu_to_be_16(seq);
 	ip->chksum = 0;
+	ip->frag_offset = 0;
+	ip->tos = 0;
 	odph_ipv4_csum_update(pkt);
 }
 
