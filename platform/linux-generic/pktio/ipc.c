@@ -322,7 +322,7 @@ static int _ipc_init_master(pktio_entry_t *pktio_entry,
 		goto free_s_prod;
 	}
 
-	memcpy(pinfo->master.pool_name, pool_name, strlen(pool_name));
+	strcpy(pinfo->master.pool_name, pool_name);
 
 	/* Export ring info for the slave process to use */
 	pinfo->master.ring_size = ring_size;
