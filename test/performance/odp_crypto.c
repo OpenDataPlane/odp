@@ -90,20 +90,20 @@ typedef struct {
  */
 typedef struct {
 	/**
-	 * If non zero prints content of packets. Enabled by -d or
+	 * If non-zero, prints content of packets. Enabled by -d or
 	 * --debug option.
 	 */
 	int debug_packets;
 
 	/**
-	 * If non zero Try to run crypto operation in place. Note some
+	 * If non-zero, try to run crypto operation in place. Note some
 	 * implementation may not support such mode. Enabled by -n or
 	 * --inplace option.
 	 */
 	int in_place;
 
 	/**
-	 * If non zeor output of previous operation taken as input for
+	 * If non-zero, output of previous operation taken as input for
 	 * next encrypt operations. Enabled by -r or --reuse option.
 	 */
 	int reuse_packet;
@@ -118,7 +118,7 @@ typedef struct {
 
 	/**
 	 * Number of iteration to repeat crypto operation to get good
-	 * average number. Specified through -i or --terations option.
+	 * average number. Specified through -i or --iterations option.
 	 * Default is 10000.
 	 */
 	int iteration_count;
@@ -136,7 +136,7 @@ typedef struct {
 
 	/**
 	 * Pointer to selected algorithm to test. If NULL all available
-	 * alogorthims are tested. Name of algorithm is passed through
+	 * algorithms are tested. Name of algorithm is passed through
 	 * -a or --algorithm option.
 	 */
 	crypto_alg_config_t *alg_config;
@@ -1096,7 +1096,7 @@ static int check_auth_params(const odp_crypto_capability_t *crypto_capa,
 }
 
 /**
- * Process one algorithm. Note if paload size is specicified it is
+ * Process one algorithm. Note if payload size is specified it is
  * only one run. Or iterate over set of predefined payloads.
  */
 static int run_measure_one_config(test_run_arg_t *arg)
@@ -1442,7 +1442,7 @@ static void parse_args(int argc, char *argv[], crypto_args_t *cargs)
 }
 
 /**
- * Prinf usage information
+ * Print usage information
  */
 static void usage(char *progname)
 {
