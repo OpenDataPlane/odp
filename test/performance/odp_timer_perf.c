@@ -292,6 +292,8 @@ static int create_timer_pools(test_global_t *global)
 	printf("  num timer        %u\n", num_timer);
 	printf("  resolution       %" PRIu64 " nsec\n", res_ns);
 	printf("  period           %" PRIu64 " nsec\n", period_ns);
+	printf("  max timeout      %" PRIu64 " nsec\n", max_tmo_ns);
+	printf("  min timeout      %" PRIu64 " nsec\n", min_tmo_ns);
 	printf("  first timer at   %.2f sec\n", (double)START_NS / ODP_TIME_SEC_IN_NS);
 	if (mode == MODE_SCHED_OVERH)
 		printf("  test duration    %.2f sec\n", (double)max_tmo_ns / ODP_TIME_SEC_IN_NS);
