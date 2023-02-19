@@ -6,11 +6,18 @@
  */
 
 #include <string.h>
+#include <stdlib.h>
 #include <odp_api.h>
 #include <odp/helper/odph_api.h>
 #include <odp_cunit_common.h>
 #include <packet_common.h>
 #include "test_vectors.h"
+
+/*
+ * If nonzero, run time consuming tests too.
+ * Set through FULL_TEST environment variable.
+ */
+static int full_test;
 
 #define PKT_POOL_NUM  64
 #define PKT_POOL_LEN  (1 * 1024)
@@ -881,7 +888,8 @@ static void alg_test_op(alg_test_param_t *param)
 
 		param->wrong_digest = false;
 		alg_test_execute(param);
-		alg_test_execute(param); /* rerun with the same parameters */
+		if (full_test)
+			alg_test_execute(param); /* rerun with the same parameters */
 		param->wrong_digest = true;
 		alg_test_execute(param);
 	}
@@ -2853,6 +2861,11 @@ static int crypto_term(odp_instance_t inst)
 int main(int argc, char *argv[])
 {
 	int ret;
+	char *env = getenv("FULL_TEST");
+
+	if (env && strcmp(env, "0"))
+		full_test = 1;
+	printf("Test mode: %s\n", full_test ? "full" : "partial");
 
 	/* parse common options: */
 	if (odp_cunit_parse_options(argc, argv))
