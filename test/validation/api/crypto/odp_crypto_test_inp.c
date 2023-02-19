@@ -19,6 +19,8 @@
  */
 static int full_test;
 
+#define MAX_FAILURE_PRINTS 20
+
 #define PKT_POOL_NUM  64
 #define PKT_POOL_LEN  (1 * 1024)
 #define UAREA_SIZE 8
@@ -164,8 +166,8 @@ static int alg_op(odp_packet_t pkt,
 		  odp_crypto_session_t session,
 		  uint8_t *cipher_iv_ptr,
 		  uint8_t *auth_iv_ptr,
-		  odp_packet_data_range_t *cipher_range,
-		  odp_packet_data_range_t *auth_range,
+		  const odp_packet_data_range_t *cipher_range,
+		  const odp_packet_data_range_t *auth_range,
 		  uint8_t *aad,
 		  unsigned int hash_result_offset)
 {
@@ -248,8 +250,8 @@ static int alg_packet_op(odp_packet_t pkt_in,
 			 int32_t oop_shift,
 			 uint8_t *cipher_iv_ptr,
 			 uint8_t *auth_iv_ptr,
-			 odp_packet_data_range_t *cipher_range,
-			 odp_packet_data_range_t *auth_range,
+			 const odp_packet_data_range_t *cipher_range,
+			 const odp_packet_data_range_t *auth_range,
 			 uint8_t *aad,
 			 unsigned int hash_result_offset)
 {
@@ -349,8 +351,8 @@ static int crypto_op(odp_packet_t pkt_in,
 		     int32_t oop_shift,
 		     uint8_t *cipher_iv,
 		     uint8_t *auth_iv,
-		     odp_packet_data_range_t *cipher_range,
-		     odp_packet_data_range_t *auth_range,
+		     const odp_packet_data_range_t *cipher_range,
+		     const odp_packet_data_range_t *auth_range,
 		     uint8_t *aad,
 		     unsigned int hash_result_offset)
 {
@@ -414,8 +416,10 @@ static void adjust_segments(odp_packet_t *pkt, uint32_t first_seg_len)
 
 static void fill_with_pattern(uint8_t *buf, uint32_t len)
 {
+	static uint8_t value;
+
 	for (uint32_t n = 0; n < len; n++)
-		buf[n] = n;
+		buf[n] = value++;
 }
 
 static void write_header_and_trailer(odp_packet_t pkt,
@@ -442,6 +446,8 @@ typedef struct alg_test_param_t {
 	odp_cipher_alg_t cipher_alg;
 	odp_auth_alg_t auth_alg;
 	crypto_test_reference_t *ref;
+	odp_packet_data_range_t cipher_range;
+	odp_packet_data_range_t auth_range;
 	uint32_t digest_offset;
 	odp_bool_t is_bit_mode_cipher;
 	odp_bool_t is_bit_mode_auth;
@@ -457,23 +463,14 @@ static void prepare_crypto_ranges(const alg_test_param_t *param,
 				  odp_packet_data_range_t *auth_range)
 {
 	odp_packet_data_range_t zero_range = {.offset = 0, .length = 0};
+	uint32_t c_scale = param->is_bit_mode_cipher ? 8 : 1;
+	uint32_t a_scale = param->is_bit_mode_auth ? 8 : 1;
 
-	cipher_range->offset = param->header_len;
-	cipher_range->length = ref_length_in_bytes(param->ref);
-	auth_range->offset = param->header_len;
-	auth_range->length = ref_length_in_bytes(param->ref);
-	if (param->is_bit_mode_cipher) {
-		cipher_range->offset *= 8;
-		cipher_range->length = ref_length_in_bits(param->ref);
-	}
-	if (param->is_bit_mode_auth) {
-		auth_range->offset *= 8;
-		auth_range->length = ref_length_in_bits(param->ref);
-	}
-	/*
-	 * We did not check the bit mode of the null algorithms, so let's
-	 * not pass potentially invalid ranges to them.
-	 */
+	*cipher_range = param->cipher_range;
+	*auth_range = param->auth_range;
+	cipher_range->offset += c_scale * param->header_len;
+	auth_range->offset += a_scale * param->header_len;
+
 	if (param->cipher_alg == ODP_CIPHER_ALG_NULL)
 		*cipher_range = zero_range;
 	if (param->auth_alg == ODP_AUTH_ALG_NULL)
@@ -689,11 +686,13 @@ static void prepare_expected_data(const alg_test_param_t *param,
 	const int32_t shift = param->op_type == ODP_CRYPTO_OP_TYPE_OOP ? param->oop_shift : 0;
 	const odp_packet_t base_pkt = param->op_type == ODP_CRYPTO_OP_TYPE_OOP ? pkt_out : pkt_in;
 	int rc;
+	uint32_t cipher_offset_in_ref = param->cipher_range.offset;
 
 	if (param->op == ODP_CRYPTO_OP_ENCODE)
 		digest_offset += shift;
 
 	if (param->is_bit_mode_cipher) {
+		cipher_offset_in_ref /= 8;
 		cipher_offset /= 8;
 		cipher_len = (cipher_len + 7) / 8;
 	}
@@ -735,11 +734,11 @@ static void prepare_expected_data(const alg_test_param_t *param,
 		 * text) does not work in any real use case anyway.
 		 */
 		memcpy(ex->data + cipher_offset + shift,
-		       param->ref->ciphertext,
+		       param->ref->ciphertext + cipher_offset_in_ref,
 		       cipher_len);
 	} else {
 		memcpy(ex->data + cipher_offset + shift,
-		       param->ref->plaintext,
+		       param->ref->plaintext + cipher_offset_in_ref,
 		       cipher_len);
 	}
 
@@ -753,7 +752,7 @@ static void print_data(const char *title, uint8_t *data, uint32_t len)
 {
 	static uint64_t limit;
 
-	if (limit++ > 20)
+	if (limit++ > MAX_FAILURE_PRINTS)
 		return;
 
 	printf("%s\n", title);
@@ -874,6 +873,66 @@ static void alg_test_execute(const alg_test_param_t *param)
 	odp_packet_free(pkt_out);
 }
 
+static void print_alg_test_param(const alg_test_param_t *p)
+{
+	const char *cipher_mode = p->is_bit_mode_cipher ? "bit" : "byte";
+	const char *auth_mode = p->is_bit_mode_auth ? "bit" : "byte";
+
+	switch (p->op_type) {
+	case ODP_CRYPTO_OP_TYPE_LEGACY:
+		printf("legacy ");
+		break;
+	case ODP_CRYPTO_OP_TYPE_BASIC:
+		printf("basic ");
+		break;
+	case ODP_CRYPTO_OP_TYPE_OOP:
+		printf("out-of-place ");
+		break;
+	}
+	printf("%s\n", p->op == ODP_CRYPTO_OP_ENCODE ? "encode" : "decode");
+
+	printf("cipher: %s, %s mode\n", cipher_alg_name(p->cipher_alg), cipher_mode);
+	printf("  key length: %d, iv length: %d\n",
+	       p->ref->cipher_key_length, p->ref->cipher_iv_length);
+	printf("  range: offset %d, length %d\n",
+	       p->cipher_range.offset, p->cipher_range.length);
+
+	printf("auth: %s, %s mode\n", auth_alg_name(p->auth_alg), auth_mode);
+	printf("  key length: %d, iv length: %d\n",
+	       p->ref->auth_key_length, p->ref->auth_iv_length);
+	printf("  range: offset %d, length %d; aad length: %d\n",
+	       p->auth_range.offset, p->auth_range.length, p->ref->aad_length);
+	printf("  digest offset: %d, digest length %d\n",
+	       p->digest_offset, p->ref->digest_length);
+
+	if (p->wrong_digest)
+		printf("wrong digest test\n");
+	printf("header length: %d, trailer length: %d\n", p->header_len, p->trailer_len);
+	if (p->adjust_segmentation)
+		printf("segmentation adjusted, first_seg_len: %d\n", p->first_seg_len);
+	if (p->op_type == ODP_CRYPTO_OP_TYPE_OOP)
+		printf("oop_shift: %d\n", p->oop_shift);
+}
+
+static void alg_test_execute_and_print(alg_test_param_t *param)
+{
+	static int print_limit = MAX_FAILURE_PRINTS;
+	unsigned int num = CU_get_number_of_failures();
+
+	alg_test_execute(param);
+
+	if (CU_get_number_of_failures() > num) {
+		if (print_limit > 0) {
+			printf("\nTest failed:\n");
+			print_alg_test_param(param);
+			printf("\n");
+			print_limit--;
+			if (print_limit == 0)
+				printf("Suppressing further failure output\n");
+		}
+	}
+}
+
 static void alg_test_op(alg_test_param_t *param)
 {
 	int32_t oop_shifts[] = {0, 3, 130, -10};
@@ -887,11 +946,11 @@ static void alg_test_op(alg_test_param_t *param)
 		param->oop_shift = oop_shifts[n];
 
 		param->wrong_digest = false;
-		alg_test_execute(param);
+		alg_test_execute_and_print(param);
 		if (full_test)
-			alg_test_execute(param); /* rerun with the same parameters */
+			alg_test_execute_and_print(param); /* rerun with the same parameters */
 		param->wrong_digest = true;
-		alg_test_execute(param);
+		alg_test_execute_and_print(param);
 	}
 }
 
@@ -953,17 +1012,26 @@ static odp_crypto_session_t session_create(odp_crypto_op_t op,
 	ses_params.auth_digest_len = ref->digest_length;
 	ses_params.auth_aad_len = ref->aad_length;
 	ses_params.hash_result_in_auth_range = (hash_mode == HASH_OVERLAP);
-
 	rc = odp_crypto_session_create(&ses_params, &session, &status);
-	/*
-	 * In some cases an individual algorithm cannot be used alone,
-	 * i.e. with the null cipher/auth algorithm.
-	 */
-	if (rc < 0 &&
-	    status == ODP_CRYPTO_SES_ERR_ALG_COMBO) {
+
+	if (rc < 0 && status == ODP_CRYPTO_SES_ERR_ALG_COMBO) {
 		printf("\n    Unsupported algorithm combination: %s, %s\n",
 		       cipher_alg_name(cipher_alg),
 		       auth_alg_name(auth_alg));
+		return ODP_CRYPTO_SESSION_INVALID;
+	}
+
+	/*
+	 * Allow ODP_CRYPTO_SES_ERR_ALG_ORDER only in async op mode.
+	 * In sync mode an implementation should be able to support both
+	 * orders without much difficulty.
+	 */
+	if (rc < 0 && status == ODP_CRYPTO_SES_ERR_ALG_ORDER &&
+	    ses_params.op_mode == ODP_CRYPTO_ASYNC) {
+		printf("\n    Unsupported algorithm order: %s, %s, auth_cipher_text: %d\n",
+		       cipher_alg_name(cipher_alg),
+		       auth_alg_name(auth_alg),
+		       ses_params.auth_cipher_text);
 		return ODP_CRYPTO_SESSION_INVALID;
 	}
 
@@ -976,12 +1044,6 @@ static odp_crypto_session_t session_create(odp_crypto_op_t op,
 		return ODP_CRYPTO_SESSION_INVALID;
 	}
 
-	/*
-	 * We do not allow ODP_CRYPTO_SES_ERR_ALG_ORDER since we do
-	 * not combine individual non-null crypto and auth algorithms
-	 * with each other in the tests. Both orders should work when
-	 * only one algorithm is used (i.e. the other one is null).
-	 */
 	CU_ASSERT_FATAL(!rc);
 	CU_ASSERT(status == ODP_CRYPTO_SES_ERR_NONE);
 	CU_ASSERT(odp_crypto_session_to_u64(session) !=
@@ -1004,19 +1066,24 @@ static void alg_test_ses(odp_crypto_op_t op,
 			 odp_auth_alg_t auth_alg,
 			 alg_order_t order,
 			 crypto_test_reference_t *ref,
+			 odp_packet_data_range_t cipher_range,
+			 odp_packet_data_range_t auth_range,
 			 uint32_t digest_offset,
 			 odp_bool_t is_bit_mode_cipher,
 			 odp_bool_t is_bit_mode_auth)
 {
 	unsigned int initial_num_failures = CU_get_number_of_failures();
 	const uint32_t reflength = ref_length_in_bytes(ref);
-	const hash_test_mode_t hash_mode = digest_offset < reflength ? HASH_OVERLAP
-								     : HASH_NO_OVERLAP;
+	hash_test_mode_t hash_mode = HASH_NO_OVERLAP;
 	odp_crypto_session_t session;
 	int rc;
 	uint32_t seg_len;
 	uint32_t max_shift;
 	alg_test_param_t test_param;
+
+	if (digest_offset >= auth_range.offset &&
+	    digest_offset < auth_range.offset + auth_range.length)
+		hash_mode = HASH_OVERLAP;
 
 	session = session_create(op, op_type, cipher_alg, auth_alg, order, ref, hash_mode);
 	if (session == ODP_CRYPTO_SESSION_INVALID)
@@ -1029,6 +1096,8 @@ static void alg_test_ses(odp_crypto_op_t op,
 	test_param.cipher_alg = cipher_alg;
 	test_param.auth_alg = auth_alg;
 	test_param.ref = ref;
+	test_param.cipher_range = cipher_range;
+	test_param.auth_range = auth_range;
 	test_param.is_bit_mode_cipher = is_bit_mode_cipher;
 	test_param.is_bit_mode_auth = is_bit_mode_auth;
 	test_param.digest_offset = digest_offset;
@@ -1036,12 +1105,21 @@ static void alg_test_ses(odp_crypto_op_t op,
 	alg_test_op(&test_param);
 
 	max_shift = reflength + ref->digest_length;
+	seg_len = 0;
+
+	if (!full_test &&
+	    cipher_alg != ODP_CIPHER_ALG_NULL &&
+	    auth_alg != ODP_AUTH_ALG_NULL) {
+		/* run the loop body just once */
+		seg_len = max_shift / 2;
+		max_shift = seg_len;
+	}
 
 	/*
 	 * Test with segmented packets with all possible segment boundaries
 	 * within the packet data
 	 */
-	for (seg_len = 0; seg_len <= max_shift; seg_len++) {
+	for (; seg_len <= max_shift; seg_len++) {
 		/*
 		 * CUnit chokes on too many assertion failures, so bail
 		 * out if this test has already failed.
@@ -1072,6 +1150,8 @@ static void alg_test(odp_crypto_op_t op,
 		     odp_auth_alg_t auth_alg,
 		     alg_order_t order,
 		     crypto_test_reference_t *ref,
+		     odp_packet_data_range_t cipher_range,
+		     odp_packet_data_range_t auth_range,
 		     uint32_t digest_offset,
 		     odp_bool_t is_bit_mode_cipher,
 		     odp_bool_t is_bit_mode_auth)
@@ -1092,6 +1172,8 @@ static void alg_test(odp_crypto_op_t op,
 			     auth_alg,
 			     order,
 			     ref,
+			     cipher_range,
+			     auth_range,
 			     digest_offset,
 			     is_bit_mode_cipher,
 			     is_bit_mode_auth);
@@ -1151,6 +1233,8 @@ static void check_alg(odp_crypto_op_t op,
 		odp_bool_t is_bit_mode_cipher = false;
 		odp_bool_t is_bit_mode_auth = false;
 		uint32_t digest_offs = ref_length_in_bytes(&ref[idx]);
+		odp_packet_data_range_t cipher_range = {.offset = 0};
+		odp_packet_data_range_t auth_range = {.offset = 0};
 
 		if (ref_length_in_bits(&ref[idx]) % 8 != 0)
 			bit_mode_needed = true;
@@ -1210,9 +1294,18 @@ static void check_alg(odp_crypto_op_t op,
 			continue;
 		}
 
-		alg_test(op, cipher_alg, auth_alg, AUTH_PLAINTEXT, &ref[idx], digest_offs,
+		cipher_range.length = is_bit_mode_cipher ?
+			ref_length_in_bits(&ref[idx]) :
+			ref_length_in_bytes(&ref[idx]);
+		auth_range.length = is_bit_mode_auth ?
+			ref_length_in_bits(&ref[idx]) :
+			ref_length_in_bytes(&ref[idx]);
+
+		alg_test(op, cipher_alg, auth_alg, AUTH_PLAINTEXT, &ref[idx],
+			 cipher_range, auth_range, digest_offs,
 			 is_bit_mode_cipher, is_bit_mode_auth);
-		alg_test(op, cipher_alg, auth_alg, AUTH_CIPHERTEXT, &ref[idx], digest_offs,
+		alg_test(op, cipher_alg, auth_alg, AUTH_CIPHERTEXT, &ref[idx],
+			 cipher_range, auth_range, digest_offs,
 			 is_bit_mode_cipher, is_bit_mode_auth);
 
 		cipher_tested[cipher_idx] = true;
@@ -1558,6 +1651,8 @@ static void test_auth_hash_in_auth_range(odp_auth_alg_t auth,
 {
 	static crypto_test_reference_t ref = {.length = 0};
 	uint32_t digest_offset = 13;
+	const odp_packet_data_range_t cipher_range = {.offset = 0, .length = 0};
+	odp_packet_data_range_t auth_range;
 
 	/*
 	 * Create test packets with auth hash in the authenticated range and
@@ -1565,6 +1660,11 @@ static void test_auth_hash_in_auth_range(odp_auth_alg_t auth,
 	 */
 	if (create_hash_test_reference(auth, capa, &ref, digest_offset, 0))
 		return;
+
+	auth_range.offset = 0;
+	auth_range.length = capa->bit_mode ?
+		ref_length_in_bits(&ref) :
+		ref_length_in_bytes(&ref);
 
 	/*
 	 * Decode the ciphertext packet.
@@ -1578,6 +1678,7 @@ static void test_auth_hash_in_auth_range(odp_auth_alg_t auth,
 		 auth,
 		 order,
 		 &ref,
+		 cipher_range, auth_range,
 		 digest_offset,
 		 false,
 		 capa->bit_mode);
@@ -1588,6 +1689,11 @@ static void test_auth_hash_in_auth_range(odp_auth_alg_t auth,
 	 */
 	if (create_hash_test_reference(auth, capa, &ref, digest_offset, 1))
 		return;
+
+	auth_range.offset = 0;
+	auth_range.length = capa->bit_mode ?
+		ref_length_in_bits(&ref) :
+		ref_length_in_bytes(&ref);
 
 	/*
 	 * Encode the plaintext packet.
@@ -1601,40 +1707,58 @@ static void test_auth_hash_in_auth_range(odp_auth_alg_t auth,
 		 auth,
 		 order,
 		 &ref,
+		 cipher_range, auth_range,
 		 digest_offset,
 		 false,
 		 capa->bit_mode);
 }
 
+/*
+ * Cipher algorithms that are not AEAD algorithms
+ */
+static odp_cipher_alg_t cipher_algs[] = {
+	ODP_CIPHER_ALG_DES,
+	ODP_CIPHER_ALG_3DES_CBC,
+	ODP_CIPHER_ALG_3DES_ECB,
+	ODP_CIPHER_ALG_AES_CBC,
+	ODP_CIPHER_ALG_AES_CTR,
+	ODP_CIPHER_ALG_AES_ECB,
+	ODP_CIPHER_ALG_AES_CFB128,
+	ODP_CIPHER_ALG_AES_XTS,
+	ODP_CIPHER_ALG_KASUMI_F8,
+	ODP_CIPHER_ALG_SNOW3G_UEA2,
+	ODP_CIPHER_ALG_AES_EEA2,
+	ODP_CIPHER_ALG_ZUC_EEA3,
+};
+
+/*
+ * Authentication algorithms and hashes that use auth_range
+ * parameter. AEAD algorithms are excluded.
+ */
+static odp_auth_alg_t auth_algs[] = {
+	ODP_AUTH_ALG_MD5_HMAC,
+	ODP_AUTH_ALG_SHA1_HMAC,
+	ODP_AUTH_ALG_SHA224_HMAC,
+	ODP_AUTH_ALG_SHA256_HMAC,
+	ODP_AUTH_ALG_SHA384_HMAC,
+	ODP_AUTH_ALG_SHA512_HMAC,
+	ODP_AUTH_ALG_AES_GMAC,
+	ODP_AUTH_ALG_AES_CMAC,
+	ODP_AUTH_ALG_AES_XCBC_MAC,
+	ODP_AUTH_ALG_KASUMI_F9,
+	ODP_AUTH_ALG_SNOW3G_UIA2,
+	ODP_AUTH_ALG_AES_EIA2,
+	ODP_AUTH_ALG_ZUC_EIA3,
+	ODP_AUTH_ALG_MD5,
+	ODP_AUTH_ALG_SHA1,
+	ODP_AUTH_ALG_SHA224,
+	ODP_AUTH_ALG_SHA256,
+	ODP_AUTH_ALG_SHA384,
+	ODP_AUTH_ALG_SHA512,
+};
+
 static void test_auth_hashes_in_auth_range(void)
 {
-	/*
-	 * Authentication algorithms and hashes that use auth_range
-	 * parameter. AEAD algorithms are excluded.
-	 */
-	static odp_auth_alg_t auth_algs[] = {
-		ODP_AUTH_ALG_NULL,
-		ODP_AUTH_ALG_MD5_HMAC,
-		ODP_AUTH_ALG_SHA1_HMAC,
-		ODP_AUTH_ALG_SHA224_HMAC,
-		ODP_AUTH_ALG_SHA256_HMAC,
-		ODP_AUTH_ALG_SHA384_HMAC,
-		ODP_AUTH_ALG_SHA512_HMAC,
-		ODP_AUTH_ALG_AES_GMAC,
-		ODP_AUTH_ALG_AES_CMAC,
-		ODP_AUTH_ALG_AES_XCBC_MAC,
-		ODP_AUTH_ALG_KASUMI_F9,
-		ODP_AUTH_ALG_SNOW3G_UIA2,
-		ODP_AUTH_ALG_AES_EIA2,
-		ODP_AUTH_ALG_ZUC_EIA3,
-		ODP_AUTH_ALG_MD5,
-		ODP_AUTH_ALG_SHA1,
-		ODP_AUTH_ALG_SHA224,
-		ODP_AUTH_ALG_SHA256,
-		ODP_AUTH_ALG_SHA384,
-		ODP_AUTH_ALG_SHA512,
-	};
-
 	for (size_t n = 0; n < ARRAY_SIZE(auth_algs); n++) {
 		odp_auth_alg_t auth = auth_algs[n];
 		int num;
@@ -1654,6 +1778,530 @@ static void test_auth_hashes_in_auth_range(void)
 			test_auth_hash_in_auth_range(auth, &capa[i], AUTH_CIPHERTEXT);
 		}
 	}
+}
+
+/*
+ * Encode ref->plaintext and save result in ref->ciphertext.
+ */
+static int crypto_encode_ref(crypto_test_reference_t *ref,
+			     odp_cipher_alg_t cipher,
+			     odp_auth_alg_t auth,
+			     odp_packet_data_range_t cipher_range,
+			     odp_packet_data_range_t auth_range,
+			     uint32_t hash_result_offset)
+{
+	odp_packet_data_range_t zero_range = {.offset = 0, .length = 0};
+	odp_packet_t pkt;
+	int rc;
+	odp_crypto_session_t session;
+	odp_bool_t ok;
+
+	pkt = odp_packet_alloc(suite_context.pool, ref->length);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+
+	rc = odp_packet_copy_from_mem(pkt, 0, ref->length, ref->plaintext);
+	CU_ASSERT(rc == 0);
+
+	session = session_create(ODP_CRYPTO_OP_ENCODE,
+				 ODP_CRYPTO_OP_TYPE_LEGACY,
+				 cipher,
+				 auth,
+				 AUTH_PLAINTEXT,
+				 ref,
+				 HASH_OVERLAP);
+
+	if (session == ODP_CRYPTO_SESSION_INVALID) {
+		odp_packet_free(pkt);
+		return 1;
+	}
+
+	if (cipher == ODP_CIPHER_ALG_NULL)
+		cipher_range = zero_range;
+	if (auth == ODP_AUTH_ALG_NULL) {
+		auth_range = zero_range;
+		hash_result_offset = 0;
+	}
+
+	CU_ASSERT_FATAL(hash_result_offset + ref->digest_length <= ref->length);
+
+	rc = crypto_op(pkt, &pkt, &ok, session, ODP_CRYPTO_OP_TYPE_LEGACY, 0,
+		       ref->cipher_iv, ref->auth_iv,
+		       &cipher_range, &auth_range,
+		       ref->aad, hash_result_offset);
+	CU_ASSERT(rc == 0);
+	CU_ASSERT(ok);
+
+	rc = odp_crypto_session_destroy(session);
+	CU_ASSERT(rc == 0);
+
+	rc = odp_packet_copy_to_mem(pkt, 0, ref->length, ref->ciphertext);
+	CU_ASSERT(rc == 0);
+
+	odp_packet_free(pkt);
+	return 0;
+}
+
+typedef struct crypto_suite_t {
+	odp_cipher_alg_t cipher;
+	odp_auth_alg_t auth;
+	alg_order_t order;
+	const odp_crypto_cipher_capability_t *cipher_capa;
+	const odp_crypto_auth_capability_t *auth_capa;
+} crypto_suite_t;
+
+/*
+ * Create test reference for combined auth & cipher by doing authentication
+ * and ciphering through separate ODP crypto operations.
+ */
+static int create_combined_ref(const crypto_suite_t *suite,
+			       crypto_test_reference_t *ref,
+			       odp_packet_data_range_t *cipher_range,
+			       odp_packet_data_range_t *auth_range,
+			       uint32_t digest_offset)
+{
+	uint32_t total_len;
+	int rc;
+	crypto_test_reference_t ref_cipher_only;
+	crypto_test_reference_t ref_auth_only;
+	crypto_test_reference_t *first_ref, *second_ref;
+	odp_auth_alg_t first_auth, second_auth;
+	odp_cipher_alg_t first_cipher, second_cipher;
+
+	total_len = cipher_range->offset + cipher_range->length;
+	if (auth_range->offset + auth_range->length > total_len)
+		total_len = auth_range->offset + auth_range->length;
+	if (digest_offset + suite->auth_capa->digest_len > total_len)
+		total_len = digest_offset + suite->auth_capa->digest_len;
+
+	ref->cipher_key_length = suite->cipher_capa->key_len;
+	ref->cipher_iv_length = suite->cipher_capa->iv_len;
+	ref->auth_key_length = suite->auth_capa->key_len;
+	ref->auth_iv_length = suite->auth_capa->iv_len;
+	ref->digest_length = suite->auth_capa->digest_len;
+	ref->aad_length = 0;
+	ref->is_length_in_bits = false;
+	ref->length = total_len;
+
+	if (suite->cipher_capa->bit_mode) {
+		cipher_range->offset *= 8;
+		cipher_range->length *= 8;
+	}
+	if (suite->auth_capa->bit_mode) {
+		auth_range->offset *= 8;
+		auth_range->length *= 8;
+	}
+
+	if (ref->auth_key_length > MAX_KEY_LEN ||
+	    ref->auth_iv_length > MAX_IV_LEN ||
+	    total_len > MAX_DATA_LEN ||
+	    digest_offset + ref->digest_length > MAX_DATA_LEN)
+		CU_FAIL_FATAL("Internal error\n");
+
+	fill_with_pattern(ref->cipher_key, ref->cipher_key_length);
+	fill_with_pattern(ref->cipher_iv, ref->cipher_iv_length);
+	fill_with_pattern(ref->auth_key, ref->auth_key_length);
+	fill_with_pattern(ref->auth_iv, ref->auth_iv_length);
+	fill_with_pattern(ref->plaintext, ref->length);
+	memset(ref->plaintext + digest_offset, 0, ref->digest_length);
+
+	ref_cipher_only = *ref;
+	ref_cipher_only.auth_key_length = 0;
+	ref_cipher_only.auth_iv_length = 0;
+	ref_cipher_only.aad_length = 0;
+	ref_cipher_only.digest_length = 0;
+
+	ref_auth_only = *ref;
+	ref_auth_only.cipher_key_length = 0;
+	ref_auth_only.cipher_iv_length = 0;
+
+	if (suite->order == AUTH_CIPHERTEXT) {
+		first_ref = &ref_cipher_only;
+		first_cipher = suite->cipher;
+		first_auth = ODP_AUTH_ALG_NULL;
+		second_ref = &ref_auth_only;
+		second_cipher = ODP_CIPHER_ALG_NULL;
+		second_auth = suite->auth;
+	} else {
+		first_ref = &ref_auth_only;
+		first_cipher = ODP_CIPHER_ALG_NULL;
+		first_auth = suite->auth;
+		second_ref = &ref_cipher_only;
+		second_cipher = suite->cipher;
+		second_auth = ODP_AUTH_ALG_NULL;
+	}
+	rc = crypto_encode_ref(first_ref,
+			       first_cipher, first_auth,
+			       *cipher_range, *auth_range,
+			       digest_offset);
+	if (rc)
+		return 1;
+	memcpy(second_ref->plaintext, first_ref->ciphertext, ref->length);
+	rc = crypto_encode_ref(second_ref,
+			       second_cipher, second_auth,
+			       *cipher_range, *auth_range,
+			       digest_offset);
+	if (rc)
+		return 1;
+	memcpy(ref->ciphertext, second_ref->ciphertext, ref->length);
+	/*
+	 * These may be encrypted bytes, but that is what alg_test wants if
+	 * the digest is encrypted in the input packet.
+	 */
+	memcpy(ref->digest, second_ref->ciphertext + digest_offset, ref->digest_length);
+
+	return 0;
+}
+
+/*
+ * Return cipher range that is at least min_len bytes long, multiple of the
+ * block size and at least 3 blocks.
+ */
+static uint32_t get_cipher_range_len(uint32_t min_len)
+{
+#define MAX_BLOCK_SIZE 16
+	uint32_t bs = MAX_BLOCK_SIZE;
+	uint32_t len = 3 * bs;
+
+	if (min_len > len)
+		len = ((min_len + bs - 1) / bs) * bs;
+	return len;
+}
+
+typedef enum range_overlap_t {
+	SEPARATE_AUTH_AND_CIPHER_RANGES,
+	SAME_AUTH_AND_CIPHER_RANGE,
+	RANGES_PARTIALLY_OVERLAP,
+	AUTH_RANGE_IN_CIPHER_RANGE,
+	CIPHER_RANGE_IN_AUTH_RANGE,
+} range_overlap_t;
+#define NUM_RANGE_OVERLAPS 5
+
+typedef enum hash_location_t {
+	HASH_SEPARATE,
+	HASH_IN_AUTH_RANGE_ONLY,
+	HASH_IN_CIPHER_RANGE_ONLY,
+	HASH_IN_AUTH_AND_CIPHER_RANGE,
+} hash_location_t;
+#define NUM_HASH_LOCATIONS 4
+
+static int make_byte_ranges(range_overlap_t overlap,
+			    hash_location_t hash_location,
+			    uint32_t hash_len,
+			    odp_packet_data_range_t *cipher_range,
+			    odp_packet_data_range_t *auth_range,
+			    uint32_t *digest_offset)
+{
+	const uint32_t padding = 5; /* padding between parts, could also be zero */
+	const uint32_t nonzero_len = 3;
+	uint32_t c_offs = 0, c_len = 0, a_offs = 0, a_len = 0, digest_offs = 0;
+
+	switch (overlap) {
+	case SEPARATE_AUTH_AND_CIPHER_RANGES:
+		switch (hash_location) {
+		case HASH_SEPARATE:
+			/* |cccc_aaaa_dd| */
+			c_offs = 0;
+			c_len = get_cipher_range_len(nonzero_len);
+			a_offs = c_offs + c_len + padding;
+			a_len = nonzero_len;
+			digest_offs = a_offs + a_len + padding;
+			break;
+		case HASH_IN_AUTH_RANGE_ONLY:
+			/*
+			 * |cccc_aaaa|
+			 * |     _dd_|
+			 */
+			c_offs = 0;
+			c_len = get_cipher_range_len(nonzero_len);
+			a_offs = c_offs + c_len + padding;
+			a_len = hash_len + 2 * padding;
+			digest_offs = a_offs + padding;
+			break;
+		case HASH_IN_CIPHER_RANGE_ONLY:
+			/*
+			 * |cccc_aaaa|
+			 * |_dd_     |
+			 */
+			c_offs = 0;
+			c_len = get_cipher_range_len(hash_len + 2 * padding);
+			a_offs = c_offs + c_len + padding;
+			a_len = nonzero_len;
+			digest_offs = c_offs + padding;
+			break;
+		case HASH_IN_AUTH_AND_CIPHER_RANGE:
+			/* not possible when ranges are separate */
+			return 1;
+		}
+		break;
+	case SAME_AUTH_AND_CIPHER_RANGE:
+		c_offs = 0;
+		a_offs = 0;
+		switch (hash_location) {
+		case HASH_SEPARATE:
+			/*
+			 * |cccc_dd|
+			 * |aaaa   |
+			 */
+			c_len = get_cipher_range_len(nonzero_len);
+			a_len = c_len;
+			digest_offs = c_len + padding;
+			break;
+		case HASH_IN_AUTH_RANGE_ONLY:
+		case HASH_IN_CIPHER_RANGE_ONLY:
+			/* not possible when ranges are the same */
+			return 1;
+		case HASH_IN_AUTH_AND_CIPHER_RANGE:
+			/*
+			 * |cccc|
+			 * |aaaa|
+			 * |_dd_|
+			 */
+			c_len = get_cipher_range_len(hash_len + 2 * padding);
+			a_len = c_len;
+			digest_offs = padding;
+			break;
+		}
+		break;
+	case RANGES_PARTIALLY_OVERLAP:
+		a_offs = 0;
+		switch (hash_location) {
+		case HASH_SEPARATE:
+			/*
+			 * |aaaa    |
+			 * | cccc_dd|
+			 */
+			a_len = 2 * nonzero_len;
+			c_offs = nonzero_len;
+			c_len = get_cipher_range_len(a_len);
+			digest_offs = c_offs + c_len + padding;
+			break;
+		case HASH_IN_AUTH_RANGE_ONLY:
+			/*
+			 * |aaaaa  |
+			 * |_dd_ccc|
+			 */
+			digest_offs = padding;
+			a_len = hash_len + 2 * padding + nonzero_len;
+			c_offs = hash_len + 2 * padding;
+			c_len = get_cipher_range_len(2 * nonzero_len);
+			break;
+		case HASH_IN_CIPHER_RANGE_ONLY:
+			/* PDCP case when AUTH_PLAINTEXT */
+			/*
+			 * |aaaadd|
+			 * | ccccc|
+			 */
+			c_offs = nonzero_len;
+			c_len = get_cipher_range_len(nonzero_len + hash_len);
+			a_len = nonzero_len + c_len - hash_len;
+			digest_offs = c_offs + c_len - hash_len;
+			break;
+		case HASH_IN_AUTH_AND_CIPHER_RANGE:
+			/*
+			 * |aaaaaa |
+			 * | cccccc|
+			 * |¨_dd_  |
+			 */
+			c_offs = nonzero_len;
+			c_len = get_cipher_range_len(hash_len + 2 * padding + nonzero_len);
+			a_len = c_offs + hash_len + 2 * padding;
+			digest_offs = c_offs + padding;
+			break;
+		}
+		break;
+	case AUTH_RANGE_IN_CIPHER_RANGE:
+		c_offs = 0;
+		a_offs = nonzero_len;
+		switch (hash_location) {
+		case HASH_SEPARATE:
+			/*
+			 * |cccc_dd|
+			 * | aa_   |
+			 */
+			a_len = nonzero_len;
+			c_len = get_cipher_range_len(a_offs + a_len + padding);
+			digest_offs = c_len + padding;
+			break;
+		case HASH_IN_AUTH_RANGE_ONLY:
+			/* not possible since auth range is in cipher range */
+			return 1;
+		case HASH_IN_CIPHER_RANGE_ONLY:
+			/*
+			 * |ccccccc|
+			 * | aa_dd_|
+			 */
+			a_len = nonzero_len;
+			digest_offs = a_offs + a_len + padding;
+			c_len = get_cipher_range_len(digest_offs + hash_len + padding);
+			break;
+		case HASH_IN_AUTH_AND_CIPHER_RANGE:
+			/*
+			 * |cccccc|
+			 * | aaaa_|
+			 * | _dd_ |
+			 */
+			a_len = /**/ hash_len + 2 * padding;
+			c_len = get_cipher_range_len(a_offs + a_len + padding);
+			digest_offs = a_offs + /**/ padding;
+			break;
+		}
+		break;
+	case CIPHER_RANGE_IN_AUTH_RANGE:
+		a_offs = 0;
+		c_offs = nonzero_len;
+		switch (hash_location) {
+		case HASH_SEPARATE:
+			/*
+			 * |aaaa_dd|
+			 * | cc_   |
+			 */
+			c_len = get_cipher_range_len(nonzero_len);
+			a_len = c_offs + c_len + padding;
+			digest_offs = a_len + padding;
+			break;
+		case HASH_IN_AUTH_RANGE_ONLY:
+			/*
+			 * |aaaaaaa|
+			 * | cc_dd_|
+			 */
+			c_len = get_cipher_range_len(nonzero_len);
+			digest_offs = c_offs + c_len + padding;
+			a_len = digest_offs + hash_len + padding;
+			break;
+		case HASH_IN_CIPHER_RANGE_ONLY:
+			/* not possible since cipher range is in auth range */
+			return 1;
+		case HASH_IN_AUTH_AND_CIPHER_RANGE:
+			/*
+			 * |aaaaaa|
+			 * | cccc_|
+			 * | _dd_ |
+			 */
+			c_len = get_cipher_range_len(hash_len + 2 * padding);
+			a_len = c_offs + c_len + padding;
+			digest_offs = c_offs + padding;
+			break;
+		}
+		break;
+	}
+	cipher_range->offset = c_offs;
+	cipher_range->length = c_len;
+	auth_range->offset = a_offs;
+	auth_range->length = a_len;
+	*digest_offset = digest_offs;
+	return 0;
+}
+
+static void test_combo(const crypto_suite_t *suite,
+		       range_overlap_t overlap,
+		       hash_location_t location)
+{
+	int rc;
+
+	odp_packet_data_range_t cipher_range = {0, 0};
+	odp_packet_data_range_t auth_range = {0, 0};
+	uint32_t digest_offset = 0;
+	crypto_test_reference_t ref;
+
+	rc = make_byte_ranges(overlap,
+			      location,
+			      suite->auth_capa->digest_len,
+			      &cipher_range,
+			      &auth_range,
+			      &digest_offset);
+	if (rc)
+		return;
+
+	rc = create_combined_ref(suite, &ref,
+				 &cipher_range, &auth_range,
+				 digest_offset);
+	if (rc)
+		return;
+
+	alg_test(ODP_CRYPTO_OP_ENCODE,
+		 suite->cipher,
+		 suite->auth,
+		 suite->order,
+		 &ref,
+		 cipher_range, auth_range,
+		 digest_offset,
+		 suite->cipher_capa->bit_mode,
+		 suite->auth_capa->bit_mode);
+
+	alg_test(ODP_CRYPTO_OP_DECODE,
+		 suite->cipher,
+		 suite->auth,
+		 suite->order,
+		 &ref,
+		 cipher_range, auth_range,
+		 digest_offset,
+		 suite->cipher_capa->bit_mode,
+		 suite->auth_capa->bit_mode);
+}
+
+/* Iterate and test different cipher/auth range and hash locations */
+static void test_combo_ranges(const crypto_suite_t *suite)
+{
+	for (int overlap = 0; overlap < NUM_RANGE_OVERLAPS; overlap++)
+		for (int location = 0; location < NUM_HASH_LOCATIONS; location++) {
+			if (suite->order == AUTH_CIPHERTEXT &&
+			    (location == HASH_IN_CIPHER_RANGE_ONLY ||
+			     location == HASH_IN_AUTH_AND_CIPHER_RANGE)) {
+				/*
+				 * This combination ís not valid since
+				 * the generated hash would overwrite some
+				 * ciphertext, preventing decryption.
+				 */
+				continue;
+			}
+			test_combo(suite, overlap, location);
+		}
+}
+
+/* Iterate and test all variants (key sizes etc) of an alg combo */
+static void test_combo_variants(odp_cipher_alg_t cipher, odp_auth_alg_t auth)
+{
+	int num, num_ciphers, num_auths;
+
+	if (check_alg_support(cipher, auth) == ODP_TEST_INACTIVE)
+		return;
+
+	printf("    %s, %s\n",
+	       cipher_alg_name(cipher),
+	       auth_alg_name(auth));
+
+	num_ciphers = odp_crypto_cipher_capability(cipher, NULL, 0);
+	num_auths = odp_crypto_auth_capability(auth, NULL, 0);
+	CU_ASSERT_FATAL(num_ciphers > 0);
+	CU_ASSERT_FATAL(num_auths > 0);
+
+	odp_crypto_cipher_capability_t cipher_capa[num_ciphers];
+	odp_crypto_auth_capability_t auth_capa[num_auths];
+
+	num = odp_crypto_cipher_capability(cipher, cipher_capa, num_ciphers);
+	CU_ASSERT(num == num_ciphers);
+	num = odp_crypto_auth_capability(auth, auth_capa, num_auths);
+	CU_ASSERT(num == num_auths);
+
+	for (int n = 0; n < num_ciphers; n++)
+		for (int i = 0; i < num_auths; i++) {
+			crypto_suite_t suite = {.cipher = cipher,
+						.auth = auth,
+						.cipher_capa = &cipher_capa[n],
+						.auth_capa = &auth_capa[i]};
+			suite.order = AUTH_PLAINTEXT;
+			test_combo_ranges(&suite);
+			suite.order = AUTH_CIPHERTEXT;
+			test_combo_ranges(&suite);
+		}
+}
+
+static void test_all_combinations(void)
+{
+	printf("\n");
+	for (size_t n = 0; n < ARRAY_SIZE(cipher_algs); n++)
+		for (size_t i = 0; i < ARRAY_SIZE(auth_algs); i++)
+			test_combo_variants(cipher_algs[n], auth_algs[i]);
 }
 
 static int check_alg_null(void)
@@ -2736,6 +3384,7 @@ odp_testinfo_t crypto_suite[] = {
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_check_alg_sha512,
 				  check_alg_sha512),
 	ODP_TEST_INFO(test_auth_hashes_in_auth_range),
+	ODP_TEST_INFO(test_all_combinations),
 	ODP_TEST_INFO_NULL,
 };
 
