@@ -571,7 +571,7 @@ static int is_in_range(uint32_t offs, uint32_t range_offs, uint32_t range_len)
  */
 typedef struct ignore_t {
 	uint32_t byte_offset;	/* offset to a byte which has bits to be ignored */
-	uint32_t byte_mask;	/* mask of ignored bits in the byte */
+	uint8_t byte_mask;	/* mask of ignored bits in the byte */
 	struct {
 		uint32_t offset;
 		uint32_t length;
@@ -619,10 +619,13 @@ static void prepare_ignore_info(const alg_test_param_t *param,
 	 */
 	if (param->is_bit_mode_cipher &&
 	    param->cipher_alg != ODP_CIPHER_ALG_NULL) {
-		uint8_t leftover_bits = param->ref->length % 8;
+		uint8_t leftover_bits = ref_length_in_bits(param->ref) % 8;
 
 		ignore->byte_offset = cipher_offset + cipher_len - 1 + shift;
-		ignore->byte_mask = ~(0xff << (8 - leftover_bits));
+		if (leftover_bits > 0)
+			ignore->byte_mask = ~(0xff << (8 - leftover_bits));
+		else
+			ignore->byte_mask = 0;
 	}
 
 	/*
