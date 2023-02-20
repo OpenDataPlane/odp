@@ -811,10 +811,18 @@ typedef struct odp_crypto_packet_op_param_t {
 	 */
 	const uint8_t *aad_ptr;
 
-	/** Data range to apply cipher */
+	/** Data range to be ciphered. Ignored by the null cipher. */
 	odp_packet_data_range_t cipher_range;
 
-	/** Data range to authenticate */
+	/** Data range to be authenticated
+	 *
+	 *  The value is ignored with authenticated encryption algorithms,
+	 *  such as AES-GCM, which authenticate data in the cipher range
+	 *  and the AAD. The value is also ignored by the null algorithm.
+	 *
+	 *  As a special case AES-GMAC uses this field instead of aad_ptr
+	 *  for the data bytes to be authenticated.
+	 */
 	odp_packet_data_range_t auth_range;
 
 	/** Shift of the output offsets with ODP_CRYPTO_OP_TYPE_OOP
