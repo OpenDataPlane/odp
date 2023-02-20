@@ -628,66 +628,6 @@ int odp_crypto_session_destroy(odp_crypto_session_t session)
 	return 0;
 }
 
-#if ODP_DEPRECATED_API
-int
-odp_crypto_operation(odp_crypto_op_param_t *param,
-		     odp_bool_t *posted,
-		     odp_crypto_op_result_t *result)
-{
-	odp_crypto_packet_op_param_t packet_param;
-	odp_packet_t out_pkt = param->out_pkt;
-	odp_crypto_packet_result_t packet_result;
-	odp_crypto_op_result_t local_result;
-	int rc;
-
-	if (((odp_crypto_generic_session_t *)(intptr_t)param->session)->p.op_type !=
-	    ODP_CRYPTO_OP_TYPE_LEGACY)
-		return -1;
-
-	packet_param.session = param->session;
-	packet_param.cipher_iv_ptr = param->cipher_iv_ptr;
-	packet_param.auth_iv_ptr = param->auth_iv_ptr;
-	packet_param.hash_result_offset = param->hash_result_offset;
-	packet_param.aad_ptr = param->aad_ptr;
-	packet_param.cipher_range = param->cipher_range;
-	packet_param.auth_range = param->auth_range;
-
-	rc = odp_crypto_op(&param->pkt, &out_pkt, &packet_param, 1);
-	if (rc <= 0)
-		return -1;
-
-	rc = odp_crypto_result(&packet_result, out_pkt);
-	if (rc < 0) {
-		/*
-		 * We cannot fail since odp_crypto_op() has already processed
-		 * the packet. Let's indicate error in the result instead.
-		 */
-		packet_result.ok = false;
-	}
-
-	/* Indicate to caller operation was sync */
-	*posted = 0;
-
-	packet_subtype_set(out_pkt, ODP_EVENT_PACKET_BASIC);
-
-	/* Fill in result */
-	local_result.ctx = param->ctx;
-	local_result.pkt = out_pkt;
-	local_result.cipher_status = packet_result.cipher_status;
-	local_result.auth_status = packet_result.auth_status;
-	local_result.ok = packet_result.ok;
-
-	/*
-	 * Be bug-to-bug compatible. Return output packet also through params.
-	 */
-	param->out_pkt = out_pkt;
-
-	*result = local_result;
-
-	return 0;
-}
-#endif
-
 int _odp_crypto_init_global(void)
 {
 	size_t mem_size;
@@ -778,45 +718,6 @@ int _odp_crypto_term_local(void)
 	free_mb_mgr(local.mb_mgr);
 	return 0;
 }
-
-#if ODP_DEPRECATED_API
-odp_crypto_compl_t odp_crypto_compl_from_event(odp_event_t ev)
-{
-	/* This check not mandated by the API specification */
-	if (odp_event_type(ev) != ODP_EVENT_CRYPTO_COMPL)
-		_ODP_ABORT("Event not a crypto completion");
-	return (odp_crypto_compl_t)ev;
-}
-
-odp_event_t odp_crypto_compl_to_event(odp_crypto_compl_t completion_event)
-{
-	return (odp_event_t)completion_event;
-}
-
-void
-odp_crypto_compl_result(odp_crypto_compl_t completion_event,
-			odp_crypto_op_result_t *result)
-{
-	(void)completion_event;
-	(void)result;
-
-	/* We won't get such events anyway, so there can be no result */
-	_ODP_ASSERT(0);
-}
-
-void
-odp_crypto_compl_free(odp_crypto_compl_t completion_event)
-{
-	odp_event_t ev = odp_crypto_compl_to_event(completion_event);
-
-	odp_buffer_free(odp_buffer_from_event(ev));
-}
-
-uint64_t odp_crypto_compl_to_u64(odp_crypto_compl_t hdl)
-{
-	return _odp_pri(hdl);
-}
-#endif /* ODP_DEPRECATED_API */
 
 void odp_crypto_session_param_init(odp_crypto_session_param_t *param)
 {
