@@ -171,7 +171,7 @@ odp_crypto_alg_err_t ipsec_mb_cipher_op(odp_packet_t pkt,
 					odp_crypto_generic_session_t *session)
 {
 	IMB_MGR *mb_mgr = local.mb_mgr;
-	uint8_t *iv_ptr = param->cipher_iv_ptr;
+	const uint8_t *iv_ptr = param->cipher_iv_ptr;
 	uint32_t in_pos = param->cipher_range.offset;
 	uint32_t in_len = param->cipher_range.length;
 
@@ -248,7 +248,7 @@ odp_crypto_alg_err_t auth_ipsec_mb_gen(odp_packet_t pkt,
 				       odp_crypto_generic_session_t *session)
 {
 	IMB_MGR *mb_mgr = local.mb_mgr;
-	uint8_t *iv_ptr = param->auth_iv_ptr;
+	const uint8_t *iv_ptr = param->auth_iv_ptr;
 	uint32_t in_pos = param->auth_range.offset;
 	uint32_t in_len = param->auth_range.length;
 	uint32_t auth_tag;
@@ -312,7 +312,7 @@ odp_crypto_alg_err_t auth_ipsec_mb_check(odp_packet_t pkt,
 					 odp_crypto_generic_session_t *session)
 {
 	IMB_MGR *mb_mgr = local.mb_mgr;
-	uint8_t *iv_ptr = param->auth_iv_ptr;
+	const uint8_t *iv_ptr = param->auth_iv_ptr;
 	uint32_t in_pos = param->auth_range.offset;
 	uint32_t in_len = param->auth_range.length;
 	uint32_t bytes = ZUC_DIGEST_LENGTH;

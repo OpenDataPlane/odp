@@ -705,7 +705,7 @@ int packet_cmac_eia2(odp_packet_t pkt,
 		     uint8_t *hash)
 {
 	CMAC_CTX *ctx = local.cmac_ctx[session->idx];
-	void *iv_ptr    = param->auth_iv_ptr;
+	const void *iv_ptr = param->auth_iv_ptr;
 	uint32_t offset = param->auth_range.offset;
 	uint32_t len    = param->auth_range.length;
 	size_t outlen;

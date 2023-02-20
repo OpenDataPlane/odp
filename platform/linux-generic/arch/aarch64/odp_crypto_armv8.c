@@ -203,7 +203,7 @@ null_crypto_routine(odp_packet_t pkt ODP_UNUSED,
 	set_crypto_op_result_ok(pkt);
 }
 
-static inline void copy_aad(uint8_t *dst, uint8_t *src, uint32_t len)
+static inline void copy_aad(uint8_t *dst, const uint8_t *src, uint32_t len)
 {
 	_ODP_ASSERT(len == 8 || len == 12);
 
