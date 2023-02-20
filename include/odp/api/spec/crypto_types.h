@@ -38,11 +38,6 @@ extern "C" {
  */
 
 /**
- * @typedef odp_crypto_compl_t
-*  @deprecated Crypto API completion event (platform dependent).
-*/
-
-/**
  * Crypto API operation mode
  */
 typedef enum {
@@ -516,8 +511,7 @@ typedef enum odp_crypto_op_type_t {
 	/**
 	 * Input packet data and metadata are copied in the output packet
 	 * and then processed. Output packet is allocated by the caller
-	 * or by ODP. odp_crypto_op(), odp_crypto_op_enq() and
-	 * odp_crypto_operation() can be used.
+	 * or by ODP.
 	 *
 	 * This is the default value but will be deprecated in the future.
 	 */
@@ -526,7 +520,6 @@ typedef enum odp_crypto_op_type_t {
 	/**
 	 * Input packet data and metadata are copied in the output packet
 	 * and then processed. Output packet is allocated by ODP.
-	 * odp_crypto_op() and odp_crypto_op_enq() can be used.
 	 */
 	ODP_CRYPTO_OP_TYPE_BASIC,
 
@@ -541,8 +534,6 @@ typedef enum odp_crypto_op_type_t {
 	 *
 	 * Crypto output is the processed crypto_range, auth_range and
 	 * MAC/digest (in encode sessions) of the input packet.
-	 *
-	 * odp_crypto_op() and odp_crypto_op_enq() can be used.
 	 */
 	ODP_CRYPTO_OP_TYPE_OOP,
 } odp_crypto_op_type_t;
@@ -597,14 +588,6 @@ typedef struct odp_crypto_session_param_t {
 	 *  Default value is false.
 	 */
 	odp_bool_t hash_result_in_auth_range;
-
-	/** Preferred sync vs. async for odp_crypto_operation()
-	 *
-	 *  The default value is ODP_CRYPTO_SYNC.
-	 *
-	 *  @deprecated Used only with deprecated odp_crypto_operation()
-	 */
-	odp_crypto_op_mode_t ODP_DEPRECATE(pref_mode);
 
 	/** Operation mode when using packet interface: sync or async
 	 *
@@ -675,8 +658,7 @@ typedef struct odp_crypto_session_param_t {
 	/** Async mode completion event queue
 	 *
 	 *  The completion queue is used to return completions from
-	 *  odp_crypto_op_enq() (and the deprecated odp_crypto_operation())
-	 *  to the application.
+	 *  odp_crypto_op_enq() to the application.
 	 */
 	odp_queue_t compl_queue;
 
@@ -692,83 +674,6 @@ typedef struct odp_crypto_session_param_t {
 	odp_pool_t output_pool;
 
 } odp_crypto_session_param_t;
-
-/**
- * Crypto API per packet operation parameters
- *
- * @deprecated Use odp_crypto_packet_op_param_t instead.
- */
-typedef struct odp_crypto_op_param_t {
-	/** Session handle from creation */
-	odp_crypto_session_t session;
-
-	/** User context */
-	void *ctx;
-
-	/** Input packet
-	 *
-	 *  Specifies the input packet for the crypto operation. When the
-	 *  'out_pkt' variable is set to ODP_PACKET_INVALID (indicating a new
-	 *  packet should be allocated for the resulting packet).
-	 */
-	odp_packet_t pkt;
-
-	/** Output packet
-	 *
-	 *  Both "in place" (the original packet 'pkt' is modified) and
-	 *  "copy" (the packet is replicated to a new packet which contains
-	 *  the modified data) modes are supported. The "in place" mode of
-	 *  operation is indicated by setting 'out_pkt' equal to 'pkt'.
-	 *  For the copy mode of operation, setting 'out_pkt' to a valid packet
-	 *  value indicates the caller wishes to specify the destination packet.
-	 *  Setting 'out_pkt' to ODP_PACKET_INVALID indicates the caller wishes
-	 *  the destination packet be allocated from the output pool specified
-	 *  during session creation.
-	 */
-	odp_packet_t out_pkt;
-
-	/** IV pointer for cipher */
-	uint8_t *cipher_iv_ptr;
-
-	/** Authentication IV pointer */
-	uint8_t *auth_iv_ptr;
-
-	/** Offset from start of packet for hash result
-	 *
-	 *  In case of decode sessions, the expected hash will be read from
-	 *  this offset and compared with the calculated hash. After the
-	 *  operation the hash bytes will have undefined values.
-	 *
-	 *  In case of encode sessions the calculated hash will be stored in
-	 *  this offset.
-	 *
-	 *  If the hash_result_in_auth_range session parameter is true,
-	 *  the hash result location may overlap auth_range. In that case
-	 *  the result location will be zeroed in decode sessions before
-	 *  hash calculation. Zeroing is not done in encode sessions.
-	 */
-	uint32_t hash_result_offset;
-
-	/** Pointer to AAD. AAD length is defined by 'auth_aad_len'
-	 *  session parameter.
-	 */
-	uint8_t *aad_ptr;
-
-	/** Data range to be ciphered */
-	odp_packet_data_range_t cipher_range;
-
-	/** Data range to be authenticated
-	 *
-	 *  The value is ignored with authenticated encryption algorithms,
-	 *  such as AES-GCM, which authenticate data in the cipher range
-	 *  and the AAD.
-	 *
-	 *  As a special case AES-GMAC uses this field instead of aad_ptr
-	 *  for the data bytes to be authenticated.
-	 */
-	odp_packet_data_range_t auth_range;
-
-} ODP_DEPRECATE(odp_crypto_op_param_t);
 
 /**
  * Crypto packet API per packet operation parameters
@@ -931,29 +836,6 @@ typedef struct odp_crypto_op_status {
 	/** Hardware specific return code */
 	ODP_DEPRECATE(odp_crypto_hw_err_t) ODP_DEPRECATE(hw_err);
 } odp_crypto_op_status_t;
-
-/**
- * Crypto API operation result
- *
- * @deprecated Use odp_crypto_packet_result_t instead.
- */
-typedef struct odp_crypto_op_result {
-	/** Request completed successfully */
-	odp_bool_t  ok;
-
-	/** User context from request */
-	void *ctx;
-
-	/** Output packet */
-	odp_packet_t pkt;
-
-	/** Cipher status */
-	odp_crypto_op_status_t cipher_status;
-
-	/** Authentication status */
-	odp_crypto_op_status_t auth_status;
-
-} ODP_DEPRECATE(odp_crypto_op_result_t);
 
 /**
  * Crypto packet API operation result
