@@ -259,17 +259,28 @@ odp_event_t odp_crypto_packet_to_event(odp_packet_t pkt);
 /**
  * Get crypto operation results from a crypto processed packet
  *
- * Successful crypto operations of all types (SYNC and ASYNC) produce packets
- * which contain crypto result metadata. This function copies the operation
- * results from a crypto processed packet. Event subtype of this kind of
- * packet is ODP_EVENT_PACKET_CRYPTO. Results are undefined if a non-crypto
- * processed packet is passed as input.
+ * Crypto operations of all types (SYNC and ASYNC) produce packets which
+ * contain crypto result metadata. This function returns success status
+ * of the crypto operation that was applied to a packet and optionally
+ * writes additional information in a result structure.
+ *
+ * If the crypto operation succeeded, zero is returned and the values
+ * written in the cipher_status and auth_status fields of the result
+ * structure have undefined values.
+ *
+ * If the crypto operation failed, -1 is returned and the cipher_status
+ * and auth_status fields of the result structure indicate the reason for
+ * the failure.
+ *
+ * The subtype of the passed packet must be ODP_EVENT_PACKET_CRYPTO,
+ * otherwise the result of the call is undefined.
  *
  * @param         packet  A crypto processed packet (ODP_EVENT_PACKET_CRYPTO)
- * @param[out]    result  Pointer to operation result for output
+ * @param[out]    result  Pointer to operation result for output or NULL
  *
- * @retval  0     On success
- * @retval <0     On failure
+ * @retval   0    Crypto operation succeeded
+ * @retval  -1    Crypto operation failed
+ * @retval <-1    Failed to get crypto operation status of the packet
  */
 int odp_crypto_result(odp_crypto_packet_result_t *result,
 		      odp_packet_t packet);
