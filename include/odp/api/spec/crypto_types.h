@@ -578,7 +578,8 @@ typedef struct odp_crypto_session_param_t {
 	 *  indicates the reverse order of operation.
 	 *
 	 *  The value is ignored with authenticated encryption algorithms
-	 *  such as AES-GCM.
+	 *  such as AES-GCM. The value is also ignored when one of the
+	 *  algorithms is null.
 	 *
 	 *  true:  Authenticate cipher text
 	 *  false: Authenticate plain text
