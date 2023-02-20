@@ -49,9 +49,6 @@ static void test_defaults(uint8_t fill)
 	CU_ASSERT_EQUAL(param.op, ODP_CRYPTO_OP_ENCODE);
 	CU_ASSERT_EQUAL(param.op_type, ODP_CRYPTO_OP_TYPE_LEGACY);
 	CU_ASSERT_EQUAL(param.auth_cipher_text, false);
-#if ODP_DEPRECATED_API
-	CU_ASSERT_EQUAL(param.pref_mode, ODP_CRYPTO_SYNC);
-#endif
 	CU_ASSERT_EQUAL(param.op_mode, ODP_CRYPTO_SYNC);
 	CU_ASSERT_EQUAL(param.cipher_alg, ODP_CIPHER_ALG_NULL);
 	CU_ASSERT_EQUAL(param.cipher_iv_len, 0);
@@ -159,88 +156,6 @@ static const char *cipher_alg_name(odp_cipher_alg_t cipher)
 		return "Unknown";
 	}
 }
-
-#if ODP_DEPRECATED_API
-static int alg_op(odp_packet_t pkt,
-		  odp_bool_t *ok,
-		  odp_crypto_session_t session,
-		  uint8_t *cipher_iv_ptr,
-		  uint8_t *auth_iv_ptr,
-		  const odp_packet_data_range_t *cipher_range,
-		  const odp_packet_data_range_t *auth_range,
-		  uint8_t *aad,
-		  unsigned int hash_result_offset)
-{
-	int rc;
-	odp_crypto_op_result_t result;
-	odp_crypto_op_param_t op_params;
-	odp_bool_t posted;
-	odp_event_subtype_t subtype;
-
-	/* Prepare input/output params */
-	memset(&op_params, 0, sizeof(op_params));
-	op_params.session = session;
-	op_params.pkt = pkt;
-	op_params.out_pkt = pkt;
-	op_params.ctx = (void *)0xdeadbeef;
-
-	op_params.cipher_range = *cipher_range;
-	op_params.auth_range = *auth_range;
-	if (cipher_iv_ptr)
-		op_params.cipher_iv_ptr = cipher_iv_ptr;
-	if (auth_iv_ptr)
-		op_params.auth_iv_ptr = auth_iv_ptr;
-
-	op_params.aad_ptr = aad;
-
-	op_params.hash_result_offset = hash_result_offset;
-
-	rc = odp_crypto_operation(&op_params, &posted, &result);
-	if (rc < 0) {
-		CU_FAIL("Failed odp_crypto_operation()");
-		return rc;
-	}
-
-	if (posted) {
-		odp_event_t event;
-		odp_crypto_compl_t compl_event;
-
-		/* Get crypto completion event from compl_queue. */
-		CU_ASSERT_FATAL(NULL != suite_context.compl_queue_deq);
-		do {
-			event = suite_context.compl_queue_deq();
-		} while (event == ODP_EVENT_INVALID);
-
-		CU_ASSERT(odp_event_is_valid(event) == 1);
-		CU_ASSERT(ODP_EVENT_CRYPTO_COMPL == odp_event_type(event));
-		CU_ASSERT(ODP_EVENT_NO_SUBTYPE == odp_event_subtype(event));
-		CU_ASSERT(ODP_EVENT_CRYPTO_COMPL ==
-			  odp_event_types(event, &subtype));
-		CU_ASSERT(ODP_EVENT_NO_SUBTYPE == subtype);
-
-		compl_event = odp_crypto_compl_from_event(event);
-		CU_ASSERT(odp_crypto_compl_to_u64(compl_event) ==
-			  odp_crypto_compl_to_u64(
-				  odp_crypto_compl_from_event(event)));
-		odp_crypto_compl_result(compl_event, &result);
-		odp_crypto_compl_free(compl_event);
-	}
-
-	CU_ASSERT(result.pkt == pkt);
-	CU_ASSERT(result.ctx == (void *)0xdeadbeef);
-	CU_ASSERT(ODP_EVENT_PACKET ==
-		  odp_event_type(odp_packet_to_event(result.pkt)));
-	CU_ASSERT(ODP_EVENT_PACKET_BASIC ==
-		  odp_event_subtype(odp_packet_to_event(result.pkt)));
-	CU_ASSERT(ODP_EVENT_PACKET ==
-		  odp_event_types(odp_packet_to_event(result.pkt), &subtype));
-	CU_ASSERT(ODP_EVENT_PACKET_BASIC == subtype);
-
-	*ok = result.ok;
-
-	return 0;
-}
-#endif
 
 static int alg_packet_op(odp_packet_t pkt_in,
 			 odp_packet_t *pkt_out,
@@ -362,23 +277,11 @@ static int crypto_op(odp_packet_t pkt_in,
 {
 	int rc;
 
-	if (!suite_context.packet) {
-#if ODP_DEPRECATED_API
-		rc = alg_op(pkt_in, ok, session,
-			    cipher_iv, auth_iv,
-			    cipher_range, auth_range,
-			    aad, hash_result_offset);
-		*pkt_out = pkt_in;
-#else
-		rc = -1;
-#endif
-	} else {
-		rc = alg_packet_op(pkt_in, pkt_out, ok, session,
-				   op_type, oop_shift,
-				   cipher_iv, auth_iv,
-				   cipher_range, auth_range,
-				   aad, hash_result_offset);
-	}
+	rc = alg_packet_op(pkt_in, pkt_out, ok, session,
+			   op_type, oop_shift,
+			   cipher_iv, auth_iv,
+			   cipher_range, auth_range,
+			   aad, hash_result_offset);
 
 	if (rc < 0)
 		odp_packet_free(pkt_in);
@@ -1017,9 +920,6 @@ static odp_crypto_session_t session_create(odp_crypto_op_t op,
 	ses_params.op_type = op_type;
 	ses_params.auth_cipher_text = (order == AUTH_CIPHERTEXT);
 	ses_params.op_mode = suite_context.op_mode;
-#if ODP_DEPRECATED_API
-	ses_params.pref_mode = suite_context.pref_mode;
-#endif
 	ses_params.cipher_alg = cipher_alg;
 	ses_params.auth_alg = auth_alg;
 	ses_params.compl_queue = suite_context.queue;
@@ -1389,14 +1289,12 @@ static int check_alg_support(odp_cipher_alg_t cipher, odp_auth_alg_t auth)
 			return ODP_TEST_INACTIVE;
 	}
 
-	if (suite_context.packet) {
-		if (suite_context.op_mode == ODP_CRYPTO_SYNC &&
-		    capability.sync_mode == ODP_SUPPORT_NO)
-			return ODP_TEST_INACTIVE;
-		if (suite_context.op_mode == ODP_CRYPTO_ASYNC &&
-		    capability.async_mode == ODP_SUPPORT_NO)
-			return ODP_TEST_INACTIVE;
-	}
+	if (suite_context.op_mode == ODP_CRYPTO_SYNC &&
+	    capability.sync_mode == ODP_SUPPORT_NO)
+		return ODP_TEST_INACTIVE;
+	if (suite_context.op_mode == ODP_CRYPTO_ASYNC &&
+	    capability.async_mode == ODP_SUPPORT_NO)
+		return ODP_TEST_INACTIVE;
 
 	/* Cipher algorithms */
 	switch (cipher) {
@@ -3153,64 +3051,8 @@ static odp_event_t plain_compl_queue_deq(void)
 	return odp_queue_deq(suite_context.queue);
 }
 
-#if ODP_DEPRECATED_API
-static int crypto_suite_sync_init(void)
-{
-	suite_context.pool = odp_pool_lookup("packet_pool");
-	if (suite_context.pool == ODP_POOL_INVALID)
-		return -1;
-
-	suite_context.queue = ODP_QUEUE_INVALID;
-	suite_context.pref_mode = ODP_CRYPTO_SYNC;
-	return 0;
-}
-
-static int crypto_suite_async_plain_init(void)
-{
-	odp_queue_t out_queue;
-
-	suite_context.pool = odp_pool_lookup("packet_pool");
-	if (suite_context.pool == ODP_POOL_INVALID)
-		return -1;
-
-	out_queue = plain_compl_queue_create();
-	if (ODP_QUEUE_INVALID == out_queue) {
-		fprintf(stderr, "Crypto outq creation failed.\n");
-		return -1;
-	}
-	suite_context.queue = out_queue;
-	suite_context.q_type = ODP_QUEUE_TYPE_PLAIN;
-	suite_context.compl_queue_deq = plain_compl_queue_deq;
-	suite_context.pref_mode = ODP_CRYPTO_ASYNC;
-
-	return 0;
-}
-
-static int crypto_suite_async_sched_init(void)
-{
-	odp_queue_t out_queue;
-
-	suite_context.pool = odp_pool_lookup("packet_pool");
-	if (suite_context.pool == ODP_POOL_INVALID)
-		return -1;
-
-	out_queue = sched_compl_queue_create();
-	if (ODP_QUEUE_INVALID == out_queue) {
-		fprintf(stderr, "Crypto outq creation failed.\n");
-		return -1;
-	}
-	suite_context.queue = out_queue;
-	suite_context.q_type = ODP_QUEUE_TYPE_SCHED;
-	suite_context.compl_queue_deq = sched_compl_queue_deq;
-	suite_context.pref_mode = ODP_CRYPTO_ASYNC;
-
-	return 0;
-}
-#endif
-
 static int crypto_suite_packet_sync_init(void)
 {
-	suite_context.packet = true;
 	suite_context.op_mode = ODP_CRYPTO_SYNC;
 
 	suite_context.pool = odp_pool_lookup("packet_pool");
@@ -3225,7 +3067,6 @@ static int crypto_suite_packet_async_plain_init(void)
 {
 	odp_queue_t out_queue;
 
-	suite_context.packet = true;
 	suite_context.op_mode = ODP_CRYPTO_ASYNC;
 
 	suite_context.pool = odp_pool_lookup("packet_pool");
@@ -3248,7 +3089,6 @@ static int crypto_suite_packet_async_sched_init(void)
 {
 	odp_queue_t out_queue;
 
-	suite_context.packet = true;
 	suite_context.op_mode = ODP_CRYPTO_ASYNC;
 
 	suite_context.pool = odp_pool_lookup("packet_pool");
@@ -3424,14 +3264,6 @@ odp_testinfo_t crypto_suite[] = {
 };
 
 odp_suiteinfo_t crypto_suites[] = {
-#if ODP_DEPRECATED_API
-	{"odp_crypto_sync_inp", crypto_suite_sync_init,
-	 NULL, crypto_suite},
-	{"odp_crypto_async_plain_inp", crypto_suite_async_plain_init,
-	 crypto_suite_term, crypto_suite},
-	{"odp_crypto_async_sched_inp", crypto_suite_async_sched_init,
-	 crypto_suite_term, crypto_suite},
-#endif
 	{"odp_crypto_packet_sync_inp", crypto_suite_packet_sync_init,
 	 NULL, crypto_suite},
 	{"odp_crypto_packet_async_plain_inp",
