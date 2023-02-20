@@ -115,80 +115,6 @@ int odp_crypto_session_create(const odp_crypto_session_param_t *param,
  */
 int odp_crypto_session_destroy(odp_crypto_session_t session);
 
-#if ODP_DEPRECATED_API
-
-/**
- * Return crypto completion handle that is associated with event
- *
- * @deprecated Used only with the deprecated odp_crypto_operation()
- *
- * Note: any invalid parameters will cause undefined behavior and may cause
- * the application to abort or crash.
- *
- * @param ev An event of type ODP_EVENT_CRYPTO_COMPL
- *
- * @return crypto completion handle
- */
-odp_crypto_compl_t odp_crypto_compl_from_event(odp_event_t ev);
-
-/**
- * Convert crypto completion handle to event handle
- *
- * @deprecated Used only with the deprecated odp_crypto_operation()
- *
- * @param completion_event  Completion event to convert to generic event
- *
- * @return Event handle
- */
-odp_event_t odp_crypto_compl_to_event(odp_crypto_compl_t completion_event);
-
-/**
- * Release crypto completion event
- *
- * @deprecated Used only with the deprecated odp_crypto_operation()
- *
- * @param completion_event  Completion event we are done accessing
- */
-void odp_crypto_compl_free(odp_crypto_compl_t completion_event);
-
-/**
- * Crypto per packet operation
- *
- * @deprecated Use odp_crypto_op() or odp_crypto_op_enq() instead.
- *
- * This function may be called only for sessions configured with
- * the ODP_CRYPTO_OP_TYPE_LEGACY operation type.
- *
- * Performs the cryptographic operations specified during session creation
- * on the packet.  If the operation is performed synchronously, "posted"
- * will return FALSE and the result of the operation is immediately available.
- * If "posted" returns TRUE the result will be delivered via the completion
- * queue specified when the session was created.
- *
- * @param param             Operation parameters
- * @param posted            Pointer to return posted, TRUE for async operation
- * @param result            Results of operation (when posted returns FALSE)
- *
- * @retval 0 on success
- * @retval <0 on failure
- */
-int odp_crypto_operation(odp_crypto_op_param_t *param,
-			 odp_bool_t *posted,
-			 odp_crypto_op_result_t *result);
-
-/**
- * Crypto per packet operation query result from completion event
- *
- * @deprecated Used only with the deprecated odp_crypto_operation()
- *
- * @param completion_event  Event containing operation results
- * @param result            Pointer to result structure
- */
-void odp_crypto_compl_result(odp_crypto_compl_t completion_event,
-			     odp_crypto_op_result_t *result);
-
-#endif /* ODP_DEPRECATED_API */
-
 /**
  * Get printable value for an odp_crypto_session_t
  *
@@ -201,23 +127,6 @@ void odp_crypto_compl_result(odp_crypto_compl_t completion_event,
  * an odp_crypto_session_t handle.
  */
 uint64_t odp_crypto_session_to_u64(odp_crypto_session_t hdl);
-
-#if ODP_DEPRECATED_API
-/**
- * Get printable value for an odp_crypto_compl_t
- *
- * @deprecated Used only with the deprecated odp_crypto_operation()
- *
- * @param hdl  odp_crypto_compl_t handle to be printed
- * @return     uint64_t value that can be used to print/display this
- *             handle
- *
- * @note This routine is intended to be used for diagnostic purposes
- * to enable applications to generate a printable value that represents
- * an odp_crypto_compl_t handle.
- */
-uint64_t odp_crypto_compl_to_u64(odp_crypto_compl_t hdl);
-#endif
 
 /**
  * Initialize crypto session parameters

@@ -52,8 +52,6 @@ extern "C" {
  *       packet processing related metadata
  * - ODP_EVENT_TIMEOUT
  *     - Timeout event (odp_timeout_t) from a timer
- * - ODP_EVENT_CRYPTO_COMPL
- *     - Crypto completion event (odp_crypto_compl_t)
  * - ODP_EVENT_IPSEC_STATUS
  *     - IPSEC status update event (odp_ipsec_status_t)
  * - ODP_EVENT_PACKET_VECTOR
