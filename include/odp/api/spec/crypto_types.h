@@ -777,10 +777,10 @@ typedef struct odp_crypto_packet_op_param_t {
 	odp_crypto_session_t session;
 
 	/** IV pointer for cipher */
-	uint8_t *cipher_iv_ptr;
+	const uint8_t *cipher_iv_ptr;
 
 	/** IV pointer for authentication */
-	uint8_t *auth_iv_ptr;
+	const uint8_t *auth_iv_ptr;
 
 	/** Offset from start of packet for hash result
 	 *
@@ -808,7 +808,7 @@ typedef struct odp_crypto_packet_op_param_t {
 	/** Pointer to AAD. AAD length is defined by 'auth_aad_len'
 	 *  session parameter.
 	 */
-	uint8_t *aad_ptr;
+	const uint8_t *aad_ptr;
 
 	/** Data range to apply cipher */
 	odp_packet_data_range_t cipher_range;
