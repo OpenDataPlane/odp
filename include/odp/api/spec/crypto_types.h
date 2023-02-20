@@ -880,14 +880,16 @@ typedef enum {
 	ODP_CRYPTO_SES_ERR_PARAMS,
 } odp_crypto_ses_create_err_t;
 
-/** This synonym for backward compatibility will be deprecated later */
+#if ODP_DEPRECATED_API
+/** This synonym for backward compatibility has been deprecated */
 #define ODP_CRYPTO_SES_CREATE_ERR_NONE       ODP_CRYPTO_SES_ERR_NONE
-/** This synonym for backward compatibility will be deprecated later */
+/** This synonym for backward compatibility has been deprecated */
 #define ODP_CRYPTO_SES_CREATE_ERR_ENOMEM     ODP_CRYPTO_SES_ERR_ENOMEM
-/** This synonym for backward compatibility will be deprecated later */
+/** This synonym for backward compatibility has been deprecated */
 #define ODP_CRYPTO_SES_CREATE_ERR_INV_CIPHER ODP_CRYPTO_SES_ERR_CIPHER
-/** This synonym for backward compatibility will be deprecated later */
+/** This synonym for backward compatibility has been deprecated */
 #define ODP_CRYPTO_SES_CREATE_ERR_INV_AUTH   ODP_CRYPTO_SES_ERR_AUTH
+#endif
 
 /**
  * Crypto API algorithm return code
