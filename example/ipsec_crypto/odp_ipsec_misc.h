@@ -321,24 +321,6 @@ void ipv4_adjust_len(odph_ipv4hdr_t *ip, int adj)
 	ip->tot_len = odp_cpu_to_be_16(odp_be_to_cpu_16(ip->tot_len) + adj);
 }
 
-/**
- * Verify crypto operation completed successfully
- *
- * @param status  Pointer to cryto completion structure
- *
- * @return TRUE if all OK else FALSE
- */
-static inline
-odp_bool_t is_crypto_op_status_ok(odp_crypto_op_status_t *status)
-{
-	if (status->alg_err != ODP_CRYPTO_ALG_ERR_NONE)
-		return FALSE;
-	if (status->hw_err != ODP_CRYPTO_HW_ERR_NONE)
-		return FALSE;
-	return TRUE;
-}
-
-
 #ifdef __cplusplus
 }
 #endif
