@@ -897,14 +897,16 @@ typedef enum {
 typedef enum {
 	/** Algorithm successful */
 	ODP_CRYPTO_ALG_ERR_NONE,
-	/** Invalid data block size */
+	/** Invalid range or packet size */
 	ODP_CRYPTO_ALG_ERR_DATA_SIZE,
 	/** Key size invalid for algorithm */
-	ODP_CRYPTO_ALG_ERR_KEY_SIZE,
+	ODP_DEPRECATE(ODP_CRYPTO_ALG_ERR_KEY_SIZE),
 	/** Computed ICV value mismatch */
 	ODP_CRYPTO_ALG_ERR_ICV_CHECK,
 	/** IV value not specified */
-	ODP_CRYPTO_ALG_ERR_IV_INVALID,
+	ODP_DEPRECATE(ODP_CRYPTO_ALG_ERR_IV_INVALID),
+	/** Other error */
+	ODP_CRYPTO_ALG_ERR_OTHER,
 } odp_crypto_alg_err_t;
 
 /**
@@ -912,12 +914,12 @@ typedef enum {
  */
 typedef enum {
 	/** Operation completed successfully */
-	ODP_CRYPTO_HW_ERR_NONE,
+	ODP_DEPRECATE(ODP_CRYPTO_HW_ERR_NONE),
 	/** Error detected during DMA of data */
-	ODP_CRYPTO_HW_ERR_DMA,
+	ODP_DEPRECATE(ODP_CRYPTO_HW_ERR_DMA),
 	/** Operation failed due to pool depletion */
-	ODP_CRYPTO_HW_ERR_BP_DEPLETED,
-} odp_crypto_hw_err_t;
+	ODP_DEPRECATE(ODP_CRYPTO_HW_ERR_BP_DEPLETED),
+} ODP_DEPRECATE(odp_crypto_hw_err_t);
 
 /**
  * Cryto API per packet operation completion status
@@ -927,8 +929,7 @@ typedef struct odp_crypto_op_status {
 	odp_crypto_alg_err_t alg_err;
 
 	/** Hardware specific return code */
-	odp_crypto_hw_err_t  hw_err;
-
+	ODP_DEPRECATE(odp_crypto_hw_err_t) ODP_DEPRECATE(hw_err);
 } odp_crypto_op_status_t;
 
 /**
@@ -958,8 +959,11 @@ typedef struct odp_crypto_op_result {
  * Crypto packet API operation result
  */
 typedef struct odp_crypto_packet_result_t {
-	/** Request completed successfully */
-	odp_bool_t  ok;
+	/** Request completed successfully.
+	 *
+	 *  @deprecated Check the return value of odp_crypto_result() instead.
+	 */
+	odp_bool_t  ODP_DEPRECATE(ok);
 
 	/** Input packet passed to odp_crypo_op_enq() when the operation
 	 *  type of the session is ODP_CRYPTO_OP_TYPE_OOP. In other cases
