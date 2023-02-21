@@ -45,6 +45,8 @@ typedef struct {
 	uint64_t nsec_after_max;
 	uint64_t nsec_after_max_idx;
 
+	int64_t nsec_final;
+
 	uint64_t num_before;
 	uint64_t num_exact;
 	uint64_t num_after;
@@ -696,6 +698,9 @@ static void print_stat(test_global_t *test_global)
 	print_nsec_error("min", stat->nsec_before_min, res_ns, stat->nsec_before_min_idx);
 	print_nsec_error("max", stat->nsec_before_max, res_ns, stat->nsec_before_max_idx);
 	print_nsec_error("ave", ave_before, res_ns, UINT64_MAX);
+	printf("  final timeout error (nsec):\n");
+	printf("              %12" PRIi64 "  /  %.3fx resolution\n",
+	       stat->nsec_final, (double)stat->nsec_final / res_ns);
 	printf("\n");
 }
 
@@ -771,6 +776,7 @@ static void run_test(test_global_t *test_global)
 			tmo_ns += ctx->count * period + .5;
 			ctx->count++;
 		}
+		stat->nsec_final = (int64_t)time_ns - (int64_t)tmo_ns;
 
 		if (log)
 			log[i].tmo_ns = tmo_ns;
