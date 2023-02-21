@@ -35,11 +35,15 @@ typedef struct timer_ctx_t {
 typedef struct {
 	uint64_t nsec_before_sum;
 	uint64_t nsec_before_min;
+	uint64_t nsec_before_min_idx;
 	uint64_t nsec_before_max;
+	uint64_t nsec_before_max_idx;
 
 	uint64_t nsec_after_sum;
 	uint64_t nsec_after_min;
+	uint64_t nsec_after_min_idx;
 	uint64_t nsec_after_max;
+	uint64_t nsec_after_max_idx;
 
 	uint64_t num_before;
 	uint64_t num_exact;
@@ -629,6 +633,16 @@ static int destroy_timers(test_global_t *test_global)
 	return ret;
 }
 
+static void print_nsec_error(const char *str, uint64_t nsec, double res_ns,
+			     uint64_t idx)
+{
+	printf("         %s: %12" PRIu64 "  /  %.3fx resolution",
+	       str, nsec, (double)nsec / res_ns);
+	if (idx != UINT64_MAX)
+		printf(", event %" PRIu64, idx);
+	printf("\n");
+}
+
 static void print_stat(test_global_t *test_global)
 {
 	uint64_t i;
@@ -665,7 +679,7 @@ static void print_stat(test_global_t *test_global)
 		fprintf(file, "\n");
 	}
 
-	printf("\n Test results:\n");
+	printf("\nTest results:\n");
 	printf("  num after:  %12" PRIu64 "  /  %.2f%%\n",
 	       stat->num_after, 100.0 * stat->num_after / tot_timers);
 	printf("  num before: %12" PRIu64 "  /  %.2f%%\n",
@@ -675,19 +689,13 @@ static void print_stat(test_global_t *test_global)
 	printf("  num retry:  %12" PRIu64 "  /  %.2f%%\n",
 	       stat->num_too_near, 100.0 * stat->num_too_near / tot_timers);
 	printf("  error after (nsec):\n");
-	printf("         min: %12" PRIu64 "  /  %.3fx resolution\n",
-	       stat->nsec_after_min, (double)stat->nsec_after_min / res_ns);
-	printf("         max: %12" PRIu64 "  /  %.3fx resolution\n",
-	       stat->nsec_after_max, (double)stat->nsec_after_max / res_ns);
-	printf("         ave: %12.0f  /  %.3fx resolution\n",
-	       ave_after, ave_after / res_ns);
+	print_nsec_error("min", stat->nsec_after_min, res_ns, stat->nsec_after_min_idx);
+	print_nsec_error("max", stat->nsec_after_max, res_ns, stat->nsec_after_max_idx);
+	print_nsec_error("ave", ave_after, res_ns, UINT64_MAX);
 	printf("  error before (nsec):\n");
-	printf("         min: %12" PRIu64 "  /  %.3fx resolution\n",
-	       stat->nsec_before_min, (double)stat->nsec_before_min / res_ns);
-	printf("         max: %12" PRIu64 "  /  %.3fx resolution\n",
-	       stat->nsec_before_max, (double)stat->nsec_before_max / res_ns);
-	printf("         ave: %12.0f  /  %.3fx resolution\n",
-	       ave_before, ave_before / res_ns);
+	print_nsec_error("min", stat->nsec_before_min, res_ns, stat->nsec_before_min_idx);
+	print_nsec_error("max", stat->nsec_before_max, res_ns, stat->nsec_before_max_idx);
+	print_nsec_error("ave", ave_before, res_ns, UINT64_MAX);
 	printf("\n");
 }
 
@@ -771,10 +779,14 @@ static void run_test(test_global_t *test_global)
 			diff_ns = time_ns - tmo_ns;
 			stat->num_after++;
 			stat->nsec_after_sum += diff_ns;
-			if (diff_ns < stat->nsec_after_min)
+			if (diff_ns < stat->nsec_after_min) {
 				stat->nsec_after_min = diff_ns;
-			if (diff_ns > stat->nsec_after_max)
+				stat->nsec_after_min_idx = i;
+			}
+			if (diff_ns > stat->nsec_after_max) {
 				stat->nsec_after_max = diff_ns;
+				stat->nsec_after_max_idx = i;
+			}
 			if (log)
 				log[i].diff_ns = diff_ns;
 
@@ -782,10 +794,14 @@ static void run_test(test_global_t *test_global)
 			diff_ns = tmo_ns - time_ns;
 			stat->num_before++;
 			stat->nsec_before_sum += diff_ns;
-			if (diff_ns < stat->nsec_before_min)
+			if (diff_ns < stat->nsec_before_min) {
 				stat->nsec_before_min = diff_ns;
-			if (diff_ns > stat->nsec_before_max)
+				stat->nsec_before_min_idx = i;
+			}
+			if (diff_ns > stat->nsec_before_max) {
 				stat->nsec_before_max = diff_ns;
+				stat->nsec_before_max_idx = i;
+			}
 			if (log)
 				log[i].diff_ns = -diff_ns;
 		} else {
