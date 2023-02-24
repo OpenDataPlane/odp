@@ -234,7 +234,7 @@ Prerequisites for building the OpenDataPlane (ODP) API
 3.6 DPDK packet I/O support (optional)
 
    Use DPDK for ODP packet I/O. Currently supported DPDK versions are v19.11,
-   v20.11 (recommended), v21.11.
+   v20.11 (recommended), v21.11, and v22.11.
 
    Note: only packet I/O is accelerated with DPDK. See
         https://github.com/OpenDataPlane/odp-dpdk.git
