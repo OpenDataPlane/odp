@@ -1312,7 +1312,6 @@ static int init_packets(test_global_t *global, int pktio,
 	void *data;
 	uint8_t *u8;
 	odph_ethhdr_t *eth;
-	odph_vlanhdr_t *vlan;
 	odph_ipv4hdr_t *ip;
 	odph_udphdr_t *udp;
 	uint16_t tpid;
@@ -1323,6 +1322,7 @@ static int init_packets(test_global_t *global, int pktio,
 	uint16_t udp_dst = test_options->udp_dst;
 	uint32_t udp_src_cnt = 0;
 	uint32_t udp_dst_cnt = 0;
+	odph_vlanhdr_t *vlan = NULL; /* Fixes bogus compiler warning */
 
 	if (num_vlan > MAX_VLANS)
 		num_vlan = MAX_VLANS;
