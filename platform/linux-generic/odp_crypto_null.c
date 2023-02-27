@@ -487,9 +487,6 @@ static odp_packet_t get_output_packet(const odp_crypto_generic_session_t *sessio
 {
 	int rc;
 
-	if (odp_likely(session->p.op_type == ODP_CRYPTO_OP_TYPE_BASIC))
-		return pkt_in;
-
 	if (odp_likely(pkt_in == pkt_out))
 		return pkt_out;
 
@@ -525,9 +522,13 @@ int crypto_int(odp_packet_t pkt_in,
 
 	session = (odp_crypto_generic_session_t *)(intptr_t)param->session;
 
-	out_pkt = get_output_packet(session, pkt_in, *pkt_out);
-	if (odp_unlikely(out_pkt == ODP_PACKET_INVALID))
-		return -1;
+	if (odp_likely(session->p.op_type == ODP_CRYPTO_OP_TYPE_BASIC)) {
+		out_pkt = pkt_in;
+	} else {
+		out_pkt = get_output_packet(session, pkt_in, *pkt_out);
+		if (odp_unlikely(out_pkt == ODP_PACKET_INVALID))
+			return -1;
+	}
 
 	/* Fill in result */
 	packet_subtype_set(out_pkt, ODP_EVENT_PACKET_CRYPTO);
