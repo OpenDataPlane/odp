@@ -67,7 +67,7 @@ jobs:
       fail-fast: false
       matrix:
         cc: [gcc, clang]
-        conf: ['', 'CFLAGS=-O3', 'CFLAGS=-O1', 'CFLAGS=-O0 --enable-debug=full', 'CFLAGS=-pedantic',
+        conf: ['', 'CFLAGS=-O3', 'CFLAGS=-O1', 'CFLAGS=-O0 --enable-debug=full', 'CFLAGS=-Os', 'CFLAGS=-pedantic',
                '--enable-lto', '--enable-lto --enable-abi-compat', '--enable-pcapng-support']
         exclude:
           - cc: clang
