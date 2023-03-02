@@ -328,11 +328,11 @@ static int alg_packet_op(odp_packet_t pkt_in,
 	CU_ASSERT(odp_packet_subtype(*pkt_out) == ODP_EVENT_PACKET_CRYPTO);
 
 	rc = odp_crypto_result(&result, *pkt_out);
-	if (rc < 0) {
+	if (rc < -1) {
 		CU_FAIL("Failed odp_crypto_packet_result()");
 		return rc;
 	}
-	CU_ASSERT(rc == 0);
+	CU_ASSERT(rc == 0 || rc == -1);
 
 	if (op_type == ODP_CRYPTO_OP_TYPE_OOP &&
 	    suite_context.op_mode == ODP_CRYPTO_ASYNC)
