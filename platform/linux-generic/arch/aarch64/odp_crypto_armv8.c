@@ -182,12 +182,6 @@ static inline void set_crypto_op_result(odp_packet_t pkt,
 	op_result = &packet_hdr(pkt)->crypto_op_result;
 	op_result->cipher_status.alg_err = cipher_err;
 	op_result->auth_status.alg_err = auth_err;
-#if ODP_DEPRECATED_API
-	op_result->cipher_status.hw_err = ODP_CRYPTO_HW_ERR_NONE;
-	op_result->auth_status.hw_err = ODP_CRYPTO_HW_ERR_NONE;
-#endif
-	op_result->ok = (cipher_err == ODP_CRYPTO_ALG_ERR_NONE &&
-			 auth_err   == ODP_CRYPTO_ALG_ERR_NONE);
 }
 
 static inline void set_crypto_op_result_ok(odp_packet_t pkt)

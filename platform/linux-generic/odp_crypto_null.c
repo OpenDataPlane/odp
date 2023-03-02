@@ -535,11 +535,6 @@ int crypto_int(odp_packet_t pkt_in,
 	op_result = &packet_hdr(out_pkt)->crypto_op_result;
 	op_result->cipher_status.alg_err = ODP_CRYPTO_ALG_ERR_NONE;
 	op_result->auth_status.alg_err = ODP_CRYPTO_ALG_ERR_NONE;
-#if ODP_DEPRECATED_API
-	op_result->cipher_status.hw_err = ODP_CRYPTO_HW_ERR_NONE;
-	op_result->auth_status.hw_err = ODP_CRYPTO_HW_ERR_NONE;
-#endif
-	op_result->ok = true;
 
 	/* Synchronous, simply return results */
 	*pkt_out = out_pkt;
