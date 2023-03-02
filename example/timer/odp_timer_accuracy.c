@@ -69,6 +69,7 @@ typedef struct test_global_t {
 		unsigned long long offset_ns;
 		unsigned long long max_tmo_ns;
 		unsigned long long num;
+		unsigned long long num_warmup;
 		unsigned long long burst;
 		unsigned long long burst_gap;
 		odp_fract_u64_t freq;
@@ -88,6 +89,7 @@ typedef struct test_global_t {
 	odp_pool_t       timeout_pool;
 	timer_ctx_t     *timer_ctx;
 	uint64_t         period_ns;
+	uint64_t         warmup_timers;
 	uint64_t         tot_timers;
 	uint64_t         alloc_timers;
 	uint64_t         start_tick;
@@ -113,6 +115,7 @@ static void print_usage(void)
 	       "  -f, --first <nsec>      First timer offset in nsec. Default: 0 for periodic mode, otherwise 300 msec\n"
 	       "  -x, --max_tmo <nsec>    Maximum timeout in nsec. When 0, max tmo is calculated from other options. Default: 0\n"
 	       "  -n, --num <number>      Number of timeout periods. Default: 50\n"
+	       "  -w, --warmup <number>   Number of warmup periods. Default: 0\n"
 	       "  -b, --burst <number>    Number of timers per a timeout period. Default: 1\n"
 	       "  -g, --burst_gap <nsec>  Gap (in nsec) between timers within a burst. Default: 0\n"
 	       "                          In periodic mode, first + burst * burst_gap must be less than period length.\n"
@@ -144,6 +147,7 @@ static int parse_options(int argc, char *argv[], test_global_t *test_global)
 		{"first",        required_argument, NULL, 'f'},
 		{"max_tmo",      required_argument, NULL, 'x'},
 		{"num",          required_argument, NULL, 'n'},
+		{"warmup",       required_argument, NULL, 'w'},
 		{"burst",        required_argument, NULL, 'b'},
 		{"burst_gap",    required_argument, NULL, 'g'},
 		{"mode",         required_argument, NULL, 'm'},
@@ -156,7 +160,7 @@ static int parse_options(int argc, char *argv[], test_global_t *test_global)
 		{"help",         no_argument,       NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
-	const char *shortopts =  "+p:r:R:f:x:n:b:g:m:P:M:o:e:s:ih";
+	const char *shortopts =  "+p:r:R:f:x:n:w:b:g:m:P:M:o:e:s:ih";
 	int ret = 0;
 
 	test_global->opt.period_ns = 200 * ODP_TIME_MSEC_IN_NS;
@@ -165,6 +169,7 @@ static int parse_options(int argc, char *argv[], test_global_t *test_global)
 	test_global->opt.offset_ns = UINT64_MAX;
 	test_global->opt.max_tmo_ns = 0;
 	test_global->opt.num       = 50;
+	test_global->opt.num_warmup = 0;
 	test_global->opt.burst     = 1;
 	test_global->opt.burst_gap = 0;
 	test_global->opt.mode      = MODE_ONESHOT;
@@ -202,6 +207,9 @@ static int parse_options(int argc, char *argv[], test_global_t *test_global)
 			break;
 		case 'n':
 			test_global->opt.num = strtoull(optarg, NULL, 0);
+			break;
+		case 'w':
+			test_global->opt.num_warmup = strtoull(optarg, NULL, 0);
 			break;
 		case 'b':
 			test_global->opt.burst = strtoull(optarg, NULL, 0);
@@ -263,7 +271,9 @@ static int parse_options(int argc, char *argv[], test_global_t *test_global)
 	if (test_global->opt.res_ns == 0 && test_global->opt.res_hz == 0)
 		test_global->opt.res_ns = test_global->opt.period_ns / 10;
 
-	test_global->tot_timers = test_global->opt.num * test_global->opt.burst;
+	test_global->warmup_timers = test_global->opt.num_warmup * test_global->opt.burst;
+	test_global->tot_timers =
+		test_global->warmup_timers + test_global->opt.num * test_global->opt.burst;
 
 	if (test_global->opt.mode == MODE_ONESHOT)
 		test_global->alloc_timers = test_global->tot_timers;
@@ -293,7 +303,7 @@ static int start_timers(test_global_t *test_global)
 	odp_timeout_t timeout;
 	odp_timer_set_t ret;
 	odp_time_t time;
-	uint64_t i, j, idx, num_tmo, burst, burst_gap;
+	uint64_t i, j, idx, num_tmo, num_warmup, burst, burst_gap;
 	uint64_t tot_timers, alloc_timers;
 	enum mode_e mode;
 	odp_timer_clk_src_t clk_src;
@@ -302,6 +312,7 @@ static int start_timers(test_global_t *test_global)
 	alloc_timers = test_global->alloc_timers;
 	tot_timers = test_global->tot_timers;
 	num_tmo = test_global->opt.num;
+	num_warmup = test_global->opt.num_warmup;
 	burst = test_global->opt.burst;
 	burst_gap = test_global->opt.burst_gap;
 	period_ns = test_global->opt.period_ns;
@@ -482,10 +493,14 @@ static int start_timers(test_global_t *test_global)
 	printf("  min timeout:     %" PRIu64 " nsec\n", timer_param.min_tmo);
 	printf("  max timeout:     %" PRIu64 " nsec\n", timer_param.max_tmo);
 	printf("  num timeout:     %" PRIu64 "\n", num_tmo);
+	printf("  num warmup:      %" PRIu64 "\n", num_warmup);
 	printf("  burst size:      %" PRIu64 "\n", burst);
 	printf("  burst gap:       %" PRIu64 "\n", burst_gap);
 	printf("  total timers:    %" PRIu64 "\n", tot_timers);
+	printf("  warmup timers:   %" PRIu64 "\n", test_global->warmup_timers);
 	printf("  alloc timers:    %" PRIu64 "\n", alloc_timers);
+	printf("  warmup time:     %.2f sec\n",
+	       (offset_ns + (num_warmup * period_ns)) / 1000000000.0);
 	printf("  test run time:   %.2f sec\n\n",
 	       (offset_ns + (num_tmo * period_ns)) / 1000000000.0);
 
@@ -673,13 +688,15 @@ static void print_stat(test_global_t *test_global)
 
 		fprintf(file, "   Timer      tmo(ns)   diff(ns)\n");
 
-		for (i = 0; i < tot_timers; i++) {
+		for (i = test_global->warmup_timers; i < tot_timers; i++) {
 			fprintf(file, "%8" PRIu64 " %12" PRIu64 " %10"
 				PRIi64 "\n", i, log[i].tmo_ns, log[i].diff_ns);
 		}
 
 		fprintf(file, "\n");
 	}
+
+	tot_timers -= test_global->warmup_timers;
 
 	printf("\nTest results:\n");
 	printf("  num after:  %12" PRIu64 "  /  %.2f%%\n",
@@ -776,6 +793,13 @@ static void run_test(test_global_t *test_global)
 			tmo_ns += ctx->count * period + .5;
 			ctx->count++;
 		}
+
+		if (i == test_global->warmup_timers) {
+			memset(stat, 0, sizeof(*stat));
+			stat->nsec_before_min = UINT64_MAX;
+			stat->nsec_after_min = UINT64_MAX;
+		}
+
 		stat->nsec_final = (int64_t)time_ns - (int64_t)tmo_ns;
 
 		if (log)
