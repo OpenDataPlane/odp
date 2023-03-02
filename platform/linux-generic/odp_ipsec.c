@@ -955,27 +955,27 @@ static int ipsec_in_prepare_packet(odp_packet_t *pkt, ipsec_state_t *state, ipse
 static int ipsec_in_do_crypto(odp_packet_t *pkt, odp_crypto_packet_op_param_t *param,
 			      odp_ipsec_op_status_t *status)
 {
-	odp_crypto_packet_result_t crypto;
+	odp_crypto_packet_result_t result;
+	int rc;
 
 	if (odp_unlikely(odp_crypto_op(pkt, pkt, param, 1) < 0)) {
 		_ODP_DBG("Crypto failed\n");
 		goto alg_err;
 	}
 
-	if (odp_unlikely(odp_crypto_result(&crypto, *pkt) < 0)) {
+	rc = odp_crypto_result(&result, *pkt);
+
+	if (odp_likely(rc == 0))
+		return 0;
+
+	if (odp_unlikely(rc < -1)) {
 		_ODP_DBG("Crypto failed\n");
 		goto alg_err;
 	}
 
-	if (odp_unlikely(!crypto.ok)) {
-		if (crypto.cipher_status.alg_err == ODP_CRYPTO_ALG_ERR_ICV_CHECK ||
-		    crypto.auth_status.alg_err == ODP_CRYPTO_ALG_ERR_ICV_CHECK)
-			goto auth_err;
-		else
-			goto alg_err;
-	}
-
-	return 0;
+	if (result.cipher_status.alg_err == ODP_CRYPTO_ALG_ERR_ICV_CHECK ||
+	    result.auth_status.alg_err == ODP_CRYPTO_ALG_ERR_ICV_CHECK)
+		goto auth_err;
 
 alg_err:
 	status->error.alg = 1;
@@ -2085,25 +2085,25 @@ static void ipsec_do_crypto_burst(odp_packet_t pkts[], odp_crypto_packet_op_para
 
 static int ipsec_in_check_crypto_result(odp_packet_t pkt, odp_ipsec_op_status_t *status)
 {
-	odp_crypto_packet_result_t crypto;
+	odp_crypto_packet_result_t result;
+	int rc = odp_crypto_result(&result, pkt);
 
-	if (odp_unlikely(odp_crypto_result(&crypto, pkt) < 0)) {
+	if (odp_likely(rc == 0))
+		return 0;
+
+	if (odp_unlikely(rc < -1)) {
 		_ODP_DBG("Crypto failed\n");
 		status->error.alg = 1;
 		return -1;
 	}
 
-	if (odp_unlikely(!crypto.ok)) {
-		if (crypto.cipher_status.alg_err == ODP_CRYPTO_ALG_ERR_ICV_CHECK ||
-		    crypto.auth_status.alg_err == ODP_CRYPTO_ALG_ERR_ICV_CHECK)
-			status->error.auth = 1;
-		else
-			status->error.alg = 1;
+	if (result.cipher_status.alg_err == ODP_CRYPTO_ALG_ERR_ICV_CHECK ||
+	    result.auth_status.alg_err == ODP_CRYPTO_ALG_ERR_ICV_CHECK)
+		status->error.auth = 1;
+	else
+		status->error.alg = 1;
 
-		return -1;
-	}
-
-	return 0;
+	return -1;
 }
 
 static inline void update_post_lifetime_stats(ipsec_sa_t *sa, ipsec_state_t *state)
@@ -2250,17 +2250,9 @@ static void ipsec_out_prepare(const odp_packet_t pkt_in[], odp_packet_t pkt_out[
 
 static int ipsec_out_check_crypto_result(odp_packet_t pkt, odp_ipsec_op_status_t *status)
 {
-	odp_crypto_packet_result_t crypto;
-
-	if (odp_unlikely(odp_crypto_result(&crypto, pkt) < 0)) {
+	if (odp_unlikely(odp_crypto_result(NULL, pkt) != 0)) {
 		_ODP_DBG("Crypto failed\n");
 		status->error.alg = 1;
-		return -1;
-	}
-
-	if (odp_unlikely(!crypto.ok)) {
-		status->error.alg = 1;
-
 		return -1;
 	}
 

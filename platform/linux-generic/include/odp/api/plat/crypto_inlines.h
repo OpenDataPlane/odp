@@ -51,9 +51,10 @@ _ODP_INLINE int odp_crypto_result(odp_crypto_packet_result_t *result, odp_packet
 
 	op_result = _odp_pkt_get_ptr(pkt, odp_crypto_packet_result_t, crypto_op);
 
-	*result = *op_result;
+	if (result)
+		*result = *op_result;
 
-	return 0;
+	return op_result->ok ? 0 : -1;
 }
 
 /** @endcond */
