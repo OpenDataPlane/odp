@@ -476,9 +476,10 @@ typedef struct odp_timer_start_t {
 typedef struct odp_timer_periodic_start_t {
 	/** First expiration time
 	 *
-	 *  The first expiration time in absolute timer ticks. When zero, timer expiration starts
-	 *  from the current time. After the first expiration, timer expiration continues with the
-	 *  defined frequency. The tick value must be within one timer period from the current time.
+	 *  The first expiration time in absolute timer ticks. When zero, the first expiration time
+	 *  is one period after the current time. After the first expiration, timer expiration
+	 *  continues with the defined frequency. The tick value must be within one timer period
+	 *  from the current time.
 	 */
 	uint64_t first_tick;
 
