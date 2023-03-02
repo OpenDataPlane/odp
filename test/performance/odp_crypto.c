@@ -853,8 +853,6 @@ run_measure_one(crypto_args_t *cargs,
 				}
 				packets_sent += rc;
 			} else {
-				odp_crypto_packet_result_t result;
-
 				rc = odp_crypto_op(&pkt, &out_pkt,
 						   &params, 1);
 				if (rc <= 0) {
@@ -865,8 +863,7 @@ run_measure_one(crypto_args_t *cargs,
 				}
 				packets_sent += rc;
 				packets_received++;
-				if (odp_unlikely(odp_crypto_result(&result, out_pkt) != 0) ||
-				    odp_unlikely(!result.ok)) {
+				if (odp_unlikely(odp_crypto_result(NULL, out_pkt) != 0)) {
 					ODPH_ERR("Crypto operation failed\n");
 					odp_packet_free(out_pkt);
 					return -1;
@@ -889,7 +886,6 @@ run_measure_one(crypto_args_t *cargs,
 
 		if (cargs->schedule || cargs->poll) {
 			odp_event_t ev;
-			odp_crypto_packet_result_t result;
 			odp_packet_t out_pkt;
 
 			if (cargs->schedule)
@@ -900,8 +896,7 @@ run_measure_one(crypto_args_t *cargs,
 
 			while (ev != ODP_EVENT_INVALID) {
 				out_pkt = odp_crypto_packet_from_event(ev);
-				if (odp_unlikely(odp_crypto_result(&result, out_pkt) != 0) ||
-				    odp_unlikely(!result.ok)) {
+				if (odp_unlikely(odp_crypto_result(NULL, out_pkt) != 0)) {
 					ODPH_ERR("Crypto operation failed\n");
 					odp_packet_free(out_pkt);
 					return -1;
