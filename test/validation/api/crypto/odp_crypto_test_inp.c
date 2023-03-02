@@ -338,7 +338,11 @@ static int alg_packet_op(odp_packet_t pkt_in,
 	    suite_context.op_mode == ODP_CRYPTO_ASYNC)
 		CU_ASSERT(result.pkt_in == pkt_in);
 
-	*ok = result.ok;
+	*ok = (rc == 0);
+
+#if ODP_DEPRECATED_API
+	CU_ASSERT(*ok == result.ok);
+#endif
 
 	return 0;
 }
