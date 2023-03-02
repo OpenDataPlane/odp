@@ -707,14 +707,10 @@ pkt_disposition_e do_ipsec_in_finish(odp_packet_t pkt,
 				     pkt_ctx_t *ctx)
 {
 	odph_ipv4hdr_t *ip;
-	odp_crypto_packet_result_t result;
 	int hdr_len = ctx->ipsec.hdr_len;
 	int trl_len = 0;
 
-	odp_crypto_result(&result, pkt);
-
-	/* Check crypto result */
-	if (!result.ok)
+	if (odp_crypto_result(NULL, pkt) != 0)
 		return PKT_DROP;
 
 	ip = (odph_ipv4hdr_t *)odp_packet_l3_ptr(pkt, NULL);
@@ -1017,12 +1013,8 @@ pkt_disposition_e do_ipsec_out_finish(odp_packet_t pkt,
 				      pkt_ctx_t *ctx)
 {
 	odph_ipv4hdr_t *ip;
-	odp_crypto_packet_result_t result;
 
-	odp_crypto_result(&result, pkt);
-
-	/* Check crypto result */
-	if (!result.ok)
+	if (odp_crypto_result(NULL, pkt) != 0)
 		return PKT_DROP;
 
 	ip = (odph_ipv4hdr_t *)odp_packet_l3_ptr(pkt, NULL);
