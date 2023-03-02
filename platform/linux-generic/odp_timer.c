@@ -1643,7 +1643,7 @@ int odp_timer_periodic_start(odp_timer_t timer, const odp_timer_periodic_start_t
 		if (odp_unlikely(abs_tick > cur_tick + tim->periodic_ticks))
 			return ODP_TIMER_TOO_FAR;
 	} else {
-		abs_tick = cur_tick;
+		abs_tick = cur_tick + tim->periodic_ticks;
 	}
 
 	if (!timer_reset(idx, abs_tick, &tmo_ev, tp))
