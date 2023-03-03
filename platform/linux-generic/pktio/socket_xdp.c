@@ -98,9 +98,23 @@ typedef struct {
 } xdp_umem_info_t;
 
 typedef struct {
+	uint32_t rx;
+	uint32_t tx;
+	uint32_t other;
+	uint32_t combined;
+} drv_channels_t;
+
+typedef struct {
+	/* Queue counts for getting/setting driver's ethtool queue configuration. */
+	drv_channels_t drv_channels;
+	/* Packet I/O level requested input queue count. */
 	uint32_t num_in_conf_qs;
+	/* Packet I/O level requested output queue count. */
 	uint32_t num_out_conf_qs;
+	/* Actual internal queue count. */
 	uint32_t num_qs;
+	/* Length of driver's ethtool RSS indirection table. */
+	uint32_t drv_num_rss;
 } q_num_conf_t;
 
 typedef struct {
@@ -188,6 +202,53 @@ out:
 	return idx;
 }
 
+static odp_bool_t get_nic_queue_count(int fd, const char *devname, drv_channels_t *cur_channels)
+{
+	struct ethtool_channels channels;
+	struct ifreq ifr;
+	int ret;
+
+	memset(&channels, 0, sizeof(struct ethtool_channels));
+	channels.cmd = ETHTOOL_GCHANNELS;
+	snprintf(ifr.ifr_name, IF_NAMESIZE, "%s", devname);
+	ifr.ifr_data = (char *)&channels;
+	ret = ioctl(fd, SIOCETHTOOL, &ifr);
+
+	if (ret == -1) {
+		_ODP_DBG("Unable to query NIC queue capabilities: %s\n", strerror(errno));
+		return false;
+	}
+
+	cur_channels->rx = channels.rx_count;
+	cur_channels->tx = channels.tx_count;
+	cur_channels->other = channels.other_count;
+	cur_channels->combined = channels.combined_count;
+
+	return true;
+}
+
+static odp_bool_t get_nic_rss_indir_count(int fd, const char *devname, uint32_t *drv_num_rss)
+{
+	struct ethtool_rxfh indir;
+	struct ifreq ifr;
+	int ret;
+
+	memset(&indir, 0, sizeof(struct ethtool_rxfh));
+	indir.cmd = ETHTOOL_GRSSH;
+	snprintf(ifr.ifr_name, IF_NAMESIZE, "%s", devname);
+	ifr.ifr_data = (char *)&indir;
+	ret = ioctl(fd, SIOCETHTOOL, &ifr);
+
+	if (ret == -1) {
+		_ODP_DBG("Unable to query NIC RSS indirection table size: %s\n", strerror(errno));
+		return false;
+	}
+
+	*drv_num_rss = indir.indir_size;
+
+	return true;
+}
+
 static void parse_options(xdp_umem_info_t *umem_info)
 {
 	if (!_odp_libconfig_lookup_ext_int(CONF_BASE_STR, NULL, RX_DESCS_STR,
@@ -254,6 +315,11 @@ static int sock_xdp_open(odp_pktio_t pktio, pktio_entry_t *pktio_entry, const ch
 		odp_ticketlock_init(&priv->qs[i].tx_lock);
 	}
 
+	if (!get_nic_queue_count(priv->helper_sock, devname, &priv->q_num_conf.drv_channels) ||
+	    !get_nic_rss_indir_count(priv->helper_sock, devname, &priv->q_num_conf.drv_num_rss))
+		_ODP_PRINT("Warning: Unable to query NIC queue count/RSS, manual cleanup"
+			   " required\n");
+
 	priv->bind_q = get_bind_queue_index(pktio_entry->name);
 	parse_options(priv->umem_info);
 	_ODP_DBG("Socket xdp interface (%s):\n", pktio_entry->name);
@@ -269,9 +335,61 @@ mtu_err:
 	return -1;
 }
 
+static odp_bool_t set_nic_queue_count(int fd, const char *devname, drv_channels_t *new_channels)
+{
+	struct ethtool_channels channels;
+	struct ifreq ifr;
+	int ret;
+
+	memset(&channels, 0, sizeof(struct ethtool_channels));
+	channels.cmd = ETHTOOL_SCHANNELS;
+	channels.rx_count = new_channels->rx;
+	channels.tx_count = new_channels->tx;
+	channels.other_count = new_channels->other;
+	channels.combined_count = new_channels->combined;
+	snprintf(ifr.ifr_name, IF_NAMESIZE, "%s", devname);
+	ifr.ifr_data = (char *)&channels;
+	ret = ioctl(fd, SIOCETHTOOL, &ifr);
+
+	if (ret == -1) {
+		_ODP_DBG("Unable to set NIC queue count: %s\n", strerror(errno));
+		return false;
+	}
+
+	return true;
+}
+
+static odp_bool_t set_nic_rss_indir(int fd, const char *devname, struct ethtool_rxfh *indir)
+{
+	struct ifreq ifr;
+	int ret;
+
+	indir->cmd = ETHTOOL_SRSSH;
+	snprintf(ifr.ifr_name, IF_NAMESIZE, "%s", devname);
+	ifr.ifr_data = (char *)indir;
+	ret = ioctl(fd, SIOCETHTOOL, &ifr);
+
+	if (ret == -1) {
+		_ODP_DBG("Unable to set NIC RSS indirection table: %s\n", strerror(errno));
+		return false;
+	}
+
+	return true;
+}
+
 static int sock_xdp_close(pktio_entry_t *pktio_entry)
 {
 	xdp_sock_info_t *priv = pkt_priv(pktio_entry);
+	struct ethtool_rxfh indir;
+
+	memset(&indir, 0, sizeof(struct ethtool_rxfh));
+
+	if (priv->q_num_conf.num_qs != 0U)
+		(void)set_nic_queue_count(priv->helper_sock, pktio_entry->name,
+					  &priv->q_num_conf.drv_channels);
+
+	if (priv->q_num_conf.drv_num_rss != 0U)
+		(void)set_nic_rss_indir(priv->helper_sock, pktio_entry->name, &indir);
 
 	close(priv->helper_sock);
 
@@ -411,16 +529,42 @@ static int sock_xdp_start(pktio_entry_t *pktio_entry)
 {
 	xdp_sock_info_t *priv = pkt_priv(pktio_entry);
 	int ret;
+	drv_channels_t channels = priv->q_num_conf.drv_channels;
+	struct ethtool_rxfh *indir = calloc(1U, sizeof(struct ethtool_rxfh)
+					    + sizeof(((struct ethtool_rxfh *)0)->rss_config[0U])
+					    * priv->q_num_conf.drv_num_rss);
+
+	if (indir == NULL) {
+		_ODP_ERR("Error allocating NIC RSS table\n");
+		return -1;
+	}
 
 	ret = umem_create(priv->umem_info);
 
 	if (ret) {
 		_ODP_ERR("Error creating UMEM pool for xdp: %d\n", ret);
-		return -1;
+		goto err;
 	}
 
 	priv->q_num_conf.num_qs = _ODP_MAX(priv->q_num_conf.num_in_conf_qs,
 					   priv->q_num_conf.num_out_conf_qs);
+	channels.combined = priv->q_num_conf.num_qs;
+
+	if (!set_nic_queue_count(priv->helper_sock, pktio_entry->name, &channels))
+		_ODP_PRINT("Warning: Unable to configure NIC queue count, manual configuration"
+			   " required\n");
+
+	if (priv->q_num_conf.num_in_conf_qs > 0U) {
+		indir->indir_size = priv->q_num_conf.drv_num_rss;
+
+		for (uint32_t i = 0U; i < indir->indir_size; ++i)
+			indir->rss_config[i] = (i % priv->q_num_conf.num_in_conf_qs)
+					       + priv->bind_q;
+
+		if (!set_nic_rss_indir(priv->helper_sock, pktio_entry->name, indir))
+			_ODP_PRINT("Warning: Unable to configure NIC RSS, manual configuration"
+				   " required\n");
+	}
 
 	if (!create_sockets(priv, pktio_entry->name))
 		goto sock_err;
@@ -429,6 +573,9 @@ static int sock_xdp_start(pktio_entry_t *pktio_entry)
 
 sock_err:
 	umem_delete(priv->umem_info);
+
+err:
+	free(indir);
 
 	return -1;
 }
