@@ -9,4 +9,4 @@ INPUT = $(SRCDIR)/doc/application-api-guide \
 	$(SRCDIR)/include/odp/api \
 	$(SRCDIR)/platform/$(WITH_PLATFORM)/doc \
 	$(SRCDIR)/platform/$(WITH_PLATFORM)/include/odp/api
-EXAMPLE_PATH = $(SRCDIR)/example $(SRCDIR)/platform $(SRCDIR)/CONTRIBUTING
+EXAMPLE_PATH = $(SRCDIR)/example $(SRCDIR)/platform $(SRCDIR)/CONTRIBUTING $(SRCDIR)/include/README

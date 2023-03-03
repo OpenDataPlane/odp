@@ -36,12 +36,16 @@
  * for general Linux data plane support.
  *
  * @section contact Contact Details
- * - The main web site is http://www.opendataplane.org/
+ * - The main web site is https://www.opendataplane.org/
  * - The git repo is https://github.com/OpenDataPlane/odp.git
  * - Bug tracking is https://github.com/OpenDataPlane/odp/issues
  *
  */
 
-/**@page contributing Contributing Guide Lines
+/**@page api_principles API Principles
+ * @verbinclude include/README
+ */
+
+/**@page contributing Contributing Guidelines
  * @verbinclude CONTRIBUTING
  */
