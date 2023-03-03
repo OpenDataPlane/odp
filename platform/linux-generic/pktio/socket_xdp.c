@@ -42,6 +42,9 @@
 #define NUM_DESCS_DEFAULT 1024U
 #define MIN_FRAME_SIZE 2048U
 
+#define MAX_QUEUES (ODP_PKTIN_MAX_QUEUES > ODP_PKTOUT_MAX_QUEUES ? \
+			ODP_PKTIN_MAX_QUEUES : ODP_PKTOUT_MAX_QUEUES)
+
 #define IF_DELIM " "
 #define Q_DELIM ':'
 #define CONF_BASE_STR "pktio_xdp"
@@ -95,9 +98,15 @@ typedef struct {
 } xdp_umem_info_t;
 
 typedef struct {
-	xdp_sock_t qs[ODP_PKTOUT_MAX_QUEUES];
+	uint32_t num_in_conf_qs;
+	uint32_t num_out_conf_qs;
+	uint32_t num_qs;
+} q_num_conf_t;
+
+typedef struct {
+	xdp_sock_t qs[MAX_QUEUES];
 	xdp_umem_info_t *umem_info;
-	uint32_t num_q;
+	q_num_conf_t q_num_conf;
 	int pktio_idx;
 	int helper_sock;
 	uint32_t mtu;
@@ -276,7 +285,7 @@ static int sock_xdp_open(odp_pktio_t pktio, pktio_entry_t *pktio_entry, const ch
 
 	priv->max_mtu = pool->seg_len;
 
-	for (int i = 0; i < ODP_PKTOUT_MAX_QUEUES; ++i) {
+	for (int i = 0; i < MAX_QUEUES; ++i) {
 		odp_ticketlock_init(&priv->qs[i].rx_lock);
 		odp_ticketlock_init(&priv->qs[i].tx_lock);
 	}
@@ -306,18 +315,7 @@ static int sock_xdp_close(pktio_entry_t *pktio_entry)
 	odp_packet_hdr_t *pkt_hdr;
 
 	close(priv->helper_sock);
-
-	for (uint32_t i = 0U; i < priv->num_q; ++i) {
-		if (priv->qs[i].xsk != NULL) {
-			xsk_socket__delete(priv->qs[i].xsk);
-			priv->qs[i].xsk = NULL;
-		}
-	}
-
 	umem_delete(priv->umem_info);
-	/* Ring setup/clean up routines seem to be asynchronous with some drivers and might not be
-	 * ready yet after xsk_socket__delete(). */
-	sleep(1U);
 
 	/* Free all packets that were in fill or completion queues at the time of closing. */
 	for (uint32_t i = 0U; i < pool->num + pool->skipped_blocks; ++i) {
@@ -328,6 +326,137 @@ static int sock_xdp_close(pktio_entry_t *pktio_entry)
 			odp_packet_free(packet_handle(pkt_hdr));
 		}
 	}
+
+	return 0;
+}
+
+static void fill_socket_config(struct xsk_socket_config *config, xdp_umem_info_t *umem_info)
+{
+	config->rx_size = umem_info->num_rx_desc * 2U;
+	config->tx_size = umem_info->num_tx_desc;
+	config->libxdp_flags = 0U;
+	config->xdp_flags = 0U;
+	config->bind_flags = XDP_ZEROCOPY;
+}
+
+static odp_bool_t reserve_fill_queue_elements(xdp_sock_info_t *sock_info, xdp_sock_t *sock,
+					      int num)
+{
+	pool_t *pool;
+	odp_packet_t packets[num];
+	int count;
+	struct xsk_ring_prod *fill_q;
+	uint32_t start_idx;
+	int pktio_idx;
+	uint32_t block_size;
+	odp_packet_hdr_t *pkt_hdr;
+
+	pool = sock_info->umem_info->pool;
+	count = odp_packet_alloc_multi(_odp_pool_handle(pool), sock_info->mtu, packets, num);
+
+	if (count <= 0) {
+		++sock->i_stats[RX_PKT_ALLOC_ERR];
+		return false;
+	}
+
+	fill_q = &sock->fill_q;
+
+	if (xsk_ring_prod__reserve(fill_q, count, &start_idx) == 0U) {
+		odp_packet_free_multi(packets, count);
+		++sock->i_stats[RX_DESC_RSV_ERR];
+		return false;
+	}
+
+	pktio_idx = sock_info->pktio_idx;
+	block_size = pool->block_size;
+
+	for (int i = 0; i < count; ++i) {
+		pkt_hdr = packet_hdr(packets[i]);
+		pkt_hdr->ms_pktio_idx = pktio_idx;
+		*xsk_ring_prod__fill_addr(fill_q, start_idx++) =
+			pkt_hdr->event_hdr.index.event * block_size;
+	}
+
+	xsk_ring_prod__submit(&sock->fill_q, count);
+
+	return true;
+}
+
+static odp_bool_t create_sockets(xdp_sock_info_t *sock_info, const char *devname)
+{
+	struct xsk_socket_config config;
+	uint32_t bind_q, i;
+	struct xsk_umem *umem;
+	xdp_sock_t *sock;
+	int ret;
+
+	bind_q = sock_info->bind_q;
+	umem = sock_info->umem_info->umem;
+
+	for (i = 0U; i < sock_info->q_num_conf.num_qs;) {
+		sock = &sock_info->qs[i];
+		fill_socket_config(&config, sock_info->umem_info);
+		ret = xsk_socket__create_shared(&sock->xsk, devname, bind_q, umem, &sock->rx,
+						&sock->tx, &sock->fill_q, &sock->compl_q, &config);
+
+		if (ret) {
+			_ODP_ERR("Error creating xdp socket for bind queue %u: %d\n", bind_q, ret);
+			goto err;
+		}
+
+		++i;
+
+		if (!reserve_fill_queue_elements(sock_info, sock, config.rx_size)) {
+			_ODP_ERR("Unable to reserve fill queue descriptors for queue: %u\n",
+				 bind_q);
+			goto err;
+		}
+
+		++bind_q;
+	}
+
+	/* Ring setup/clean up routines seem to be asynchronous with some drivers and might not be
+	 * ready yet after xsk_socket__create_shared(). */
+	sleep(1U);
+
+	return true;
+
+err:
+	for (uint32_t j = 0U; j < i; ++j) {
+		xsk_socket__delete(sock_info->qs[j].xsk);
+		sock_info->qs[j].xsk = NULL;
+	}
+
+	return false;
+}
+
+static int sock_xdp_start(pktio_entry_t *pktio_entry)
+{
+	xdp_sock_info_t *priv = pkt_priv(pktio_entry);
+
+	priv->q_num_conf.num_qs = _ODP_MAX(priv->q_num_conf.num_in_conf_qs,
+					   priv->q_num_conf.num_out_conf_qs);
+
+	if (!create_sockets(priv, pktio_entry->name))
+		return -1;
+
+	return 0;
+}
+
+static int sock_xdp_stop(pktio_entry_t *pktio_entry)
+{
+	xdp_sock_info_t *priv = pkt_priv(pktio_entry);
+
+	for (uint32_t i = 0U; i < priv->q_num_conf.num_qs; ++i) {
+		if (priv->qs[i].xsk != NULL) {
+			xsk_socket__delete(priv->qs[i].xsk);
+			priv->qs[i].xsk = NULL;
+		}
+	}
+
+	/* Ring setup/clean up routines seem to be asynchronous with some drivers and might not be
+	 * ready yet after xsk_socket__delete(). */
+	sleep(1U);
 
 	return 0;
 }
@@ -343,7 +472,7 @@ static int sock_xdp_stats(pktio_entry_t *pktio_entry, odp_pktio_stats_t *stats)
 
 	memset(stats, 0, sizeof(odp_pktio_stats_t));
 
-	for (uint32_t i = 0U; i < priv->num_q; ++i) {
+	for (uint32_t i = 0U; i < priv->q_num_conf.num_qs; ++i) {
 		sock = &priv->qs[i];
 		qi_stats = sock->qi_stats;
 		qo_stats = sock->qo_stats;
@@ -373,7 +502,7 @@ static int sock_xdp_stats_reset(pktio_entry_t *pktio_entry)
 	struct xdp_statistics xdp_stats;
 	socklen_t optlen = sizeof(struct xdp_statistics);
 
-	for (uint32_t i = 0U; i < priv->num_q; ++i) {
+	for (uint32_t i = 0U; i < priv->q_num_conf.num_qs; ++i) {
 		sock = &priv->qs[i];
 		memset(&sock->qi_stats, 0, sizeof(odp_pktin_queue_stats_t));
 		memset(&sock->qo_stats, 0, sizeof(odp_pktout_queue_stats_t));
@@ -432,7 +561,7 @@ static int sock_xdp_extra_stat_info(pktio_entry_t *pktio_entry, odp_pktio_extra_
 				    int num)
 {
 	xdp_sock_info_t *priv = pkt_priv(pktio_entry);
-	const int total_stats = MAX_INTERNAL_STATS * priv->num_q;
+	const int total_stats = MAX_INTERNAL_STATS * priv->q_num_conf.num_qs;
 
 	if (info != NULL && num > 0) {
 		for (int i = 0; i < _ODP_MIN(num, total_stats); ++i)
@@ -447,7 +576,7 @@ static int sock_xdp_extra_stat_info(pktio_entry_t *pktio_entry, odp_pktio_extra_
 static int sock_xdp_extra_stats(pktio_entry_t *pktio_entry, uint64_t stats[], int num)
 {
 	xdp_sock_info_t *priv = pkt_priv(pktio_entry);
-	const int total_stats = MAX_INTERNAL_STATS * priv->num_q;
+	const int total_stats = MAX_INTERNAL_STATS * priv->q_num_conf.num_qs;
 	uint64_t *i_stats;
 
 	if (stats != NULL && num > 0) {
@@ -463,7 +592,7 @@ static int sock_xdp_extra_stats(pktio_entry_t *pktio_entry, uint64_t stats[], in
 static int sock_xdp_extra_stat_counter(pktio_entry_t *pktio_entry, uint32_t id, uint64_t *stat)
 {
 	xdp_sock_info_t *priv = pkt_priv(pktio_entry);
-	const uint32_t total_stats = MAX_INTERNAL_STATS * priv->num_q;
+	const uint32_t total_stats = MAX_INTERNAL_STATS * priv->q_num_conf.num_qs;
 
 	if (id >= total_stats) {
 		_ODP_ERR("Invalid counter id: %u (allowed range: 0-%u)\n", id, total_stats - 1U);
@@ -556,49 +685,6 @@ static uint32_t process_received(pktio_entry_t *pktio_entry, xdp_sock_t *sock, p
 	sock->qi_stats.errors += errors;
 
 	return num_rx;
-}
-
-static odp_bool_t reserve_fill_queue_elements(xdp_sock_info_t *sock_info, xdp_sock_t *sock,
-					      int num)
-{
-	pool_t *pool;
-	odp_packet_t packets[num];
-	int count;
-	struct xsk_ring_prod *fill_q;
-	uint32_t start_idx;
-	int pktio_idx;
-	uint32_t block_size;
-	odp_packet_hdr_t *pkt_hdr;
-
-	pool = sock_info->umem_info->pool;
-	count = odp_packet_alloc_multi(_odp_pool_handle(pool), sock_info->mtu, packets, num);
-
-	if (count <= 0) {
-		++sock->i_stats[RX_PKT_ALLOC_ERR];
-		return false;
-	}
-
-	fill_q = &sock->fill_q;
-
-	if (xsk_ring_prod__reserve(fill_q, count, &start_idx) == 0U) {
-		odp_packet_free_multi(packets, count);
-		++sock->i_stats[RX_DESC_RSV_ERR];
-		return false;
-	}
-
-	pktio_idx = sock_info->pktio_idx;
-	block_size = pool->block_size;
-
-	for (int i = 0; i < count; ++i) {
-		pkt_hdr = packet_hdr(packets[i]);
-		pkt_hdr->ms_pktio_idx = pktio_idx;
-		*xsk_ring_prod__fill_addr(fill_q, start_idx++) =
-			pkt_hdr->event_hdr.index.event * block_size;
-	}
-
-	xsk_ring_prod__submit(&sock->fill_q, count);
-
-	return true;
 }
 
 static int sock_xdp_recv(pktio_entry_t *pktio_entry, int index, odp_packet_t packets[], int num)
@@ -905,72 +991,22 @@ static int sock_xdp_input_queues_config(pktio_entry_t *pktio_entry,
 {
 	xdp_sock_info_t *priv = pkt_priv(pktio_entry);
 
+	priv->q_num_conf.num_in_conf_qs = param->num_queues;
 	priv->lockless_rx = pktio_entry->param.in_mode == ODP_PKTIN_MODE_SCHED ||
 			    param->op_mode == ODP_PKTIO_OP_MT_UNSAFE;
 
 	return 0;
 }
 
-static void fill_socket_config(struct xsk_socket_config *config, xdp_umem_info_t *umem_info)
-{
-	config->rx_size = umem_info->num_rx_desc;
-	config->tx_size = umem_info->num_tx_desc;
-	config->libxdp_flags = 0U;
-	config->xdp_flags = 0U;
-	config->bind_flags = XDP_ZEROCOPY; /* TODO: XDP_COPY */
-}
-
 static int sock_xdp_output_queues_config(pktio_entry_t *pktio_entry,
 					 const odp_pktout_queue_param_t *param)
 {
 	xdp_sock_info_t *priv = pkt_priv(pktio_entry);
-	struct xsk_socket_config config;
-	const char *devname = pktio_entry->name;
-	uint32_t bind_q, i;
-	struct xsk_umem *umem;
-	xdp_sock_t *sock;
-	int ret;
 
+	priv->q_num_conf.num_out_conf_qs = param->num_queues;
 	priv->lockless_tx = param->op_mode == ODP_PKTIO_OP_MT_UNSAFE;
-	fill_socket_config(&config, priv->umem_info);
-	bind_q = priv->bind_q;
-	umem = priv->umem_info->umem;
-
-	for (i = 0U; i < param->num_queues;) {
-		sock = &priv->qs[i];
-		ret = xsk_socket__create_shared(&sock->xsk, devname, bind_q, umem, &sock->rx,
-						&sock->tx, &sock->fill_q, &sock->compl_q, &config);
-
-		if (ret) {
-			_ODP_ERR("Error creating xdp socket for bind queue %u: %d\n", bind_q, ret);
-			goto err;
-		}
-
-		++i;
-
-		if (!reserve_fill_queue_elements(priv, sock, config.rx_size)) {
-			_ODP_ERR("Unable to reserve fill queue descriptors for queue: %u.\n",
-				 bind_q);
-			goto err;
-		}
-
-		++bind_q;
-	}
-
-	priv->num_q = i;
-	/* Ring setup/clean up routines seem to be asynchronous with some drivers and might not be
-	 * ready yet after xsk_socket__create_shared(). */
-	sleep(1U);
 
 	return 0;
-
-err:
-	for (uint32_t j = 0U; j < i; ++j) {
-		xsk_socket__delete(priv->qs[j].xsk);
-		priv->qs[j].xsk = NULL;
-	}
-
-	return -1;
 }
 
 const pktio_if_ops_t _odp_sock_xdp_pktio_ops = {
@@ -981,8 +1017,8 @@ const pktio_if_ops_t _odp_sock_xdp_pktio_ops = {
 	.term = NULL,
 	.open = sock_xdp_open,
 	.close = sock_xdp_close,
-	.start = NULL,
-	.stop = NULL,
+	.start = sock_xdp_start,
+	.stop = sock_xdp_stop,
 	.stats = sock_xdp_stats,
 	.stats_reset = sock_xdp_stats_reset,
 	.pktin_queue_stats = sock_xdp_pktin_queue_stats,
