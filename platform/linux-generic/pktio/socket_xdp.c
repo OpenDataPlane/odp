@@ -1,4 +1,4 @@
-/* Copyright (c) 2022, Nokia
+/* Copyright (c) 2022-2023, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -9,32 +9,33 @@
 #ifdef _ODP_PKTIO_XDP
 
 #include <odp_posix_extensions.h>
+#include <odp/api/cpu.h>
 #include <odp/api/debug.h>
 #include <odp/api/hints.h>
+#include <odp/api/packet_io_stats.h>
 #include <odp/api/system_info.h>
 #include <odp/api/ticketlock.h>
-#include <odp/api/packet_io_stats.h>
 
 #include <odp_classification_internal.h>
 #include <odp_debug_internal.h>
 #include <odp_libconfig_internal.h>
 #include <odp_macros_internal.h>
-#include <odp_packet_io_internal.h>
 #include <odp_packet_internal.h>
+#include <odp_packet_io_internal.h>
 #include <odp_parse_internal.h>
 #include <odp_pool_internal.h>
 #include <odp_socket_common.h>
 
-#include <string.h>
 #include <errno.h>
-#include <sys/socket.h>
-#include <unistd.h>
-#include <poll.h>
-#include <sys/ioctl.h>
 #include <linux/ethtool.h>
+#include <linux/if_xdp.h>
 #include <linux/sockios.h>
 #include <net/if.h>
-#include <linux/if_xdp.h>
+#include <poll.h>
+#include <string.h>
+#include <sys/ioctl.h>
+#include <sys/socket.h>
+#include <unistd.h>
 
 #include <xdp/xsk.h>
 
@@ -830,12 +831,13 @@ static int sock_xdp_link_info(pktio_entry_t *pktio_entry, odp_pktio_link_info_t 
 				 pktio_entry->name, info);
 }
 
-static int set_queue_capability(int fd, const char *devname, odp_pktio_capability_t *capa)
+static int get_nic_queue_capability(int fd, const char *devname, odp_pktio_capability_t *capa)
 {
-	struct ifreq ifr;
 	struct ethtool_channels channels;
-	uint32_t max_channels;
+	struct ifreq ifr;
 	int ret;
+	const uint32_t cc = odp_cpu_count();
+	uint32_t max_channels;
 
 	memset(&channels, 0, sizeof(struct ethtool_channels));
 	channels.cmd = ETHTOOL_GCHANNELS;
@@ -845,16 +847,16 @@ static int set_queue_capability(int fd, const char *devname, odp_pktio_capabilit
 
 	if (ret == -1 || channels.max_combined == 0U) {
 		if (ret == -1 && errno != EOPNOTSUPP) {
-			_ODP_ERR("Unable to query NIC channel capabilities: %s\n", strerror(errno));
+			_ODP_ERR("Unable to query NIC queue capabilities: %s\n", strerror(errno));
 			return -1;
 		}
 
 		channels.max_combined = 1U;
 	}
 
-	max_channels = _ODP_MIN((uint32_t)ODP_PKTOUT_MAX_QUEUES, channels.max_combined);
+	max_channels = _ODP_MIN(cc, channels.max_combined);
 	capa->max_input_queues = _ODP_MIN((uint32_t)ODP_PKTIN_MAX_QUEUES, max_channels);
-	capa->max_output_queues = max_channels;
+	capa->max_output_queues = _ODP_MIN((uint32_t)ODP_PKTOUT_MAX_QUEUES, max_channels);
 
 	return 0;
 }
@@ -865,7 +867,7 @@ static int sock_xdp_capability(pktio_entry_t *pktio_entry, odp_pktio_capability_
 
 	memset(capa, 0, sizeof(odp_pktio_capability_t));
 
-	if (set_queue_capability(priv->helper_sock, pktio_entry->name, capa))
+	if (get_nic_queue_capability(priv->helper_sock, pktio_entry->name, capa))
 		return -1;
 
 	capa->set_op.op.promisc_mode = 1U;
