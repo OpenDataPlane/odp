@@ -67,6 +67,10 @@ static const char * const internal_stats_strs[] = {
 
 #define MAX_INTERNAL_STATS _ODP_ARRAY_SIZE(internal_stats_strs)
 
+static const char * const shadow_q_driver_strs[] = {
+	"mlx",
+};
+
 typedef struct {
 	uint64_t rx_dropped;
 	uint64_t rx_inv_descs;
@@ -128,6 +132,7 @@ typedef struct {
 	uint32_t bind_q;
 	odp_bool_t lockless_rx;
 	odp_bool_t lockless_tx;
+	odp_bool_t is_shadow_q;
 } xdp_sock_info_t;
 
 typedef struct {
@@ -159,47 +164,6 @@ static int sock_xdp_init_global(void)
 static inline xdp_sock_info_t *pkt_priv(pktio_entry_t *pktio_entry)
 {
 	return (xdp_sock_info_t *)(uintptr_t)(pktio_entry->pkt_priv);
-}
-
-static uint32_t get_bind_queue_index(const char *devname)
-{
-	const char *param = getenv("ODP_PKTIO_XDP_PARAMS");
-	char *tmp_str;
-	char *tmp;
-	char *if_str;
-	int idx = 0;
-
-	if (param == NULL)
-		goto out;
-
-	tmp_str = strdup(param);
-
-	if (tmp_str == NULL)
-		goto out;
-
-	tmp = strtok(tmp_str, IF_DELIM);
-
-	if (tmp == NULL)
-		goto out_str;
-
-	while (tmp) {
-		if_str = strchr(tmp, Q_DELIM);
-
-		if (if_str != NULL && if_str != &tmp[strlen(tmp) - 1U]) {
-			if (strncmp(devname, tmp, (uint64_t)(uintptr_t)(if_str - tmp)) == 0) {
-				idx = _ODP_MAX(atoi(++if_str), 0);
-				break;
-			}
-		}
-
-		tmp = strtok(NULL, IF_DELIM);
-	}
-
-out_str:
-	free(tmp_str);
-
-out:
-	return idx;
 }
 
 static odp_bool_t get_nic_queue_count(int fd, const char *devname, drv_channels_t *cur_channels)
@@ -247,6 +211,34 @@ static odp_bool_t get_nic_rss_indir_count(int fd, const char *devname, uint32_t 
 	*drv_num_rss = indir.indir_size;
 
 	return true;
+}
+
+static odp_bool_t is_shadow_q_driver(int fd, const char *devname)
+{
+	struct ethtool_drvinfo info;
+	struct ifreq ifr;
+	int ret;
+
+	memset(&info, 0, sizeof(struct ethtool_drvinfo));
+	info.cmd = ETHTOOL_GDRVINFO;
+	snprintf(ifr.ifr_name, IF_NAMESIZE, "%s", devname);
+	ifr.ifr_data = (char *)&info;
+	ret = ioctl(fd, SIOCETHTOOL, &ifr);
+
+	if (ret == -1) {
+		_ODP_DBG("Unable to query NIC driver information: %s\n", strerror(errno));
+		return false;
+	}
+
+	for (uint32_t i = 0U; i < _ODP_ARRAY_SIZE(shadow_q_driver_strs); ++i) {
+		if (strstr(info.driver, shadow_q_driver_strs[i]) != NULL) {
+			_ODP_PRINT("Driver with XDP shadow queues in use: %s, manual RSS"
+				   " configuration likely required\n", info.driver);
+			return true;
+		}
+	}
+
+	return false;
 }
 
 static void parse_options(xdp_umem_info_t *umem_info)
@@ -320,12 +312,11 @@ static int sock_xdp_open(odp_pktio_t pktio, pktio_entry_t *pktio_entry, const ch
 		_ODP_PRINT("Warning: Unable to query NIC queue count/RSS, manual cleanup"
 			   " required\n");
 
-	priv->bind_q = get_bind_queue_index(pktio_entry->name);
+	priv->is_shadow_q = is_shadow_q_driver(priv->helper_sock, pktio_entry->name);
 	parse_options(priv->umem_info);
 	_ODP_DBG("Socket xdp interface (%s):\n", pktio_entry->name);
 	_ODP_DBG("  num_rx_desc: %d\n", priv->umem_info->num_rx_desc);
 	_ODP_DBG("  num_tx_desc: %d\n", priv->umem_info->num_tx_desc);
-	_ODP_DBG("  starting bind queue: %u\n", priv->bind_q);
 
 	return 0;
 
@@ -388,7 +379,7 @@ static int sock_xdp_close(pktio_entry_t *pktio_entry)
 		(void)set_nic_queue_count(priv->helper_sock, pktio_entry->name,
 					  &priv->q_num_conf.drv_channels);
 
-	if (priv->q_num_conf.drv_num_rss != 0U)
+	if (priv->q_num_conf.drv_num_rss != 0U && !priv->is_shadow_q)
 		(void)set_nic_rss_indir(priv->helper_sock, pktio_entry->name, &indir);
 
 	close(priv->helper_sock);
@@ -548,18 +539,18 @@ static int sock_xdp_start(pktio_entry_t *pktio_entry)
 
 	priv->q_num_conf.num_qs = _ODP_MAX(priv->q_num_conf.num_in_conf_qs,
 					   priv->q_num_conf.num_out_conf_qs);
+	priv->bind_q = priv->is_shadow_q ? priv->q_num_conf.num_qs : 0U;
 	channels.combined = priv->q_num_conf.num_qs;
 
 	if (!set_nic_queue_count(priv->helper_sock, pktio_entry->name, &channels))
 		_ODP_PRINT("Warning: Unable to configure NIC queue count, manual configuration"
 			   " required\n");
 
-	if (priv->q_num_conf.num_in_conf_qs > 0U) {
+	if (priv->q_num_conf.num_in_conf_qs > 0U && !priv->is_shadow_q) {
 		indir->indir_size = priv->q_num_conf.drv_num_rss;
 
 		for (uint32_t i = 0U; i < indir->indir_size; ++i)
-			indir->rss_config[i] = (i % priv->q_num_conf.num_in_conf_qs)
-					       + priv->bind_q;
+			indir->rss_config[i] = (i % priv->q_num_conf.num_in_conf_qs);
 
 		if (!set_nic_rss_indir(priv->helper_sock, pktio_entry->name, indir))
 			_ODP_PRINT("Warning: Unable to configure NIC RSS, manual configuration"
