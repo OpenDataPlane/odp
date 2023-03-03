@@ -1,51 +1,94 @@
-ODP specification
-=================
+Copyright (c) 2017, Linaro Limited
+Copyright (c) 2023, Nokia
+All rights reserved.
+
+SPDX-License-Identifier:        BSD-3-Clause
+
+# ODP specification
 
 ODP specification consists of several types of files, which together provide
 full list of types, values and functions that ODP implementation MUST provide.
 
-ODP API specification
----------------------
+## API Principles
+
+Both applications and implementations must comply with the API specification. If
+not otherwise documented, results are undefined if an application acts against
+the specification. For example, if an application passes bad parameters to an
+ODP API, one implementation may report an error, while another may not check
+them (to maximize performance) and would just crash.
+
+Many ODP component areas provide an odp_xxx_capability() API that returns
+platform-specific information regarding supported features in that component.
+For best portability applications should always use these capability APIs.
+
+ODP APIs are described using opaque data types of which definition are left up
+to the ODP implementation. For example, ODP packets are referenced by handles of
+type odp_packet_t, and packet-related APIs take arguments of this type. What an
+odp_packet_t actually is, is not part of the ODP API specification and
+applications cannot make assumptions about the underlying type.
+
+Application gains ODP handle ownership when it receives it from an ODP API call.
+For example, application can receive an odp_event_t handle from `odp_schedule()`
+call. The ownership ends when the handle is passed back to ODP, for example with
+`odp_queue_enq()` call. Application MUST NOT use the handle anymore after it
+has lost the ownership.
+
+## API headers
+
+ODP API headers are divided into the following directories.
+```
+include/
+├── odp_api.h
+└── odp/
+    ├── api/
+    │   ├── abi-default/
+    │   └── spec/
+    └── arch/
+        └── @ARCH_ABI@/
+            └── odp/
+                └── api/
+                    └── abi/
+platform/
+└── @with_platform@/
+    ├── include/
+    └── include-abi/
+        └── odp/
+            └── api/
+                └── abi/
+```
+
+### Application header
+
+This header found at `include/odp_api.h` is an entry point for an application.
+Application MUST include only odp_api.h, nothing else. This file includes all
+files from ODP specification.
+
+### API specification
 
 These are the files from `include/odp/api/spec` directory. They specify a set
-of function prototypes, types, type names, enumerations etc that MUST be
+of function prototypes, types, type names, enumerations, etc. that MUST be
 provided by ODP implementation. Doxygen comments inside these files document
-requirements for ABI interface provided by an implementation. Content of some
-types and value of some enumerations are left undefined in API spec. These are
-defined either in ABI spec or implementation specific (non-ABI compatible)
-headers .An implementation MUST use these headers AS IS, without any
-modifications to be compatible with ODP specification.
+the API specification. Content of some types and value of some enumerations are
+left undefined in API spec. These are defined either in ABI spec or
+implementation specific (non-ABI compatible) headers. An implementation MUST use
+these headers AS IS, without any modifications to be compatible with ODP
+specification.
 
-ODP ABI compatibility specification
------------------------------------
+### ABI compatibility specification
 
 These are the files from `include/odp/arch/@ARCH_ABI@/odp/api/abi/` directory.
 They specify a set of types and values that MUST be used AS IS without any
 modifications by an implementation if it supports and is compiled for
 ABI-compatibility mode.
 
-ODP default ABI headers
------------------------
+### Default ABI headers
 
 These are the files from `include/odp/api/abi-default` directory. They provide
 default specification for ODP types and values for ABI compatibility. CPU
 architecture specific ABI compatibility files heavily depend on these headers.
 These files MUST NOT be changed by an implementation.
 
-odp_api.h header
-----------------
-
-This header found at `include/odp_api.h` is an entry point for an application.
-Application MUST include only odp_api.h, nothing else. This file includes all
-files from ODP specification.
-
-Additional ODP headers
-======================
-
-These are the headers provided by an ODP to supplement ODP specification.
-
-ODP API headers
----------------
+### Additional API headers
 
 These are the files from `include/odp/api` directory. They glue together API
 and ABI specification headers. Although they are not part of ODP specification
@@ -53,11 +96,9 @@ itself, they provide an easy way for an implementation to use ODP API/ABI
 header files.  An implementation SHOULD use these headers AS IS unless it has
 strong reason not to do so.
 
-Platform-specific headers
-=========================
+## Platform-specific headers
 
-Platform ABI headers
---------------------
+### Platform ABI headers
 
 These are the headers found at
 `platform/@with_platform@/include-abi/odp/api/abi` directory. They are used by
@@ -66,14 +107,13 @@ disabled. They should implement at least a set of types and values documented
 in ODP API specification headers. They are permitted to provide any platform
 specific optimizations (i.e. they might provide types and/or values that map
 directly onto the hardware details, they might provide inline functions to
-speed up execution of the application, etc). These headers MAY use ODP default
+speed up execution of the application, etc.). These headers MAY use ODP default
 ABI headers if they do fit.
 
-Rest of platform-specific headers
----------------------------------
+### Additional platform-specific headers
 
 Platform MAY provide additional headers at `platform/@with_platform/include`.
-However these headers SHOULD NOT be used directly by an application, because
+However, these headers SHOULD NOT be used directly by an application, because
 this will tie it to the exact implementation details. Application MUST include
 only <odp_api.h> header.  Platform ABI headers MAY use these headers to
 implement platform-specific optimizations.
