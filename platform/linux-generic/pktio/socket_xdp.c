@@ -836,6 +836,7 @@ static int sock_xdp_recv(pktio_entry_t *pktio_entry, int index, odp_packet_t pac
 	uint32_t start_idx = 0U, recvd, procd;
 
 	priv = pkt_priv(pktio_entry);
+	_ODP_ASSERT((uint32_t)index < priv->q_num_conf.num_in_conf_qs);
 	sock = &priv->qs[index];
 
 	if (!priv->lockless_rx)
@@ -947,6 +948,7 @@ static int sock_xdp_send(pktio_entry_t *pktio_entry, int index, const odp_packet
 		return 0;
 
 	priv = pkt_priv(pktio_entry);
+	_ODP_ASSERT((uint32_t)index < priv->q_num_conf.num_out_conf_qs);
 	sock = &priv->qs[index];
 
 	if (!priv->lockless_tx)
