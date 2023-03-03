@@ -147,62 +147,6 @@ static inline xdp_sock_info_t *pkt_priv(pktio_entry_t *pktio_entry)
 	return (xdp_sock_info_t *)(uintptr_t)(pktio_entry->pkt_priv);
 }
 
-static void parse_options(xdp_umem_info_t *umem_info)
-{
-	if (!_odp_libconfig_lookup_ext_int(CONF_BASE_STR, NULL, RX_DESCS_STR,
-					   &umem_info->num_rx_desc) ||
-	    !_odp_libconfig_lookup_ext_int(CONF_BASE_STR, NULL, TX_DESCS_STR,
-					   &umem_info->num_tx_desc)) {
-		_ODP_ERR("Unable to parse xdp descriptor configuration, using defaults (%d).\n",
-			 NUM_DESCS_DEFAULT);
-		goto defaults;
-	}
-
-	if (umem_info->num_rx_desc <= 0 || umem_info->num_tx_desc <= 0 ||
-	    !_ODP_CHECK_IS_POWER2(umem_info->num_rx_desc) ||
-	    !_ODP_CHECK_IS_POWER2(umem_info->num_tx_desc)) {
-		_ODP_ERR("Invalid xdp descriptor configuration, using defaults (%d).\n",
-			 NUM_DESCS_DEFAULT);
-		goto defaults;
-	}
-
-	return;
-
-defaults:
-	umem_info->num_rx_desc = NUM_DESCS_DEFAULT;
-	umem_info->num_tx_desc = NUM_DESCS_DEFAULT;
-}
-
-static int umem_create(xdp_umem_info_t *umem_info, pool_t *pool)
-{
-	struct xsk_umem_config cfg;
-
-	if (umem_info->ref_cnt++ > 0U)
-		return 0;
-
-	parse_options(umem_info);
-	umem_info->pool = pool;
-	/* Fill queue size is recommended to be >= HW RX ring size + AF_XDP RX
-	* ring size, so use size twice the size of AF_XDP RX ring. */
-	cfg.fill_size = umem_info->num_rx_desc * 2U;
-	cfg.comp_size = umem_info->num_tx_desc;
-	cfg.frame_size = pool->block_size;
-	cfg.frame_headroom = sizeof(odp_packet_hdr_t) + pool->headroom;
-	cfg.flags = XDP_UMEM_UNALIGNED_CHUNK_FLAG;
-
-	return xsk_umem__create(&umem_info->umem, pool->base_addr, pool->shm_size,
-				&umem_info->fill_q, &umem_info->compl_q, &cfg);
-}
-
-static void umem_delete(xdp_umem_info_t *umem_info)
-{
-	if (umem_info->ref_cnt-- != 1U)
-		return;
-
-	while (xsk_umem__delete(umem_info->umem) == -EBUSY)
-		continue;
-}
-
 static uint32_t get_bind_queue_index(const char *devname)
 {
 	const char *param = getenv("ODP_PKTIO_XDP_PARAMS");
@@ -244,6 +188,32 @@ out:
 	return idx;
 }
 
+static void parse_options(xdp_umem_info_t *umem_info)
+{
+	if (!_odp_libconfig_lookup_ext_int(CONF_BASE_STR, NULL, RX_DESCS_STR,
+					   &umem_info->num_rx_desc) ||
+	    !_odp_libconfig_lookup_ext_int(CONF_BASE_STR, NULL, TX_DESCS_STR,
+					   &umem_info->num_tx_desc)) {
+		_ODP_ERR("Unable to parse xdp descriptor configuration, using defaults (%d)\n",
+			 NUM_DESCS_DEFAULT);
+		goto defaults;
+	}
+
+	if (umem_info->num_rx_desc <= 0 || umem_info->num_tx_desc <= 0 ||
+	    !_ODP_CHECK_IS_POWER2(umem_info->num_rx_desc) ||
+	    !_ODP_CHECK_IS_POWER2(umem_info->num_tx_desc)) {
+		_ODP_ERR("Invalid xdp descriptor configuration, using defaults (%d)\n",
+			 NUM_DESCS_DEFAULT);
+		goto defaults;
+	}
+
+	return;
+
+defaults:
+	umem_info->num_rx_desc = NUM_DESCS_DEFAULT;
+	umem_info->num_tx_desc = NUM_DESCS_DEFAULT;
+}
+
 static int sock_xdp_open(odp_pktio_t pktio, pktio_entry_t *pktio_entry, const char *devname,
 			 odp_pool_t pool_hdl)
 {
@@ -258,13 +228,7 @@ static int sock_xdp_open(odp_pktio_t pktio, pktio_entry_t *pktio_entry, const ch
 	memset(priv, 0, sizeof(xdp_sock_info_t));
 	pool = _odp_pool_entry(pool_hdl);
 	priv->umem_info = (xdp_umem_info_t *)pool->mem_src_data;
-	ret = umem_create(priv->umem_info, pool);
-
-	if (ret) {
-		_ODP_ERR("Error creating UMEM pool for xdp: %d\n", ret);
-		return -1;
-	}
-
+	priv->umem_info->pool = pool;
 	/* Mark transitory kernel-owned packets with the pktio index, so that they can be freed on
 	 * close. */
 	priv->pktio_idx = 1 + odp_pktio_index(pktio);
@@ -274,7 +238,7 @@ static int sock_xdp_open(odp_pktio_t pktio, pktio_entry_t *pktio_entry, const ch
 
 	if (ret == -1) {
 		_ODP_ERR("Error creating helper socket for xdp: %s\n", strerror(errno));
-		goto sock_err;
+		return -1;
 	}
 
 	priv->helper_sock = ret;
@@ -291,7 +255,7 @@ static int sock_xdp_open(odp_pktio_t pktio, pktio_entry_t *pktio_entry, const ch
 	}
 
 	priv->bind_q = get_bind_queue_index(pktio_entry->name);
-
+	parse_options(priv->umem_info);
 	_ODP_DBG("Socket xdp interface (%s):\n", pktio_entry->name);
 	_ODP_DBG("  num_rx_desc: %d\n", priv->umem_info->num_rx_desc);
 	_ODP_DBG("  num_tx_desc: %d\n", priv->umem_info->num_tx_desc);
@@ -302,32 +266,36 @@ static int sock_xdp_open(odp_pktio_t pktio, pktio_entry_t *pktio_entry, const ch
 mtu_err:
 	close(priv->helper_sock);
 
-sock_err:
-	umem_delete(priv->umem_info);
-
 	return -1;
 }
 
 static int sock_xdp_close(pktio_entry_t *pktio_entry)
 {
 	xdp_sock_info_t *priv = pkt_priv(pktio_entry);
-	pool_t *pool = priv->umem_info->pool;
-	odp_packet_hdr_t *pkt_hdr;
 
 	close(priv->helper_sock);
-	umem_delete(priv->umem_info);
-
-	/* Free all packets that were in fill or completion queues at the time of closing. */
-	for (uint32_t i = 0U; i < pool->num + pool->skipped_blocks; ++i) {
-		pkt_hdr = packet_hdr(packet_from_event_hdr(event_hdr_from_index(pool, i)));
-
-		if (pkt_hdr->ms_pktio_idx == priv->pktio_idx) {
-			pkt_hdr->ms_pktio_idx = 0U;
-			odp_packet_free(packet_handle(pkt_hdr));
-		}
-	}
 
 	return 0;
+}
+
+static int umem_create(xdp_umem_info_t *umem_info)
+{
+	struct xsk_umem_config cfg;
+
+	if (umem_info->ref_cnt++ > 0U)
+		return 0;
+
+	/* Fill queue size is recommended to be >= HW RX ring size + AF_XDP RX
+	 * ring size, so use size twice the size of AF_XDP RX ring. */
+	cfg.fill_size = umem_info->num_rx_desc * 2U;
+	cfg.comp_size = umem_info->num_tx_desc;
+	cfg.frame_size = umem_info->pool->block_size;
+	cfg.frame_headroom = sizeof(odp_packet_hdr_t) + umem_info->pool->headroom;
+	cfg.flags = XDP_UMEM_UNALIGNED_CHUNK_FLAG;
+
+	return xsk_umem__create(&umem_info->umem, umem_info->pool->base_addr,
+				umem_info->pool->shm_size, &umem_info->fill_q, &umem_info->compl_q,
+				&cfg);
 }
 
 static void fill_socket_config(struct xsk_socket_config *config, xdp_umem_info_t *umem_info)
@@ -430,22 +398,46 @@ err:
 	return false;
 }
 
+static void umem_delete(xdp_umem_info_t *umem_info)
+{
+	if (umem_info->ref_cnt-- != 1U)
+		return;
+
+	while (xsk_umem__delete(umem_info->umem) == -EBUSY)
+		continue;
+}
+
 static int sock_xdp_start(pktio_entry_t *pktio_entry)
 {
 	xdp_sock_info_t *priv = pkt_priv(pktio_entry);
+	int ret;
+
+	ret = umem_create(priv->umem_info);
+
+	if (ret) {
+		_ODP_ERR("Error creating UMEM pool for xdp: %d\n", ret);
+		return -1;
+	}
 
 	priv->q_num_conf.num_qs = _ODP_MAX(priv->q_num_conf.num_in_conf_qs,
 					   priv->q_num_conf.num_out_conf_qs);
 
 	if (!create_sockets(priv, pktio_entry->name))
-		return -1;
+		goto sock_err;
 
 	return 0;
+
+sock_err:
+	umem_delete(priv->umem_info);
+
+	return -1;
 }
 
 static int sock_xdp_stop(pktio_entry_t *pktio_entry)
 {
 	xdp_sock_info_t *priv = pkt_priv(pktio_entry);
+	pool_t *pool = priv->umem_info->pool;
+	odp_packet_hdr_t *pkt_hdr;
 
 	for (uint32_t i = 0U; i < priv->q_num_conf.num_qs; ++i) {
 		if (priv->qs[i].xsk != NULL) {
@@ -454,9 +446,20 @@ static int sock_xdp_stop(pktio_entry_t *pktio_entry)
 		}
 	}
 
+	umem_delete(priv->umem_info);
 	/* Ring setup/clean up routines seem to be asynchronous with some drivers and might not be
 	 * ready yet after xsk_socket__delete(). */
 	sleep(1U);
+
+	/* Free all packets that were in fill or completion queues at the time of closing. */
+	for (uint32_t i = 0U; i < pool->num + pool->skipped_blocks; ++i) {
+		pkt_hdr = packet_hdr(packet_from_event_hdr(event_hdr_from_index(pool, i)));
+
+		if (pkt_hdr->ms_pktio_idx == priv->pktio_idx) {
+			pkt_hdr->ms_pktio_idx = 0U;
+			odp_packet_free(packet_handle(pkt_hdr));
+		}
+	}
 
 	return 0;
 }
