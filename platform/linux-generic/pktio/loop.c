@@ -336,8 +336,10 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index, odp_packet_t pkt
 		/* Try IPsec inline processing */
 		if (pktio_entry->config.inbound_ipsec &&
 		    !pkt_hdr->p.flags.ip_err &&
-		    odp_packet_has_ipsec(pkt))
+		    odp_packet_has_ipsec(pkt)) {
 			_odp_ipsec_try_inline(&pkt);
+			pkt_hdr = packet_hdr(pkt);
+		}
 
 		if (!pkt_hdr->p.flags.all.error) {
 			octets += pkt_len;
