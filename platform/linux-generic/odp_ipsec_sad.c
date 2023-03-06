@@ -631,6 +631,7 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 	crypto_param.op = (ODP_IPSEC_DIR_INBOUND == param->dir) ?
 			ODP_CRYPTO_OP_DECODE :
 			ODP_CRYPTO_OP_ENCODE;
+	crypto_param.op_type = ODP_CRYPTO_OP_TYPE_BASIC;
 	crypto_param.auth_cipher_text = 1;
 	if (param->proto == ODP_IPSEC_AH)
 		crypto_param.hash_result_in_auth_range = 1;
