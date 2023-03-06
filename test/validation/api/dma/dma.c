@@ -269,9 +269,10 @@ static void test_dma_compl_pool(void)
 {
 	odp_pool_t pool;
 	odp_pool_info_t pool_info;
-	odp_dma_compl_t compl;
+	odp_dma_compl_t compl[global.dma_capa.max_transfers];
 	uint64_t u64;
 	int ret;
+	uint32_t i, j;
 	const char *name = COMPL_POOL_NAME;
 
 	CU_ASSERT_FATAL(global.compl_pool != ODP_POOL_INVALID);
@@ -288,14 +289,21 @@ static void test_dma_compl_pool(void)
 	CU_ASSERT(pool_info.dma_pool_param.num == global.dma_capa.max_transfers);
 	CU_ASSERT(pool_info.dma_pool_param.cache_size == global.cache_size);
 
-	compl = odp_dma_compl_alloc(global.compl_pool);
+	for (i = 0; i < global.dma_capa.max_transfers; i++) {
+		compl[i] = odp_dma_compl_alloc(global.compl_pool);
 
-	u64 = odp_dma_compl_to_u64(compl);
-	CU_ASSERT(u64 != odp_dma_compl_to_u64(ODP_DMA_COMPL_INVALID));
-	printf("\n    DMA compl handle: 0x%" PRIx64 "\n", u64);
-	odp_dma_compl_print(compl);
+		u64 = odp_dma_compl_to_u64(compl[i]);
+		CU_ASSERT(u64 != odp_dma_compl_to_u64(ODP_DMA_COMPL_INVALID));
 
-	odp_dma_compl_free(compl);
+		if (compl[i] == ODP_DMA_COMPL_INVALID)
+			break;
+
+		printf("\n    DMA compl handle: 0x%" PRIx64 "\n", u64);
+		odp_dma_compl_print(compl[i]);
+	}
+
+	for (j = 0; j < i; j++)
+		odp_dma_compl_free(compl[j]);
 }
 
 static void test_dma_compl_pool_same_name(void)
