@@ -22,8 +22,7 @@ extern "C" {
  */
 typedef enum {
 	CRYPTO_API_SYNC,              /**< Synchronous mode */
-	CRYPTO_API_ASYNC_IN_PLACE,    /**< Asynchronous in place */
-	CRYPTO_API_ASYNC_NEW_BUFFER   /**< Asynchronous new buffer */
+	CRYPTO_API_ASYNC,             /**< Asynchronous mode */
 } crypto_api_mode_e;
 
 /**
@@ -31,7 +30,6 @@ typedef enum {
  */
 typedef struct ipsec_cache_entry_s {
 	struct ipsec_cache_entry_s  *next;        /**< Next entry on list */
-	odp_bool_t                   in_place;    /**< Crypto API mode */
 	odp_bool_t                   async;       /**< ASYNC or SYNC mode */
 	int                          sa_flags;
 	uint32_t                     src_ip;      /**< Source v4 address */
