@@ -634,7 +634,6 @@ pkt_disposition_e do_ipsec_in_classify(odp_packet_t *pkt,
 	/* Initialize parameters block */
 	memset(&params, 0, sizeof(params));
 	params.session = entry->state.session;
-	out_pkt = entry->in_place ? *pkt : ODP_PACKET_INVALID;
 
 	/*Save everything to context */
 	ctx->ipsec.ip_tos = ip->tos;
@@ -679,7 +678,7 @@ pkt_disposition_e do_ipsec_in_classify(odp_packet_t *pkt,
 	*skip = FALSE;
 	ctx->state = PKT_STATE_IPSEC_IN_FINISH;
 	if (entry->async) {
-		if (odp_crypto_op_enq(pkt, &out_pkt, &params, 1) != 1) {
+		if (odp_crypto_op_enq(pkt, NULL, &params, 1) != 1) {
 			ODPH_ERR("Error: odp_crypto_op_enq() failed\n");
 			exit(EXIT_FAILURE);
 		}
@@ -989,11 +988,9 @@ pkt_disposition_e do_ipsec_out_seq(odp_packet_t *pkt,
 		ip->id = odp_cpu_to_be_16((*ctx->ipsec.tun_hdr_id)++);
 	}
 
-	out_pkt = entry->in_place ? *pkt : ODP_PACKET_INVALID;
-
 	/* Issue crypto request */
 	if (entry->async) {
-		if (odp_crypto_op_enq(pkt, &out_pkt,
+		if (odp_crypto_op_enq(pkt, NULL,
 				      &ctx->ipsec.params, 1) != 1) {
 			ODPH_ERR("Error: odp_crypto_op_enq() failed\n");
 			exit(EXIT_FAILURE);
@@ -1362,9 +1359,7 @@ main(int argc, char *argv[])
 
 	/* Populate our IPsec cache */
 	printf("Using %s mode for crypto API\n\n",
-	       (CRYPTO_API_SYNC == global->appl.mode) ? "SYNC" :
-	       (CRYPTO_API_ASYNC_IN_PLACE == global->appl.mode) ?
-	       "ASYNC_IN_PLACE" : "ASYNC_NEW_BUFFER");
+	       (CRYPTO_API_SYNC == global->appl.mode) ? "SYNC" : "ASYNC");
 	ipsec_init_post(global->appl.mode);
 
 	/* Initialize interfaces (which resolves FWD DB entries */
@@ -1661,8 +1656,7 @@ static void usage(char *progname)
 	       "Mandatory OPTIONS:\n"
 	       " -i, --interface Eth interfaces (comma-separated, no spaces)\n"
 	       " -m, --mode   0: SYNC\n"
-	       "              1: ASYNC_IN_PLACE\n"
-	       "              2: ASYNC_NEW_BUFFER\n"
+	       "              1: ASYNC\n"
 	       "         Default: 0: SYNC api mode\n"
 	       "\n"
 	       "Routing / IPSec OPTIONS:\n"
