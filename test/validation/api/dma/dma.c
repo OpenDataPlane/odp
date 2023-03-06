@@ -330,6 +330,36 @@ static void test_dma_compl_pool_same_name(void)
 	CU_ASSERT_FATAL(odp_pool_destroy(pool_b) == 0);
 }
 
+static void test_dma_compl_pool_max_pools(void)
+{
+	odp_dma_pool_param_t dma_pool_param;
+	/* Max pools minus the ones already created in global init */
+	uint32_t num = global.dma_capa.pool.max_pools - 2, i, j;
+	odp_pool_t pools[num];
+	int ret;
+
+	odp_dma_pool_param_init(&dma_pool_param);
+	dma_pool_param.num = global.dma_capa.max_transfers;
+
+	for (i = 0; i < num; i++) {
+		pools[i] = odp_dma_pool_create(NULL, &dma_pool_param);
+		CU_ASSERT(pools[i] != ODP_POOL_INVALID);
+
+		if (pools[i] == ODP_POOL_INVALID) {
+			ODPH_ERR("DMA completion pool create failed: %u / %u\n", i, num);
+			break;
+		}
+	}
+
+	for (j = 0; j < i; j++) {
+		ret = odp_pool_destroy(pools[j]);
+		CU_ASSERT(ret == 0);
+
+		if (ret == -1)
+			ODPH_ERR("DMA completion pool destroy failed: %u / %u\n", j, i);
+	}
+}
+
 static void init_source(uint8_t *src, uint32_t len)
 {
 	uint32_t i;
@@ -1266,6 +1296,7 @@ odp_testinfo_t dma_suite[] = {
 	ODP_TEST_INFO_CONDITIONAL(test_dma_debug, check_sync),
 	ODP_TEST_INFO_CONDITIONAL(test_dma_compl_pool, check_event),
 	ODP_TEST_INFO_CONDITIONAL(test_dma_compl_pool_same_name, check_event),
+	ODP_TEST_INFO_CONDITIONAL(test_dma_compl_pool_max_pools, check_event),
 	ODP_TEST_INFO_CONDITIONAL(test_dma_addr_to_addr_sync, check_sync),
 	ODP_TEST_INFO_CONDITIONAL(test_dma_addr_to_addr_sync_mtrs, check_sync),
 	ODP_TEST_INFO_CONDITIONAL(test_dma_addr_to_addr_sync_mseg, check_sync),
