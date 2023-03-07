@@ -10,7 +10,7 @@
 
 #define COMPL_POOL_NAME "DMA compl pool"
 
-#define SHM_SIZE     (1024 * 1024)
+#define MIN_SEG_LEN  1024
 #define SHM_ALIGN    ODP_CACHE_LINE_SIZE
 #define NUM_COMPL    10
 #define RETRIES      5
@@ -20,6 +20,8 @@
 #define MULTI        1
 #define RESULT       1
 #define USER_DATA    0xdeadbeef
+
+#define MIN(a, b) (a < b ? a : b)
 
 typedef struct global_t {
 	odp_dma_capability_t dma_capa;
@@ -47,7 +49,7 @@ static int dma_suite_init(void)
 	odp_dma_pool_param_t dma_pool_param;
 	odp_pool_capability_t pool_capa;
 	odp_queue_param_t queue_param;
-	uint32_t pkt_len;
+	uint32_t shm_len, pkt_len;
 	void *addr;
 
 	memset(&global, 0, sizeof(global_t));
@@ -67,7 +69,8 @@ static int dma_suite_init(void)
 		return 0;
 	}
 
-	shm = odp_shm_reserve("DMA test", SHM_SIZE, SHM_ALIGN, 0);
+	shm_len = MIN_SEG_LEN * global.dma_capa.max_segs * global.dma_capa.max_transfers;
+	shm = odp_shm_reserve("DMA test", shm_len, SHM_ALIGN, 0);
 
 	if (shm == ODP_SHM_INVALID) {
 		ODPH_ERR("SHM reserve failed\n");
@@ -82,7 +85,7 @@ static int dma_suite_init(void)
 	}
 
 	global.shm = shm;
-	global.data_size = SHM_SIZE / 2;
+	global.data_size = shm_len / 2;
 	global.src_addr = addr;
 	global.dst_addr = (uint8_t *)global.src_addr + global.data_size;
 	global.len = global.data_size - OFFSET - TRAILER;
@@ -96,6 +99,7 @@ static int dma_suite_init(void)
 	if (pkt_len == 0)
 		pkt_len = 4000;
 
+	pkt_len = MIN(pkt_len, global.dma_capa.max_seg_len);
 	odp_pool_param_init(&pool_param);
 	pool_param.type = ODP_POOL_PACKET;
 	pool_param.pkt.num = 4;
@@ -517,8 +521,8 @@ static void test_dma_addr_to_addr(odp_dma_compl_mode_t compl_mode_mask, uint32_t
 	uint32_t i, cur_len;
 	uint8_t *src = global.src_addr + OFFSET;
 	uint8_t *dst = global.dst_addr + OFFSET;
-	uint32_t len = global.len;
-	uint32_t seg_len = len / num;
+	uint32_t seg_len = MIN(global.len / num, global.dma_capa.max_seg_len);
+	uint32_t len = seg_len * num;
 	uint32_t offset = 0;
 
 	init_source(global.src_addr, global.data_size);
@@ -558,7 +562,7 @@ static void test_dma_addr_to_addr(odp_dma_compl_mode_t compl_mode_mask, uint32_t
 	if (ret > 0) {
 		CU_ASSERT(check_equal(src, dst, len) == 0);
 		CU_ASSERT(check_zero(global.dst_addr, OFFSET) == 0);
-		CU_ASSERT(check_zero(dst + len, TRAILER) == 0);
+		CU_ASSERT(check_zero(dst + len, global.len - len + TRAILER) == 0);
 	}
 
 	CU_ASSERT(odp_dma_destroy(dma) == 0);
@@ -577,8 +581,8 @@ static void test_dma_addr_to_addr_trs(odp_dma_compl_mode_t compl_mode_mask, uint
 	odp_dma_compl_mode_t compl_mode;
 	uint8_t *src = global.src_addr + OFFSET;
 	uint8_t *dst = global.dst_addr + OFFSET;
-	uint32_t len = global.len;
-	uint32_t trs_len = len / num_trs;
+	uint32_t trs_len = MIN(global.len / num_trs, global.dma_capa.max_seg_len);
+	uint32_t len = trs_len * num_trs;
 	uint32_t offset = 0;
 	int ret = -1;
 
@@ -630,7 +634,7 @@ static void test_dma_addr_to_addr_trs(odp_dma_compl_mode_t compl_mode_mask, uint
 	if (ret > 0) {
 		CU_ASSERT(check_equal(src, dst, len) == 0);
 		CU_ASSERT(check_zero(global.dst_addr, OFFSET) == 0);
-		CU_ASSERT(check_zero(dst + len, TRAILER) == 0);
+		CU_ASSERT(check_zero(dst + len, global.len - len + TRAILER) == 0);
 	}
 
 	CU_ASSERT(odp_dma_destroy(dma) == 0);
