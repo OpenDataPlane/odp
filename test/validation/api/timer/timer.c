@@ -2392,7 +2392,7 @@ static void timer_test_periodic(odp_queue_type_t queue_type, int use_first)
 	odp_event_t ev;
 	odp_timer_t timer;
 	odp_time_t t1, t2;
-	uint64_t tick, cur_tick, period_ns, duration_ns, diff_ns;
+	uint64_t tick, cur_tick, period_ns, duration_ns, diff_ns, offset_ns;
 	double freq, freq_out, min_freq, max_freq;
 	int ret;
 	const char *user_ctx = "User context";
@@ -2509,10 +2509,14 @@ static void timer_test_periodic(odp_queue_type_t queue_type, int use_first)
 
 	memset(&start_param, 0, sizeof(odp_timer_periodic_start_t));
 	cur_tick = odp_timer_current_tick(timer_pool);
-	tick = cur_tick + odp_timer_ns_to_tick(timer_pool, period_ns / 2);
+	offset_ns = period_ns / 2;
+	tick = cur_tick + odp_timer_ns_to_tick(timer_pool, offset_ns);
 
-	if (use_first)
+	if (use_first) {
+		/* First tick moves timer to start before the first period */
+		duration_ns -= (period_ns - offset_ns);
 		start_param.first_tick = tick;
+	}
 
 	start_param.freq_multiplier = multiplier;
 	start_param.tmo_ev = ev;
