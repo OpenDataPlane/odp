@@ -243,10 +243,8 @@ Prerequisites for building the OpenDataPlane (ODP) API
 
 3.6 AF_XDP socket based packet I/O support (optional)
 
-   Use AF_XDP socket for packet I/O. At the moment, only zero-copy variant is
-   supported, requiring a kernel version 5.4 or higher. Additionally, if packet
-   pools are to be shared between packet I/Os, kernel version of 5.10 or higher
-   is required.
+   Use AF_XDP socket for packet I/O. A kernel version of 5.10 or higher is
+   required, older kernels may or may not work.
 
    More information about XDP and AF_XDP can be found here:
    https://www.kernel.org/doc/Documentation/networking/af_xdp.rst
@@ -256,7 +254,9 @@ Prerequisites for building the OpenDataPlane (ODP) API
    combinations that would otherwise conform to reported capabilities.
 
    Note that, currently, AF_XDP socket packet I/O cannot be instantiated if
-   DPDK zero-copy is enabled.
+   DPDK zero-copy is enabled. Additionally, RSS hash key and flow hash
+   configuration is done based on the NIC/driver default values and should be
+   manually reconfigured with e.g. ethtool if changes are required.
 
 3.6.1 AF_XDP socket packet I/O requirements
 
@@ -283,45 +283,27 @@ Prerequisites for building the OpenDataPlane (ODP) API
 3.6.2 Build ODP with AF_XDP socket packet I/O support
 
    After building and installing libxdp and libbpf, ODP can be configured to be
-   built with AF_XDP support (pass PKG_CONFIG_PATH if needed).
+   built with AF_XDP support (modify PKG_CONFIG_PATH as needed).
 
    $ ./configure --enable-xdp
 
-3.6.3 Running ODP with AF_XDP socket packet I/O
+3.6.3 Running ODP with AF_XDP socket packet I/O with Mellanox NICs
 
-   AF_XDP socket packet I/Os bind to TRX-combined queues. Based on the packet
-   prosessing needs, NIC(s) of the environment should be configured
-   accordingly.
-
-   $ ethtool -L <if name> combined <count>
-
-   For example, with four (4) TRX queues, packet processing can be divided to
-   four (4) processing cores.
-
-   Additionally, with some NICs (e.g. Mellanox), when zero-copy XDP is in use,
-   the queue configuration is adjusted by the NIC with additional queues on top
-   of the configured amount of TRX queues which are then used as the actual
-   queues. This will require additional forwarding rules as otherwise packets
-   do not get forwarded to the zero-copy queues.
+   AF_XDP socket packet I/Os bind to NIC TRX-combined queues. Steering packets
+   to correct input sockets is configured via NIC RSS. With some NICs
+   (e.g. Mellanox), the driver queue configuration is adjusted by the NIC with
+   additional queues on top of the configured amount of TRX queues which are
+   then used as the actual queues. This will require additional forwarding
+   rules as RSS is not possible to be configured programmatically in this case.
+   Otherwise packets do not get forwarded to the correct queues.
 
    For example:
 
    ethtool -N <if name> flow-type ether dst <mac of if> action 5
 
    Would forward Ethernet frames with a given destination address to queue 5,
-   which should be one of the zero-copy queues, i.e. queue index on top of the
-   amount configured with "ethtool -L" option.
-
-   Which queues to bind to a given interface can be controlled with an
-   environment variable when starting an ODP executable:
-
-   $ ODP_PKTIO_XDP_PARAMS="<if name>:<queue index> <if name>:<queue index> ..." ./<odp executable> ...
-
-   parameter being a string of interface-queue index pairs, where interface and
-   queue are separated by a colon and pairs separated by a whitespace. The queue
-   index dictates the starting queue in case of multiple TRX queues per packet
-   I/O. If no environment variable is passed, zero (0) starting queue is chosen
-   for all AF_XDP interfaces.
+   which would be the first actual queue in case 5 regular combined queues
+   were configured (zero-indexing).
 
 4.0 Packages needed to build API tests
 
