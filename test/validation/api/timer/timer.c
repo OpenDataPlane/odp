@@ -1,5 +1,5 @@
 /* Copyright (c) 2015-2018, Linaro Limited
- * Copyright (c) 2019-2022, Nokia
+ * Copyright (c) 2019-2023, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -2521,7 +2521,8 @@ static void timer_test_periodic(odp_queue_type_t queue_type, int use_first)
 	ODPH_DBG("  Current tick:    %" PRIu64 "\n", cur_tick);
 	ODPH_DBG("  First tick:      %" PRIu64 "\n", start_param.first_tick);
 	ODPH_DBG("  Multiplier:      %" PRIu64 "\n", start_param.freq_multiplier);
-	ODPH_DBG("Test duration ns:  %" PRIu64 "\n", duration_ns);
+	ODPH_DBG("  Period:          %" PRIu64 " nsec\n", period_ns);
+	ODPH_DBG("Expected duration: %" PRIu64 " nsec\n", duration_ns);
 
 	ret = odp_timer_periodic_start(timer, &start_param);
 
@@ -2575,6 +2576,8 @@ static void timer_test_periodic(odp_queue_type_t queue_type, int use_first)
 	/* Stop periodic timer */
 	ret = odp_timer_periodic_cancel(timer);
 	CU_ASSERT_FATAL(ret == 0);
+
+	ODPH_DBG("Measured duration: %" PRIu64 " nsec\n", diff_ns);
 
 	t1 = odp_time_local();
 	while (1) {
