@@ -151,7 +151,7 @@ typedef struct odp_pool_stats_t {
  * Pool capabilities
  */
 typedef struct odp_pool_capability_t {
-	/** Maximum number of pools of any type */
+	/** Maximum number of pools of any type (odp_pool_type_t) */
 	uint32_t max_pools;
 
 	/** Buffer pool capabilities  */
