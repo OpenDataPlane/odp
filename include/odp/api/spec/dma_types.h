@@ -69,7 +69,9 @@ extern "C" {
  * Pool statistics are not supported with DMA completion event pools.
  */
 typedef struct odp_dma_pool_capability_t {
-	/** Maximum number of DMA completion event pools */
+	/** Maximum number of DMA completion event pools
+	 *
+	 *  See odp_pool_capability_t::max_pools for total capability. */
 	uint32_t max_pools;
 
 	/** Maximum number of DMA completion events in a pool */
