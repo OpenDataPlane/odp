@@ -64,7 +64,7 @@ typedef struct test_log_t {
 typedef struct test_global_t {
 	struct {
 		unsigned long long period_ns;
-		unsigned long long res_ns;
+		long long res_ns;
 		unsigned long long res_hz;
 		unsigned long long offset_ns;
 		unsigned long long max_tmo_ns;
@@ -88,7 +88,7 @@ typedef struct test_global_t {
 	odp_timer_pool_t timer_pool;
 	odp_pool_t       timeout_pool;
 	timer_ctx_t     *timer_ctx;
-	uint64_t         period_ns;
+	double           res_ns;
 	uint64_t         warmup_timers;
 	uint64_t         tot_timers;
 	uint64_t         alloc_timers;
@@ -108,12 +108,15 @@ static void print_usage(void)
 	       "Timer accuracy test application.\n"
 	       "\n"
 	       "OPTIONS:\n"
-	       "  -p, --period <nsec>     Timeout period in nsec. Default: 200 msec\n"
-	       "  -r, --res_ns <nsec>     Timeout resolution in nsec. Default: period / 10\n"
-	       "  -R, --res_hz <hertz>    Timeout resolution in hertz. Note: resolution can be set\n"
-	       "                          either in nsec or hertz (not both). Default: 0\n"
+	       "  -p, --period <nsec>     Timeout period in nsec. Not used in periodic mode. Default: 200 msec\n"
+	       "  -r, --res_ns <nsec>     Timeout resolution in nsec. Default value is 0. Special values:\n"
+	       "                          0:  Use period / 10 as the resolution\n"
+	       "                          -1: In periodic mode, use resolution from capabilities\n"
+	       "  -R, --res_hz <hertz>    Timeout resolution in hertz. Set resolution either with -r (nsec) or -R (hertz),\n"
+	       "                          and leave other to 0. Default: 0 (not used)\n"
 	       "  -f, --first <nsec>      First timer offset in nsec. Default: 0 for periodic mode, otherwise 300 msec\n"
-	       "  -x, --max_tmo <nsec>    Maximum timeout in nsec. When 0, max tmo is calculated from other options. Default: 0\n"
+	       "  -x, --max_tmo <nsec>    Maximum timeout in nsec. Not used in periodic mode.\n"
+	       "                          When 0, max tmo is calculated from other options. Default: 0\n"
 	       "  -n, --num <number>      Number of timeout periods. Default: 50\n"
 	       "  -w, --warmup <number>   Number of warmup periods. Default: 0\n"
 	       "  -b, --burst <number>    Number of timers per a timeout period. Default: 1\n"
@@ -125,7 +128,7 @@ static void print_usage(void)
 	       "                            2: One-shot. Each period, restart timers with relative time.\n"
 	       "                            3: Periodic.\n"
 	       "  -P, --periodic <freq_integer:freq_numer:freq_denom:max_multiplier>\n"
-	       "                          Periodic timer pool parameters. Default: 5:0:0:1\n"
+	       "                          Periodic timer pool parameters. Default: 5:0:0:1 (5 Hz)\n"
 	       "  -M, --multiplier        Periodic timer multiplier. Default: 1\n"
 	       "  -o, --output <file>     Output file for measurement logs\n"
 	       "  -e, --early_retry <num> When timer restart fails due to ODP_TIMER_TOO_NEAR, retry this many times\n"
@@ -194,7 +197,7 @@ static int parse_options(int argc, char *argv[], test_global_t *test_global)
 			test_global->opt.period_ns = strtoull(optarg, NULL, 0);
 			break;
 		case 'r':
-			test_global->opt.res_ns = strtoull(optarg, NULL, 0);
+			test_global->opt.res_ns = strtoll(optarg, NULL, 0);
 			break;
 		case 'R':
 			test_global->opt.res_hz = strtoull(optarg, NULL, 0);
@@ -255,21 +258,22 @@ static int parse_options(int argc, char *argv[], test_global_t *test_global)
 		}
 	}
 
-	if (test_global->opt.mode == MODE_PERIODIC)
+	if (test_global->opt.mode == MODE_PERIODIC) {
 		test_global->opt.period_ns = ODP_TIME_SEC_IN_NS /
 			odp_fract_u64_to_dbl(&test_global->opt.freq) /
 			test_global->opt.multiplier;
 
-	if (test_global->opt.offset_ns == UINT64_MAX) {
-		if (test_global->opt.mode == MODE_PERIODIC)
+		if (test_global->opt.offset_ns == UINT64_MAX)
 			test_global->opt.offset_ns = 0;
-		else
+	} else {
+		if (test_global->opt.res_ns < 0) {
+			printf("Resolution (res_ns) must be >= 0 with single shot timer\n");
+			return -1;
+		}
+
+		if (test_global->opt.offset_ns == UINT64_MAX)
 			test_global->opt.offset_ns = 300 * ODP_TIME_MSEC_IN_NS;
 	}
-
-	/* Default resolution */
-	if (test_global->opt.res_ns == 0 && test_global->opt.res_hz == 0)
-		test_global->opt.res_ns = test_global->opt.period_ns / 10;
 
 	test_global->warmup_timers = test_global->opt.num_warmup * test_global->opt.burst;
 	test_global->tot_timers =
@@ -283,6 +287,149 @@ static int parse_options(int argc, char *argv[], test_global_t *test_global)
 	return ret;
 }
 
+static int single_shot_params(test_global_t *test_global, odp_timer_pool_param_t *timer_param,
+			      odp_timer_capability_t *timer_capa)
+{
+	uint64_t res_ns, res_hz;
+	uint64_t max_res_ns, max_res_hz;
+	uint64_t period_ns = test_global->opt.period_ns;
+	uint64_t num_tmo = test_global->opt.num;
+	uint64_t offset_ns = test_global->opt.offset_ns;
+	enum mode_e mode = test_global->opt.mode;
+
+	max_res_ns = timer_capa->max_res.res_ns;
+	max_res_hz = timer_capa->max_res.res_hz;
+
+	/* Default resolution */
+	if (test_global->opt.res_ns == 0 && test_global->opt.res_hz == 0) {
+		res_ns = test_global->opt.period_ns / 10;
+		res_hz = 0;
+	} else if (test_global->opt.res_ns) {
+		res_ns = test_global->opt.res_ns;
+		res_hz = 0;
+	} else {
+		res_ns = 0;
+		res_hz = test_global->opt.res_hz;
+	}
+
+	if (res_ns && res_ns < max_res_ns) {
+		printf("Resolution %" PRIu64 " nsec too high. Highest resolution %" PRIu64 " nsec. "
+		       "Default resolution is period / 10.\n\n",
+		       res_ns, max_res_ns);
+		return -1;
+	}
+
+	if (res_hz && res_hz > max_res_hz) {
+		printf("Resolution %" PRIu64 " hz too high. Highest resolution %" PRIu64 " hz. "
+		       "Default resolution is period / 10.\n\n",
+		       res_hz, max_res_hz);
+		return -1;
+	}
+
+	if (res_ns)
+		timer_param->res_ns = res_ns;
+	else
+		timer_param->res_hz = res_hz;
+
+	if (mode == MODE_ONESHOT) {
+		timer_param->min_tmo = offset_ns / 2;
+		timer_param->max_tmo = offset_ns + ((num_tmo + 1) * period_ns);
+	} else {
+		timer_param->min_tmo = period_ns / 10;
+		timer_param->max_tmo = offset_ns + (2 * period_ns);
+	}
+
+	if (test_global->opt.max_tmo_ns) {
+		if (test_global->opt.max_tmo_ns < timer_param->max_tmo) {
+			printf("Max tmo is too small. Must be at least %" PRIu64 " nsec.\n",
+			       timer_param->max_tmo);
+			return -1;
+		}
+
+		timer_param->max_tmo = test_global->opt.max_tmo_ns;
+	}
+
+	printf("  max res nsec:    %" PRIu64 "\n", max_res_ns);
+	printf("  max res hertz:   %" PRIu64 "\n", max_res_hz);
+
+	return 0;
+}
+
+static int periodic_params(test_global_t *test_global, odp_timer_pool_param_t *timer_param,
+			   odp_timer_capability_t *timer_capa)
+{
+	int ret;
+	uint64_t res_ns;
+	odp_timer_periodic_capability_t capa;
+	odp_fract_u64_t freq = test_global->opt.freq;
+	uint64_t res_hz = test_global->opt.res_hz;
+	uint64_t max_multiplier = test_global->opt.max_multiplier;
+	uint64_t multiplier = test_global->opt.multiplier;
+
+	if (res_hz) {
+		res_ns = ODP_TIME_SEC_IN_NS / res_hz;
+	} else {
+		res_ns = test_global->opt.res_ns;
+
+		/* Default resolution */
+		if (res_ns == 0)
+			res_ns = test_global->opt.period_ns / 10;
+	}
+
+	if (res_ns == 0) {
+		printf("Too high resolution\n");
+		return -1;
+	}
+
+	/* Resolution from capa */
+	if (test_global->opt.res_ns < 0)
+		res_ns = 0;
+
+	capa.base_freq_hz = freq;
+	capa.max_multiplier = max_multiplier;
+	capa.res_ns = res_ns;
+
+	ret = odp_timer_periodic_capability(test_global->opt.clk_src, &capa);
+
+	if (ret < 0) {
+		printf("Requested periodic timer capabilities are not supported.\n"
+		       "Capabilities: min base freq %g Hz, max base freq %g Hz, "
+		       "max res %" PRIu64 " Hz\n",
+		       odp_fract_u64_to_dbl(&timer_capa->periodic.min_base_freq_hz),
+		       odp_fract_u64_to_dbl(&timer_capa->periodic.max_base_freq_hz),
+		       timer_capa->max_res.res_hz);
+		return -1;
+	}
+
+	if (ret == 0) {
+		printf("Requested base frequency is not met, which causes drift.\n"
+		       "Using base frequency %g Hz\n",
+		       odp_fract_u64_to_dbl(&capa.base_freq_hz));
+	}
+
+	if (res_ns == 0)
+		res_ns = capa.res_ns;
+
+	/* Min/max tmo are ignored, leave those to default values */
+	timer_param->timer_type = ODP_TIMER_TYPE_PERIODIC;
+	timer_param->periodic.base_freq_hz = capa.base_freq_hz;
+	timer_param->periodic.max_multiplier = max_multiplier;
+
+	if (res_hz)
+		timer_param->res_hz = res_hz;
+	else
+		timer_param->res_ns = res_ns;
+
+	printf("  freq integer:    %" PRIu64 "\n", freq.integer);
+	printf("  freq numer:      %" PRIu64 "\n", freq.numer);
+	printf("  freq denom:      %" PRIu64 "\n", freq.denom);
+	printf("  max_multiplier:  %" PRIu64 "\n", max_multiplier);
+	printf("  multiplier:      %" PRIu64 "\n", multiplier);
+	printf("  resolution capa: %" PRIu64 " nsec\n", capa.res_ns);
+
+	return 0;
+}
+
 static int start_timers(test_global_t *test_global)
 {
 	odp_pool_t pool;
@@ -294,19 +441,16 @@ static int start_timers(test_global_t *test_global)
 	odp_queue_t queue;
 	odp_queue_param_t queue_param;
 	uint64_t start_tick;
-	uint64_t period_ns, res_ns, res_hz, start_ns, nsec, offset_ns;
-	uint64_t max_res_ns, max_res_hz;
-	odp_fract_u64_t freq;
-	uint64_t max_multiplier, multiplier;
+	uint64_t period_ns, start_ns, nsec, offset_ns;
 	uint32_t max_timers;
 	odp_event_t event;
 	odp_timeout_t timeout;
-	odp_timer_set_t ret;
 	odp_time_t time;
 	uint64_t i, j, idx, num_tmo, num_warmup, burst, burst_gap;
 	uint64_t tot_timers, alloc_timers;
 	enum mode_e mode;
 	odp_timer_clk_src_t clk_src;
+	int ret;
 
 	mode = test_global->opt.mode;
 	alloc_timers = test_global->alloc_timers;
@@ -316,10 +460,7 @@ static int start_timers(test_global_t *test_global)
 	burst = test_global->opt.burst;
 	burst_gap = test_global->opt.burst_gap;
 	period_ns = test_global->opt.period_ns;
-	test_global->period_ns = period_ns;
-	freq = test_global->opt.freq;
-	max_multiplier = test_global->opt.max_multiplier;
-	multiplier = test_global->opt.multiplier;
+	offset_ns = test_global->opt.offset_ns;
 
 	/* Always init globals for destroy calls */
 	test_global->queue = ODP_QUEUE_INVALID;
@@ -381,115 +522,37 @@ static int start_timers(test_global_t *test_global)
 		return -1;
 	}
 
-	max_res_ns = timer_capa.max_res.res_ns;
-	max_res_hz = timer_capa.max_res.res_hz;
-
-	offset_ns = test_global->opt.offset_ns;
-
-	if (test_global->opt.res_ns) {
-		res_ns = test_global->opt.res_ns;
-		res_hz = 0;
-	} else {
-		res_ns = 0;
-		res_hz = test_global->opt.res_hz;
-	}
-
-	if (res_ns && res_ns < max_res_ns) {
-		printf("Resolution %" PRIu64 " nsec too high. Highest resolution %" PRIu64 " nsec. "
-		       "Default resolution is period / 10.\n\n",
-		       res_ns, max_res_ns);
-		return -1;
-	}
-
-	if (res_hz && res_hz > max_res_hz) {
-		printf("Resolution %" PRIu64 " hz too high. Highest resolution %" PRIu64 " hz. "
-		       "Default resolution is period / 10.\n\n",
-		       res_hz, max_res_hz);
-		return -1;
-	}
+	printf("\nTest parameters:\n");
+	printf("  clock source:    %i\n", clk_src);
+	printf("  max timers capa: %" PRIu32 "\n", max_timers);
+	printf("  mode:            %i\n", mode);
 
 	odp_timer_pool_param_init(&timer_param);
 
-	if (res_ns)
-		timer_param.res_ns = res_ns;
+	if (mode == MODE_PERIODIC)
+		ret = periodic_params(test_global, &timer_param, &timer_capa);
 	else
-		timer_param.res_hz = res_hz;
+		ret = single_shot_params(test_global, &timer_param, &timer_capa);
 
-	if (mode == MODE_ONESHOT) {
-		timer_param.min_tmo = offset_ns / 2;
-		timer_param.max_tmo = offset_ns + ((num_tmo + 1) * period_ns);
+	if (ret)
+		return ret;
+
+	if (timer_param.res_hz) {
+		test_global->res_ns = 1000000000.0 / timer_param.res_hz;
+		printf("  resolution:      %" PRIu64 " Hz\n", timer_param.res_hz);
 	} else {
-		timer_param.min_tmo = period_ns / 10;
-		timer_param.max_tmo = offset_ns + (2 * period_ns);
-	}
-
-	if (test_global->opt.max_tmo_ns) {
-		if (test_global->opt.max_tmo_ns < timer_param.max_tmo) {
-			printf("Max tmo is too small. Must be at least %" PRIu64 " nsec.\n",
-			       timer_param.max_tmo);
-			return -1;
-		}
-
-		timer_param.max_tmo = test_global->opt.max_tmo_ns;
-	}
-
-	if (mode == MODE_PERIODIC) {
-		int r;
-		odp_timer_periodic_capability_t capa;
-
-		capa.base_freq_hz = freq;
-		capa.max_multiplier = max_multiplier;
-		capa.res_ns = res_ns;
-
-		r = odp_timer_periodic_capability(test_global->opt.clk_src, &capa);
-
-		if (r < 0) {
-			printf("Requested periodic timer capabilities are not supported.\n"
-			       "Capabilities: min base freq %g Hz, max base freq %g Hz, "
-			       "max res %" PRIu64 " Hz\n",
-			       odp_fract_u64_to_dbl(&timer_capa.periodic.min_base_freq_hz),
-			       odp_fract_u64_to_dbl(&timer_capa.periodic.max_base_freq_hz),
-			       timer_capa.max_res.res_hz);
-			return -1;
-		}
-
-		if (r == 0) {
-			printf("Requested base frequency is not met, which causes drift.\n"
-			       "Using base frequency %g Hz\n",
-			       odp_fract_u64_to_dbl(&capa.base_freq_hz));
-		}
-
-		timer_param.timer_type = ODP_TIMER_TYPE_PERIODIC;
-		timer_param.res_ns = res_ns;
-		timer_param.periodic.base_freq_hz = capa.base_freq_hz;
-		timer_param.periodic.max_multiplier = max_multiplier;
+		test_global->res_ns = timer_param.res_ns;
+		printf("  resolution:      %" PRIu64 " nsec\n", timer_param.res_ns);
 	}
 
 	timer_param.num_timers = alloc_timers;
 	timer_param.clk_src    = clk_src;
 
-	printf("\nTest parameters:\n");
-	printf("  clock source:    %i\n", test_global->opt.clk_src);
-	printf("  max res nsec:    %" PRIu64 "\n", max_res_ns);
-	printf("  max res hertz:   %" PRIu64 "\n", max_res_hz);
-	printf("  max timers capa: %" PRIu32 "\n", max_timers);
-	printf("  mode:            %i\n", mode);
 	printf("  restart retries: %i\n", test_global->opt.early_retry);
 	if (test_global->opt.output)
 		printf("  log file:        %s\n", test_global->filename);
 	printf("  start offset:    %" PRIu64 " nsec\n", offset_ns);
 	printf("  period:          %" PRIu64 " nsec\n", period_ns);
-	if (res_ns)
-		printf("  resolution:      %" PRIu64 " nsec\n", res_ns);
-	else
-		printf("  resolution:      %" PRIu64 " hz\n", res_hz);
-	if (mode == MODE_PERIODIC) {
-		printf("  freq integer:    %" PRIu64 "\n", freq.integer);
-		printf("  freq numer:      %" PRIu64 "\n", freq.numer);
-		printf("  freq denom:      %" PRIu64 "\n", freq.denom);
-		printf("  max_multiplier:  %" PRIu64 "\n", max_multiplier);
-		printf("  multiplier:      %" PRIu64 "\n", multiplier);
-	}
 	printf("  min timeout:     %" PRIu64 " nsec\n", timer_param.min_tmo);
 	printf("  max timeout:     %" PRIu64 " nsec\n", timer_param.max_tmo);
 	printf("  num timeout:     %" PRIu64 "\n", num_tmo);
@@ -569,6 +632,8 @@ static int start_timers(test_global_t *test_global)
 		num_tmo = 1;
 
 	for (i = 0; i < num_tmo; i++) {
+		odp_timer_set_t retval;
+
 		for (j = 0; j < burst; j++) {
 			timer_ctx_t *ctx = &test_global->timer_ctx[idx];
 			odp_timer_start_t start_param;
@@ -585,7 +650,7 @@ static int start_timers(test_global_t *test_global)
 					start_param.first_tick =
 						start_tick + odp_timer_ns_to_tick(timer_pool, nsec);
 				start_param.tmo_ev = ctx->event;
-				ret = odp_timer_periodic_start(ctx->timer, &start_param);
+				retval = odp_timer_periodic_start(ctx->timer, &start_param);
 			} else {
 				nsec = offset_ns + (i * period_ns) + (j * burst_gap);
 				ctx->nsec = start_ns + nsec;
@@ -593,12 +658,11 @@ static int start_timers(test_global_t *test_global)
 				start_param.tick =
 					start_tick + odp_timer_ns_to_tick(timer_pool, nsec);
 				start_param.tmo_ev = ctx->event;
-				ret = odp_timer_start(ctx->timer, &start_param);
+				retval = odp_timer_start(ctx->timer, &start_param);
 			}
 
-			if (ret != ODP_TIMER_SUCCESS) {
-				printf("Timer[%" PRIu64 "] set failed: %i\n",
-				       idx, ret);
+			if (retval != ODP_TIMER_SUCCESS) {
+				printf("Timer[%" PRIu64 "] set failed: %i\n", idx, retval);
 				return -1;
 			}
 
@@ -668,10 +732,7 @@ static void print_stat(test_global_t *test_global)
 	test_log_t *log = test_global->log;
 	double ave_after = 0.0;
 	double ave_before = 0.0;
-	double res_ns = test_global->opt.res_ns;
-
-	if (test_global->opt.res_ns == 0)
-		res_ns = 1000000000.0 / test_global->opt.res_hz;
+	double res_ns = test_global->res_ns;
 
 	if (stat->num_after)
 		ave_after = (double)stat->nsec_after_sum / stat->num_after;
@@ -778,7 +839,7 @@ static void run_test(test_global_t *test_global)
 	num_tmo  = test_global->opt.num;
 	burst    = test_global->opt.burst;
 	tot_timers = test_global->tot_timers;
-	period_ns  = test_global->period_ns;
+	period_ns  = test_global->opt.period_ns;
 
 	for (i = 0; i < tot_timers; i++) {
 		ev = odp_schedule(NULL, ODP_SCHED_WAIT);
