@@ -19,9 +19,6 @@ const pktio_if_ops_t * const _odp_pktio_if_ops[]  = {
 #ifdef _ODP_PKTIO_XDP
 	&_odp_sock_xdp_pktio_ops,
 #endif
-#ifdef _ODP_PKTIO_NETMAP
-	&_odp_netmap_pktio_ops,
-#endif
 #ifdef _ODP_PKTIO_PCAP
 	&_odp_pcap_pktio_ops,
 #endif

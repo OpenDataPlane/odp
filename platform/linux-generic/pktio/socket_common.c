@@ -46,7 +46,6 @@ struct ethtool_link_settings {
 /**
  * ODP_PACKET_SOCKET_MMSG:
  * ODP_PACKET_SOCKET_MMAP:
- * ODP_PACKET_NETMAP:
  */
 int _odp_mac_addr_get_fd(int fd, const char *name, unsigned char mac_dst[])
 {
@@ -70,7 +69,6 @@ int _odp_mac_addr_get_fd(int fd, const char *name, unsigned char mac_dst[])
 /*
  * ODP_PACKET_SOCKET_MMSG:
  * ODP_PACKET_SOCKET_MMAP:
- * ODP_PACKET_NETMAP:
  * ODP_PACKET_TAP:
  */
 uint32_t _odp_mtu_get_fd(int fd, const char *name)
@@ -91,7 +89,6 @@ uint32_t _odp_mtu_get_fd(int fd, const char *name)
 /*
  * ODP_PACKET_SOCKET_MMAP:
  * ODP_PACKET_SOCKET_MMSG:
- * ODP_PACKET_NETMAP:
  * ODP_PACKET_TAP:
  */
 int _odp_mtu_set_fd(int fd, const char *name, int mtu)
@@ -114,7 +111,6 @@ int _odp_mtu_set_fd(int fd, const char *name, int mtu)
 /*
  * ODP_PACKET_SOCKET_MMSG:
  * ODP_PACKET_SOCKET_MMAP:
- * ODP_PACKET_NETMAP:
  */
 int _odp_promisc_mode_set_fd(int fd, const char *name, int enable)
 {
@@ -146,7 +142,6 @@ int _odp_promisc_mode_set_fd(int fd, const char *name, int enable)
 /*
  * ODP_PACKET_SOCKET_MMSG:
  * ODP_PACKET_SOCKET_MMAP:
- * ODP_PACKET_NETMAP:
  */
 int _odp_promisc_mode_get_fd(int fd, const char *name)
 {

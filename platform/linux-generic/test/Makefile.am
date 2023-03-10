@@ -23,9 +23,6 @@ SUBDIRS += validation/api/pktio\
 if ODP_PKTIO_PCAP
 TESTS += validation/api/pktio/pktio_run_pcap.sh
 endif
-if netmap_support
-TESTS += validation/api/pktio/pktio_run_netmap.sh
-endif
 if PKTIO_DPDK
 TESTS += validation/api/pktio/pktio_run_dpdk.sh
 endif

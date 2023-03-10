@@ -12,7 +12,6 @@ AM_CPPFLAGS +=  -I$(top_srcdir)/platform/$(with_platform)/arch/@ARCH_DIR@
 AM_CPPFLAGS +=  -I$(top_srcdir)/platform/$(with_platform)/arch/default
 
 AM_CPPFLAGS +=  $(OPENSSL_CPPFLAGS)
-AM_CPPFLAGS +=  $(NETMAP_CPPFLAGS)
 
 AM_CFLAGS +=  $(AARCH64CRYPTO_CFLAGS)
 AM_CFLAGS +=  $(DPDK_CFLAGS)
@@ -270,7 +269,6 @@ __LIB__libodp_linux_la_SOURCES = \
 			   pktio/io_ops.c \
 			   pktio/ipc.c \
 			   pktio/loop.c \
-			   pktio/netmap.c \
 			   pktio/null.c \
 			   pktio/pktio_common.c \
 			   pktio/socket.c \

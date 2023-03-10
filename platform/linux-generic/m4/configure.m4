@@ -28,7 +28,6 @@ m4_include([platform/linux-generic/m4/odp_openssl.m4])
 m4_include([platform/linux-generic/m4/odp_crypto.m4])
 m4_include([platform/linux-generic/m4/odp_ipsec_mb.m4])
 m4_include([platform/linux-generic/m4/odp_pcapng.m4])
-m4_include([platform/linux-generic/m4/odp_netmap.m4])
 m4_include([platform/linux-generic/m4/odp_dpdk.m4])
 m4_include([platform/linux-generic/m4/odp_xdp.m4])
 ODP_EVENT_VALIDATION

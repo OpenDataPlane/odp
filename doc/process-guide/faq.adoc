@@ -219,9 +219,6 @@ vendors package this capability as a NIC + ODP library. The ODP project also
 supports its own ODP-DPDK [1]  implementation to help migrations from the lower
 level DPDK API to the ODPs abstraction.
 
-But traditional NICs are supported odp-linux has PKTIO support for Netmap and
-DPDK.
-
 == Does ODP support polling mode?
 
 ODP does not dictate a model, although the majority of current contributors see

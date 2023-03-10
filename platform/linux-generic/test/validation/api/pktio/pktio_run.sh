@@ -62,9 +62,6 @@ run_test()
 		unset ODP_PKTIO_DISABLE_SOCKET_${distype}
 	done
 
-	# this script doesn't support testing with netmap
-	export ODP_PKTIO_DISABLE_NETMAP=y
-
 	for distype in SKIP MMAP; do
 		if [ "$disabletype" != "SKIP" ]; then
 			export ODP_PKTIO_DISABLE_SOCKET_${distype}=y
