@@ -17,9 +17,6 @@
 /* Define to 1 to enable DPDK zero copy support */
 #undef _ODP_DPDK_ZERO_COPY
 
-/* Define to 1 to enable netmap packet I/O support */
-#undef _ODP_PKTIO_NETMAP
-
 /* Define to 1 to enable pcap packet I/O support */
 #undef _ODP_PKTIO_PCAP
 

@@ -62,9 +62,7 @@ ODP_STATIC_ASSERT(PKTIO_LSO_PROFILES < UINT8_MAX, "PKTIO_LSO_PROFILES_ERROR");
 /* Forward declaration */
 struct pktio_if_ops;
 
-#if defined(_ODP_PKTIO_NETMAP)
-#define PKTIO_PRIVATE_SIZE 74752
-#elif defined(_ODP_PKTIO_XDP) && ODP_CACHE_LINE_SIZE == 128
+#if defined(_ODP_PKTIO_XDP) && ODP_CACHE_LINE_SIZE == 128
 #define PKTIO_PRIVATE_SIZE 33792
 #elif defined(_ODP_PKTIO_XDP)
 #define PKTIO_PRIVATE_SIZE 29696
@@ -292,7 +290,6 @@ static inline void _odp_pktio_tx_ts_set(pktio_entry_t *entry)
 	odp_atomic_store_u64(&entry->tx_ts, ts_val.u64);
 }
 
-extern const pktio_if_ops_t _odp_netmap_pktio_ops;
 extern const pktio_if_ops_t _odp_dpdk_pktio_ops;
 extern const pktio_if_ops_t _odp_sock_xdp_pktio_ops;
 extern const pktio_if_ops_t _odp_sock_mmsg_pktio_ops;

@@ -29,17 +29,17 @@ SPDX-License-Identifier:        BSD-3-Clause
 
     E.g.
         socket:eth1
-        netmap:eth2
+        socket_xdp:eth2
 
     The supported pktio types are:
         dpdk
         ipc
         loop
-        netmap
         null
         pcap
         socket
         socket_mmap
+        socket_xdp
         tap
 
 5. Random data
