@@ -603,6 +603,9 @@ typedef struct odp_crypto_session_param_t {
 	 *  the pairing authentication algorithm. When ciphering is enabled
 	 *  cipher key and IV need to be set. The default value is
 	 *  ODP_CIPHER_ALG_NULL.
+	 *
+	 *  When ciphering is disabled, i.e. cipher_alg is ODP_CIPHER_ALG_NULL,
+	 *  cipher_key and cipher_iv_len parameters are ignored.
 	 */
 	odp_cipher_alg_t cipher_alg;
 
@@ -629,6 +632,10 @@ typedef struct odp_crypto_session_param_t {
 	 *  ODP_AUTH_ALG_CHACHA20_POLY1305. Otherwise, all authentication side
 	 *  parameters must be set when authentication is enabled. The default
 	 *  value is ODP_AUTH_ALG_NULL.
+	 *
+	 *  When authentication is disabled, i.e. auth_alg is
+	 *  ODP_AUTH_ALG_NULL, auth_key, auth_iv_len, auth_digest_len,
+	 *  auth_aad_len and hash_result_in_auth_range parameters are ignored.
 	 */
 	odp_auth_alg_t auth_alg;
 
