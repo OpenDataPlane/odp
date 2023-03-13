@@ -48,13 +48,15 @@ ODP_STATIC_ASSERT(sizeof(odp_timeout_hdr_t) <= ODP_CACHE_LINE_SIZE,
 
 /* A larger decrement value should be used after receiving events compared to
  * an 'empty' call. */
-void _odp_timer_run_inline(int dec);
+uint64_t _odp_timer_run_inline(int dec);
 
 /* Static inline wrapper to minimize modification of schedulers. */
-static inline void timer_run(int dec)
+static inline uint64_t timer_run(int dec)
 {
 	if (odp_global_rw->inline_timers)
-		_odp_timer_run_inline(dec);
+		return _odp_timer_run_inline(dec);
+
+	return UINT64_MAX;
 }
 
 #endif
