@@ -761,11 +761,12 @@ static inline void timer_expire(timer_pool_t *tp, uint32_t idx, uint64_t tick)
 	}
 }
 
-static inline void timer_pool_scan(timer_pool_t *tp, uint64_t tick)
+static inline uint64_t timer_pool_scan(timer_pool_t *tp, uint64_t tick)
 {
 	tick_buf_t *array = &tp->tick_buf[0];
 	uint32_t high_wm = odp_atomic_load_acq_u32(&tp->high_wm);
 	uint32_t i;
+	uint64_t min = UINT64_MAX;
 
 	_ODP_ASSERT(high_wm <= tp->param.num_timers);
 	for (i = 0; i < high_wm; i++) {
@@ -780,18 +781,23 @@ static inline void timer_pool_scan(timer_pool_t *tp, uint64_t tick)
 		if (odp_unlikely(exp_tck <= tick)) {
 			/* Attempt to expire timer */
 			timer_expire(tp, i, tick);
+			min = 0;
+		} else {
+			min = _ODP_MIN(min, exp_tck - tick);
 		}
 	}
+
+	return min;
 }
 
 /******************************************************************************
  * Inline timer processing
  *****************************************************************************/
 
-static inline void timer_pool_scan_inline(int num, odp_time_t now)
+static inline uint64_t timer_pool_scan_inline(int num, odp_time_t now)
 {
 	timer_pool_t *tp;
-	uint64_t new_tick, old_tick, nsec;
+	uint64_t new_tick, old_tick, ticks_to_next_expire, nsec, min = UINT64_MAX;
 	int64_t diff;
 	int i;
 
@@ -832,26 +838,29 @@ static inline void timer_pool_scan_inline(int num, odp_time_t now)
 					odp_atomic_store_u32(&tp->notify_overrun, 2);
 				}
 			}
-			timer_pool_scan(tp, nsec);
+			ticks_to_next_expire = timer_pool_scan(tp, nsec);
+			min = _ODP_MIN(min, ticks_to_next_expire);
 		}
 	}
+
+	return min;
 }
 
-void _odp_timer_run_inline(int dec)
+uint64_t _odp_timer_run_inline(int dec)
 {
 	odp_time_t now;
 	int num = timer_global->highest_tp_idx + 1;
 	int poll_interval = timer_global->poll_interval;
 
 	if (num == 0)
-		return;
+		return UINT64_MAX;
 
 	/* Rate limit how often this thread checks the timer pools. */
 
 	if (poll_interval > 1) {
 		timer_local.run_cnt -= dec;
 		if (timer_local.run_cnt > 0)
-			return;
+			return UINT64_MAX;
 		timer_local.run_cnt = poll_interval;
 	}
 
@@ -862,7 +871,7 @@ void _odp_timer_run_inline(int dec)
 
 		if (odp_time_cmp(period,
 				 timer_global->poll_interval_time) < 0)
-			return;
+			return UINT64_MAX;
 		timer_local.last_run = now;
 	}
 
@@ -870,13 +879,14 @@ void _odp_timer_run_inline(int dec)
 	if (CONFIG_TIMER_PROFILE_INLINE) {
 		odp_time_t t1 = odp_time_local_strict();
 
-		timer_pool_scan_inline(num, now);
+		uint64_t ret = timer_pool_scan_inline(num, now);
 		odp_time_t t2 = odp_time_local_strict();
 
 		timer_local.prof_nsec += odp_time_diff_ns(t2, t1);
 		timer_local.prof_rounds++;
+		return ret;
 	} else {
-		timer_pool_scan_inline(num, now);
+		return timer_pool_scan_inline(num, now);
 	}
 }
 
