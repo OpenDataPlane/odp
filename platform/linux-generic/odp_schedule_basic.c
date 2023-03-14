@@ -44,6 +44,7 @@
 
 #include <string.h>
 #include <time.h>
+#include <inttypes.h>
 
 /* No synchronization context */
 #define NO_SYNC_CONTEXT ODP_SCHED_SYNC_PARALLEL
@@ -297,7 +298,7 @@ typedef struct {
 
 	struct {
 		uint32_t poll_time;
-		struct timespec sleep_time;
+		uint64_t sleep_time;
 	} powersave;
 
 	/* Scheduler interface config options (not used in fast path) */
@@ -545,8 +546,8 @@ static int read_config_file(sched_global_t *sched)
 	}
 
 	val = _ODP_MAX(0, val);
-	sched->powersave.sleep_time.tv_sec = val / 1000000000;
-	sched->powersave.sleep_time.tv_nsec = val % 1000000000;
+	val = _ODP_MIN((int)ODP_TIME_SEC_IN_NS - 1, val);
+	sched->powersave.sleep_time = val;
 	_ODP_PRINT("  %s: %i\n", str, val);
 
 	_ODP_PRINT("  dynamic load balance: %s\n", sched->load_balance ? "ON" : "OFF");
@@ -1672,7 +1673,7 @@ static inline int schedule_loop_sleep(odp_queue_t *out_queue, uint64_t wait,
 			timer_run(2);
 			break;
 		}
-		timer_run(1);
+		uint64_t next = timer_run(sleep ? TIMER_SCAN_FORCE : 1);
 
 		if (first) {
 			start = odp_time_local();
@@ -1683,8 +1684,19 @@ static inline int schedule_loop_sleep(odp_queue_t *out_queue, uint64_t wait,
 			continue;
 		}
 
-		if (sleep)
-			nanosleep(&sched->powersave.sleep_time, NULL);
+		if (sleep && next) {
+			uint64_t sleep_nsec = _ODP_MIN(sched->powersave.sleep_time, next);
+
+			if (wait != ODP_SCHED_WAIT) {
+				uint64_t nsec_to_end = odp_time_diff_ns(end, current);
+
+				sleep_nsec = _ODP_MIN(sleep_nsec, nsec_to_end);
+			}
+
+			struct timespec ts = { 0, sleep_nsec };
+
+			nanosleep(&ts, NULL);
+		}
 
 		if (wait != ODP_SCHED_WAIT || !sleep) {
 			current = odp_time_local();
