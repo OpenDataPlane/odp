@@ -794,7 +794,7 @@ static inline uint64_t timer_pool_scan(timer_pool_t *tp, uint64_t tick)
  * Inline timer processing
  *****************************************************************************/
 
-static inline uint64_t timer_pool_scan_inline(int num, odp_time_t now)
+static inline uint64_t timer_pool_scan_inline(int num, odp_time_t now, int force)
 {
 	timer_pool_t *tp;
 	uint64_t new_tick, old_tick, ticks_to_next_expire, nsec, min = UINT64_MAX;
@@ -823,7 +823,7 @@ static inline uint64_t timer_pool_scan_inline(int num, odp_time_t now)
 		old_tick = odp_atomic_load_u64(&tp->cur_tick);
 		diff = new_tick - old_tick;
 
-		if (diff < 1)
+		if (diff < 1 && !force)
 			continue;
 
 		if (odp_atomic_cas_u64(&tp->cur_tick, &old_tick, new_tick)) {
@@ -850,7 +850,8 @@ uint64_t _odp_timer_run_inline(int dec)
 {
 	odp_time_t now;
 	int num = timer_global->highest_tp_idx + 1;
-	int poll_interval = timer_global->poll_interval;
+	int force = (dec == TIMER_SCAN_FORCE);
+	int poll_interval = force ? 0 : timer_global->poll_interval;
 
 	if (num == 0)
 		return UINT64_MAX;
@@ -875,18 +876,23 @@ uint64_t _odp_timer_run_inline(int dec)
 		timer_local.last_run = now;
 	}
 
+	if (force) {
+		timer_local.run_cnt = poll_interval;
+		timer_local.last_run = now;
+	}
+
 	/* Check the timer pools. */
 	if (CONFIG_TIMER_PROFILE_INLINE) {
 		odp_time_t t1 = odp_time_local_strict();
 
-		uint64_t ret = timer_pool_scan_inline(num, now);
+		uint64_t ret = timer_pool_scan_inline(num, now, force);
 		odp_time_t t2 = odp_time_local_strict();
 
 		timer_local.prof_nsec += odp_time_diff_ns(t2, t1);
 		timer_local.prof_rounds++;
 		return ret;
 	} else {
-		return timer_pool_scan_inline(num, now);
+		return timer_pool_scan_inline(num, now, force);
 	}
 }
 

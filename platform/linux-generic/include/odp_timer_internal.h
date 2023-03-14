@@ -22,6 +22,12 @@
 #include <odp_global_data.h>
 #include <odp_pool_internal.h>
 
+/*
+ * Use as the argument to timer_run() to force a scan and to ignore rate
+ * limit.
+ */
+#define TIMER_SCAN_FORCE INT32_MAX
+
 /**
  * Internal Timeout header
  */
