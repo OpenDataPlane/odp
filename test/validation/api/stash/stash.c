@@ -456,7 +456,7 @@ static void stash_default_put(uint32_t size, int32_t burst, stash_op_t op, int b
 	odp_stash_t stash;
 	odp_stash_param_t param;
 	int32_t i, ret, retry, num_left;
-	int32_t num, max_burst;
+	int32_t num, max_burst, num_stashed;
 	void *input, *output;
 
 	if (batch) {
@@ -519,6 +519,12 @@ static void stash_default_put(uint32_t size, int32_t burst, stash_op_t op, int b
 	retry = MAX_RETRY;
 	num_left = num;
 	max_burst = burst;
+	num_stashed = 0;
+
+	/* Try to store extra objects if strict mode is not enabled */
+	if (!strict_size)
+		num_left += burst;
+
 	while (num_left > 0) {
 		if (op == STASH_GEN) {
 			if (batch)
@@ -545,6 +551,9 @@ static void stash_default_put(uint32_t size, int32_t burst, stash_op_t op, int b
 		}
 		CU_ASSERT_FATAL(ret >= 0);
 		CU_ASSERT_FATAL(ret <= burst);
+
+		num_stashed += ret;
+
 		if (batch) {
 			CU_ASSERT(ret == 0 || ret == burst);
 			if (num_left - ret < burst)
@@ -555,6 +564,9 @@ static void stash_default_put(uint32_t size, int32_t burst, stash_op_t op, int b
 			num_left -= ret;
 			retry = MAX_RETRY;
 		} else {
+			/* Stash full */
+			if (num_stashed >= num)
+				break;
 			retry--;
 			CU_ASSERT_FATAL(retry > 0);
 		}
@@ -562,7 +574,7 @@ static void stash_default_put(uint32_t size, int32_t burst, stash_op_t op, int b
 
 	burst = max_burst;
 	retry = MAX_RETRY;
-	num_left = num;
+	num_left = num_stashed;
 	while (num_left > 0) {
 		memset(output, 0, burst * size);
 
@@ -661,7 +673,7 @@ static void stash_fifo_put(uint32_t size, int32_t burst, stash_op_t op, int batc
 	odp_stash_t stash;
 	odp_stash_param_t param;
 	int32_t i, ret, retry, num_left;
-	int32_t num, max_burst;
+	int32_t num, max_burst, num_stashed;
 	void *input, *output;
 
 	if (batch) {
@@ -717,6 +729,12 @@ static void stash_fifo_put(uint32_t size, int32_t burst, stash_op_t op, int batc
 	retry = MAX_RETRY;
 	num_left = num;
 	max_burst = burst;
+	num_stashed = 0;
+
+	/* Try to store extra objects if strict mode is not enabled */
+	if (!strict_size)
+		num_left += burst;
+
 	while (num_left > 0) {
 		for (i = 0; i < burst; i++) {
 			if (size == sizeof(uint64_t))
@@ -755,6 +773,8 @@ static void stash_fifo_put(uint32_t size, int32_t burst, stash_op_t op, int batc
 		CU_ASSERT_FATAL(ret >= 0);
 		CU_ASSERT_FATAL(ret <= burst);
 
+		num_stashed += ret;
+
 		if (batch) {
 			CU_ASSERT(ret == 0 || ret == burst);
 			if (num_left - ret < burst)
@@ -765,6 +785,9 @@ static void stash_fifo_put(uint32_t size, int32_t burst, stash_op_t op, int batc
 			num_left -= ret;
 			retry = MAX_RETRY;
 		} else {
+			/* Stash full */
+			if (num_stashed >= num)
+				break;
 			retry--;
 			CU_ASSERT_FATAL(retry > 0);
 		}
@@ -772,7 +795,7 @@ static void stash_fifo_put(uint32_t size, int32_t burst, stash_op_t op, int batc
 
 	burst = max_burst;
 	retry = MAX_RETRY;
-	num_left = num;
+	num_left = num_stashed;
 	while (num_left > 0) {
 		memset(output, 0, burst * size);
 
