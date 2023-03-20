@@ -251,7 +251,14 @@ int odp_stash_capability(odp_stash_capability_t *capa, odp_stash_type_t type)
 
 	capa->max_stashes_any_type = max_stashes;
 	capa->max_stashes          = max_stashes;
+
 	capa->max_num_obj          = stash_global->max_num_obj;
+	capa->max_num.u8           = stash_global->max_num_obj;
+	capa->max_num.u16          = stash_global->max_num_obj;
+	capa->max_num.u32          = stash_global->max_num_obj;
+	capa->max_num.u64          = stash_global->max_num_obj;
+	capa->max_num.max_obj_size = stash_global->max_num_obj;
+
 	capa->max_obj_size         = sizeof(uint64_t);
 	capa->max_get_batch        = MIN_RING_SIZE;
 	capa->max_put_batch        = MIN_RING_SIZE;
