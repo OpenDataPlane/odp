@@ -7,6 +7,8 @@
 #include <odp_api.h>
 #include "odp_cunit_common.h"
 
+#include <string.h>
+
 #define MAGIC_U64  0x8b7438fa56c82e96
 #define MAGIC_U32  0x74a13b94
 #define MAGIC_U16  0x25bf
@@ -111,10 +113,9 @@ static int stash_suite_init(void)
 static void stash_capability(void)
 {
 	odp_stash_capability_t capa;
-	int ret;
 
 	memset(&capa, 0, sizeof(odp_stash_capability_t));
-	CU_ASSERT(odp_stash_capability(&capa, ODP_STASH_TYPE_DEFAULT) == 0);
+	CU_ASSERT_FATAL(odp_stash_capability(&capa, ODP_STASH_TYPE_DEFAULT) == 0);
 	CU_ASSERT(capa.max_stashes_any_type > 0);
 	CU_ASSERT(capa.max_stashes > 0);
 	CU_ASSERT(capa.max_num_obj > 0);
@@ -122,16 +123,43 @@ static void stash_capability(void)
 	CU_ASSERT(capa.max_get_batch >= 1);
 	CU_ASSERT(capa.max_put_batch >= 1);
 
+	CU_ASSERT(capa.max_num.u8 >= capa.max_num_obj);
+	CU_ASSERT(capa.max_num.u16 >= capa.max_num_obj);
+	CU_ASSERT(capa.max_num.u32 >= capa.max_num_obj);
+	CU_ASSERT(capa.max_num.max_obj_size >= capa.max_num_obj);
+	if (capa.max_obj_size >= 8)
+		CU_ASSERT(capa.max_num.u64 >= capa.max_num_obj);
+	if (capa.max_obj_size < 8)
+		CU_ASSERT(capa.max_num.u64 == 0);
+	if (capa.max_obj_size >= 16)
+		CU_ASSERT(capa.max_num.u128 >= capa.max_num_obj);
+	if (capa.max_obj_size < 16)
+		CU_ASSERT(capa.max_num.u128 == 0);
+
 	memset(&capa, 0, sizeof(odp_stash_capability_t));
-	ret = odp_stash_capability(&capa, ODP_STASH_TYPE_FIFO);
-	CU_ASSERT(ret == 0);
+	CU_ASSERT_FATAL(odp_stash_capability(&capa, ODP_STASH_TYPE_FIFO) == 0);
 	CU_ASSERT(capa.max_stashes_any_type > 0);
-	if (ret == 0 && capa.max_stashes) {
-		CU_ASSERT(capa.max_num_obj > 0);
-		CU_ASSERT(capa.max_obj_size >= sizeof(uint32_t));
-		CU_ASSERT(capa.max_get_batch >= 1);
-		CU_ASSERT(capa.max_put_batch >= 1);
-	}
+
+	if (capa.max_stashes == 0)
+		return;
+
+	CU_ASSERT(capa.max_num_obj > 0);
+	CU_ASSERT(capa.max_obj_size >= sizeof(uint32_t));
+	CU_ASSERT(capa.max_get_batch >= 1);
+	CU_ASSERT(capa.max_put_batch >= 1);
+
+	CU_ASSERT(capa.max_num.u8 >= capa.max_num_obj);
+	CU_ASSERT(capa.max_num.u16 >= capa.max_num_obj);
+	CU_ASSERT(capa.max_num.u32 >= capa.max_num_obj);
+	CU_ASSERT(capa.max_num.max_obj_size >= capa.max_num_obj);
+	if (capa.max_obj_size >= 8)
+		CU_ASSERT(capa.max_num.u64 >= capa.max_num_obj);
+	if (capa.max_obj_size < 8)
+		CU_ASSERT(capa.max_num.u64 == 0);
+	if (capa.max_obj_size >= 16)
+		CU_ASSERT(capa.max_num.u128 >= capa.max_num_obj);
+	if (capa.max_obj_size < 16)
+		CU_ASSERT(capa.max_num.u128 == 0);
 }
 
 static void param_defaults(uint8_t fill)
