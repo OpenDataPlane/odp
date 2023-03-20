@@ -1,4 +1,4 @@
-/* Copyright (c) 2020-2022, Nokia
+/* Copyright (c) 2020-2023, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -147,6 +147,7 @@ static void param_defaults(uint8_t fill)
 	CU_ASSERT(param.stats.all == 0);
 	CU_ASSERT(param.stats.bit.count == 0);
 	CU_ASSERT(param.stats.bit.cache_count == 0);
+	CU_ASSERT(param.strict_size == 0);
 }
 
 static void stash_param_defaults(void)
@@ -449,7 +450,8 @@ static void stash_stats_u32(void)
 	CU_ASSERT_FATAL(odp_stash_destroy(stash) == 0);
 }
 
-static void stash_default_put(uint32_t size, int32_t burst, stash_op_t op, int batch)
+static void stash_default_put(uint32_t size, int32_t burst, stash_op_t op, int batch,
+			      odp_bool_t strict_size)
 {
 	odp_stash_t stash;
 	odp_stash_param_t param;
@@ -505,6 +507,7 @@ static void stash_default_put(uint32_t size, int32_t burst, stash_op_t op, int b
 	param.num_obj    = num;
 	param.obj_size   = size;
 	param.cache_size = global.cache_size_default;
+	param.strict_size = strict_size;
 
 	stash = odp_stash_create("test_stash_default", &param);
 
@@ -652,7 +655,8 @@ static void stash_default_put(uint32_t size, int32_t burst, stash_op_t op, int b
 	CU_ASSERT_FATAL(odp_stash_destroy(stash) == 0);
 }
 
-static void stash_fifo_put(uint32_t size, int32_t burst, stash_op_t op, int batch)
+static void stash_fifo_put(uint32_t size, int32_t burst, stash_op_t op, int batch,
+			   odp_bool_t strict_size)
 {
 	odp_stash_t stash;
 	odp_stash_param_t param;
@@ -701,6 +705,7 @@ static void stash_fifo_put(uint32_t size, int32_t burst, stash_op_t op, int batc
 	param.type     = ODP_STASH_TYPE_FIFO;
 	param.num_obj  = num;
 	param.obj_size = size;
+	param.strict_size = strict_size;
 
 	stash = odp_stash_create("test_stash_fifo", &param);
 
@@ -912,282 +917,338 @@ static int check_support_fifo(void)
 
 static void stash_default_put_u64_1(void)
 {
-	stash_default_put(sizeof(uint64_t), 1, STASH_GEN, 0);
+	stash_default_put(sizeof(uint64_t), 1, STASH_GEN, 0, false);
+	stash_default_put(sizeof(uint64_t), 1, STASH_GEN, 0, true);
 }
 
 static void stash_default_put_u64_n(void)
 {
-	stash_default_put(sizeof(uint64_t), BURST, STASH_GEN, 0);
+	stash_default_put(sizeof(uint64_t), BURST, STASH_GEN, 0, false);
+	stash_default_put(sizeof(uint64_t), BURST, STASH_GEN, 0, true);
 }
 
 static void stash_default_u64_put_u64_1(void)
 {
-	stash_default_put(sizeof(uint64_t), 1, STASH_U64, 0);
+	stash_default_put(sizeof(uint64_t), 1, STASH_U64, 0, false);
+	stash_default_put(sizeof(uint64_t), 1, STASH_U64, 0, true);
 }
 
 static void stash_default_u64_put_u64_n(void)
 {
-	stash_default_put(sizeof(uint64_t), BURST, STASH_U64, 0);
+	stash_default_put(sizeof(uint64_t), BURST, STASH_U64, 0, false);
+	stash_default_put(sizeof(uint64_t), BURST, STASH_U64, 0, true);
 }
 
 static void stash_default_put_ptr_1(void)
 {
-	stash_default_put(sizeof(uintptr_t), 1, STASH_PTR, 0);
+	stash_default_put(sizeof(uintptr_t), 1, STASH_PTR, 0, false);
+	stash_default_put(sizeof(uintptr_t), 1, STASH_PTR, 0, true);
 }
 
 static void stash_default_put_ptr_n(void)
 {
-	stash_default_put(sizeof(uintptr_t), BURST, STASH_PTR, 0);
+	stash_default_put(sizeof(uintptr_t), BURST, STASH_PTR, 0, false);
+	stash_default_put(sizeof(uintptr_t), BURST, STASH_PTR, 0, true);
 }
 
 static void stash_default_put_u64_1_batch(void)
 {
-	stash_default_put(sizeof(uint64_t), 1, STASH_GEN, 1);
+	stash_default_put(sizeof(uint64_t), 1, STASH_GEN, 1, false);
+	stash_default_put(sizeof(uint64_t), 1, STASH_GEN, 1, true);
 }
 
 static void stash_default_put_u64_n_batch(void)
 {
-	stash_default_put(sizeof(uint64_t), BATCH, STASH_GEN, 1);
+	stash_default_put(sizeof(uint64_t), BATCH, STASH_GEN, 1, false);
+	stash_default_put(sizeof(uint64_t), BATCH, STASH_GEN, 1, true);
 }
 
 static void stash_default_u64_put_u64_1_batch(void)
 {
-	stash_default_put(sizeof(uint64_t), 1, STASH_U64, 1);
+	stash_default_put(sizeof(uint64_t), 1, STASH_U64, 1, false);
+	stash_default_put(sizeof(uint64_t), 1, STASH_U64, 1, true);
 }
 
 static void stash_default_u64_put_u64_n_batch(void)
 {
-	stash_default_put(sizeof(uint64_t), BATCH, STASH_U64, 1);
+	stash_default_put(sizeof(uint64_t), BATCH, STASH_U64, 1, false);
+	stash_default_put(sizeof(uint64_t), BATCH, STASH_U64, 1, true);
 }
 
 static void stash_default_put_ptr_1_batch(void)
 {
-	stash_default_put(sizeof(uintptr_t), 1, STASH_PTR, 1);
+	stash_default_put(sizeof(uintptr_t), 1, STASH_PTR, 1, false);
+	stash_default_put(sizeof(uintptr_t), 1, STASH_PTR, 1, true);
 }
 
 static void stash_default_put_ptr_n_batch(void)
 {
-	stash_default_put(sizeof(uintptr_t), BATCH, STASH_PTR, 1);
+	stash_default_put(sizeof(uintptr_t), BATCH, STASH_PTR, 1, false);
+	stash_default_put(sizeof(uintptr_t), BATCH, STASH_PTR, 1, true);
 }
 
 static void stash_default_put_u32_1(void)
 {
-	stash_default_put(sizeof(uint32_t), 1, STASH_GEN, 0);
+	stash_default_put(sizeof(uint32_t), 1, STASH_GEN, 0, false);
+	stash_default_put(sizeof(uint32_t), 1, STASH_GEN, 0, true);
 }
 
 static void stash_default_put_u32_n(void)
 {
-	stash_default_put(sizeof(uint32_t), BURST, STASH_GEN, 0);
+	stash_default_put(sizeof(uint32_t), BURST, STASH_GEN, 0, false);
+	stash_default_put(sizeof(uint32_t), BURST, STASH_GEN, 0, true);
 }
 
 static void stash_default_u32_put_u32_1(void)
 {
-	stash_default_put(sizeof(uint32_t), 1, STASH_U32, 0);
+	stash_default_put(sizeof(uint32_t), 1, STASH_U32, 0, false);
+	stash_default_put(sizeof(uint32_t), 1, STASH_U32, 0, true);
 }
 
 static void stash_default_u32_put_u32_n(void)
 {
-	stash_default_put(sizeof(uint32_t), BURST, STASH_U32, 0);
+	stash_default_put(sizeof(uint32_t), BURST, STASH_U32, 0, false);
+	stash_default_put(sizeof(uint32_t), BURST, STASH_U32, 0, true);
 }
 
 static void stash_default_put_u16_1(void)
 {
-	stash_default_put(sizeof(uint16_t), 1, STASH_GEN, 0);
+	stash_default_put(sizeof(uint16_t), 1, STASH_GEN, 0, false);
+	stash_default_put(sizeof(uint16_t), 1, STASH_GEN, 0, true);
 }
 
 static void stash_default_put_u16_n(void)
 {
-	stash_default_put(sizeof(uint16_t), BURST, STASH_GEN, 0);
+	stash_default_put(sizeof(uint16_t), BURST, STASH_GEN, 0, false);
+	stash_default_put(sizeof(uint16_t), BURST, STASH_GEN, 0, true);
 }
 
 static void stash_default_put_u8_1(void)
 {
-	stash_default_put(sizeof(uint8_t), 1, STASH_GEN, 0);
+	stash_default_put(sizeof(uint8_t), 1, STASH_GEN, 0, false);
+	stash_default_put(sizeof(uint8_t), 1, STASH_GEN, 0, true);
 }
 
 static void stash_default_put_u8_n(void)
 {
-	stash_default_put(sizeof(uint8_t), BURST, STASH_GEN, 0);
+	stash_default_put(sizeof(uint8_t), BURST, STASH_GEN, 0, false);
+	stash_default_put(sizeof(uint8_t), BURST, STASH_GEN, 0, true);
 }
 
 static void stash_default_put_u32_1_batch(void)
 {
-	stash_default_put(sizeof(uint32_t), 1, STASH_GEN, 1);
+	stash_default_put(sizeof(uint32_t), 1, STASH_GEN, 1, false);
+	stash_default_put(sizeof(uint32_t), 1, STASH_GEN, 1, true);
 }
 
 static void stash_default_put_u32_n_batch(void)
 {
-	stash_default_put(sizeof(uint32_t), BATCH, STASH_GEN, 1);
+	stash_default_put(sizeof(uint32_t), BATCH, STASH_GEN, 1, false);
+	stash_default_put(sizeof(uint32_t), BATCH, STASH_GEN, 1, true);
 }
 
 static void stash_default_u32_put_u32_1_batch(void)
 {
-	stash_default_put(sizeof(uint32_t), 1, STASH_U32, 1);
+	stash_default_put(sizeof(uint32_t), 1, STASH_U32, 1, false);
+	stash_default_put(sizeof(uint32_t), 1, STASH_U32, 1, true);
 }
 
 static void stash_default_u32_put_u32_n_batch(void)
 {
-	stash_default_put(sizeof(uint32_t), BATCH, STASH_U32, 1);
+	stash_default_put(sizeof(uint32_t), BATCH, STASH_U32, 1, false);
+	stash_default_put(sizeof(uint32_t), BATCH, STASH_U32, 1, true);
 }
 
 static void stash_default_put_u16_1_batch(void)
 {
-	stash_default_put(sizeof(uint16_t), 1, STASH_GEN, 1);
+	stash_default_put(sizeof(uint16_t), 1, STASH_GEN, 1, false);
+	stash_default_put(sizeof(uint16_t), 1, STASH_GEN, 1, true);
 }
 
 static void stash_default_put_u16_n_batch(void)
 {
-	stash_default_put(sizeof(uint16_t), BATCH, STASH_GEN, 1);
+	stash_default_put(sizeof(uint16_t), BATCH, STASH_GEN, 1, false);
+	stash_default_put(sizeof(uint16_t), BATCH, STASH_GEN, 1, true);
 }
 
 static void stash_default_put_u8_1_batch(void)
 {
-	stash_default_put(sizeof(uint8_t), 1, STASH_GEN, 1);
+	stash_default_put(sizeof(uint8_t), 1, STASH_GEN, 1, false);
+	stash_default_put(sizeof(uint8_t), 1, STASH_GEN, 1, true);
 }
 
 static void stash_default_put_u8_n_batch(void)
 {
-	stash_default_put(sizeof(uint8_t), BATCH, STASH_GEN, 1);
+	stash_default_put(sizeof(uint8_t), BATCH, STASH_GEN, 1, false);
+	stash_default_put(sizeof(uint8_t), BATCH, STASH_GEN, 1, true);
 }
 
 static void stash_fifo_put_u64_1(void)
 {
-	stash_fifo_put(sizeof(uint64_t), 1, STASH_GEN, 0);
+	stash_fifo_put(sizeof(uint64_t), 1, STASH_GEN, 0, false);
+	stash_fifo_put(sizeof(uint64_t), 1, STASH_GEN, 0, true);
 }
 
 static void stash_fifo_put_u64_n(void)
 {
-	stash_fifo_put(sizeof(uint64_t), BURST, STASH_GEN, 0);
+	stash_fifo_put(sizeof(uint64_t), BURST, STASH_GEN, 0, false);
+	stash_fifo_put(sizeof(uint64_t), BURST, STASH_GEN, 0, true);
 }
 
 static void stash_fifo_u64_put_u64_1(void)
 {
-	stash_fifo_put(sizeof(uint64_t), 1, STASH_U64, 0);
+	stash_fifo_put(sizeof(uint64_t), 1, STASH_U64, 0, false);
+	stash_fifo_put(sizeof(uint64_t), 1, STASH_U64, 0, true);
 }
 
 static void stash_fifo_u64_put_u64_n(void)
 {
-	stash_fifo_put(sizeof(uint64_t), BURST, STASH_U64, 0);
+	stash_fifo_put(sizeof(uint64_t), BURST, STASH_U64, 0, false);
+	stash_fifo_put(sizeof(uint64_t), BURST, STASH_U64, 0, true);
 }
 
 static void stash_fifo_put_ptr_1(void)
 {
-	stash_fifo_put(sizeof(uintptr_t), 1, STASH_PTR, 0);
+	stash_fifo_put(sizeof(uintptr_t), 1, STASH_PTR, 0, false);
+	stash_fifo_put(sizeof(uintptr_t), 1, STASH_PTR, 0, true);
 }
 
 static void stash_fifo_put_ptr_n(void)
 {
-	stash_fifo_put(sizeof(uintptr_t), BURST, STASH_PTR, 0);
+	stash_fifo_put(sizeof(uintptr_t), BURST, STASH_PTR, 0, false);
+	stash_fifo_put(sizeof(uintptr_t), BURST, STASH_PTR, 0, true);
 }
 
 static void stash_fifo_put_u32_1(void)
 {
-	stash_fifo_put(sizeof(uint32_t), 1, STASH_GEN, 0);
+	stash_fifo_put(sizeof(uint32_t), 1, STASH_GEN, 0, false);
+	stash_fifo_put(sizeof(uint32_t), 1, STASH_GEN, 0, true);
 }
 
 static void stash_fifo_put_u32_n(void)
 {
-	stash_fifo_put(sizeof(uint32_t), BURST, STASH_GEN, 0);
+	stash_fifo_put(sizeof(uint32_t), BURST, STASH_GEN, 0, false);
+	stash_fifo_put(sizeof(uint32_t), BURST, STASH_GEN, 0, true);
 }
 
 static void stash_fifo_u32_put_u32_1(void)
 {
-	stash_fifo_put(sizeof(uint32_t), 1, STASH_U32, 0);
+	stash_fifo_put(sizeof(uint32_t), 1, STASH_U32, 0, false);
+	stash_fifo_put(sizeof(uint32_t), 1, STASH_U32, 0, true);
 }
 
 static void stash_fifo_u32_put_u32_n(void)
 {
-	stash_fifo_put(sizeof(uint32_t), BURST, STASH_U32, 0);
+	stash_fifo_put(sizeof(uint32_t), BURST, STASH_U32, 0, false);
+	stash_fifo_put(sizeof(uint32_t), BURST, STASH_U32, 0, true);
 }
 
 static void stash_fifo_put_u16_1(void)
 {
-	stash_fifo_put(sizeof(uint16_t), 1, STASH_GEN, 0);
+	stash_fifo_put(sizeof(uint16_t), 1, STASH_GEN, 0, false);
+	stash_fifo_put(sizeof(uint16_t), 1, STASH_GEN, 0, true);
 }
 
 static void stash_fifo_put_u16_n(void)
 {
-	stash_fifo_put(sizeof(uint16_t), BURST, STASH_GEN, 0);
+	stash_fifo_put(sizeof(uint16_t), BURST, STASH_GEN, 0, false);
+	stash_fifo_put(sizeof(uint16_t), BURST, STASH_GEN, 0, true);
 }
 
 static void stash_fifo_put_u8_1(void)
 {
-	stash_fifo_put(sizeof(uint8_t), 1, STASH_GEN, 0);
+	stash_fifo_put(sizeof(uint8_t), 1, STASH_GEN, 0, false);
+	stash_fifo_put(sizeof(uint8_t), 1, STASH_GEN, 0, true);
 }
 
 static void stash_fifo_put_u8_n(void)
 {
-	stash_fifo_put(sizeof(uint8_t), BURST, STASH_GEN, 0);
+	stash_fifo_put(sizeof(uint8_t), BURST, STASH_GEN, 0, false);
+	stash_fifo_put(sizeof(uint8_t), BURST, STASH_GEN, 0, true);
 }
 
 static void stash_fifo_put_u64_1_batch(void)
 {
-	stash_fifo_put(sizeof(uint64_t), 1, STASH_GEN, 1);
+	stash_fifo_put(sizeof(uint64_t), 1, STASH_GEN, 1, false);
+	stash_fifo_put(sizeof(uint64_t), 1, STASH_GEN, 1, true);
 }
 
 static void stash_fifo_put_u64_n_batch(void)
 {
-	stash_fifo_put(sizeof(uint64_t), BATCH, STASH_GEN, 1);
+	stash_fifo_put(sizeof(uint64_t), BATCH, STASH_GEN, 1, false);
+	stash_fifo_put(sizeof(uint64_t), BATCH, STASH_GEN, 1, true);
 }
 
 static void stash_fifo_u64_put_u64_1_batch(void)
 {
-	stash_fifo_put(sizeof(uint64_t), 1, STASH_U64, 1);
+	stash_fifo_put(sizeof(uint64_t), 1, STASH_U64, 1, false);
+	stash_fifo_put(sizeof(uint64_t), 1, STASH_U64, 1, true);
 }
 
 static void stash_fifo_u64_put_u64_n_batch(void)
 {
-	stash_fifo_put(sizeof(uint64_t), BATCH, STASH_U64, 1);
+	stash_fifo_put(sizeof(uint64_t), BATCH, STASH_U64, 1, false);
+	stash_fifo_put(sizeof(uint64_t), BATCH, STASH_U64, 1, true);
 }
 
 static void stash_fifo_put_ptr_1_batch(void)
 {
-	stash_fifo_put(sizeof(uintptr_t), 1, STASH_PTR, 1);
+	stash_fifo_put(sizeof(uintptr_t), 1, STASH_PTR, 1, false);
+	stash_fifo_put(sizeof(uintptr_t), 1, STASH_PTR, 1, true);
 }
 
 static void stash_fifo_put_ptr_n_batch(void)
 {
-	stash_fifo_put(sizeof(uintptr_t), BATCH, STASH_PTR, 1);
+	stash_fifo_put(sizeof(uintptr_t), BATCH, STASH_PTR, 1, false);
+	stash_fifo_put(sizeof(uintptr_t), BATCH, STASH_PTR, 1, true);
 }
 
 static void stash_fifo_put_u32_1_batch(void)
 {
-	stash_fifo_put(sizeof(uint32_t), 1, STASH_GEN, 1);
+	stash_fifo_put(sizeof(uint32_t), 1, STASH_GEN, 1, false);
+	stash_fifo_put(sizeof(uint32_t), 1, STASH_GEN, 1, true);
 }
 
 static void stash_fifo_put_u32_n_batch(void)
 {
-	stash_fifo_put(sizeof(uint32_t), BATCH, STASH_GEN, 1);
+	stash_fifo_put(sizeof(uint32_t), BATCH, STASH_GEN, 1, false);
+	stash_fifo_put(sizeof(uint32_t), BATCH, STASH_GEN, 1, true);
 }
 
 static void stash_fifo_u32_put_u32_1_batch(void)
 {
-	stash_fifo_put(sizeof(uint32_t), 1, STASH_U32, 1);
+	stash_fifo_put(sizeof(uint32_t), 1, STASH_U32, 1, false);
+	stash_fifo_put(sizeof(uint32_t), 1, STASH_U32, 1, true);
 }
 
 static void stash_fifo_u32_put_u32_n_batch(void)
 {
-	stash_fifo_put(sizeof(uint32_t), BATCH, STASH_U32, 1);
+	stash_fifo_put(sizeof(uint32_t), BATCH, STASH_U32, 1, false);
+	stash_fifo_put(sizeof(uint32_t), BATCH, STASH_U32, 1, true);
 }
 
 static void stash_fifo_put_u16_1_batch(void)
 {
-	stash_fifo_put(sizeof(uint16_t), 1, STASH_GEN, 1);
+	stash_fifo_put(sizeof(uint16_t), 1, STASH_GEN, 1, false);
+	stash_fifo_put(sizeof(uint16_t), 1, STASH_GEN, 1, true);
 }
 
 static void stash_fifo_put_u16_n_batch(void)
 {
-	stash_fifo_put(sizeof(uint16_t), BATCH, STASH_GEN, 1);
+	stash_fifo_put(sizeof(uint16_t), BATCH, STASH_GEN, 1, false);
+	stash_fifo_put(sizeof(uint16_t), BATCH, STASH_GEN, 1, true);
 }
 
 static void stash_fifo_put_u8_1_batch(void)
 {
-	stash_fifo_put(sizeof(uint8_t), 1, STASH_GEN, 1);
+	stash_fifo_put(sizeof(uint8_t), 1, STASH_GEN, 1, false);
+	stash_fifo_put(sizeof(uint8_t), 1, STASH_GEN, 1, true);
 }
 
 static void stash_fifo_put_u8_n_batch(void)
 {
-	stash_fifo_put(sizeof(uint8_t), BATCH, STASH_GEN, 1);
+	stash_fifo_put(sizeof(uint8_t), BATCH, STASH_GEN, 1, false);
+	stash_fifo_put(sizeof(uint8_t), BATCH, STASH_GEN, 1, true);
 }
 
 odp_testinfo_t stash_suite[] = {
