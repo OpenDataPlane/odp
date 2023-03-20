@@ -84,6 +84,7 @@ typedef struct ODP_ALIGNED_CACHE stash_t {
 
 	char      name[ODP_STASH_NAME_LEN];
 	int       index;
+	uint8_t   strict_size;
 
 	/* Ring header followed by variable sized data (object handles) */
 	union {
@@ -117,7 +118,6 @@ typedef struct stash_global_t {
 	uint32_t          max_num;
 	uint32_t          max_num_obj;
 	uint32_t          num_internal;
-	uint8_t           strict_size;
 	uint8_t           stash_state[CONFIG_MAX_STASHES];
 	stash_t           *stash[CONFIG_MAX_STASHES];
 	uint8_t           data[] ODP_ALIGNED_CACHE;
@@ -144,7 +144,6 @@ int _odp_stash_init_global(void)
 	uint64_t ring_max_size, stash_max_size, stash_data_size, offset;
 	const uint32_t internal_stashes = odp_global_ro.disable.dma ? 0 : CONFIG_INTERNAL_STASHES;
 	uint8_t *stash_data;
-	uint8_t strict_size;
 	int val = 0;
 
 	if (odp_global_ro.disable.stash && odp_global_ro.disable.dma) {
@@ -169,14 +168,6 @@ int _odp_stash_init_global(void)
 	}
 	_ODP_PRINT("  %s: %i\n", str, val);
 	max_num_obj = val;
-
-	str = "stash.strict_size";
-	if (!_odp_libconfig_lookup_int(str, &val)) {
-		_ODP_ERR("Config option '%s' not found.\n", str);
-		return -1;
-	}
-	_ODP_PRINT("  %s: %i\n", str, val);
-	strict_size = !!val;
 
 	_ODP_PRINT("\n");
 
@@ -213,7 +204,6 @@ int _odp_stash_init_global(void)
 	stash_global->shm = shm;
 	stash_global->max_num = max_num;
 	stash_global->max_num_obj = max_num_obj;
-	stash_global->strict_size = strict_size;
 	stash_global->num_internal = internal_stashes;
 	odp_ticketlock_init(&stash_global->lock);
 
@@ -491,7 +481,8 @@ odp_stash_t odp_stash_create(const char *name, const odp_stash_param_t *param)
 	memset(stash, 0, sizeof(stash_t));
 
 	/* Set ring function pointers */
-	if (stash_global->strict_size) {
+	stash->strict_size = !!param->strict_size;
+	if (stash->strict_size) {
 		if (ring_u64) {
 			stash->ring_fn.u64.init      = strict_ring_u64_init;
 			stash->ring_fn.u64.enq_multi = strict_ring_u64_enq_multi;
@@ -914,6 +905,7 @@ void odp_stash_print(odp_stash_t st)
 	_ODP_PRINT("  obj size        %u\n", stash->obj_size);
 	_ODP_PRINT("  obj count       %u\n", stash_obj_count(stash));
 	_ODP_PRINT("  ring size       %u\n", stash->ring_size);
+	_ODP_PRINT("  strict size     %u\n", stash->strict_size);
 	_ODP_PRINT("\n");
 }
 
