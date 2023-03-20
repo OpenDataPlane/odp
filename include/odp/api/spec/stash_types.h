@@ -156,11 +156,7 @@ typedef struct odp_stash_capability_t {
 	 */
 	uint32_t max_stashes;
 
-	/** Maximum number of object handles per stash
-	 *
-	 *  The value of zero means that limited only by the available
-	 *  memory size.
-	 */
+	/** Maximum number of object handles per stash */
 	uint64_t max_num_obj;
 
 	/** Maximum object handle size in bytes
