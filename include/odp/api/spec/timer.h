@@ -123,7 +123,7 @@ void odp_timer_pool_param_init(odp_timer_pool_param_t *param);
  * @param params     Timer pool parameters. The content will be copied.
  *
  * @return Timer pool handle on success
- * @retval ODP_TIMER_POOL_INVALID on failure and errno set
+ * @retval ODP_TIMER_POOL_INVALID on failure
  */
 odp_timer_pool_t odp_timer_pool_create(const char *name,
 				       const odp_timer_pool_param_t *params);
@@ -209,7 +209,7 @@ int odp_timer_pool_info(odp_timer_pool_t timer_pool,
  * @param user_ptr    User defined pointer or NULL to be copied to timeouts
  *
  * @return Timer handle on success
- * @retval ODP_TIMER_INVALID on failure and errno set.
+ * @retval ODP_TIMER_INVALID on failure
  */
 odp_timer_t odp_timer_alloc(odp_timer_pool_t timer_pool, odp_queue_t queue, const void *user_ptr);
 
