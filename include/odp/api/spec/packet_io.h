@@ -47,9 +47,9 @@ extern "C" {
  * Open a packet IO interface
  *
  * An ODP program can open a single packet IO interface per device, attempts
- * to open an already open device will fail, returning ODP_PKTIO_INVALID with
- * errno set. Use odp_pktio_lookup() to obtain a handle to an already open
- * device. Packet IO parameters provide interface level configuration options.
+ * to open an already open device will fail, returning ODP_PKTIO_INVALID. Use
+ * odp_pktio_lookup() to obtain a handle to an already open device. Packet IO
+ * parameters provide interface level configuration options.
  *
  * Use odp_pktio_param_init() to initialize packet IO parameters into their
  * default values. Default values are also used when 'param' pointer is NULL.
@@ -500,7 +500,7 @@ odp_lso_profile_t odp_lso_profile_create(odp_pktio_t pktio, const odp_lso_profil
 /**
  * Destroy LSO profile
  *
- * LSO profiles can be destoyed only when the packet IO interface is not active (i.e. after it
+ * LSO profiles can be destroyed only when the packet IO interface is not active (i.e. after it
  * has been stopped).
  *
  * @param lso_profile   LSO profile to be destroyed
