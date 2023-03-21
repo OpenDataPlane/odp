@@ -274,9 +274,6 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool)
 	/* Open a packet IO instance */
 	pktio = odp_pktio_open(dev, pool, &pktio_param);
 	if (pktio == ODP_PKTIO_INVALID) {
-		if (odp_errno() == EPERM)
-			ODPH_ERR("Root level permission required\n");
-
 		ODPH_ERR("pktio create failed for %s\n", dev);
 		exit(EXIT_FAILURE);
 	}
