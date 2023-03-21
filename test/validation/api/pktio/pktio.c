@@ -1683,7 +1683,6 @@ static void pktio_test_lookup(void)
 
 	pktio_inval = odp_pktio_open(iface_name[0], default_pkt_pool,
 				     &pktio_param);
-	CU_ASSERT(odp_errno() != 0);
 	CU_ASSERT(pktio_inval == ODP_PKTIO_INVALID);
 
 	CU_ASSERT(odp_pktio_close(pktio) == 0);
@@ -4437,7 +4436,7 @@ static int create_pool(const char *iface, int num)
 
 	pool[num] = odp_pool_create(pool_name, &params);
 	if (ODP_POOL_INVALID == pool[num]) {
-		ODPH_ERR("failed to create pool: %d", odp_errno());
+		ODPH_ERR("failed to create pool: %s\n", pool_name);
 		return -1;
 	}
 
@@ -4467,7 +4466,7 @@ static int create_pktv_pool(const char *iface, int num)
 
 	pktv_pool[num] = odp_pool_create(pool_name, &params);
 	if (ODP_POOL_INVALID == pktv_pool[num]) {
-		ODPH_ERR("failed to create pool: %d", odp_errno());
+		ODPH_ERR("failed to create pool: %s\n", pool_name);
 		return -1;
 	}
 
