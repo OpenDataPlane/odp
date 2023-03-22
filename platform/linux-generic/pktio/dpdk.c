@@ -24,7 +24,6 @@
 
 #include <odp_classification_internal.h>
 #include <odp_debug_internal.h>
-#include <odp_errno_define.h>
 #include <odp_global_data.h>
 #include <odp_libconfig_internal.h>
 #include <odp_macros_internal.h>
@@ -59,6 +58,7 @@
 #endif
 
 #include <ctype.h>
+#include <errno.h>
 #include <sched.h>
 #include <stdint.h>
 #include <unistd.h>
@@ -883,12 +883,11 @@ static inline void pkt_set_ol_tx(odp_pktout_config_opt_t *pktout_cfg,
 static inline int pkt_to_mbuf(pktio_entry_t *pktio_entry,
 			      struct rte_mbuf *mbuf_table[],
 			      const odp_packet_t pkt_table[], uint16_t num,
-			      int *tx_ts_idx)
+			      uint16_t *tx_ts_idx)
 {
 	pkt_dpdk_t *pkt_dpdk = pkt_priv(pktio_entry);
-	int i, j;
 	char *data;
-	uint16_t pkt_len;
+	uint16_t i, j, pkt_len;
 	uint8_t chksum_enabled = pktio_entry->enabled.chksum_insert;
 	uint8_t tx_ts_enabled = _odp_pktio_tx_ts_enabled(pktio_entry);
 	odp_pktout_config_opt_t *pktout_cfg = &pktio_entry->config.pktout;
@@ -903,11 +902,8 @@ static inline int pkt_to_mbuf(pktio_entry_t *pktio_entry,
 
 		pkt_len = packet_len(pkt_hdr);
 
-		if (odp_unlikely(pkt_len > pkt_dpdk->mtu)) {
-			if (i == 0)
-				_odp_errno = EMSGSIZE;
+		if (odp_unlikely(pkt_len > pkt_dpdk->mtu))
 			goto fail;
-		}
 
 		/* Packet always fits in mbuf */
 		data = rte_pktmbuf_append(mbuf_table[i], pkt_len);
@@ -929,7 +925,7 @@ fail:
 	for (j = i; j < num; j++)
 		rte_pktmbuf_free(mbuf_table[j]);
 
-	return i;
+	return i > 0 ? i : -1;
 }
 
 static inline void prefetch_pkt(struct rte_mbuf *mbuf)
@@ -1042,15 +1038,15 @@ static inline int mbuf_to_pkt_zero(pktio_entry_t *pktio_entry,
 static inline int pkt_to_mbuf_zero(pktio_entry_t *pktio_entry,
 				   struct rte_mbuf *mbuf_table[],
 				   const odp_packet_t pkt_table[], uint16_t num,
-				   uint16_t *copy_count, uint16_t cpy_idx[], int *tx_ts_idx)
+				   uint16_t *copy_count, uint16_t cpy_idx[], uint16_t *tx_ts_idx)
 {
 	pkt_dpdk_t *pkt_dpdk = pkt_priv(pktio_entry);
 	odp_pktout_config_opt_t *pktout_cfg = &pktio_entry->config.pktout;
 	odp_pktout_config_opt_t *pktout_capa = &pkt_dpdk->pktout_capa;
 	uint16_t mtu = pkt_dpdk->mtu;
+	uint16_t i;
 	uint8_t chksum_enabled = pktio_entry->enabled.chksum_insert;
 	uint8_t tx_ts_enabled = _odp_pktio_tx_ts_enabled(pktio_entry);
-	int i;
 	*copy_count = 0;
 
 	for (i = 0; i < num; i++) {
@@ -1069,7 +1065,7 @@ static inline int pkt_to_mbuf_zero(pktio_entry_t *pktio_entry,
 				pkt_set_ol_tx(pktout_cfg, pktout_capa, pkt_hdr,
 					      mbuf, odp_packet_data(pkt));
 		} else {
-			int dummy_idx = 0;
+			uint16_t dummy_idx = 0;
 
 			/* Fall back to packet copy */
 			if (odp_unlikely(pkt_to_mbuf(pktio_entry, &mbuf,
@@ -1087,9 +1083,7 @@ static inline int pkt_to_mbuf_zero(pktio_entry_t *pktio_entry,
 	return i;
 
 fail:
-	if (i == 0)
-		_odp_errno = EMSGSIZE;
-	return i;
+	return  i > 0 ? i : -1;
 }
 
 /* Test if s has only digits or not. Dpdk pktio uses only digits.*/
@@ -2134,10 +2128,9 @@ static int dpdk_send(pktio_entry_t *pktio_entry, int index,
 	pkt_dpdk_t *pkt_dpdk = pkt_priv(pktio_entry);
 	uint16_t copy_count = 0;
 	uint16_t cpy_idx[num];
-	int tx_pkts;
-	int i;
+	uint16_t tx_pkts;
 	int mbufs;
-	int tx_ts_idx = 0;
+	uint16_t tx_ts_idx = 0;
 
 	if (_ODP_DPDK_ZERO_COPY)
 		mbufs = pkt_to_mbuf_zero(pktio_entry, tx_mbufs, pkt_table, num,
@@ -2145,6 +2138,9 @@ static int dpdk_send(pktio_entry_t *pktio_entry, int index,
 	else
 		mbufs = pkt_to_mbuf(pktio_entry, tx_mbufs, pkt_table, num,
 				    &tx_ts_idx);
+
+	if (odp_unlikely(mbufs < 1))
+		return mbufs;
 
 	if (!pkt_dpdk->flags.lockless_tx)
 		odp_ticketlock_lock(&pkt_dpdk->tx_lock[index]);
@@ -2163,7 +2159,7 @@ static int dpdk_send(pktio_entry_t *pktio_entry, int index,
 		if (odp_unlikely(copy_count)) {
 			uint16_t idx;
 
-			for (i = 0; i < copy_count; i++) {
+			for (uint16_t i = 0; i < copy_count; i++) {
 				idx = cpy_idx[i];
 
 				if (odp_likely(idx < tx_pkts))
@@ -2172,20 +2168,14 @@ static int dpdk_send(pktio_entry_t *pktio_entry, int index,
 					rte_pktmbuf_free(tx_mbufs[idx]);
 			}
 		}
-		if (odp_unlikely(tx_pkts == 0 && _odp_errno != 0))
-			return -1;
 	} else {
 		if (odp_unlikely(tx_pkts < mbufs)) {
-			for (i = tx_pkts; i < mbufs; i++)
+			for (uint16_t i = tx_pkts; i < mbufs; i++)
 				rte_pktmbuf_free(tx_mbufs[i]);
 		}
 
-		if (odp_unlikely(tx_pkts == 0)) {
-			if (_odp_errno != 0)
-				return -1;
-		} else {
+		if (odp_likely(tx_pkts))
 			odp_packet_free_multi(pkt_table, tx_pkts);
-		}
 	}
 
 	return tx_pkts;
