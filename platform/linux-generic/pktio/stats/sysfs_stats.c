@@ -8,7 +8,6 @@
 #include <odp/api/packet_io_stats.h>
 
 #include <odp_debug_internal.h>
-#include <odp_errno_define.h>
 #include <odp_sysfs_stats.h>
 
 #include <dirent.h>
@@ -27,7 +26,6 @@ static int sysfs_get_val(const char *fname, uint64_t *val)
 
 	file = fopen(fname, "rt");
 	if (file == NULL) {
-		_odp_errno = errno;
 		/* do not print debug err if sysfs is not supported by
 		 * kernel driver.
 		 */

@@ -10,7 +10,6 @@
 #include <odp/api/packet_io_stats.h>
 
 #include <odp_debug_internal.h>
-#include <odp_errno_define.h>
 #include <odp_ethtool_stats.h>
 
 #include <sys/ioctl.h>
@@ -50,13 +49,11 @@ static struct ethtool_gstrings *get_stringset(int fd, struct ifreq *ifr)
 		drvinfo.cmd = ETHTOOL_GDRVINFO;
 		ifr->ifr_data = (void *)&drvinfo;
 		if (ioctl(fd, SIOCETHTOOL, ifr)) {
-			_odp_errno = errno;
-			_ODP_ERR("Cannot get stats information\n");
+			_ODP_ERR("Cannot get stats information: %s\n", strerror(errno));
 			return NULL;
 		}
 		len = *(uint32_t *)(void *)((char *)&drvinfo + drvinfo_offset);
 	} else {
-		_odp_errno = errno;
 		return NULL;
 	}
 
@@ -76,8 +73,7 @@ static struct ethtool_gstrings *get_stringset(int fd, struct ifreq *ifr)
 	strings->len = len;
 	ifr->ifr_data = (void *)strings;
 	if (ioctl(fd, SIOCETHTOOL, ifr)) {
-		_odp_errno = errno;
-		_ODP_ERR("Cannot get stats information\n");
+		_ODP_ERR("Cannot get stats information: %s\n", strerror(errno));
 		free(strings);
 		return NULL;
 	}
@@ -122,7 +118,6 @@ static int ethtool_stats_get(int fd, const char *name,
 	ifr.ifr_data = (void *)estats;
 	err = ioctl(fd, SIOCETHTOOL, &ifr);
 	if (err < 0) {
-		_odp_errno = errno;
 		free(strings);
 		free(estats);
 		return -1;

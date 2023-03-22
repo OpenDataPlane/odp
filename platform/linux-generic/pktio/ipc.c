@@ -10,13 +10,11 @@
 #include <odp_debug_internal.h>
 #include <odp_packet_io_internal.h>
 #include <odp_pool_internal.h>
-#include <odp_errno_define.h>
 #include <odp_macros_internal.h>
 #include <odp_shm_internal.h>
 #include <odp_ring_ptr_internal.h>
 #include <odp_global_data.h>
 
-#include <errno.h>
 #include <fcntl.h>
 #include <stdint.h>
 #include <sys/mman.h>
@@ -129,7 +127,6 @@ static ring_ptr_t *_ring_create(const char *name, uint32_t count,
 	/* count must be a power of 2 */
 	if (!_ODP_CHECK_IS_POWER2(count)) {
 		_ODP_ERR("Requested size is invalid, must be a power of 2\n");
-		_odp_errno = EINVAL;
 		return NULL;
 	}
 
@@ -144,7 +141,6 @@ static ring_ptr_t *_ring_create(const char *name, uint32_t count,
 		ring_ptr_init(r);
 
 	} else {
-		_odp_errno = ENOMEM;
 		_ODP_ERR("Cannot reserve memory\n");
 	}
 

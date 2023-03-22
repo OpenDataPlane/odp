@@ -21,7 +21,6 @@
 #include <odp_parse_internal.h>
 #include <odp_classification_internal.h>
 #include <odp_debug_internal.h>
-#include <odp_errno_define.h>
 #include <odp_event_internal.h>
 #include <odp_global_data.h>
 #include <odp_ipsec_internal.h>
@@ -33,7 +32,6 @@
 #include <protocols/eth.h>
 #include <protocols/ip.h>
 
-#include <errno.h>
 #include <inttypes.h>
 #include <limits.h>
 #include <stdint.h>
@@ -527,10 +525,8 @@ static int loopback_send(pktio_entry_t *pktio_entry, int index, const odp_packet
 		uint32_t pkt_len = odp_packet_len(pkt_tbl[i]);
 
 		if (odp_unlikely(pkt_len > pkt_loop->mtu)) {
-			if (nb_tx == 0) {
-				_odp_errno = EMSGSIZE;
+			if (nb_tx == 0)
 				return -1;
-			}
 			break;
 		}
 

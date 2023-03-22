@@ -41,7 +41,6 @@
 #include <odp_atomic_internal.h>
 #include <odp_config_internal.h>
 #include <odp_debug_internal.h>
-#include <odp_errno_define.h>
 #include <odp_event_internal.h>
 #include <odp_global_data.h>
 #include <odp_init_internal.h>
@@ -409,7 +408,7 @@ static inline odp_timer_t timer_alloc(timer_pool_t *tp, odp_queue_t queue, const
 		/* Add timer to queue */
 		_odp_queue_fn->timer_add(queue);
 	} else {
-		_odp_errno = ENFILE; /* Reusing file table overflow */
+		/* Reusing file table overflow */
 		hdl = ODP_TIMER_INVALID;
 	}
 	odp_spinlock_unlock(&tp->lock);
@@ -1401,23 +1400,14 @@ odp_timer_pool_t odp_timer_pool_create(const char *name,
 		return ODP_TIMER_POOL_INVALID;
 	}
 
-	if ((param->res_ns && param->res_hz) ||
-	    (param->res_ns == 0 && param->res_hz == 0)) {
-		_odp_errno = EINVAL;
+	if ((param->res_ns && param->res_hz) || (param->res_ns == 0 && param->res_hz == 0))
 		return ODP_TIMER_POOL_INVALID;
-	}
 
-	if (param->res_hz == 0 &&
-	    param->res_ns < timer_global->highest_res_ns) {
-		_odp_errno = EINVAL;
+	if (param->res_hz == 0 && param->res_ns < timer_global->highest_res_ns)
 		return ODP_TIMER_POOL_INVALID;
-	}
 
-	if (param->res_ns == 0 &&
-	    param->res_hz > timer_global->highest_res_hz) {
-		_odp_errno = EINVAL;
+	if (param->res_ns == 0 && param->res_hz > timer_global->highest_res_hz)
 		return ODP_TIMER_POOL_INVALID;
-	}
 
 	return timer_pool_new(name, param);
 }
