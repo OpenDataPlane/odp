@@ -20,7 +20,6 @@
 #include <odp_packet_io_internal.h>
 #include <odp_packet_io_stats.h>
 #include <odp_debug_internal.h>
-#include <odp_errno_define.h>
 #include <odp_classification_internal.h>
 #include <odp_macros_internal.h>
 
@@ -96,7 +95,6 @@ static int sock_close(pktio_entry_t *pktio_entry)
 	pkt_sock_t *pkt_sock = pkt_priv(pktio_entry);
 
 	if (pkt_sock->sockfd != -1 && close(pkt_sock->sockfd) != 0) {
-		_odp_errno = errno;
 		_ODP_ERR("close(sockfd): %s\n", strerror(errno));
 		return -1;
 	}
@@ -128,7 +126,6 @@ static int sock_setup_pkt(pktio_entry_t *pktio_entry, const char *netdev,
 
 	sockfd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
 	if (sockfd == -1) {
-		_odp_errno = errno;
 		_ODP_ERR("socket(): %s\n", strerror(errno));
 		goto error;
 	}
@@ -139,7 +136,6 @@ static int sock_setup_pkt(pktio_entry_t *pktio_entry, const char *netdev,
 	snprintf(ethreq.ifr_name, IF_NAMESIZE, "%s", netdev);
 	err = ioctl(sockfd, SIOCGIFINDEX, &ethreq);
 	if (err != 0) {
-		_odp_errno = errno;
 		_ODP_ERR("ioctl(SIOCGIFINDEX): %s: \"%s\".\n", strerror(errno), ethreq.ifr_name);
 		goto error;
 	}
@@ -162,7 +158,6 @@ static int sock_setup_pkt(pktio_entry_t *pktio_entry, const char *netdev,
 	sa_ll.sll_ifindex = if_idx;
 	sa_ll.sll_protocol = htons(ETH_P_ALL);
 	if (bind(sockfd, (struct sockaddr *)&sa_ll, sizeof(sa_ll)) < 0) {
-		_odp_errno = errno;
 		_ODP_ERR("bind(to IF): %s\n", strerror(errno));
 		goto error;
 	}
@@ -486,7 +481,6 @@ static int sock_mmsg_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 		ret = sendmmsg(sockfd, &msgvec[i], num - i, MSG_DONTWAIT);
 		if (odp_unlikely(ret <= -1)) {
 			if (i == 0 && SOCK_ERR_REPORT(errno)) {
-				_odp_errno = errno;
 				_ODP_ERR("sendmmsg(): %s\n", strerror(errno));
 				odp_ticketlock_unlock(&pkt_sock->tx_lock);
 				return -1;

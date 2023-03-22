@@ -25,7 +25,6 @@
 #include <odp_classification_internal.h>
 #include <odp_config_internal.h>
 #include <odp_debug_internal.h>
-#include <odp_errno_define.h>
 #include <odp_event_vector_internal.h>
 #include <odp_init_internal.h>
 #include <odp_libconfig_internal.h>
@@ -35,7 +34,6 @@
 #include <odp_queue_if.h>
 #include <odp_schedule_if.h>
 
-#include <errno.h>
 #include <ifaddrs.h>
 #include <inttypes.h>
 #include <string.h>
@@ -405,8 +403,7 @@ odp_pktio_t odp_pktio_open(const char *name, odp_pool_t pool,
 
 	hdl = odp_pktio_lookup(name);
 	if (hdl != ODP_PKTIO_INVALID) {
-		/* interface is already open */
-		_odp_errno = EEXIST;
+		_ODP_ERR("pktio device %s already opened\n", name);
 		return ODP_PKTIO_INVALID;
 	}
 
@@ -2357,7 +2354,7 @@ int _odp_pktio_pktout_tm_config(odp_pktio_t pktio_hdl,
 	odp_pktout_mode_t mode;
 	pktio_entry_t *entry;
 	uint32_t i;
-	int rc = 0;
+	int rc;
 
 	odp_pktout_queue_param_init(&param);
 	param.num_queues = 1;
@@ -2368,11 +2365,10 @@ int _odp_pktio_pktout_tm_config(odp_pktio_t pktio_hdl,
 		return -1;
 	}
 
-	rc = -ENOTSUP;
 	mode = entry->param.out_mode;
 	/* Don't proceed further if mode is not TM */
 	if (mode != ODP_PKTOUT_MODE_TM)
-		return rc;
+		return -1;
 
 	/* Don't reconfigure unless requested */
 	if (entry->num_out_queue && !reconf) {
@@ -3507,7 +3503,7 @@ odp_proto_stats_capability(odp_pktio_t pktio, odp_proto_stats_capability_t *capa
 	(void)pktio;
 
 	if (capa == NULL)
-		return -EINVAL;
+		return -1;
 
 	memset(capa, 0, sizeof(*capa));
 

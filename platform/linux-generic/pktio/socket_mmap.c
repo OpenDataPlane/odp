@@ -21,7 +21,6 @@
 #include <odp_packet_io_internal.h>
 #include <odp_packet_io_stats.h>
 #include <odp_debug_internal.h>
-#include <odp_errno_define.h>
 #include <odp_classification_datamodel.h>
 #include <odp_classification_internal.h>
 #include <odp_global_data.h>
@@ -113,14 +112,12 @@ static int mmap_pkt_socket(void)
 	int ret, sock = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
 
 	if (sock == -1) {
-		_odp_errno = errno;
 		_ODP_ERR("socket(SOCK_RAW): %s\n", strerror(errno));
 		return -1;
 	}
 
 	ret = setsockopt(sock, SOL_PACKET, PACKET_VERSION, &ver, sizeof(ver));
 	if (ret == -1) {
-		_odp_errno = errno;
 		_ODP_ERR("setsockopt(PACKET_VERSION): %s\n", strerror(errno));
 		close(sock);
 		return -1;
@@ -483,7 +480,6 @@ static int mmap_setup_ring(pkt_sock_mmap_t *pkt_sock, struct ring *ring,
 
 	ret = setsockopt(sock, SOL_PACKET, type, &ring->req, sizeof(ring->req));
 	if (ret == -1) {
-		_odp_errno = errno;
 		_ODP_ERR("setsockopt(pkt mmap): %s\n", strerror(errno));
 		return -1;
 	}
@@ -514,7 +510,6 @@ static int mmap_sock(pkt_sock_mmap_t *pkt_sock)
 		     MAP_SHARED | MAP_LOCKED | MAP_POPULATE, sock, 0);
 
 	if (pkt_sock->mmap_base == MAP_FAILED) {
-		_odp_errno = errno;
 		_ODP_ERR("mmap rx&tx buffer failed: %s\n", strerror(errno));
 		return -1;
 	}
@@ -570,7 +565,6 @@ static int mmap_bind_sock(pkt_sock_mmap_t *pkt_sock, const char *netdev)
 	ret = bind(pkt_sock->sockfd, (struct sockaddr *)&pkt_sock->ll,
 		   sizeof(pkt_sock->ll));
 	if (ret == -1) {
-		_odp_errno = errno;
 		_ODP_ERR("bind(to IF): %s\n", strerror(errno));
 		return -1;
 	}
@@ -590,7 +584,6 @@ static int sock_mmap_close(pktio_entry_t *entry)
 	}
 
 	if (pkt_sock->sockfd != -1 && close(pkt_sock->sockfd) != 0) {
-		_odp_errno = errno;
 		_ODP_ERR("close(sockfd): %s\n", strerror(errno));
 		return -1;
 	}
@@ -664,7 +657,6 @@ static int sock_mmap_open(odp_pktio_t id ODP_UNUSED,
 
 	if_idx = if_nametoindex(netdev);
 	if (if_idx == 0) {
-		_odp_errno = errno;
 		_ODP_ERR("if_nametoindex(): %s\n", strerror(errno));
 		goto error;
 	}

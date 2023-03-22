@@ -19,7 +19,6 @@
 #include <odp_parse_internal.h>
 #include <odp_chksum_internal.h>
 #include <odp_debug_internal.h>
-#include <odp_errno_define.h>
 #include <odp_event_internal.h>
 #include <odp_event_validation_internal.h>
 #include <odp_macros_internal.h>
@@ -655,10 +654,7 @@ odp_packet_t odp_packet_alloc(odp_pool_t pool_hdl, uint32_t len)
 	odp_packet_t pkt;
 	int num, num_seg;
 
-	if (odp_unlikely(pool->type != ODP_POOL_PACKET)) {
-		_odp_errno = EINVAL;
-		return ODP_PACKET_INVALID;
-	}
+	_ODP_ASSERT(pool->type == ODP_POOL_PACKET);
 
 	if (odp_unlikely(len > pool->max_len || len == 0))
 		return ODP_PACKET_INVALID;
@@ -678,10 +674,7 @@ int odp_packet_alloc_multi(odp_pool_t pool_hdl, uint32_t len,
 	pool_t *pool = _odp_pool_entry(pool_hdl);
 	int num, num_seg;
 
-	if (odp_unlikely(pool->type != ODP_POOL_PACKET)) {
-		_odp_errno = EINVAL;
-		return -1;
-	}
+	_ODP_ASSERT(pool->type == ODP_POOL_PACKET);
 
 	if (odp_unlikely(len > pool->max_len || len == 0))
 		return -1;

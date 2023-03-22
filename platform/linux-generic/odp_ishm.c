@@ -42,7 +42,6 @@
 #include <odp/api/system_info.h>
 #include <odp/api/debug.h>
 #include <odp_init_internal.h>
-#include <odp_errno_define.h>
 #include <odp_shm_internal.h>
 #include <odp_debug_internal.h>
 #include <odp_fdserver_internal.h>
