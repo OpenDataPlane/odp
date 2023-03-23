@@ -14,17 +14,4 @@ fi
 export PKG_CONFIG_PATH=
 export PKG_CONFIG_LIBDIR=/usr/lib/${TARGET_ARCH}/pkgconfig
 
-cd "$(dirname "$0")"/../..
-./bootstrap
-./configure \
-	--host=${TARGET_ARCH} --build=x86_64-linux-gnu \
-	--prefix=/opt/odp \
-	${CONF}
-
-make clean
-
-make -j $(nproc)
-
-make install
-
-make installcheck
+exec "$(dirname "$0")"/build.sh
