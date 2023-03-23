@@ -30,9 +30,11 @@
 extern "C" {
 #endif
 
-/* Avoid "ISO C99 requires at least one argument for the "..."  in a variadic
- * macro" errors when building with 'pedantic' option. */
-#pragma GCC system_header
+#pragma GCC diagnostic push
+
+#ifdef __clang__
+#pragma GCC diagnostic ignored "-Wgnu-zero-variadic-macro-arguments"
+#endif
 
 /* Debug level configure option. Zero is the highest level. Value of N prints debug messages from
  * level 0 to N. */
@@ -49,20 +51,24 @@ extern "C" {
 /*
  * Print debug message to log, if ODP_DEBUG_PRINT flag is set and CONFIG_DEBUG_LEVEL is high enough.
  */
-#define ODP_DBG_LVL(level, fmt, ...) \
+#define ODP_DBG_LVL(level, ...) \
 	do { \
 		if (ODP_DEBUG_PRINT == 1 && CONFIG_DEBUG_LEVEL >= (level)) \
-			_ODP_LOG(ODP_LOG_DBG, fmt, ##__VA_ARGS__);\
+			__extension__ ({ \
+				_ODP_LOG(ODP_LOG_DBG, ##__VA_ARGS__); \
+			}); \
 	} while (0)
 
 /*
  * Same as ODP_DBG_LVL() but does not add file/line/function name prefix
  */
-#define ODP_DBG_RAW(level, fmt, ...) \
+#define ODP_DBG_RAW(level, ...) \
 	do { \
 		if (ODP_DEBUG_PRINT == 1 && CONFIG_DEBUG_LEVEL >= (level)) \
-			_ODP_LOG_FN(ODP_LOG_DBG, fmt, ##__VA_ARGS__);\
+			_ODP_LOG_FN(ODP_LOG_DBG, ##__VA_ARGS__); \
 	} while (0)
+
+#pragma GCC diagnostic pop
 
 #ifdef __cplusplus
 }
