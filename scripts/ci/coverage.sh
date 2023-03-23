@@ -5,6 +5,10 @@ if [ "${CC#clang}" != "${CC}" ] ; then
 	export CXX="clang++"
 fi
 
+echo 1000 | tee /proc/sys/vm/nr_hugepages
+mkdir -p /mnt/huge
+mount -t hugetlbfs nodev /mnt/huge
+
 cd "$(dirname "$0")"/../..
 ./bootstrap
 ./configure \
@@ -12,10 +16,6 @@ cd "$(dirname "$0")"/../..
 	--enable-debug=full --enable-helper-linux --enable-dpdk
 export CCACHE_DISABLE=1
 make -j $(nproc)
-
-echo 1000 | tee /proc/sys/vm/nr_hugepages
-mkdir -p /mnt/huge
-mount -t hugetlbfs nodev /mnt/huge
 
 # Ignore possible failures there because these tests depends on measurements
 # and systems might differ in performance.
