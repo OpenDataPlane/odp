@@ -24,13 +24,15 @@
 extern "C" {
 #endif
 
+#pragma GCC diagnostic push
+
+#ifdef __clang__
+#pragma GCC diagnostic ignored "-Wgnu-zero-variadic-macro-arguments"
+#endif
+
 /** @addtogroup odph_debug ODPH DEBUG
  *  @{
  */
-
-/* Avoid "ISO C99 requires at least one argument for the "..."  in a variadic
- * macro" errors when building with 'pedantic' option. */
-#pragma GCC system_header
 
 /**
  * Assert macro for applications and helper code
@@ -85,25 +87,39 @@ do { \
 /**
  * Debug printing macro, which prints output when DEBUG flag is set.
  */
-#define ODPH_DBG(fmt, ...) \
-		ODPH_LOG(ODPH_LOG_DBG, fmt, ##__VA_ARGS__)
+#define ODPH_DBG(...) \
+	do { \
+		__extension__ ({ \
+			ODPH_LOG(ODPH_LOG_DBG, ##__VA_ARGS__); \
+		}); \
+	} while (0)
 
 /**
  * Print output to stderr (file, line and function).
  */
-#define ODPH_ERR(fmt, ...) \
-		ODPH_LOG(ODPH_LOG_ERR, fmt, ##__VA_ARGS__)
+#define ODPH_ERR(...) \
+	do { \
+		__extension__ ({ \
+			ODPH_LOG(ODPH_LOG_ERR, ##__VA_ARGS__); \
+		}); \
+	} while (0)
 
 /**
  * Print output to stderr (file, line and function),
  * then abort.
  */
-#define ODPH_ABORT(fmt, ...) \
-		ODPH_LOG(ODPH_LOG_ABORT, fmt, ##__VA_ARGS__)
+#define ODPH_ABORT(...) \
+	do { \
+		__extension__ ({ \
+			ODPH_LOG(ODPH_LOG_ABORT, ##__VA_ARGS__); \
+		}); \
+	} while (0)
 
 /**
  * @}
  */
+
+#pragma GCC diagnostic pop
 
 #ifdef __cplusplus
 }
