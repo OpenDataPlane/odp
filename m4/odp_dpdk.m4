@@ -225,7 +225,7 @@ DPDK_LIBS_LIBODP="$DPDK_LIBS"
     else
         # Build a list of libraries, which should not be rearranged by libtool.
         # This ensures that DPDK constructors are included properly.
-        DPDK_LIBS_LIBODP=$(echo "$DPDK_LIBS" | sed -e 's/ /,/g' | sed 's/-Wl,//g')
+        DPDK_LIBS_LIBODP=$(echo "$DPDK_LIBS" | sed -e 's/\ *$//g' -e 's/ /,/g' -e 's/-Wl,//g')
         DPDK_LIBS_LIBODP=$(echo "$DPDK_LIBS_LIBODP" | sed 's/-pthread/-lpthread/g')
         DPDK_LIBS_LIBODP="-Wl,$DPDK_LIBS_LIBODP"
         DPDK_LIBS_LT="$DPDK_LIBS_LIBODP"
