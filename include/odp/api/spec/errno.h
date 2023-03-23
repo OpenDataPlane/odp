@@ -31,8 +31,7 @@ extern "C" {
  * may initialize errno to zero at anytime by calling odp_errno_zero(). Other
  * ODP functions never set errno to zero. Valid errno values are non-zero
  * and implementation specific. It's also implementation specific which
- * functions set errno in addition to those explicitly specified by
- * the API spec. ODP errno is initially zero.
+ * functions set errno. ODP errno is initially zero.
  *
  *  @{
  */
