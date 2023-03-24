@@ -181,7 +181,7 @@ static void test_dma_capability(void)
 	odp_dma_capability_t capa;
 
 	memset(&capa, 0, sizeof(odp_dma_capability_t));
-	CU_ASSERT(odp_dma_capability(&capa) == 0);
+	CU_ASSERT_FATAL(odp_dma_capability(&capa) == 0);
 
 	if (capa.max_sessions == 0)
 		return;
@@ -196,8 +196,12 @@ static void test_dma_capability(void)
 	CU_ASSERT(capa.compl_mode_mask & ODP_DMA_COMPL_SYNC);
 
 	if (capa.compl_mode_mask & ODP_DMA_COMPL_EVENT) {
+		odp_pool_capability_t pool_capa;
+
+		CU_ASSERT_FATAL(odp_pool_capability(&pool_capa) == 0);
+
 		CU_ASSERT(capa.queue_type_sched || capa.queue_type_plain);
-		CU_ASSERT(capa.pool.max_pools > 0);
+		CU_ASSERT(capa.pool.max_pools > 0 && capa.pool.max_pools <= pool_capa.max_pools);
 		CU_ASSERT(capa.pool.max_num > 0);
 		CU_ASSERT(capa.pool.min_cache_size <= capa.pool.max_cache_size);
 	}
