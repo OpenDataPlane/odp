@@ -622,7 +622,8 @@ typedef enum {
  */
 typedef struct odp_cls_cos_param {
 	/** Action to take. When action is ODP_COS_ACTION_DROP, all the other
-	 * parameters are ignored.
+	 * parameters are ignored. If action is ODP_COS_ACTION_ENQUEUE, then
+	 * queue must be set, or num_queue must be greater than one.
 	 *
 	 * The final match in the CoS chain defines the action for a packet.
 	 * I.e. packet is dropped only when the CoS of the last matching rule
@@ -773,9 +774,12 @@ int odp_cos_destroy(odp_cos_t cos);
 /**
  * Assign a queue for a class-of-service
  *
+ * Action of the given CoS may not be ODP_COS_ACTION_DROP.
+ *
  * @param cos          CoS handle
  * @param queue        Handle of the queue where all packets of this specific
- *                     class of service will be enqueued.
+ *                     class of service will be enqueued. Must not be
+ *                     ODP_QUEUE_INVALID.
  *
  * @retval  0 on success
  * @retval <0 on failure
@@ -788,7 +792,8 @@ int odp_cos_queue_set(odp_cos_t cos, odp_queue_t queue);
 * @param cos           CoS handle
 *
 * @retval Queue handle associated with the given class-of-service
-* @retval ODP_QUEUE_INVALID on failure, or if the queue has not been set
+* @retval ODP_QUEUE_INVALID on failure, or if there are multiple queues, or if
+*         the CoS action is ODP_COS_ACTION_DROP.
 */
 odp_queue_t odp_cos_queue(odp_cos_t cos);
 
