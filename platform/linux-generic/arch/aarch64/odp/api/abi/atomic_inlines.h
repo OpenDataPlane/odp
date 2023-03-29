@@ -205,6 +205,34 @@ static inline void _odp_atomic_dec_u64(odp_atomic_u64_t *atom)
 	_odp_atomic_sub_u64(atom, 1);
 }
 
+static inline void _odp_atomic_max_u32(odp_atomic_u32_t *atom, uint32_t val)
+{
+	__asm__ volatile("stumax   %w[val], %[atom]"
+			 : [atom] "+Q" (atom->v)
+			 : [val] "r" (val));
+}
+
+static inline void _odp_atomic_min_u32(odp_atomic_u32_t *atom, uint32_t val)
+{
+	__asm__ volatile("stumin   %w[val], %[atom]"
+			 : [atom] "+Q" (atom->v)
+			 : [val] "r" (val));
+}
+
+static inline void _odp_atomic_max_u64(odp_atomic_u64_t *atom, uint64_t val)
+{
+	__asm__ volatile("stumax   %[val], %[atom]"
+			 : [atom] "+Q" (atom->v)
+			 : [val] "r" (val));
+}
+
+static inline void _odp_atomic_min_u64(odp_atomic_u64_t *atom, uint64_t val)
+{
+	__asm__ volatile("stumin   %[val], %[atom]"
+			 : [atom] "+Q" (atom->v)
+			 : [val] "r" (val));
+}
+
 static inline void _odp_atomic_add_rel_u32(odp_atomic_u32_t *atom, uint32_t val)
 {
 	__asm__ volatile("staddl   %w[val], %[atom]"
