@@ -149,28 +149,14 @@ _ODP_INLINE uint32_t odp_atomic_xchg_u32(odp_atomic_u32_t *atom,
 	return __atomic_exchange_n(&atom->v, new_val, __ATOMIC_RELAXED);
 }
 
-_ODP_INLINE void odp_atomic_max_u32(odp_atomic_u32_t *atom, uint32_t new_max)
+_ODP_INLINE void odp_atomic_max_u32(odp_atomic_u32_t *atom, uint32_t val)
 {
-	uint32_t old_val;
-
-	old_val = odp_atomic_load_u32(atom);
-
-	while (new_max > old_val) {
-		if (odp_atomic_cas_u32(atom, &old_val, new_max))
-			break;
-	}
+	_odp_atomic_max_u32(atom, val);
 }
 
-_ODP_INLINE void odp_atomic_min_u32(odp_atomic_u32_t *atom, uint32_t new_min)
+_ODP_INLINE void odp_atomic_min_u32(odp_atomic_u32_t *atom, uint32_t val)
 {
-	uint32_t old_val;
-
-	old_val = odp_atomic_load_u32(atom);
-
-	while (new_min < old_val) {
-		if (odp_atomic_cas_u32(atom, &old_val, new_min))
-			break;
-	}
+	_odp_atomic_min_u32(atom, val);
 }
 
 #ifdef ODP_ATOMIC_U64_LOCK
@@ -325,6 +311,30 @@ _ODP_INLINE int odp_atomic_cas_acq_rel_u64(odp_atomic_u64_t *atom,
 	return ret;
 }
 
+_ODP_INLINE void odp_atomic_max_u64(odp_atomic_u64_t *atom, uint64_t new_val)
+{
+	uint64_t old_val;
+
+	old_val = odp_atomic_load_u64(atom);
+
+	while (new_val > old_val) {
+		if (odp_atomic_cas_u64(atom, &old_val, new_val))
+			break;
+	}
+}
+
+_ODP_INLINE void odp_atomic_min_u64(odp_atomic_u64_t *atom, uint64_t new_val)
+{
+	uint64_t old_val;
+
+	old_val = odp_atomic_load_u64(atom);
+
+	while (new_val < old_val) {
+		if (odp_atomic_cas_u64(atom, &old_val, new_val))
+			break;
+	}
+}
+
 #else /* !ODP_ATOMIC_U64_LOCK */
 
 _ODP_INLINE void odp_atomic_init_u64(odp_atomic_u64_t *atom, uint64_t val)
@@ -447,31 +457,17 @@ _ODP_INLINE int odp_atomic_cas_acq_rel_u64(odp_atomic_u64_t *atom,
 					   __ATOMIC_RELAXED);
 }
 
+_ODP_INLINE void odp_atomic_max_u64(odp_atomic_u64_t *atom, uint64_t val)
+{
+	_odp_atomic_max_u64(atom, val);
+}
+
+_ODP_INLINE void odp_atomic_min_u64(odp_atomic_u64_t *atom, uint64_t val)
+{
+	_odp_atomic_min_u64(atom, val);
+}
+
 #endif /* !ODP_ATOMIC_U64_LOCK */
-
-_ODP_INLINE void odp_atomic_max_u64(odp_atomic_u64_t *atom, uint64_t new_max)
-{
-	uint64_t old_val;
-
-	old_val = odp_atomic_load_u64(atom);
-
-	while (new_max > old_val) {
-		if (odp_atomic_cas_u64(atom, &old_val, new_max))
-			break;
-	}
-}
-
-_ODP_INLINE void odp_atomic_min_u64(odp_atomic_u64_t *atom, uint64_t new_min)
-{
-	uint64_t old_val;
-
-	old_val = odp_atomic_load_u64(atom);
-
-	while (new_min < old_val) {
-		if (odp_atomic_cas_u64(atom, &old_val, new_min))
-			break;
-	}
-}
 
 _ODP_INLINE uint32_t odp_atomic_load_acq_u32(odp_atomic_u32_t *atom)
 {
