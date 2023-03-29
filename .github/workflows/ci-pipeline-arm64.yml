@@ -166,7 +166,7 @@ jobs:
       fail-fast: false
       matrix:
         cc: [gcc, clang]
-        cflags: ['-march=armv8.2-a -O2', '-march=armv8-a+lse -O2']
+        cflags: ['-march=armv8.2-a -O2', '-march=armv8.2-a+crypto -O2']
     steps:
       - uses: AutoModality/action-clean@v1.1.0
       - uses: actions/checkout@v3
