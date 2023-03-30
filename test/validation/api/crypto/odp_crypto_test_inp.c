@@ -746,14 +746,7 @@ static void alg_test_execute(const alg_test_param_t *param)
 		      param->ref->aad, digest_offset))
 		return;
 
-	/*
-	 * API is not explicit about whether a failed crypto op
-	 * sets the has_error packet flag or leaves it unchanged.
-	 * Let's allow both behaviours.
-	 */
 	test_packet_get_md(pkt_out, &md_out);
-	if (param->wrong_digest)
-		md_out.has_error = 0;
 
 	if (param->op_type == ODP_CRYPTO_OP_TYPE_OOP) {
 		test_packet_md_t md;
