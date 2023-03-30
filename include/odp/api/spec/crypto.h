@@ -200,6 +200,11 @@ int odp_crypto_result(odp_crypto_packet_result_t *result,
  * Performs the SYNC cryptographic operations specified during session creation
  * on the packets. All arrays should be of num_pkt size.
  *
+ * Result of the crypto operation can be checked using odp_crypto_result().
+ * Parse flags in packet metadata are not affected by the crypto operation.
+ * In particular, odp_packet_has_error() can not be used for checking if the
+ * crypto operation succeeded.
+ *
  * Use of the pkt_out parameter depends on the configured crypto operation
  * type as described below.
  *
