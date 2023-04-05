@@ -968,6 +968,7 @@ static void alg_test_op(alg_test_param_t *param)
 	}
 }
 
+static int combo_warning_shown;
 static int oop_warning_shown;
 
 typedef enum {
@@ -1029,9 +1030,12 @@ static odp_crypto_session_t session_create(odp_crypto_op_t op,
 	rc = odp_crypto_session_create(&ses_params, &session, &status);
 
 	if (rc < 0 && status == ODP_CRYPTO_SES_ERR_ALG_COMBO) {
-		printf("\n    Unsupported algorithm combination: %s, %s\n",
-		       cipher_alg_name(cipher_alg),
-		       auth_alg_name(auth_alg));
+		if (!combo_warning_shown) {
+			combo_warning_shown = 1;
+			printf("\n    Unsupported algorithm combination: %s, %s\n",
+			       cipher_alg_name(cipher_alg),
+			       auth_alg_name(auth_alg));
+		}
 		return ODP_CRYPTO_SESSION_INVALID;
 	}
 
@@ -2301,6 +2305,8 @@ static void test_combo_variants(odp_cipher_alg_t cipher, odp_auth_alg_t auth)
 	CU_ASSERT(num == num_ciphers);
 	num = odp_crypto_auth_capability(auth, auth_capa, num_auths);
 	CU_ASSERT(num == num_auths);
+
+	combo_warning_shown = 0;
 
 	for (int n = 0; n < num_ciphers; n++)
 		for (int i = 0; i < num_auths; i++) {
