@@ -2263,6 +2263,11 @@ static void test_combo_variants(odp_cipher_alg_t cipher, odp_auth_alg_t auth)
 {
 	int num, num_ciphers, num_auths;
 
+	/* ODP API says AES-GMAC can be combined with the null cipher only */
+	if (auth == ODP_AUTH_ALG_AES_GMAC &&
+	    cipher != ODP_CIPHER_ALG_NULL)
+		return;
+
 	if (check_alg_support(cipher, auth) == ODP_TEST_INACTIVE)
 		return;
 
