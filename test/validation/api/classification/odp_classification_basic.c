@@ -203,13 +203,14 @@ static void classification_test_create_pmr_match(void)
 	retval = odp_cls_pmr_destroy(ODP_PMR_INVALID);
 	CU_ASSERT(retval < 0);
 
+	odp_cos_destroy(cos);
 	odp_queue_destroy(queue);
 	odp_pool_destroy(pool);
 	odp_pool_destroy(pkt_pool);
-	odp_cos_destroy(cos);
+	odp_pktio_default_cos_set(pktio, ODP_COS_INVALID);
+	odp_cos_destroy(default_cos);
 	odp_queue_destroy(default_queue);
 	odp_pool_destroy(default_pool);
-	odp_cos_destroy(default_cos);
 	odp_pktio_close(pktio);
 }
 
@@ -401,13 +402,14 @@ static void classification_test_pmr_composite_create(void)
 	retval = odp_cls_pmr_destroy(pmr_composite);
 	CU_ASSERT(retval == 0);
 
+	odp_cos_destroy(cos);
 	odp_queue_destroy(queue);
 	odp_pool_destroy(pool);
 	odp_pool_destroy(pkt_pool);
-	odp_cos_destroy(cos);
+	odp_pktio_default_cos_set(pktio, ODP_COS_INVALID);
+	odp_cos_destroy(default_cos);
 	odp_queue_destroy(default_queue);
 	odp_pool_destroy(default_pool);
-	odp_cos_destroy(default_cos);
 	odp_pktio_close(pktio);
 }
 
