@@ -22,7 +22,7 @@ static int full_test;
 #define MAX_FAILURE_PRINTS 20
 
 #define PKT_POOL_NUM  64
-#define PKT_POOL_LEN  (1 * 1024)
+#define PKT_POOL_LEN  1200 /* enough for a test packet and some headroom */
 #define UAREA_SIZE 8
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
