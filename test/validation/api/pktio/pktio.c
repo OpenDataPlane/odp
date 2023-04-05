@@ -2041,8 +2041,10 @@ static void pktio_config_flow_control(int pfc, int rx, int tx)
 	if (cos != ODP_COS_INVALID)
 		odp_cos_destroy(cos);
 
-	if (default_cos != ODP_COS_INVALID)
+	if (default_cos != ODP_COS_INVALID) {
+		odp_pktio_default_cos_set(pktio, ODP_COS_INVALID);
 		odp_cos_destroy(default_cos);
+	}
 
 	if (queue != ODP_QUEUE_INVALID)
 		odp_queue_destroy(queue);

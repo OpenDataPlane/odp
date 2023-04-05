@@ -194,9 +194,10 @@ static void classification_test_pktin_classifier_flag(void)
 	CU_ASSERT(seqno == cls_pkt_get_seq(pkt));
 
 	odp_packet_free(pkt);
-	odp_cos_destroy(cos);
-	odp_cos_destroy(default_cos);
 	odp_cls_pmr_destroy(pmr);
+	odp_cos_destroy(cos);
+	odp_pktio_default_cos_set(pktio, ODP_COS_INVALID);
+	odp_cos_destroy(default_cos);
 	stop_pktio(pktio);
 	odp_queue_destroy(queue);
 	odp_queue_destroy(default_queue);
@@ -366,9 +367,10 @@ static void _classification_test_pmr_term_tcp_dport(int num_pkt)
 	CU_ASSERT(sent_queue == recv_queue);
 	CU_ASSERT(sent_default == recv_default);
 
-	odp_cos_destroy(cos);
-	odp_cos_destroy(default_cos);
 	odp_cls_pmr_destroy(pmr);
+	odp_cos_destroy(cos);
+	odp_pktio_default_cos_set(pktio, ODP_COS_INVALID);
+	odp_cos_destroy(default_cos);
 	stop_pktio(pktio);
 	odp_queue_destroy(queue);
 	odp_queue_destroy(default_queue);
@@ -457,9 +459,10 @@ static void test_pmr(const odp_pmr_param_t *pmr_param, odp_packet_t pkt,
 	}
 
 	odp_packet_free(pkt);
+	odp_cls_pmr_destroy(pmr);
 	odp_cos_destroy(cos);
+	odp_pktio_default_cos_set(pktio, ODP_COS_INVALID);
 	odp_cos_destroy(default_cos);
-	odp_cls_pmr_destroy(pmr);      /* XXX ordering */
 	stop_pktio(pktio);
 	odp_pool_destroy(default_pool);
 	odp_pool_destroy(pool);
@@ -747,9 +750,10 @@ static void classification_test_pmr_term_dmac(void)
 	CU_ASSERT(recvpool == default_pool);
 	CU_ASSERT(retqueue == default_queue);
 
-	odp_cos_destroy(cos);
-	odp_cos_destroy(default_cos);
 	odp_cls_pmr_destroy(pmr);
+	odp_cos_destroy(cos);
+	odp_pktio_default_cos_set(pktio, ODP_COS_INVALID);
+	odp_cos_destroy(default_cos);
 	odp_packet_free(pkt);
 	stop_pktio(pktio);
 	odp_pool_destroy(default_pool);
@@ -1080,9 +1084,10 @@ static void classification_test_pmr_pool_set(void)
 	CU_ASSERT(retqueue == queue);
 	odp_packet_free(pkt);
 
-	odp_cos_destroy(cos);
-	odp_cos_destroy(default_cos);
 	odp_cls_pmr_destroy(pmr);
+	odp_cos_destroy(cos);
+	odp_pktio_default_cos_set(pktio, ODP_COS_INVALID);
+	odp_cos_destroy(default_cos);
 	stop_pktio(pktio);
 	odp_pool_destroy(default_pool);
 	odp_pool_destroy(pool);
@@ -1180,9 +1185,10 @@ static void classification_test_pmr_queue_set(void)
 	CU_ASSERT(retqueue == queue_new);
 	odp_packet_free(pkt);
 
-	odp_cos_destroy(cos);
-	odp_cos_destroy(default_cos);
 	odp_cls_pmr_destroy(pmr);
+	odp_cos_destroy(cos);
+	odp_pktio_default_cos_set(pktio, ODP_COS_INVALID);
+	odp_cos_destroy(default_cos);
 	stop_pktio(pktio);
 	odp_pool_destroy(default_pool);
 	odp_pool_destroy(pool);
@@ -1603,15 +1609,15 @@ static void test_pmr_series(const int num_udp, int marking)
 	CU_ASSERT(seqno == cls_pkt_get_seq(pkt));
 	CU_ASSERT(retqueue == default_queue);
 	odp_packet_free(pkt);
+	odp_cls_pmr_destroy(pmr_ip);
 
 	for (i = 0; i < num_udp; i++) {
-		odp_cos_destroy(cos_udp[i]);
 		odp_cls_pmr_destroy(pmr_udp[i]);
+		odp_cos_destroy(cos_udp[i]);
 	}
 
 	odp_cos_destroy(cos_ip);
-	odp_cls_pmr_destroy(pmr_ip);
-
+	odp_pktio_default_cos_set(pktio, ODP_COS_INVALID);
 	odp_cos_destroy(default_cos);
 	stop_pktio(pktio);
 	odp_pool_destroy(default_pool);

@@ -162,6 +162,16 @@ static int classification_suite_common_term(odp_bool_t enable_pktv)
 		retcode = -1;
 	}
 
+	for (i = 0; i < CLS_ENTRIES; i++) {
+		if (pmr_list[i] != ODP_PMR_INVALID)
+			odp_cls_pmr_destroy(pmr_list[i]);
+	}
+
+	for (i = 0; i < CLS_ENTRIES; i++) {
+		if (cos_list[i] != ODP_COS_INVALID)
+			odp_cos_destroy(cos_list[i]);
+	}
+
 	if (0 != odp_pool_destroy(pool_default)) {
 		ODPH_ERR("Pool_default destroy failed\n");
 		retcode = -1;
@@ -172,16 +182,6 @@ static int classification_suite_common_term(odp_bool_t enable_pktv)
 			ODPH_ERR("Packet vector pool destroy failed\n");
 			retcode = -1;
 		}
-	}
-
-	for (i = 0; i < CLS_ENTRIES; i++) {
-		if (cos_list[i] != ODP_COS_INVALID)
-			odp_cos_destroy(cos_list[i]);
-	}
-
-	for (i = 0; i < CLS_ENTRIES; i++) {
-		if (pmr_list[i] != ODP_PMR_INVALID)
-			odp_cls_pmr_destroy(pmr_list[i]);
 	}
 
 	for (i = 0; i < CLS_ENTRIES; i++) {
