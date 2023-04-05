@@ -864,12 +864,26 @@ static void alg_test_execute(const alg_test_param_t *param)
 		CU_ASSERT(test_packet_is_md_equal(&md_out, &md_in));
 	}
 
+	if (param->cipher_alg != ODP_CIPHER_ALG_NULL &&
+	    param->auth_alg != ODP_AUTH_ALG_NULL &&
+	    param->digest_offset >= cipher_range.offset &&
+	    param->digest_offset < cipher_range.offset + cipher_range.length) {
+		/*
+		 * Not all implementations support digest offset in cipher
+		 * range, so allow crypto op failure without further checks
+		 * in this case.
+		 */
+		if (!ok)
+			goto out;
+	}
+
 	if (param->wrong_digest) {
 		CU_ASSERT(!ok);
 	} else {
 		CU_ASSERT(ok);
 	}
 	check_output_packet_data(pkt_out, &expected);
+out:
 	odp_packet_free(pkt_out);
 }
 
