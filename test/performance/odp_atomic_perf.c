@@ -18,8 +18,9 @@
 /* Default number of test rounds */
 #define NUM_ROUNDS 1000000u
 
-/* Initial value for atomic variables */
-#define INIT_VAL 1234567
+/* Initial value for atomic variables. Supports up to 2 billion
+ * rounds of 32-bit min and max tests. */
+#define INIT_VAL 0x80000000
 
 /* Max number of workers if num_cpu=0 */
 #define DEFAULT_MAX_WORKERS 10
