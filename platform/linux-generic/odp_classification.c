@@ -250,6 +250,9 @@ odp_cos_t odp_cls_cos_create(const char *name, const odp_cls_cos_param_t *param_
 		param.queue = ODP_QUEUE_INVALID;
 		param.pool = ODP_POOL_INVALID;
 		param.vector.enable = false;
+	} else {
+		if (param.num_queue == 1 && param.queue == ODP_QUEUE_INVALID)
+			return ODP_COS_INVALID;
 	}
 
 	/* num_queue should not be zero */
@@ -429,6 +432,11 @@ int odp_cos_queue_set(odp_cos_t cos_id, odp_queue_t queue_id)
 
 	if (cos == NULL) {
 		_ODP_ERR("Invalid odp_cos_t handle\n");
+		return -1;
+	}
+
+	if (queue_id == ODP_QUEUE_INVALID) {
+		_ODP_ERR("Invalid queue\n");
 		return -1;
 	}
 
@@ -1720,11 +1728,6 @@ int _odp_cls_classify_packet(pktio_entry_t *entry, const uint8_t *base,
 
 	if (cos->action == ODP_COS_ACTION_DROP)
 		return 1;
-
-	if (cos->queue == ODP_QUEUE_INVALID && cos->num_queue == 1) {
-		odp_atomic_inc_u64(&cos->stats.discards);
-		return 1;
-	}
 
 	*pool = cos->pool;
 	if (*pool == ODP_POOL_INVALID)
