@@ -475,6 +475,30 @@ static void ipsec_check_out_in_one(const ipsec_test_part *part_outbound,
 	}
 }
 
+static int sa_creation_failure_ok(const odp_ipsec_sa_param_t *param)
+{
+	odp_cipher_alg_t cipher = param->crypto.cipher_alg;
+	odp_auth_alg_t auth     = param->crypto.auth_alg;
+
+	/* Single algorithm must not fail */
+	if (cipher == ODP_CIPHER_ALG_NULL || auth == ODP_AUTH_ALG_NULL)
+		return 0;
+
+	/* Combined mode algorithms must not fail */
+	if (cipher == ODP_CIPHER_ALG_AES_GCM ||
+	    cipher == ODP_CIPHER_ALG_AES_CCM ||
+	    cipher == ODP_CIPHER_ALG_CHACHA20_POLY1305)
+		return 0;
+
+	/* Combination of mandatory algorithms must not fail */
+	if (cipher == ODP_CIPHER_ALG_AES_CBC && auth == ODP_AUTH_ALG_SHA1_HMAC)
+		return 0;
+
+	printf("\n      Algorithm combination (%d, %d) maybe not supported.\n", cipher, auth);
+	printf("      SA creation failed, skipping test.\n");
+	return 1;
+}
+
 static void test_out_in_common(const ipsec_test_flags *flags,
 			       odp_cipher_alg_t cipher,
 			       const odp_crypto_key_t *cipher_key,
@@ -538,6 +562,9 @@ static void test_out_in_common(const ipsec_test_flags *flags,
 		param.opt.udp_encap = 1;
 
 	sa_out = odp_ipsec_sa_create(&param);
+
+	if (sa_out == ODP_IPSEC_SA_INVALID && sa_creation_failure_ok(&param))
+		return;
 
 	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa_out);
 
