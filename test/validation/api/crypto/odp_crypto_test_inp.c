@@ -1672,6 +1672,9 @@ static void test_auth_hash_in_auth_range(odp_auth_alg_t auth,
 	const odp_packet_data_range_t cipher_range = {.offset = 0, .length = 0};
 	odp_packet_data_range_t auth_range;
 
+	if (!full_test && capa->digest_len % 4 != 0)
+		return;
+
 	/*
 	 * Create test packets with auth hash in the authenticated range and
 	 * zeroes in the hash location in the plaintext packet.
@@ -2260,6 +2263,9 @@ static void test_combo(const crypto_suite_t *suite,
 /* Iterate and test different cipher/auth range and hash locations */
 static void test_combo_ranges(const crypto_suite_t *suite)
 {
+	if (!full_test && suite->auth_capa->digest_len % 4 != 0)
+		return;
+
 	for (int overlap = 0; overlap < NUM_RANGE_OVERLAPS; overlap++)
 		for (int location = 0; location < NUM_HASH_LOCATIONS; location++) {
 			if (suite->order == AUTH_CIPHERTEXT &&
