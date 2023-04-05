@@ -331,7 +331,7 @@ static void prio_grp_mask_init(void)
 
 static inline void prio_grp_mask_set(int prio, int grp)
 {
-	uint64_t grp_mask = 0x1u << grp;
+	uint64_t grp_mask = (uint64_t)1 << grp;
 	uint64_t mask = odp_atomic_load_u64(&sched->prio_grp_mask[prio]);
 
 	odp_atomic_store_u64(&sched->prio_grp_mask[prio], mask | grp_mask);
@@ -341,7 +341,7 @@ static inline void prio_grp_mask_set(int prio, int grp)
 
 static inline void prio_grp_mask_clear(int prio, int grp)
 {
-	uint64_t grp_mask = 0x1u << grp;
+	uint64_t grp_mask = (uint64_t)1 << grp;
 	uint64_t mask = odp_atomic_load_u64(&sched->prio_grp_mask[prio]);
 
 	sched->prio_grp_count[prio][grp]--;
@@ -753,7 +753,7 @@ static inline int grp_update_tbl(void)
 		if (odp_thrmask_isset(&sched->sched_grp[i].mask, thr)) {
 			sched_local.grp[num] = i;
 			num++;
-			mask |= 0x1u << i;
+			mask |= (uint64_t)1 << i;
 		}
 	}
 
