@@ -51,7 +51,7 @@ extern odp_abort_func_t _odp_abort_fn;
  * ODP LOG macro.
  */
 #define _ODP_LOG(level, fmt, ...) \
-		 _ODP_LOG_FN(level, "%s:%d:%s():" fmt, __FILE__, \
+		 _ODP_LOG_FN(level, "%s:%d:%s(): " fmt, __FILE__, \
 		 __LINE__, __func__, ##__VA_ARGS__)
 
 /**

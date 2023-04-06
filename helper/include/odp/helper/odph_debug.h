@@ -64,7 +64,7 @@ typedef enum odph_log_level {
 #define ODPH_LOG(level, fmt, ...) \
 do { \
 	if (level != ODPH_LOG_DBG || ODPH_DEBUG_PRINT == 1) \
-		fprintf(stderr, "%s:%d:%s():" fmt, __FILE__, \
+		fprintf(stderr, "%s:%d:%s(): " fmt, __FILE__, \
 		__LINE__, __func__, ##__VA_ARGS__); \
 	if (level == ODPH_LOG_ABORT) \
 		abort(); \
