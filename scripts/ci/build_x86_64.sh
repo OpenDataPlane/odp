@@ -6,6 +6,6 @@ if [ "${CC#clang}" != "${CC}" ] ; then
 fi
 
 # Required by CentOS and Rocky Linux to find DPDK install
-export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/usr/local/lib64/pkgconfig
+export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/usr/local/lib64/pkgconfig:/usr/lib/pkgconfig/
 
 exec "$(dirname "$0")"/build.sh
