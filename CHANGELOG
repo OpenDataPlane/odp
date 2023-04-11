@@ -1,3 +1,118 @@
+== OpenDataPlane (1.41.0.0)
+
+=== Backward incompatible API changes
+==== Classifier
+* Require that PMRs must be destroyed before the CoS they refer to is destroyed.
+
+==== Crypto
+* Deprecate the old session creation error names
+(`ODP_CRYPTO_SES_CREATE_ERR_NONE`, `ODP_CRYPTO_SES_CREATE_ERR_ENOMEM`,
+`ODP_CRYPTO_SES_CREATE_ERR_INV_CIPHER`, `ODP_CRYPTO_SES_CREATE_ERR_INV_AUTH`)
+that have been replaced by shorter error names.
+* Change return value of `odp_crypto_result()` to indicate crypto operation
+success/failure.
+* Deprecate `odp_crypto_packet_result_t.ok` field. Replaced by
+`odp_crypto_result()` return value.
+* Specify that the status fields of `odp_crypto_packet_result_t` are valid
+only when the operation failed (`odp_crypto_result()` returned -1).
+* Deprecate `odp_crypto_hw_err_t` type and `odp_crypto_op_status_t.hw_err`
+field. All errors are now reported through `alg_err` field.
+* Deprecate `ODP_CRYPTO_ALG_ERR_KEY_SIZE` and `ODP_CRYPTO_ALG_ERR_IV_INVALID`
+error codes.
+* Require that cipher range (`odp_crypto_packet_op_param_t.cipher_range`) and
+auth range (`odp_crypto_packet_op_param_t.auth_range`) have zero offset and zero
+length when used with null cipher and null auth algorithm, respectively, with
+the out-of-place operation type.
+
+==== Errno
+* Remove mention about errno values specified in the API spec. Setting errno has
+been removed from all ODP APIs outside errno module.
+
+==== Packet IO
+* Remove legacy reference to errno from `odp_pktio_open()` function.
+
+==== Stash
+* Remove special meaning of `odp_stash_capability_t.max_num_obj` value zero.
+
+==== Timer
+* Remove legacy references to errno from `odp_timer_pool_create()` and
+`odp_timer_alloc()` functions.
+
+=== Backward compatible API changes
+==== Classifier
+* Clarify that the CoS to be destroyed with `odp_cos_destroy()` must not be in
+use.
+* Clarify that `odp_cos_queue()` returns `ODP_QUEUE_INVALID` if the queue is not
+set.
+* Allow CoS pool (`odp_cls_cos_param_t.pool`) to be set to `ODP_POOL_INVALID`,
+in which case the originating pktin pool is used.
+* Clarify when CoS queue may and may not be invalid.
+
+==== Crypto
+* Change IV (`odp_crypto_packet_op_param_t.cipher_iv_ptr`,
+`odp_crypto_packet_op_param_t.auth_iv_ptr`) and AAD (
+`odp_crypto_packet_op_param_t.aad_ptr`) pointers to pointers to constants.
+* Clarify that algorithm order (`odp_crypto_session_param_t.auth_cipher_text`)
+is ignored with null algorithms.
+* Clarify when cipher (`odp_crypto_packet_op_param_t.cipher_range`) and auth
+(`odp_crypto_packet_op_param_t.auth_range`) ranges are ignored.
+* Allow the result pointer for `odp_crypto_result()` to be null, making filling
+the result structure optional.
+* Clarify the description of `ODP_CRYPTO_ALG_ERR_DATA_SIZE`.
+* Add a new crypto operation error `ODP_CRYPTO_ALG_ERR_OTHER` to cover cases
+for which the other errors do not fit.
+* Clarify that null cipher and auth algorithms ignore key length, IV length,
+digest length, etc. session parameters.
+* Clarify that crypto operations do not affect parse flags in packet metadata
+and thus `odp_packet_has_error()` cannot be used for checking operation result.
+
+==== Packet IO
+* Allow the default CoS to be removed by passing `ODP_COS_INVALID` to
+`odp_pktio_default_cos_set()`.
+
+==== Pool
+* Clarify that the pool to be destroyed with `odp_pool_destroy()` must not be in
+use.
+* Clarify that `odp_pool_capability_t.max_pools` is used for all pool types
+defined in `odp_pool_type_t`.
+
+==== Stash
+* Add new stash create parameter `odp_stash_param_t.strict_size` for performance
+optimization. The new option is disabled by default and the total object count
+limitation is removed from stash put functions.
+* Add new capabilities for maximum number of object handles per stash for
+each object size (`odp_stash_capability_t.max_num`).
+
+==== Timer
+* Clarify that zero `odp_timer_periodic_start_t.first_tick` means that the first
+expiration time is one period after the current time, not at the current time.
+
+=== Remove deprecated APIs
+==== Crypto
+* Remove deprecated `odp_crypto_compl_t` crypto completion event.
+* Remove deprecated `odp_crypto_op_param_t` type.
+* Remove deprecated `odp_crypto_op_result_t` type.
+* Remove deprecated `odp_crypto_session_param_t.pref_mode` field.
+* Remove deprecated `odp_crypto_compl_from_event()` function.
+* Remove deprecated `odp_crypto_compl_to_event()` function.
+* Remove deprecated `odp_crypto_compl_free()` function.
+* Remove deprecated `odp_crypto_operation()` function.
+* Remove deprecated `odp_crypto_compl_result()` function.
+* Remove deprecated `odp_crypto_compl_to_u64()` function.
+
+==== Event
+* Remove deprecated `ODP_EVENT_CRYPTO_COMPL` event type.
+
+=== Implementation
+==== Packet IO
+* Remove netmap pktio device.
+* Change recommended DPDK version for DPDK pktio device to v22.11.
+
+==== Stash
+* Change implementation to use overflow safe MPMC rings by default. Previous
+strict size ring-based implementation can be used by enabling
+`odp_stash_param_t.strict_size` parameter.
+
 == OpenDataPlane (1.40.0.0)
 
 === Backward incompatible API changes
