@@ -39,14 +39,14 @@ jobs:
         cp users-guide/users-guide.html gh-pages/users-guide/index.html
         mkdir gh-pages/process-guide
         cp process-guide/*.html gh-pages/process-guide/
-        touch gh-pages/.nojekyll
         popd
 
     - name: Deploy
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      uses: crazy-max/ghaction-github-pages@v2
+      uses: crazy-max/ghaction-github-pages@v3
       with:
         allow_empty_commit: false
         build_dir: ./doc/gh-pages
+        jekyll: false
         target_branch: gh-pages
