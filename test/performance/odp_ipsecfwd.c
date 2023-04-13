@@ -1109,9 +1109,10 @@ static void parse_inbound(config_setting_t *cfg, sa_config_t *config)
 		config->sa_param.inbound.lookup_mode = val;
 
 	if (config_setting_lookup_string(cs, "lookup_dst_addr", &val_str) == CONFIG_TRUE) {
-		odph_ipv4_addr_parse(&config->lkp_dst_ip, val_str);
-		config->lkp_dst_ip = odp_cpu_to_be_32(config->lkp_dst_ip);
-		config->sa_param.inbound.lookup_param.dst_addr = &config->lkp_dst_ip;
+		if (odph_ipv4_addr_parse(&config->lkp_dst_ip, val_str) == 0) {
+			config->lkp_dst_ip = odp_cpu_to_be_32(config->lkp_dst_ip);
+			config->sa_param.inbound.lookup_param.dst_addr = &config->lkp_dst_ip;
+		}
 	}
 
 	if (config_setting_lookup_int(cs, "antireplay_ws", &val) == CONFIG_TRUE)
@@ -1134,15 +1135,17 @@ static void parse_outbound(config_setting_t *cfg, sa_config_t *config)
 
 	if (tunnel != NULL) {
 		if (config_setting_lookup_string(tunnel, "src_addr", &val_str) == CONFIG_TRUE) {
-			odph_ipv4_addr_parse(&config->src_ip, val_str);
-			config->src_ip = odp_cpu_to_be_32(config->src_ip);
-			config->sa_param.outbound.tunnel.ipv4.src_addr = &config->src_ip;
+			if (odph_ipv4_addr_parse(&config->src_ip, val_str) == 0) {
+				config->src_ip = odp_cpu_to_be_32(config->src_ip);
+				config->sa_param.outbound.tunnel.ipv4.src_addr = &config->src_ip;
+			}
 		}
 
 		if (config_setting_lookup_string(tunnel, "dst_addr", &val_str) == CONFIG_TRUE) {
-			odph_ipv4_addr_parse(&config->dst_ip, val_str);
-			config->dst_ip = odp_cpu_to_be_32(config->dst_ip);
-			config->sa_param.outbound.tunnel.ipv4.dst_addr = &config->dst_ip;
+			if (odph_ipv4_addr_parse(&config->dst_ip, val_str) == 0) {
+				config->dst_ip = odp_cpu_to_be_32(config->dst_ip);
+				config->sa_param.outbound.tunnel.ipv4.dst_addr = &config->dst_ip;
+			}
 		}
 
 		if (config_setting_lookup_int(tunnel, "dscp", &val) == CONFIG_TRUE)
