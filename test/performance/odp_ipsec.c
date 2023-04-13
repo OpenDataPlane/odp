@@ -930,7 +930,7 @@ run_measure_one_config(ipsec_args_t *cargs,
 		return -1;
 	}
 
-	rc = odph_ipsec_alg_check(capa, config->crypto.cipher_alg,
+	rc = odph_ipsec_alg_check(&capa, config->crypto.cipher_alg,
 				  config->crypto.cipher_key.length,
 				  config->crypto.auth_alg,
 				  config->crypto.auth_key.length);

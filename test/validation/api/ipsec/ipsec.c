@@ -266,7 +266,7 @@ int ipsec_check(odp_bool_t ah,
 	if (ah && (ODP_SUPPORT_NO == capa.proto_ah))
 		return ODP_TEST_INACTIVE;
 
-	if (odph_ipsec_alg_check(capa, cipher, cipher_bits / 8, auth,
+	if (odph_ipsec_alg_check(&capa, cipher, cipher_bits / 8, auth,
 				 auth_bits / 8) < 0)
 		return ODP_TEST_INACTIVE;
 
