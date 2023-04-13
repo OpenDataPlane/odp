@@ -58,7 +58,7 @@ uint32_t odph_ipsec_auth_icv_len_default(odp_auth_alg_t auth_alg)
 	return icv_len;
 }
 
-int odph_ipsec_alg_check(odp_ipsec_capability_t capa,
+int odph_ipsec_alg_check(const odp_ipsec_capability_t *capa,
 			 odp_cipher_alg_t cipher_alg,
 			 uint32_t cipher_key_len,
 			 odp_auth_alg_t auth_alg,
@@ -71,35 +71,35 @@ int odph_ipsec_alg_check(odp_ipsec_capability_t capa,
 	/* Check whether requested cipher algorithm is supported */
 	switch (cipher_alg) {
 	case ODP_CIPHER_ALG_NULL:
-		if (!capa.ciphers.bit.null)
+		if (!capa->ciphers.bit.null)
 			return -1;
 		break;
 	case ODP_CIPHER_ALG_DES:
-		if (!capa.ciphers.bit.des)
+		if (!capa->ciphers.bit.des)
 			return -1;
 		break;
 	case ODP_CIPHER_ALG_3DES_CBC:
-		if (!capa.ciphers.bit.trides_cbc)
+		if (!capa->ciphers.bit.trides_cbc)
 			return -1;
 		break;
 	case ODP_CIPHER_ALG_AES_CBC:
-		if (!capa.ciphers.bit.aes_cbc)
+		if (!capa->ciphers.bit.aes_cbc)
 			return -1;
 		break;
 	case ODP_CIPHER_ALG_AES_CTR:
-		if (!capa.ciphers.bit.aes_ctr)
+		if (!capa->ciphers.bit.aes_ctr)
 			return -1;
 		break;
 	case ODP_CIPHER_ALG_AES_GCM:
-		if (!capa.ciphers.bit.aes_gcm)
+		if (!capa->ciphers.bit.aes_gcm)
 			return -1;
 		break;
 	case ODP_CIPHER_ALG_AES_CCM:
-		if (!capa.ciphers.bit.aes_ccm)
+		if (!capa->ciphers.bit.aes_ccm)
 			return -1;
 		break;
 	case ODP_CIPHER_ALG_CHACHA20_POLY1305:
-		if (!capa.ciphers.bit.chacha20_poly1305)
+		if (!capa->ciphers.bit.chacha20_poly1305)
 			return -1;
 		break;
 	default:
@@ -110,51 +110,51 @@ int odph_ipsec_alg_check(odp_ipsec_capability_t capa,
 	/* Check whether requested auth algorithm is supported */
 	switch (auth_alg) {
 	case ODP_AUTH_ALG_NULL:
-		if (!capa.auths.bit.null)
+		if (!capa->auths.bit.null)
 			return -1;
 		break;
 	case ODP_AUTH_ALG_MD5_HMAC:
-		if (!capa.auths.bit.md5_hmac)
+		if (!capa->auths.bit.md5_hmac)
 			return -1;
 		break;
 	case ODP_AUTH_ALG_SHA1_HMAC:
-		if (!capa.auths.bit.sha1_hmac)
+		if (!capa->auths.bit.sha1_hmac)
 			return -1;
 		break;
 	case ODP_AUTH_ALG_SHA256_HMAC:
-		if (!capa.auths.bit.sha256_hmac)
+		if (!capa->auths.bit.sha256_hmac)
 			return -1;
 		break;
 	case ODP_AUTH_ALG_SHA384_HMAC:
-		if (!capa.auths.bit.sha384_hmac)
+		if (!capa->auths.bit.sha384_hmac)
 			return -1;
 		break;
 	case ODP_AUTH_ALG_SHA512_HMAC:
-		if (!capa.auths.bit.sha512_hmac)
+		if (!capa->auths.bit.sha512_hmac)
 			return -1;
 		break;
 	case ODP_AUTH_ALG_AES_XCBC_MAC:
-		if (!capa.auths.bit.aes_xcbc_mac)
+		if (!capa->auths.bit.aes_xcbc_mac)
 			return -1;
 		break;
 	case ODP_AUTH_ALG_AES_GCM:
-		if (!capa.auths.bit.aes_gcm)
+		if (!capa->auths.bit.aes_gcm)
 			return -1;
 		break;
 	case ODP_AUTH_ALG_AES_GMAC:
-		if (!capa.auths.bit.aes_gmac)
+		if (!capa->auths.bit.aes_gmac)
 			return -1;
 		break;
 	case ODP_AUTH_ALG_AES_CCM:
-		if (!capa.auths.bit.aes_ccm)
+		if (!capa->auths.bit.aes_ccm)
 			return -1;
 		break;
 	case ODP_AUTH_ALG_AES_CMAC:
-		if (!capa.auths.bit.aes_cmac)
+		if (!capa->auths.bit.aes_cmac)
 			return -1;
 		break;
 	case ODP_AUTH_ALG_CHACHA20_POLY1305:
-		if (!capa.auths.bit.chacha20_poly1305)
+		if (!capa->auths.bit.chacha20_poly1305)
 			return -1;
 		break;
 	default:
