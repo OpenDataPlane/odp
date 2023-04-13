@@ -1948,7 +1948,7 @@ static void create_groups(int num, odp_schedule_group_t *group)
 	}
 }
 
-static int set_vector_pool_params(odp_pool_param_t *params, odp_pool_capability_t pool_capa)
+static int set_vector_pool_params(odp_pool_param_t *params, const odp_pool_capability_t *pool_capa)
 {
 	uint32_t num_vec, vec_size;
 
@@ -1957,14 +1957,14 @@ static int set_vector_pool_params(odp_pool_param_t *params, odp_pool_capability_
 	else
 		vec_size = gbl_args->appl.vec_size;
 
-	ODPH_ASSERT(pool_capa.vector.max_size > 0);
-	if (vec_size > pool_capa.vector.max_size) {
+	ODPH_ASSERT(pool_capa->vector.max_size > 0);
+	if (vec_size > pool_capa->vector.max_size) {
 		if (gbl_args->appl.vec_size == 0) {
-			vec_size = pool_capa.vector.max_size;
+			vec_size = pool_capa->vector.max_size;
 			printf("\nWarning: Vector size reduced to %u\n\n", vec_size);
 		} else {
 			ODPH_ERR("Vector size too big %u. Maximum is %u.\n",
-				 vec_size, pool_capa.vector.max_size);
+				 vec_size, pool_capa->vector.max_size);
 			return -1;
 		}
 	}
@@ -1978,13 +1978,13 @@ static int set_vector_pool_params(odp_pool_param_t *params, odp_pool_capability_
 		num_vec = gbl_args->appl.num_vec;
 	}
 
-	if (pool_capa.vector.max_num && num_vec > pool_capa.vector.max_num) {
+	if (pool_capa->vector.max_num && num_vec > pool_capa->vector.max_num) {
 		if (gbl_args->appl.num_vec == 0) {
-			num_vec = pool_capa.vector.max_num;
+			num_vec = pool_capa->vector.max_num;
 			printf("\nWarning: number of vectors reduced to %u\n\n", num_vec);
 		} else {
 			ODPH_ERR("Too many vectors (%u) per pool. Maximum is %u.\n",
-				 num_vec, pool_capa.vector.max_num);
+				 num_vec, pool_capa->vector.max_num);
 			return -1;
 		}
 	}
@@ -2197,7 +2197,7 @@ int main(int argc, char *argv[])
 		}
 
 		odp_pool_param_init(&params);
-		if (set_vector_pool_params(&params, pool_capa))
+		if (set_vector_pool_params(&params, &pool_capa))
 			return -1;
 
 		gbl_args->vector_num = params.vector.num;
