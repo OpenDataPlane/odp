@@ -1108,6 +1108,9 @@ static _odp_event_hdr_t *pktin_dequeue(odp_queue_t queue)
 	if (_odp_queue_fn->orig_deq_multi(queue, &event_hdr, 1) == 1)
 		return event_hdr;
 
+	if (odp_unlikely(entry->state != PKTIO_STATE_STARTED))
+		return 0;
+
 	pkts = pktin_recv_buf(entry, pktin_index, hdr_tbl, QUEUE_MULTI_MAX);
 
 	if (pkts <= 0)
@@ -1153,7 +1156,7 @@ static int pktin_deq_multi(odp_queue_t queue, _odp_event_hdr_t *event_hdr[],
 	/** queue already has number of requested buffers,
 	 *  do not do receive in that case.
 	 */
-	if (nbr == num)
+	if (nbr == num || odp_unlikely(entry->state != PKTIO_STATE_STARTED))
 		return nbr;
 
 	pkts = pktin_recv_buf(entry, pktin_index, hdr_tbl, QUEUE_MULTI_MAX);
