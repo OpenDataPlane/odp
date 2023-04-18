@@ -1164,8 +1164,8 @@ static void pool_test_pool_statistics(odp_pool_type_t pool_type)
 	CU_ASSERT_FATAL(max_pools != 0);
 
 	/* Extra alloc rounds for testing odp_pool_stats_t.alloc_fails */
-	uint32_t num_alloc_rounds = num_obj + 100;
-	odp_event_t event[max_pools][num_alloc_rounds];
+	uint32_t num_allocs = num_obj + 100;
+	odp_event_t event[max_pools][num_allocs];
 	uint32_t num_event[max_pools];
 	odp_pool_t pool[max_pools];
 
@@ -1202,7 +1202,7 @@ static void pool_test_pool_statistics(odp_pool_type_t pool_type)
 			CU_ASSERT(stats.thread.cache_available[j] <= stats.cache_available);
 
 		/* Allocate the events */
-		for (j = 0; j < num_alloc_rounds; j++) {
+		for (j = 0; j < num_allocs; j++) {
 			odp_event_t new_event = ODP_EVENT_INVALID;
 			uint64_t total_cached = 0;
 			uint16_t first_id = 0;
@@ -1275,12 +1275,13 @@ static void pool_test_pool_statistics(odp_pool_type_t pool_type)
 		for (j = 0; j < ODP_POOL_MAX_THREAD_STATS; j++)
 			CU_ASSERT(stats.thread.cache_available[j] == 0);
 		if (supported.bit.alloc_ops)
-			CU_ASSERT(stats.alloc_ops > 0 && stats.alloc_ops <= num_obj + 1);
+			CU_ASSERT(stats.alloc_ops > 0 && stats.alloc_ops <= num_allocs);
 		if (supported.bit.alloc_fails)
 			CU_ASSERT(stats.alloc_fails == num_fails);
 		if (supported.bit.total_ops)
-			CU_ASSERT(stats.total_ops > 0 && stats.total_ops <= num_obj + 1);
+			CU_ASSERT(stats.total_ops > 0 && stats.total_ops <= num_allocs);
 		CU_ASSERT(stats.free_ops == 0);
+		CU_ASSERT(stats.cache_alloc_ops <= num_allocs);
 		CU_ASSERT(stats.cache_free_ops == 0);
 	}
 
