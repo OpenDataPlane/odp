@@ -1,5 +1,5 @@
 /* Copyright (c) 2015-2018, Linaro Limited
- * Copyright (c) 2020-2022, Nokia
+ * Copyright (c) 2020-2023, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -156,7 +156,7 @@ unsigned int odp_pool_max_index(void);
 int odp_pool_index(odp_pool_t pool);
 
 /**
- * Get statistics for pool handle
+ * Get statistics for pool
  *
  * Read the statistics counters enabled using odp_pool_stats_opt_t during pool creation. The
  * inactive counters are set to zero by the implementation. Depending on the implementation, there
@@ -177,7 +177,29 @@ int odp_pool_index(odp_pool_t pool);
 int odp_pool_stats(odp_pool_t pool, odp_pool_stats_t *stats);
 
 /**
- * Reset statistics for pool handle
+ * Get selected pool statistics
+ *
+ * Read the selected counters given in odp_pool_stats_opt_t bit field structure. Only counters
+ * included in odp_pool_stats_selected_t can be read and the selected counters must have been
+ * enabled during pool creation. Values of the unselected counters are undefined. Depending on the
+ * implementation, there may be some delay until performed pool operations are visible in the
+ * statistics.
+ *
+ * Depending on the implementation, this function may have higher performance compared to
+ * odp_pool_stats(), as only the selected set of counters is read.
+ *
+ * @param         pool   Pool handle
+ * @param[out]    stats  Output buffer for counters
+ * @param         opt    Bit field for selecting the counters to be read
+ *
+ * @retval  0 on success
+ * @retval <0 on failure
+ */
+int odp_pool_stats_selected(odp_pool_t pool, odp_pool_stats_selected_t *stats,
+			    const odp_pool_stats_opt_t *opt);
+
+/**
+ * Reset statistics for pool
  *
  * Reset all statistics counters to zero except: odp_pool_stats_t::available,
  * odp_pool_stats_t::cache_available, odp_pool_stats_t::thread::cache_available

@@ -1,4 +1,4 @@
-/* Copyright (c) 2021-2022, Nokia
+/* Copyright (c) 2021-2023, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -146,6 +146,38 @@ typedef struct odp_pool_stats_t {
 	} thread;
 
 } odp_pool_stats_t;
+
+/**
+ * Pool statistics counters
+ *
+ * Same as odp_pool_stats_t excluding per thread counters.
+ */
+typedef struct odp_pool_stats_selected_t {
+	/** See odp_pool_stats_t::available */
+	uint64_t available;
+
+	/** See odp_pool_stats_t::alloc_ops */
+	uint64_t alloc_ops;
+
+	/** See odp_pool_stats_t::alloc_fails */
+	uint64_t alloc_fails;
+
+	/** See odp_pool_stats_t::free_ops */
+	uint64_t free_ops;
+
+	/** See odp_pool_stats_t::total_ops */
+	uint64_t total_ops;
+
+	/** See odp_pool_stats_t::cache_available */
+	uint64_t cache_available;
+
+	/** See odp_pool_stats_t::cache_alloc_ops */
+	uint64_t cache_alloc_ops;
+
+	/** See odp_pool_stats_t::cache_free_ops */
+	uint64_t cache_free_ops;
+
+} odp_pool_stats_selected_t;
 
 /**
  * Pool capabilities
