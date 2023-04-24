@@ -158,8 +158,9 @@ int odp_pool_index(odp_pool_t pool);
 /**
  * Get statistics for pool handle
  *
- * Read the statistics counters enabled using odp_pool_stats_opt_t during pool
- * creation. The inactive counters are set to zero by the implementation.
+ * Read the statistics counters enabled using odp_pool_stats_opt_t during pool creation. The
+ * inactive counters are set to zero by the implementation. Depending on the implementation, there
+ * may be some delay until performed pool operations are visible in the statistics.
  *
  * A single call may read statistics from one to ODP_POOL_MAX_THREAD_STATS
  * threads. Set 'stats.thread.first' and 'stats.thread.last' to select the
