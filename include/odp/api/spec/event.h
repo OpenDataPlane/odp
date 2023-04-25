@@ -1,5 +1,5 @@
 /* Copyright (c) 2015-2018, Linaro Limited
- * Copyright (c) 2022, Nokia
+ * Copyright (c) 2022-2023, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -78,6 +78,20 @@ odp_event_type_t odp_event_types(odp_event_t event,
  */
 int odp_event_type_multi(const odp_event_t event[], int num,
 			 odp_event_type_t *type);
+
+/**
+ * Event user area
+ *
+ * Returns pointer to the user area associated with the event. This maps to the
+ * user area of underlying event type (e.g. odp_packet_user_area() for packets).
+ * If the event does not have user area, NULL is returned.
+ *
+ * @param      event    Event handle
+ *
+ * @return Pointer to the user area of the event
+ * @retval NULL  The event does not have user area
+ */
+void *odp_event_user_area(odp_event_t event);
 
 /**
  * Filter and convert packet events
