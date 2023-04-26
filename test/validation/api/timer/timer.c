@@ -1595,7 +1595,7 @@ static void timer_test_cancel(void)
 	odp_timer_t tim;
 	odp_event_t ev;
 	odp_timeout_t tmo;
-	odp_timer_set_t rc;
+	odp_timer_retval_t rc;
 	int ret;
 
 	memset(&capa, 0, sizeof(capa));
@@ -1999,7 +1999,7 @@ static int worker_entrypoint(void *arg ODP_UNUSED)
 	odp_event_t ev;
 	struct timespec ts;
 	uint32_t nstale;
-	odp_timer_set_t timer_rc;
+	odp_timer_retval_t timer_rc;
 	odp_timer_start_t start_param;
 	odp_timer_pool_t tp = global_mem->tp;
 	odp_pool_t tbp = global_mem->tbp;
@@ -2119,7 +2119,7 @@ static int worker_entrypoint(void *arg ODP_UNUSED)
 				ncancel++;
 			}
 		} else {
-			odp_timer_set_t rc;
+			odp_timer_retval_t rc;
 			uint64_t cur_tick;
 			uint64_t tck;
 			int reset_timer = 0;

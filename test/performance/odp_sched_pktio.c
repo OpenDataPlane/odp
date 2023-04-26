@@ -424,7 +424,7 @@ static int worker_thread_timers(void *arg)
 	odp_queue_t queue;
 	pktin_queue_context_t *queue_context;
 	odp_timer_t timer;
-	odp_timer_set_t ret;
+	odp_timer_retval_t ret;
 	odp_timer_start_t start_param;
 	worker_arg_t *worker_arg = arg;
 	test_global_t *test_global = worker_arg->test_global_ptr;
@@ -1326,7 +1326,7 @@ static int start_timers(test_global_t *test_global)
 	int i, j;
 	odp_timeout_t timeout;
 	odp_timer_t timer;
-	odp_timer_set_t ret;
+	odp_timer_retval_t ret;
 	odp_timer_start_t start_param;
 	uint64_t timeout_tick = test_global->timer.timeout_tick;
 	int num_pktio = test_global->opt.num_pktio;

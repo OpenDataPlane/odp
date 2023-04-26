@@ -656,7 +656,7 @@ static int start_timers(test_global_t *test_global)
 		num_tmo = 1;
 
 	for (i = 0; i < num_tmo; i++) {
-		odp_timer_set_t retval;
+		odp_timer_retval_t retval;
 
 		for (j = 0; j < burst; j++) {
 			timer_ctx_t *ctx = &test_global->timer_ctx[idx];
@@ -980,7 +980,7 @@ static void run_test(test_global_t *test_global)
 			/* Reset timer for next period */
 			odp_timer_t tim;
 			uint64_t nsec, tick;
-			odp_timer_set_t ret;
+			odp_timer_retval_t ret;
 			unsigned int j;
 			unsigned int retries = test_global->opt.early_retry;
 			uint64_t start_ns = test_global->start_ns;
