@@ -515,24 +515,49 @@ typedef struct odp_timer_periodic_start_t {
 } odp_timer_periodic_start_t;
 
 /**
- * Return values of timer set calls.
+ * Return values for timer start, restart and cancel calls
  */
 typedef enum {
-	/** Timer set operation succeeded */
+	/**
+	 * Timer operation succeeded
+	 *
+	 * Timer start, restart and cancel operations may return this value.
+	 */
 	ODP_TIMER_SUCCESS = 0,
 
-	/** Timer set operation failed because expiration time is too near to
-	 *  the current time. */
+	/**
+	 * Timer operation failed, too near to the current time
+	 *
+	 * The operation failed because the requested time/timer has expired already, or is too
+	 * near to the current time. Timer start, restart and cancel operations may return this
+	 * value.
+	 */
 	ODP_TIMER_TOO_NEAR = -1,
 
-	/** Timer set operation failed because expiration time is too far from
-	 *  the current time. */
+	/**
+	 * Timer operation failed, too far from the current time
+	 *
+	 * The operation failed because the requested time is too far from the current time.
+	 * Only timer start and restart operations may return this value.
+	 */
 	ODP_TIMER_TOO_FAR = -2,
 
-	/** Timer set operation failed */
+	/**
+	 * Timer operation failed
+	 *
+	 * The operation failed due to some other reason than timing of the request. Timer start,
+	 * restart and cancel operations may return this value.
+	 */
 	ODP_TIMER_FAIL = -3
 
-} odp_timer_set_t;
+} odp_timer_retval_t;
+
+/**
+ * For backwards compatibility, odp_timer_set_t is synonym of odp_timer_retval_t
+ *
+ * @deprecated Use odp_timer_retval_t instead.
+ */
+typedef odp_timer_retval_t odp_timer_set_t;
 
 #if ODP_DEPRECATED_API
 /**

@@ -427,19 +427,22 @@ int ODP_DEPRECATE(odp_timer_set_rel)(odp_timer_t timer, uint64_t rel_tick, odp_e
 /**
  * Cancel a timer
  *
- * Cancels a previously started single shot timer. A successful operation prevents timer
- * expiration and returns the timeout event back to application. Application may use or free
- * the event normally.
+ * Cancels a previously started single shot timer. A successful operation (#ODP_TIMER_SUCCESS)
+ * prevents timer expiration and returns the timeout event back to application. Application may
+ * use or free the event normally.
  *
  * When the timer is close to expire or has expired already, the call may not be able cancel it
- * anymore. In this case, the call returns failure and the timeout is delivered to the destination
- * queue.
+ * anymore. In this case, the call returns #ODP_TIMER_TOO_NEAR and the timeout is delivered to
+ * the destination queue.
  *
  * @param      timer  Timer
- * @param[out] tmo_ev Pointer to an event handle for output
+ * @param[out] tmo_ev Pointer to an event handle for output. Event handle is written only
+ *                    on success.
  *
- * @retval 0  Success. Active timer cancelled, timeout returned in 'tmo_ev'
- * @retval <0 Failure. Timer inactive or already expired.
+ * @retval ODP_TIMER_SUCCESS  Timer was cancelled successfully. Timeout event returned in 'tmo_ev'.
+ * @retval ODP_TIMER_TOO_NEAR Timer cannot be cancelled. Timer has expired already, or cannot be
+ *                            cancelled due to close expiration time.
+ * @retval ODP_TIMER_FAIL     Other failure.
  */
 int odp_timer_cancel(odp_timer_t timer, odp_event_t *tmo_ev);
 
