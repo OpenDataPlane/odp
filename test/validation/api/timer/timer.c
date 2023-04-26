@@ -772,9 +772,9 @@ static void timer_pool_max_res(void)
 
 		ev = ODP_EVENT_INVALID;
 		ret = odp_timer_cancel(timer, &ev);
-		CU_ASSERT(ret == 0);
+		CU_ASSERT(ret == ODP_TIMER_SUCCESS);
 
-		if (ret == 0) {
+		if (ret == ODP_TIMER_SUCCESS) {
 			CU_ASSERT(ev != ODP_EVENT_INVALID);
 			odp_event_free(ev);
 		}
@@ -945,9 +945,9 @@ static void timer_single_shot(odp_queue_type_t queue_type, odp_timer_tick_type_t
 
 		if (cancel) {
 			ret = odp_timer_cancel(timer, &ev);
-			CU_ASSERT(ret == 0);
+			CU_ASSERT(ret == ODP_TIMER_SUCCESS);
 
-			if (ret == 0)
+			if (ret == ODP_TIMER_SUCCESS)
 				CU_ASSERT(ev != ODP_EVENT_INVALID);
 		} else {
 			uint64_t diff_ns;
@@ -1655,7 +1655,7 @@ static void timer_test_cancel(void)
 		CU_FAIL_FATAL("Failed to set timer (relative time)");
 
 	ev = ODP_EVENT_INVALID;
-	if (odp_timer_cancel(tim, &ev) != 0)
+	if (odp_timer_cancel(tim, &ev) != ODP_TIMER_SUCCESS)
 		CU_FAIL_FATAL("Failed to cancel timer (relative time)");
 
 	if (ev == ODP_EVENT_INVALID)
@@ -1838,7 +1838,7 @@ static void timer_test_tmo_limit(odp_queue_type_t queue_type,
 			t2 = odp_time_local();
 			diff_ns = odp_time_diff_ns(t2, t1);
 
-			CU_ASSERT(ret == 0);
+			CU_ASSERT(ret == ODP_TIMER_SUCCESS);
 			CU_ASSERT(ev != ODP_EVENT_INVALID);
 
 			if (ev != ODP_EVENT_INVALID)
@@ -1985,7 +1985,6 @@ static int worker_entrypoint(void *arg ODP_UNUSED)
 	int thr = odp_thread_id();
 	uint32_t i, allocated;
 	unsigned seed = thr;
-	int rc;
 	odp_queue_t queue;
 	struct test_timer *tt;
 	uint32_t nset;
@@ -1999,7 +1998,7 @@ static int worker_entrypoint(void *arg ODP_UNUSED)
 	odp_event_t ev;
 	struct timespec ts;
 	uint32_t nstale;
-	odp_timer_retval_t timer_rc;
+	odp_timer_retval_t rc;
 	odp_timer_start_t start_param;
 	odp_timer_pool_t tp = global_mem->tp;
 	odp_pool_t tbp = global_mem->tbp;
@@ -2072,11 +2071,11 @@ static int worker_entrypoint(void *arg ODP_UNUSED)
 		start_param.tmo_ev = tt[i].ev;
 		tt[i].ev = ODP_EVENT_INVALID;
 
-		timer_rc = odp_timer_start(tt[i].tim, &start_param);
-		if (timer_rc == ODP_TIMER_TOO_NEAR) {
+		rc = odp_timer_start(tt[i].tim, &start_param);
+		if (rc == ODP_TIMER_TOO_NEAR) {
 			ODPH_ERR("Missed tick, setting timer\n");
-		} else if (timer_rc != ODP_TIMER_SUCCESS) {
-			ODPH_ERR("Failed to set timer: %d\n", timer_rc);
+		} else if (rc != ODP_TIMER_SUCCESS) {
+			ODPH_ERR("Failed to set timer: %d\n", rc);
 			CU_FAIL("Failed to set timer");
 		} else {
 			tt[i].tick = tck;
@@ -2110,16 +2109,18 @@ static int worker_entrypoint(void *arg ODP_UNUSED)
 				goto sleep;
 			/* Timer active, cancel it */
 			rc = odp_timer_cancel(tt[i].tim, &tt[i].ev);
-			if (rc != 0) {
-				/* Cancel failed, timer already expired */
-				ntoolate++;
-				ODPH_DBG("Failed to cancel timer, probably already expired\n");
-			} else {
+
+			if (rc == ODP_TIMER_SUCCESS) {
 				tt[i].tick = TICK_INVALID;
 				ncancel++;
+			} else if (rc == ODP_TIMER_TOO_NEAR) {
+				/* Cancel failed, timer already expired */
+				ntoolate++;
+				ODPH_DBG("Failed to cancel timer, already expired\n");
+			} else {
+				CU_FAIL_FATAL("Cancel failed");
 			}
 		} else {
-			odp_timer_retval_t rc;
 			uint64_t cur_tick;
 			uint64_t tck;
 			int reset_timer = 0;
@@ -2174,15 +2175,21 @@ sleep:
 			CU_FAIL_FATAL("nanosleep failed");
 	}
 
-	/* Cancel and free all timers */
+	/* Try to cancel all active timers */
 	nstale = 0;
 	for (i = 0; i < allocated; i++) {
-		(void)odp_timer_cancel(tt[i].tim, &tt[i].ev);
+		if (tt[i].ev != ODP_EVENT_INVALID)
+			continue;
+
+		rc = odp_timer_cancel(tt[i].tim, &tt[i].ev);
 		tt[i].tick = TICK_INVALID;
-		if (tt[i].ev == ODP_EVENT_INVALID)
-			/* Cancel too late, timer already expired and
-			 * timeout enqueued */
+
+		if (rc == ODP_TIMER_TOO_NEAR) {
+			/* Cancel too late, timer already expired and timeout enqueued */
 			nstale++;
+		} else if (rc != ODP_TIMER_SUCCESS) {
+			CU_FAIL("Timer cancel failed");
+		}
 	}
 
 	ODPH_DBG("Thread %u: %" PRIu32 " timers set\n", thr, nset);
@@ -2230,8 +2237,7 @@ sleep:
 	if (ev != ODP_EVENT_INVALID)
 		CU_FAIL("Unexpected event received");
 
-	rc = odp_queue_destroy(queue);
-	CU_ASSERT(rc == 0);
+	CU_ASSERT(odp_queue_destroy(queue) == 0);
 	for (i = 0; i < allocated; i++) {
 		if (tt[i].ev != ODP_EVENT_INVALID)
 			odp_event_free(tt[i].ev);
