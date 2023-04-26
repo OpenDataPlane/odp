@@ -1731,11 +1731,11 @@ int odp_timer_cancel(odp_timer_t hdl, odp_event_t *tmo_ev)
 	if (old_event != ODP_EVENT_INVALID) {
 		/* Active timer cancelled, timeout returned */
 		*tmo_ev = old_event;
-		return 0;
+		return ODP_TIMER_SUCCESS;
 	}
 
 	/* Timer already expired, no timeout returned */
-	return -1;
+	return ODP_TIMER_TOO_NEAR;
 }
 
 int odp_timer_periodic_cancel(odp_timer_t hdl)
