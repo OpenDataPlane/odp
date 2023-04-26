@@ -644,7 +644,7 @@ static void cancel_timers(test_global_t *global, uint32_t worker_idx)
 			if (timer == ODP_TIMER_INVALID)
 				continue;
 
-			if (odp_timer_cancel(timer, &ev) == 0)
+			if (odp_timer_cancel(timer, &ev) == ODP_TIMER_SUCCESS)
 				odp_event_free(ev);
 		}
 	}
@@ -753,8 +753,14 @@ static int set_cancel_mode_worker(void *arg)
 				status = odp_timer_cancel(timer, &ev);
 				num_cancel++;
 
-				if (status < 0)
+				if (odp_unlikely(status == ODP_TIMER_TOO_NEAR)) {
 					continue;
+				} else if (odp_unlikely(status != ODP_TIMER_SUCCESS)) {
+					ODPH_ERR("Timer (%u/%u) cancel failed (ret %i)\n", i, j,
+						 status);
+					ret = -1;
+					break;
+				}
 
 				start_param.tick_type = ODP_TIMER_TICK_ABS;
 				start_param.tick = tick + j * period_tick;
