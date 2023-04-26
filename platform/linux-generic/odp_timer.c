@@ -106,6 +106,8 @@
 #define IDX2LOCK(tp, idx) (&(tp)->locks[(idx) % NUM_LOCKS])
 #endif
 
+#define ACC_SIZE (1ull << 32)
+
 #include <odp/visibility_begin.h>
 
 /* Fill in timeout header field offsets for inline functions */
@@ -153,6 +155,12 @@ typedef struct {
 
 	/* Period of periodic timer in ticks (nanoseconds), includes PERIODIC_CANCELLED flag. */
 	uint64_t periodic_ticks;
+
+	/* Periodic ticks fractional part. */
+	uint32_t periodic_ticks_frac;
+
+	/* Periodic ticks fractional part accumulator. */
+	uint32_t periodic_ticks_frac_acc;
 
 	/* Used for free list of timers */
 	uint32_t next_free;
@@ -1600,6 +1608,7 @@ int odp_timer_periodic_start(odp_timer_t timer, const odp_timer_periodic_start_t
 	_odp_timer_t *tim = &tp->timers[idx];
 	uint64_t multiplier = start_param->freq_multiplier;
 	double freq = multiplier * tp->base_freq;
+	double period_ns_dbl;
 
 	if (odp_unlikely(!tp->periodic)) {
 		_ODP_ERR("Not a periodic timer\n");
@@ -1616,7 +1625,9 @@ int odp_timer_periodic_start(odp_timer_t timer, const odp_timer_periodic_start_t
 		return ODP_TIMER_FAIL;
 	}
 
-	period_ns = (uint64_t)((double)ODP_TIME_SEC_IN_NS / freq);
+	period_ns_dbl = (double)ODP_TIME_SEC_IN_NS / freq;
+	period_ns = period_ns_dbl;
+
 	if (period_ns == 0) {
 		_ODP_ERR("Too high periodic timer frequency: %f\n", freq);
 		return ODP_TIMER_FAIL;
@@ -1628,6 +1639,8 @@ int odp_timer_periodic_start(odp_timer_t timer, const odp_timer_periodic_start_t
 	}
 
 	tim->periodic_ticks = period_ns;
+	tim->periodic_ticks_frac = (period_ns_dbl - period_ns) * ACC_SIZE;
+	tim->periodic_ticks_frac_acc = 0;
 	abs_tick = start_param->first_tick;
 
 	if (abs_tick) {
@@ -1654,7 +1667,7 @@ int odp_timer_periodic_start(odp_timer_t timer, const odp_timer_periodic_start_t
 
 int odp_timer_periodic_ack(odp_timer_t timer, odp_event_t tmo_ev)
 {
-	uint64_t abs_tick;
+	uint64_t abs_tick, acc;
 	odp_timeout_t tmo = odp_timeout_from_event(tmo_ev);
 	timer_pool_t *tp = handle_to_tp(timer);
 	uint32_t idx = handle_to_idx(timer, tp);
@@ -1672,6 +1685,14 @@ int odp_timer_periodic_ack(odp_timer_t timer, odp_event_t tmo_ev)
 		return 2;
 	}
 
+	acc = (uint64_t)tim->periodic_ticks_frac_acc + (uint64_t)tim->periodic_ticks_frac;
+
+	if (acc >= ACC_SIZE) {
+		abs_tick++;
+		acc -= ACC_SIZE;
+	}
+
+	tim->periodic_ticks_frac_acc = acc;
 	abs_tick += odp_timeout_tick(tmo);
 
 	if (!timer_reset(idx, abs_tick, &tmo_ev, tp))
