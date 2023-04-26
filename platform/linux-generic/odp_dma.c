@@ -396,7 +396,7 @@ static inline int segment_pkt(segment_t seg[], int num_seg, const odp_dma_seg_t 
 			offset  += len;
 			num++;
 
-			if (odp_unlikely(num >= MAX_SEGS)) {
+			if (odp_unlikely(num > MAX_SEGS)) {
 				_ODP_ERR("Too many packet segments\n");
 				return 0;
 			}
