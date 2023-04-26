@@ -51,7 +51,7 @@ typedef struct {
 } test_globals_t;
 
 /** @private Timer set status ASCII strings */
-static const char *timerset2str(odp_timer_set_t val)
+static const char *timerset2str(odp_timer_retval_t val)
 {
 	switch (val) {
 	case ODP_TIMER_SUCCESS:
@@ -120,7 +120,7 @@ static void test_abs_timeouts(int thr, test_globals_t *gbls)
 	while (1) {
 		int wait = 0;
 		odp_event_t ev;
-		odp_timer_set_t rc;
+		odp_timer_retval_t rc;
 		odp_timer_start_t start_param;
 
 		if (ttp) {
