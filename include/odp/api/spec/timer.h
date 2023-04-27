@@ -191,6 +191,28 @@ uint64_t odp_timer_ns_to_tick(odp_timer_pool_t timer_pool, uint64_t ns);
 uint64_t odp_timer_current_tick(odp_timer_pool_t timer_pool);
 
 /**
+ * Sample tick values of timer pools
+ *
+ * Reads timer pool tick values simultaneously (or closely back-to-back) from all requested timer
+ * pools, and outputs those on success. Optionally, outputs corresponding source clock (HW) counter
+ * values, which are implementation specific and may be used for debugging. When a timer pool does
+ * not support reading of the source clock value, zero is written instead. Values are written into
+ * the output arrays in the same order which timer pools were defined. Nothing is written on
+ * failure.
+ *
+ * @param      timer_pool  Timer pools to sample
+ * @param[out] tick        Tick value array for output (one element per timer pool)
+ * @param[out] clk_count   Source clock counter value array for output (one element per
+ *                         timer pool), or NULL when counter values are not requested.
+ * @param      num         Number of timer pools to sample
+ *
+ * @retval  0 All requested timer pools sampled successfully
+ * @retval -1 Failure
+ */
+int odp_timer_sample_ticks(odp_timer_pool_t timer_pool[], uint64_t tick[], uint64_t clk_count[],
+			   int num);
+
+/**
  * Query timer pool configuration and current state
  *
  * @param      timer_pool  Timer pool
