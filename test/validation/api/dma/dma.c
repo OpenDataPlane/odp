@@ -234,6 +234,7 @@ static void test_dma_param(uint8_t fill)
 
 	memset(&dma_pool_param, fill, sizeof(dma_pool_param));
 	odp_dma_pool_param_init(&dma_pool_param);
+	CU_ASSERT(dma_pool_param.uarea_size == 0);
 	CU_ASSERT(dma_pool_param.cache_size <= global.dma_capa.pool.max_cache_size);
 	CU_ASSERT(dma_pool_param.cache_size >= global.dma_capa.pool.min_cache_size);
 }
@@ -291,6 +292,7 @@ static void test_dma_compl_pool(void)
 	CU_ASSERT(pool_info.pool_ext == 0);
 	CU_ASSERT(pool_info.type == ODP_POOL_DMA_COMPL);
 	CU_ASSERT(pool_info.dma_pool_param.num == global.dma_capa.max_transfers);
+	CU_ASSERT(pool_info.dma_pool_param.uarea_size == 0);
 	CU_ASSERT(pool_info.dma_pool_param.cache_size == global.cache_size);
 
 	for (i = 0; i < global.dma_capa.max_transfers; i++) {
@@ -362,6 +364,45 @@ static void test_dma_compl_pool_max_pools(void)
 		if (ret == -1)
 			ODPH_ERR("DMA completion pool destroy failed: %u / %u\n", j, i);
 	}
+}
+
+static void test_dma_compl_user_area(void)
+{
+	odp_dma_pool_param_t dma_pool_param;
+	uint32_t num = MIN(10, global.dma_capa.pool.max_num),
+	size = global.dma_capa.pool.max_uarea_size, i;
+	odp_pool_t pool;
+	odp_dma_compl_t compl_evs[num];
+	void *addr, *prev = NULL;
+
+	odp_dma_pool_param_init(&dma_pool_param);
+	dma_pool_param.num = num;
+	dma_pool_param.uarea_size = size;
+	pool = odp_dma_pool_create(NULL, &dma_pool_param);
+
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+
+	for (i = 0; i < num; i++) {
+		compl_evs[i] = odp_dma_compl_alloc(pool);
+
+		if (compl_evs[i] == ODP_DMA_COMPL_INVALID)
+			break;
+
+		addr = odp_dma_compl_user_area(compl_evs[i]);
+
+		CU_ASSERT_FATAL(addr != NULL);
+		CU_ASSERT(prev != addr);
+
+		prev = addr;
+		memset(addr, 0, size);
+	}
+
+	CU_ASSERT(i == num);
+
+	for (uint32_t j = 0; j < i; j++)
+		odp_dma_compl_free(compl_evs[j]);
+
+	CU_ASSERT(odp_pool_destroy(pool) == 0);
 }
 
 static void init_source(uint8_t *src, uint32_t len)
@@ -1054,6 +1095,18 @@ static int check_event(void)
 	return ODP_TEST_INACTIVE;
 }
 
+static int check_event_user_area(void)
+{
+	if (global.disabled)
+		return ODP_TEST_INACTIVE;
+
+	if ((global.dma_capa.compl_mode_mask & ODP_DMA_COMPL_EVENT) &&
+	    global.dma_capa.pool.max_uarea_size > 0)
+		return ODP_TEST_ACTIVE;
+
+	return ODP_TEST_INACTIVE;
+}
+
 static int check_scheduled(void)
 {
 	if (global.disabled)
@@ -1448,6 +1501,7 @@ odp_testinfo_t dma_suite[] = {
 	ODP_TEST_INFO_CONDITIONAL(test_dma_compl_pool, check_event),
 	ODP_TEST_INFO_CONDITIONAL(test_dma_compl_pool_same_name, check_event),
 	ODP_TEST_INFO_CONDITIONAL(test_dma_compl_pool_max_pools, check_event),
+	ODP_TEST_INFO_CONDITIONAL(test_dma_compl_user_area, check_event_user_area),
 	ODP_TEST_INFO_CONDITIONAL(test_dma_addr_to_addr_sync, check_sync),
 	ODP_TEST_INFO_CONDITIONAL(test_dma_addr_to_addr_sync_mtrs, check_sync),
 	ODP_TEST_INFO_CONDITIONAL(test_dma_addr_to_addr_sync_mseg, check_sync),
