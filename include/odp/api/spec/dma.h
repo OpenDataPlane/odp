@@ -285,6 +285,19 @@ odp_event_t odp_dma_compl_to_event(odp_dma_compl_t dma_compl);
 uint64_t odp_dma_compl_to_u64(odp_dma_compl_t dma_compl);
 
 /**
+ * DMA completion event user area
+ *
+ * Returns pointer to the user area associated with the completion event. Size of the area is fixed
+ * and defined in completion event pool parameters.
+ *
+ * @param dma_compl    DMA completion event handle
+ *
+ * @return Pointer to the user area of the completion event
+ * @retval NULL  The completion event does not have user area
+ */
+void *odp_dma_compl_user_area(odp_dma_compl_t dma_compl);
+
+/**
  * Allocate DMA completion event
  *
  * Allocates a DMA completion event from a pool. The pool must have been created with
