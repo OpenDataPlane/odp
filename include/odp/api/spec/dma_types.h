@@ -77,6 +77,9 @@ typedef struct odp_dma_pool_capability_t {
 	/** Maximum number of DMA completion events in a pool */
 	uint32_t max_num;
 
+	/** Maximum user area size in bytes */
+	uint32_t max_uarea_size;
+
 	/** Minimum size of thread local cache */
 	uint32_t min_cache_size;
 
@@ -93,6 +96,13 @@ typedef struct odp_dma_pool_param_t {
 	 *
 	 *  Maximum value is defined by 'max_num' pool capability */
 	uint32_t num;
+
+	/** User area size in bytes
+	 *
+	 *  Maximum value is defined by 'max_uarea_size' pool capability. Specify as 0 if no user
+	 *  area is needed. The default value is 0.
+	 */
+	uint32_t uarea_size;
 
 	/** Maximum number of events cached locally per thread
 	 *
