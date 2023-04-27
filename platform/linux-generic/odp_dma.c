@@ -101,6 +101,7 @@ int odp_dma_capability(odp_dma_capability_t *capa)
 
 	capa->pool.max_pools      = _odp_dma_glb->pool_capa.buf.max_pools;
 	capa->pool.max_num        = _odp_dma_glb->pool_capa.buf.max_num;
+	capa->pool.max_uarea_size = _odp_dma_glb->pool_capa.buf.max_uarea_size;
 	capa->pool.min_cache_size = _odp_dma_glb->pool_capa.buf.min_cache_size;
 	capa->pool.max_cache_size = _odp_dma_glb->pool_capa.buf.max_cache_size;
 
@@ -735,10 +736,16 @@ odp_pool_t odp_dma_pool_create(const char *name, const odp_dma_pool_param_t *dma
 	odp_pool_t pool;
 	odp_pool_param_t pool_param;
 	uint32_t num = dma_pool_param->num;
+	uint32_t uarea_size = dma_pool_param->uarea_size;
 	uint32_t cache_size = dma_pool_param->cache_size;
 
 	if (num > _odp_dma_glb->pool_capa.buf.max_num) {
 		_ODP_ERR("Too many DMA completion events: %u\n", num);
+		return ODP_POOL_INVALID;
+	}
+
+	if (uarea_size > _odp_dma_glb->pool_capa.buf.max_uarea_size) {
+		_ODP_ERR("Bad uarea size: %u\n", uarea_size);
 		return ODP_POOL_INVALID;
 	}
 
@@ -751,6 +758,7 @@ odp_pool_t odp_dma_pool_create(const char *name, const odp_dma_pool_param_t *dma
 	odp_pool_param_init(&pool_param);
 	pool_param.type           = ODP_POOL_BUFFER;
 	pool_param.buf.num        = num;
+	pool_param.buf.uarea_size = uarea_size;
 	pool_param.buf.cache_size = cache_size;
 	pool_param.buf.size       = sizeof(odp_dma_result_t);
 
@@ -833,6 +841,11 @@ uint64_t odp_dma_to_u64(odp_dma_t dma)
 uint64_t odp_dma_compl_to_u64(odp_dma_compl_t dma_compl)
 {
 	return (uint64_t)(uintptr_t)dma_compl;
+}
+
+void *odp_dma_compl_user_area(odp_dma_compl_t dma_compl)
+{
+	return odp_buffer_user_area((odp_buffer_t)(uintptr_t)dma_compl);
 }
 
 void odp_dma_print(odp_dma_t dma)
