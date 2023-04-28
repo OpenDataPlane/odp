@@ -1,5 +1,5 @@
 /* Copyright (c) 2018, Linaro Limited
- * Copyright (c) 2022, Nokia
+ * Copyright (c) 2022-2023, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -8,11 +8,17 @@
 #ifndef ODP_PLAT_EVENT_INLINES_H_
 #define ODP_PLAT_EVENT_INLINES_H_
 
+#include <odp/api/buffer_types.h>
+#include <odp/api/dma.h>
 #include <odp/api/event_types.h>
 #include <odp/api/packet_types.h>
+#include <odp/api/timer_types.h>
 
+#include <odp/api/plat/buffer_inline_types.h>
 #include <odp/api/plat/event_inline_types.h>
+#include <odp/api/plat/event_vector_inline_types.h>
 #include <odp/api/plat/packet_inline_types.h>
+#include <odp/api/plat/timer_inline_types.h>
 
 /** @cond _ODP_HIDE_FROM_DOXYGEN_ */
 
@@ -21,6 +27,7 @@
 	#define _ODP_INLINE static inline
 	#define odp_event_type __odp_event_type
 	#define odp_event_type_multi __odp_event_type_multi
+	#define odp_event_user_area __odp_event_user_area
 	#define odp_event_subtype __odp_event_subtype
 	#define odp_event_types __odp_event_types
 	#define odp_event_flow_id __odp_event_flow_id
@@ -57,6 +64,26 @@ _ODP_INLINE int odp_event_type_multi(const odp_event_t event[], int num,
 	*type_out = type;
 
 	return i;
+}
+
+_ODP_INLINE void *odp_event_user_area(odp_event_t event)
+{
+	const odp_event_type_t type = __odp_event_type_get(event);
+
+	switch (type) {
+	case ODP_EVENT_BUFFER:
+		return _odp_buffer_get((odp_buffer_t)event, void *, uarea_addr);
+	case ODP_EVENT_PACKET:
+		return _odp_pkt_get((odp_packet_t)event, void *, user_area);
+	case ODP_EVENT_PACKET_VECTOR:
+		return _odp_event_vect_get((odp_packet_vector_t)event, void *, uarea_addr);
+	case ODP_EVENT_TIMEOUT:
+		return _odp_timeout_hdr_field((odp_timeout_t)event, void *, uarea_addr);
+	case ODP_EVENT_DMA_COMPL:
+		return odp_dma_compl_user_area((odp_dma_compl_t)event);
+	default:
+		return NULL;
+	}
 }
 
 _ODP_INLINE odp_event_subtype_t odp_event_subtype(odp_event_t event)
