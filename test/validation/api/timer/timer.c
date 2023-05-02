@@ -1146,6 +1146,86 @@ static void timer_pool_current_tick(void)
 	}
 }
 
+static void timer_pool_sample_ticks_run(odp_timer_clk_src_t clk_2)
+{
+	odp_timer_capability_t capa;
+	odp_timer_pool_param_t tp_param;
+	odp_timer_pool_t tp[2];
+	uint64_t t1[2], t2[2], ticks[2], min[2], max[2];
+	uint64_t clk_count[2] = {0};
+	odp_timer_clk_src_t clk_1 = ODP_CLOCK_DEFAULT;
+	uint64_t nsec = 100 * ODP_TIME_MSEC_IN_NS;
+
+	/* Highest resolution */
+	odp_timer_pool_param_init(&tp_param);
+	tp_param.num_timers = 100;
+
+	/* First timer pool: default clock source */
+	memset(&capa, 0, sizeof(capa));
+	CU_ASSERT_FATAL(odp_timer_capability(clk_1, &capa) == 0);
+	tp_param.clk_src    = clk_1;
+	tp_param.res_hz     = capa.max_res.res_hz;
+	tp_param.min_tmo    = capa.max_res.min_tmo;
+	tp_param.max_tmo    = capa.max_res.max_tmo;
+
+	tp[0] = odp_timer_pool_create("timer_pool_0", &tp_param);
+	CU_ASSERT_FATAL(tp[0] != ODP_TIMER_POOL_INVALID);
+
+	/* Second timer pool: another clock source */
+	memset(&capa, 0, sizeof(capa));
+	CU_ASSERT_FATAL(odp_timer_capability(clk_2, &capa) == 0);
+	tp_param.clk_src    = clk_2;
+	tp_param.res_hz     = capa.max_res.res_hz;
+	tp_param.min_tmo    = capa.max_res.min_tmo;
+	tp_param.max_tmo    = capa.max_res.max_tmo;
+
+	tp[1] = odp_timer_pool_create("timer_pool_1", &tp_param);
+	CU_ASSERT_FATAL(tp[1] != ODP_TIMER_POOL_INVALID);
+
+	odp_timer_pool_start();
+
+	/* Allow +-10% error margin */
+	min[0] = odp_timer_ns_to_tick(tp[0], 0.9 * nsec);
+	max[0] = odp_timer_ns_to_tick(tp[0], 1.1 * nsec);
+	min[1] = odp_timer_ns_to_tick(tp[1], 0.9 * nsec);
+	max[1] = odp_timer_ns_to_tick(tp[1], 1.1 * nsec);
+
+	CU_ASSERT_FATAL(odp_timer_sample_ticks(tp, t1, NULL, 2) == 0);
+
+	odp_time_wait_ns(nsec);
+
+	CU_ASSERT_FATAL(odp_timer_sample_ticks(tp, t2, clk_count, 2) == 0);
+
+	ticks[0] = t2[0] - t1[0];
+	ticks[1] = t2[1] - t1[1];
+
+	CU_ASSERT(t2[0] >= t1[0]);
+	CU_ASSERT(t2[1] >= t1[1]);
+	CU_ASSERT(ticks[0] >= min[0]);
+	CU_ASSERT(ticks[1] >= min[1]);
+	CU_ASSERT(ticks[0] <= max[0]);
+	CU_ASSERT(ticks[1] <= max[1]);
+
+	printf("\nClock source: %i, %i\n", clk_1, clk_2);
+	printf("  Time nsec:      %" PRIu64 "\n", nsec);
+	printf("  Measured ticks: %" PRIu64 ", %" PRIu64 "\n", ticks[0], ticks[1]);
+	printf("  Expected ticks: %" PRIu64 ", %" PRIu64 "\n",
+	       odp_timer_ns_to_tick(tp[0], nsec), odp_timer_ns_to_tick(tp[1], nsec));
+	printf("  T2 tick:        %" PRIu64 ", %" PRIu64 "\n", t2[0], t2[1]);
+	printf("  Clk count:      %" PRIu64 ", %" PRIu64 "\n", clk_count[0], clk_count[1]);
+
+	odp_timer_pool_destroy(tp[0]);
+	odp_timer_pool_destroy(tp[1]);
+}
+
+static void timer_pool_sample_ticks(void)
+{
+	for (int i = 0; i < ODP_CLOCK_NUM_SRC; i++) {
+		if (global_mem->clk_supported[i])
+			timer_pool_sample_ticks_run(ODP_CLOCK_SRC_0 + i);
+	}
+}
+
 static void timer_pool_tick_info_run(odp_timer_clk_src_t clk_src)
 {
 	odp_timer_capability_t capa;
@@ -2902,6 +2982,7 @@ odp_testinfo_t timer_suite[] = {
 	ODP_TEST_INFO(timer_pool_create_max),
 	ODP_TEST_INFO(timer_pool_max_res),
 	ODP_TEST_INFO(timer_pool_current_tick),
+	ODP_TEST_INFO(timer_pool_sample_ticks),
 	ODP_TEST_INFO(timer_pool_tick_info),
 	ODP_TEST_INFO_CONDITIONAL(timer_plain_rel_wait, check_plain_queue_support),
 	ODP_TEST_INFO_CONDITIONAL(timer_plain_abs_wait, check_plain_queue_support),
