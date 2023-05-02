@@ -1084,6 +1084,68 @@ static void timer_sched_abs_wait_3sec(void)
 	timer_single_shot(ODP_QUEUE_TYPE_SCHED, ABSOLUTE, START, TIMEOUT, 30, 110 * MSEC);
 }
 
+static void timer_pool_current_tick_run(odp_timer_clk_src_t clk_src)
+{
+	odp_timer_capability_t capa;
+	odp_timer_pool_param_t tp_param;
+	odp_timer_pool_t tp;
+	uint64_t t1, t2, ticks, min, max;
+	uint64_t nsec = 100 * ODP_TIME_MSEC_IN_NS;
+
+	memset(&capa, 0, sizeof(capa));
+	CU_ASSERT_FATAL(odp_timer_capability(clk_src, &capa) == 0);
+
+	/* Highest resolution */
+	odp_timer_pool_param_init(&tp_param);
+	tp_param.res_hz     = capa.max_res.res_hz;
+	tp_param.min_tmo    = capa.max_res.min_tmo;
+	tp_param.max_tmo    = capa.max_res.max_tmo;
+	tp_param.num_timers = 100;
+	tp_param.clk_src    = clk_src;
+
+	tp = odp_timer_pool_create("cur_tick", &tp_param);
+	CU_ASSERT_FATAL(tp != ODP_TIMER_POOL_INVALID);
+
+	odp_timer_pool_start();
+
+	/* Allow +-10% error margin */
+	min = odp_timer_ns_to_tick(tp, 0.9 * nsec);
+	max = odp_timer_ns_to_tick(tp, 1.1 * nsec);
+
+	t1 = odp_timer_current_tick(tp);
+
+	odp_time_wait_ns(nsec);
+
+	t2 = odp_timer_current_tick(tp);
+
+	ticks = t2 - t1;
+
+	CU_ASSERT(t2 >= t1);
+	CU_ASSERT(ticks >= min);
+	CU_ASSERT(ticks <= max);
+
+	printf("\nClock source %i\n", clk_src);
+	printf("  Time nsec:      %" PRIu64 "\n", nsec);
+	printf("  Measured ticks: %" PRIu64 "\n", ticks);
+	printf("  Expected ticks: %" PRIu64 "\n", odp_timer_ns_to_tick(tp, nsec));
+
+	odp_timer_pool_destroy(tp);
+}
+
+static void timer_pool_current_tick(void)
+{
+	odp_timer_clk_src_t clk_src;
+	int i;
+
+	for (i = 0; i < ODP_CLOCK_NUM_SRC; i++) {
+		clk_src = ODP_CLOCK_SRC_0 + i;
+		if (global_mem->clk_supported[i]) {
+			ODPH_DBG("\nTesting clock source: %i\n", clk_src);
+			timer_pool_current_tick_run(clk_src);
+		}
+	}
+}
+
 static void timer_pool_tick_info_run(odp_timer_clk_src_t clk_src)
 {
 	odp_timer_capability_t capa;
@@ -2839,6 +2901,7 @@ odp_testinfo_t timer_suite[] = {
 	ODP_TEST_INFO(timer_pool_create_destroy),
 	ODP_TEST_INFO(timer_pool_create_max),
 	ODP_TEST_INFO(timer_pool_max_res),
+	ODP_TEST_INFO(timer_pool_current_tick),
 	ODP_TEST_INFO(timer_pool_tick_info),
 	ODP_TEST_INFO_CONDITIONAL(timer_plain_rel_wait, check_plain_queue_support),
 	ODP_TEST_INFO_CONDITIONAL(timer_plain_abs_wait, check_plain_queue_support),
