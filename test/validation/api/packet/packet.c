@@ -3267,6 +3267,8 @@ static void packet_vector_test_user_area(void)
 	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
 
 	for (i = 0; i < num; i++) {
+		odp_event_t ev;
+
 		pktv[i] = odp_packet_vector_alloc(pool);
 
 		if (pktv[i] == ODP_PACKET_VECTOR_INVALID)
@@ -3276,6 +3278,9 @@ static void packet_vector_test_user_area(void)
 		addr = odp_packet_vector_user_area(pktv[i]);
 		CU_ASSERT_FATAL(addr != NULL);
 		CU_ASSERT(prev != addr);
+
+		ev = odp_packet_vector_to_event(pktv[i]);
+		CU_ASSERT(odp_event_user_area(ev) == addr);
 
 		prev = addr;
 		memset(addr, 0, size);
@@ -3448,6 +3453,7 @@ static void packet_test_user_area(void)
 	odp_pool_param_t param;
 	odp_packet_t pkt;
 	odp_pool_t pool;
+	odp_event_t ev;
 
 	memcpy(&param, &default_param, sizeof(odp_pool_param_t));
 
@@ -3463,6 +3469,8 @@ static void packet_test_user_area(void)
 	} else {
 		CU_ASSERT(odp_packet_user_area(pkt) == NULL);
 	}
+	ev = odp_packet_to_event(pkt);
+	CU_ASSERT(odp_event_user_area(ev) == odp_packet_user_area(pkt));
 
 	odp_packet_free(pkt);
 	CU_ASSERT(odp_pool_destroy(pool) == 0);
@@ -3476,6 +3484,8 @@ static void packet_test_user_area(void)
 	pkt = odp_packet_alloc(pool, param.pkt.len);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	CU_ASSERT_FATAL(odp_packet_user_area(pkt) != NULL);
+	ev = odp_packet_to_event(pkt);
+	CU_ASSERT(odp_event_user_area(ev) == odp_packet_user_area(pkt));
 	CU_ASSERT(odp_packet_user_area_size(pkt) >= 1);
 	*(char *)odp_packet_user_area(pkt) = 0;
 	CU_ASSERT_FATAL(odp_packet_is_valid(pkt) == 1);
@@ -3488,6 +3498,8 @@ static void packet_test_user_area(void)
 	pkt = odp_packet_alloc(pool, param.pkt.len);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	CU_ASSERT_FATAL(odp_packet_user_area(pkt) != NULL);
+	ev = odp_packet_to_event(pkt);
+	CU_ASSERT(odp_event_user_area(ev) == odp_packet_user_area(pkt));
 	CU_ASSERT(odp_packet_user_area_size(pkt) == param.pkt.uarea_size);
 	memset(odp_packet_user_area(pkt), 0, param.pkt.uarea_size);
 	CU_ASSERT_FATAL(odp_packet_is_valid(pkt) == 1);

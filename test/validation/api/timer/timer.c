@@ -517,6 +517,8 @@ static void timer_test_timeout_user_area(void)
 	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
 
 	for (i = 0; i < num; i++) {
+		odp_event_t ev;
+
 		tmo[i] = odp_timeout_alloc(pool);
 
 		if (tmo[i] == ODP_TIMEOUT_INVALID)
@@ -527,6 +529,9 @@ static void timer_test_timeout_user_area(void)
 		addr = odp_timeout_user_area(tmo[i]);
 		CU_ASSERT_FATAL(addr != NULL);
 		CU_ASSERT(prev != addr);
+
+		ev = odp_timeout_to_event(tmo[i]);
+		CU_ASSERT(odp_event_user_area(ev) == addr);
 
 		prev = addr;
 		memset(addr, 0, size);
