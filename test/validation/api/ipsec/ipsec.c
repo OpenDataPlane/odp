@@ -458,6 +458,9 @@ static void ipsec_status_event_handle(odp_event_t ev_status,
 	CU_ASSERT_EQUAL(1, odp_event_is_valid(ev_status));
 	CU_ASSERT_EQUAL_FATAL(ODP_EVENT_IPSEC_STATUS, odp_event_type(ev_status));
 
+	/* No user area for IPsec status events */
+	CU_ASSERT(odp_event_user_area(ev_status) == NULL);
+
 	CU_ASSERT_EQUAL(0, odp_ipsec_status(&status, ev_status));
 	CU_ASSERT_EQUAL(ODP_IPSEC_STATUS_WARN, status.id);
 	CU_ASSERT_EQUAL(sa, status.sa);

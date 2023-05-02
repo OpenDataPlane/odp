@@ -536,6 +536,8 @@ static void buffer_test_user_area(void)
 	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
 
 	for (i = 0; i < num; i++) {
+		odp_event_t ev;
+
 		buffer[i] = odp_buffer_alloc(pool);
 
 		if (buffer[i] == ODP_BUFFER_INVALID)
@@ -545,6 +547,9 @@ static void buffer_test_user_area(void)
 		addr = odp_buffer_user_area(buffer[i]);
 		CU_ASSERT_FATAL(addr != NULL);
 		CU_ASSERT(prev != addr);
+
+		ev = odp_buffer_to_event(buffer[i]);
+		CU_ASSERT(odp_event_user_area(ev) == addr);
 
 		prev = addr;
 		memset(addr, 0, size);
