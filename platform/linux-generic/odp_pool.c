@@ -176,6 +176,16 @@ static inline int cache_available(pool_t *pool, odp_pool_stats_t *stats)
 	return 0;
 }
 
+static inline uint64_t cache_total_available(pool_t *pool)
+{
+	uint64_t cached = 0;
+
+	for (int i = 0; i < ODP_THREAD_COUNT_MAX; i++)
+		cached += odp_atomic_load_u32(&pool->local_cache[i].cache_num);
+
+	return cached;
+}
+
 static int read_config_file(pool_global_t *pool_glb)
 {
 	uint32_t local_cache_size, burst_size, align;
@@ -1695,6 +1705,58 @@ int odp_pool_stats(odp_pool_t pool_hdl, odp_pool_stats_t *stats)
 		stats->cache_alloc_ops = odp_atomic_load_u64(&pool->stats.cache_alloc_ops);
 
 	if (pool->params.stats.bit.cache_free_ops)
+		stats->cache_free_ops = odp_atomic_load_u64(&pool->stats.cache_free_ops);
+
+	return 0;
+}
+
+int odp_pool_stats_selected(odp_pool_t pool_hdl, odp_pool_stats_selected_t *stats,
+			    const odp_pool_stats_opt_t *opt)
+{
+	pool_t *pool;
+
+	if (odp_unlikely(pool_hdl == ODP_POOL_INVALID)) {
+		_ODP_ERR("Invalid pool handle\n");
+		return -1;
+	}
+	if (odp_unlikely(stats == NULL)) {
+		_ODP_ERR("Output buffer NULL\n");
+		return -1;
+	}
+	if (odp_unlikely(opt == NULL)) {
+		_ODP_ERR("Pool counters NULL\n");
+		return -1;
+	}
+
+	pool = _odp_pool_entry(pool_hdl);
+
+	if (odp_unlikely(opt->all & ~pool->params.stats.all)) {
+		_ODP_ERR("Trying to read disabled counter\n");
+		return -1;
+	}
+
+	if (opt->bit.available)
+		stats->available = ring_ptr_len(&pool->ring->hdr);
+
+	if (opt->bit.alloc_ops || opt->bit.total_ops)
+		stats->alloc_ops = odp_atomic_load_u64(&pool->stats.alloc_ops);
+
+	if (opt->bit.alloc_fails)
+		stats->alloc_fails = odp_atomic_load_u64(&pool->stats.alloc_fails);
+
+	if (opt->bit.free_ops || opt->bit.total_ops)
+		stats->free_ops = odp_atomic_load_u64(&pool->stats.free_ops);
+
+	if (opt->bit.total_ops)
+		stats->total_ops = stats->alloc_ops + stats->free_ops;
+
+	if (opt->bit.cache_available)
+		stats->cache_available = cache_total_available(pool);
+
+	if (opt->bit.cache_alloc_ops)
+		stats->cache_alloc_ops = odp_atomic_load_u64(&pool->stats.cache_alloc_ops);
+
+	if (opt->bit.cache_free_ops)
 		stats->cache_free_ops = odp_atomic_load_u64(&pool->stats.cache_free_ops);
 
 	return 0;
