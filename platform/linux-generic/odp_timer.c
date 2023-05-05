@@ -1755,6 +1755,11 @@ int odp_timeout_fresh(odp_timeout_t tmo)
 {
 	const odp_timeout_hdr_t *hdr = timeout_hdr(tmo);
 	odp_timer_t hdl = hdr->timer;
+
+	/* Timeout not connected to a timer */
+	if (odp_unlikely(hdl == ODP_TIMER_INVALID))
+		return 0;
+
 	timer_pool_t *tp = handle_to_tp(hdl);
 	uint32_t idx = handle_to_idx(hdl, tp);
 	tick_buf_t *tb = &tp->tick_buf[idx];
@@ -1767,6 +1772,7 @@ int odp_timeout_fresh(odp_timeout_t tmo)
 
 odp_timeout_t odp_timeout_alloc(odp_pool_t pool_hdl)
 {
+	odp_timeout_hdr_t *hdr;
 	odp_event_t event;
 	pool_t *pool;
 
@@ -1779,6 +1785,9 @@ odp_timeout_t odp_timeout_alloc(odp_pool_t pool_hdl)
 	event = _odp_event_alloc(pool);
 	if (odp_unlikely(event == ODP_EVENT_INVALID))
 		return ODP_TIMEOUT_INVALID;
+
+	hdr = timeout_hdr_from_event(event);
+	hdr->timer = ODP_TIMER_INVALID;
 
 	return odp_timeout_from_event(event);
 }
