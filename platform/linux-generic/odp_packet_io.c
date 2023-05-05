@@ -652,6 +652,13 @@ int odp_pktio_start(odp_pktio_t hdl)
 		_ODP_ERR("Already started\n");
 		return -1;
 	}
+
+	if (entry->state == PKTIO_STATE_STOP_PENDING) {
+		unlock_entry(entry);
+		_ODP_ERR("Scheduled pktio stop pending\n");
+		return -1;
+	}
+
 	entry->parse_layer = pktio_cls_enabled(entry) ?
 				       ODP_PROTO_LAYER_ALL :
 				       entry->config.parser.layer;
