@@ -395,7 +395,10 @@ void ipsec_sa_param_fill(odp_ipsec_sa_param_t *param,
 	param->dir = dir;
 	if (dir == ODP_IPSEC_DIR_INBOUND) {
 		param->inbound.lookup_mode = ODP_IPSEC_LOOKUP_SPI;
-		param->inbound.antireplay_ws = capa.max_antireplay_ws;
+		if (auth_alg == ODP_AUTH_ALG_NULL)
+			param->inbound.antireplay_ws = 0;
+		else
+			param->inbound.antireplay_ws = capa.max_antireplay_ws;
 	}
 	param->proto = proto;
 
