@@ -1,5 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
- * Copyright (c) 2021-2022, Nokia
+ * Copyright (c) 2021-2023, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -2054,19 +2054,21 @@ void odp_packet_aging_tmo_set(odp_packet_t pkt, uint64_t tmo_ns);
 uint64_t odp_packet_aging_tmo(odp_packet_t pkt);
 
 /**
- * Request Tx completion event.
+ * Request packet transmit completion
  *
- * Enables or disables TX completion event request for the packet. When
- * enabled, an event of type ODP_EVENT_PACKET_TX_COMPL will be sent to the
- * destination queue based on the TX completion mode. The event is sent only
- * after pktio interface has finished processing the packet. A previously
- * enabled request can be disabled by setting the mode to
- * ODP_PACKET_TX_COMPL_DISABLED.
+ * Enables or disables packet transmit completion request for the packet. Completion may be
+ * requested either in event (#ODP_PACKET_TX_COMPL_EVENT) or poll (#ODP_PACKET_TX_COMPL_POLL) mode.
+ * When event mode is enabled, an event of type ODP_EVENT_PACKET_TX_COMPL will be sent to the
+ * destination queue to signal transmit completion. When poll mode is enabled,
+ * odp_packet_tx_compl_done() is used with the provided completion identifier to check the
+ * completion. In both cases, transmit completion is reported only after pktio interface has
+ * finished processing the packet.
  *
- * TX completion event request is disabled by default.
+ * A previously enabled request can be disabled by setting the mode to ODP_PACKET_TX_COMPL_DISABLED.
+ * Transmit completion request is disabled by default.
  *
  * @param pkt     Packet handle
- * @param opt     Points to TX completion event generation options
+ * @param opt     Packet transmit completion request options
  *
  * @retval 0  On success
  * @retval <0 On failure
@@ -2074,12 +2076,12 @@ uint64_t odp_packet_aging_tmo(odp_packet_t pkt);
 int odp_packet_tx_compl_request(odp_packet_t pkt, const odp_packet_tx_compl_opt_t *opt);
 
 /**
- * Check if TX completion event is requested for the packet
+ * Check if packet transmit completion is requested
  *
  * @param pkt     Packet handle
  *
- * @retval non-zero  TX completion event is requested
- * @retval 0         TX completion event is not requested
+ * @retval non-zero  Transmit completion is requested
+ * @retval 0         Transmit completion is not requested
  */
 int odp_packet_has_tx_compl_request(odp_packet_t pkt);
 
@@ -2397,6 +2399,29 @@ void odp_packet_tx_compl_free(odp_packet_tx_compl_t tx_compl);
  * @see odp_packet_user_ptr_set()
  */
 void *odp_packet_tx_compl_user_ptr(odp_packet_tx_compl_t tx_compl);
+
+/**
+ * Check packet transmit completion
+ *
+ * Checks if a previously sent packet with a ODP_PACKET_TX_COMPL_POLL type transmit completion
+ * request (see odp_packet_tx_compl_opt_t) has been transmitted. The packet send function call
+ * clears completion identifier status, and 0 is returned while the transmit is in progress.
+ * When >0 is returned, transmit of the packet is complete and the completion identifier may be
+ * reused for another transmit.
+ *
+ * When transmit of a packet is complete, it indicates that transmit of other packets sent
+ * before the packet through the same queue have also completed.
+ *
+ * Returns initially 0 for all configured completion identifiers.
+ *
+ * @param pktio          Packet IO interface that was used to send the packet
+ * @param compl_id       Completion identifier that was used in the transmit completion request
+ *
+ * @retval >0  Packet transmit is complete
+ * @retval  0  Packet transmit is not complete
+ * @retval <0  Failed to read packet transmit status
+ */
+int odp_packet_tx_compl_done(odp_pktio_t pktio, uint32_t compl_id);
 
 /*
  *
