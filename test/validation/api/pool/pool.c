@@ -1264,6 +1264,9 @@ static void pool_test_pool_statistics(odp_pool_type_t pool_type)
 		CU_ASSERT(num_events == num_obj);
 		num_event[i] = num_events;
 
+		/* Allow implementation some time to update counters */
+		odp_time_wait_ns(ODP_TIME_MSEC_IN_NS);
+
 		stats.thread.first = first;
 		stats.thread.last = last;
 		CU_ASSERT_FATAL(odp_pool_stats(pool[i], &stats) == 0);
@@ -1287,6 +1290,9 @@ static void pool_test_pool_statistics(odp_pool_type_t pool_type)
 
 	for (i = 0; i < num_pool; i++) {
 		odp_event_free_multi(event[i], num_event[i]);
+
+		/* Allow implementation some time to update counters */
+		odp_time_wait_ns(ODP_TIME_MSEC_IN_NS);
 
 		stats.thread.first = odp_thread_id();
 		stats.thread.last = odp_thread_id();
