@@ -30,6 +30,7 @@ typedef struct timer_ctx_t {
 	odp_event_t event;
 	uint64_t    nsec;
 	uint64_t    count;
+	uint64_t    first_period;
 } timer_ctx_t;
 
 typedef struct {
@@ -45,6 +46,8 @@ typedef struct {
 	uint64_t nsec_after_max;
 	uint64_t nsec_after_max_idx;
 
+	int tmo_tick;
+	int64_t first_tmo_diff;
 	int64_t nsec_final;
 
 	uint64_t num_before;
@@ -671,6 +674,9 @@ static int start_timers(test_global_t *test_global)
 					ctx->nsec = start_ns + nsec;
 
 				ctx->count = 0;
+				ctx->first_period = start_tick +
+					odp_timer_ns_to_tick(timer_pool,
+							     test_global->period_dbl + 0.5);
 				start_param.freq_multiplier = test_global->opt.multiplier;
 				start_param.first_tick = 0;
 				if (nsec)
@@ -803,6 +809,14 @@ static void print_stat(test_global_t *test_global)
 	print_nsec_error("min", stat->nsec_before_min, res_ns, stat->nsec_before_min_idx);
 	print_nsec_error("max", stat->nsec_before_max, res_ns, stat->nsec_before_max_idx);
 	print_nsec_error("ave", ave_before, res_ns, UINT64_MAX);
+
+	if (test_global->opt.mode == MODE_PERIODIC && !test_global->opt.offset_ns) {
+		printf("  first timeout difference to one period (nsec):\n");
+		printf("              %12" PRIi64 "  /  %.3fx resolution, based on %s\n",
+		       stat->first_tmo_diff, (double)stat->first_tmo_diff / res_ns,
+		       stat->tmo_tick ? "timeout tick" : "time");
+	}
+
 	printf("  final timeout error (nsec):\n");
 	printf("              %12" PRIi64 "  /  %.3fx resolution\n",
 	       stat->nsec_final, (double)stat->nsec_final / res_ns);
@@ -858,6 +872,7 @@ static void run_test(test_global_t *test_global)
 	test_log_t *log = test_global->log;
 	enum mode_e mode = test_global->opt.mode;
 	double period_dbl = test_global->period_dbl;
+	odp_timer_pool_t tp = test_global->timer_pool;
 
 	num      = 0;
 	next_tmo = 1;
@@ -873,16 +888,53 @@ static void run_test(test_global_t *test_global)
 		tmo = odp_timeout_from_event(ev);
 		ctx = odp_timeout_user_ptr(tmo);
 		tmo_ns = ctx->nsec;
+
 		if (mode == MODE_PERIODIC) {
+			if (!ctx->count && !test_global->opt.offset_ns) {
+				/*
+				 * If first_tick is zero, the API allows the implementation to
+				 * place the timer where it can, so we have to adjust our
+				 * expectation of the timeout time.
+				 */
+
+				uint64_t tmo_tick = odp_timeout_tick(tmo);
+
+				if (tmo_tick) {
+					/*
+					 * Adjust by the difference between one period after start
+					 * time and the timeout tick.
+					 */
+					stat->tmo_tick = 1;
+					stat->first_tmo_diff =
+					    (int64_t)odp_timer_tick_to_ns(tp, tmo_tick) -
+					    (int64_t)odp_timer_tick_to_ns(tp, ctx->first_period);
+					tmo_ns += stat->first_tmo_diff;
+				} else {
+					/*
+					 * Timeout tick is not provided, so the best we can do is
+					 * to just take the current time as a baseline.
+					 */
+					stat->first_tmo_diff = (int64_t)time_ns - (int64_t)tmo_ns;
+					tmo_ns = ctx->nsec = time_ns;
+				}
+
+				ctx->nsec = tmo_ns;
+			}
+
 			/* round to closest integer number */
 			tmo_ns += ctx->count * period_dbl + 0.5;
 			ctx->count++;
 		}
 
 		if (i == test_global->warmup_timers) {
+			int tmo_tick = stat->tmo_tick;
+			int64_t first_tmo_diff = stat->first_tmo_diff;
+
 			memset(stat, 0, sizeof(*stat));
 			stat->nsec_before_min = UINT64_MAX;
 			stat->nsec_after_min = UINT64_MAX;
+			stat->tmo_tick = tmo_tick;
+			stat->first_tmo_diff = first_tmo_diff;
 		}
 
 		stat->nsec_final = (int64_t)time_ns - (int64_t)tmo_ns;
@@ -930,7 +982,6 @@ static void run_test(test_global_t *test_global)
 			uint64_t nsec, tick;
 			odp_timer_set_t ret;
 			unsigned int j;
-			odp_timer_pool_t tp = test_global->timer_pool;
 			unsigned int retries = test_global->opt.early_retry;
 			uint64_t start_ns = test_global->start_ns;
 			uint64_t period_ns = test_global->opt.period_ns;
