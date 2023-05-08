@@ -2086,6 +2086,39 @@ int odp_packet_tx_compl_request(odp_packet_t pkt, const odp_packet_tx_compl_opt_
 int odp_packet_has_tx_compl_request(odp_packet_t pkt);
 
 /**
+ * Set packet free control option
+ *
+ * This option enables application to control which packets are freed/not freed back into pool
+ * after ODP implementation has finished processing those. The option affects only packets that
+ * are transmitted directly through a packet output interface (also with LSO), i.e. packets
+ * transmitted through inline IPsec or TM are not affected.
+ *
+ * When the option is set to #ODP_PACKET_FREE_CTRL_DONT_FREE, packet output interface will not free
+ * the packet after transmit and application may reuse the packet as soon as its transmit is
+ * complete (see e.g. odp_packet_tx_compl_done()).
+ *
+ * The option must not be enabled on packets that have multiple references.
+ *
+ * Check packet IO interface capability free_ctrl.dont_free (odp_pktio_capability_t::dont_free) for
+ * the option support. When an interface does not support the option, it ignores the value.
+ *
+ * The default value is #ODP_PACKET_FREE_CTRL_DISABLED.
+ *
+ * @param pkt   Packet handle
+ * @param ctrl  Packet free control option value
+ */
+void odp_packet_free_ctrl_set(odp_packet_t pkt, odp_packet_free_ctrl_t ctrl);
+
+/**
+ * Returns packet free control option value
+ *
+ * @param pkt   Packet handle
+ *
+ * @return The current value of the packet free control option
+ */
+odp_packet_free_ctrl_t odp_packet_free_ctrl(odp_packet_t pkt);
+
+/**
  * Request packet proto stats.
  *
  * The statistics enabled in the proto stats object are updated for the packet in

@@ -1042,6 +1042,16 @@ typedef struct odp_pktio_capability_t {
 
 	} tx_compl;
 
+	/** Supported packet free control options */
+	struct {
+		/**
+		 * Packet free control option #ODP_PACKET_FREE_CTRL_DONT_FREE support
+		 * with odp_packet_free_ctrl_set().
+		 */
+		uint32_t dont_free : 1;
+
+	} free_ctrl;
+
 	/** Packet input reassembly capability */
 	odp_reass_capability_t reassembly;
 
