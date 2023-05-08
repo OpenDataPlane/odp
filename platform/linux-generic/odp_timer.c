@@ -320,6 +320,22 @@ static void block_sigalarm(void)
 	sigprocmask(SIG_BLOCK, &sigset, NULL);
 }
 
+static void posix_timer_stop(timer_pool_t *tp)
+{
+	int ret;
+
+	/* Stop POSIX timer signals */
+	if (timer_delete(tp->timerid) != 0)
+		_ODP_ABORT("timer_delete() returned error: %s\n", strerror(errno));
+
+	/* Stop the thread */
+	_ODP_DBG("stop\n");
+	tp->thr_exit = 1;
+	ret = pthread_join(tp->thr_pthread, NULL);
+	if (ret != 0)
+		_ODP_ABORT("Unable to join thread, err %d\n", ret);
+}
+
 static void odp_timer_pool_del(timer_pool_t *tp)
 {
 	int highest;
@@ -327,20 +343,8 @@ static void odp_timer_pool_del(timer_pool_t *tp)
 
 	odp_spinlock_lock(&tp->lock);
 
-	if (!odp_global_rw->inline_timers) {
-		int ret;
-
-		/* Stop POSIX timer signals */
-		if (timer_delete(tp->timerid) != 0)
-			_ODP_ABORT("timer_delete() returned error %s\n", strerror(errno));
-
-		/* Stop the thread */
-		_ODP_DBG("stop\n");
-		tp->thr_exit = 1;
-		ret = pthread_join(tp->thr_pthread, NULL);
-		if (ret != 0)
-			_ODP_ABORT("unable to join thread, err %d\n", ret);
-	}
+	if (!odp_global_rw->inline_timers)
+		posix_timer_stop(tp);
 
 	if (tp->num_alloc != 0) {
 		/* It's a programming error to attempt to destroy a */
@@ -2005,16 +2009,30 @@ int _odp_timer_term_global(void)
 {
 	odp_shm_t shm;
 	int i;
+	int rc = 0;
 
 	if (timer_global == NULL)
 		return 0;
 
 	for (i = 0; i < MAX_TIMER_POOLS; i++) {
 		shm = timer_global->tp_shm[i];
+
+		if (timer_global->timer_pool_used[i]) {
+			_ODP_ERR("Not destroyed timer pool: %i\n", i);
+			rc = -1;
+
+			/* Prevent crash from timer thread */
+			if (!odp_global_rw->inline_timers) {
+				timer_pool_t *tp = timer_global->timer_pool[i];
+
+				if (tp != NULL)
+					posix_timer_stop(tp);
+			}
+		}
 		if (shm != ODP_SHM_INVALID) {
 			if (odp_shm_free(shm)) {
-				_ODP_ERR("Shm free failed for timer pool %i\n", i);
-				return -1;
+				_ODP_ERR("Shm free failed for timer pool: %i\n", i);
+				rc = -1;
 			}
 		}
 	}
@@ -2024,7 +2042,7 @@ int _odp_timer_term_global(void)
 		return -1;
 	}
 
-	return 0;
+	return rc;
 }
 
 int _odp_timer_init_local(void)
