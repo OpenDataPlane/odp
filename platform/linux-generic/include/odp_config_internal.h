@@ -189,6 +189,9 @@ extern "C" {
  */
 #define CONFIG_TIMER_128BIT_ATOMICS 1
 
+/* Better scalability for timer expires. It works with inline timer enabled. */
+#define CONFIG_TIMER_EXPIRE_ENHANCE 0
+
 #ifdef __cplusplus
 }
 #endif

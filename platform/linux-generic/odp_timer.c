@@ -28,6 +28,7 @@
 #include <odp/api/sync.h>
 #include <odp/api/time.h>
 #include <odp/api/timer.h>
+#include <odp/api/stash.h>
 
 /* Inlined API functions */
 #include <odp/api/plat/atomic_inlines.h>
@@ -61,6 +62,7 @@
 #include <sys/syscall.h>
 #include <time.h>
 #include <unistd.h>
+#include <sys/queue.h>
 
 /* Check whether 128-bit atomics should be used */
 #if defined(ODP_ATOMIC_U128) && CONFIG_TIMER_128BIT_ATOMICS
@@ -68,6 +70,8 @@
 #else
 #define USE_128BIT_ATOMICS 0
 #endif
+
+#define MAX_SLOT_NUM 1024
 
 /* One divided by one nanosecond in Hz */
 #define GIGA_HZ 1000000000
@@ -167,6 +171,21 @@ typedef struct {
 
 } _odp_timer_t;
 
+typedef struct index {
+	uint32_t index;
+
+	LIST_ENTRY(index) entry;
+} timer_index_t;
+
+typedef LIST_HEAD(index_list, index) index_list_t;
+
+typedef struct timing_wheel_t {
+	odp_spinlock_t lock_pool[MAX_SLOT_NUM];
+	index_list_t slot[MAX_SLOT_NUM];
+	odp_stash_t stash;
+	uint8_t *base;
+} timing_wheel_t;
+
 typedef struct timer_pool_s {
 	/* Put frequently accessed fields in the first cache line */
 	uint64_t nsec_per_scan;
@@ -198,6 +217,7 @@ typedef struct timer_pool_s {
 	/* Multiple locks per cache line! */
 	_odp_atomic_flag_t locks[NUM_LOCKS] ODP_ALIGNED_CACHE;
 #endif
+	timing_wheel_t timing_wheel;
 
 } timer_pool_t;
 
@@ -243,6 +263,56 @@ static timer_global_t *timer_global;
 
 /* Timer thread local data */
 static __thread timer_local_t timer_local;
+
+static void init_wheel(timer_pool_t *tp)
+{
+	for (int j = 0; j < MAX_SLOT_NUM; j++) {
+		LIST_INIT(&tp->timing_wheel.slot[j]);
+		odp_spinlock_init(&tp->timing_wheel.lock_pool[j]);
+	}
+	odp_stash_param_t param;
+	odp_stash_t stash;
+
+	odp_stash_param_init(&param);
+
+	/* Note: num_timers need to be larger than stash.max_num_obj */
+	param.num_obj  = tp->param.num_timers;
+	param.obj_size = sizeof(uint64_t);
+
+	stash = odp_stash_create("timing wheel stash", &param);
+
+	if (stash == ODP_STASH_INVALID) {
+		_ODP_ERR("Stash create failed\n");
+		return;
+	}
+
+	tp->timing_wheel.stash = stash;
+
+	/* Allocate memory pool to save timer index */
+	uint8_t *base = malloc(sizeof(timer_index_t) * tp->param.num_timers);
+
+	if (base == NULL) {
+		_ODP_ERR("Timing wheel malloc failed");
+		return;
+	}
+	tp->timing_wheel.base = base;
+
+	for (uint32_t i = 0; i < tp->param.num_timers; i++) {
+		/* Use stash to store index pointers */
+		uintptr_t slot_addr = ((uintptr_t)base + i * sizeof(timer_index_t));
+
+		if (odp_stash_put_ptr(stash, &slot_addr, 1) != 1) {
+			_ODP_ERR("Stash put failed\n");
+			return;
+		}
+	}
+}
+
+static void destroy_wheel(timer_pool_t *tp)
+{
+	odp_stash_destroy(tp->timing_wheel.stash);
+	free(tp->timing_wheel.base);
+}
 
 static inline void set_next_free(_odp_timer_t *tim, uint32_t nf)
 {
@@ -384,6 +454,9 @@ static void odp_timer_pool_del(timer_pool_t *tp)
 
 	timer_global->highest_tp_idx = highest;
 
+	if (CONFIG_TIMER_EXPIRE_ENHANCE)
+		destroy_wheel(tp);
+
 	odp_ticketlock_unlock(&timer_global->lock);
 }
 
@@ -427,10 +500,61 @@ static inline odp_timer_t timer_alloc(timer_pool_t *tp, odp_queue_t queue, const
 	return hdl;
 }
 
+static void timer_hash_element_remove(uint32_t idx, timer_pool_t *tp)
+{
+	timer_index_t *cur, *next;
+	uintptr_t slot_addr;
+	uint64_t tick = tp->tick_buf[idx].exp_tck.v;
+
+	if (tick == TMO_INACTIVE)
+		return;
+
+	int slot_index = (tick / tp->param.res_ns + 1) % MAX_SLOT_NUM;
+
+	odp_spinlock_lock(&tp->timing_wheel.lock_pool[slot_index]);
+	cur = LIST_FIRST(&tp->timing_wheel.slot[slot_index]);
+	while (cur != NULL) {
+		if (cur->index == idx) {
+			next = LIST_NEXT((cur), entry);
+			LIST_REMOVE(cur, entry);
+			slot_addr = (uintptr_t)cur;
+
+			if (odp_stash_put_ptr(tp->timing_wheel.stash, &slot_addr, 1) != 1)
+				_ODP_ERR("Timing wheel stash put failed\n");
+
+			cur = next;
+			continue;
+		}
+		cur = LIST_NEXT((cur), entry);
+	}
+	odp_spinlock_unlock(&tp->timing_wheel.lock_pool[slot_index]);
+}
+
 static bool timer_reset(uint32_t idx, uint64_t abs_tck, odp_event_t *tmo_event,
 			timer_pool_t *tp)
 {
 	bool success = true;
+
+	if (CONFIG_TIMER_EXPIRE_ENHANCE) {
+		int slot_index = (abs_tck / tp->param.res_ns + 1) % MAX_SLOT_NUM;
+		timer_index_t *cur;
+		uintptr_t slot_element;
+
+		/* Restart case: remove previous valid stash obj */
+		timer_hash_element_remove(idx, tp);
+
+		if (odp_stash_get_ptr(tp->timing_wheel.stash, (uintptr_t *)&slot_element, 1) != 1) {
+			_ODP_ERR("Timing wheel stash get failed\n");
+		} else {
+			cur = (timer_index_t *)slot_element;
+			cur->index = idx;
+
+			odp_spinlock_lock(&tp->timing_wheel.lock_pool[slot_index]);
+			LIST_INSERT_HEAD(&tp->timing_wheel.slot[slot_index], cur, entry);
+			odp_spinlock_unlock(&tp->timing_wheel.lock_pool[slot_index]);
+		}
+	}
+
 	tick_buf_t *tb = &tp->tick_buf[idx];
 
 	if (tmo_event == NULL || *tmo_event == ODP_EVENT_INVALID) {
@@ -609,6 +733,9 @@ static odp_event_t timer_cancel(timer_pool_t *tp, uint32_t idx)
 	tick_buf_t *tb = &tp->tick_buf[idx];
 	odp_event_t old_event;
 
+	if (CONFIG_TIMER_EXPIRE_ENHANCE)
+		timer_hash_element_remove(idx, tp);
+
 #if USE_128BIT_ATOMICS
 	tick_buf_t new, old;
 
@@ -756,6 +883,37 @@ static inline void timer_pool_scan(timer_pool_t *tp, uint64_t tick)
 	tick_buf_t *array = &tp->tick_buf[0];
 	uint32_t high_wm = odp_atomic_load_acq_u32(&tp->high_wm);
 	uint32_t i;
+
+	if (CONFIG_TIMER_EXPIRE_ENHANCE) {
+		timer_index_t *cur, *next;
+		uintptr_t slot_addr;
+		int slot_index = (tick / tp->param.res_ns) % MAX_SLOT_NUM;
+
+		cur = LIST_FIRST(&tp->timing_wheel.slot[slot_index]);
+		while (cur != NULL) {
+			if (cur->index >= high_wm) {
+				cur = LIST_NEXT((cur), entry);
+				continue;
+			}
+			uint64_t exp_tck = array[cur->index].exp_tck.v;
+
+			if (exp_tck <= tick) {
+				timer_expire(tp, cur->index, tick);
+				odp_spinlock_lock(&tp->timing_wheel.lock_pool[slot_index]);
+				next = LIST_NEXT((cur), entry);
+				LIST_REMOVE(cur, entry);
+				slot_addr = (uintptr_t)cur;
+
+				if (odp_stash_put_ptr(tp->timing_wheel.stash, &slot_addr, 1) != 1)
+					_ODP_ERR("Stash put failed\n");
+				cur = next;
+				odp_spinlock_unlock(&tp->timing_wheel.lock_pool[slot_index]);
+				continue;
+			}
+			cur = LIST_NEXT((cur), entry);
+		}
+		return;
+	}
 
 	_ODP_ASSERT(high_wm <= tp->param.num_timers);
 	for (i = 0; i < high_wm; i++) {
@@ -1270,6 +1428,9 @@ static odp_timer_pool_t timer_pool_new(const char *name, const odp_timer_pool_pa
 	/* Update the highest index for inline timer scan */
 	if (tp_idx > timer_global->highest_tp_idx)
 		timer_global->highest_tp_idx = tp_idx;
+
+	if (CONFIG_TIMER_EXPIRE_ENHANCE)
+		init_wheel(tp);
 
 	odp_ticketlock_unlock(&timer_global->lock);
 
