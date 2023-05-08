@@ -1,5 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
- * Copyright (c) 2019-2021, Nokia
+ * Copyright (c) 2019-2023, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -341,6 +341,28 @@ int odp_term_local(void);
  * @see odp_init_global(), odp_term_local()
  */
 int odp_term_global(odp_instance_t instance);
+
+/**
+ * Abnormally terminate ODP application after a non-recoverable error
+ *
+ * This function may be used to abnormally terminate the calling thread and finally the entire
+ * application. Application is not expected to carry out normal local/global clean-up after a
+ * thread has panicked.
+ *
+ * Depending on the implementation, this function may dump stack and other memory areas, clean up
+ * and stop HW operations and/or perform other actions helpful in postmortem analysis. Termination
+ * is done using ODP abort function and is the last function to be called in the context after
+ * implementation specific actions and clean-ups.
+ *
+ * The issuing thread does not progress past this function, other threads may be affected during
+ * the actions before the eventual termination, complexity of the processing environment likely
+ * having an effect on the termination latency.
+ *
+ * @param fmt Printf-style message to be printed to the ODP log
+ *
+ * @see odp_override_abort()
+ */
+void odp_panic(const char *fmt, ...) ODP_NORETURN;
 
 /**
  * Set thread specific log function
