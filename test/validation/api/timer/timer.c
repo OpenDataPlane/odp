@@ -2385,6 +2385,23 @@ static void timer_test_sched_all(void)
 	timer_test_all(ODP_QUEUE_TYPE_SCHED);
 }
 
+static int fract_cmp(const odp_fract_u64_t *a, const odp_fract_u64_t *b)
+{
+	if (a->numer && !a->denom)
+		return 1;
+
+	if (b->numer && !b->denom)
+		return 1;
+
+	uint64_t a_den = a->denom ? a->denom : 1, a_num = a->integer * a_den + a->numer;
+	uint64_t b_den = b->denom ? b->denom : 1, b_num = b->integer * b_den + b->numer;
+
+	a_num *= b_den;
+	b_num *= a_den;
+
+	return a_num != b_num;
+}
+
 static void timer_test_periodic_capa(void)
 {
 	odp_timer_capability_t timer_capa;
@@ -2425,9 +2442,7 @@ static void timer_test_periodic_capa(void)
 	capa.res_ns         = 0;
 
 	CU_ASSERT(odp_timer_periodic_capability(ODP_CLOCK_DEFAULT, &capa) == 1);
-	CU_ASSERT(capa.base_freq_hz.integer == min_fract.integer);
-	CU_ASSERT(capa.base_freq_hz.numer   == min_fract.numer);
-	CU_ASSERT(capa.base_freq_hz.denom   == min_fract.denom);
+	CU_ASSERT(!fract_cmp(&capa.base_freq_hz, &min_fract));
 	CU_ASSERT(capa.max_multiplier >= 1);
 	CU_ASSERT(capa.res_ns > 0);
 
@@ -2437,9 +2452,7 @@ static void timer_test_periodic_capa(void)
 	capa.res_ns         = 0;
 
 	CU_ASSERT(odp_timer_periodic_capability(ODP_CLOCK_DEFAULT, &capa) == 1);
-	CU_ASSERT(capa.base_freq_hz.integer == max_fract.integer);
-	CU_ASSERT(capa.base_freq_hz.numer   == max_fract.numer);
-	CU_ASSERT(capa.base_freq_hz.denom   == max_fract.denom);
+	CU_ASSERT(!fract_cmp(&capa.base_freq_hz, &max_fract));
 	CU_ASSERT(capa.max_multiplier >= 1);
 	CU_ASSERT(capa.res_ns > 0);
 
@@ -2489,13 +2502,9 @@ static void timer_test_periodic_capa(void)
 			ret = odp_timer_periodic_capability(ODP_CLOCK_DEFAULT, &capa);
 
 			if (ret == 1) {
-				CU_ASSERT(capa.base_freq_hz.integer == base_freq.integer);
-				CU_ASSERT(capa.base_freq_hz.numer   == base_freq.numer);
-				CU_ASSERT(capa.base_freq_hz.denom   == base_freq.denom);
+				CU_ASSERT(!fract_cmp(&capa.base_freq_hz, &base_freq));
 			} else if (ret == 0) {
-				CU_ASSERT(capa.base_freq_hz.integer != base_freq.integer ||
-					  capa.base_freq_hz.numer   != base_freq.numer ||
-					  capa.base_freq_hz.denom   != base_freq.denom)
+				CU_ASSERT(fract_cmp(&capa.base_freq_hz, &base_freq));
 
 				if (capa.base_freq_hz.numer)
 					CU_ASSERT_FATAL(capa.base_freq_hz.denom);
@@ -2584,9 +2593,7 @@ static void timer_test_periodic(odp_queue_type_t queue_type, int use_first)
 		/* Allow 10% difference in outputted base frequency */
 		CU_ASSERT((freq_out > (0.9 * freq)) && (freq_out < (1.1 * freq)));
 	} else {
-		CU_ASSERT(base_freq.integer == periodic_capa.base_freq_hz.integer);
-		CU_ASSERT(base_freq.numer   == periodic_capa.base_freq_hz.numer);
-		CU_ASSERT(base_freq.denom   == periodic_capa.base_freq_hz.denom);
+		CU_ASSERT(!fract_cmp(&base_freq, &periodic_capa.base_freq_hz));
 	}
 
 	CU_ASSERT(periodic_capa.res_ns > 0);
