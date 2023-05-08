@@ -452,9 +452,13 @@ uint64_t odp_pktin_wait_time(uint64_t nsec);
  * the operation is optimized for single thread operation per queue and the same
  * queue must not be accessed simultaneously from multiple threads.
  *
- * A successful call returns the actual number of packets sent. If return value
- * is less than 'num', the remaining packets at the end of packets[] array
- * are not consumed, and the caller has to take care of them.
+ * A successful call returns the actual number of packets accepted for transmit. If return value
+ * is less than 'num', the remaining packets at the end of packets[] array are not consumed,
+ * and the caller has to take care of them. Transmitted packets are freed back into their
+ * originating pools by default. If interface supports #ODP_PACKET_FREE_CTRL_DONT_FREE
+ * option and it is set (odp_packet_free_ctrl_set()) in a packet, the packet is not freed
+ * but application owns it again after its transmit is complete. Application may use
+ * odp_packet_tx_compl_request() to request an indication when transmit of a packet is complete.
  *
  * Entire packet data is sent out (odp_packet_len() bytes of data, starting from
  * odp_packet_data()). All other packet metadata is ignored unless otherwise
@@ -465,7 +469,7 @@ uint64_t odp_pktin_wait_time(uint64_t nsec);
  * @param packets[]    Array of packets to send
  * @param num          Number of packets to send
  *
- * @return Number of packets sent
+ * @return Number of packets accepted for transmit
  * @retval <0 on failure
  */
 int odp_pktout_send(odp_pktout_queue_t queue, const odp_packet_t packets[],

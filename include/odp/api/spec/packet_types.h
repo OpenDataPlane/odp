@@ -487,6 +487,18 @@ typedef struct odp_packet_tx_compl_opt_t {
 } odp_packet_tx_compl_opt_t;
 
 /**
+ * Packet free control option
+ */
+typedef enum odp_packet_free_ctrl_t {
+	/** Packet free control disabled */
+	ODP_PACKET_FREE_CTRL_DISABLED = 0,
+
+	/** Don't free packet after processing it */
+	ODP_PACKET_FREE_CTRL_DONT_FREE,
+
+} odp_packet_free_ctrl_t;
+
+/**
  * Packet proto stats options
  */
 typedef struct odp_packet_proto_stats_opt_t {
