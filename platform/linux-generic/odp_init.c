@@ -15,11 +15,12 @@
 #include <odp_debug_internal.h>
 #include <odp_global_data.h>
 #include <odp_init_internal.h>
-#include <odp_schedule_if.h>
 #include <odp_libconfig_internal.h>
+#include <odp_schedule_if.h>
 
-#include <string.h>
+#include <stdarg.h>
 #include <stdio.h>
+#include <string.h>
 #include <unistd.h>
 
 enum init_stage {
@@ -678,6 +679,25 @@ int odp_init_local(odp_instance_t instance, odp_thread_type_t thr_type)
 init_fail:
 	term_local(stage);
 	return -1;
+}
+
+ODP_PRINTF_FORMAT(1, 2)
+void odp_panic(const char *fmt, ...)
+{
+	va_list args1;
+	va_list args2;
+	int len;
+
+	va_start(args1, fmt);
+	va_copy(args2, args1);
+	len = vsnprintf(NULL, 0, fmt, args1);
+
+	char buf[len + 1];
+
+	va_end(args1);
+	vsnprintf(buf, sizeof(buf), fmt, args2);
+	va_end(args2);
+	_ODP_ABORT("ODP panic, aborting: %s", buf);
 }
 
 int odp_term_local(void)
