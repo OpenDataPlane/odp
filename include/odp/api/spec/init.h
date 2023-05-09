@@ -91,11 +91,12 @@ int odp_override_log(odp_log_level_t level, const char *fmt, ...);
  * - By overriding the ODP implementation default abort function
  *   odp_override_abort().
  *
- * @warning The latter option is less portable and GNU linker dependent
- * (utilizes function attribute "weak"). If both are defined, the odp_init_t
- * function pointer has priority over the override function.
+ * The latter option is less portable and GNU linker dependent (utilizes function
+ * attribute "weak"). If both are defined, the odp_init_t function pointer has
+ * priority over the override function.
  *
- * @warning this function shall not return
+ * Note that no ODP calls should be called in the abort function and the function
+ * should not return.
  */
 void odp_override_abort(void) ODP_NORETURN;
 
