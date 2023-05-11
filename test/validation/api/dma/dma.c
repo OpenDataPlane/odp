@@ -173,7 +173,7 @@ static int dma_suite_term(void)
 		return -1;
 	}
 
-	return 0;
+	return odp_cunit_print_inactive();
 }
 
 static void test_dma_capability(void)
