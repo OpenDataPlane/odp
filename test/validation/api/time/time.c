@@ -1,5 +1,5 @@
 /* Copyright (c) 2015-2018, Linaro Limited
- * Copyright (c) 2019-2022, Nokia
+ * Copyright (c) 2019-2023, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -12,6 +12,7 @@
 #include <time.h>
 
 #include <odp_api.h>
+#include <odp/helper/odph_api.h>
 #include "odp_cunit_common.h"
 
 #define BUSY_LOOP_CNT		30000000    /* used for t > min resolution */
@@ -19,6 +20,11 @@
 #define MAX_TIME_RATE		15000000000
 #define DELAY_TOLERANCE		40000000	    /* deviation for delay */
 #define WAIT_SECONDS            3
+#define MAX_WORKERS		32
+#define TIME_SAMPLES		2
+#define TIME_TOLERANCE_NS	1000000
+#define TIME_TOLERANCE_CI_NS	40000000
+#define GLOBAL_SHM_NAME		"GlobalTimeTest"
 
 static uint64_t local_res;
 static uint64_t global_res;
@@ -27,6 +33,96 @@ typedef odp_time_t time_cb(void);
 typedef uint64_t time_res_cb(void);
 typedef odp_time_t time_from_ns_cb(uint64_t ns);
 typedef uint64_t time_nsec_cb(void);
+
+typedef struct {
+	uint32_t num_threads;
+	odp_barrier_t test_barrier;
+	odp_time_t time[MAX_WORKERS + 1][TIME_SAMPLES];
+} global_shared_mem_t;
+
+static global_shared_mem_t *global_mem;
+static odp_instance_t *instance;
+
+static int time_global_init(odp_instance_t *inst)
+{
+	odp_shm_t global_shm;
+	odp_init_t init_param;
+	odph_helper_options_t helper_options;
+	uint32_t workers_count, max_threads;
+
+	if (odph_options(&helper_options)) {
+		ODPH_ERR("odph_options() failed\n");
+		return -1;
+	}
+
+	odp_init_param_init(&init_param);
+	init_param.mem_model = helper_options.mem_model;
+
+	if (0 != odp_init_global(inst, &init_param, NULL)) {
+		ODPH_ERR("odp_init_global() failed\n");
+		return -1;
+	}
+	if (0 != odp_init_local(*inst, ODP_THREAD_CONTROL)) {
+		ODPH_ERR("odp_init_local() failed\n");
+		return -1;
+	}
+
+	global_shm = odp_shm_reserve(GLOBAL_SHM_NAME,
+				     sizeof(global_shared_mem_t),
+				     ODP_CACHE_LINE_SIZE, 0);
+	if (global_shm == ODP_SHM_INVALID) {
+		ODPH_ERR("Unable reserve memory for global_shm\n");
+		return -1;
+	}
+
+	global_mem = odp_shm_addr(global_shm);
+	memset(global_mem, 0, sizeof(global_shared_mem_t));
+
+	global_mem->num_threads = MAX_WORKERS;
+
+	workers_count = odp_cpumask_default_worker(NULL, 0);
+
+	max_threads = (workers_count >= MAX_WORKERS) ?
+			MAX_WORKERS : workers_count;
+
+	if (max_threads < global_mem->num_threads) {
+		printf("Requested num of threads is too large\n");
+		printf("reducing from %" PRIu32 " to %" PRIu32 "\n",
+		       global_mem->num_threads,
+		       max_threads);
+		global_mem->num_threads = max_threads;
+	}
+
+	printf("Num of threads used = %" PRIu32 "\n",
+	       global_mem->num_threads);
+
+	instance = inst;
+
+	return 0;
+}
+
+static int time_global_term(odp_instance_t inst)
+{
+	odp_shm_t shm;
+
+	shm = odp_shm_lookup(GLOBAL_SHM_NAME);
+	if (0 != odp_shm_free(shm)) {
+		ODPH_ERR("odp_shm_free() failed\n");
+		return -1;
+	}
+
+	if (0 != odp_term_local()) {
+		ODPH_ERR("odp_term_local() failed\n");
+		return -1;
+	}
+
+	if (0 != odp_term_global(inst)) {
+		ODPH_ERR("odp_term_global() failed\n");
+		return -1;
+	}
+
+	return 0;
+}
 
 static void time_test_constants(void)
 {
@@ -589,6 +685,91 @@ static void time_test_accuracy_nsec(void)
 	}
 }
 
+static int time_test_global_sync_thr(void *arg ODP_UNUSED)
+{
+	int tid = odp_thread_id();
+	odp_shm_t global_shm = odp_shm_lookup(GLOBAL_SHM_NAME);
+	global_shared_mem_t *global_mem = odp_shm_addr(global_shm);
+
+	if (!global_mem)
+		return 1;
+
+	odp_barrier_wait(&global_mem->test_barrier);
+	global_mem->time[tid][0] = odp_time_global();
+	odp_time_wait_ns(ODP_TIME_MSEC_IN_NS * 100);
+	odp_barrier_wait(&global_mem->test_barrier);
+	global_mem->time[tid][1] = odp_time_global();
+
+	return 0;
+}
+
+static void time_test_global_sync(void)
+{
+	odp_cpumask_t cpumask;
+	odph_thread_common_param_t thr_common;
+	odph_thread_param_t thr_param;
+	odph_thread_t thread_tbl[MAX_WORKERS];
+	const uint64_t tolerance =
+		odp_cunit_ci() ? TIME_TOLERANCE_CI_NS : TIME_TOLERANCE_NS;
+	int num = global_mem->num_threads;
+	int tid = odp_thread_id();
+
+	/* Test using num threads plus the current thread. */
+	odp_barrier_init(&global_mem->test_barrier, num + 1);
+
+	odp_cpumask_default_worker(&cpumask, num);
+
+	odph_thread_param_init(&thr_param);
+	thr_param.start = time_test_global_sync_thr;
+	thr_param.thr_type = ODP_THREAD_WORKER;
+
+	odph_thread_common_param_init(&thr_common);
+	thr_common.instance = *instance;
+
+	int thr = 0, cpu = odp_cpumask_first(&cpumask);
+
+	while (cpu >= 0) {
+		odp_cpumask_t cpumask_one;
+
+		odp_cpumask_zero(&cpumask_one);
+		odp_cpumask_set(&cpumask_one, cpu);
+		thr_common.cpumask = &cpumask_one;
+
+		CU_ASSERT_FATAL(odph_thread_create(&thread_tbl[thr++],
+						   &thr_common, &thr_param, 1) == 1);
+
+		/*
+		 * Delay for more than the tolerance, so that we notice if the
+		 * thread's view of global time is affected.
+		 */
+		odp_time_wait_ns(tolerance * 2);
+
+		cpu = odp_cpumask_next(&cpumask, cpu);
+	}
+
+	odp_barrier_wait(&global_mem->test_barrier);
+	global_mem->time[tid][0] = odp_time_global();
+	odp_time_wait_ns(ODP_TIME_MSEC_IN_NS * 100);
+	odp_barrier_wait(&global_mem->test_barrier);
+	global_mem->time[tid][1] = odp_time_global();
+	CU_ASSERT(odph_thread_join(thread_tbl, num) == num);
+
+	for (int s = 0; s < TIME_SAMPLES; s++) {
+		uint64_t min = UINT64_MAX, max = 0;
+
+		for (int i = 0; i < num + 1; i++) {
+			uint64_t t = odp_time_to_ns(global_mem->time[i][s]);
+
+			if (t < min)
+				min = t;
+			if (t > max)
+				max = t;
+		}
+
+		CU_ASSERT(max - min < tolerance);
+	}
+}
+
 odp_testinfo_t time_suite_time[] = {
 	ODP_TEST_INFO(time_test_constants),
 	ODP_TEST_INFO(time_test_local_res),
@@ -614,6 +795,7 @@ odp_testinfo_t time_suite_time[] = {
 	ODP_TEST_INFO(time_test_global_strict_diff),
 	ODP_TEST_INFO(time_test_global_strict_sum),
 	ODP_TEST_INFO(time_test_global_strict_cmp),
+	ODP_TEST_INFO(time_test_global_sync),
 	ODP_TEST_INFO_NULL
 };
 
@@ -629,6 +811,9 @@ int main(int argc, char *argv[])
 	/* parse common options: */
 	if (odp_cunit_parse_options(argc, argv))
 		return -1;
+
+	odp_cunit_register_global_init(time_global_init);
+	odp_cunit_register_global_term(time_global_term);
 
 	ret = odp_cunit_register(time_suites);
 
