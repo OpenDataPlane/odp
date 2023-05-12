@@ -1,4 +1,4 @@
-/* Copyright (c) 2021-2022, Nokia
+/* Copyright (c) 2021-2023, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -48,6 +48,10 @@ void odp_dma_param_init(odp_dma_param_t *param);
 
 /**
  * Create DMA session
+ *
+ * Create a DMA session according to the parameters. The use of session name is optional. Unique
+ * names are not required. However, odp_dma_lookup() returns only a single matching named session.
+ * Use odp_dma_param_init() to initialize parameters into their default values.
  *
  * @param name		DMA session name or NULL. Maximum string length is ODP_DMA_NAME_LEN.
  * @param param		DMA session parameters
