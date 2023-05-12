@@ -269,6 +269,54 @@ static void test_dma_debug(void)
 	CU_ASSERT(odp_dma_destroy(dma) == 0);
 }
 
+static void test_dma_same_name_null(void)
+{
+	odp_dma_param_t dma_param;
+	odp_dma_t dma_a, dma_b;
+
+	odp_dma_param_init(&dma_param);
+	dma_param.compl_mode_mask = ODP_DMA_COMPL_SYNC;
+	dma_a = odp_dma_create(NULL, &dma_param);
+
+	CU_ASSERT_FATAL(dma_a != ODP_DMA_INVALID);
+
+	dma_b = odp_dma_create(NULL, &dma_param);
+
+	CU_ASSERT_FATAL(dma_b != ODP_DMA_INVALID);
+	CU_ASSERT(odp_dma_to_u64(dma_a) != odp_dma_to_u64(dma_b));
+	CU_ASSERT(odp_dma_destroy(dma_a) == 0);
+	CU_ASSERT(odp_dma_destroy(dma_b) == 0);
+}
+
+static void test_dma_same_name_named(void)
+{
+	odp_dma_param_t dma_param;
+	const char *name = "DMA session";
+	odp_dma_t dma, dma_a, dma_b;
+
+	odp_dma_param_init(&dma_param);
+	dma_param.compl_mode_mask = ODP_DMA_COMPL_SYNC;
+	dma_a = odp_dma_create(name, &dma_param);
+
+	CU_ASSERT_FATAL(dma_a != ODP_DMA_INVALID);
+
+	dma = odp_dma_lookup(name);
+
+	CU_ASSERT(odp_dma_to_u64(dma) == odp_dma_to_u64(dma_a));
+
+	dma_b = odp_dma_create(name, &dma_param);
+
+	CU_ASSERT_FATAL(dma_b != ODP_DMA_INVALID);
+
+	dma = odp_dma_lookup(name);
+
+	CU_ASSERT(odp_dma_to_u64(dma) == odp_dma_to_u64(dma_a) ||
+		  odp_dma_to_u64(dma) == odp_dma_to_u64(dma_b));
+	CU_ASSERT(odp_dma_to_u64(dma_a) != odp_dma_to_u64(dma_b));
+	CU_ASSERT(odp_dma_destroy(dma_a) == 0);
+	CU_ASSERT(odp_dma_destroy(dma_b) == 0);
+}
+
 static void test_dma_compl_pool(void)
 {
 	odp_pool_t pool;
@@ -1043,6 +1091,17 @@ static int check_sync(void)
 	return ODP_TEST_ACTIVE;
 }
 
+static int check_session_count(void)
+{
+	if (global.disabled)
+		return ODP_TEST_INACTIVE;
+
+	if (global.dma_capa.max_sessions > 1)
+		return ODP_TEST_ACTIVE;
+
+	return ODP_TEST_INACTIVE;
+}
+
 static int check_event(void)
 {
 	if (global.disabled)
@@ -1445,6 +1504,8 @@ odp_testinfo_t dma_suite[] = {
 	ODP_TEST_INFO(test_dma_capability),
 	ODP_TEST_INFO_CONDITIONAL(test_dma_param_init, check_sync),
 	ODP_TEST_INFO_CONDITIONAL(test_dma_debug, check_sync),
+	ODP_TEST_INFO_CONDITIONAL(test_dma_same_name_null, check_session_count),
+	ODP_TEST_INFO_CONDITIONAL(test_dma_same_name_named, check_session_count),
 	ODP_TEST_INFO_CONDITIONAL(test_dma_compl_pool, check_event),
 	ODP_TEST_INFO_CONDITIONAL(test_dma_compl_pool_same_name, check_event),
 	ODP_TEST_INFO_CONDITIONAL(test_dma_compl_pool_max_pools, check_event),
