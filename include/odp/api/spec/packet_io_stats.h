@@ -101,16 +101,16 @@ typedef struct odp_pktio_stats_t {
  * level statistics odp_pktio_stats_t for counter definitions.
  */
 typedef struct odp_pktin_queue_stats_t {
-	/** @see odp_pktio_stats_t::in_octets */
+	/** See odp_pktio_stats_t::in_octets */
 	uint64_t octets;
 
-	/** @see odp_pktio_stats_t::in_packets */
+	/** See odp_pktio_stats_t::in_packets */
 	uint64_t packets;
 
-	/** @see odp_pktio_stats_t::in_discards */
+	/** See odp_pktio_stats_t::in_discards */
 	uint64_t discards;
 
-	/** @see odp_pktio_stats_t::in_errors */
+	/** See odp_pktio_stats_t::in_errors */
 	uint64_t errors;
 
 } odp_pktin_queue_stats_t;
@@ -122,16 +122,16 @@ typedef struct odp_pktin_queue_stats_t {
  * level statistics odp_pktio_stats_t for counter definitions.
  */
 typedef struct odp_pktout_queue_stats_t {
-	/** @see odp_pktio_stats_t::out_octets */
+	/** See odp_pktio_stats_t::out_octets */
 	uint64_t octets;
 
-	/** @see odp_pktio_stats_t::out_packets */
+	/** See odp_pktio_stats_t::out_packets */
 	uint64_t packets;
 
-	/** @see odp_pktio_stats_t::out_discards */
+	/** See odp_pktio_stats_t::out_discards */
 	uint64_t discards;
 
-	/** @see odp_pktio_stats_t::out_errors */
+	/** See odp_pktio_stats_t::out_errors */
 	uint64_t errors;
 
 } odp_pktout_queue_stats_t;
@@ -146,46 +146,46 @@ typedef struct odp_pktio_stats_capability_t {
 		union {
 			/** Statistics counters in a bit field structure */
 			struct {
-				/** @see odp_pktio_stats_t::in_octets */
+				/** See odp_pktio_stats_t::in_octets */
 				uint64_t in_octets          : 1;
 
-				/** @see odp_pktio_stats_t::in_packets */
+				/** See odp_pktio_stats_t::in_packets */
 				uint64_t in_packets         : 1;
 
-				/** @see odp_pktio_stats_t::in_ucast_pkts */
+				/** See odp_pktio_stats_t::in_ucast_pkts */
 				uint64_t in_ucast_pkts      : 1;
 
-				/** @see odp_pktio_stats_t::in_mcast_pkts */
+				/** See odp_pktio_stats_t::in_mcast_pkts */
 				uint64_t in_mcast_pkts      : 1;
 
-				/** @see odp_pktio_stats_t::in_bcast_pkts */
+				/** See odp_pktio_stats_t::in_bcast_pkts */
 				uint64_t in_bcast_pkts      : 1;
 
-				/** @see odp_pktio_stats_t::in_discards */
+				/** See odp_pktio_stats_t::in_discards */
 				uint64_t in_discards        : 1;
 
-				/** @see odp_pktio_stats_t::in_errors */
+				/** See odp_pktio_stats_t::in_errors */
 				uint64_t in_errors          : 1;
 
-				/** @see odp_pktio_stats_t::out_octets */
+				/** See odp_pktio_stats_t::out_octets */
 				uint64_t out_octets         : 1;
 
-				/** @see odp_pktio_stats_t::out_packets */
+				/** See odp_pktio_stats_t::out_packets */
 				uint64_t out_packets        : 1;
 
-				/** @see odp_pktio_stats_t::out_ucast_pkts */
+				/** See odp_pktio_stats_t::out_ucast_pkts */
 				uint64_t out_ucast_pkts     : 1;
 
-				/** @see odp_pktio_stats_t::out_mcast_pkts */
+				/** See odp_pktio_stats_t::out_mcast_pkts */
 				uint64_t out_mcast_pkts     : 1;
 
-				/** @see odp_pktio_stats_t::out_bcast_pkts */
+				/** See odp_pktio_stats_t::out_bcast_pkts */
 				uint64_t out_bcast_pkts     : 1;
 
-				/** @see odp_pktio_stats_t::out_discards */
+				/** See odp_pktio_stats_t::out_discards */
 				uint64_t out_discards       : 1;
 
-				/** @see odp_pktio_stats_t::out_errors */
+				/** See odp_pktio_stats_t::out_errors */
 				uint64_t out_errors         : 1;
 			} counter;
 
@@ -203,16 +203,16 @@ typedef struct odp_pktio_stats_capability_t {
 		union {
 			/** Statistics counters in a bit field structure */
 			struct {
-				/** @see odp_pktin_queue_stats_t::octets */
+				/** See odp_pktin_queue_stats_t::octets */
 				uint64_t octets             : 1;
 
-				/** @see odp_pktin_queue_stats_t::packets */
+				/** See odp_pktin_queue_stats_t::packets */
 				uint64_t packets            : 1;
 
-				/** @see odp_pktin_queue_stats_t::discards */
+				/** See odp_pktin_queue_stats_t::discards */
 				uint64_t discards           : 1;
 
-				/** @see odp_pktin_queue_stats_t::errors */
+				/** See odp_pktin_queue_stats_t::errors */
 				uint64_t errors             : 1;
 			} counter;
 
@@ -230,16 +230,16 @@ typedef struct odp_pktio_stats_capability_t {
 		union {
 			/** Statistics counters in a bit field structure */
 			struct {
-				/** @see odp_pktout_queue_stats_t::octets */
+				/** See odp_pktout_queue_stats_t::octets */
 				uint64_t octets             : 1;
 
-				/** @see odp_pktout_queue_stats_t::packets */
+				/** See odp_pktout_queue_stats_t::packets */
 				uint64_t packets            : 1;
 
-				/** @see odp_pktout_queue_stats_t::discards */
+				/** See odp_pktout_queue_stats_t::discards */
 				uint64_t discards           : 1;
 
-				/** @see odp_pktout_queue_stats_t::errors */
+				/** See odp_pktout_queue_stats_t::errors */
 				uint64_t errors             : 1;
 			} counter;
 

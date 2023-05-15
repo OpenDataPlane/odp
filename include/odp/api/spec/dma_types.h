@@ -511,9 +511,8 @@ typedef struct odp_dma_compl_param_t {
 
 	/** User context pointer
 	 *
-	 *  User defined context pointer which is copied to transfer results
-	 *  (@see odp_dma_result_t). The value does not need to represent a valid address
-	 *  (any intptr_t value is allowed).
+	 *  User defined context pointer which is copied to transfer results (odp_dma_result_t). The
+	 *  value does not need to represent a valid address (any intptr_t value is allowed).
 	 *
 	 *  The default value is NULL.
 	 */
@@ -533,7 +532,7 @@ typedef struct odp_dma_result_t {
 	/** User context pointer
 	 *
 	 *  User defined context pointer value from transfer completion parameters
-	 *  (@see odp_dma_compl_param_t). The default value is NULL.
+	 *  (odp_dma_compl_param_t). The default value is NULL.
 	 */
 	void *user_ptr;
 

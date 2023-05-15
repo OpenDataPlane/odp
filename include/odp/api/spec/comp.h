@@ -219,7 +219,7 @@ typedef struct odp_comp_alg_capability_t {
 	 * that the percentage of output data produced might be greater
 	 * than this value.
 	 *
-	 * @see odp__percent_t
+	 * @see odp_percent_t
 	 */
 	odp_percent_t compression_ratio;
 } odp_comp_alg_capability_t;
@@ -257,7 +257,7 @@ typedef struct odp_comp_deflate_param {
 	 *
 	 * max_level - High quality compression
 	 *
-	 * @see 'max_level' in odp_comp_alg_capability_t
+	 * @see odp_comp_alg_capability_t::max_level
 	 */
 	uint32_t comp_level;
 

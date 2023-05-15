@@ -295,7 +295,7 @@ int odp_shm_info(odp_shm_t shm, odp_shm_info_t *info);
  * SHM block segmentation information
  *
  * Retrieve information about each memory segment of an SHM block. SHM info call outputs the number
- * of memory segments (@see odp_shm_info_t.num_seg). A single segment info call may be used
+ * of memory segments (odp_shm_info_t::num_seg). A single segment info call may be used
  * to request information for all the segments, or for a subset of those. Use 'index' and 'num'
  * parameters to specify the segments. Segment indexing starts from zero and continues to
  * odp_shm_info_t.num_seg - 1. Segment infos are written in virtual memory address order and

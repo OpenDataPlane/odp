@@ -206,19 +206,19 @@ typedef struct odp_tm_queue_stats_capability_t {
 	union {
 		/** Statistics counters in a bit field structure */
 		struct {
-			/** @see odp_tm_queue_stats_t::octets */
+			/** See odp_tm_queue_stats_t::octets */
 			uint64_t octets          : 1;
 
-			/** @see odp_tm_queue_stats_t::packets */
+			/** See odp_tm_queue_stats_t::packets */
 			uint64_t packets         : 1;
 
-			/** @see odp_tm_queue_stats_t::discards */
+			/** See odp_tm_queue_stats_t::discards */
 			uint64_t discards        : 1;
 
-			/** @see odp_tm_queue_stats_t::discard_octets */
+			/** See odp_tm_queue_stats_t::discard_octets */
 			uint64_t discard_octets  : 1;
 
-			/** @see odp_tm_queue_stats_t::errors */
+			/** See odp_tm_queue_stats_t::errors */
 			uint64_t errors          : 1;
 
 		} counter;
