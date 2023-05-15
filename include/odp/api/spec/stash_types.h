@@ -106,10 +106,10 @@ typedef enum odp_stash_op_mode_t {
 typedef union odp_stash_stats_opt_t {
 	/** Option flags */
 	struct {
-		/** @see odp_stash_stats_t::count */
+		/** See odp_stash_stats_t::count */
 		uint64_t count          : 1;
 
-		/** @see odp_stash_stats_t::cache_count */
+		/** See odp_stash_stats_t::cache_count */
 		uint64_t cache_count    : 1;
 
 	} bit;

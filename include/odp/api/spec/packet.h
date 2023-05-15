@@ -937,7 +937,7 @@ void *odp_packet_buf_head(odp_packet_buf_t pkt_buf);
 /**
  * Packet buffer size in bytes
  *
- * Packet buffer size is calculated from the buffer head pointer (@see odp_packet_buf_head()).
+ * Packet buffer size is calculated from the buffer head pointer (see odp_packet_buf_head()).
  * It contains all buffer level headroom, data, and tailroom. For a single segmented packet this is
  * equivalent to odp_packet_buf_len().
  *
@@ -994,7 +994,7 @@ void odp_packet_buf_data_set(odp_packet_buf_t pkt_buf, uint32_t data_offset, uin
  * may be done only for packet buffers that are not part of any packet (i.e. buffers between
  * odp_packet_disassemble() and odp_packet_reassemble() calls).
  *
- * This call can be used only for packets of an external memory pool (@see odp_pool_ext_create()).
+ * This call can be used only for packets of an external memory pool (see odp_pool_ext_create()).
  *
  * @param      pool     Pool from which the packet buffer (disassembled packet) originate from
  * @param      head     Head pointer
@@ -1008,12 +1008,12 @@ odp_packet_buf_t odp_packet_buf_from_head(odp_pool_t pool, void *head);
  * Disassemble packet into packet buffers
  *
  * Breaks up a packet into a list of packet buffers. Outputs a packet buffer handle for each
- * segment of the packet (@see odp_packet_num_segs()). After a successful operation the packet
+ * segment of the packet (see odp_packet_num_segs()). After a successful operation the packet
  * handle must not be referenced anymore. Packet buffers are reassembled into a new packet (or
  * several new packets) with a later odp_packet_reassemble() call(s). All packet buffers must be
  * reassembled into a packet and freed into the originating pool before the pool is destroyed.
  *
- * This call can be used only for packets of an external memory pool (@see odp_pool_ext_create()).
+ * This call can be used only for packets of an external memory pool (see odp_pool_ext_create()).
  *
  * @param      pkt      Packet to be disassembled
  * @param[out] pkt_buf  Packet buffer handle array for output
@@ -1040,7 +1040,7 @@ uint32_t odp_packet_disassemble(odp_packet_t pkt, odp_packet_buf_t pkt_buf[], ui
  * in the buffers. All other packet metadata are set to their default values. After a successful
  * operation packet buffer handles must not be referenced anymore.
  *
- * This call can be used only for packets of an external memory pool (@see odp_pool_ext_create()).
+ * This call can be used only for packets of an external memory pool (see odp_pool_ext_create()).
  *
  * @param      pool     Pool from which all packet buffers (disassembled packets) originate from
  * @param      pkt_buf  Packet buffers to form a new packet
@@ -2195,8 +2195,8 @@ void odp_packet_vector_free(odp_packet_vector_t pktv);
  * the vector table.
  *
  * @note The maximum number of packets this vector can hold is defined by
- * odp_pool_param_t:vector:max_size. The return value of this function will not
- * be greater than odp_pool_param_t:vector:max_size
+ * odp_pool_param_t::vector::max_size. The return value of this function will not
+ * be greater than odp_pool_param_t::vector::max_size
  *
  * @note The pkt_tbl points to the packet vector table. Application can edit the
  * packet handles in the table directly (up to odp_pool_param_t::vector::max_size).

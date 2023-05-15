@@ -332,7 +332,7 @@ void odp_dma_pool_param_init(odp_dma_pool_param_t *pool_param);
  * The use of pool name is optional. Unique names are not required. However, odp_pool_lookup()
  * returns only a single matching pool. Use odp_dma_pool_param_init() to initialize pool parameters
  * into their default values. Parameters values must not exceed pool capabilities
- * (@see odp_dma_pool_capability_t)
+ * (odp_dma_pool_capability_t).
  *
  * @param name          Name of the pool or NULL. Maximum string length is ODP_POOL_NAME_LEN.
  * @param pool_param    Pool parameters

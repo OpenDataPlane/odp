@@ -357,26 +357,26 @@ typedef struct odp_packet_parse_result_t {
 	/** Parse result flags */
 	odp_packet_parse_result_flag_t flag;
 
-	/** @see odp_packet_len() */
+	/** See odp_packet_len() */
 	uint32_t packet_len;
 
-	/** @see odp_packet_l2_offset() */
+	/** See odp_packet_l2_offset() */
 	uint32_t l2_offset;
-	/** @see odp_packet_l3_offset() */
+	/** See odp_packet_l3_offset() */
 	uint32_t l3_offset;
-	/** @see odp_packet_l4_offset() */
+	/** See odp_packet_l4_offset() */
 	uint32_t l4_offset;
 
-	/** @see odp_packet_l3_chksum_status() */
+	/** See odp_packet_l3_chksum_status() */
 	odp_packet_chksum_status_t l3_chksum_status;
-	/** @see odp_packet_l4_chksum_status() */
+	/** See odp_packet_l4_chksum_status() */
 	odp_packet_chksum_status_t l4_chksum_status;
 
-	/** @see odp_packet_l2_type() */
+	/** See odp_packet_l2_type() */
 	odp_proto_l2_type_t l2_type;
-	/** @see odp_packet_l3_type() */
+	/** See odp_packet_l3_type() */
 	odp_proto_l3_type_t l3_type;
-	/** @see odp_packet_l4_type() */
+	/** See odp_packet_l4_type() */
 	odp_proto_l4_type_t l4_type;
 
 } odp_packet_parse_result_t;

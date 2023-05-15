@@ -56,31 +56,31 @@ extern "C" {
 typedef union odp_pool_stats_opt_t {
 	/** Option flags */
 	struct {
-		/** @see odp_pool_stats_t::available */
+		/** See odp_pool_stats_t::available */
 		uint64_t available          : 1;
 
-		/** @see odp_pool_stats_t::alloc_ops */
+		/** See odp_pool_stats_t::alloc_ops */
 		uint64_t alloc_ops          : 1;
 
-		/** @see odp_pool_stats_t::alloc_fails */
+		/** See odp_pool_stats_t::alloc_fails */
 		uint64_t alloc_fails        : 1;
 
-		/** @see odp_pool_stats_t::free_ops */
+		/** See odp_pool_stats_t::free_ops */
 		uint64_t free_ops           : 1;
 
-		/** @see odp_pool_stats_t::total_ops */
+		/** See odp_pool_stats_t::total_ops */
 		uint64_t total_ops          : 1;
 
-		/** @see odp_pool_stats_t::cache_available */
+		/** See odp_pool_stats_t::cache_available */
 		uint64_t cache_available    : 1;
 
-		/** @see odp_pool_stats_t::cache_alloc_ops */
+		/** See odp_pool_stats_t::cache_alloc_ops */
 		uint64_t cache_alloc_ops    : 1;
 
-		/** @see odp_pool_stats_t::cache_free_ops */
+		/** See odp_pool_stats_t::cache_free_ops */
 		uint64_t cache_free_ops     : 1;
 
-		/** @see odp_pool_stats_t::thread::cache_available */
+		/** See odp_pool_stats_t::thread::cache_available */
 		uint64_t thread_cache_available : 1;
 	} bit;
 
@@ -449,7 +449,7 @@ typedef struct odp_pool_param_t {
 		/** Minimum packet data alignment in bytes.
 		 *
 		 *  Valid values are powers of two. User allocated packets have
-		 *  start of data (@see odp_packet_data()) aligned to this or
+		 *  start of data (see odp_packet_data()) aligned to this or
 		 *  a higher alignment (power of two value). This parameter
 		 *  does not apply to packets that ODP allocates internally
 		 *  (e.g. packets from packet input).

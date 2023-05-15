@@ -274,7 +274,7 @@ typedef union odp_cls_pmr_terms_t {
  * Packet Matching Rule parameter structure
  *
  * Match value/mask size and endianness are defined in PMR term documentation
- * (@see odp_cls_pmr_term_t). Most values and masks are passed in big
+ * (see odp_cls_pmr_term_t). Most values and masks are passed in big
  * endian format without data alignment requirement. ODP_PMR_LEN is
  * an exception to this (uint32_t in CPU endian).
  */
@@ -474,16 +474,16 @@ typedef struct odp_cls_stats_capability_t {
 		union {
 			/** Statistics counters in a bit field structure */
 			struct {
-				/** @see odp_cls_cos_stats_t::octets */
+				/** See odp_cls_cos_stats_t::octets */
 				uint64_t octets          : 1;
 
-				/** @see odp_cls_cos_stats_t::packets */
+				/** See odp_cls_cos_stats_t::packets */
 				uint64_t packets         : 1;
 
-				/** @see odp_cls_cos_stats_t::discards */
+				/** See odp_cls_cos_stats_t::discards */
 				uint64_t discards        : 1;
 
-				/** @see odp_cls_cos_stats_t::errors */
+				/** See odp_cls_cos_stats_t::errors */
 				uint64_t errors          : 1;
 
 			} counter;
@@ -502,16 +502,16 @@ typedef struct odp_cls_stats_capability_t {
 		union {
 			/** Statistics counters in a bit field structure */
 			struct {
-				/** @see odp_cls_queue_stats_t::octets */
+				/** See odp_cls_queue_stats_t::octets */
 				uint64_t octets          : 1;
 
-				/** @see odp_cls_queue_stats_t::packets */
+				/** See odp_cls_queue_stats_t::packets */
 				uint64_t packets         : 1;
 
-				/** @see odp_cls_queue_stats_t::discards */
+				/** See odp_cls_queue_stats_t::discards */
 				uint64_t discards        : 1;
 
-				/** @see odp_cls_queue_stats_t::errors */
+				/** See odp_cls_queue_stats_t::errors */
 				uint64_t errors          : 1;
 
 			} counter;
@@ -635,8 +635,9 @@ typedef struct odp_cls_cos_param {
 	odp_cos_action_t action;
 
 	/** Enable statistics. If true, counters are incremented when packets
-	 * are classified to the CoS. Default is false. @see
-	 * odp_cls_cos_stats().
+	 * are classified to the CoS. Default is false.
+	 *
+	 * @see odp_cls_cos_stats()
 	 */
 	odp_bool_t stats_enable;
 
@@ -675,7 +676,7 @@ typedef struct odp_cls_cos_param {
 	/** Pool associated with CoS
 	 *
 	 * May be set to ODP_POOL_INVALID, in which case the default pool of
-	 * the originating packet input is used (@see odp_pktio_open()). If
+	 * the originating packet input is used (see odp_pktio_open()). If
 	 * there is no originating packet input (e.g. with lookaside IPsec),
 	 * then this parameter must be set to a valid pool.
 	 *
@@ -761,7 +762,7 @@ odp_queue_t odp_cls_hash_result(odp_cos_t cos, odp_packet_t packet);
  *
  * Before destroying a CoS, all the PMRs referring to the CoS (as a source or
  * destination CoS) must be destroyed first. Also, the CoS must not be in use
- * as the default CoS in any pktio (@see odp_pktio_default_cos_set()) or as the
+ * as the default CoS in any pktio (see odp_pktio_default_cos_set()) or as the
  * destination CoS of any IPsec SA.
  *
  * @param cos          CoS handle

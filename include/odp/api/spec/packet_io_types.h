@@ -635,8 +635,7 @@ typedef struct odp_pktio_config_t {
 	 * * 0: Disable outbound IPSEC inline operation (default)
 	 * * 1: Enable outbound IPSEC inline operation
 	 *
-	 *  @see odp_ipsec_config(), odp_ipsec_sa_create()
-	 *  odp_ipsec_out_inline()
+	 *  @see odp_ipsec_config(), odp_ipsec_sa_create(), odp_ipsec_out_inline()
 	 */
 	odp_bool_t outbound_ipsec;
 

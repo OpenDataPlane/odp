@@ -225,7 +225,7 @@ void odp_schedule_prefetch(int num);
  * Maximum scheduling priority level
  *
  * This is the maximum value that can be set to 'prio' field in
- * odp_schedule_param_t (e.g. @see odp_queue_create()). Queues with a higher
+ * odp_schedule_param_t (e.g. odp_queue_create()). Queues with a higher
  * priority value are served with higher priority than queues with a lower
  * priority value.
  *
@@ -237,7 +237,7 @@ int odp_schedule_max_prio(void);
  * Minimum scheduling priority level
  *
  * This is the minimum value that can be set to 'prio' field in
- * odp_schedule_param_t (e.g. @see odp_queue_create()). Queues with a higher
+ * odp_schedule_param_t (e.g. odp_queue_create()). Queues with a higher
  * priority value are served with higher priority than queues with a lower
  * priority value.
  *
@@ -249,7 +249,7 @@ int odp_schedule_min_prio(void);
  * Default scheduling priority level
  *
  * This is the default value of 'prio' field in odp_schedule_param_t
- * (e.g. @see odp_queue_param_init()). The default value should be suitable for
+ * (e.g. odp_queue_param_init()). The default value should be suitable for
  * an application that uses single priority level for all its queues (uses
  * scheduler only for load balancing and synchronization). Typically,
  * the default value is between minimum and maximum values, but with a few
@@ -534,6 +534,7 @@ void odp_schedule_order_lock_wait(uint32_t lock_index);
  * an ordered scheduling context or if an ordered lock is being held.
  *
  * This functions does nothing if ordered wait is not supported.
+ *
  * @see odp_schedule_capability()
  */
 void odp_schedule_order_wait(void);

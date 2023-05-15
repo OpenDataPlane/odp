@@ -70,55 +70,55 @@ typedef struct odp_packet_parse_result_flag_t {
 
 		/** Flags as a bitfield struct */
 		struct {
-			/** @see odp_packet_has_error() */
+			/** See odp_packet_has_error() */
 			uint64_t has_error    : 1;
-			/** @see odp_packet_has_l2_error() */
+			/** See odp_packet_has_l2_error() */
 			uint64_t has_l2_error : 1;
-			/** @see odp_packet_has_l3_error() */
+			/** See odp_packet_has_l3_error() */
 			uint64_t has_l3_error : 1;
-			/** @see odp_packet_has_l4_error() */
+			/** See odp_packet_has_l4_error() */
 			uint64_t has_l4_error : 1;
-			/** @see odp_packet_has_l2() */
+			/** See odp_packet_has_l2() */
 			uint64_t has_l2 : 1;
-			/** @see odp_packet_has_l3() */
+			/** See odp_packet_has_l3() */
 			uint64_t has_l3 : 1;
-			/** @see odp_packet_has_l4() */
+			/** See odp_packet_has_l4() */
 			uint64_t has_l4 : 1;
-			/** @see odp_packet_has_eth() */
+			/** See odp_packet_has_eth() */
 			uint64_t has_eth : 1;
-			/** @see odp_packet_has_eth_bcast() */
+			/** See odp_packet_has_eth_bcast() */
 			uint64_t has_eth_bcast : 1;
-			/** @see odp_packet_has_eth_mcast() */
+			/** See odp_packet_has_eth_mcast() */
 			uint64_t has_eth_mcast : 1;
-			/** @see odp_packet_has_jumbo() */
+			/** See odp_packet_has_jumbo() */
 			uint64_t has_jumbo : 1;
-			/** @see odp_packet_has_vlan() */
+			/** See odp_packet_has_vlan() */
 			uint64_t has_vlan : 1;
-			/** @see odp_packet_has_vlan_qinq() */
+			/** See odp_packet_has_vlan_qinq() */
 			uint64_t has_vlan_qinq : 1;
-			/** @see odp_packet_has_arp() */
+			/** See odp_packet_has_arp() */
 			uint64_t has_arp : 1;
-			/** @see odp_packet_has_ipv4() */
+			/** See odp_packet_has_ipv4() */
 			uint64_t has_ipv4 : 1;
-			/** @see odp_packet_has_ipv6() */
+			/** See odp_packet_has_ipv6() */
 			uint64_t has_ipv6 : 1;
-			/** @see odp_packet_has_ip_bcast() */
+			/** See odp_packet_has_ip_bcast() */
 			uint64_t has_ip_bcast : 1;
-			/** @see odp_packet_has_ip_mcast() */
+			/** See odp_packet_has_ip_mcast() */
 			uint64_t has_ip_mcast : 1;
-			/** @see odp_packet_has_ipfrag() */
+			/** See odp_packet_has_ipfrag() */
 			uint64_t has_ipfrag : 1;
-			/** @see odp_packet_has_ipopt() */
+			/** See odp_packet_has_ipopt() */
 			uint64_t has_ipopt : 1;
-			/** @see odp_packet_has_ipsec() */
+			/** See odp_packet_has_ipsec() */
 			uint64_t has_ipsec : 1;
-			/** @see odp_packet_has_udp() */
+			/** See odp_packet_has_udp() */
 			uint64_t has_udp : 1;
-			/** @see odp_packet_has_tcp() */
+			/** See odp_packet_has_tcp() */
 			uint64_t has_tcp : 1;
-			/** @see odp_packet_has_sctp() */
+			/** See odp_packet_has_sctp() */
 			uint64_t has_sctp : 1;
-			/** @see odp_packet_has_icmp() */
+			/** See odp_packet_has_icmp() */
 			uint64_t has_icmp : 1;
 		};
 	};
