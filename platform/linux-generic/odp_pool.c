@@ -1507,6 +1507,42 @@ int odp_pool_capability(odp_pool_capability_t *capa)
 	return 0;
 }
 
+static const char *get_long_type_str(odp_pool_type_t type)
+{
+	switch (type) {
+	case ODP_POOL_BUFFER:
+		return "buffer";
+	case ODP_POOL_PACKET:
+		return "packet";
+	case ODP_POOL_TIMEOUT:
+		return "timeout";
+	case ODP_POOL_VECTOR:
+		return "vector";
+	case ODP_POOL_DMA_COMPL:
+		return "dma completion";
+	default:
+		return "unknown";
+	}
+}
+
+static const char *get_short_type_str(odp_pool_type_t type)
+{
+	switch (type) {
+	case ODP_POOL_BUFFER:
+		return "B";
+	case ODP_POOL_PACKET:
+		return "P";
+	case ODP_POOL_TIMEOUT:
+		return "T";
+	case ODP_POOL_VECTOR:
+		return "V";
+	case ODP_POOL_DMA_COMPL:
+		return "D";
+	default:
+		return "-";
+	}
+}
+
 void odp_pool_print(odp_pool_t pool_hdl)
 {
 	pool_t *pool;
@@ -1518,12 +1554,7 @@ void odp_pool_print(odp_pool_t pool_hdl)
 	_ODP_PRINT("  pool            %" PRIu64 "\n",
 		   odp_pool_to_u64(_odp_pool_handle(pool)));
 	_ODP_PRINT("  name            %s\n", pool->name);
-	_ODP_PRINT("  pool type       %s\n",
-		   pool->type == ODP_POOL_BUFFER ? "buffer" :
-		   (pool->type == ODP_POOL_PACKET ? "packet" :
-		    (pool->type == ODP_POOL_TIMEOUT ? "timeout" :
-		     (pool->type == ODP_POOL_VECTOR ? "vector" :
-		      "unknown"))));
+	_ODP_PRINT("  pool type       %s\n", get_long_type_str(pool->type_2));
 	_ODP_PRINT("  pool shm        %" PRIu64 "\n", odp_shm_to_u64(pool->shm));
 	_ODP_PRINT("  user area shm   %" PRIu64 "\n", odp_shm_to_u64(pool->uarea_shm));
 	_ODP_PRINT("  num             %u\n", pool->num);
@@ -1554,8 +1585,7 @@ void odp_pool_print_all(void)
 	uint32_t buf_len = 0;
 	uint8_t type, ext;
 	const int col_width = 24;
-	const char *name;
-	char type_c;
+	const char *name, *type_c;
 
 	_ODP_PRINT("\nList of all pools\n");
 	_ODP_PRINT("-----------------\n");
@@ -1585,12 +1615,9 @@ void odp_pool_print_all(void)
 		if (type == ODP_POOL_BUFFER || type == ODP_POOL_PACKET)
 			buf_len = seg_len;
 
-		type_c = (type == ODP_POOL_BUFFER) ? 'B' :
-			 (type == ODP_POOL_PACKET) ? 'P' :
-			 (type == ODP_POOL_TIMEOUT) ? 'T' :
-			 (type == ODP_POOL_VECTOR) ? 'V' : '-';
+		type_c = get_short_type_str(pool->type_2);
 
-		_ODP_PRINT("%4u %-*s    %c %6" PRIu64 " %6" PRIu32 " %6" PRIu32 " %8" PRIu32 "    "
+		_ODP_PRINT("%4u %-*s    %s %6" PRIu64 " %6" PRIu32 " %6" PRIu32 " %8" PRIu32 "    "
 			  "%" PRIu8 "\n", index, col_width, name, type_c, available, tot,
 			  cache_size, buf_len, ext);
 	}
