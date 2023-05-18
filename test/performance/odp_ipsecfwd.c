@@ -1948,12 +1948,24 @@ static void print_stats(const prog_config_t *config)
 
 int main(int argc, char **argv)
 {
+	odph_helper_options_t odph_opts;
+	odp_init_t init_param;
 	odp_instance_t odp_instance;
 	odp_shm_t shm_cfg = ODP_SHM_INVALID;
 	parse_result_t parse_res;
 	int ret = EXIT_SUCCESS;
 
-	if (odp_init_global(&odp_instance, NULL, NULL) < 0) {
+	argc = odph_parse_options(argc, argv);
+
+	if (odph_options(&odph_opts) == -1) {
+		ODPH_ERR("Error while reading ODP helper options, exiting\n");
+		exit(EXIT_FAILURE);
+	}
+
+	odp_init_param_init(&init_param);
+	init_param.mem_model = odph_opts.mem_model;
+
+	if (odp_init_global(&odp_instance, &init_param, NULL) < 0) {
 		ODPH_ERR("ODP global init failed, exiting\n");
 		exit(EXIT_FAILURE);
 	}
