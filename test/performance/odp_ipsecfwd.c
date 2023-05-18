@@ -135,6 +135,7 @@ typedef struct prog_config_s {
 	fwd_entry_t fwd_entries[MAX_FWDS];
 	odp_queue_t sa_qs[MAX_SA_QUEUES];
 	pktio_t pktios[MAX_IFS];
+	odp_atomic_u32_t is_running;
 	sa_config_t default_cfg;
 	ops_t ops;
 	char *conf_file;
@@ -181,7 +182,7 @@ typedef struct {
 	uint8_t q_idx;
 } pkt_ifs_t;
 
-static exposed_alg_t exposed_algs[] = {
+static const exposed_alg_t exposed_algs[] = {
 	ALG_ENTRY(ODP_CIPHER_ALG_NULL, CIPHER_TYPE),
 	ALG_ENTRY(ODP_CIPHER_ALG_DES, CIPHER_TYPE),
 	ALG_ENTRY(ODP_CIPHER_ALG_3DES_CBC, CIPHER_TYPE),
@@ -208,9 +209,9 @@ static exposed_alg_t exposed_algs[] = {
 
 /* SPIs for in and out directions */
 static odp_ipsec_sa_t *spi_to_sa_map[2U][MAX_SPIS];
-static odp_atomic_u32_t is_running;
 static const int ipsec_out_mark;
 static __thread pkt_ifs_t ifs;
+static prog_config_t *prog_conf;
 
 static void init_config(prog_config_t *config)
 {
@@ -226,7 +227,7 @@ static void init_config(prog_config_t *config)
 
 static void terminate(int signal ODP_UNUSED)
 {
-	odp_atomic_store_u32(&is_running, 0U);
+	odp_atomic_store_u32(&prog_conf->is_running, 0U);
 }
 
 static void parse_interfaces(prog_config_t *config, const char *optarg)
@@ -1747,6 +1748,7 @@ static int process_packets(void *args)
 	int thr_idx = odp_thread_id();
 	odp_event_t evs[MAX_BURST], ev;
 	ops_t ops = config->prog_config->ops;
+	odp_atomic_u32_t *is_running = &config->prog_config->is_running;
 	uint32_t cnt;
 	odp_event_type_t type;
 	odp_event_subtype_t subtype;
@@ -1759,7 +1761,7 @@ static int process_packets(void *args)
 	config->thr_idx = thr_idx;
 	odp_barrier_wait(&config->prog_config->init_barrier);
 
-	while (odp_atomic_load_u32(&is_running)) {
+	while (odp_atomic_load_u32(is_running)) {
 		int num_pkts_in = 0, num_pkts_ips = 0;
 		/* TODO: Add possibility to configure scheduler and ipsec enq/deq burst sizes. */
 		cnt = ops.rx(config, evs, MAX_BURST);
@@ -1947,8 +1949,8 @@ static void print_stats(const prog_config_t *config)
 int main(int argc, char **argv)
 {
 	odp_instance_t odp_instance;
+	odp_shm_t shm_cfg = ODP_SHM_INVALID;
 	parse_result_t parse_res;
-	prog_config_t config;
 	int ret = EXIT_SUCCESS;
 
 	if (odp_init_global(&odp_instance, NULL, NULL) < 0) {
@@ -1961,15 +1963,32 @@ int main(int argc, char **argv)
 		exit(EXIT_FAILURE);
 	}
 
-	init_config(&config);
+	shm_cfg = odp_shm_reserve(PROG_NAME "_cfg", sizeof(prog_config_t), ODP_CACHE_LINE_SIZE,
+				  0U);
 
-	if (!config.is_dir_rx && odp_schedule_config(NULL) < 0) {
+	if (shm_cfg == ODP_SHM_INVALID) {
+		ODPH_ERR("Error reserving shared memory\n");
+		ret = EXIT_FAILURE;
+		goto out;
+	}
+
+	prog_conf = odp_shm_addr(shm_cfg);
+
+	if (prog_conf == NULL) {
+		ODPH_ERR("Error resolving shared memory address\n");
+		ret = EXIT_FAILURE;
+		goto out;
+	}
+
+	init_config(prog_conf);
+
+	if (!prog_conf->is_dir_rx && odp_schedule_config(NULL) < 0) {
 		ODPH_ERR("Error configuring scheduler\n");
 		ret = EXIT_FAILURE;
 		goto out_test;
 	}
 
-	parse_res = setup_program(argc, argv, &config);
+	parse_res = setup_program(argc, argv, prog_conf);
 
 	if (parse_res == PRS_NOK) {
 		ret = EXIT_FAILURE;
@@ -1981,22 +2000,26 @@ int main(int argc, char **argv)
 		goto out_test;
 	}
 
-	config.odp_instance = odp_instance;
-	odp_atomic_init_u32(&is_running, 1U);
+	prog_conf->odp_instance = odp_instance;
+	odp_atomic_init_u32(&prog_conf->is_running, 1U);
 
-	if (!setup_test(&config)) {
+	if (!setup_test(prog_conf)) {
 		ret = EXIT_FAILURE;
 		goto out_test;
 	}
 
-	while (odp_atomic_load_u32(&is_running))
+	while (odp_atomic_load_u32(&prog_conf->is_running))
 		odp_cpu_pause();
 
-	stop_test(&config);
-	print_stats(&config);
+	stop_test(prog_conf);
+	print_stats(prog_conf);
 
 out_test:
-	teardown_test(&config);
+	teardown_test(prog_conf);
+
+out:
+	if (shm_cfg != ODP_SHM_INVALID)
+		(void)odp_shm_free(shm_cfg);
 
 	if (odp_term_local() < 0) {
 		ODPH_ERR("ODP local terminate failed, exiting\n");
