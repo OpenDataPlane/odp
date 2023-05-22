@@ -75,11 +75,14 @@ int odp_timer_res_capability(odp_timer_clk_src_t clk_src,
  * frequency multiplier and the minimum timeout resolution. If there is no requirement for timeout
  * resolution, it is set to zero.
  *
- * A successful call overwrites all 'capa' fields with the resulting values. Return value
- * is 1 when timer capability meets or exceeds all requested values. The call returns 0, when
- * the requested base frequency is not supported exactly, but capability meets or exceeds all other
- * requested values. In this case, the call overwrites 'base_freq_hz' with the closest supported
- * frequency.
+ * When the call returns success, 'capa' fields are overwritten in following ways. On return value
+ * of 1, timer supports the requested base frequency exactly, and meets or exceeds other requested
+ * values. The base frequency value is not modified, but other 'capa' fields are updated with
+ * resulting maximum capabilities.
+ *
+ * When the call returns 0, the requested base frequency is not supported exactly, but timer
+ * capabilities meet or exceed all other requested values. In this case, the call overwrites
+ * 'base_freq_hz' with the closest supported frequency and updates other 'capa' fields accordingly.
  *
  * Failure is returned when the requirements are not supported or the call fails otherwise.
  *
