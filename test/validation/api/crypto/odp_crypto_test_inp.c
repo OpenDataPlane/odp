@@ -28,9 +28,7 @@ static int full_test;
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 
 struct suite_context_s {
-	odp_bool_t packet;
 	odp_crypto_op_mode_t op_mode;
-	odp_crypto_op_mode_t pref_mode;
 	odp_pool_t pool;
 	odp_queue_t queue;
 	odp_queue_type_t q_type;
@@ -1078,9 +1076,6 @@ static void alg_test(odp_crypto_op_t op,
 	};
 
 	for (unsigned int n = 0; n < ARRAY_SIZE(op_types); n++) {
-		if (!suite_context.packet &&
-		    op_types[n] != ODP_CRYPTO_OP_TYPE_LEGACY)
-			continue;
 		alg_test_ses(op,
 			     op_types[n],
 			     cipher_alg,
