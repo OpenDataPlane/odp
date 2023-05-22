@@ -1,5 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
- * Copyright (c) 2019-2022, Nokia
+ * Copyright (c) 2019-2023, Nokia
  *
  * All rights reserved.
  *
@@ -102,7 +102,15 @@ typedef struct {
  * Periodic timer capability
  */
 typedef struct {
-	/** Periodic timer pool base frequency in hertz */
+	/**
+	 * Periodic timer pool base frequency in hertz
+	 *
+	 * Base frequency is represented as a fractional number where the fraction part is always
+	 * less than one. In other words, the integer part specifies whole hertz whereas
+	 * the fraction part specifies parts of a hertz (if any). The fraction part does not
+	 * need to be reduced to its lowest terms - e.g. 100.5 Hz may be represented as 100 1/2 Hz,
+	 * 100 5/10 Hz, or 100 Hz with some other equivalent fraction part.
+	 */
 	odp_fract_u64_t base_freq_hz;
 
 	/** Maximum base frequency multiplier */
@@ -358,7 +366,9 @@ typedef struct {
 		 *  Use odp_timer_periodic_capability() to check base frequency support,
 		 *  and resulting max_multiplier and resolution values.
 		 *
-		 *  The default value is zero.
+		 *  Fraction part of the value is always less than one, see
+		 *  odp_timer_periodic_capability_t::base_freq_hz for details. The default value
+		 *  is zero.
 		 *
 		 *  An example with two timer frequencies:
 		 *       base_freq_hz.integer = 33333, .numer = 1, .denom = 3
