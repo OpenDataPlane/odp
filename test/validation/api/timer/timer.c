@@ -2430,11 +2430,15 @@ static void timer_test_periodic_capa(void)
 	CU_ASSERT_FATAL(min_fract.integer || min_fract.numer);
 	CU_ASSERT_FATAL(max_fract.integer || max_fract.numer);
 
-	if (min_fract.numer)
+	if (min_fract.numer) {
 		CU_ASSERT_FATAL(min_fract.denom);
+		CU_ASSERT_FATAL(min_fract.numer < min_fract.denom);
+	}
 
-	if (max_fract.numer)
+	if (max_fract.numer) {
 		CU_ASSERT_FATAL(max_fract.denom);
+		CU_ASSERT_FATAL(max_fract.numer < max_fract.denom);
+	}
 
 	min_freq = odp_fract_u64_to_dbl(&min_fract);
 	max_freq = odp_fract_u64_to_dbl(&max_fract);
@@ -2520,8 +2524,11 @@ static void timer_test_periodic_capa(void)
 					  capa.base_freq_hz.numer   != base_freq.numer ||
 					  capa.base_freq_hz.denom   != base_freq.denom)
 
-				if (capa.base_freq_hz.numer)
+				if (capa.base_freq_hz.numer) {
 					CU_ASSERT_FATAL(capa.base_freq_hz.denom);
+					CU_ASSERT_FATAL(capa.base_freq_hz.numer <
+							capa.base_freq_hz.denom);
+				}
 
 				CU_ASSERT(odp_fract_u64_to_dbl(&capa.base_freq_hz) >= min_freq);
 				CU_ASSERT(odp_fract_u64_to_dbl(&capa.base_freq_hz) <= max_freq);
@@ -2606,6 +2613,11 @@ static void timer_test_periodic(odp_queue_type_t queue_type, int use_first)
 	if (ret == 0) {
 		/* Allow 10% difference in outputted base frequency */
 		CU_ASSERT((freq_out > (0.9 * freq)) && (freq_out < (1.1 * freq)));
+
+		if (periodic_capa.base_freq_hz.numer) {
+			CU_ASSERT_FATAL(periodic_capa.base_freq_hz.numer <
+					periodic_capa.base_freq_hz.denom);
+		}
 	} else {
 		CU_ASSERT(base_freq.integer == periodic_capa.base_freq_hz.integer);
 		CU_ASSERT(base_freq.numer   == periodic_capa.base_freq_hz.numer);
