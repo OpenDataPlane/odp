@@ -201,7 +201,7 @@ static int alg_packet_op(odp_packet_t pkt_in,
 		rc = odp_crypto_op(&pkt_in, pkt_out, &op_params, 1);
 		if (rc <= 0) {
 			CU_FAIL("Failed odp_crypto_packet_op()");
-			return rc;
+			return -1;
 		}
 	} else {
 		odp_packet_t *out_param = pkt_out;
@@ -212,7 +212,7 @@ static int alg_packet_op(odp_packet_t pkt_in,
 		rc = odp_crypto_op_enq(&pkt_in, out_param, &op_params, 1);
 		if (rc <= 0) {
 			CU_FAIL("Failed odp_crypto_op_enq()");
-			return rc;
+			return -1;
 		}
 
 		/* Get crypto completion event from compl_queue. */
@@ -241,10 +241,8 @@ static int alg_packet_op(odp_packet_t pkt_in,
 	CU_ASSERT(odp_packet_subtype(*pkt_out) == ODP_EVENT_PACKET_CRYPTO);
 
 	rc = odp_crypto_result(&result, *pkt_out);
-	if (rc < -1) {
-		CU_FAIL("Failed odp_crypto_packet_result()");
-		return rc;
-	}
+	if (rc < -1)
+		CU_FAIL("Failed odp_crypto_result()");
 	CU_ASSERT(rc == 0 || rc == -1);
 
 	if (op_type == ODP_CRYPTO_OP_TYPE_OOP &&
@@ -281,9 +279,11 @@ static int crypto_op(odp_packet_t pkt_in,
 			   cipher_range, auth_range,
 			   aad, hash_result_offset);
 
-	if (rc < 0)
+	if (rc) {
 		odp_packet_free(pkt_in);
-
+		if (op_type == ODP_CRYPTO_OP_TYPE_OOP)
+			odp_packet_free(*pkt_out);
+	}
 	return rc;
 }
 
@@ -1529,6 +1529,10 @@ static int create_hash_test_reference(odp_auth_alg_t auth,
 		       ref->cipher_iv, ref->auth_iv,
 		       &cipher_range, &auth_range, ref->aad, enc_digest_offset);
 	CU_ASSERT(rc == 0);
+	if (rc) {
+		(void)odp_crypto_session_destroy(session);
+		return -1;
+	}
 	CU_ASSERT(ok);
 
 	rc = odp_crypto_session_destroy(session);
@@ -1740,6 +1744,10 @@ static int crypto_encode_ref(crypto_test_reference_t *ref,
 		       &cipher_range, &auth_range,
 		       ref->aad, hash_result_offset);
 	CU_ASSERT(rc == 0);
+	if (rc) {
+		(void)odp_crypto_session_destroy(session);
+		return -1;
+	}
 	CU_ASSERT(ok);
 
 	rc = odp_crypto_session_destroy(session);
