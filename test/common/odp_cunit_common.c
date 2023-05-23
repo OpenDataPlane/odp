@@ -32,7 +32,7 @@
 #endif
 
 /* Globals */
-static int allow_skip_result;
+static int running_in_ci;
 static odph_thread_t thread_tbl[ODP_THREAD_COUNT_MAX];
 static int threads_running;
 static odp_instance_t instance;
@@ -720,7 +720,7 @@ int odp_cunit_parse_options(int argc, char *argv[])
 		control_thread = true;
 
 	if (env && !strcmp(env, "true")) {
-		allow_skip_result = 1;
+		running_in_ci = 1;
 		ODPH_DBG("\nWARNING: test result can be used for code coverage only.\n"
 			 "CI=true env variable is set!\n");
 	}
@@ -730,7 +730,12 @@ int odp_cunit_parse_options(int argc, char *argv[])
 
 int odp_cunit_ret(int val)
 {
-	return allow_skip_result ? 0 : val;
+	return running_in_ci ? 0 : val;
+}
+
+int odp_cunit_ci(void)
+{
+	return running_in_ci;
 }
 
 int odp_cunit_ci_skip(const char *test_name)
