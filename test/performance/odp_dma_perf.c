@@ -485,7 +485,8 @@ static parse_result_t check_options(prog_config_t *config)
 			return PRS_NOT_SUP;
 		}
 
-		shm_size = config->dst_seg_len * config->num_out_segs * config->num_inflight;
+		shm_size = (uint64_t)config->dst_seg_len * config->num_out_segs *
+			   config->num_inflight;
 
 		if (shm_capa.max_size != 0U && shm_size > shm_capa.max_size) {
 			ODPH_ERR("Unsupported total SHM block size: %" PRIu64 ""
@@ -721,7 +722,7 @@ static void free_packets(const sd_t *sd)
 
 static odp_bool_t allocate_memory(sd_t *sd)
 {
-	const uint64_t num_segs = sd->dma.num_in_segs * sd->dma.num_inflight;
+	const uint64_t num_segs = (uint64_t)sd->dma.num_in_segs * sd->dma.num_inflight;
 
 	sd->seg.src_shm = odp_shm_reserve(PROG_NAME "_src_shm", sd->dma.src_seg_len * num_segs,
 					  ODP_CACHE_LINE_SIZE, 0U);
