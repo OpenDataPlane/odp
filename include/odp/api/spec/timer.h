@@ -118,8 +118,11 @@ void odp_timer_pool_param_init(odp_timer_pool_param_t *param);
  * to initialize timer pool parameters into their default values.
  *
  * Periodic timer expiration frequency is a multiple of the timer pool base frequency
- * (odp_timer_pool_param_t::base_freq_hz). Use odp_timer_periodic_capability() to check
- * which base frequencies and multipliers are supported.
+ * (odp_timer_pool_param_t::base_freq_hz). Depending on implementation, the base frequency may need
+ * to be selected carefully with respect to the timer pool source clock frequency. Use
+ * odp_timer_periodic_capability() to check which base frequencies and multipliers are supported.
+ *
+ * The call returns failure when requested parameter values are not supported.
  *
  * @param name       Name of the timer pool or NULL. Maximum string length is
  *                   ODP_TIMER_POOL_NAME_LEN.
@@ -128,8 +131,7 @@ void odp_timer_pool_param_init(odp_timer_pool_param_t *param);
  * @return Timer pool handle on success
  * @retval ODP_TIMER_POOL_INVALID on failure
  */
-odp_timer_pool_t odp_timer_pool_create(const char *name,
-				       const odp_timer_pool_param_t *params);
+odp_timer_pool_t odp_timer_pool_create(const char *name, const odp_timer_pool_param_t *params);
 
 /**
  * Start a timer pool
