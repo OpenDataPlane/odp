@@ -423,16 +423,16 @@ static void time_test_wait_until(time_cb time_cur, time_from_ns_cb time_from_ns)
 				   DELAY_TOLERANCE);
 
 	if (odp_time_cmp(wait, lower_limit) < 0) {
-		fprintf(stderr, "Exceed lower limit: "
-			"wait is %" PRIu64 ", lower_limit %" PRIu64 "\n",
-			odp_time_to_ns(wait), odp_time_to_ns(lower_limit));
+		ODPH_ERR("Exceed lower limit: "
+			 "wait is %" PRIu64 ", lower_limit %" PRIu64 "\n",
+			 odp_time_to_ns(wait), odp_time_to_ns(lower_limit));
 		CU_FAIL("Exceed lower limit\n");
 	}
 
 	if (odp_time_cmp(wait, upper_limit) > 0) {
-		fprintf(stderr, "Exceed upper limit: "
-			"wait is %" PRIu64 ", upper_limit %" PRIu64 "\n",
-			odp_time_to_ns(wait), odp_time_to_ns(lower_limit));
+		ODPH_ERR("Exceed upper limit: "
+			 "wait is %" PRIu64 ", upper_limit %" PRIu64 "\n",
+			 odp_time_to_ns(wait), odp_time_to_ns(lower_limit));
 		CU_FAIL("Exceed upper limit\n");
 	}
 }
@@ -466,16 +466,16 @@ static void time_test_wait_ns(void)
 					     DELAY_TOLERANCE);
 
 	if (odp_time_cmp(diff, lower_limit) < 0) {
-		fprintf(stderr, "Exceed lower limit: "
-			"diff is %" PRIu64 ", lower_limit %" PRIu64 "\n",
-			odp_time_to_ns(diff), odp_time_to_ns(lower_limit));
+		ODPH_ERR("Exceed lower limit: "
+			 "diff is %" PRIu64 ", lower_limit %" PRIu64 "\n",
+			 odp_time_to_ns(diff), odp_time_to_ns(lower_limit));
 		CU_FAIL("Exceed lower limit\n");
 	}
 
 	if (odp_time_cmp(diff, upper_limit) > 0) {
-		fprintf(stderr, "Exceed upper limit: "
-			"diff is %" PRIu64 ", upper_limit %" PRIu64 "\n",
-			odp_time_to_ns(diff), odp_time_to_ns(upper_limit));
+		ODPH_ERR("Exceed upper limit: "
+			 "diff is %" PRIu64 ", upper_limit %" PRIu64 "\n",
+			 odp_time_to_ns(diff), odp_time_to_ns(upper_limit));
 		CU_FAIL("Exceed upper limit\n");
 	}
 }
@@ -486,13 +486,13 @@ static void check_time_diff(double t_odp, double t_system,
 {
 	if (t_odp > t_system * 1.05) {
 		CU_FAIL("ODP time too high");
-		fprintf(stderr, "ODP time too high (%s/%d): t_odp: %f, t_system: %f\n",
-			test, id, t_odp, t_system);
+		ODPH_ERR("ODP time too high (%s/%d): t_odp: %f, t_system: %f\n",
+			 test, id, t_odp, t_system);
 	}
 	if (t_odp < t_system * 0.95) {
 		CU_FAIL("ODP time too low");
-		fprintf(stderr, "ODP time too low (%s/%d): t_odp: %f, t_system: %f\n",
-			test, id, t_odp, t_system);
+		ODPH_ERR("ODP time too low (%s/%d): t_odp: %f, t_system: %f\n",
+			 test, id, t_odp, t_system);
 	}
 }
 
