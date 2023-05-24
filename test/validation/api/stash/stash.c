@@ -5,6 +5,8 @@
  */
 
 #include <odp_api.h>
+#include <odp/helper/odph_api.h>
+
 #include "odp_cunit_common.h"
 
 #include <string.h>
@@ -63,7 +65,7 @@ static int stash_suite_init(void)
 	odp_stash_capability_t *capa_fifo = &global.capa_fifo;
 
 	if (odp_stash_capability(capa_default, ODP_STASH_TYPE_DEFAULT)) {
-		printf("stash capability failed for the default type\n");
+		ODPH_ERR("Stash capability failed for the default type\n");
 		return -1;
 	}
 

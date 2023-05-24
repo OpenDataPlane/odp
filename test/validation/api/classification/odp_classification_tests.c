@@ -70,7 +70,7 @@ static int classification_suite_common_init(odp_bool_t enable_pktv)
 
 	ret = odp_pktio_capability(pktio_loop, &pktio_capa);
 	if (ret) {
-		fprintf(stderr, "unable to get pktio capability.\n");
+		ODPH_ERR("Unable to get pktio capability\n");
 		return -1;
 	}
 

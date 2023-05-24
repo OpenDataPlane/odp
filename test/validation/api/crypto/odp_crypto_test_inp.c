@@ -1264,7 +1264,7 @@ static int check_alg_support(odp_cipher_alg_t cipher, odp_auth_alg_t auth)
 
 	memset(&capability, 0, sizeof(odp_crypto_capability_t));
 	if (odp_crypto_capability(&capability)) {
-		fprintf(stderr, "odp_crypto_capability() failed\n");
+		ODPH_ERR("odp_crypto_capability() failed\n");
 		return ODP_TEST_INACTIVE;
 	}
 
@@ -1351,7 +1351,7 @@ static int check_alg_support(odp_cipher_alg_t cipher, odp_auth_alg_t auth)
 			return ODP_TEST_INACTIVE;
 		break;
 	default:
-		fprintf(stderr, "Unsupported cipher algorithm\n");
+		ODPH_ERR("Unsupported cipher algorithm\n");
 		return ODP_TEST_INACTIVE;
 	}
 
@@ -1450,7 +1450,7 @@ static int check_alg_support(odp_cipher_alg_t cipher, odp_auth_alg_t auth)
 			return ODP_TEST_INACTIVE;
 		break;
 	default:
-		fprintf(stderr, "Unsupported authentication algorithm\n");
+		ODPH_ERR("Unsupported authentication algorithm\n");
 		return ODP_TEST_INACTIVE;
 	}
 
@@ -3071,7 +3071,7 @@ static int crypto_suite_packet_async_plain_init(void)
 
 	out_queue = plain_compl_queue_create();
 	if (ODP_QUEUE_INVALID == out_queue) {
-		fprintf(stderr, "Crypto outq creation failed.\n");
+		ODPH_ERR("Crypto outq creation failed\n");
 		return -1;
 	}
 	suite_context.queue = out_queue;
@@ -3093,7 +3093,7 @@ static int crypto_suite_packet_async_sched_init(void)
 
 	out_queue = sched_compl_queue_create();
 	if (ODP_QUEUE_INVALID == out_queue) {
-		fprintf(stderr, "Crypto outq creation failed.\n");
+		ODPH_ERR("Crypto outq creation failed\n");
 		return -1;
 	}
 	suite_context.queue = out_queue;
@@ -3107,9 +3107,9 @@ static int crypto_suite_term(void)
 {
 	if (ODP_QUEUE_INVALID != suite_context.queue) {
 		if (odp_queue_destroy(suite_context.queue))
-			fprintf(stderr, "Crypto outq destroy failed.\n");
+			ODPH_ERR("Crypto outq destroy failed\n");
 	} else {
-		fprintf(stderr, "Crypto outq not found.\n");
+		ODPH_ERR("Crypto outq not found\n");
 	}
 
 	return odp_cunit_print_inactive();
@@ -3280,7 +3280,7 @@ static int crypto_init(odp_instance_t *inst)
 	odph_helper_options_t helper_options;
 
 	if (odph_options(&helper_options)) {
-		fprintf(stderr, "error: odph_options() failed.\n");
+		ODPH_ERR("odph_options() failed\n");
 		return -1;
 	}
 
@@ -3288,23 +3288,23 @@ static int crypto_init(odp_instance_t *inst)
 	init_param.mem_model = helper_options.mem_model;
 
 	if (0 != odp_init_global(inst, &init_param, NULL)) {
-		fprintf(stderr, "error: odp_init_global() failed.\n");
+		ODPH_ERR("odp_init_global() failed\n");
 		return -1;
 	}
 
 	if (0 != odp_init_local(*inst, ODP_THREAD_CONTROL)) {
-		fprintf(stderr, "error: odp_init_local() failed.\n");
+		ODPH_ERR("odp_init_local() failed\n");
 		return -1;
 	}
 
 	/* Configure the scheduler. */
 	if (odp_schedule_config(NULL)) {
-		fprintf(stderr, "odp_schedule_config() failed.\n");
+		ODPH_ERR("odp_schedule_config() failed\n");
 		return -1;
 	}
 
 	if (odp_pool_capability(&pool_capa) < 0) {
-		fprintf(stderr, "error: odp_pool_capability() failed.\n");
+		ODPH_ERR("odp_pool_capability() failed\n");
 		return -1;
 	}
 
@@ -3325,20 +3325,20 @@ static int crypto_init(odp_instance_t *inst)
 
 	if (pool_capa.pkt.max_seg_len &&
 	    PKT_POOL_LEN > pool_capa.pkt.max_seg_len) {
-		fprintf(stderr, "Warning: small packet segment length\n");
+		ODPH_ERR("Warning: small packet segment length\n");
 		params.pkt.seg_len = pool_capa.pkt.max_seg_len;
 	}
 
 	if (pool_capa.pkt.max_len &&
 	    PKT_POOL_LEN > pool_capa.pkt.max_len) {
-		fprintf(stderr, "Pool max packet length too small\n");
+		ODPH_ERR("Pool max packet length too small\n");
 		return -1;
 	}
 
 	pool = odp_pool_create("packet_pool", &params);
 
 	if (ODP_POOL_INVALID == pool) {
-		fprintf(stderr, "Packet pool creation failed.\n");
+		ODPH_ERR("Packet pool creation failed\n");
 		return -1;
 	}
 
@@ -3352,18 +3352,18 @@ static int crypto_term(odp_instance_t inst)
 	pool = odp_pool_lookup("packet_pool");
 	if (ODP_POOL_INVALID != pool) {
 		if (odp_pool_destroy(pool))
-			fprintf(stderr, "Packet pool destroy failed.\n");
+			ODPH_ERR("Packet pool destroy failed\n");
 	} else {
-		fprintf(stderr, "Packet pool not found.\n");
+		ODPH_ERR("Packet pool not found\n");
 	}
 
 	if (0 != odp_term_local()) {
-		fprintf(stderr, "error: odp_term_local() failed.\n");
+		ODPH_ERR("odp_term_local() failed\n");
 		return -1;
 	}
 
 	if (0 != odp_term_global(inst)) {
-		fprintf(stderr, "error: odp_term_global() failed.\n");
+		ODPH_ERR("odp_term_global() failed\n");
 		return -1;
 	}
 

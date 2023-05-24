@@ -569,12 +569,12 @@ static int spinlock_functional_test(void *arg UNUSED)
 
 	if ((global_mem->g_verbose) &&
 	    ((sync_failures != 0) || (is_locked_errs != 0)))
-		printf("\nThread %" PRIu32 " (id=%d core=%d) had %" PRIu32
-		       " sync_failures and %" PRIu32
-		       " is_locked_errs in %" PRIu32
-		       " iterations\n", thread_num,
-		       per_thread_mem->thread_id, per_thread_mem->thread_core,
-		       sync_failures, is_locked_errs, iterations);
+		ODPH_ERR("Thread %" PRIu32 " (id=%d core=%d) had %" PRIu32
+			 " sync_failures and %" PRIu32
+			 " is_locked_errs in %" PRIu32
+			 " iterations\n", thread_num,
+			 per_thread_mem->thread_id, per_thread_mem->thread_core,
+			 sync_failures, is_locked_errs, iterations);
 
 	CU_ASSERT(sync_failures == 0);
 	CU_ASSERT(is_locked_errs == 0);
@@ -675,14 +675,14 @@ static int spinlock_recursive_functional_test(void *arg UNUSED)
 
 	if ((global_mem->g_verbose) &&
 	    (sync_failures != 0 || recursive_errs != 0 || is_locked_errs != 0))
-		printf("\nThread %" PRIu32 " (id=%d core=%d) had %" PRIu32
-		       " sync_failures and %" PRIu32
-		       " recursive_errs and %" PRIu32
-		       " is_locked_errs in %" PRIu32
-		       " iterations\n", thread_num,
-		       per_thread_mem->thread_id, per_thread_mem->thread_core,
-		       sync_failures, recursive_errs, is_locked_errs,
-		       iterations);
+		ODPH_ERR("Thread %" PRIu32 " (id=%d core=%d) had %" PRIu32
+			 " sync_failures and %" PRIu32
+			 " recursive_errs and %" PRIu32
+			 " is_locked_errs in %" PRIu32
+			 " iterations\n", thread_num,
+			 per_thread_mem->thread_id, per_thread_mem->thread_core,
+			 sync_failures, recursive_errs, is_locked_errs,
+			 iterations);
 
 	CU_ASSERT(sync_failures == 0);
 	CU_ASSERT(recursive_errs == 0);
@@ -765,12 +765,12 @@ static int ticketlock_functional_test(void *arg UNUSED)
 
 	if ((global_mem->g_verbose) &&
 	    ((sync_failures != 0) || (is_locked_errs != 0)))
-		printf("\nThread %" PRIu32 " (id=%d core=%d) had %" PRIu32
-		       " sync_failures and %" PRIu32
-		       " is_locked_errs in %" PRIu32 " iterations\n",
-		       thread_num,
-		       per_thread_mem->thread_id, per_thread_mem->thread_core,
-		       sync_failures, is_locked_errs, iterations);
+		ODPH_ERR("Thread %" PRIu32 " (id=%d core=%d) had %" PRIu32
+			 " sync_failures and %" PRIu32
+			 " is_locked_errs in %" PRIu32 " iterations\n",
+			 thread_num,
+			 per_thread_mem->thread_id, per_thread_mem->thread_core,
+			 sync_failures, is_locked_errs, iterations);
 
 	CU_ASSERT(sync_failures == 0);
 	CU_ASSERT(is_locked_errs == 0);
@@ -858,11 +858,11 @@ static int rwlock_functional_test(void *arg UNUSED)
 	}
 
 	if ((global_mem->g_verbose) && (sync_failures != 0))
-		printf("\nThread %" PRIu32 " (id=%d core=%d) had %" PRIu32
-		       " sync_failures in %" PRIu32 " iterations\n", thread_num,
-		       per_thread_mem->thread_id,
-		       per_thread_mem->thread_core,
-		       sync_failures, iterations);
+		ODPH_ERR("Thread %" PRIu32 " (id=%d core=%d) had %" PRIu32
+			 " sync_failures in %" PRIu32 " iterations\n", thread_num,
+			 per_thread_mem->thread_id,
+			 per_thread_mem->thread_core,
+			 sync_failures, iterations);
 
 	CU_ASSERT(sync_failures == 0);
 
@@ -985,13 +985,13 @@ static int rwlock_recursive_functional_test(void *arg UNUSED)
 	}
 
 	if ((global_mem->g_verbose) && (sync_failures != 0))
-		printf("\nThread %" PRIu32 " (id=%d core=%d) had %" PRIu32
-		       " sync_failures and %" PRIu32
-		       " recursive_errs in %" PRIu32
-		       " iterations\n", thread_num,
-		       per_thread_mem->thread_id,
-		       per_thread_mem->thread_core,
-		       sync_failures, recursive_errs, iterations);
+		ODPH_ERR("Thread %" PRIu32 " (id=%d core=%d) had %" PRIu32
+			 " sync_failures and %" PRIu32
+			 " recursive_errs in %" PRIu32
+			 " iterations\n", thread_num,
+			 per_thread_mem->thread_id,
+			 per_thread_mem->thread_core,
+			 sync_failures, recursive_errs, iterations);
 
 	CU_ASSERT(sync_failures == 0);
 	CU_ASSERT(recursive_errs == 0);
@@ -1153,7 +1153,7 @@ static int lock_init(odp_instance_t *inst)
 	odph_helper_options_t helper_options;
 
 	if (odph_options(&helper_options)) {
-		fprintf(stderr, "error: odph_options() failed.\n");
+		ODPH_ERR("odph_options() failed\n");
 		return -1;
 	}
 
@@ -1161,18 +1161,18 @@ static int lock_init(odp_instance_t *inst)
 	init_param.mem_model = helper_options.mem_model;
 
 	if (0 != odp_init_global(inst, &init_param, NULL)) {
-		fprintf(stderr, "error: odp_init_global() failed.\n");
+		ODPH_ERR("odp_init_global() failed\n");
 		return -1;
 	}
 	if (0 != odp_init_local(*inst, ODP_THREAD_CONTROL)) {
-		fprintf(stderr, "error: odp_init_local() failed.\n");
+		ODPH_ERR("odp_init_local() failed\n");
 		return -1;
 	}
 
 	global_shm = odp_shm_reserve(GLOBAL_SHM_NAME,
 				     sizeof(global_shared_mem_t), 64, 0);
 	if (ODP_SHM_INVALID == global_shm) {
-		fprintf(stderr, "Unable reserve memory for global_shm\n");
+		ODPH_ERR("Unable to reserve memory for global_shm\n");
 		return -1;
 	}
 
@@ -1208,17 +1208,17 @@ static int lock_term(odp_instance_t inst)
 
 	shm = odp_shm_lookup(GLOBAL_SHM_NAME);
 	if (0 != odp_shm_free(shm)) {
-		fprintf(stderr, "error: odp_shm_free() failed.\n");
+		ODPH_ERR("odp_shm_free() failed\n");
 		return -1;
 	}
 
 	if (0 != odp_term_local()) {
-		fprintf(stderr, "error: odp_term_local() failed.\n");
+		ODPH_ERR("odp_term_local() failed\n");
 		return -1;
 	}
 
 	if (0 != odp_term_global(inst)) {
-		fprintf(stderr, "error: odp_term_global() failed.\n");
+		ODPH_ERR("odp_term_global() failed\n");
 		return -1;
 	}
 

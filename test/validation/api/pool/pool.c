@@ -1859,7 +1859,7 @@ static int pool_suite_init(void)
 	memset(&default_pool_param, 0, sizeof(odp_pool_param_t));
 
 	if (odp_pool_capability(&global_pool_capa) < 0) {
-		printf("pool_capability failed in suite init\n");
+		ODPH_ERR("odp_pool_capability() failed in suite init\n");
 		return -1;
 	}
 
@@ -1873,12 +1873,12 @@ static int pool_ext_suite_init(void)
 	memset(&global_pool_ext_capa, 0, sizeof(odp_pool_ext_capability_t));
 
 	if (odp_pool_ext_capability(ODP_POOL_PACKET, &global_pool_ext_capa)) {
-		printf("Pool ext capa failed in suite init\n");
+		ODPH_ERR("Pool ext capa failed in suite init\n");
 		return -1;
 	}
 
 	if (global_pool_ext_capa.type != ODP_POOL_PACKET) {
-		printf("Bad type from pool ext capa in suite init\n");
+		ODPH_ERR("Bad type from pool ext capa in suite init\n");
 		return -1;
 	}
 

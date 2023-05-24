@@ -139,7 +139,7 @@ static int scheduler_suite_init(void)
 	odp_schedule_config_t sched_config;
 
 	if (odp_schedule_capability(&sched_capa)) {
-		printf("odp_schedule_capability() failed\n");
+		ODPH_ERR("odp_schedule_capability() failed\n");
 		return -1;
 	}
 
@@ -152,7 +152,7 @@ static int scheduler_suite_init(void)
 
 	/* Configure the scheduler. All test cases share the config. */
 	if (odp_schedule_config(&sched_config)) {
-		printf("odp_schedule_config() failed.\n");
+		ODPH_ERR("odp_schedule_config() failed\n");
 		return -1;
 	}
 

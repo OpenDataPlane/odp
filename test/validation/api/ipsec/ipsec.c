@@ -57,12 +57,12 @@ static odp_pktio_t pktio_create(odp_pool_t pool)
 	if (pktio == ODP_PKTIO_INVALID) {
 		ret = odp_pool_destroy(pool);
 		if (ret)
-			fprintf(stderr, "unable to destroy pool.\n");
+			ODPH_ERR("Unable to destroy pool\n");
 		return ODP_PKTIO_INVALID;
 	}
 
 	if (odp_pktio_capability(pktio, &capa)) {
-		fprintf(stderr, "pktio capabilities failed.\n");
+		ODPH_ERR("Pktio capabilities failed\n");
 		return ODP_PKTIO_INVALID;
 	}
 
@@ -70,12 +70,12 @@ static odp_pktio_t pktio_create(odp_pool_t pool)
 	pktin_param.queue_param.sched.sync = ODP_SCHED_SYNC_ATOMIC;
 
 	if (odp_pktin_queue_config(pktio, &pktin_param)) {
-		fprintf(stderr, "pktin queue config failed.\n");
+		ODPH_ERR("Pktin queue config failed\n");
 		return ODP_PKTIO_INVALID;
 	}
 
 	if (odp_pktout_queue_config(pktio, NULL)) {
-		fprintf(stderr, "pktout queue config failed.\n");
+		ODPH_ERR("Pktout queue config failed\n");
 		return ODP_PKTIO_INVALID;
 	}
 
@@ -213,7 +213,7 @@ static void pktio_stop(odp_pktio_t pktio)
 	odp_pktin_event_queue(pktio, &queue, 1);
 
 	if (odp_pktio_stop(pktio))
-		fprintf(stderr, "IPsec pktio stop failed.\n");
+		ODPH_ERR("IPsec pktio stop failed\n");
 
 	while (1) {
 		odp_event_t ev = recv_event(queue, 0);
@@ -1279,7 +1279,7 @@ int ipsec_suite_term(void)
 
 	if (ODP_QUEUE_INVALID != suite_context.queue) {
 		if (odp_queue_destroy(suite_context.queue))
-			fprintf(stderr, "IPsec destq destroy failed.\n");
+			ODPH_ERR("IPsec destq destroy failed\n");
 	}
 
 	if (odp_cunit_print_inactive())
@@ -1332,7 +1332,7 @@ int ipsec_suite_plain_init(void)
 
 	dest_queue = plain_queue_create("ipsec-out");
 	if (ODP_QUEUE_INVALID == dest_queue) {
-		fprintf(stderr, "IPsec destq creation failed.\n");
+		ODPH_ERR("IPsec destq creation failed\n");
 		return -1;
 	}
 
@@ -1348,7 +1348,7 @@ int ipsec_suite_sched_init(void)
 
 	dest_queue = sched_queue_create("ipsec-out");
 	if (ODP_QUEUE_INVALID == dest_queue) {
-		fprintf(stderr, "IPsec destq creation failed.\n");
+		ODPH_ERR("IPsec destq creation failed\n");
 		return -1;
 	}
 
@@ -1374,7 +1374,7 @@ int ipsec_init(odp_instance_t *inst, odp_ipsec_op_mode_t mode)
 	suite_context.default_queue = ODP_QUEUE_INVALID;
 
 	if (odph_options(&helper_options)) {
-		fprintf(stderr, "error: odph_options() failed.\n");
+		ODPH_ERR("odph_options() failed\n");
 		return -1;
 	}
 
@@ -1382,22 +1382,22 @@ int ipsec_init(odp_instance_t *inst, odp_ipsec_op_mode_t mode)
 	init_param.mem_model = helper_options.mem_model;
 
 	if (0 != odp_init_global(inst, &init_param, NULL)) {
-		fprintf(stderr, "error: odp_init_global() failed.\n");
+		ODPH_ERR("odp_init_global() failed\n");
 		return -1;
 	}
 
 	if (0 != odp_init_local(*inst, ODP_THREAD_CONTROL)) {
-		fprintf(stderr, "error: odp_init_local() failed.\n");
+		ODPH_ERR("odp_init_local() failed\n");
 		return -1;
 	}
 
 	if (odp_schedule_config(NULL)) {
-		fprintf(stderr, "odp_schedule_config() failed.\n");
+		ODPH_ERR("odp_schedule_config() failed\n");
 		return -1;
 	}
 
 	if (odp_pool_capability(&pool_capa) < 0) {
-		fprintf(stderr, "error: odp_pool_capability() failed.\n");
+		ODPH_ERR("odp_pool_capability() failed\n");
 		return -1;
 	}
 
@@ -1409,27 +1409,27 @@ int ipsec_init(odp_instance_t *inst, odp_ipsec_op_mode_t mode)
 
 	if (pool_capa.pkt.max_seg_len &&
 	    MAX_PKT_LEN > pool_capa.pkt.max_seg_len) {
-		fprintf(stderr, "Warning: small packet segment length\n");
+		ODPH_ERR("Warning: small packet segment length\n");
 		params.pkt.seg_len = pool_capa.pkt.max_seg_len;
 	}
 
 	if (pool_capa.pkt.max_len &&
 	    MAX_PKT_LEN > pool_capa.pkt.max_len) {
-		fprintf(stderr, "Pool max packet length too small\n");
+		ODPH_ERR("Pool max packet length too small\n");
 		return -1;
 	}
 
 	pool = odp_pool_create("packet_pool", &params);
 
 	if (ODP_POOL_INVALID == pool) {
-		fprintf(stderr, "Packet pool creation failed.\n");
+		ODPH_ERR("Packet pool creation failed\n");
 		return -1;
 	}
 
 	if (mode == ODP_IPSEC_OP_MODE_INLINE) {
 		pktio = pktio_create(pool);
 		if (ODP_PKTIO_INVALID == pktio) {
-			fprintf(stderr, "IPsec pktio creation failed.\n");
+			ODPH_ERR("IPsec pktio creation failed\n");
 			return -1;
 		}
 	}
@@ -1469,7 +1469,7 @@ int ipsec_config(odp_instance_t ODP_UNUSED inst)
 			suite_context.default_queue = sched_queue_create("ipsec-default");
 
 		if (ODP_QUEUE_INVALID == suite_context.default_queue) {
-			fprintf(stderr, "IPsec defaultq creation failed.\n");
+			ODPH_ERR("IPsec defaultq creation failed\n");
 			return -1;
 		}
 	}
@@ -1564,26 +1564,26 @@ int ipsec_term(odp_instance_t inst)
 
 	if (ODP_PKTIO_INVALID != pktio) {
 		if (odp_pktio_close(pktio))
-			fprintf(stderr, "IPsec pktio close failed.\n");
+			ODPH_ERR("IPsec pktio close failed\n");
 	}
 
 	if (ODP_QUEUE_INVALID != default_queue) {
 		if (odp_queue_destroy(default_queue))
-			fprintf(stderr, "IPsec defaultq destroy failed.\n");
+			ODPH_ERR("IPsec defaultq destroy failed\n");
 	}
 
 	if (ODP_POOL_INVALID != pool) {
 		if (odp_pool_destroy(pool))
-			fprintf(stderr, "Packet pool destroy failed.\n");
+			ODPH_ERR("Packet pool destroy failed\n");
 	}
 
 	if (0 != odp_term_local()) {
-		fprintf(stderr, "error: odp_term_local() failed.\n");
+		ODPH_ERR("odp_term_local() failed\n");
 		return -1;
 	}
 
 	if (0 != odp_term_global(inst)) {
-		fprintf(stderr, "error: odp_term_global() failed.\n");
+		ODPH_ERR("odp_term_global() failed\n");
 		return -1;
 	}
 

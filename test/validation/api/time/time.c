@@ -519,15 +519,13 @@ static void time_test_wait_until(time_cb time_cur, time_from_ns_cb time_from_ns)
 				   DELAY_TOLERANCE);
 
 	if (odp_time_cmp(wait, lower_limit) < 0) {
-		ODPH_ERR("Exceed lower limit: "
-			 "wait is %" PRIu64 ", lower_limit %" PRIu64 "\n",
+		ODPH_ERR("Exceed lower limit: wait is %" PRIu64 ", lower_limit %" PRIu64 "\n",
 			 odp_time_to_ns(wait), odp_time_to_ns(lower_limit));
 		CU_FAIL("Exceed lower limit\n");
 	}
 
 	if (odp_time_cmp(wait, upper_limit) > 0) {
-		ODPH_ERR("Exceed upper limit: "
-			 "wait is %" PRIu64 ", upper_limit %" PRIu64 "\n",
+		ODPH_ERR("Exceed upper limit: wait is %" PRIu64 ", upper_limit %" PRIu64 "\n",
 			 odp_time_to_ns(wait), odp_time_to_ns(lower_limit));
 		CU_FAIL("Exceed upper limit\n");
 	}
@@ -562,15 +560,13 @@ static void time_test_wait_ns(void)
 					     DELAY_TOLERANCE);
 
 	if (odp_time_cmp(diff, lower_limit) < 0) {
-		ODPH_ERR("Exceed lower limit: "
-			 "diff is %" PRIu64 ", lower_limit %" PRIu64 "\n",
+		ODPH_ERR("Exceed lower limit: diff is %" PRIu64 ", lower_limit %" PRIu64 "\n",
 			 odp_time_to_ns(diff), odp_time_to_ns(lower_limit));
 		CU_FAIL("Exceed lower limit\n");
 	}
 
 	if (odp_time_cmp(diff, upper_limit) > 0) {
-		ODPH_ERR("Exceed upper limit: "
-			 "diff is %" PRIu64 ", upper_limit %" PRIu64 "\n",
+		ODPH_ERR("Exceed upper limit: diff is %" PRIu64 ", upper_limit %" PRIu64 "\n",
 			 odp_time_to_ns(diff), odp_time_to_ns(upper_limit));
 		CU_FAIL("Exceed upper limit\n");
 	}
