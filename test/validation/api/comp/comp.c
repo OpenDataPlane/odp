@@ -5,6 +5,8 @@
  */
 
 #include <odp_api.h>
+#include <odp/helper/odph_api.h>
+
 #include <odp_cunit_common.h>
 #include "test_vectors.h"
 
@@ -68,7 +70,7 @@ static int check_comp_alg_support(odp_comp_alg_t comp,
 			return ODP_TEST_INACTIVE;
 		break;
 	default:
-		fprintf(stderr, "Unsupported compression algorithm\n");
+		ODPH_ERR("Unsupported compression algorithm\n");
 		return ODP_TEST_INACTIVE;
 	}
 
@@ -87,7 +89,7 @@ static int check_comp_alg_support(odp_comp_alg_t comp,
 			return ODP_TEST_INACTIVE;
 		break;
 	default:
-		fprintf(stderr, "Unsupported hash algorithm\n");
+		ODPH_ERR("Unsupported hash algorithm\n");
 		return ODP_TEST_INACTIVE;
 	}
 
@@ -475,17 +477,17 @@ static int comp_init(odp_instance_t *inst)
 	odp_pool_capability_t pool_capa;
 
 	if (0 != odp_init_global(inst, NULL, NULL)) {
-		fprintf(stderr, "error: odp_init_global() failed.\n");
+		ODPH_ERR("odp_init_global() failed\n");
 		return -1;
 	}
 
 	if (0 != odp_init_local(*inst, ODP_THREAD_CONTROL)) {
-		fprintf(stderr, "error: odp_init_local() failed.\n");
+		ODPH_ERR("odp_init_local() failed\n");
 		return -1;
 	}
 
 	if (odp_pool_capability(&pool_capa) < 0) {
-		fprintf(stderr, "error: odp_pool_capability() failed.\n");
+		ODPH_ERR("odp_pool_capability() failed\n");
 		return -1;
 	}
 
@@ -497,20 +499,20 @@ static int comp_init(odp_instance_t *inst)
 
 	if (pool_capa.pkt.max_seg_len &&
 	    TEST_PKT_LEN > pool_capa.pkt.max_seg_len) {
-		fprintf(stderr, "Warning: small packet segment length\n");
+		ODPH_ERR("Warning: small packet segment length\n");
 		params.pkt.seg_len = pool_capa.pkt.max_seg_len;
 	}
 
 	pool = odp_pool_create(COMP_PACKET_POOL, &params);
 	if (ODP_POOL_INVALID == pool) {
-		fprintf(stderr, "Packet pool creation failed.\n");
+		ODPH_ERR("Packet pool creation failed\n");
 		return -1;
 	}
 
 	/* Queue to store compression/decompression events */
 	out_queue = odp_queue_create(COMP_OUT_QUEUE, NULL);
 	if (ODP_QUEUE_INVALID == out_queue) {
-		fprintf(stderr, "Comp outq creation failed.\n");
+		ODPH_ERR("Comp outq creation failed\n");
 		return -1;
 	}
 
@@ -525,26 +527,26 @@ static int comp_term(odp_instance_t inst)
 	out_queue = odp_queue_lookup(COMP_OUT_QUEUE);
 	if (ODP_QUEUE_INVALID != out_queue) {
 		if (odp_queue_destroy(out_queue))
-			fprintf(stderr, "Comp outq destroy failed.\n");
+			ODPH_ERR("Comp outq destroy failed\n");
 	} else {
-		fprintf(stderr, "Comp outq not found.\n");
+		ODPH_ERR("Comp outq not found\n");
 	}
 
 	pool = odp_pool_lookup(COMP_PACKET_POOL);
 	if (ODP_POOL_INVALID != pool) {
 		if (odp_pool_destroy(pool))
-			fprintf(stderr, "Packet pool destroy failed.\n");
+			ODPH_ERR("Packet pool destroy failed\n");
 	} else {
-		fprintf(stderr, "Packet pool not found.\n");
+		ODPH_ERR("Packet pool not found\n");
 	}
 
 	if (0 != odp_term_local()) {
-		fprintf(stderr, "error: odp_term_local() failed.\n");
+		ODPH_ERR("odp_term_local() failed\n");
 		return -1;
 	}
 
 	if (0 != odp_term_global(inst)) {
-		fprintf(stderr, "error: odp_term_global() failed.\n");
+		ODPH_ERR("odp_term_global() failed\n");
 		return -1;
 	}
 

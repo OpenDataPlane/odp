@@ -117,7 +117,7 @@ static int timer_global_init(odp_instance_t *inst)
 	int i;
 
 	if (odph_options(&helper_options)) {
-		fprintf(stderr, "error: odph_options() failed.\n");
+		ODPH_ERR("odph_options() failed\n");
 		return -1;
 	}
 
@@ -125,11 +125,11 @@ static int timer_global_init(odp_instance_t *inst)
 	init_param.mem_model = helper_options.mem_model;
 
 	if (0 != odp_init_global(inst, &init_param, NULL)) {
-		fprintf(stderr, "error: odp_init_global() failed.\n");
+		ODPH_ERR("odp_init_global() failed\n");
 		return -1;
 	}
 	if (0 != odp_init_local(*inst, ODP_THREAD_CONTROL)) {
-		fprintf(stderr, "error: odp_init_local() failed.\n");
+		ODPH_ERR("odp_init_local() failed\n");
 		return -1;
 	}
 
@@ -137,7 +137,7 @@ static int timer_global_init(odp_instance_t *inst)
 				     sizeof(global_shared_mem_t),
 				     ODP_CACHE_LINE_SIZE, 0);
 	if (global_shm == ODP_SHM_INVALID) {
-		fprintf(stderr, "Unable reserve memory for global_shm\n");
+		ODPH_ERR("Unable to reserve memory for global_shm\n");
 		return -1;
 	}
 
@@ -149,7 +149,7 @@ static int timer_global_init(odp_instance_t *inst)
 
 	memset(&capa, 0, sizeof(capa));
 	if (odp_timer_capability(ODP_CLOCK_DEFAULT, &capa)) {
-		fprintf(stderr, "Timer capability failed\n");
+		ODPH_ERR("Timer capability failed\n");
 		return -1;
 	}
 
@@ -162,7 +162,7 @@ static int timer_global_init(odp_instance_t *inst)
 	res_capa.res_ns = res_ns;
 
 	if (odp_timer_res_capability(ODP_CLOCK_DEFAULT, &res_capa)) {
-		fprintf(stderr, "Timer resolution capability failed\n");
+		ODPH_ERR("Timer resolution capability failed\n");
 		return -1;
 	}
 
@@ -178,7 +178,7 @@ static int timer_global_init(odp_instance_t *inst)
 
 	range = (RANGE_MS * 1000) + THREE_POINT_THREE_MSEC;
 	if ((max_tmo - min_tmo) < range) {
-		fprintf(stderr, "Validation test needs %u msec range\n", range);
+		ODPH_ERR("Validation test needs %u msec range\n", range);
 		return -1;
 	}
 
@@ -209,17 +209,17 @@ static int timer_global_term(odp_instance_t inst)
 
 	shm = odp_shm_lookup(GLOBAL_SHM_NAME);
 	if (0 != odp_shm_free(shm)) {
-		fprintf(stderr, "error: odp_shm_free() failed.\n");
+		ODPH_ERR("odp_shm_free() failed\n");
 		return -1;
 	}
 
 	if (0 != odp_term_local()) {
-		fprintf(stderr, "error: odp_term_local() failed.\n");
+		ODPH_ERR("odp_term_local() failed\n");
 		return -1;
 	}
 
 	if (0 != odp_term_global(inst)) {
-		fprintf(stderr, "error: odp_term_global() failed.\n");
+		ODPH_ERR("odp_term_global() failed\n");
 		return -1;
 	}
 

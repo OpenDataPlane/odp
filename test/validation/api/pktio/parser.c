@@ -70,20 +70,19 @@ static int pkt_pool_create(void)
 	odp_pool_param_t params;
 
 	if (odp_pool_capability(&capa) != 0) {
-		printf("Error: unable to query pool capability.\n");
+		ODPH_ERR("Unable to query pool capability\n");
 		return -1;
 	}
 
 	if (capa.pkt.max_num && capa.pkt.max_num < PKT_POOL_NUM) {
-		printf("Error: packet pool size not supported.\n");
-		printf("MAX: %" PRIu32 "\n", capa.pkt.max_num);
+		ODPH_ERR("Packet pool size not supported: MAX=%" PRIu32 "\n", capa.pkt.max_num);
 		return -1;
 	} else if (capa.pkt.max_len && capa.pkt.max_len < PKT_POOL_BUF_LEN) {
-		printf("Error: packet length not supported.\n");
+		ODPH_ERR("Packet length not supported\n");
 		return -1;
 	} else if (capa.pkt.max_seg_len &&
 		   capa.pkt.max_seg_len < PKT_POOL_BUF_LEN) {
-		printf("Error: segment length not supported.\n");
+		ODPH_ERR("Segment length not supported\n");
 		return -1;
 	}
 
@@ -95,7 +94,7 @@ static int pkt_pool_create(void)
 
 	parser_pool = odp_pool_create("pkt_pool_default", &params);
 	if (parser_pool == ODP_POOL_INVALID) {
-		printf("Error: packet pool create failed.\n");
+		ODPH_ERR("Packet pool create failed\n");
 		return -1;
 	}
 
@@ -115,24 +114,24 @@ static odp_pktio_t create_pktio(int iface_idx, odp_pool_t pool)
 
 	pktio = odp_pktio_open(iface, pool, &pktio_param);
 	if (pktio == ODP_PKTIO_INVALID) {
-		printf("Error: failed to open %s\n", iface);
+		ODPH_ERR("Failed to open %s\n", iface);
 		return ODP_PKTIO_INVALID;
 	}
 
 	odp_pktio_config_init(&config);
 	config.parser.layer = ODP_PROTO_LAYER_ALL;
 	if (odp_pktio_config(pktio, &config)) {
-		printf("Error:  failed to configure %s\n", iface);
+		ODPH_ERR("Failed to configure %s\n", iface);
 		return ODP_PKTIO_INVALID;
 	}
 
 	/* By default, single input and output queue is used */
 	if (odp_pktin_queue_config(pktio, NULL)) {
-		printf("Error: failed to config input queue for %s\n", iface);
+		ODPH_ERR("Failed to config input queue for %s\n", iface);
 		return ODP_PKTIO_INVALID;
 	}
 	if (odp_pktout_queue_config(pktio, NULL)) {
-		printf("Error: failed to config output queue for %s\n", iface);
+		ODPH_ERR("Failed to config output queue for %s\n", iface);
 		return ODP_PKTIO_INVALID;
 	}
 
@@ -151,7 +150,7 @@ static odp_packet_t create_packet(const uint8_t *data, uint32_t len)
 		return ODP_PACKET_INVALID;
 
 	if (odp_packet_copy_from_mem(pkt, 0, len, data)) {
-		printf("Error: failed to copy test packet data\n");
+		ODPH_ERR("Failed to copy test packet data\n");
 		odp_packet_free(pkt);
 		return ODP_PACKET_INVALID;
 	}
@@ -513,7 +512,7 @@ int parser_suite_init(void)
 	}
 
 	if (pkt_pool_create() != 0) {
-		printf("Error: failed to create parser pool\n");
+		ODPH_ERR("Failed to create parser pool\n");
 		return -1;
 	}
 
@@ -525,22 +524,22 @@ int parser_suite_init(void)
 		io->name = iface_name[i];
 		io->hdl   = create_pktio(i, parser_pool);
 		if (io->hdl == ODP_PKTIO_INVALID) {
-			printf("Error: failed to open iface");
+			ODPH_ERR("Failed to open iface");
 			return -1;
 		}
 
 		if (odp_pktout_queue(io->hdl, &io->pktout, 1) != 1) {
-			printf("Error: failed to start iface: %s\n", io->name);
+			ODPH_ERR("Failed to start iface: %s\n", io->name);
 			return -1;
 		}
 
 		if (odp_pktin_queue(io->hdl, &io->pktin, 1) != 1) {
-			printf("Error: failed to start iface: %s\n", io->name);
+			ODPH_ERR("Failed to start iface: %s\n", io->name);
 			return -1;
 		}
 
 		if (odp_pktio_start(io->hdl)) {
-			printf("Error: failed to start iface: %s\n", io->name);
+			ODPH_ERR("Failed to start iface: %s\n", io->name);
 			return -1;
 		}
 
@@ -562,19 +561,17 @@ int parser_suite_term(void)
 
 	for (i = 0; i < num_ifaces; ++i) {
 		if (odp_pktio_stop(pktios[i].hdl)) {
-			printf("Error: failed to stop pktio: %s\n",
-			       pktios[i].name);
+			ODPH_ERR("Failed to stop pktio: %s\n", pktios[i].name);
 			ret = -1;
 		}
 		if (odp_pktio_close(pktios[i].hdl)) {
-			printf("Error: failed to close pktio: %s\n",
-			       pktios[i].name);
+			ODPH_ERR("Failed to close pktio: %s\n", pktios[i].name);
 			ret = -1;
 		}
 	}
 
 	if (odp_pool_destroy(parser_pool) != 0) {
-		printf("Error: failed to destroy packet pool\n");
+		ODPH_ERR("Failed to destroy packet pool\n");
 		ret = -1;
 	}
 

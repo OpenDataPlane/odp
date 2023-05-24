@@ -6,6 +6,7 @@
  */
 
 #include <odp_api.h>
+#include <odp/helper/odph_api.h>
 #include <odp_cunit_common.h>
 
 #define MAX_WORKERS             32
@@ -65,7 +66,7 @@ static int queue_suite_init(void)
 			      ODP_CACHE_LINE_SIZE, 0);
 
 	if (shm == ODP_SHM_INVALID) {
-		printf("Shared memory reserve failed\n");
+		ODPH_ERR("Shared memory reserve failed\n");
 		return -1;
 	}
 
@@ -91,7 +92,7 @@ static int queue_suite_init(void)
 	pool = odp_pool_create("msg_pool", &params);
 
 	if (ODP_POOL_INVALID == pool) {
-		printf("Pool create failed.\n");
+		ODPH_ERR("Pool create failed\n");
 		return -1;
 	}
 	return 0;
@@ -103,17 +104,17 @@ static int queue_suite_term(void)
 
 	shm = odp_shm_lookup(GLOBALS_NAME);
 	if (shm == ODP_SHM_INVALID) {
-		printf("SHM lookup failed.\n");
+		ODPH_ERR("SHM lookup failed\n");
 		return -1;
 	}
 
 	if (odp_shm_free(shm)) {
-		printf("SHM free failed.\n");
+		ODPH_ERR("SHM free failed\n");
 		return -1;
 	}
 
 	if (odp_pool_destroy(pool)) {
-		printf("Pool destroy failed.\n");
+		ODPH_ERR("Pool destroy failed\n");
 		return -1;
 	}
 
@@ -455,7 +456,7 @@ static int queue_pair_work_loop(void *arg)
 		buf = odp_buffer_from_event(ev);
 		data = odp_buffer_addr(buf);
 		if (*data != i) {
-			printf("Seq error: expected %u, recv %u\n", i, *data);
+			ODPH_ERR("Seq error: expected %u, recv %u\n", i, *data);
 			CU_FAIL("Sequence number error");
 		}
 

@@ -23,7 +23,7 @@ static int buffer_suite_init(void)
 	uint32_t size, num, align;
 
 	if (odp_pool_capability(&pool_capa)) {
-		printf("pool capability failed\n");
+		ODPH_ERR("Pool capability failed\n");
 		return -1;
 	}
 
@@ -111,7 +111,7 @@ static void test_pool_alloc_free(const odp_pool_param_t *param)
 			wrong_align = true;
 
 		if (wrong_type || wrong_subtype || wrong_size || wrong_align) {
-			printf("Buffer has error\n");
+			ODPH_ERR("Buffer has error\n");
 			odp_buffer_print(buffer[i]);
 			break;
 		}
@@ -200,7 +200,7 @@ static void test_pool_alloc_free_multi(const odp_pool_param_t *param)
 			wrong_align = true;
 
 		if (wrong_type || wrong_subtype || wrong_size || wrong_align) {
-			printf("Buffer has error\n");
+			ODPH_ERR("Buffer has error\n");
 			odp_buffer_print(buffer[i]);
 			break;
 		}
@@ -351,7 +351,7 @@ static void test_pool_max_pools(odp_pool_param_t *param)
 
 	CU_ASSERT(num_pool == max_pools);
 	if (num_pool != max_pools)
-		printf("Error: created only %u pools\n", num_pool);
+		ODPH_ERR("Created only %u pools\n", num_pool);
 
 	for (i = 0; i < num_pool; i++) {
 		buffer[i] = odp_buffer_alloc(pool[i]);

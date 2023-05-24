@@ -200,7 +200,7 @@ static int packet_suite_init(void)
 	memset(&pool_capa, 0, sizeof(odp_pool_capability_t));
 
 	if (odp_pool_capability(&pool_capa) < 0) {
-		printf("pool_capability failed\n");
+		ODPH_ERR("odp_pool_capability() failed\n");
 		return -1;
 	}
 
@@ -246,14 +246,14 @@ static int packet_suite_init(void)
 
 	default_pool = odp_pool_create("default_pool", &params);
 	if (default_pool == ODP_POOL_INVALID) {
-		printf("default pool create failed\n");
+		ODPH_ERR("Default pool create failed\n");
 		return -1;
 	}
 
 	test_packet = odp_packet_alloc(default_pool, packet_len);
 
 	if (test_packet == ODP_PACKET_INVALID) {
-		printf("test_packet alloc failed\n");
+		ODPH_ERR("Packet alloc failed\n");
 		return -1;
 	}
 
@@ -277,7 +277,7 @@ static int packet_suite_init(void)
 		 segmented_packet_len > pool_capa.pkt.min_seg_len);
 
 	if (ret != PACKET_POOL_NUM_SEG) {
-		printf("packet alloc failed\n");
+		ODPH_ERR("Packet alloc failed\n");
 		return -1;
 	}
 	segmented_test_packet = pkt_tbl[0];
@@ -285,7 +285,7 @@ static int packet_suite_init(void)
 
 	if (odp_packet_is_valid(test_packet) == 0 ||
 	    odp_packet_is_valid(segmented_test_packet) == 0) {
-		printf("packet_is_valid failed\n");
+		ODPH_ERR("odp_packet_is_valid() failed\n");
 		return -1;
 	}
 
@@ -299,7 +299,7 @@ static int packet_suite_init(void)
 
 	udat = odp_packet_user_area(test_packet);
 	if (odp_packet_user_area_size(test_packet) < uarea_size) {
-		printf("Bad packet user area size %u\n", odp_packet_user_area_size(test_packet));
+		ODPH_ERR("Bad packet user area size %u\n", odp_packet_user_area_size(test_packet));
 		return -1;
 	}
 
@@ -308,8 +308,8 @@ static int packet_suite_init(void)
 
 	udat = odp_packet_user_area(segmented_test_packet);
 	if (odp_packet_user_area_size(segmented_test_packet) < uarea_size) {
-		printf("Bad segmented packet user area size %u\n",
-		       odp_packet_user_area_size(segmented_test_packet));
+		ODPH_ERR("Bad segmented packet user area size %u\n",
+			 odp_packet_user_area_size(segmented_test_packet));
 		return -1;
 	}
 
@@ -3343,14 +3343,14 @@ static int packet_vector_suite_init(void)
 	vector_default_pool = odp_pool_create("vector_default_pool", &params);
 
 	if (vector_default_pool == ODP_POOL_INVALID) {
-		ODPH_ERR("default vector pool create failed\n");
+		ODPH_ERR("Default vector pool create failed\n");
 		goto err1;
 	}
 
 	/* Allocating a default vector */
 	pktv_default = odp_packet_vector_alloc(vector_default_pool);
 	if (pktv_default == ODP_PACKET_VECTOR_INVALID) {
-		ODPH_ERR("default vector packet allocation failed\n");
+		ODPH_ERR("Default vector packet allocation failed\n");
 		goto err2;
 	}
 	return 0;
@@ -3406,7 +3406,7 @@ static void packet_test_max_pools(void)
 
 	CU_ASSERT(num_pool == max_pools);
 	if (num_pool != max_pools)
-		printf("Error: created only %u pools\n", num_pool);
+		ODPH_ERR("Created only %u pools\n", num_pool);
 
 	for (i = 0; i < num_pool; i++) {
 		packet[i] = odp_packet_alloc(pool[i], len);
@@ -3498,7 +3498,7 @@ static int packet_parse_suite_init(void)
 	memset(&pool_capa, 0, sizeof(odp_pool_capability_t));
 
 	if (odp_pool_capability(&pool_capa) < 0) {
-		printf("pool_capability failed\n");
+		ODPH_ERR("odp_pool_capability() failed\n");
 		return -1;
 	}
 

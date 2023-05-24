@@ -3155,12 +3155,12 @@ static int create_queues(test_globals_t *globals)
 	int sched_types;
 
 	if (odp_queue_capability(&queue_capa) < 0) {
-		printf("Queue capability query failed\n");
+		ODPH_ERR("Queue capability query failed\n");
 		return -1;
 	}
 
 	if (odp_schedule_capability(&sched_capa) < 0) {
-		printf("Queue capability query failed\n");
+		ODPH_ERR("Queue capability query failed\n");
 		return -1;
 	}
 
@@ -3196,9 +3196,9 @@ static int create_queues(test_globals_t *globals)
 		num_plain = (prios * queues_per_prio);
 	}
 	if (!queues_per_prio) {
-		printf("Not enough queues. At least %d scheduled queues and "
-		       "%d plain queus required.\n",
-		       ((prios * sched_types) + CHAOS_NUM_QUEUES), prios);
+		ODPH_ERR("Not enough queues. At least %d scheduled queues and "
+			 "%d plain queues required.\n",
+			 ((prios * sched_types) + CHAOS_NUM_QUEUES), prios);
 		return -1;
 	}
 	globals->queues_per_prio = queues_per_prio;
@@ -3211,7 +3211,7 @@ static int create_queues(test_globals_t *globals)
 	queue_ctx_pool = odp_pool_create(QUEUE_CTX_POOL_NAME, &params);
 
 	if (queue_ctx_pool == ODP_POOL_INVALID) {
-		printf("Pool creation failed (queue ctx).\n");
+		ODPH_ERR("Pool creation failed (queue ctx)\n");
 		return -1;
 	}
 	globals->queue_ctx_pool = queue_ctx_pool;
@@ -3231,7 +3231,7 @@ static int create_queues(test_globals_t *globals)
 			q = odp_queue_create(name, &p);
 
 			if (q == ODP_QUEUE_INVALID) {
-				printf("Parallel queue create failed.\n");
+				ODPH_ERR("Parallel queue create failed\n");
 				return -1;
 			}
 
@@ -3241,21 +3241,21 @@ static int create_queues(test_globals_t *globals)
 			q = odp_queue_create(name, &p);
 
 			if (q == ODP_QUEUE_INVALID) {
-				printf("Atomic queue create failed.\n");
+				ODPH_ERR("Atomic queue create failed\n");
 				return -1;
 			}
 
 			snprintf(name, sizeof(name), "plain_%d_%d_o", i, j);
 			pq = odp_queue_create(name, NULL);
 			if (pq == ODP_QUEUE_INVALID) {
-				printf("Plain queue create failed.\n");
+				ODPH_ERR("Plain queue create failed\n");
 				return -1;
 			}
 
 			queue_ctx_buf = odp_buffer_alloc(queue_ctx_pool);
 
 			if (queue_ctx_buf == ODP_BUFFER_INVALID) {
-				printf("Cannot allocate plain queue ctx buf\n");
+				ODPH_ERR("Cannot allocate plain queue ctx buf\n");
 				return -1;
 			}
 
@@ -3266,7 +3266,7 @@ static int create_queues(test_globals_t *globals)
 			rc = odp_queue_context_set(pq, pqctx, 0);
 
 			if (rc != 0) {
-				printf("Cannot set plain queue context\n");
+				ODPH_ERR("Cannot set plain queue context\n");
 				return -1;
 			}
 
@@ -3277,7 +3277,7 @@ static int create_queues(test_globals_t *globals)
 			q = odp_queue_create(name, &p);
 
 			if (q == ODP_QUEUE_INVALID) {
-				printf("Ordered queue create failed.\n");
+				ODPH_ERR("Ordered queue create failed\n");
 				return -1;
 			}
 			if (odp_queue_lock_count(q) !=
@@ -3293,7 +3293,7 @@ static int create_queues(test_globals_t *globals)
 			queue_ctx_buf = odp_buffer_alloc(queue_ctx_pool);
 
 			if (queue_ctx_buf == ODP_BUFFER_INVALID) {
-				printf("Cannot allocate queue ctx buf\n");
+				ODPH_ERR("Cannot allocate queue ctx buf\n");
 				return -1;
 			}
 
@@ -3311,7 +3311,7 @@ static int create_queues(test_globals_t *globals)
 			rc = odp_queue_context_set(q, qctx, 0);
 
 			if (rc != 0) {
-				printf("Cannot set queue context\n");
+				ODPH_ERR("Cannot set queue context\n");
 				return -1;
 			}
 		}
@@ -3522,14 +3522,14 @@ static int scheduler_test_global_init(void)
 			      sizeof(test_globals_t), ODP_CACHE_LINE_SIZE, 0);
 
 	if (shm == ODP_SHM_INVALID) {
-		printf("Shared memory reserve failed (globals).\n");
+		ODPH_ERR("Shared memory reserve failed (globals)\n");
 		return -1;
 	}
 
 	globals = odp_shm_addr(shm);
 
 	if (!globals) {
-		printf("Shared memory reserve failed (globals).\n");
+		ODPH_ERR("Shared memory reserve failed (globals)\n");
 		return -1;
 	}
 
@@ -3544,7 +3544,7 @@ static int scheduler_test_global_init(void)
 			      ODP_CACHE_LINE_SIZE, 0);
 
 	if (shm == ODP_SHM_INVALID) {
-		printf("Shared memory reserve failed (args).\n");
+		ODPH_ERR("Shared memory reserve failed (args)\n");
 		return -1;
 	}
 
@@ -3552,7 +3552,7 @@ static int scheduler_test_global_init(void)
 	globals->shm_args = shm;
 
 	if (!args) {
-		printf("Shared memory reserve failed (args).\n");
+		ODPH_ERR("Shared memory reserve failed (args)\n");
 		return -1;
 	}
 
@@ -3572,14 +3572,14 @@ static int scheduler_test_global_init(void)
 	pool = odp_pool_create(MSG_POOL_NAME, &params);
 
 	if (pool == ODP_POOL_INVALID) {
-		printf("Pool creation failed (msg).\n");
+		ODPH_ERR("Pool creation failed (msg)\n");
 		return -1;
 	}
 
 	globals->pool = pool;
 
 	if (odp_schedule_capability(&sched_capa)) {
-		printf("odp_schedule_capability() failed\n");
+		ODPH_ERR("odp_schedule_capability() failed\n");
 		return -1;
 	}
 
@@ -3599,7 +3599,7 @@ static int scheduler_test_global_init(void)
 
 	/* Configure the scheduler. All test cases share the config. */
 	if (odp_schedule_config(&sched_config)) {
-		printf("odp_schedule_config() failed.\n");
+		ODPH_ERR("odp_schedule_config() failed\n");
 		return -1;
 	}
 
