@@ -176,7 +176,7 @@ static _odp_event_hdr_t *queue_lf_deq(odp_queue_t handle)
 {
 	queue_entry_t *queue;
 	queue_lf_t *queue_lf;
-	int i, j, i_lowest;
+	int i, j, i_lowest = 0;
 	int found;
 	ring_lf_node_t node_val, old_val, new_val;
 	ring_lf_node_t *node, *old;
