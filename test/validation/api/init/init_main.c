@@ -241,6 +241,15 @@ static void init_test_feature_disabled(void)
 	init_test_feature(1);
 }
 
+static void init_test_panic(void)
+{
+	volatile odp_bool_t dummy = false;
+
+	/* Only check that symbol exists for now. */
+	if (dummy)
+		odp_panic("Panic!\n");
+}
+
 odp_testinfo_t testinfo[] = {
 	ODP_TEST_INFO(init_test_defaults),
 	ODP_TEST_INFO(init_test_abort),
@@ -250,6 +259,7 @@ odp_testinfo_t testinfo[] = {
 	ODP_TEST_INFO(init_test_feature_disabled),
 	ODP_TEST_INFO(init_test_log_thread),
 	ODP_TEST_INFO(init_test_param_init),
+	ODP_TEST_INFO(init_test_panic)
 };
 
 odp_testinfo_t init_suite[] = {
