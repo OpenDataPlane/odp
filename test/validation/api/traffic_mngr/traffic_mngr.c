@@ -1379,12 +1379,11 @@ static uint32_t pkts_rcvd_in_given_order(uint32_t   unique_id_list[],
 {
 	rcv_pkt_desc_t *rcv_pkt_desc;
 	odp_bool_t      is_match;
-	uint32_t        rcv_pkt_idx, pkts_in_order, pkts_out_of_order;
+	uint32_t        rcv_pkt_idx, pkts_in_order;
 	uint32_t        rcv_unique_id;
 	int             last_pkt_idx, pkt_idx;
 
 	pkts_in_order     = 1;
-	pkts_out_of_order = 0;
 	last_pkt_idx      = -1;
 	pkt_idx           = -1;
 
@@ -1404,12 +1403,8 @@ static uint32_t pkts_rcvd_in_given_order(uint32_t   unique_id_list[],
 							   unique_id_list,
 							   unique_id_list_len);
 			if (0 <= pkt_idx) {
-				if (0 <= last_pkt_idx) {
-					if (last_pkt_idx < pkt_idx)
-						pkts_in_order++;
-					else
-						pkts_out_of_order++;
-				}
+				if (0 <= last_pkt_idx && last_pkt_idx < pkt_idx)
+					pkts_in_order++;
 
 				last_pkt_idx = pkt_idx;
 			}
