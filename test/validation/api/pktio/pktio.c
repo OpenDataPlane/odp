@@ -3712,6 +3712,103 @@ static void pktio_test_pktout_compl_event(bool use_plain_queue)
 		odp_queue_destroy(compl_queue[i]);
 }
 
+static void pktio_test_pktout_compl_poll(void)
+{
+	odp_pktio_t pktio[MAX_NUM_IFACES] = {ODP_PKTIO_INVALID};
+	odp_packet_t pkt_tbl[TX_BATCH_LEN];
+	odp_pktio_capability_t pktio_capa;
+	odp_pktout_queue_t pktout_queue;
+	uint32_t pkt_seq[TX_BATCH_LEN];
+	odp_pktio_t pktio_tx, pktio_rx;
+	odp_packet_tx_compl_opt_t opt;
+	pktio_info_t pktio_rx_info;
+	odp_pktio_config_t config;
+	int ret, i, num_rx = 0;
+
+	CU_ASSERT_FATAL(num_ifaces >= 1);
+
+	/* Open and configure interfaces */
+	for (i = 0; i < num_ifaces; ++i) {
+		pktio[i] = create_pktio(i, ODP_PKTIN_MODE_DIRECT,
+					ODP_PKTOUT_MODE_DIRECT);
+		CU_ASSERT_FATAL(pktio[i] != ODP_PKTIO_INVALID);
+
+		CU_ASSERT_FATAL(odp_pktio_capability(pktio[i], &pktio_capa) == 0);
+
+		/* Configure Tx completion offload for PKTIO Tx */
+		if (i == 0) {
+			CU_ASSERT_FATAL(pktio_capa.tx_compl.mode_poll == 1);
+			CU_ASSERT_FATAL(pktio_capa.tx_compl.max_compl_id >= (TX_BATCH_LEN - 1));
+
+			odp_pktio_config_init(&config);
+			config.tx_compl.mode_poll = 1;
+			config.tx_compl.max_compl_id = TX_BATCH_LEN - 1;
+			CU_ASSERT_FATAL(odp_pktio_config(pktio[i], &config) == 0);
+		}
+
+		CU_ASSERT_FATAL(odp_pktio_start(pktio[i]) == 0);
+	}
+
+	for (i = 0; i < num_ifaces; i++)
+		_pktio_wait_linkup(pktio[i]);
+
+	pktio_tx = pktio[0];
+	pktio_rx = (num_ifaces > 1) ? pktio[1] : pktio_tx;
+	pktio_rx_info.id   = pktio_rx;
+	pktio_rx_info.inq  = ODP_QUEUE_INVALID;
+	pktio_rx_info.in_mode = ODP_PKTIN_MODE_DIRECT;
+
+	ret = create_packets(pkt_tbl, pkt_seq, TX_BATCH_LEN, pktio_tx, pktio_rx);
+	CU_ASSERT_FATAL(ret == TX_BATCH_LEN);
+
+	ret = odp_pktout_queue(pktio_tx, &pktout_queue, 1);
+	CU_ASSERT_FATAL(ret > 0);
+
+	memset(&opt, 0, sizeof(opt));
+
+	/* Disabled by default */
+	CU_ASSERT(odp_packet_has_tx_compl_request(pkt_tbl[0]) == 0);
+
+	/* Check that disable works */
+	opt.compl_id = 0;
+	opt.mode = ODP_PACKET_TX_COMPL_POLL;
+	odp_packet_tx_compl_request(pkt_tbl[0], &opt);
+	CU_ASSERT(odp_packet_has_tx_compl_request(pkt_tbl[0]) != 0);
+	opt.mode = ODP_PACKET_TX_COMPL_DISABLED;
+	odp_packet_tx_compl_request(pkt_tbl[0], &opt);
+	CU_ASSERT(odp_packet_has_tx_compl_request(pkt_tbl[0]) == 0);
+
+	/* Prepare batch of pkts with different tx completion identifiers */
+	for (i = 0; i < TX_BATCH_LEN;  i++) {
+		CU_ASSERT(odp_packet_has_tx_compl_request(pkt_tbl[i]) == 0);
+		opt.compl_id = i;
+		opt.mode = ODP_PACKET_TX_COMPL_EVENT;
+		odp_packet_tx_compl_request(pkt_tbl[i], &opt);
+		CU_ASSERT(odp_packet_has_tx_compl_request(pkt_tbl[i]) != 0);
+		/* Set pkt sequence number as its user ptr */
+		odp_packet_user_ptr_set(pkt_tbl[i], (const void *)&pkt_seq[i]);
+	}
+
+	CU_ASSERT_FATAL(odp_pktout_send(pktout_queue, pkt_tbl, TX_BATCH_LEN) == TX_BATCH_LEN);
+
+	num_rx = wait_for_packets(&pktio_rx_info, pkt_tbl, pkt_seq, TX_BATCH_LEN, TXRX_MODE_SINGLE,
+				  ODP_TIME_SEC_IN_NS, false);
+	CU_ASSERT(num_rx == TX_BATCH_LEN);
+	for (i = 0; i < num_rx; i++)
+		odp_packet_free(pkt_tbl[i]);
+
+	/* Transmits should be complete since we received the packets already */
+	for (i = 0; i < num_rx; i++) {
+		ret = odp_packet_tx_compl_done(pktio_tx, i);
+		CU_ASSERT(ret > 0);
+	}
+
+	for (i = 0; i < num_ifaces; i++) {
+		CU_ASSERT_FATAL(odp_pktio_stop(pktio[i]) == 0);
+		CU_ASSERT_FATAL(odp_pktio_close(pktio[i]) == 0);
+	}
+}
+
 static int pktio_check_pktout_compl_event(bool plain)
 {
 	odp_pktio_param_t pktio_param;
@@ -3733,6 +3830,31 @@ static int pktio_check_pktout_compl_event(bool plain)
 	if (ret < 0 || !capa.tx_compl.mode_event ||
 	    (plain && !capa.tx_compl.queue_type_plain) ||
 	    (!plain && !capa.tx_compl.queue_type_sched))
+		return ODP_TEST_INACTIVE;
+
+	return ODP_TEST_ACTIVE;
+}
+
+static int pktio_check_pktout_compl_poll(void)
+{
+	odp_pktio_param_t pktio_param;
+	odp_pktio_capability_t capa;
+	odp_pktio_t pktio;
+	int ret;
+
+	odp_pktio_param_init(&pktio_param);
+	pktio_param.in_mode = ODP_PKTIN_MODE_DIRECT;
+	pktio_param.out_mode = ODP_PKTOUT_MODE_DIRECT;
+
+	pktio = odp_pktio_open(iface_name[0], pool[0], &pktio_param);
+	if (pktio == ODP_PKTIO_INVALID)
+		return ODP_TEST_INACTIVE;
+
+	ret = odp_pktio_capability(pktio, &capa);
+	(void)odp_pktio_close(pktio);
+
+	if (ret < 0 || capa.tx_compl.mode_poll == 0 ||
+	    capa.tx_compl.max_compl_id < (TX_BATCH_LEN - 1))
 		return ODP_TEST_INACTIVE;
 
 	return ODP_TEST_ACTIVE;
@@ -5198,6 +5320,7 @@ odp_testinfo_t pktio_suite_unsegmented[] = {
 				  pktio_check_pktout_compl_event_plain_queue),
 	ODP_TEST_INFO_CONDITIONAL(pktio_test_pktout_compl_event_sched_queue,
 				  pktio_check_pktout_compl_event_sched_queue),
+	ODP_TEST_INFO_CONDITIONAL(pktio_test_pktout_compl_poll, pktio_check_pktout_compl_poll),
 	ODP_TEST_INFO_CONDITIONAL(pktio_test_enable_pause_rx, pktio_check_pause_rx),
 	ODP_TEST_INFO_CONDITIONAL(pktio_test_enable_pause_tx, pktio_check_pause_tx),
 	ODP_TEST_INFO_CONDITIONAL(pktio_test_enable_pause_both, pktio_check_pause_both),
