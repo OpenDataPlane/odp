@@ -615,7 +615,7 @@ int odp_pktio_config(odp_pktio_t hdl, const odp_pktio_config_t *config)
 	entry->config = *config;
 
 	entry->enabled.tx_ts = config->pktout.bit.ts_ena;
-	entry->enabled.tx_compl = config->pktout.bit.tx_compl_ena;
+	entry->enabled.tx_compl = (config->pktout.bit.tx_compl_ena || config->tx_compl.mode_event);
 
 	if (entry->enabled.tx_compl)
 		if (configure_tx_event_compl(entry)) {
@@ -1621,6 +1621,10 @@ int odp_pktio_capability(odp_pktio_t pktio, odp_pktio_capability_t *capa)
 	capa->tx_compl.queue_type_sched = 1;
 	capa->tx_compl.queue_type_plain = 1;
 	capa->tx_compl.mode_all = 1;
+	capa->tx_compl.mode_event = 1;
+	capa->tx_compl.mode_poll = 0;
+	capa->tx_compl.max_compl_id = 0;
+	capa->free_ctrl.dont_free = 0;
 
 	capa->config.pktout.bit.aging_ena = 1;
 	capa->max_tx_aging_tmo_ns = MAX_TX_AGING_TMO_NS;
