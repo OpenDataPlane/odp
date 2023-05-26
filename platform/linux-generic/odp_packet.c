@@ -2253,6 +2253,14 @@ void *odp_packet_tx_compl_user_ptr(odp_packet_tx_compl_t tx_compl)
 	return (void *)(uintptr_t)data->user_ptr;
 }
 
+int odp_packet_tx_compl_done(odp_pktio_t pktio, uint32_t compl_id)
+{
+	(void)pktio;
+	(void)compl_id;
+
+	return -1;
+}
+
 odp_packet_reass_status_t
 odp_packet_reass_status(odp_packet_t pkt)
 {
