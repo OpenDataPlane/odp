@@ -1574,56 +1574,60 @@ int odp_pktio_capability(odp_pktio_t pktio, odp_pktio_capability_t *capa)
 {
 	pktio_entry_t *entry;
 	int ret;
+	uint32_t mtu;
 
 	entry = get_pktio_entry(pktio);
 	if (entry == NULL) {
-		_ODP_DBG("pktio entry %" PRIuPTR " does not exist\n", (uintptr_t)pktio);
+		_ODP_ERR("pktio entry %" PRIuPTR " does not exist\n", (uintptr_t)pktio);
 		return -1;
 	}
 
 	ret = entry->ops->capability(entry, capa);
 
-	if (ret == 0) {
-		uint32_t mtu = pktio_maxlen(pktio);
-
-		if (mtu == 0) {
-			_ODP_DBG("MTU query failed: %s\n", entry->name);
-			return -1;
-		}
-
-		/* The same parser is used for all pktios */
-		capa->config.parser.layer = ODP_PROTO_LAYER_ALL;
-		/* Header skip is not supported */
-		capa->set_op.op.skip_offset = 0;
-		/* Irrespective of whether we optimize the fast path or not,
-		 * we can report that it is supported.
-		 */
-		capa->config.pktout.bit.no_packet_refs = 1;
-
-		/* LSO implementation is common to all pktios */
-		capa->lso.max_profiles           = PKTIO_LSO_PROFILES;
-		capa->lso.max_profiles_per_pktio = PKTIO_LSO_PROFILES;
-		capa->lso.max_packet_segments    = PKT_MAX_SEGS;
-		capa->lso.max_segments           = PKTIO_LSO_MAX_SEGMENTS;
-		capa->lso.max_payload_len        = mtu - PKTIO_LSO_MIN_PAYLOAD_OFFSET;
-		capa->lso.max_payload_offset     = PKTIO_LSO_MAX_PAYLOAD_OFFSET;
-		capa->lso.max_num_custom         = ODP_LSO_MAX_CUSTOM;
-		capa->lso.proto.ipv4             = 1;
-		capa->lso.proto.custom           = 1;
-		capa->lso.mod_op.add_segment_num = 1;
-
-		capa->config.pktout.bit.tx_compl_ena = 1;
-		capa->tx_compl.queue_type_sched = 1;
-		capa->tx_compl.queue_type_plain = 1;
-		capa->tx_compl.mode_all = 1;
-
-		capa->config.pktout.bit.aging_ena = 1;
-		capa->max_tx_aging_tmo_ns = MAX_TX_AGING_TMO_NS;
+	if (ret) {
+		_ODP_ERR("Driver specific capa query failed: %s\n", entry->name);
+		return -1;
 	}
 
+	mtu = pktio_maxlen(pktio);
+
+	if (mtu == 0) {
+		_ODP_ERR("MTU query failed: %s\n", entry->name);
+		return -1;
+	}
+
+	/* The same parser is used for all pktios */
+	capa->config.parser.layer = ODP_PROTO_LAYER_ALL;
+	/* Header skip is not supported */
+	capa->set_op.op.skip_offset = 0;
+	/* Irrespective of whether we optimize the fast path or not,
+	 * we can report that it is supported.
+	 */
+	capa->config.pktout.bit.no_packet_refs = 1;
+
+	/* LSO implementation is common to all pktios */
+	capa->lso.max_profiles           = PKTIO_LSO_PROFILES;
+	capa->lso.max_profiles_per_pktio = PKTIO_LSO_PROFILES;
+	capa->lso.max_packet_segments    = PKT_MAX_SEGS;
+	capa->lso.max_segments           = PKTIO_LSO_MAX_SEGMENTS;
+	capa->lso.max_payload_len        = mtu - PKTIO_LSO_MIN_PAYLOAD_OFFSET;
+	capa->lso.max_payload_offset     = PKTIO_LSO_MAX_PAYLOAD_OFFSET;
+	capa->lso.max_num_custom         = ODP_LSO_MAX_CUSTOM;
+	capa->lso.proto.ipv4             = 1;
+	capa->lso.proto.custom           = 1;
+	capa->lso.mod_op.add_segment_num = 1;
+
+	capa->config.pktout.bit.tx_compl_ena = 1;
+	capa->tx_compl.queue_type_sched = 1;
+	capa->tx_compl.queue_type_plain = 1;
+	capa->tx_compl.mode_all = 1;
+
+	capa->config.pktout.bit.aging_ena = 1;
+	capa->max_tx_aging_tmo_ns = MAX_TX_AGING_TMO_NS;
+
 	/* Packet vector generation is common for all pktio types */
-	if (ret == 0 && (entry->param.in_mode ==  ODP_PKTIN_MODE_QUEUE ||
-			 entry->param.in_mode ==  ODP_PKTIN_MODE_SCHED)) {
+	if (entry->param.in_mode ==  ODP_PKTIN_MODE_QUEUE ||
+	    entry->param.in_mode ==  ODP_PKTIN_MODE_SCHED) {
 		capa->vector.supported = ODP_SUPPORT_YES;
 		capa->vector.max_size = CONFIG_PACKET_VECTOR_MAX_SIZE;
 		capa->vector.min_size = 1;
@@ -1639,7 +1643,7 @@ int odp_pktio_capability(odp_pktio_t pktio, odp_pktio_capability_t *capa)
 	capa->flow_control.pause_tx = 0;
 	capa->flow_control.pfc_tx = 0;
 
-	return ret;
+	return 0;
 }
 
 unsigned int odp_pktio_max_index(void)
