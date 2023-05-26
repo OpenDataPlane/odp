@@ -731,8 +731,9 @@ static void time_test_global_sync(void)
 		odp_cpumask_set(&cpumask_one, cpu);
 		thr_common.cpumask = &cpumask_one;
 
-		CU_ASSERT_FATAL(odph_thread_create(&thread_tbl[thr++],
-						   &thr_common, &thr_param, 1) == 1);
+		int r = odph_thread_create(&thread_tbl[thr++],
+					   &thr_common, &thr_param, 1);
+		CU_ASSERT_FATAL(r == 1);
 
 		/*
 		 * Delay for more than the tolerance, so that we notice if the
