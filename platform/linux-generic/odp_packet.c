@@ -2261,6 +2261,26 @@ int odp_packet_tx_compl_done(odp_pktio_t pktio, uint32_t compl_id)
 	return -1;
 }
 
+void odp_packet_free_ctrl_set(odp_packet_t pkt, odp_packet_free_ctrl_t ctrl)
+{
+	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
+
+	if (ctrl == ODP_PACKET_FREE_CTRL_DONT_FREE)
+		pkt_hdr->p.flags.free_ctrl = 1;
+	else
+		pkt_hdr->p.flags.free_ctrl = 0;
+}
+
+odp_packet_free_ctrl_t odp_packet_free_ctrl(odp_packet_t pkt)
+{
+	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
+
+	if (pkt_hdr->p.flags.free_ctrl)
+		return ODP_PACKET_FREE_CTRL_DONT_FREE;
+
+	return ODP_PACKET_FREE_CTRL_DISABLED;
+}
+
 odp_packet_reass_status_t
 odp_packet_reass_status(odp_packet_t pkt)
 {
