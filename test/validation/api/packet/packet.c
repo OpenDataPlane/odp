@@ -873,6 +873,12 @@ static void packet_test_basic_metadata(void)
 	CU_ASSERT(!odp_time_cmp(ts, odp_packet_ts(pkt)));
 	odp_packet_has_ts_clr(pkt);
 	CU_ASSERT(!odp_packet_has_ts(pkt));
+
+	CU_ASSERT(odp_packet_free_ctrl(pkt) == ODP_PACKET_FREE_CTRL_DISABLED);
+	odp_packet_free_ctrl_set(pkt, ODP_PACKET_FREE_CTRL_DONT_FREE);
+	CU_ASSERT(odp_packet_free_ctrl(pkt) == ODP_PACKET_FREE_CTRL_DONT_FREE);
+	odp_packet_free_ctrl_set(pkt, ODP_PACKET_FREE_CTRL_DISABLED);
+	CU_ASSERT(odp_packet_free_ctrl(pkt) == ODP_PACKET_FREE_CTRL_DISABLED);
 }
 
 static void packet_test_length(void)
