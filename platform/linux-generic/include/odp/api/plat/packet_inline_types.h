@@ -123,7 +123,7 @@ typedef union {
 	uint32_t all_flags;
 
 	struct {
-		uint32_t reserved1:      6;
+		uint32_t reserved1:      5;
 
 	/*
 	 * Init flags
@@ -142,6 +142,7 @@ typedef union {
 		uint32_t l4_chksum:      1; /* L4 chksum override */
 		uint32_t ts_set:         1; /* Set Tx timestamp */
 		uint32_t tx_compl:       1; /* Tx completion event requested */
+		uint32_t free_ctrl:      1; /* Don't free option */
 		uint32_t tx_aging:       1; /* Packet aging at Tx requested */
 		uint32_t shaper_len_adj: 8; /* Adjustment for traffic mgr */
 
@@ -159,8 +160,8 @@ typedef union {
 
 	/* Flag groups */
 	struct {
-		uint32_t reserved2:      6;
-		uint32_t other:         19; /* All other flags */
+		uint32_t reserved2:      5;
+		uint32_t other:         20; /* All other flags */
 		uint32_t error:          7; /* All error flags */
 	} all;
 
