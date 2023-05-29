@@ -699,7 +699,7 @@ static int time_test_global_sync_thr(void *arg ODP_UNUSED)
 	return 0;
 }
 
-static void time_test_global_sync(void)
+static void time_test_global_sync(const int ctrl)
 {
 	odp_cpumask_t cpumask;
 	odph_thread_common_param_t thr_common;
@@ -707,33 +707,42 @@ static void time_test_global_sync(void)
 	odph_thread_t thread_tbl[MAX_WORKERS];
 	const uint64_t tolerance =
 		odp_cunit_ci() ? TIME_TOLERANCE_CI_NS : TIME_TOLERANCE_NS;
-	int num = global_mem->num_threads;
-	int tid = odp_thread_id();
+	const int num = ctrl ? 2 : global_mem->num_threads;
 
-	/* Test using num threads plus the current thread. */
-	odp_barrier_init(&global_mem->test_barrier, num + 1);
+	if (num < 2) {
+		printf(" number of threads is less than two, test skipped. ");
+		return;
+	}
 
-	odp_cpumask_default_worker(&cpumask, num);
+	odp_barrier_init(&global_mem->test_barrier, num);
 
 	odph_thread_param_init(&thr_param);
 	thr_param.start = time_test_global_sync_thr;
-	thr_param.thr_type = ODP_THREAD_WORKER;
 
 	odph_thread_common_param_init(&thr_common);
 	thr_common.instance = *instance;
 
-	int thr = 0, cpu = odp_cpumask_first(&cpumask);
+	int thr = 0;
 
-	while (cpu >= 0) {
-		odp_cpumask_t cpumask_one;
-
-		odp_cpumask_zero(&cpumask_one);
-		odp_cpumask_set(&cpumask_one, cpu);
-		thr_common.cpumask = &cpumask_one;
+	if (ctrl) {
+		/* Test sync between one control and one worker thread. */
+		odp_cpumask_default_control(&cpumask, 1);
+		thr_common.cpumask = &cpumask;
+		thr_param.thr_type = ODP_THREAD_CONTROL;
 
 		int r = odph_thread_create(&thread_tbl[thr++],
 					   &thr_common, &thr_param, 1);
 		CU_ASSERT_FATAL(r == 1);
+		odp_cpumask_default_worker(&cpumask, 1);
+	} else {
+		/* Test sync between num worker threads. */
+		odp_cpumask_default_worker(&cpumask, num);
+	}
+
+	int cpu = odp_cpumask_first(&cpumask);
+
+	while (cpu >= 0) {
+		odp_cpumask_t cpumask_one;
 
 		/*
 		 * Delay for more than the tolerance, so that we notice if the
@@ -741,20 +750,24 @@ static void time_test_global_sync(void)
 		 */
 		odp_time_wait_ns(tolerance * 2);
 
+		odp_cpumask_zero(&cpumask_one);
+		odp_cpumask_set(&cpumask_one, cpu);
+		thr_common.cpumask = &cpumask_one;
+		thr_param.thr_type = ODP_THREAD_WORKER;
+
+		int r = odph_thread_create(&thread_tbl[thr++],
+					   &thr_common, &thr_param, 1);
+		CU_ASSERT_FATAL(r == 1);
+
 		cpu = odp_cpumask_next(&cpumask, cpu);
 	}
 
-	odp_barrier_wait(&global_mem->test_barrier);
-	global_mem->time[tid][0] = odp_time_global();
-	odp_time_wait_ns(ODP_TIME_MSEC_IN_NS * 100);
-	odp_barrier_wait(&global_mem->test_barrier);
-	global_mem->time[tid][1] = odp_time_global();
 	CU_ASSERT(odph_thread_join(thread_tbl, num) == num);
 
 	for (int s = 0; s < TIME_SAMPLES; s++) {
 		uint64_t min = UINT64_MAX, max = 0;
 
-		for (int i = 0; i < num + 1; i++) {
+		for (int i = 1; i < num + 1; i++) {
 			uint64_t t = odp_time_to_ns(global_mem->time[i][s]);
 
 			if (t < min)
@@ -765,6 +778,16 @@ static void time_test_global_sync(void)
 
 		CU_ASSERT(max - min < tolerance);
 	}
+}
+
+static void time_test_global_sync_workers(void)
+{
+	time_test_global_sync(0);
+}
+
+static void time_test_global_sync_control(void)
+{
+	time_test_global_sync(1);
 }
 
 odp_testinfo_t time_suite_time[] = {
@@ -792,7 +815,8 @@ odp_testinfo_t time_suite_time[] = {
 	ODP_TEST_INFO(time_test_global_strict_diff),
 	ODP_TEST_INFO(time_test_global_strict_sum),
 	ODP_TEST_INFO(time_test_global_strict_cmp),
-	ODP_TEST_INFO(time_test_global_sync),
+	ODP_TEST_INFO(time_test_global_sync_workers),
+	ODP_TEST_INFO(time_test_global_sync_control),
 	ODP_TEST_INFO_NULL
 };
 
