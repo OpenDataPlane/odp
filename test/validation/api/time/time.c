@@ -765,19 +765,42 @@ static void time_test_global_sync(const int ctrl)
 	CU_ASSERT(odph_thread_join(thread_tbl, num) == num);
 
 	for (int s = 0; s < TIME_SAMPLES; s++) {
+		int min_idx = 0, max_idx = 0;
 		uint64_t min = UINT64_MAX, max = 0;
+		double avg = 0;
 
 		for (int i = 1; i < num + 1; i++) {
 			uint64_t t = odp_time_to_ns(global_mem->time[i][s]);
 
-			if (t < min)
+			if (t < min) {
 				min = t;
-			if (t > max)
-				max = t;
+				min_idx = i;
+			}
 		}
 
-		CU_ASSERT(max - min < tolerance);
+		printf("\nround %d\nthread time diffs: ", s);
+
+		for (int i = 1; i < num + 1; i++) {
+			uint64_t t = odp_time_to_ns(global_mem->time[i][s]) - min;
+
+			printf("%" PRIu64 " ", t);
+
+			if (t > max) {
+				max = t;
+				max_idx = i;
+			}
+
+			avg += t;
+		}
+
+		/* The min result itself is not included in the average. */
+		avg /= num - 1;
+		printf("\nmin: %" PRIu64 " (tid %d)  max diff: %" PRIu64
+		       " (tid %d)  avg diff: %g", min, min_idx, max, max_idx, avg);
+		CU_ASSERT(max < tolerance);
 	}
+
+	printf("\n");
 }
 
 static void time_test_global_sync_workers(void)
