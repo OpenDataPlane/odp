@@ -5,6 +5,7 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+#include <odp/api/hints.h>
 #include <odp/api/system_info.h>
 
 #include <odp_debug_internal.h>
@@ -916,6 +917,16 @@ static int ipc_link_info(pktio_entry_t *pktio_entry, odp_pktio_link_info_t *info
 	return 0;
 }
 
+static int ipc_capability(pktio_entry_t *pktio_entry ODP_UNUSED, odp_pktio_capability_t *capa)
+{
+	memset(capa, 0, sizeof(odp_pktio_capability_t));
+
+	capa->max_input_queues  = 1;
+	capa->max_output_queues = 1;
+
+	return 0;
+}
+
 static int ipc_close(pktio_entry_t *pktio_entry)
 {
 	pkt_ipc_t *pktio_ipc = pkt_priv(pktio_entry);
@@ -965,6 +976,7 @@ const pktio_if_ops_t _odp_ipc_pktio_ops = {
 	.stop = ipc_stop,
 	.link_status = ipc_link_status,
 	.link_info = ipc_link_info,
+	.capability = ipc_capability,
 	.maxlen_get = ipc_mtu_get,
 	.promisc_mode_set = NULL,
 	.promisc_mode_get = NULL,

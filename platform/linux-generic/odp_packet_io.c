@@ -1570,17 +1570,6 @@ int _odp_pktio_term_global(void)
 	return ret;
 }
 
-static
-int single_capability(odp_pktio_capability_t *capa)
-{
-	memset(capa, 0, sizeof(odp_pktio_capability_t));
-	capa->max_input_queues  = 1;
-	capa->max_output_queues = 1;
-	capa->set_op.op.promisc_mode = 1;
-
-	return 0;
-}
-
 int odp_pktio_capability(odp_pktio_t pktio, odp_pktio_capability_t *capa)
 {
 	pktio_entry_t *entry;
@@ -1592,10 +1581,7 @@ int odp_pktio_capability(odp_pktio_t pktio, odp_pktio_capability_t *capa)
 		return -1;
 	}
 
-	if (entry->ops->capability)
-		ret = entry->ops->capability(entry, capa);
-	else
-		ret = single_capability(capa);
+	ret = entry->ops->capability(entry, capa);
 
 	if (ret == 0) {
 		uint32_t mtu = pktio_maxlen(pktio);
