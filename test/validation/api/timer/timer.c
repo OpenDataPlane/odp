@@ -15,6 +15,8 @@
 #include <odp/helper/odph_api.h>
 #include "odp_cunit_common.h"
 
+#include <stdint.h>
+
 #define MAX_WORKERS 32
 
 #define GLOBAL_SHM_NAME	"GlobalTimerTest"
@@ -279,7 +281,7 @@ static void timer_test_capa_run(odp_timer_clk_src_t clk_src)
 	CU_ASSERT_FATAL(ret == 0);
 
 	CU_ASSERT(capa.highest_res_ns == capa.max_res.res_ns);
-	/* Assuming max resoultion to be 100 msec or better */
+	/* Assuming max resolution to be 100 msec or better */
 	CU_ASSERT(capa.max_res.res_ns <= 100000000);
 	CU_ASSERT(capa.max_res.res_hz >= 10);
 	CU_ASSERT(capa.max_res.res_ns  < capa.max_res.max_tmo);
@@ -302,6 +304,13 @@ static void timer_test_capa_run(odp_timer_clk_src_t clk_src)
 	CU_ASSERT(res_capa.min_tmo == capa.max_res.min_tmo);
 	CU_ASSERT(res_capa.max_tmo == capa.max_res.max_tmo);
 
+	if (capa.max_res.res_ns > 1) {
+		memset(&res_capa, 0, sizeof(res_capa));
+		res_capa.res_ns = capa.max_res.res_ns - 1;
+		ret = odp_timer_res_capability(clk_src, &res_capa);
+		CU_ASSERT(ret < 0);
+	}
+
 	/* Set max resolution in hz */
 	memset(&res_capa, 0, sizeof(res_capa));
 	res_capa.res_hz = capa.max_res.res_hz;
@@ -311,6 +320,13 @@ static void timer_test_capa_run(odp_timer_clk_src_t clk_src)
 	CU_ASSERT(res_capa.res_hz  == capa.max_res.res_hz);
 	CU_ASSERT(res_capa.min_tmo == capa.max_res.min_tmo);
 	CU_ASSERT(res_capa.max_tmo == capa.max_res.max_tmo);
+
+	if (capa.max_res.res_hz < UINT64_MAX) {
+		memset(&res_capa, 0, sizeof(res_capa));
+		res_capa.res_hz = capa.max_res.res_hz + 1;
+		ret = odp_timer_res_capability(clk_src, &res_capa);
+		CU_ASSERT(ret < 0);
+	}
 
 	/* Set max timeout */
 	memset(&res_capa, 0, sizeof(res_capa));
@@ -322,6 +338,13 @@ static void timer_test_capa_run(odp_timer_clk_src_t clk_src)
 	CU_ASSERT(res_capa.min_tmo == capa.max_tmo.min_tmo);
 	CU_ASSERT(res_capa.res_ns  == capa.max_tmo.res_ns);
 	CU_ASSERT(res_capa.res_hz  == capa.max_tmo.res_hz);
+
+	if (capa.max_tmo.max_tmo < UINT64_MAX) {
+		memset(&res_capa, 0, sizeof(res_capa));
+		res_capa.max_tmo = capa.max_tmo.max_tmo + 1;
+		ret = odp_timer_res_capability(clk_src, &res_capa);
+		CU_ASSERT(ret < 0);
+	}
 }
 
 static void timer_test_capa(void)
