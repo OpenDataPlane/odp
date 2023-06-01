@@ -1,5 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
- * Copyright (c) 2019-2021, Nokia
+ * Copyright (c) 2019-2023, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -31,6 +31,18 @@ extern "C" {
  * @typedef odp_instance_t
  * ODP instance ID.
  */
+
+/**
+ * Called from signal handler
+ */
+#define ODP_TERM_FROM_SIGH	((uint64_t)0x1)
+
+/**
+ * Last standard flag for abnormal terminate
+ *
+ * An implementation may use this for adding its own flags after the standard flags.
+ */
+#define ODP_TERM_LAST_FLAG ODP_TERM_FROM_SIGH
 
 /**
  * ODP log level.
@@ -341,6 +353,39 @@ int odp_term_local(void);
  * @see odp_init_global(), odp_term_local()
  */
 int odp_term_global(odp_instance_t instance);
+
+/**
+ * Abnormal ODP termination after a non-recoverable error
+ *
+ * Application may call this function to terminate an ODP instance after facing
+ * a non-recoverable error. Depending on the implementation, this function may
+ * attempt to dump stack and other memory areas, clean up and stop HW
+ * operations and/or perform other actions helpful in postmortem analysis.
+ * Depending on the nature of the error resulting in the abnormal termination,
+ * these actions may partially or completely fail. Flags (ODP_TERM_*) parameter
+ * can be used to control and data parameter can be used to pass additional
+ * flag-specific information to the termination process. Implementation
+ * specific flags with implementation specific data may also exist, see from
+ * implementation documentation how those should be utilized.
+ *
+ * Some coordination across threads is required when abnormally terminating, if
+ * other threads continue calling ODP functions during or after termination,
+ * their operation is most likely affected.
+ *
+ * When the function returns, the ODP instance has been destroyed either
+ * completely or partially. Application must not attempt to call any ODP
+ * functions during its remaining lifetime, but terminate as soon as feasible.
+ *
+ * @param instance        Instance handle
+ * @param flags           A bit mask of control flags (ODP_TERM_*), set to 0
+ *                        when no flags
+ * @param data            Additional data, set to NULL when no additional data
+ *
+ * @retval 0 on all actions successfully performed
+ * @retval <0 on failure to perform all actions, implementation specific status
+ *         code for debugging
+ */
+int odp_term_abnormal(odp_instance_t instance, uint64_t flags, void *data);
 
 /**
  * Set thread specific log function
