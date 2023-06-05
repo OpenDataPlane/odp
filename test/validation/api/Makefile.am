@@ -54,6 +54,7 @@ TESTS = \
 	init/init_feature_enabled$(EXEEXT) \
 	init/init_feature_disabled$(EXEEXT) \
 	init/init_test_param_init$(EXEEXT) \
+	init/init_test_term_abnormal$(EXEEXT) \
 	ipsec/ipsec_sync$(EXEEXT) \
 	ipsec/ipsec_async$(EXEEXT) \
 	ipsec/ipsec_inline_in$(EXEEXT) \
