@@ -1,5 +1,5 @@
 /* Copyright (c) 2015-2018, Linaro Limited
- * Copyright (c) 2019-2022, Nokia
+ * Copyright (c) 2019-2023, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -242,6 +242,24 @@ static void init_test_feature_disabled(void)
 	init_test_feature(1);
 }
 
+static void init_test_term_abnormal(void)
+{
+	int ret;
+	odp_instance_t instance;
+
+	ret = odp_init_global(&instance, NULL, NULL);
+	CU_ASSERT_FATAL(ret == 0);
+
+	ret = odp_init_local(instance, ODP_THREAD_WORKER);
+	CU_ASSERT_FATAL(ret == 0);
+
+	/* odp_term_abnormal() is allowed to fail */
+	ret = odp_term_abnormal(instance, 0, NULL);
+
+	if (ret < 0)
+		ODPH_ERR("Failed to perform all abnormal termination actions: %d\n", ret);
+}
+
 odp_testinfo_t testinfo[] = {
 	ODP_TEST_INFO(init_test_defaults),
 	ODP_TEST_INFO(init_test_abort),
@@ -251,6 +269,7 @@ odp_testinfo_t testinfo[] = {
 	ODP_TEST_INFO(init_test_feature_disabled),
 	ODP_TEST_INFO(init_test_log_thread),
 	ODP_TEST_INFO(init_test_param_init),
+	ODP_TEST_INFO(init_test_term_abnormal)
 };
 
 odp_testinfo_t init_suite[] = {
