@@ -692,6 +692,26 @@ int odp_term_local(void)
 	return term_local(ALL_INIT);
 }
 
+int odp_term_abnormal(odp_instance_t instance, uint64_t flags, void *data ODP_UNUSED)
+{
+	if (flags & ODP_TERM_FROM_SIGH)
+		/* Called from signal handler, not safe to terminate with local/global,
+		 * return with failure as not able to perform all actions */
+		return -1;
+
+	if (odp_term_local() < 0) {
+		_ODP_ERR("ODP local terminate failed.\n");
+		return -2;
+	}
+
+	if (odp_term_global(instance) < 0) {
+		_ODP_ERR("ODP global terminate failed.\n");
+		return -3;
+	}
+
+	return 0;
+}
+
 void odp_log_thread_fn_set(odp_log_func_t func)
 {
 	_odp_this_thread->log_fn = func;
