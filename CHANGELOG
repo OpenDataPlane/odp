@@ -1,3 +1,68 @@
+== OpenDataPlane (1.41.1.0)
+
+=== Backward compatible API changes
+==== DMA
+* Add `odp_dma_compl_user_area()` function which returns pointer to the user
+area configured with DMA completion event pool parameters.
+* Clarify that DMA session names don't need to be unique.
+
+==== Event
+* Add `odp_event_user_area()` function which returns a pointer to the user area
+associated with the event.
+
+==== Init
+* Add `odp_term_abnormal()` function that can be used to abnormally terminate
+an ODP application after a non-recoverable error. Depending on the
+implementation, this function may attempt to dump stack and other memory areas,
+clean up and stop HW operations and/or perform other actions helpful in
+postmortem analysis.
+
+==== Packet
+* Extend packet transmit completion (`odp_packet_tx_compl_request()`) with poll
+mode. When enabled, packet transmit completion status can be checked with
+`odp_packet_tx_compl_done()`.
+* Add `odp_packet_free_ctrl_set()` function for controlling packet output
+interface to not free a packet after transmitting it.
+* Add `odp_packet_free_ctrl()` function for reading packet's free control
+option value.
+
+==== Pool
+* Relax `odp_pool_stats()` specification to allow implementations to have some
+delay until pool statistics are updated.
+* Add new function `odp_pool_stats_selected()` for reading only selected pool
+statistic(s).
+
+==== Timer
+* Split `odp_timer_cancel()` failure reason into timing related and other
+failures.
+* Rename `odp_timer_set_t` to `odp_timer_retval_t` as it is used now for start,
+restart, and cancel operations. `odp_timer_set_t` remains as a typedef for
+backward compatibility.
+* Add `odp_timer_sample_ticks()` function that samples tick value of multiple
+timer pools simultaneously.
+* Allow implementation to place the first timer as close as it can to one period
+when starting a periodic timer with `first_tick` set to 0.
+* Clarify that periodic timer base frequency uses fractional numbers the same
+way as timer tick info (`odp_timer_tick_info_t`). Integer part specifies full
+hertz and fractional part specifies parts of a hertz.
+* Clarify that `odp_timer_periodic_capability()` call does not overwrite the
+base frequency value when 1 is returned.
+* Clarify that some implementations may support only certain periodic timer base
+frequencies and those depend on source clock frequency.
+
+=== Performance Tests
+==== bench_timer
+* Add new test application for measuring call latency of small functions in the
+timer API.
+
+==== dma_perf
+* Refactor DMA test application to support multiple worker threads. The number
+of in-flight transfers can be configured and workers will always try to keep
+that many transfers active through single or per-worker DMA session.
+
+==== ipsecfwd
+* Add support for running the application in process mode.
+
 == OpenDataPlane (1.41.0.0)
 
 === Backward incompatible API changes
