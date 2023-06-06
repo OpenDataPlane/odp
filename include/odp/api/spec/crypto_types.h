@@ -1,5 +1,5 @@
 /* Copyright (c) 2014-2018, Linaro Limited
- * Copyright (c) 2021-2022, Nokia
+ * Copyright (c) 2021-2023, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -509,7 +509,7 @@ typedef struct odp_crypto_key {
  */
 typedef enum odp_crypto_op_type_t {
 	/**
-	 * Input packet data and metadata are copied in the output packet
+	 * Input packet data and metadata are copied to the output packet
 	 * and then processed. Output packet is allocated by the caller
 	 * or by ODP.
 	 *
@@ -518,7 +518,7 @@ typedef enum odp_crypto_op_type_t {
 	ODP_CRYPTO_OP_TYPE_LEGACY,
 
 	/**
-	 * Input packet data and metadata are copied in the output packet
+	 * Input packet data and metadata are copied to the output packet
 	 * and then processed. Output packet is allocated by ODP.
 	 */
 	ODP_CRYPTO_OP_TYPE_BASIC,
@@ -753,9 +753,15 @@ typedef struct odp_crypto_packet_op_param_t {
 	 *  creation.
 	 *
 	 *  Ignored by the null cipher with operation types other than
-	 *  ODP_CRYPTO_OP_TYPE_OOP. Must be set to zero range (zero offset
-	 *  and zero length) with the null cipher used with the out-of-place
-	 *  operation type.
+	 *  ODP_CRYPTO_OP_TYPE_OOP.
+	 *
+	 *  With the OOP operation type the cipher range is copied to the
+	 *  output packet even with the null cipher. Non-zero-length ranges
+	 *  are not necessarily supported with the null cipher and the OOP
+	 *  operation type. If the requested range is not supported, the
+	 *  crypto operation will fail. The failure is indicated through
+	 *  odp_crypto_result() or through a negative return value of
+	 *  odp_crypto_op()/odp_crypto_op_enq().
 	 **/
 	odp_packet_data_range_t cipher_range;
 
@@ -769,9 +775,15 @@ typedef struct odp_crypto_packet_op_param_t {
 	 *  and the AAD.
 	 *
 	 *  Ignored by the null auth algorithm with operation types other than
-	 *  ODP_CRYPTO_OP_TYPE_OOP. Must be set to zero range (zero offset
-	 *  and zero length) with the null cipher used with the out-of-place
-	 *  operation type.
+	 *  ODP_CRYPTO_OP_TYPE_OOP.
+	 *
+	 *  With the OOP operation type the auth range is copied to the
+	 *  output packet even with the null auth algorithm. Non-zero-length
+	 *  ranges are not necessarily supported with the null algorithm and
+	 *  the OOP operation type. If the requested range is not supported,
+	 *  the crypto operation will fail. The failure is indicated through
+	 *  odp_crypto_result() or through a negative return value of
+	 *  odp_crypto_op()/odp_crypto_op_enq().
 	 *
 	 *  As a special case AES-GMAC uses this field instead of aad_ptr
 	 *  for the data bytes to be authenticated.
