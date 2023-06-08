@@ -1,45 +1,20 @@
 /* Copyright (c) 2017-2018, Linaro Limited
+ * Copyright (c) 2023, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-/*-
- *   BSD LICENSE
- *
- *   Copyright(c) 2010-2015 Intel Corporation. All rights reserved.
- *   All rights reserved.
- *
- *   Redistribution and use in source and binary forms, with or without
- *   modification, are permitted provided that the following conditions
- *   are met:
- *
- *     * Redistributions of source code must retain the above copyright
- *       notice, this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above copyright
- *       notice, this list of conditions and the following disclaimer in
- *       the documentation and/or other materials provided with the
- *       distribution.
- *     * Neither the name of Intel Corporation nor the names of its
- *       contributors may be used to endorse or promote products derived
- *       from this software without specific prior written permission.
- *
- *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- *   A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- *   OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- *   SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- *   LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- *   DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- *   THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- *   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright(c) 2010-2015 Intel Corporation
  */
 
 #include "cpu_flags.h"
 #include <odp_debug_internal.h>
 #include <odp/api/abi/cpu_time.h>
+
+#include <cpuid.h>
+#include <errno.h>
 #include <stdio.h>
 #include <stdint.h>
 
@@ -74,6 +49,7 @@ enum rte_cpu_flag_t {
 	RTE_CPUFLAG_AVX,                    /**< AVX */
 	RTE_CPUFLAG_F16C,                   /**< F16C */
 	RTE_CPUFLAG_RDRAND,                 /**< RDRAND */
+	RTE_CPUFLAG_HYPERVISOR,             /**< Running in a VM */
 
 	/* (EAX 01h) EDX features */
 	RTE_CPUFLAG_FPU,                    /**< FPU */
@@ -130,6 +106,7 @@ enum rte_cpu_flag_t {
 	RTE_CPUFLAG_INVPCID,                /**< INVPCID */
 	RTE_CPUFLAG_RTM,                    /**< Transactional memory */
 	RTE_CPUFLAG_AVX512F,                /**< AVX512F */
+	RTE_CPUFLAG_RDSEED,                 /**< RDSEED instruction */
 
 	/* (EAX 80000001h) ECX features */
 	RTE_CPUFLAG_LAHF_SAHF,              /**< LAHF_SAHF */
@@ -145,8 +122,29 @@ enum rte_cpu_flag_t {
 	/* (EAX 80000007h) EDX features */
 	RTE_CPUFLAG_INVTSC,                 /**< INVTSC */
 
+	RTE_CPUFLAG_AVX512DQ,               /**< AVX512 Doubleword and Quadword */
+	RTE_CPUFLAG_AVX512IFMA,             /**< AVX512 Integer Fused Multiply-Add */
+	RTE_CPUFLAG_AVX512CD,               /**< AVX512 Conflict Detection*/
+	RTE_CPUFLAG_AVX512BW,               /**< AVX512 Byte and Word */
+	RTE_CPUFLAG_AVX512VL,               /**< AVX512 Vector Length */
+	RTE_CPUFLAG_AVX512VBMI,             /**< AVX512 Vector Bit Manipulation */
+	RTE_CPUFLAG_AVX512VBMI2,            /**< AVX512 Vector Bit Manipulation 2 */
+	RTE_CPUFLAG_GFNI,                   /**< Galois Field New Instructions */
+	RTE_CPUFLAG_VAES,                   /**< Vector AES */
+	RTE_CPUFLAG_VPCLMULQDQ,             /**< Vector Carry-less Multiply */
+	RTE_CPUFLAG_AVX512VNNI,
+	/**< AVX512 Vector Neural Network Instructions */
+	RTE_CPUFLAG_AVX512BITALG,           /**< AVX512 Bit Algorithms */
+	RTE_CPUFLAG_AVX512VPOPCNTDQ,        /**< AVX512 Vector Popcount */
+	RTE_CPUFLAG_CLDEMOTE,               /**< Cache Line Demote */
+	RTE_CPUFLAG_MOVDIRI,                /**< Direct Store Instructions */
+	RTE_CPUFLAG_MOVDIR64B,              /**< Direct Store Instructions 64B */
+	RTE_CPUFLAG_AVX512VP2INTERSECT,     /**< AVX512 Two Register Intersection */
+
+	RTE_CPUFLAG_WAITPKG,                /**< UMONITOR/UMWAIT/TPAUSE */
+
 	/* The last item */
-	RTE_CPUFLAG_NUMFLAGS, /**< This should always be the last! */
+	RTE_CPUFLAG_NUMFLAGS,               /**< This should always be the last! */
 };
 
 enum cpu_register_t {
@@ -203,6 +201,7 @@ static const struct feature_entry cpu_feature_table[] = {
 	FEAT_DEF(AVX, 0x00000001, 0, RTE_REG_ECX, 28)
 	FEAT_DEF(F16C, 0x00000001, 0, RTE_REG_ECX, 29)
 	FEAT_DEF(RDRAND, 0x00000001, 0, RTE_REG_ECX, 30)
+	FEAT_DEF(HYPERVISOR, 0x00000001, 0, RTE_REG_ECX, 31)
 
 	FEAT_DEF(FPU, 0x00000001, 0, RTE_REG_EDX,  0)
 	FEAT_DEF(VME, 0x00000001, 0, RTE_REG_EDX,  1)
@@ -246,15 +245,36 @@ static const struct feature_entry cpu_feature_table[] = {
 	FEAT_DEF(ENERGY_EFF, 0x00000006, 0, RTE_REG_ECX,  3)
 
 	FEAT_DEF(FSGSBASE, 0x00000007, 0, RTE_REG_EBX,  0)
-	FEAT_DEF(BMI1, 0x00000007, 0, RTE_REG_EBX,  2)
+	FEAT_DEF(BMI1, 0x00000007, 0, RTE_REG_EBX,  3)
 	FEAT_DEF(HLE, 0x00000007, 0, RTE_REG_EBX,  4)
 	FEAT_DEF(AVX2, 0x00000007, 0, RTE_REG_EBX,  5)
-	FEAT_DEF(SMEP, 0x00000007, 0, RTE_REG_EBX,  6)
-	FEAT_DEF(BMI2, 0x00000007, 0, RTE_REG_EBX,  7)
-	FEAT_DEF(ERMS, 0x00000007, 0, RTE_REG_EBX,  8)
+	FEAT_DEF(SMEP, 0x00000007, 0, RTE_REG_EBX,  7)
+	FEAT_DEF(BMI2, 0x00000007, 0, RTE_REG_EBX,  8)
+	FEAT_DEF(ERMS, 0x00000007, 0, RTE_REG_EBX,  9)
 	FEAT_DEF(INVPCID, 0x00000007, 0, RTE_REG_EBX, 10)
 	FEAT_DEF(RTM, 0x00000007, 0, RTE_REG_EBX, 11)
 	FEAT_DEF(AVX512F, 0x00000007, 0, RTE_REG_EBX, 16)
+	FEAT_DEF(AVX512DQ, 0x00000007, 0, RTE_REG_EBX, 17)
+	FEAT_DEF(RDSEED, 0x00000007, 0, RTE_REG_EBX, 18)
+	FEAT_DEF(AVX512IFMA, 0x00000007, 0, RTE_REG_EBX, 21)
+	FEAT_DEF(AVX512CD, 0x00000007, 0, RTE_REG_EBX, 28)
+	FEAT_DEF(AVX512BW, 0x00000007, 0, RTE_REG_EBX, 30)
+	FEAT_DEF(AVX512VL, 0x00000007, 0, RTE_REG_EBX, 31)
+
+	FEAT_DEF(AVX512VBMI, 0x00000007, 0, RTE_REG_ECX,  1)
+	FEAT_DEF(WAITPKG, 0x00000007, 0, RTE_REG_ECX,  5)
+	FEAT_DEF(AVX512VBMI2, 0x00000007, 0, RTE_REG_ECX,  6)
+	FEAT_DEF(GFNI, 0x00000007, 0, RTE_REG_ECX,  8)
+	FEAT_DEF(VAES, 0x00000007, 0, RTE_REG_ECX,  9)
+	FEAT_DEF(VPCLMULQDQ, 0x00000007, 0, RTE_REG_ECX, 10)
+	FEAT_DEF(AVX512VNNI, 0x00000007, 0, RTE_REG_ECX, 11)
+	FEAT_DEF(AVX512BITALG, 0x00000007, 0, RTE_REG_ECX, 12)
+	FEAT_DEF(AVX512VPOPCNTDQ, 0x00000007, 0, RTE_REG_ECX, 14)
+	FEAT_DEF(CLDEMOTE, 0x00000007, 0, RTE_REG_ECX, 25)
+	FEAT_DEF(MOVDIRI, 0x00000007, 0, RTE_REG_ECX, 27)
+	FEAT_DEF(MOVDIR64B, 0x00000007, 0, RTE_REG_ECX, 28)
+
+	FEAT_DEF(AVX512VP2INTERSECT, 0x00000007, 0, RTE_REG_EDX,  8)
 
 	FEAT_DEF(LAHF_SAHF, 0x80000001, 0, RTE_REG_ECX,  0)
 	FEAT_DEF(LZCNT, 0x80000001, 0, RTE_REG_ECX,  4)
@@ -268,55 +288,30 @@ static const struct feature_entry cpu_feature_table[] = {
 	FEAT_DEF(INVTSC, 0x80000007, 0, RTE_REG_EDX,  8)
 };
 
-/*
- * Execute CPUID instruction and get contents of a specific register
- *
- * This function, when compiled with GCC, will generate architecture-neutral
- * code, as per GCC manual.
- */
-static void cpu_get_features(uint32_t leaf, uint32_t subleaf,
-			     cpuid_registers_t out)
-{
-#if defined(__i386__) && defined(__PIC__)
-	/* %ebx is a forbidden register if we compile with -fPIC or -fPIE */
-	__asm__ __volatile__("movl %%ebx,%0 ; cpuid ; xchgl %%ebx,%0"
-		 : "=r" (out[RTE_REG_EBX]),
-		   "=a" (out[RTE_REG_EAX]),
-		   "=c" (out[RTE_REG_ECX]),
-		   "=d" (out[RTE_REG_EDX])
-		 : "a" (leaf), "c" (subleaf));
-#else
-	__asm__ __volatile__("cpuid"
-		 : "=a" (out[RTE_REG_EAX]),
-		   "=b" (out[RTE_REG_EBX]),
-		   "=c" (out[RTE_REG_ECX]),
-		   "=d" (out[RTE_REG_EDX])
-		 : "a" (leaf), "c" (subleaf));
-#endif
-}
-
 static int cpu_get_flag_enabled(enum rte_cpu_flag_t feature)
 {
 	const struct feature_entry *feat;
 	cpuid_registers_t regs;
+	unsigned int maxleaf;
 
 	if (feature >= RTE_CPUFLAG_NUMFLAGS)
 		/* Flag does not match anything in the feature tables */
-		return -1;
+		return -ENOENT;
 
 	feat = &cpu_feature_table[feature];
 
 	if (!feat->leaf)
 		/* This entry in the table wasn't filled out! */
-		return -1;
+		return -EFAULT;
 
-	cpu_get_features(feat->leaf & 0xffff0000, 0, regs);
-	if (((regs[RTE_REG_EAX] ^ feat->leaf) & 0xffff0000) ||
-	    regs[RTE_REG_EAX] < feat->leaf)
+	maxleaf = __get_cpuid_max(feat->leaf & 0x80000000, NULL);
+
+	if (maxleaf < feat->leaf)
 		return 0;
 
-	/* get the cpuid leaf containing the desired feature */
-	cpu_get_features(feat->leaf, feat->subleaf, regs);
+	 __cpuid_count(feat->leaf, feat->subleaf,
+		       regs[RTE_REG_EAX], regs[RTE_REG_EBX],
+		       regs[RTE_REG_ECX], regs[RTE_REG_EDX]);
 
 	/* check if the feature is enabled */
 	return (regs[feat->reg] >> feat->bit) & 1;
