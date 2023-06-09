@@ -263,29 +263,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        cc_ver: [10, 11, 12]
+        cc_ver: [10, 11, 12, 13]
         conf: ['', '--enable-abi-compat']
     steps:
       - uses: actions/checkout@v3
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="gcc-${{matrix.cc_ver}}" -e CXX="g++-${{matrix.cc_ver}}"
                -e CONF="${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/build_${ARCH}.sh
-      - name: Failure log
-        if: ${{ failure() }}
-        run: find . -name config.log -exec cat {} \;
-
-  Build_gcc_u23:
-    runs-on: ubuntu-20.04
-    env:
-      OS: ubuntu_23.04
-    strategy:
-      fail-fast: false
-      matrix:
-        cc_ver: [13]
-        conf: ['', '--enable-abi-compat']
-    steps:
-      - uses: actions/checkout@v3
-      - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="gcc-${{matrix.cc_ver}}" -e CXX="g++-${{matrix.cc_ver}}"
-                -e CONF="${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/build_${ARCH}.sh
       - name: Failure log
         if: ${{ failure() }}
         run: find . -name config.log -exec cat {} \;
