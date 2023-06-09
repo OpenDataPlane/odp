@@ -4,14 +4,22 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#ifndef ODP_ABI_TIME_H_
-#define ODP_ABI_TIME_H_
+/**
+ * @file
+ *
+ * ODP time
+ */
+
+#ifndef ODP_API_TIME_TYPES_H_
+#define ODP_API_TIME_TYPES_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/* Empty header required due to the inline functions */
+#include <odp/api/abi/time_types.h>
+
+#include <odp/api/spec/time_types.h>
 
 #ifdef __cplusplus
 }

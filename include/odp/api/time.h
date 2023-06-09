@@ -17,7 +17,6 @@
 extern "C" {
 #endif
 
-#include <odp/api/std_types.h>
 #include <odp/api/abi/time.h>
 
 #include <odp/api/spec/time.h>

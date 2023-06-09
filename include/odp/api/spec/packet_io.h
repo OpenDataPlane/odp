@@ -25,7 +25,7 @@ extern "C" {
 #include <odp/api/packet_io_types.h>
 #include <odp/api/queue_types.h>
 #include <odp/api/reassembly.h>
-#include <odp/api/time.h>
+#include <odp/api/time_types.h>
 
 /** @defgroup odp_packet_io ODP PACKET IO
  *  Packet IO interfaces.

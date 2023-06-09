@@ -4,7 +4,5 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include <odp/api/abi-default/time.h>
-
-/* Inlined functions for non-ABI compat mode */
+/* Inlined API functions */
 #include <odp/api/plat/time_inlines.h>

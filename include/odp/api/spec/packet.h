@@ -25,7 +25,7 @@ extern "C" {
 #include <odp/api/pool_types.h>
 #include <odp/api/proto_stats_types.h>
 #include <odp/api/std_types.h>
-#include <odp/api/time.h>
+#include <odp/api/time_types.h>
 
 /** @defgroup odp_packet ODP PACKET
  *  Packet event metadata and operations.
