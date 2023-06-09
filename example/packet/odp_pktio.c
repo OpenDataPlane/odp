@@ -521,7 +521,10 @@ static int drop_err_pkts(odp_packet_t pkt_tbl[], unsigned len)
 			odp_packet_free(pkt); /* Drop */
 			pkt_cnt--;
 		} else if (odp_unlikely(i != j++)) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Warray-bounds"
 			pkt_tbl[j-1] = pkt;
+#pragma GCC diagnostic pop
 		}
 	}
 

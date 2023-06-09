@@ -799,6 +799,11 @@ static odp_schedule_group_t schedule_group_create(const char *name,
 		if (!sched_group->s.group[i].allocated) {
 			char *grp_name = sched_group->s.group[i].name;
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Warray-bounds"
+#if __GNUC__ >= 13
+#pragma GCC diagnostic ignored "-Wstringop-overflow"
+#endif
 			if (name == NULL) {
 				grp_name[0] = 0;
 			} else {
@@ -806,6 +811,7 @@ static odp_schedule_group_t schedule_group_create(const char *name,
 					ODP_SCHED_GROUP_NAME_LEN - 1);
 				grp_name[ODP_SCHED_GROUP_NAME_LEN - 1] = 0;
 			}
+#pragma GCC diagnostic pop
 
 			odp_thrmask_copy(&sched_group->s.group[i].mask, thrmask);
 			sched_group->s.group[i].allocated = 1;
