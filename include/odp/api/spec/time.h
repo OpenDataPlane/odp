@@ -1,5 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
- * Copyright (c) 2020-2021, Nokia
+ * Copyright (c) 2020-2023, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -19,37 +19,12 @@
 extern "C" {
 #endif
 
+#include <odp/api/std_types.h>
+#include <odp/api/time_types.h>
+
 /** @defgroup odp_time ODP TIME
  *  Chip and CPU level wall clock time.
  *  @{
- */
-
-/** A microsecond in nanoseconds */
-#define ODP_TIME_USEC_IN_NS  1000ULL
-
-/** A millisecond in nanoseconds */
-#define ODP_TIME_MSEC_IN_NS  1000000ULL
-
-/** A second in nanoseconds */
-#define ODP_TIME_SEC_IN_NS   1000000000ULL
-
-/** A minute in nanoseconds */
-#define ODP_TIME_MIN_IN_NS   60000000000ULL
-
-/** An hour in nanoseconds */
-#define ODP_TIME_HOUR_IN_NS  3600000000000ULL
-
-/**
- * @typedef odp_time_t
- * ODP time stamp. Time stamp can represent a time stamp from local or global
- * time source. A local time stamp must not be shared between threads. API calls
- * work correctly only when all time stamps for input are from the same time
- * source.
- */
-
-/**
- * @def ODP_TIME_NULL
- * Zero time stamp
  */
 
 /**

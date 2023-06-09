@@ -8,11 +8,13 @@
 #ifndef ODP_PLAT_TIME_INLINES_H_
 #define ODP_PLAT_TIME_INLINES_H_
 
-#include <stdint.h>
 #include <odp/api/align.h>
 #include <odp/api/hints.h>
+#include <odp/api/time_types.h>
 
 #include <odp/api/abi/cpu_time.h>
+
+#include <stdint.h>
 
 /** @cond _ODP_HIDE_FROM_DOXYGEN_ */
 
