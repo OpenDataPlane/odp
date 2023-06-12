@@ -9,7 +9,6 @@
 #define ODP_PLAT_EVENT_INLINES_H_
 
 #include <odp/api/buffer_types.h>
-#include <odp/api/dma.h>
 #include <odp/api/event_types.h>
 #include <odp/api/packet_types.h>
 #include <odp/api/timer_types.h>
@@ -72,6 +71,7 @@ _ODP_INLINE void *odp_event_user_area(odp_event_t event)
 
 	switch (type) {
 	case ODP_EVENT_BUFFER:
+	case ODP_EVENT_DMA_COMPL:
 		return _odp_buffer_get((odp_buffer_t)event, void *, uarea_addr);
 	case ODP_EVENT_PACKET:
 		return _odp_pkt_get((odp_packet_t)event, void *, user_area);
@@ -79,8 +79,6 @@ _ODP_INLINE void *odp_event_user_area(odp_event_t event)
 		return _odp_event_vect_get((odp_packet_vector_t)event, void *, uarea_addr);
 	case ODP_EVENT_TIMEOUT:
 		return _odp_timeout_hdr_field((odp_timeout_t)event, void *, uarea_addr);
-	case ODP_EVENT_DMA_COMPL:
-		return odp_dma_compl_user_area((odp_dma_compl_t)event);
 	default:
 		return NULL;
 	}
