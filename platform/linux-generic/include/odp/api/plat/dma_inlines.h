@@ -11,6 +11,7 @@
 #include <odp/api/dma_types.h>
 #include <odp/api/event_types.h>
 #include <odp/api/hints.h>
+#include <odp/api/queue_types.h>
 
 #include <odp/api/plat/debug_inlines.h>
 #include <odp/api/plat/event_inline_types.h>
@@ -27,6 +28,8 @@
 	#define odp_dma_compl_to_event __odp_dma_compl_to_event
 	#define odp_dma_compl_user_area __odp_dma_compl_user_area
 	#define odp_dma_compl_result __odp_dma_compl_result
+	#define odp_dma_transfer_param_init __odp_dma_transfer_param_init
+	#define odp_dma_compl_param_init __odp_dma_compl_param_init
 #else
 	#define _ODP_INLINE
 #endif
@@ -64,6 +67,25 @@ _ODP_INLINE int odp_dma_compl_result(odp_dma_compl_t dma_compl, odp_dma_result_t
 		*result_out = *result;
 
 	return result->success ? 0 : -1;
+}
+
+_ODP_INLINE void odp_dma_transfer_param_init(odp_dma_transfer_param_t *trs_param)
+{
+	memset(trs_param, 0, sizeof(odp_dma_transfer_param_t));
+
+	trs_param->src_format = ODP_DMA_FORMAT_ADDR;
+	trs_param->dst_format = ODP_DMA_FORMAT_ADDR;
+	trs_param->num_src    = 1;
+	trs_param->num_dst    = 1;
+}
+
+_ODP_INLINE void odp_dma_compl_param_init(odp_dma_compl_param_t *compl_param)
+{
+	memset(compl_param, 0, sizeof(odp_dma_compl_param_t));
+
+	compl_param->queue = ODP_QUEUE_INVALID;
+	compl_param->event = ODP_EVENT_INVALID;
+	compl_param->transfer_id = ODP_DMA_TRANSFER_ID_INVALID;
 }
 
 /** @endcond */
