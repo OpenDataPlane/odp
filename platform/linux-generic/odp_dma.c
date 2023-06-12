@@ -803,24 +803,6 @@ void odp_dma_compl_free(odp_dma_compl_t dma_compl)
 	odp_buffer_free(buf);
 }
 
-int odp_dma_compl_result(odp_dma_compl_t dma_compl, odp_dma_result_t *result_out)
-{
-	odp_dma_result_t *result;
-	odp_buffer_t buf = (odp_buffer_t)(uintptr_t)dma_compl;
-
-	if (odp_unlikely(dma_compl == ODP_DMA_COMPL_INVALID)) {
-		_ODP_ERR("Bad DMA compl handle\n");
-		return -1;
-	}
-
-	result = odp_buffer_addr(buf);
-
-	if (result_out)
-		*result_out = *result;
-
-	return result->success ? 0 : -1;
-}
-
 uint64_t odp_dma_to_u64(odp_dma_t dma)
 {
 	return (uint64_t)(uintptr_t)dma;
@@ -829,11 +811,6 @@ uint64_t odp_dma_to_u64(odp_dma_t dma)
 uint64_t odp_dma_compl_to_u64(odp_dma_compl_t dma_compl)
 {
 	return (uint64_t)(uintptr_t)dma_compl;
-}
-
-void *odp_dma_compl_user_area(odp_dma_compl_t dma_compl)
-{
-	return odp_buffer_user_area((odp_buffer_t)(uintptr_t)dma_compl);
 }
 
 void odp_dma_print(odp_dma_t dma)
