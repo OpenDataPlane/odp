@@ -803,18 +803,6 @@ void odp_dma_compl_free(odp_dma_compl_t dma_compl)
 	odp_buffer_free(buf);
 }
 
-odp_dma_compl_t odp_dma_compl_from_event(odp_event_t ev)
-{
-	_ODP_ASSERT(odp_event_type(ev) == ODP_EVENT_DMA_COMPL);
-
-	return (odp_dma_compl_t)(uintptr_t)ev;
-}
-
-odp_event_t odp_dma_compl_to_event(odp_dma_compl_t dma_compl)
-{
-	return (odp_event_t)(uintptr_t)dma_compl;
-}
-
 int odp_dma_compl_result(odp_dma_compl_t dma_compl, odp_dma_result_t *result_out)
 {
 	odp_dma_result_t *result;
