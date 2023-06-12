@@ -321,16 +321,6 @@ odp_dma_t odp_dma_lookup(const char *name)
 	return ODP_DMA_INVALID;
 }
 
-void odp_dma_transfer_param_init(odp_dma_transfer_param_t *trs_param)
-{
-	memset(trs_param, 0, sizeof(odp_dma_transfer_param_t));
-
-	trs_param->src_format = ODP_DMA_FORMAT_ADDR;
-	trs_param->dst_format = ODP_DMA_FORMAT_ADDR;
-	trs_param->num_src    = 1;
-	trs_param->num_dst    = 1;
-}
-
 static uint32_t transfer_len(const odp_dma_transfer_param_t *trs_param)
 {
 	uint32_t i;
@@ -566,14 +556,6 @@ int odp_dma_transfer_multi(odp_dma_t dma, const odp_dma_transfer_param_t *trs_pa
 		return ret;
 
 	return i;
-}
-
-void odp_dma_compl_param_init(odp_dma_compl_param_t *compl_param)
-{
-	memset(compl_param, 0, sizeof(odp_dma_compl_param_t));
-	compl_param->queue = ODP_QUEUE_INVALID;
-	compl_param->event = ODP_EVENT_INVALID;
-	compl_param->transfer_id = ODP_DMA_TRANSFER_ID_INVALID;
 }
 
 odp_dma_transfer_id_t odp_dma_transfer_id_alloc(odp_dma_t dma)
