@@ -84,6 +84,7 @@ odp_timer_perf_SOURCES = odp_timer_perf.c
 
 if LIBCONFIG
 odp_ipsecfwd_SOURCES = odp_ipsecfwd.c
+AM_CFLAGS += $(LIBCONFIG_CFLAGS)
 endif
 
 # l2fwd test depends on generator example
