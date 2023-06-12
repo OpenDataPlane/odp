@@ -638,6 +638,9 @@ uint64_t odp_timer_to_u64(odp_timer_t timer);
  */
 uint64_t odp_timeout_to_u64(odp_timeout_t tmo);
 
+uint64_t odp_timer_nsec(void);
+
+uint64_t odp_timer_rounds(void);
 /**
  * @}
  */
