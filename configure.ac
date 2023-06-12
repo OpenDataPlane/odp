@@ -120,6 +120,7 @@ AS_IF([test "$GCC" == yes],
       AS_IF([test `$CC -dumpversion | cut -d '.' -f 1` -ge 10],
 	    ODP_CHECK_CFLAG([-Wno-error=array-bounds])
 	    ODP_CHECK_CFLAG([-Wno-error=stringop-overflow])
+	    ODP_CHECK_CXXFLAG([-Wno-error=stringop-overflow])
       )
 )
 
