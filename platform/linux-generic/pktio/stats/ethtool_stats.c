@@ -29,9 +29,11 @@
 
 static struct ethtool_gstrings *get_stringset(int fd, struct ifreq *ifr)
 {
-	struct {
+	union {
 		struct ethtool_sset_info hdr;
-		uint32_t buf[1]; /* overlaps with hdr.data[] */
+		/* Reserve space for hdr.data. */
+		uint8_t buf[sizeof(struct ethtool_sset_info) +
+			    sizeof(((struct ethtool_sset_info *)0)->data[0])];
 	} sset_info;
 	struct ethtool_drvinfo drvinfo;
 	uint32_t len;
