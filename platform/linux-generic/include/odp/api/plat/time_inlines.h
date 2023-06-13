@@ -1,5 +1,5 @@
 /* Copyright (c) 2018, Linaro Limited
- * Copyright (c) 2020-2022, Nokia
+ * Copyright (c) 2020-2023, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -12,78 +12,11 @@
 #include <odp/api/hints.h>
 #include <odp/api/time_types.h>
 
-#include <odp/api/abi/cpu_time.h>
+#include <odp/api/abi/time_inlines.h>
 
 #include <stdint.h>
 
 /** @cond _ODP_HIDE_FROM_DOXYGEN_ */
-
-#define _ODP_TIMESPEC_SIZE 16
-#define _ODP_TIME_GIGA_HZ  1000000000ULL
-
-typedef struct _odp_time_global_t {
-	/* Storage space for struct timespec. Posix headers are not included
-	 * here to avoid application exposure. */
-	uint8_t timespec[_ODP_TIMESPEC_SIZE] ODP_ALIGNED(_ODP_TIMESPEC_SIZE);
-
-	int             use_hw;
-	uint64_t        hw_start;
-	uint64_t        hw_freq_hz;
-
-} _odp_time_global_t;
-
-extern _odp_time_global_t _odp_time_glob;
-
-odp_time_t _odp_timespec_cur(void);
-
-static inline odp_time_t _odp_time_cur(void)
-{
-	if (_odp_time_glob.use_hw) {
-		odp_time_t time;
-
-		time.count = _odp_cpu_global_time() - _odp_time_glob.hw_start;
-		return time;
-	}
-
-	return _odp_timespec_cur();
-}
-
-static inline odp_time_t _odp_time_cur_strict(void)
-{
-	if (_odp_time_glob.use_hw) {
-		odp_time_t time;
-
-		time.count = _odp_cpu_global_time_strict() - _odp_time_glob.hw_start;
-		return time;
-	}
-
-	return _odp_timespec_cur();
-}
-
-static inline uint64_t _odp_time_hw_to_ns(odp_time_t time)
-{
-	uint64_t nsec;
-	uint64_t freq_hz = _odp_time_glob.hw_freq_hz;
-	uint64_t count = time.count;
-	uint64_t sec = 0;
-
-	if (count >= freq_hz) {
-		sec   = count / freq_hz;
-		count = count - sec * freq_hz;
-	}
-
-	nsec = (_ODP_TIME_GIGA_HZ * count) / freq_hz;
-
-	return (sec * _ODP_TIME_GIGA_HZ) + nsec;
-}
-
-static inline uint64_t _odp_time_convert_to_ns(odp_time_t time)
-{
-	if (_odp_time_glob.use_hw)
-		return _odp_time_hw_to_ns(time);
-
-	return time.nsec;
-}
 
 #ifndef _ODP_NO_INLINE
 	/* Inline functions by default */
@@ -104,6 +37,14 @@ static inline uint64_t _odp_time_convert_to_ns(odp_time_t time)
 	#define odp_time_diff_ns    __odp_time_diff_ns
 	#define odp_time_sum        __odp_time_sum
 
+	#define odp_time_local_from_ns __odp_time_local_from_ns
+	#define odp_time_global_from_ns __odp_time_global_from_ns
+
+	#define odp_time_local_res __odp_time_local_res
+	#define odp_time_global_res __odp_time_global_res
+
+	#define odp_time_wait_ns __odp_time_wait_ns
+	#define odp_time_wait_until __odp_time_wait_until
 #else
 	#define _ODP_INLINE
 #endif
@@ -130,27 +71,27 @@ _ODP_INLINE odp_time_t odp_time_global_strict(void)
 
 _ODP_INLINE uint64_t odp_time_local_ns(void)
 {
-	return _odp_time_convert_to_ns(_odp_time_cur());
+	return _odp_time_to_ns(_odp_time_cur());
 }
 
 _ODP_INLINE uint64_t odp_time_global_ns(void)
 {
-	return _odp_time_convert_to_ns(_odp_time_cur());
+	return _odp_time_to_ns(_odp_time_cur());
 }
 
 _ODP_INLINE uint64_t odp_time_local_strict_ns(void)
 {
-	return _odp_time_convert_to_ns(_odp_time_cur_strict());
+	return _odp_time_to_ns(_odp_time_cur_strict());
 }
 
 _ODP_INLINE uint64_t odp_time_global_strict_ns(void)
 {
-	return _odp_time_convert_to_ns(_odp_time_cur_strict());
+	return _odp_time_to_ns(_odp_time_cur_strict());
 }
 
 _ODP_INLINE uint64_t odp_time_to_ns(odp_time_t time)
 {
-	return _odp_time_convert_to_ns(time);
+	return _odp_time_to_ns(time);
 }
 
 _ODP_INLINE int odp_time_cmp(odp_time_t t2, odp_time_t t1)
@@ -189,6 +130,44 @@ _ODP_INLINE odp_time_t odp_time_sum(odp_time_t t1, odp_time_t t2)
 	time.u64 = t1.u64 + t2.u64;
 
 	return time;
+}
+
+_ODP_INLINE odp_time_t odp_time_local_from_ns(uint64_t ns)
+{
+	return _odp_time_from_ns(ns);
+}
+
+_ODP_INLINE odp_time_t odp_time_global_from_ns(uint64_t ns)
+{
+	return _odp_time_from_ns(ns);
+}
+
+_ODP_INLINE uint64_t odp_time_local_res(void)
+{
+	return _odp_time_res();
+}
+
+_ODP_INLINE uint64_t odp_time_global_res(void)
+{
+	return _odp_time_res();
+}
+
+_ODP_INLINE void odp_time_wait_until(odp_time_t time)
+{
+	odp_time_t cur;
+
+	do {
+		cur = _odp_time_cur();
+	} while (odp_time_cmp(time, cur) > 0);
+}
+
+_ODP_INLINE void odp_time_wait_ns(uint64_t ns)
+{
+	odp_time_t cur = _odp_time_cur();
+	odp_time_t wait = _odp_time_from_ns(ns);
+	odp_time_t end_time = odp_time_sum(cur, wait);
+
+	odp_time_wait_until(end_time);
 }
 
 /** @endcond */
