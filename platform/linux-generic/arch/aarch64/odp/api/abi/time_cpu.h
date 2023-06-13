@@ -4,8 +4,8 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#ifndef ODP_API_ABI_CPU_TIME_H_
-#define ODP_API_ABI_CPU_TIME_H_
+#ifndef ODP_API_ABI_TIME_CPU_H_
+#define ODP_API_ABI_TIME_CPU_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -13,7 +13,7 @@ extern "C" {
 
 #include <stdint.h>
 
-static inline uint64_t _odp_cpu_global_time(void)
+static inline uint64_t _odp_time_cpu_global(void)
 {
 	uint64_t cntvct;
 
@@ -22,7 +22,7 @@ static inline uint64_t _odp_cpu_global_time(void)
 	return cntvct;
 }
 
-static inline uint64_t _odp_cpu_global_time_strict(void)
+static inline uint64_t _odp_time_cpu_global_strict(void)
 {
 	uint64_t cntvct;
 
@@ -32,7 +32,7 @@ static inline uint64_t _odp_cpu_global_time_strict(void)
 	return cntvct;
 }
 
-static inline uint64_t _odp_cpu_global_time_freq(void)
+static inline uint64_t _odp_time_cpu_global_freq(void)
 {
 	uint64_t cntfrq;
 
@@ -41,7 +41,10 @@ static inline uint64_t _odp_cpu_global_time_freq(void)
 	return cntfrq;
 }
 
-int _odp_cpu_has_global_time(void);
+static inline int _odp_time_cpu_global_freq_const(void)
+{
+	return 1;
+}
 
 #ifdef __cplusplus
 }

@@ -4,8 +4,8 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#ifndef ODP_ARCH_CPU_TIME_H_
-#define ODP_ARCH_CPU_TIME_H_
+#ifndef ODP_ARCH_TIME_CPU_H_
+#define ODP_ARCH_TIME_CPU_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -14,19 +14,19 @@ extern "C" {
 #include <stdint.h>
 #include <odp/api/abi/cpu_rdtsc.h>
 
-static inline uint64_t _odp_cpu_global_time(void)
+static inline uint64_t _odp_time_cpu_global(void)
 {
 	return _odp_cpu_rdtsc();
 }
 
-static inline uint64_t _odp_cpu_global_time_strict(void)
+static inline uint64_t _odp_time_cpu_global_strict(void)
 {
 	__atomic_thread_fence(__ATOMIC_SEQ_CST);
 	return _odp_cpu_rdtsc();
 }
 
-int _odp_cpu_has_global_time(void);
-uint64_t _odp_cpu_global_time_freq(void);
+int _odp_time_cpu_global_freq_const(void);
+uint64_t _odp_time_cpu_global_freq(void);
 
 #ifdef __cplusplus
 }

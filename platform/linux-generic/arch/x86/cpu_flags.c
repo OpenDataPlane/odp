@@ -11,7 +11,7 @@
 
 #include "cpu_flags.h"
 #include <odp_debug_internal.h>
-#include <odp/api/abi/cpu_time.h>
+#include <odp/api/abi/time_cpu.h>
 
 #include <cpuid.h>
 #include <errno.h>
@@ -354,7 +354,7 @@ void _odp_cpu_flags_print_all(void)
 	_ODP_PRINT("%s", str);
 }
 
-int _odp_cpu_has_global_time(void)
+int _odp_time_cpu_global_freq_const(void)
 {
 	if (cpu_get_flag_enabled(RTE_CPUFLAG_INVTSC) > 0)
 		return 1;

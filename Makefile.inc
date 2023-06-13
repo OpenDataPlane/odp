@@ -13,6 +13,7 @@ else
 ODP_INCLUDES += \
 	-I$(top_srcdir)/platform/@with_platform@/include \
 	-I$(top_srcdir)/platform/@with_platform@/arch/@ARCH_DIR@ \
+	-I$(top_srcdir)/platform/@with_platform@/arch/common \
 	-I$(top_srcdir)/platform/@with_platform@/arch/default \
 	-I$(top_srcdir)/platform/@with_platform@/include-abi
 endif
