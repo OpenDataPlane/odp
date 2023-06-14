@@ -2701,7 +2701,7 @@ static void timer_test_periodic_capa(void)
 	}
 }
 
-static void timer_test_periodic(odp_queue_type_t queue_type, int use_first)
+static void timer_test_periodic(odp_queue_type_t queue_type, int use_first, int rounds)
 {
 	odp_timer_capability_t timer_capa;
 	odp_timer_periodic_capability_t periodic_capa;
@@ -2720,8 +2720,8 @@ static void timer_test_periodic(odp_queue_type_t queue_type, int use_first)
 	double freq, freq_out, min_freq, max_freq;
 	int ret;
 	const char *user_ctx = "User context";
-	int num_tmo = 0;
-	int done = 0;
+	int num_tmo;
+	int done;
 	const int num = 200;
 	/* Test frequency: 1x 100Hz, or 1x min/max_base_freq */
 	const uint64_t multiplier = 1;
@@ -2829,127 +2829,135 @@ static void timer_test_periodic(odp_queue_type_t queue_type, int use_first)
 	queue = odp_queue_create("timeout_queue", &queue_param);
 	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
 
-	tmo = odp_timeout_alloc(pool);
-	ev  = odp_timeout_to_event(tmo);
-	CU_ASSERT_FATAL(ev != ODP_EVENT_INVALID);
-
 	timer = odp_timer_alloc(timer_pool, queue, user_ctx);
 	CU_ASSERT_FATAL(timer != ODP_TIMER_INVALID);
 
 	memset(&start_param, 0, sizeof(odp_timer_periodic_start_t));
-	cur_tick = odp_timer_current_tick(timer_pool);
 	offset_ns = period_ns / 2;
-	tick = cur_tick + odp_timer_ns_to_tick(timer_pool, offset_ns);
 
 	if (use_first) {
 		/* First tick moves timer to start before the first period */
 		duration_ns -= (period_ns - offset_ns);
-		start_param.first_tick = tick;
 	}
 
-	start_param.freq_multiplier = multiplier;
-	start_param.tmo_ev = ev;
+	for (int round = 0; round < rounds; round++) {
+		num_tmo = 0;
+		done = 0;
 
-	ODPH_DBG("Periodic timer start:\n");
-	ODPH_DBG("  Current tick:    %" PRIu64 "\n", cur_tick);
-	ODPH_DBG("  First tick:      %" PRIu64 "\n", start_param.first_tick);
-	ODPH_DBG("  Multiplier:      %" PRIu64 "\n", start_param.freq_multiplier);
-	ODPH_DBG("  Period:          %" PRIu64 " nsec\n", period_ns);
-	ODPH_DBG("Expected duration: %" PRIu64 " nsec\n", duration_ns);
+		tmo = odp_timeout_alloc(pool);
+		ev  = odp_timeout_to_event(tmo);
+		CU_ASSERT_FATAL(ev != ODP_EVENT_INVALID);
 
-	ret = odp_timer_periodic_start(timer, &start_param);
+		cur_tick = odp_timer_current_tick(timer_pool);
+		tick = cur_tick + odp_timer_ns_to_tick(timer_pool, offset_ns);
 
-	if (ret == ODP_TIMER_TOO_NEAR)
-		ODPH_ERR("First tick too near\n");
-	else if (ret == ODP_TIMER_TOO_FAR)
-		ODPH_ERR("First tick too far\n");
-	else if (ret == ODP_TIMER_FAIL)
-		ODPH_ERR("Periodic timer start failed\n");
+		if (use_first)
+			start_param.first_tick = tick;
 
-	CU_ASSERT_FATAL(ret == ODP_TIMER_SUCCESS);
+		start_param.freq_multiplier = multiplier;
+		start_param.tmo_ev = ev;
 
-	t1 = odp_time_local();
+		ODPH_DBG("Periodic timer start:\n");
+		ODPH_DBG("  Current tick:    %" PRIu64 "\n", cur_tick);
+		ODPH_DBG("  First tick:      %" PRIu64 "\n", start_param.first_tick);
+		ODPH_DBG("  Multiplier:      %" PRIu64 "\n", start_param.freq_multiplier);
+		ODPH_DBG("  Period:          %" PRIu64 " nsec\n", period_ns);
+		ODPH_DBG("Expected duration: %" PRIu64 " nsec\n", duration_ns);
 
-	/* Wait for timeouts. Make sure that scheduler context is not held when
-	 * exiting the loop. */
-	while (1) {
-		if (queue_type == ODP_QUEUE_TYPE_SCHED)
-			ev = odp_schedule(NULL, ODP_SCHED_NO_WAIT);
-		else
-			ev = odp_queue_deq(queue);
+		ret = odp_timer_periodic_start(timer, &start_param);
 
-		if (ev == ODP_EVENT_INVALID) {
-			t2 = odp_time_local();
-			diff_ns = odp_time_diff_ns(t2, t1);
-			if (diff_ns > (10 * duration_ns))
-				break;
+		if (ret == ODP_TIMER_TOO_NEAR)
+			ODPH_ERR("First tick too near\n");
+		else if (ret == ODP_TIMER_TOO_FAR)
+			ODPH_ERR("First tick too far\n");
+		else if (ret == ODP_TIMER_FAIL)
+			ODPH_ERR("Periodic timer start failed\n");
 
-			if (num_tmo >= num)
-				break;
+		CU_ASSERT_FATAL(ret == ODP_TIMER_SUCCESS);
 
-			continue;
+		t1 = odp_time_local();
+
+		/* Wait for timeouts. Make sure that scheduler context is not held when
+		* exiting the loop. */
+		while (1) {
+			if (queue_type == ODP_QUEUE_TYPE_SCHED)
+				ev = odp_schedule(NULL, ODP_SCHED_NO_WAIT);
+			else
+				ev = odp_queue_deq(queue);
+
+			if (ev == ODP_EVENT_INVALID) {
+				t2 = odp_time_local();
+				diff_ns = odp_time_diff_ns(t2, t1);
+				if (diff_ns > (10 * duration_ns))
+					break;
+
+				if (num_tmo >= num)
+					break;
+
+				continue;
+			}
+
+			CU_ASSERT(odp_event_type(ev) == ODP_EVENT_TIMEOUT);
+
+			if (odp_event_type(ev) != ODP_EVENT_TIMEOUT) {
+				odp_event_free(ev);
+				continue;
+			}
+
+			CU_ASSERT(odp_timer_periodic_ack(timer, ev) == 0);
+			num_tmo++;
 		}
 
-		CU_ASSERT(odp_event_type(ev) == ODP_EVENT_TIMEOUT);
+		CU_ASSERT(num_tmo == num);
 
-		if (odp_event_type(ev) != ODP_EVENT_TIMEOUT) {
-			odp_event_free(ev);
-			continue;
+		/* Allow +-30% error on test duration */
+		CU_ASSERT((diff_ns > 0.7 * duration_ns) && (diff_ns < 1.3 * duration_ns));
+
+		/* Stop periodic timer */
+		ret = odp_timer_periodic_cancel(timer);
+		CU_ASSERT_FATAL(ret == 0);
+
+		ODPH_DBG("Measured duration: %" PRIu64 " nsec\n", diff_ns);
+
+		t1 = odp_time_local();
+		while (1) {
+			if (queue_type == ODP_QUEUE_TYPE_SCHED)
+				ev = odp_schedule(NULL, ODP_SCHED_NO_WAIT);
+			else
+				ev = odp_queue_deq(queue);
+
+			if (ev == ODP_EVENT_INVALID) {
+				t2 = odp_time_local();
+				diff_ns = odp_time_diff_ns(t2, t1);
+				if (diff_ns > (10 * duration_ns))
+					break;
+
+				if (done)
+					break;
+
+				continue;
+			}
+
+			CU_ASSERT(odp_event_type(ev) == ODP_EVENT_TIMEOUT);
+
+			if (odp_event_type(ev) != ODP_EVENT_TIMEOUT) {
+				odp_event_free(ev);
+				continue;
+			}
+
+			ret = odp_timer_periodic_ack(timer, ev);
+			CU_ASSERT(ret == 1 || ret == 2);
+
+			if (ret == 2) {
+				odp_event_free(ev);
+				done = 1;
+			}
 		}
 
-		CU_ASSERT(odp_timer_periodic_ack(timer, ev) == 0);
-		num_tmo++;
+		/* Check that ack() returned 2 on the last event */
+		CU_ASSERT(done);
+		CU_ASSERT(ret == 2);
 	}
-
-	CU_ASSERT(num_tmo == num);
-
-	/* Allow +-30% error on test duration */
-	CU_ASSERT((diff_ns > 0.7 * duration_ns) && (diff_ns < 1.3 * duration_ns));
-
-	/* Stop periodic timer */
-	ret = odp_timer_periodic_cancel(timer);
-	CU_ASSERT_FATAL(ret == 0);
-
-	ODPH_DBG("Measured duration: %" PRIu64 " nsec\n", diff_ns);
-
-	t1 = odp_time_local();
-	while (1) {
-		if (queue_type == ODP_QUEUE_TYPE_SCHED)
-			ev = odp_schedule(NULL, ODP_SCHED_NO_WAIT);
-		else
-			ev = odp_queue_deq(queue);
-
-		if (ev == ODP_EVENT_INVALID) {
-			t2 = odp_time_local();
-			diff_ns = odp_time_diff_ns(t2, t1);
-			if (diff_ns > (10 * duration_ns))
-				break;
-
-			if (done)
-				break;
-
-			continue;
-		}
-
-		CU_ASSERT(odp_event_type(ev) == ODP_EVENT_TIMEOUT);
-
-		if (odp_event_type(ev) != ODP_EVENT_TIMEOUT) {
-			odp_event_free(ev);
-			continue;
-		}
-
-		ret = odp_timer_periodic_ack(timer, ev);
-		CU_ASSERT(ret == 1 || ret == 2);
-
-		if (ret == 2) {
-			odp_event_free(ev);
-			done = 1;
-		}
-	}
-
-	/* Check that ack() returned 2 on the last event */
-	CU_ASSERT(done);
-	CU_ASSERT(ret == 2);
 
 	CU_ASSERT(odp_timer_free(timer) == ODP_EVENT_INVALID);
 	odp_timer_pool_destroy(timer_pool);
@@ -2959,22 +2967,27 @@ static void timer_test_periodic(odp_queue_type_t queue_type, int use_first)
 
 static void timer_test_periodic_sched(void)
 {
-	timer_test_periodic(ODP_QUEUE_TYPE_SCHED, 0);
+	timer_test_periodic(ODP_QUEUE_TYPE_SCHED, 0, 1);
 }
 
 static void timer_test_periodic_plain(void)
 {
-	timer_test_periodic(ODP_QUEUE_TYPE_PLAIN, 0);
+	timer_test_periodic(ODP_QUEUE_TYPE_PLAIN, 0, 1);
 }
 
 static void timer_test_periodic_sched_first(void)
 {
-	timer_test_periodic(ODP_QUEUE_TYPE_SCHED, FIRST_TICK);
+	timer_test_periodic(ODP_QUEUE_TYPE_SCHED, FIRST_TICK, 1);
 }
 
 static void timer_test_periodic_plain_first(void)
 {
-	timer_test_periodic(ODP_QUEUE_TYPE_PLAIN, FIRST_TICK);
+	timer_test_periodic(ODP_QUEUE_TYPE_PLAIN, FIRST_TICK, 1);
+}
+
+static void timer_test_periodic_reuse(void)
+{
+	timer_test_periodic(ODP_QUEUE_TYPE_SCHED, 0, 2);
 }
 
 odp_testinfo_t timer_suite[] = {
@@ -3062,6 +3075,8 @@ odp_testinfo_t timer_suite[] = {
 				  check_periodic_plain_support),
 	ODP_TEST_INFO_CONDITIONAL(timer_test_periodic_plain_first,
 				  check_periodic_plain_support),
+	ODP_TEST_INFO_CONDITIONAL(timer_test_periodic_reuse,
+				  check_periodic_sched_support),
 	ODP_TEST_INFO_NULL,
 };
 
