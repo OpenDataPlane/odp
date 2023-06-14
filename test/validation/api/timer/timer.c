@@ -1323,7 +1323,7 @@ static void timer_pool_tick_info(void)
 }
 
 static void timer_test_event_type(odp_queue_type_t queue_type,
-				  odp_event_type_t event_type)
+				  odp_event_type_t event_type, int rounds)
 {
 	odp_pool_t pool;
 	odp_pool_param_t pool_param;
@@ -1401,79 +1401,83 @@ static void timer_test_event_type(odp_queue_type_t queue_type,
 	ODPH_DBG("  user_ptr %p\n\n", (const void *)user_ctx);
 
 	for (i = 0; i < num; i++) {
-		if (event_type == ODP_EVENT_BUFFER) {
-			buf = odp_buffer_alloc(pool);
-			ev  = odp_buffer_to_event(buf);
-		} else if (event_type == ODP_EVENT_PACKET) {
-			pkt = odp_packet_alloc(pool, 10);
-			ev  = odp_packet_to_event(pkt);
-		} else {
-			tmo = odp_timeout_alloc(pool);
-			ev  = odp_timeout_to_event(tmo);
-		}
-
-		CU_ASSERT(ev != ODP_EVENT_INVALID);
-
 		timer[i] = odp_timer_alloc(timer_pool, queue, user_ctx);
 		CU_ASSERT_FATAL(timer[i] != ODP_TIMER_INVALID);
-
-		start_param.tick_type = ODP_TIMER_TICK_REL;
-		start_param.tick = (i + 1) * period_tick;
-		start_param.tmo_ev = ev;
-
-		ret = odp_timer_start(timer[i], &start_param);
-
-		if (ret == ODP_TIMER_TOO_NEAR)
-			ODPH_DBG("Timer set failed. Too near %i.\n", i);
-		else if (ret == ODP_TIMER_TOO_FAR)
-			ODPH_DBG("Timer set failed. Too far %i.\n", i);
-		else if (ret == ODP_TIMER_FAIL)
-			ODPH_DBG("Timer set failed %i\n", i);
-
-		CU_ASSERT(ret == ODP_TIMER_SUCCESS);
 	}
 
-	if (test_print) {
-		printf("\n");
-		odp_timer_pool_print(timer_pool);
-		odp_timer_print(timer[0]);
-	}
+	for (int round = 0; round < rounds; round++) {
+		for (i = 0; i < num; i++) {
+			if (event_type == ODP_EVENT_BUFFER) {
+				buf = odp_buffer_alloc(pool);
+				ev  = odp_buffer_to_event(buf);
+			} else if (event_type == ODP_EVENT_PACKET) {
+				pkt = odp_packet_alloc(pool, 10);
+				ev  = odp_packet_to_event(pkt);
+			} else {
+				tmo = odp_timeout_alloc(pool);
+				ev  = odp_timeout_to_event(tmo);
+			}
 
-	ev = ODP_EVENT_INVALID;
-	num_tmo = 0;
-	t1 = odp_time_local();
+			CU_ASSERT(ev != ODP_EVENT_INVALID);
 
-	/* Wait for timers. Make sure that scheduler context is not held when
-	 * exiting the loop. */
-	do {
-		if (queue_type == ODP_QUEUE_TYPE_SCHED)
-			ev = odp_schedule(NULL, ODP_SCHED_NO_WAIT);
-		else
-			ev = odp_queue_deq(queue);
+			start_param.tick_type = ODP_TIMER_TICK_REL;
+			start_param.tick = (i + 1) * period_tick;
+			start_param.tmo_ev = ev;
 
-		if (ev == ODP_EVENT_INVALID) {
-			t2 = odp_time_local();
-			if (odp_time_diff_ns(t2, t1) > (10 * duration_ns))
-				break;
+			ret = odp_timer_start(timer[i], &start_param);
 
-			continue;
+			if (ret == ODP_TIMER_TOO_NEAR)
+				ODPH_DBG("Timer set failed. Too near %i.\n", i);
+			else if (ret == ODP_TIMER_TOO_FAR)
+				ODPH_DBG("Timer set failed. Too far %i.\n", i);
+			else if (ret == ODP_TIMER_FAIL)
+				ODPH_DBG("Timer set failed %i\n", i);
+
+			CU_ASSERT(ret == ODP_TIMER_SUCCESS);
 		}
-
-		CU_ASSERT(odp_event_type(ev) == event_type);
 
 		if (test_print) {
-			test_print = 0;
-			tmo = odp_timeout_from_event(ev);
-			odp_timeout_print(tmo);
 			printf("\n");
+			odp_timer_pool_print(timer_pool);
+			odp_timer_print(timer[0]);
 		}
 
-		odp_event_free(ev);
-		num_tmo++;
+		ev = ODP_EVENT_INVALID;
+		num_tmo = 0;
+		t1 = odp_time_local();
 
-	} while (num_tmo < num || ev != ODP_EVENT_INVALID);
+		/* Wait for timers. Make sure that scheduler context is not held when
+		* exiting the loop. */
+		do {
+			if (queue_type == ODP_QUEUE_TYPE_SCHED)
+				ev = odp_schedule(NULL, ODP_SCHED_NO_WAIT);
+			else
+				ev = odp_queue_deq(queue);
 
-	CU_ASSERT(num_tmo == num);
+			if (ev == ODP_EVENT_INVALID) {
+				t2 = odp_time_local();
+				if (odp_time_diff_ns(t2, t1) > (10 * duration_ns))
+					break;
+
+				continue;
+			}
+
+			CU_ASSERT(odp_event_type(ev) == event_type);
+
+			if (test_print) {
+				test_print = 0;
+				tmo = odp_timeout_from_event(ev);
+				odp_timeout_print(tmo);
+				printf("\n");
+			}
+
+			odp_event_free(ev);
+			num_tmo++;
+
+		} while (num_tmo < num || ev != ODP_EVENT_INVALID);
+
+		CU_ASSERT(num_tmo == num);
+	}
 
 	for (i = 0; i < num; i++)
 		CU_ASSERT(odp_timer_free(timer[i]) == ODP_EVENT_INVALID);
@@ -1485,32 +1489,47 @@ static void timer_test_event_type(odp_queue_type_t queue_type,
 
 static void timer_test_tmo_event_plain(void)
 {
-	timer_test_event_type(ODP_QUEUE_TYPE_PLAIN, ODP_EVENT_TIMEOUT);
+	timer_test_event_type(ODP_QUEUE_TYPE_PLAIN, ODP_EVENT_TIMEOUT, 1);
 }
 
 static void timer_test_tmo_event_sched(void)
 {
-	timer_test_event_type(ODP_QUEUE_TYPE_SCHED, ODP_EVENT_TIMEOUT);
+	timer_test_event_type(ODP_QUEUE_TYPE_SCHED, ODP_EVENT_TIMEOUT, 1);
 }
 
 static void timer_test_buf_event_plain(void)
 {
-	timer_test_event_type(ODP_QUEUE_TYPE_PLAIN, ODP_EVENT_BUFFER);
+	timer_test_event_type(ODP_QUEUE_TYPE_PLAIN, ODP_EVENT_BUFFER, 1);
 }
 
 static void timer_test_buf_event_sched(void)
 {
-	timer_test_event_type(ODP_QUEUE_TYPE_SCHED, ODP_EVENT_BUFFER);
+	timer_test_event_type(ODP_QUEUE_TYPE_SCHED, ODP_EVENT_BUFFER, 1);
 }
 
 static void timer_test_pkt_event_plain(void)
 {
-	timer_test_event_type(ODP_QUEUE_TYPE_PLAIN, ODP_EVENT_PACKET);
+	timer_test_event_type(ODP_QUEUE_TYPE_PLAIN, ODP_EVENT_PACKET, 1);
 }
 
 static void timer_test_pkt_event_sched(void)
 {
-	timer_test_event_type(ODP_QUEUE_TYPE_SCHED, ODP_EVENT_PACKET);
+	timer_test_event_type(ODP_QUEUE_TYPE_SCHED, ODP_EVENT_PACKET, 1);
+}
+
+static void timer_test_tmo_event_reuse(void)
+{
+	timer_test_event_type(ODP_QUEUE_TYPE_SCHED, ODP_EVENT_TIMEOUT, 2);
+}
+
+static void timer_test_buf_event_reuse(void)
+{
+	timer_test_event_type(ODP_QUEUE_TYPE_SCHED, ODP_EVENT_BUFFER, 2);
+}
+
+static void timer_test_pkt_event_reuse(void)
+{
+	timer_test_event_type(ODP_QUEUE_TYPE_SCHED, ODP_EVENT_PACKET, 2);
 }
 
 static void timer_test_queue_type(odp_queue_type_t queue_type, int priv, int exp_relax)
@@ -3031,6 +3050,12 @@ odp_testinfo_t timer_suite[] = {
 	ODP_TEST_INFO_CONDITIONAL(timer_test_pkt_event_plain,
 				  check_plain_queue_support),
 	ODP_TEST_INFO_CONDITIONAL(timer_test_pkt_event_sched,
+				  check_sched_queue_support),
+	ODP_TEST_INFO_CONDITIONAL(timer_test_tmo_event_reuse,
+				  check_sched_queue_support),
+	ODP_TEST_INFO_CONDITIONAL(timer_test_buf_event_reuse,
+				  check_sched_queue_support),
+	ODP_TEST_INFO_CONDITIONAL(timer_test_pkt_event_reuse,
 				  check_sched_queue_support),
 	ODP_TEST_INFO(timer_test_cancel),
 	ODP_TEST_INFO_CONDITIONAL(timer_test_max_res_min_tmo_plain,
