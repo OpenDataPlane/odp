@@ -26,8 +26,8 @@ enum init_stage {
 	NO_INIT = 0,    /* No init stages completed */
 	LIBCONFIG_INIT,
 	CPUMASK_INIT,
-	CPU_CYCLES_INIT,
 	SYSINFO_INIT,
+	CPU_CYCLES_INIT,
 	TIME_INIT,
 	ISHM_INIT,
 	FDSERVER_INIT,
@@ -299,6 +299,7 @@ static int term_global(enum init_stage stage)
 		}
 		/* Fall through */
 
+	case CPU_CYCLES_INIT:
 	case SYSINFO_INIT:
 		if (_odp_system_info_term()) {
 			_ODP_ERR("ODP system info term failed.\n");
@@ -306,8 +307,6 @@ static int term_global(enum init_stage stage)
 		}
 		/* Fall through */
 
-	case CPU_CYCLES_INIT:
-		/* Fall through */
 	case CPUMASK_INIT:
 		if (_odp_cpumask_term_global()) {
 			_ODP_ERR("ODP cpumask term failed.\n");
@@ -366,17 +365,17 @@ int odp_init_global(odp_instance_t *instance,
 	}
 	stage = CPUMASK_INIT;
 
-	if (_odp_cpu_cycles_init_global()) {
-		_ODP_ERR("ODP cpu cycle init failed.\n");
-		goto init_failed;
-	}
-	stage = CPU_CYCLES_INIT;
-
 	if (_odp_system_info_init()) {
 		_ODP_ERR("ODP system_info init failed.\n");
 		goto init_failed;
 	}
 	stage = SYSINFO_INIT;
+
+	if (_odp_cpu_cycles_init_global()) {
+		_ODP_ERR("ODP cpu cycle init failed.\n");
+		goto init_failed;
+	}
+	stage = CPU_CYCLES_INIT;
 
 	if (_odp_time_init_global()) {
 		_ODP_ERR("ODP time init failed.\n");
