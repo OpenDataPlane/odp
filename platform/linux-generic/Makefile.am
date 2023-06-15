@@ -353,7 +353,7 @@ noinst_HEADERS += arch/arm/odp_atomic.h \
 endif
 if ARCH_IS_AARCH64
 __LIB__libodp_linux_la_SOURCES += arch/aarch64/odp_atomic.c \
-				  arch/default/odp_cpu_cycles.c \
+				  arch/aarch64/odp_cpu_cycles.c \
 				  arch/aarch64/cpu_flags.c \
 				  arch/default/odp_hash_crc32.c \
 				  arch/default/odp_random.c \
