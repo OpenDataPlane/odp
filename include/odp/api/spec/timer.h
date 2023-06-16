@@ -1,5 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
- * Copyright (c) 2019-2022, Nokia
+ * Copyright (c) 2019-2023, Nokia
  *
  * All rights reserved.
  *
@@ -476,6 +476,17 @@ int odp_timer_cancel(odp_timer_t timer, odp_event_t *tmo_ev);
  * @return timeout handle
  */
 odp_timeout_t odp_timeout_from_event(odp_event_t ev);
+
+/**
+ * Convert multiple timeout events to timeout handles
+ *
+ * All events must be of type ODP_EVENT_TIMEOUT.
+ *
+ * @param[out] tmo  Timeout handle array for output
+ * @param      ev   Array of event handles to convert
+ * @param      num  Number of timeouts and events
+ */
+void odp_timeout_from_event_multi(odp_timeout_t tmo[], const odp_event_t ev[], int num);
 
 /**
  * Convert timeout handle to event handle
