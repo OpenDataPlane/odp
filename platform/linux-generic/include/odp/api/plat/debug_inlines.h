@@ -1,5 +1,5 @@
 /* Copyright (c) 2014-2018, Linaro Limited
- * Copyright (c) 2020-2022, Nokia
+ * Copyright (c) 2020-2023, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -72,6 +72,16 @@ extern odp_abort_func_t _odp_abort_fn;
 			__extension__ ({ \
 				_ODP_LOG(ODP_LOG_DBG, ##__VA_ARGS__); \
 			}); \
+	} while (0)
+
+/**
+ * Log warning message.
+ */
+#define _ODP_WARN(...) \
+	do { \
+		__extension__ ({ \
+			_ODP_LOG(ODP_LOG_WARN, ##__VA_ARGS__); \
+		}); \
 	} while (0)
 
 /**
