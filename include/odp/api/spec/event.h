@@ -64,6 +64,22 @@ odp_event_type_t odp_event_types(odp_event_t event,
 				 odp_event_subtype_t *subtype);
 
 /**
+ * Event types and subtypes of multiple events
+ *
+ * Outputs the event types and subtypes (optional) of all given events into the
+ * output arrays. Application can pass NULL as 'subtype' parameter if subtype
+ * values are not required. The types are written in the same order as input
+ * events.
+ *
+ * @param      event    Array of event handles
+ * @param[out] type     Event type array for output
+ * @param[out] subtype  Event subtype array for output, or NULL
+ * @param      num      Number of events, event types, and optionally subtypes
+ */
+void odp_event_types_multi(const odp_event_t event[], odp_event_type_t type[],
+			   odp_event_subtype_t subtype[], int num);
+
+/**
  * Event type of multiple events
  *
  * Returns the number of first events in the array which have the same event
