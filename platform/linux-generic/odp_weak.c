@@ -20,6 +20,7 @@ int odp_override_log(odp_log_level_t level, const char *fmt, ...)
 	switch (level) {
 	case ODP_LOG_ERR:
 	case ODP_LOG_UNIMPLEMENTED:
+	case ODP_LOG_WARN:
 	case ODP_LOG_ABORT:
 		logfd = stderr;
 		break;
