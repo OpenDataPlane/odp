@@ -1160,9 +1160,8 @@ int _odp_ishm_reserve(const char *name, uint64_t size, int fd,
 
 			if (addr == NULL) {
 				if (!huge_error_printed) {
-					_ODP_ERR("No huge pages, fall back to "
-						 "normal pages. Check: "
-						 "/proc/sys/vm/nr_hugepages.\n");
+					_ODP_WARN("No huge pages, fall back to normal pages. "
+						  "Check: /proc/sys/vm/nr_hugepages.\n");
 					huge_error_printed = 1;
 				}
 			} else {
@@ -1274,8 +1273,8 @@ static void *reserve_single_va(uint64_t size, int *fd_out)
 			}
 		}
 		if (fd < 0)
-			_ODP_ERR("No huge pages, fall back to normal pages. "
-				"Check: /proc/sys/vm/nr_hugepages.\n");
+			_ODP_WARN("No huge pages, fall back to normal pages. "
+				  "Check: /proc/sys/vm/nr_hugepages.\n");
 		ishm_tbl->single_va_huge = true;
 	}
 
