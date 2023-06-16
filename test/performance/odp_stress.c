@@ -213,7 +213,7 @@ static int worker_thread(void *arg)
 	odp_timer_start_t start_param;
 	odp_time_t t1, t2, max_time;
 	odp_time_t work_t1, work_t2;
-	uint8_t *src, *dst;
+	uint8_t *src = NULL, *dst = NULL;
 	thread_arg_t *thread_arg = arg;
 	int worker_idx = thread_arg->worker_idx;
 	test_global_t *global = thread_arg->global;
