@@ -1,4 +1,4 @@
-/* Copyright (c) 2020-2021, Nokia
+/* Copyright (c) 2020-2023, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -55,6 +55,14 @@ ODP_STATIC_ASSERT(sizeof(odp_event_vector_hdr_t) <= ODP_CACHE_LINE_SIZE,
 static inline odp_event_vector_hdr_t *_odp_packet_vector_hdr(odp_packet_vector_t pktv)
 {
 	return (odp_event_vector_hdr_t *)(uintptr_t)pktv;
+}
+
+/**
+ * Return the event header
+ */
+static inline _odp_event_hdr_t *_odp_packet_vector_to_event_hdr(odp_packet_vector_t pktv)
+{
+	return (_odp_event_hdr_t *)(uintptr_t)&_odp_packet_vector_hdr(pktv)->event_hdr;
 }
 
 /**
