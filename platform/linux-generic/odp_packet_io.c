@@ -72,11 +72,6 @@ static inline pktio_entry_t *pktio_entry_by_index(int index)
 	return _odp_pktio_entry_ptr[index];
 }
 
-static inline _odp_event_hdr_t *packet_vector_to_event_hdr(odp_packet_vector_t pktv)
-{
-	return (_odp_event_hdr_t *)(uintptr_t)&_odp_packet_vector_hdr(pktv)->event_hdr;
-}
-
 static int read_config_file(pktio_global_t *pktio_glb)
 {
 	const char *str;
@@ -826,7 +821,7 @@ static inline int pktin_recv_buf(pktio_entry_t *entry, int pktin_index,
 	if (odp_unlikely(pktv == ODP_PACKET_VECTOR_INVALID))
 		return 0;
 
-	event_hdrs[0] = packet_vector_to_event_hdr(pktv);
+	event_hdrs[0] = _odp_packet_vector_to_event_hdr(pktv);
 	return 1;
 }
 
