@@ -560,6 +560,30 @@ typedef struct odp_crypto_session_param_t {
 	 */
 	odp_crypto_op_type_t op_type;
 
+	/** Cipher range unit
+	 *
+	 *  When this flag is true, cipher range offset and length are in bits.
+	 *  Otherwise the offset and length are in bytes.
+	 *
+	 *  If cipher capabilities do not include bit_mode, setting this to
+	 *  true causes a session creation failure.
+	 *
+	 *  The default value is false.
+	 */
+	odp_bool_t cipher_range_in_bits;
+
+	/** Auth range unit
+	 *
+	 *  When this flag is true, auth range offset and length are in bits.
+	 *  Otherwise the offset and length are in bytes.
+	 *
+	 *  If auth capabilities do not include bit_mode, setting this to
+	 *  true causes a session creation failure.
+	 *
+	 *  The default value is false.
+	 */
+	odp_bool_t auth_range_in_bits;
+
 	/** Authenticate cipher vs. plain text
 	 *
 	 *  Controls ordering of authentication and cipher operations,
@@ -725,6 +749,9 @@ typedef struct odp_crypto_packet_op_param_t {
 
 	/** Data range to be ciphered.
 	 *
+	 *  The range is given in bits or bytes as configured at session
+	 *  creation.
+	 *
 	 *  Ignored by the null cipher with operation types other than
 	 *  ODP_CRYPTO_OP_TYPE_OOP. Must be set to zero range (zero offset
 	 *  and zero length) with the null cipher used with the out-of-place
@@ -733,6 +760,9 @@ typedef struct odp_crypto_packet_op_param_t {
 	odp_packet_data_range_t cipher_range;
 
 	/** Data range to be authenticated
+	 *
+	 *  The range is given in bits or bytes as configured at session
+	 *  creation.
 	 *
 	 *  The value is ignored with authenticated encryption algorithms,
 	 *  such as AES-GCM, which authenticate data in the cipher range
@@ -937,22 +967,23 @@ typedef struct odp_crypto_cipher_capability_t {
 	/** IV length in bytes */
 	uint32_t iv_len;
 
-	/** Cipher is operating in bitwise mode
+	/** Cipher supports bit mode
 	 *
-	 * This cipher works on series of bits, rather than sequences of bytes:
-	 * cipher_range in odp_crypto_op_param_t and
-	 * odp_crypto_packet_op_param_t will use bits, rather than bytes.
+	 * This cipher can work on a range of bits in addition to a range of
+	 * bytes. When this capability is not present, only byte ranges are
+	 * supported. The unit of cipher range is selected at session creation
+	 * through the cipher_range_in_bits session parameter.
 	 *
-	 * Note: data buffer MUST start on the byte boundary, using offset
-	 * which is not divisible by 8 is unsupported and will result in
-	 * unspecified behaviour.
+	 * Note: In bit mode the cipher range must start on a byte boundary.
+	 * Using an offset which is not divisible by 8 will result in
+	 * undefined behaviour.
 	 *
-	 * Note2: If the data length is not a multiple of 8, the remaining
-	 * bits of the data in the last byte of the input/output will be the
-	 * most significant bits, i.e. the most significant bit is considered
-	 * to be the first bit of a byte for the purpose of input and output
-	 * data range. The output bits that fall out of the output range are
-	 * undefined.
+	 * Note2: If the range length in bit mode is not a multiple of 8,
+	 * the remaining bits of the data in the last byte of the input/output
+	 * will be the most significant bits, i.e. the most significant bit is
+	 * considered to be the first bit of a byte for the purpose of input
+	 * and output data range. The output bits that fall out of the output
+	 * range are undefined.
 	 */
 	odp_bool_t bit_mode;
 
@@ -984,22 +1015,23 @@ typedef struct odp_crypto_auth_capability_t {
 		uint32_t inc;
 	} aad_len;
 
-	/** Auth is operating in bitstring mode
+	/** Auth algorithm supports bit mode
 	 *
-	 * This auth works on series of bits, rather than sequences of bytes:
-	 * auth_range in odp_crypto_op_param_t and
-	 * odp_crypto_packet_op_param_t will use bits, rather than bytes.
+	 * This auth algorithm can work on a range of bits in addition to
+	 * a range of bytes. When this capability is not present, only byte
+	 * ranges are supported. The unit of auth range is selected at session
+	 * creation through the auth_range_in_bits session parameter.
 	 *
-	 * Note: data buffer MUST start on the byte boundary, using offset
-	 * which is not divisible by 8 is unsupported and will result in
-	 * unpredictable behaviour.
+	 * Note: In bit mode the auth range must start on a byte boundary.
+	 * Using an offset which is not divisible by 8 will result in
+	 * undefined behaviour.
 	 *
-	 * Note2: If the data length is not a multiple of 8, the remaining
-	 * bits of the data in the last byte of the input/output will be the
-	 * most significant bits, i.e. the most significant bit is considered
-	 * to be the first bit of a byte for the purpose of input and output
-	 * data range. The output bits that fall out of the output range are
-	 * undefined.
+	 * Note2: If the range length in bit mode is not a multiple of 8,
+	 * the remaining bits of the data in the last byte of the input/output
+	 * will be the most significant bits, i.e. the most significant bit is
+	 * considered to be the first bit of a byte for the purpose of input
+	 * and output data range. The output bits that fall out of the output
+	 * range are undefined.
 	 */
 	odp_bool_t bit_mode;
 
