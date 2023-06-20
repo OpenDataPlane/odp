@@ -50,9 +50,9 @@ extern odp_abort_func_t _odp_abort_fn;
 /**
  * ODP LOG macro.
  */
-#define _ODP_LOG(level, fmt, ...) \
-		 _ODP_LOG_FN(level, "%s:%d:%s(): " fmt, __FILE__, \
-		 __LINE__, __func__, ##__VA_ARGS__)
+#define _ODP_LOG(level, prefix, fmt, ...) \
+		 _ODP_LOG_FN(level, "%s: %s:%d:%s(): " fmt, prefix, \
+			     __FILE__, __LINE__, __func__, ##__VA_ARGS__)
 
 /**
  * Runtime assertion-macro - aborts if 'cond' is false.
@@ -70,7 +70,7 @@ extern odp_abort_func_t _odp_abort_fn;
 	do { \
 		if (ODP_DEBUG_PRINT == 1) \
 			__extension__ ({ \
-				_ODP_LOG(ODP_LOG_DBG, ##__VA_ARGS__); \
+				_ODP_LOG(ODP_LOG_DBG, "DBG", ##__VA_ARGS__); \
 			}); \
 	} while (0)
 
@@ -80,7 +80,7 @@ extern odp_abort_func_t _odp_abort_fn;
 #define _ODP_WARN(...) \
 	do { \
 		__extension__ ({ \
-			_ODP_LOG(ODP_LOG_WARN, ##__VA_ARGS__); \
+			_ODP_LOG(ODP_LOG_WARN, "WARN", ##__VA_ARGS__); \
 		}); \
 	} while (0)
 
@@ -90,7 +90,7 @@ extern odp_abort_func_t _odp_abort_fn;
 #define _ODP_ERR(...) \
 	do { \
 		__extension__ ({ \
-			_ODP_LOG(ODP_LOG_ERR, ##__VA_ARGS__); \
+			_ODP_LOG(ODP_LOG_ERR, "ERR", ##__VA_ARGS__); \
 		}); \
 	} while (0)
 
@@ -101,7 +101,7 @@ extern odp_abort_func_t _odp_abort_fn;
 #define _ODP_ABORT(...) \
 	do { \
 		__extension__ ({ \
-			_ODP_LOG(ODP_LOG_ABORT, ##__VA_ARGS__); \
+			_ODP_LOG(ODP_LOG_ABORT, "ABORT", ##__VA_ARGS__); \
 		}); \
 		_odp_abort_fn(); \
 	} while (0)
