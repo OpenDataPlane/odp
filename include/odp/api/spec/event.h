@@ -94,6 +94,28 @@ int odp_event_type_multi(const odp_event_t event[], int num,
 void *odp_event_user_area(odp_event_t event);
 
 /**
+ * Event user area and flag
+ *
+ * Returns pointer to the user area and outputs value of user flag associated
+ * with the event. The user area maps to the user area of underlying event type
+ * (e.g. odp_packet_user_area() for packets). If the event does not have user
+ * area, NULL is returned.
+ *
+ * The user flag maps to the user flag value of underlying event type (e.g.
+ * odp_packet_user_flag() for packets). If the event does not have user flag, a
+ * negative value is outputted.
+ *
+ * @param      event    Event handle
+ * @param[out] flag     User flag value pointer for output. >0 if user flag is
+ *                      set, 0 if flags is not set, or <0 if event does not have
+ *                      user flag.
+ *
+ * @return Pointer to the user area of the event
+ * @retval NULL  The event does not have user area
+ */
+void *odp_event_user_area_and_flag(odp_event_t event, int *flag);
+
+/**
  * Filter and convert packet events
  *
  * Checks event type of all input events, converts all packet events and outputs
