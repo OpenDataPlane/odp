@@ -1,4 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
+ * Copyright (c) 2023, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -34,7 +35,8 @@ typedef struct {
 	uint64_t default_cpu_hz;
 	uint64_t page_size;
 	int      cache_line_size;
-	odp_bool_t cpu_hz_static;
+	uint8_t cpu_hz_static;
+	uint8_t cpu_constant_tsc;
 	odp_cpu_arch_t cpu_arch;
 	odp_cpu_arch_isa_t cpu_isa_sw;
 	odp_cpu_arch_isa_t cpu_isa_hw;

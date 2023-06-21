@@ -1,4 +1,5 @@
 /* Copyright (c) 2016-2018, Linaro Limited
+ * Copyright (c) 2023, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -30,6 +31,11 @@ int _odp_cpuinfo_parser(FILE *file, system_info_t *sysinfo)
 
 	strcpy(sysinfo->cpu_arch_str, "x86");
 	while (fgets(str, sizeof(str), file) != NULL && id < CONFIG_NUM_CPU_IDS) {
+		if (strstr(str, "flags") && strstr(str, "constant_tsc")) {
+			sysinfo->cpu_constant_tsc = 1;
+			continue;
+		}
+
 		pos = strstr(str, "model name");
 		if (pos) {
 			freq_set = false;
