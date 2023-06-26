@@ -20,8 +20,11 @@
 #define VEC_LEN  32
 #define PKT_LEN  400
 #define PKT_NUM  500
+#define ELEM_NUM 10
+#define ELEM_SIZE 128
 #define CACHE_SIZE 32
 #define MAX_NUM_DEFAULT (10 * 1024 * 1024)
+#define UAREA    0xaa
 
 #define EXT_NUM_BUF        10
 #define EXT_BUF_SIZE       2048
@@ -31,12 +34,19 @@
 #define EXT_HEADROOM       16
 #define MAGIC_U8           0x7a
 
+#define MIN(a, b)  (((a) < (b)) ? (a) : (b))
+
 typedef struct {
 	odp_barrier_t init_barrier;
 	odp_atomic_u32_t index;
 	uint32_t nb_threads;
 	odp_pool_t pool;
 } global_shared_mem_t;
+
+typedef struct {
+	uint32_t count;
+	uint8_t mark[ELEM_NUM];
+} uarea_init_t;
 
 static global_shared_mem_t *global_mem;
 
@@ -50,6 +60,9 @@ static void test_param_init(uint8_t fill)
 
 	memset(&param, fill, sizeof(param));
 	odp_pool_param_init(&param);
+
+	CU_ASSERT(param.uarea_init.init_fn == NULL);
+	CU_ASSERT(param.uarea_init.args == NULL);
 
 	CU_ASSERT(param.buf.uarea_size == 0);
 	CU_ASSERT(param.buf.cache_size >= global_pool_capa.buf.min_cache_size &&
@@ -144,6 +157,218 @@ static void pool_test_create_destroy_vector(void)
 	param.vector.max_size = capa.vector.max_size  < VEC_LEN ? capa.vector.max_size : VEC_LEN;
 
 	pool_create_destroy(&param);
+}
+
+static int pool_check_buffer_uarea_init(void)
+{
+	if (global_pool_capa.buf.max_uarea_size == 0 || !global_pool_capa.buf.uarea_persistence)
+		return ODP_TEST_INACTIVE;
+
+	return ODP_TEST_ACTIVE;
+}
+
+static int pool_check_packet_uarea_init(void)
+{
+	if (global_pool_capa.pkt.max_uarea_size == 0 || !global_pool_capa.pkt.uarea_persistence)
+		return ODP_TEST_INACTIVE;
+
+	return ODP_TEST_ACTIVE;
+}
+
+static int pool_check_vector_uarea_init(void)
+{
+	if (global_pool_capa.vector.max_uarea_size == 0 ||
+	    !global_pool_capa.vector.uarea_persistence)
+		return ODP_TEST_INACTIVE;
+
+	return ODP_TEST_ACTIVE;
+}
+
+static int pool_check_timeout_uarea_init(void)
+{
+	if (global_pool_capa.tmo.max_uarea_size == 0 || !global_pool_capa.tmo.uarea_persistence)
+		return ODP_TEST_INACTIVE;
+
+	return ODP_TEST_ACTIVE;
+}
+
+static void init_event_uarea(void *uarea, uint32_t size, void *args, uint32_t index)
+{
+	uarea_init_t *data = args;
+
+	data->count++;
+	data->mark[index] = 1;
+	memset(uarea, UAREA, size);
+}
+
+static void pool_test_buffer_uarea_init(void)
+{
+	odp_pool_param_t param;
+	uint32_t num = MIN(global_pool_capa.buf.max_num, ELEM_NUM),
+	size = MIN(global_pool_capa.buf.max_size, ELEM_SIZE), i;
+	odp_pool_t pool;
+	uarea_init_t data;
+	odp_buffer_t bufs[num];
+	uint8_t *uarea;
+
+	memset(&data, 0, sizeof(uarea_init_t));
+	odp_pool_param_init(&param);
+	param.type = ODP_POOL_BUFFER;
+	param.uarea_init.init_fn = init_event_uarea;
+	param.uarea_init.args = &data;
+	param.buf.num = num;
+	param.buf.size = size;
+	param.buf.uarea_size = 1;
+	pool = odp_pool_create(NULL, &param);
+
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+	CU_ASSERT(data.count == num);
+
+	for (i = 0; i < num; i++) {
+		CU_ASSERT(data.mark[i] == 1);
+
+		bufs[i] = odp_buffer_alloc(pool);
+
+		CU_ASSERT(bufs[i] != ODP_BUFFER_INVALID);
+
+		if (bufs[i] == ODP_BUFFER_INVALID)
+			break;
+
+		uarea = odp_buffer_user_area(bufs[i]);
+
+		CU_ASSERT(*uarea == UAREA);
+	}
+
+	odp_buffer_free_multi(bufs, i);
+	odp_pool_destroy(pool);
+}
+
+static void pool_test_packet_uarea_init(void)
+{
+	odp_pool_param_t param;
+	uint32_t num = MIN(global_pool_capa.pkt.max_num, ELEM_NUM),
+	size = MIN(global_pool_capa.pkt.max_len, ELEM_SIZE), i;
+	odp_pool_t pool;
+	uarea_init_t data;
+	odp_packet_t pkts[num];
+	uint8_t *uarea;
+
+	memset(&data, 0, sizeof(uarea_init_t));
+	odp_pool_param_init(&param);
+	param.type = ODP_POOL_PACKET;
+	param.uarea_init.init_fn = init_event_uarea;
+	param.uarea_init.args = &data;
+	param.pkt.num = num;
+	param.pkt.len = size;
+	param.pkt.uarea_size = 1;
+	pool = odp_pool_create(NULL, &param);
+
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+	CU_ASSERT(data.count == num);
+
+	for (i = 0; i < num; i++) {
+		CU_ASSERT(data.mark[i] == 1);
+
+		pkts[i] = odp_packet_alloc(pool, ELEM_SIZE);
+
+		CU_ASSERT(pkts[i] != ODP_PACKET_INVALID);
+
+		if (pkts[i] == ODP_PACKET_INVALID)
+			break;
+
+		uarea = odp_packet_user_area(pkts[i]);
+
+		CU_ASSERT(*uarea == UAREA);
+	}
+
+	odp_packet_free_multi(pkts, i);
+	odp_pool_destroy(pool);
+}
+
+static void pool_test_vector_uarea_init(void)
+{
+	odp_pool_param_t param;
+	uint32_t num = MIN(global_pool_capa.vector.max_num, ELEM_NUM),
+	size = MIN(global_pool_capa.vector.max_size, ELEM_NUM), i;
+	odp_pool_t pool;
+	uarea_init_t data;
+	odp_packet_vector_t vecs[num];
+	uint8_t *uarea;
+
+	memset(&data, 0, sizeof(uarea_init_t));
+	odp_pool_param_init(&param);
+	param.type = ODP_POOL_VECTOR;
+	param.uarea_init.init_fn = init_event_uarea;
+	param.uarea_init.args = &data;
+	param.vector.num = num;
+	param.vector.max_size = size;
+	param.vector.uarea_size = 1;
+	pool = odp_pool_create(NULL, &param);
+
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+	CU_ASSERT(data.count == num);
+
+	for (i = 0; i < num; i++) {
+		CU_ASSERT(data.mark[i] == 1);
+
+		vecs[i] = odp_packet_vector_alloc(pool);
+
+		CU_ASSERT(vecs[i] != ODP_PACKET_VECTOR_INVALID);
+
+		if (vecs[i] == ODP_PACKET_VECTOR_INVALID)
+			break;
+
+		uarea = odp_packet_vector_user_area(vecs[i]);
+
+		CU_ASSERT(*uarea == UAREA);
+	}
+
+	for (uint32_t j = 0; j < i; j++)
+		odp_packet_vector_free(vecs[j]);
+
+	odp_pool_destroy(pool);
+}
+
+static void pool_test_timeout_uarea_init(void)
+{
+	odp_pool_param_t param;
+	uint32_t num = MIN(global_pool_capa.tmo.max_num, ELEM_NUM), i;
+	odp_pool_t pool;
+	uarea_init_t data;
+	odp_timeout_t tmos[num];
+	uint8_t *uarea;
+
+	memset(&data, 0, sizeof(uarea_init_t));
+	odp_pool_param_init(&param);
+	param.type = ODP_POOL_TIMEOUT;
+	param.uarea_init.init_fn = init_event_uarea;
+	param.uarea_init.args = &data;
+	param.tmo.num = num;
+	param.tmo.uarea_size = 1;
+	pool = odp_pool_create(NULL, &param);
+
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+	CU_ASSERT(data.count == num);
+
+	for (i = 0; i < num; i++) {
+		CU_ASSERT(data.mark[i] == 1);
+
+		tmos[i] = odp_timeout_alloc(pool);
+
+		CU_ASSERT(tmos[i] != ODP_TIMEOUT_INVALID);
+
+		if (tmos[i] == ODP_TIMEOUT_INVALID)
+			break;
+
+		uarea = odp_timeout_user_area(tmos[i]);
+
+		CU_ASSERT(*uarea == UAREA);
+	}
+
+	for (uint32_t j = 0; j < i; j++)
+		odp_timeout_free(tmos[j]);
+
+	odp_pool_destroy(pool);
 }
 
 static void pool_test_lookup_info_print(void)
@@ -1505,6 +1730,8 @@ static void test_ext_param_init(uint8_t fill)
 	odp_pool_ext_param_init(ODP_POOL_PACKET, &param);
 
 	CU_ASSERT(param.type == ODP_POOL_PACKET);
+	CU_ASSERT(param.uarea_init.init_fn == NULL);
+	CU_ASSERT(param.uarea_init.args == NULL);
 	CU_ASSERT(param.cache_size >= global_pool_ext_capa.min_cache_size &&
 		  param.cache_size <= global_pool_ext_capa.max_cache_size);
 	CU_ASSERT(param.stats.all == 0);
@@ -1791,6 +2018,57 @@ static void test_packet_pool_ext_alloc(void)
 	packet_pool_ext_alloc(PKT_LEN_NORMAL);
 }
 
+static void test_packet_pool_ext_uarea_init(void)
+{
+	odp_pool_ext_capability_t capa;
+	odp_pool_ext_param_t param;
+	uint32_t num = ELEM_NUM, i;
+	odp_pool_t pool;
+	uarea_init_t data;
+	odp_shm_t shm;
+	uint8_t *uarea;
+
+	CU_ASSERT_FATAL(odp_pool_ext_capability(ODP_POOL_PACKET, &capa) == 0);
+
+	memset(&data, 0, sizeof(uarea_init_t));
+	pool_ext_init_packet_pool_param(&param);
+	param.uarea_init.init_fn = init_event_uarea;
+	param.uarea_init.args = &data;
+	num = MIN(num, param.pkt.num_buf);
+	param.pkt.num_buf = num;
+	param.pkt.uarea_size = 1;
+	pool = odp_pool_ext_create(NULL, &param);
+
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+
+	void *buf[num];
+	odp_packet_t pkts[num];
+
+	shm = populate_pool(pool, &capa, buf, num, param.pkt.buf_size);
+
+	CU_ASSERT_FATAL(shm != ODP_SHM_INVALID);
+	CU_ASSERT(data.count == num);
+
+	for (i = 0; i < num; i++) {
+		CU_ASSERT(data.mark[i] == 1);
+
+		pkts[i] = odp_packet_alloc(pool, (param.pkt.buf_size - param.pkt.headroom) / 2);
+
+		CU_ASSERT(pkts[i] != ODP_PACKET_INVALID);
+
+		if (pkts[i] == ODP_PACKET_INVALID)
+			break;
+
+		uarea = odp_packet_user_area(pkts[i]);
+
+		CU_ASSERT(*uarea == UAREA);
+	}
+
+	odp_packet_free_multi(pkts, i);
+	odp_pool_destroy(pool);
+	odp_shm_free(shm);
+}
+
 static void test_packet_pool_ext_alloc_max(void)
 {
 	packet_pool_ext_alloc(PKT_LEN_MAX);
@@ -1961,6 +2239,15 @@ static int check_pool_ext_support(void)
 	return ODP_TEST_ACTIVE;
 }
 
+static int check_pool_ext_uarea_init_support(void)
+{
+	if (global_pool_ext_capa.max_pools == 0 || !global_pool_ext_capa.pkt.uarea_persistence ||
+	    global_pool_ext_capa.pkt.max_uarea_size == 0)
+		return ODP_TEST_INACTIVE;
+
+	return ODP_TEST_ACTIVE;
+}
+
 static int check_pool_ext_segment_support(void)
 {
 	if (global_pool_ext_capa.max_pools == 0 || global_pool_ext_capa.pkt.max_segs_per_pkt < 2)
@@ -1975,6 +2262,10 @@ odp_testinfo_t pool_suite[] = {
 	ODP_TEST_INFO(pool_test_create_destroy_packet),
 	ODP_TEST_INFO(pool_test_create_destroy_timeout),
 	ODP_TEST_INFO(pool_test_create_destroy_vector),
+	ODP_TEST_INFO_CONDITIONAL(pool_test_buffer_uarea_init, pool_check_buffer_uarea_init),
+	ODP_TEST_INFO_CONDITIONAL(pool_test_packet_uarea_init, pool_check_packet_uarea_init),
+	ODP_TEST_INFO_CONDITIONAL(pool_test_vector_uarea_init, pool_check_vector_uarea_init),
+	ODP_TEST_INFO_CONDITIONAL(pool_test_timeout_uarea_init, pool_check_timeout_uarea_init),
 	ODP_TEST_INFO(pool_test_lookup_info_print),
 	ODP_TEST_INFO(pool_test_same_name_buf),
 	ODP_TEST_INFO(pool_test_same_name_pkt),
@@ -2022,6 +2313,8 @@ odp_testinfo_t pool_ext_suite[] = {
 	ODP_TEST_INFO_CONDITIONAL(test_packet_pool_ext_info, check_pool_ext_support),
 	ODP_TEST_INFO_CONDITIONAL(test_packet_pool_ext_populate, check_pool_ext_support),
 	ODP_TEST_INFO_CONDITIONAL(test_packet_pool_ext_alloc, check_pool_ext_support),
+	ODP_TEST_INFO_CONDITIONAL(test_packet_pool_ext_uarea_init,
+				  check_pool_ext_uarea_init_support),
 	ODP_TEST_INFO_CONDITIONAL(test_packet_pool_ext_alloc_max, check_pool_ext_support),
 	ODP_TEST_INFO_CONDITIONAL(test_packet_pool_ext_alloc_seg, check_pool_ext_segment_support),
 	ODP_TEST_INFO_CONDITIONAL(test_packet_pool_ext_disassemble, check_pool_ext_segment_support),
