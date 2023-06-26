@@ -1,4 +1,4 @@
-/* Copyright (c) 2021-2022, Nokia
+/* Copyright (c) 2021-2023, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -99,11 +99,12 @@ int odp_dma_capability(odp_dma_capability_t *capa)
 	capa->queue_type_sched = 1;
 	capa->queue_type_plain = 1;
 
-	capa->pool.max_pools      = _odp_dma_glb->pool_capa.buf.max_pools;
-	capa->pool.max_num        = _odp_dma_glb->pool_capa.buf.max_num;
-	capa->pool.max_uarea_size = _odp_dma_glb->pool_capa.buf.max_uarea_size;
-	capa->pool.min_cache_size = _odp_dma_glb->pool_capa.buf.min_cache_size;
-	capa->pool.max_cache_size = _odp_dma_glb->pool_capa.buf.max_cache_size;
+	capa->pool.max_pools         = _odp_dma_glb->pool_capa.buf.max_pools;
+	capa->pool.max_num           = _odp_dma_glb->pool_capa.buf.max_num;
+	capa->pool.max_uarea_size    = _odp_dma_glb->pool_capa.buf.max_uarea_size;
+	capa->pool.uarea_persistence = _odp_dma_glb->pool_capa.buf.uarea_persistence;
+	capa->pool.min_cache_size    = _odp_dma_glb->pool_capa.buf.min_cache_size;
+	capa->pool.max_cache_size    = _odp_dma_glb->pool_capa.buf.max_cache_size;
 
 	return 0;
 }
@@ -738,11 +739,13 @@ odp_pool_t odp_dma_pool_create(const char *name, const odp_dma_pool_param_t *dma
 	}
 
 	odp_pool_param_init(&pool_param);
-	pool_param.type           = ODP_POOL_BUFFER;
-	pool_param.buf.num        = num;
-	pool_param.buf.uarea_size = uarea_size;
-	pool_param.buf.cache_size = cache_size;
-	pool_param.buf.size       = sizeof(odp_dma_result_t);
+	pool_param.type               = ODP_POOL_BUFFER;
+	pool_param.uarea_init.init_fn = dma_pool_param->uarea_init.init_fn;
+	pool_param.uarea_init.args    = dma_pool_param->uarea_init.args;
+	pool_param.buf.num            = num;
+	pool_param.buf.uarea_size     = uarea_size;
+	pool_param.buf.cache_size     = cache_size;
+	pool_param.buf.size           = sizeof(odp_dma_result_t);
 
 	pool = _odp_pool_create(name, &pool_param, ODP_POOL_DMA_COMPL);
 
