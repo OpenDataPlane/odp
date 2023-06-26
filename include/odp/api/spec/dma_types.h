@@ -1,4 +1,4 @@
-/* Copyright (c) 2021-2022, Nokia
+/* Copyright (c) 2021-2023, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -79,6 +79,12 @@ typedef struct odp_dma_pool_capability_t {
 
 	/** Maximum user area size in bytes */
 	uint32_t max_uarea_size;
+
+	/** Pool user area persistence
+	 *
+	 *  See buf.uarea_persistence of odp_pool_capability_t for details
+	 *  (odp_pool_capability_t::uarea_persistence). */
+	odp_bool_t uarea_persistence;
 
 	/** Minimum size of thread local cache */
 	uint32_t min_cache_size;

@@ -209,6 +209,19 @@ typedef struct odp_pool_capability_t {
 		/** Maximum user area size in bytes */
 		uint32_t max_uarea_size;
 
+		/** Pool user area persistence
+		 *
+		 * When supported, implementation does not overwrite buffer user area
+		 * content at any point of buffer lifetime nor after freeing a buffer
+		 * back into pool.
+		 *
+		 * 0: User area content is maintained throughout regular buffer usage
+		 *    after allocation, but may be modified after free (default)
+		 * 1: User area content is maintained throughout regular buffer usage
+		 *    and additionally also after buffer is freed into the pool (between
+		 *    buffer free and allocation) */
+		odp_bool_t uarea_persistence;
+
 		/** Minimum size of thread local cache */
 		uint32_t min_cache_size;
 
@@ -288,6 +301,11 @@ typedef struct odp_pool_capability_t {
 		/** Maximum user area size in bytes */
 		uint32_t max_uarea_size;
 
+		/** Pool user area persistence
+		 *
+		 * See buf.uarea_persistence for details. */
+		odp_bool_t uarea_persistence;
+
 		/** Maximum number of subparameters
 		 *
 		 *  Maximum number of packet pool subparameters. Valid range is
@@ -318,6 +336,11 @@ typedef struct odp_pool_capability_t {
 		/** Maximum user area size in bytes */
 		uint32_t max_uarea_size;
 
+		/** Pool user area persistence
+		 *
+		 * See buf.uarea_persistence for details. */
+		odp_bool_t uarea_persistence;
+
 		/** Minimum size of thread local cache */
 		uint32_t min_cache_size;
 
@@ -344,6 +367,11 @@ typedef struct odp_pool_capability_t {
 
 		/** Maximum user area size in bytes */
 		uint32_t max_uarea_size;
+
+		/** Pool user area persistence
+		 *
+		 * See buf.uarea_persistence for details. */
+		odp_bool_t uarea_persistence;
 
 		/** Minimum size of thread local cache */
 		uint32_t min_cache_size;
@@ -712,6 +740,12 @@ typedef struct odp_pool_ext_capability_t {
 
 		/** Maximum user area size in bytes */
 		uint32_t max_uarea_size;
+
+		/** Pool user area persistence
+		 *
+		 *  See buf.uarea_persistence of odp_pool_capability_t for details
+		 *  (odp_pool_capability_t::uarea_persistence). */
+		odp_bool_t uarea_persistence;
 
 	} pkt;
 
