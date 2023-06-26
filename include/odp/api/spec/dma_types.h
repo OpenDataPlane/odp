@@ -110,6 +110,19 @@ typedef struct odp_dma_pool_param_t {
 	 */
 	uint32_t uarea_size;
 
+	/** Parameters for user area initialization */
+	struct {
+		/** See uarea_init.init_fn of odp_pool_param_t for details
+		 *  (odp_pool_param_t::init_fn). Function is called during
+		 *  odp_dma_pool_create(). */
+		void (*init_fn)(void *uarea, uint32_t size, void *args, uint32_t index);
+
+		/** See uarea_init.args of odp_pool_param_t for details
+		 *  (odp_pool_param_t::args). */
+		void *args;
+
+	} uarea_init;
+
 	/** Maximum number of events cached locally per thread
 	 *
 	 *  See odp_pool_param_t::cache_size documentation for details. Valid values range from

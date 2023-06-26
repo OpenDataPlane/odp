@@ -609,6 +609,30 @@ typedef struct odp_pool_param_t {
 		uint32_t cache_size;
 	} vector;
 
+	/** Parameters for user area initialization */
+	struct {
+		/** User area initialization function
+		 *
+		 *  Application defined user area initialization function to be
+		 *  called for each event of the pool during odp_pool_create(). Ignored
+		 *  if user area persistence is not supported
+		 *  (odp_pool_capability_t::uarea_persistence) or pool will not have any
+		 *  user area. The default value is NULL.
+		 *
+		 *  @param uarea    Pointer to the user area of an event
+		 *  @param size     User area size
+		 *  @param args     Pointer to application defined arguments
+		 *  @param index    Index of the event (0..num events in pool - 1), not
+		 *                  necessarily in order
+		 */
+		void (*init_fn)(void *uarea, uint32_t size, void *args, uint32_t index);
+
+		/** Pointer to application defined arguments to be passed to every call
+		 *  of init_fn. The default value is NULL.
+		 */
+		void *args;
+	} uarea_init;
+
 	/**
 	 * Configure statistics counters
 	 *
@@ -757,6 +781,23 @@ typedef struct odp_pool_ext_capability_t {
 typedef struct odp_pool_ext_param_t {
 	/** Pool type */
 	odp_pool_type_t type;
+
+	/** Parameters for user area initialization */
+	struct {
+		/** See uarea_init.init_fn of odp_pool_param_t for details
+		 *  (odp_pool_param_t::init_fn). However, note that with external memory
+		 *  pools, this function is called during memory population and not during
+		 *  pool creation (odp_pool_ext_populate()). Depending on the implementation,
+		 *  the function may be called each time pool is being populated with
+		 *  odp_pool_ext_populate() or during the last population call
+		 *  (odp_pool_ext_populate() with #ODP_POOL_POPULATE_DONE). */
+		void (*init_fn)(void *uarea, uint32_t size, void *args, uint32_t index);
+
+		/** See uarea_init.args of odp_pool_param_t for details
+		 *  (odp_pool_param_t::args). */
+		void *args;
+
+	} uarea_init;
 
 	/** Maximum thread local cache size for the pool
 	 *
