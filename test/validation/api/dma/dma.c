@@ -432,6 +432,7 @@ static void test_dma_compl_user_area(void)
 
 	for (i = 0; i < num; i++) {
 		odp_event_t ev;
+		int flag;
 
 		compl_evs[i] = odp_dma_compl_alloc(pool);
 
@@ -445,6 +446,8 @@ static void test_dma_compl_user_area(void)
 
 		ev = odp_dma_compl_to_event(compl_evs[i]);
 		CU_ASSERT(odp_event_user_area(ev) == addr);
+		CU_ASSERT(odp_event_user_area_and_flag(ev, &flag) == addr);
+		CU_ASSERT(flag < 0);
 
 		prev = addr;
 		memset(addr, 0, size);
