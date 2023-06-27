@@ -1,4 +1,5 @@
 /* Copyright (c) 2017-2018, Linaro Limited
+ * Copyright (c) 2023, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -349,6 +350,50 @@ static void event_test_type_multi(void)
 	CU_ASSERT(odp_pool_destroy(pkt_pool) == 0);
 }
 
+static void event_test_types_multi(void)
+{
+	odp_pool_t buf_pool, pkt_pool;
+	odp_event_t buf_event[NUM_TYPE_TEST];
+	odp_event_t pkt_event[NUM_TYPE_TEST];
+	odp_event_t event[2 * NUM_TYPE_TEST];
+	odp_event_type_t event_types[2 * NUM_TYPE_TEST];
+	odp_event_subtype_t event_subtypes[2 * NUM_TYPE_TEST];
+	int i;
+
+	type_test_init(&buf_pool, &pkt_pool, buf_event, pkt_event, event);
+
+	/* Only buffers */
+	odp_event_types_multi(buf_event, event_types, event_subtypes, NUM_TYPE_TEST);
+	for (i = 0; i < NUM_TYPE_TEST; i++) {
+		CU_ASSERT(event_types[i] == ODP_EVENT_BUFFER);
+		CU_ASSERT(event_subtypes[i] == ODP_EVENT_NO_SUBTYPE);
+	}
+
+	/* Only packets */
+	odp_event_types_multi(pkt_event, event_types, event_subtypes, NUM_TYPE_TEST);
+	for (i = 0; i < NUM_TYPE_TEST; i++) {
+		CU_ASSERT(event_types[i] == ODP_EVENT_PACKET);
+		CU_ASSERT(event_subtypes[i] == ODP_EVENT_PACKET_BASIC);
+	}
+
+	/* Mixed events: B P BB PP BBB PPP */
+	odp_event_types_multi(event, event_types, NULL, 2 * NUM_TYPE_TEST);
+	for (i = 0; i < 2 * NUM_TYPE_TEST; i++) {
+		if (i == 0 || i == 2 || i == 3 || i == 6 || i == 7 || i == 8) {
+			/* CU_ASSERT requires extra brackets */
+			CU_ASSERT(event_types[i] == ODP_EVENT_BUFFER);
+		} else {
+			CU_ASSERT(event_types[i] == ODP_EVENT_PACKET);
+		}
+	}
+
+	odp_event_free_multi(buf_event, NUM_TYPE_TEST);
+	odp_event_free_multi(pkt_event, NUM_TYPE_TEST);
+
+	CU_ASSERT(odp_pool_destroy(buf_pool) == 0);
+	CU_ASSERT(odp_pool_destroy(pkt_pool) == 0);
+}
+
 static void event_test_filter_packet(void)
 {
 	odp_pool_t buf_pool, pkt_pool;
@@ -400,6 +445,7 @@ odp_testinfo_t event_suite[] = {
 	ODP_TEST_INFO(event_test_free_multi),
 	ODP_TEST_INFO(event_test_free_multi_mixed),
 	ODP_TEST_INFO(event_test_type_multi),
+	ODP_TEST_INFO(event_test_types_multi),
 	ODP_TEST_INFO(event_test_filter_packet),
 	ODP_TEST_INFO(event_test_is_valid),
 	ODP_TEST_INFO_NULL,
