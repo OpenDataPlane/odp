@@ -518,6 +518,7 @@ static void timer_test_timeout_user_area(void)
 
 	for (i = 0; i < num; i++) {
 		odp_event_t ev;
+		int flag;
 
 		tmo[i] = odp_timeout_alloc(pool);
 
@@ -532,6 +533,8 @@ static void timer_test_timeout_user_area(void)
 
 		ev = odp_timeout_to_event(tmo[i]);
 		CU_ASSERT(odp_event_user_area(ev) == addr);
+		CU_ASSERT(odp_event_user_area_and_flag(ev, &flag) == addr);
+		CU_ASSERT(flag < 0);
 
 		prev = addr;
 		memset(addr, 0, size);
