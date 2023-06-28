@@ -283,6 +283,9 @@ static void barrier_test_memory_barrier(void)
 	volatile int b = 0;
 	volatile int c = 0;
 	volatile int d = 0;
+	volatile int e = 0;
+	volatile int f = 0;
+	volatile int g = 0;
 
 	/* Call all memory barriers to verify that those are implemented */
 	a = 1;
@@ -292,9 +295,15 @@ static void barrier_test_memory_barrier(void)
 	c = 1;
 	odp_mb_full();
 	d = 1;
+	odp_mb_sync();
+	e = 1;
+	odp_mb_sync_load();
+	f = 1;
+	odp_mb_sync_store();
+	g = 1;
 
 	/* Avoid "variable set but not used" warning */
-	temp_result = a + b + c + d;
+	temp_result = a + b + c + d + e + f + g;
 }
 
 static int barrier_init(odp_instance_t *inst)
