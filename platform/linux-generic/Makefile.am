@@ -339,6 +339,7 @@ odpapiabiarchinclude_HEADERS += arch/default/odp/api/abi/atomic_generic.h \
 				arch/default/odp/api/abi/cpu_generic.h \
 				arch/arm/odp/api/abi/cpu_inlines.h \
 				arch/arm/odp/api/abi/cpu.h \
+				arch/default/odp/api/abi/sync_inlines.h \
 				arch/default/odp/api/abi/time_inlines.h
 endif
 noinst_HEADERS += arch/arm/odp_atomic.h \
@@ -367,6 +368,7 @@ odpapiabiarchinclude_HEADERS += arch/default/odp/api/abi/atomic_generic.h \
 				arch/default/odp/api/abi/cpu_generic.h \
 				arch/aarch64/odp/api/abi/cpu_inlines.h \
 				arch/aarch64/odp/api/abi/cpu.h \
+				arch/aarch64/odp/api/abi/sync_inlines.h \
 				arch/common/odp/api/abi/time_cpu_inlines.h \
 				arch/aarch64/odp/api/abi/time_inlines.h
 endif
@@ -391,6 +393,7 @@ odpapiabiarchinclude_HEADERS += arch/default/odp/api/abi/atomic_generic.h \
 				arch/default/odp/api/abi/cpu_generic.h \
 				arch/default/odp/api/abi/cpu_inlines.h \
 				arch/default/odp/api/abi/cpu.h \
+				arch/default/odp/api/abi/sync_inlines.h \
 				arch/default/odp/api/abi/time_inlines.h
 endif
 noinst_HEADERS += arch/default/odp_atomic.h \
@@ -412,6 +415,7 @@ odpapiabiarchinclude_HEADERS += arch/default/odp/api/abi/atomic_generic.h \
 				arch/default/odp/api/abi/cpu_generic.h \
 				arch/default/odp/api/abi/cpu_inlines.h \
 				arch/powerpc/odp/api/abi/cpu.h \
+				arch/default/odp/api/abi/sync_inlines.h \
 				arch/default/odp/api/abi/time_inlines.h
 endif
 noinst_HEADERS += arch/default/odp_atomic.h \
@@ -436,6 +440,7 @@ odpapiabiarchinclude_HEADERS += arch/default/odp/api/abi/atomic_generic.h \
 				arch/default/odp/api/abi/atomic_inlines.h \
 				arch/x86/odp/api/abi/cpu_inlines.h \
 				arch/x86/odp/api/abi/cpu.h \
+				arch/x86/odp/api/abi/sync_inlines.h \
 				arch/common/odp/api/abi/time_cpu_inlines.h \
 				arch/x86/odp/api/abi/time_inlines.h
 endif

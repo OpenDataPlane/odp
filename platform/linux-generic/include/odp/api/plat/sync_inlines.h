@@ -1,7 +1,6 @@
-/* Copyright (c) 2016-2018, Linaro Limited
- * All rights reserved.
- *
- * SPDX-License-Identifier:     BSD-3-Clause
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2016-2018 Linaro Limited
+ * Copyright (c) 2023 Nokia
  */
 
 /**
@@ -12,6 +11,8 @@
 
 #ifndef ODP_PLAT_SYNC_INLINE_H_
 #define ODP_PLAT_SYNC_INLINE_H_
+
+#include <odp/api/abi/sync_inlines.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -25,6 +26,9 @@ extern "C" {
 	#define odp_mb_release __odp_mb_release
 	#define odp_mb_acquire __odp_mb_acquire
 	#define odp_mb_full __odp_mb_full
+	#define odp_mb_sync __odp_mb_sync
+	#define odp_mb_sync_load __odp_mb_sync_load
+	#define odp_mb_sync_store __odp_mb_sync_store
 #else
 	#define _ODP_INLINE
 #endif
@@ -42,6 +46,21 @@ _ODP_INLINE void odp_mb_acquire(void)
 _ODP_INLINE void odp_mb_full(void)
 {
 	__atomic_thread_fence(__ATOMIC_SEQ_CST);
+}
+
+_ODP_INLINE void odp_mb_sync(void)
+{
+	_odp_mb_sync();
+}
+
+_ODP_INLINE void odp_mb_sync_load(void)
+{
+	_odp_mb_sync_load();
+}
+
+_ODP_INLINE void odp_mb_sync_store(void)
+{
+	_odp_mb_sync_store();
 }
 
 /** @endcond */
