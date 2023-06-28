@@ -384,40 +384,38 @@ typedef struct odp_dma_param_t {
  * DMA segment
  */
 typedef struct odp_dma_seg_t {
-	/** Segment start */
+	/** Segment start address or packet handle */
 	union {
 		/** Segment start address in memory
 		 *
-		 *  Defines segment start when data format is ODP_DMA_FORMAT_ADDR. Ignored with
+		 *  Defines segment start when data format is #ODP_DMA_FORMAT_ADDR. Ignored with
 		 *  other data formats.
 		 */
 		void *addr;
 
-		/** Segment start as an offset into a packet */
-		struct {
-			/** Packet handle
-			 *
-			 *  Defines the packet when data format is ODP_DMA_FORMAT_PACKET. Ignored
-			 *  with other data formats. */
-			odp_packet_t packet;
+		/** Packet handle
+		 *
+		 *  Defines the packet when data format is #ODP_DMA_FORMAT_PACKET. Ignored
+		 *  with other data formats. */
+		odp_packet_t packet;
 
-			/** Segment start offset into the packet
-			 *
-			 *  Defines segment start when data format is ODP_DMA_FORMAT_PACKET.
-			 *  The offset is calculated from odp_packet_data() position, and the value
-			 *  must not exceed odp_packet_len().
-			 */
-			uint32_t offset;
-		};
 	};
 
 	/** Segment length in bytes
 	 *
 	 *  Defines segment length with all data formats. The maximum value is defined by
-	 *  max_seg_len capability. When data format is ODP_DMA_FORMAT_PACKET, the value must not
+	 *  max_seg_len capability. When data format is #ODP_DMA_FORMAT_PACKET, the value must not
 	 *  exceed odp_packet_len() - 'offset'.
 	 */
 	uint32_t len;
+
+	/** Segment start offset into the packet
+	 *
+	 *  Defines segment start within the packet data. The offset is calculated from
+	 *  odp_packet_data() position, and the value must not exceed odp_packet_len().
+	 *  Ignored when data format is other than #ODP_DMA_FORMAT_PACKET.
+	 */
+	uint32_t offset;
 
 	/** Segment hints
 	 *
