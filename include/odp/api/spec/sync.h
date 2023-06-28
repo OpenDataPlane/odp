@@ -1,7 +1,6 @@
-/* Copyright (c) 2013-2018, Linaro Limited
- * All rights reserved.
- *
- * SPDX-License-Identifier:     BSD-3-Clause
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2013-2018 Linaro Limited
+ * Copyright (c) 2023 Nokia
  */
 
 /**
@@ -23,15 +22,24 @@ extern "C" {
  * @details
  * <b> Memory barriers </b>
  *
- * Memory barriers enforce ordering of memory load and store operations
- * specified before and after the barrier. These barriers may affect both
- * compiler optimizations and CPU out-of-order execution. All ODP
- * synchronization mechanisms (e.g. execution barriers, locks, queues, etc )
- * include all necessary memory barriers, so these calls are not needed when
- * using those. Also ODP atomic operations have memory ordered versions. These
- * explicit barriers may be needed when thread synchronization is based on
- * a non-ODP defined mechanism. Depending on the HW platform, heavy usage of
- * memory barriers may cause significant performance degradation.
+ * A memory barrier enforces the order between memory accesses (loads and/or stores)
+ * specified (in program order) before the barrier with those specified after the barrier.
+ * A barrier may affect both compiler optimizations and CPU out-of-order execution. Depending
+ * on the used HW platform and barrier types, heavy usage of barriers may cause significant
+ * performance degradation.
+ *
+ * An application may use these memory barrier functions e.g. to build a synchronization
+ * mechanism between its threads in shared memory, or when it accesses memory mapped registers
+ * of a device.
+ *
+ * An application does not need to use these memory barriers when using other ODP APIs for thread
+ * synchronization (execution barriers, spinlocks, etc.), or when exchanging data through ODP API
+ * mechanisms (queues, stashes, etc.). Those ODP calls include necessary (acquire and release)
+ * memory barriers to maintain coherency between data producers and consumers.
+ *
+ * Some ODP atomic operations include a memory barrier - see for example odp_atomic_load_acq_u32()
+ * or odp_atomic_store_rel_u32(). Application may use also those (non-relaxed) atomic operations
+ * to enforce memory ordering while using atomic variables.
  *
  *  @{
  */
@@ -78,6 +86,39 @@ void odp_mb_acquire(void);
  * This call is not needed when using ODP defined synchronization mechanisms.
  */
 void odp_mb_full(void);
+
+/**
+ * Memory barrier for load and store synchronization
+ *
+ * This memory barrier ensures that all memory accesses (loads and stores) specified before the
+ * barrier (in program order) are complete prior to any memory access specified after the barrier
+ * begins execution.
+ *
+ * This is a stronger barrier than odp_mb_full(), as in addition to visibility order also memory
+ * access completion is ensured. The barrier may be useful e.g. when synchronizing loads and stores
+ * into memory mapped registers of a device.
+ */
+void odp_mb_sync(void);
+
+/**
+ * Memory barrier for load synchronization
+ *
+ * This memory barrier ensures that all memory loads specified before the barrier (in program
+ * order) are complete prior to any memory load specified after the barrier begins execution.
+ *
+ * The barrier may be useful e.g. when synchronizing loads from memory mapped registers of a device.
+ */
+void odp_mb_sync_load(void);
+
+/**
+ * Memory synchronization barrier for stores
+ *
+ * This memory barrier ensures that all memory stores specified before the barrier (in program
+ * order) are complete prior to any memory store specified after the barrier begins execution.
+ *
+ * The barrier may be useful e.g. when synchronizing stores to memory mapped registers of a device.
+ */
+void odp_mb_sync_store(void);
 
 /**
  * @}
