@@ -216,58 +216,157 @@ static void time_test_monotony(void)
 {
 	volatile uint64_t count = 0;
 	odp_time_t l_t1, l_t2, l_t3;
+	odp_time_t ls_t1, ls_t2, ls_t3;
 	odp_time_t g_t1, g_t2, g_t3;
-	uint64_t lns_t1, lns_t2, lns_t3;
-	uint64_t gns_t1, gns_t2, gns_t3;
+	odp_time_t gs_t1, gs_t2, gs_t3;
+	uint64_t l_ns1, l_ns2, l_ns3;
+	uint64_t ls_ns1, ls_ns2, ls_ns3;
+	uint64_t g_ns1, g_ns2, g_ns3;
+	uint64_t gs_ns1, gs_ns2, gs_ns3;
 	uint64_t ns1, ns2, ns3;
+	uint64_t s_ns1, s_ns2, s_ns3;
 
-	l_t1 = odp_time_local();
-	g_t1 = odp_time_global();
-	lns_t1 = odp_time_local_ns();
-	gns_t1 = odp_time_global_ns();
+	l_t1   = odp_time_local();
+	ls_t1  = odp_time_local_strict();
+	l_ns1  = odp_time_local_ns();
+	ls_ns1 = odp_time_local_strict_ns();
+
+	g_t1   = odp_time_global();
+	gs_t1  = odp_time_global_strict();
+	g_ns1  = odp_time_global_ns();
+	gs_ns1 = odp_time_global_strict_ns();
 
 	while (count < BUSY_LOOP_CNT) {
 		count++;
 	};
 
-	l_t2 = odp_time_local();
-	g_t2 = odp_time_global();
-	lns_t2 = odp_time_local_ns();
-	gns_t2 = odp_time_global_ns();
+	l_t2   = odp_time_local();
+	ls_t2  = odp_time_local_strict();
+	l_ns2  = odp_time_local_ns();
+	ls_ns2 = odp_time_local_strict_ns();
+
+	g_t2   = odp_time_global();
+	gs_t2  = odp_time_global_strict();
+	g_ns2  = odp_time_global_ns();
+	gs_ns2 = odp_time_global_strict_ns();
 
 	count = 0;
 	while (count < BUSY_LOOP_CNT) {
 		count++;
 	};
 
-	l_t3 = odp_time_local();
-	g_t3 = odp_time_global();
-	lns_t3 = odp_time_local_ns();
-	gns_t3 = odp_time_global_ns();
+	l_t3   = odp_time_local();
+	ls_t3  = odp_time_local_strict();
+	l_ns3  = odp_time_local_ns();
+	ls_ns3 = odp_time_local_strict_ns();
+
+	g_t3   = odp_time_global();
+	gs_t3  = odp_time_global_strict();
+	g_ns3  = odp_time_global_ns();
+	gs_ns3 = odp_time_global_strict_ns();
+
+	/* Local time tests
+	 * ---------------- */
 
 	ns1 = odp_time_to_ns(l_t1);
 	ns2 = odp_time_to_ns(l_t2);
 	ns3 = odp_time_to_ns(l_t3);
 
-	/* Local time assertions */
+	s_ns1 = odp_time_to_ns(ls_t1);
+	s_ns2 = odp_time_to_ns(ls_t2);
+	s_ns3 = odp_time_to_ns(ls_t3);
+
+	/* Time counting starts from zero. Assuming that the ODP instance has run
+	 * less than 10 minutes before running this test case. */
+	CU_ASSERT(ns1    < 10 * ODP_TIME_MIN_IN_NS);
+	CU_ASSERT(s_ns1  < 10 * ODP_TIME_MIN_IN_NS);
+	CU_ASSERT(l_ns1  < 10 * ODP_TIME_MIN_IN_NS);
+	CU_ASSERT(ls_ns1 < 10 * ODP_TIME_MIN_IN_NS);
+
+	/* Time stamp */
 	CU_ASSERT(ns2 > ns1);
 	CU_ASSERT(ns3 > ns2);
+
+	/* Strict time stamp */
+	CU_ASSERT(s_ns2 > s_ns1);
+	CU_ASSERT(s_ns3 > s_ns2);
+
+	/* Nsec time */
+	CU_ASSERT(l_ns2 > l_ns1);
+	CU_ASSERT(l_ns3 > l_ns2);
+
+	/* Strict nsec time */
+	CU_ASSERT(ls_ns2 > ls_ns1);
+	CU_ASSERT(ls_ns3 > ls_ns2);
+
+	/* Strict time stamp order is maintained */
+	CU_ASSERT(ls_ns1 >= s_ns1);
+	CU_ASSERT(ls_ns2 >= s_ns2);
+	CU_ASSERT(ls_ns3 >= s_ns3);
+
+	/* Time in nanoseconds have the same time base. Allow less than 100 msec error
+	 * between time stamp converted to nsec and nsec time. */
+	CU_ASSERT((ls_ns1 - s_ns1) < (100 * ODP_TIME_MSEC_IN_NS));
+	CU_ASSERT((ls_ns2 - s_ns2) < (100 * ODP_TIME_MSEC_IN_NS));
+	CU_ASSERT((ls_ns3 - s_ns3) < (100 * ODP_TIME_MSEC_IN_NS));
+
+	/* Global time tests
+	 * ----------------- */
 
 	ns1 = odp_time_to_ns(g_t1);
 	ns2 = odp_time_to_ns(g_t2);
 	ns3 = odp_time_to_ns(g_t3);
 
-	/* Global time assertions */
+	s_ns1 = odp_time_to_ns(gs_t1);
+	s_ns2 = odp_time_to_ns(gs_t2);
+	s_ns3 = odp_time_to_ns(gs_t3);
+
+	/* Time counting starts from zero. Assuming that the ODP instance has run
+	 * less than 10 minutes before running this test case. */
+	CU_ASSERT(ns1    < 10 * ODP_TIME_MIN_IN_NS);
+	CU_ASSERT(s_ns1  < 10 * ODP_TIME_MIN_IN_NS);
+	CU_ASSERT(g_ns1  < 10 * ODP_TIME_MIN_IN_NS);
+	CU_ASSERT(gs_ns1 < 10 * ODP_TIME_MIN_IN_NS);
+
+	/* Time stamp */
 	CU_ASSERT(ns2 > ns1);
 	CU_ASSERT(ns3 > ns2);
 
-	/* Local time in nsec */
-	CU_ASSERT(lns_t2 > lns_t1);
-	CU_ASSERT(lns_t3 > lns_t2);
+	/* Strict time stamp */
+	CU_ASSERT(s_ns2 > s_ns1);
+	CU_ASSERT(s_ns3 > s_ns2);
 
-	/* Global time in nsec */
-	CU_ASSERT(gns_t2 > gns_t1);
-	CU_ASSERT(gns_t3 > gns_t2);
+	/* Nsec time */
+	CU_ASSERT(g_ns2 > g_ns1);
+	CU_ASSERT(g_ns3 > g_ns2);
+
+	/* Strict nsec time */
+	CU_ASSERT(gs_ns2 > gs_ns1);
+	CU_ASSERT(gs_ns3 > gs_ns2);
+
+	/* Strict time stamp order is maintained */
+	CU_ASSERT(gs_ns1 >= s_ns1);
+	CU_ASSERT(gs_ns2 >= s_ns2);
+	CU_ASSERT(gs_ns3 >= s_ns3);
+
+	/* Time in nanoseconds have the same time base. Allow less than 100 msec error
+	 * between time stamp converted to nsec and nsec time. */
+	CU_ASSERT((gs_ns1 - s_ns1) < (100 * ODP_TIME_MSEC_IN_NS));
+	CU_ASSERT((gs_ns2 - s_ns2) < (100 * ODP_TIME_MSEC_IN_NS));
+	CU_ASSERT((gs_ns3 - s_ns3) < (100 * ODP_TIME_MSEC_IN_NS));
+
+	/* Tight error margin cannot be used due to possible OS interrupts during the test.
+	 * Record all time stamp values into the log to help debugging their relative order and
+	 * accuracy. */
+	printf("\n    Time stamp values in nsec:\n");
+	printf("    odp_time_local():            %" PRIu64 "\n", odp_time_to_ns(l_t1));
+	printf("    odp_time_local_strict():     %" PRIu64 "\n", odp_time_to_ns(ls_t1));
+	printf("    odp_time_local_ns():         %" PRIu64 "\n", l_ns1);
+	printf("    odp_time_local_strict_ns():  %" PRIu64 "\n", ls_ns1);
+	printf("    odp_time_global():           %" PRIu64 "\n", odp_time_to_ns(g_t1));
+	printf("    odp_time_global_strict():    %" PRIu64 "\n", odp_time_to_ns(gs_t1));
+	printf("    odp_time_global_ns():        %" PRIu64 "\n", g_ns1);
+	printf("    odp_time_global_strict_ns(): %" PRIu64 "\n\n", gs_ns1);
 }
 
 static void time_test_cmp(time_cb time_cur, time_from_ns_cb time_from_ns)
