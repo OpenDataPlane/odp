@@ -214,7 +214,8 @@ struct odp_crypto_generic_session_t {
 	odp_crypto_session_param_t p;
 
 	odp_bool_t do_cipher_first;
-	uint8_t cipher_bit_mode : 1;
+	uint8_t cipher_range_in_bits : 1;
+	uint8_t auth_range_in_bits : 1;
 	uint8_t cipher_range_used : 1;
 	uint8_t auth_range_used : 1;
 
@@ -1119,68 +1120,70 @@ static int process_cipher_param(odp_crypto_generic_session_t *session,
 	return 0;
 }
 
-static
-odp_crypto_alg_err_t cipher_encrypt_bits(odp_packet_t pkt,
-					 const odp_crypto_packet_op_param_t
-							*param,
-					 odp_crypto_generic_session_t *session)
+static odp_crypto_alg_err_t cipher_encrypt_bytes(odp_packet_t pkt,
+						 const odp_crypto_packet_op_param_t *param,
+						 odp_crypto_generic_session_t *session)
 {
 	EVP_CIPHER_CTX *ctx = local.cipher_ctx[session->idx];
 	int dummy_len = 0;
 	int cipher_len;
-	uint32_t in_len = (param->cipher_range.length + 7) / 8;
+	uint32_t in_len = param->cipher_range.length;
+	uint32_t offset = param->cipher_range.offset;
 	uint8_t data[in_len];
 	int ret;
-	uint32_t offset;
-
-	/* Range offset is in bits in bit mode but must be divisible by 8. */
-	offset = param->cipher_range.offset / 8;
 
 	EVP_EncryptInit_ex(ctx, NULL, NULL, NULL, param->cipher_iv_ptr);
-
 	odp_packet_copy_to_mem(pkt, offset, in_len, data);
-
 	EVP_EncryptUpdate(ctx, data, &cipher_len, data, in_len);
-
 	ret = EVP_EncryptFinal_ex(ctx, data + cipher_len, &dummy_len);
 	cipher_len += dummy_len;
-
 	odp_packet_copy_from_mem(pkt, offset, in_len, data);
-
 	return ret <= 0 ? ODP_CRYPTO_ALG_ERR_DATA_SIZE :
 			  ODP_CRYPTO_ALG_ERR_NONE;
 }
 
-static
-odp_crypto_alg_err_t cipher_decrypt_bits(odp_packet_t pkt,
-					 const odp_crypto_packet_op_param_t
-							*param,
-					 odp_crypto_generic_session_t *session)
+static odp_crypto_alg_err_t cipher_decrypt_bytes(odp_packet_t pkt,
+						 const odp_crypto_packet_op_param_t *param,
+						 odp_crypto_generic_session_t *session)
 {
 	EVP_CIPHER_CTX *ctx = local.cipher_ctx[session->idx];
 	int dummy_len = 0;
 	int cipher_len;
-	uint32_t in_len = (param->cipher_range.length + 7) / 8;
+	uint32_t in_len = param->cipher_range.length;
+	uint32_t offset = param->cipher_range.offset;
 	uint8_t data[in_len];
 	int ret;
-	uint32_t offset;
-
-	/* Range offset is in bits in bit mode but must be divisible by 8. */
-	offset = param->cipher_range.offset / 8;
 
 	EVP_DecryptInit_ex(ctx, NULL, NULL, NULL, param->cipher_iv_ptr);
-
 	odp_packet_copy_to_mem(pkt, offset, in_len, data);
-
 	EVP_DecryptUpdate(ctx, data, &cipher_len, data, in_len);
-
 	ret = EVP_DecryptFinal_ex(ctx, data + cipher_len, &dummy_len);
 	cipher_len += dummy_len;
-
 	odp_packet_copy_from_mem(pkt, offset, in_len, data);
-
 	return ret <= 0 ? ODP_CRYPTO_ALG_ERR_DATA_SIZE :
 			  ODP_CRYPTO_ALG_ERR_NONE;
+}
+
+static odp_crypto_alg_err_t cipher_encrypt_bits(odp_packet_t pkt,
+						const odp_crypto_packet_op_param_t *param,
+						odp_crypto_generic_session_t *session)
+{
+	odp_crypto_packet_op_param_t new_param = *param;
+
+	new_param.cipher_range.offset /= 8;
+	new_param.cipher_range.length = (new_param.cipher_range.length + 7) / 8;
+	return cipher_encrypt_bytes(pkt, &new_param, session);
+}
+
+static odp_crypto_alg_err_t cipher_decrypt_bits(odp_packet_t pkt,
+						const odp_crypto_packet_op_param_t *param,
+						odp_crypto_generic_session_t *session)
+{
+	odp_crypto_packet_op_param_t new_param = *param;
+
+	new_param.cipher_range.offset /= 8;
+	new_param.cipher_range.length = (new_param.cipher_range.length + 7) / 8;
+	return cipher_decrypt_bytes(pkt, &new_param, session);
 }
 
 static int process_cipher_param_bits(odp_crypto_generic_session_t *session,
@@ -1196,7 +1199,6 @@ static int process_cipher_param_bits(odp_crypto_generic_session_t *session,
 	       session->p.cipher_iv_len)
 		return -1;
 
-	session->cipher_bit_mode = 1;
 	session->cipher.evp_cipher = cipher;
 
 	memcpy(session->cipher.key_data, session->p.cipher_key.data,
@@ -1204,11 +1206,14 @@ static int process_cipher_param_bits(odp_crypto_generic_session_t *session,
 
 	/* Set function */
 	if (ODP_CRYPTO_OP_ENCODE == session->p.op) {
-		session->cipher.func = cipher_encrypt_bits;
 		session->cipher.init = cipher_encrypt_init;
+		session->cipher.func = session->cipher_range_in_bits ? cipher_encrypt_bits
+								     : cipher_encrypt_bytes;
+
 	} else {
-		session->cipher.func = cipher_decrypt_bits;
 		session->cipher.init = cipher_decrypt_init;
+		session->cipher.func = session->cipher_range_in_bits ? cipher_decrypt_bits
+								     : cipher_decrypt_bytes;
 	}
 
 	return 0;
@@ -2019,6 +2024,8 @@ odp_crypto_session_create(const odp_crypto_session_param_t *param,
 {
 	int rc;
 	odp_crypto_generic_session_t *session;
+	int cipher_bit_mode_supported = 0;
+	int auth_bit_mode_supported = 0;
 
 	if (odp_global_ro.disable.crypto) {
 		_ODP_ERR("Crypto is disabled\n");
@@ -2049,7 +2056,8 @@ odp_crypto_session_create(const odp_crypto_session_param_t *param,
 	/* Copy parameters */
 	session->p = *param;
 
-	session->cipher_bit_mode = 0;
+	session->cipher_range_in_bits = !!param->cipher_range_in_bits;
+	session->auth_range_in_bits = !!param->auth_range_in_bits;
 	session->auth_range_used = 1;
 	session->cipher_range_used = 1;
 
@@ -2077,6 +2085,7 @@ odp_crypto_session_create(const odp_crypto_session_param_t *param,
 		session->cipher.func = null_crypto_routine;
 		session->cipher.init = null_crypto_init_routine;
 		session->cipher_range_used = 0;
+		cipher_bit_mode_supported = 1;
 		rc = 0;
 		break;
 	case ODP_CIPHER_ALG_3DES_CBC:
@@ -2181,10 +2190,14 @@ odp_crypto_session_create(const odp_crypto_session_param_t *param,
 						       EVP_aes_128_ctr());
 		else
 			rc = -1;
+		cipher_bit_mode_supported = 1;
 		break;
 	default:
 		rc = -1;
 	}
+
+	if (session->cipher_range_in_bits && !cipher_bit_mode_supported)
+		rc = -1;
 
 	/* Check result */
 	if (rc) {
@@ -2198,6 +2211,7 @@ odp_crypto_session_create(const odp_crypto_session_param_t *param,
 		session->auth.func = null_crypto_routine;
 		session->auth.init = null_crypto_init_routine;
 		session->auth_range_used = 0;
+		auth_bit_mode_supported = 1;
 		rc = 0;
 		break;
 	case ODP_AUTH_ALG_MD5_HMAC:
@@ -2310,6 +2324,9 @@ odp_crypto_session_create(const odp_crypto_session_param_t *param,
 	default:
 		rc = -1;
 	}
+
+	if (session->auth_range_in_bits && !auth_bit_mode_supported)
+		rc = -1;
 
 	/* Check result */
 	if (rc) {
@@ -2629,9 +2646,13 @@ static void copy_ranges(odp_packet_t dst,
 	int32_t shift = param->dst_offset_shift;
 	int rc;
 
-	if (session->cipher_bit_mode) {
+	if (session->cipher_range_in_bits) {
 		c_range.offset /= 8;
 		c_range.length = (c_range.length + 7) / 8;
+	}
+	if (session->auth_range_in_bits) {
+		a_range.offset /= 8;
+		a_range.length = (a_range.length + 7) / 8;
 	}
 
 	if (session->cipher_range_used) {
@@ -2660,12 +2681,13 @@ static int crypto_int_oop_encode(odp_packet_t pkt_in,
 				 const odp_crypto_packet_op_param_t *param)
 {
 	odp_crypto_packet_op_param_t new_param = *param;
-	const uint32_t scale = session->cipher_bit_mode ? 8 : 1;
+	const uint32_t c_scale = session->cipher_range_in_bits ? 8 : 1;
+	const uint32_t a_scale = session->auth_range_in_bits ? 8 : 1;
 
 	copy_ranges(*pkt_out, pkt_in, session, param);
 
-	new_param.cipher_range.offset += param->dst_offset_shift * scale;
-	new_param.auth_range.offset += param->dst_offset_shift;
+	new_param.cipher_range.offset += param->dst_offset_shift * c_scale;
+	new_param.auth_range.offset += param->dst_offset_shift * a_scale;
 
 	return crypto_int(*pkt_out, pkt_out, &new_param);
 }
