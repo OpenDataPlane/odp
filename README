@@ -1,7 +1,6 @@
-Copyright (c) 2013-2019, Linaro Limited
-All rights reserved.
-
-SPDX-License-Identifier:        BSD-3-Clause
+SPDX-License-Identifier: BSD-3-Clause
+Copyright (c) 2013-2019 Linaro Limited
+Copyright (c) 2019-2023 OpenFastPath Foundation
 
 OpenDataPlane (ODP) project web page:
     https://www.opendataplane.org
@@ -40,8 +39,10 @@ How to build:
         make
 
 Licensing:
-    ODP project uses BSD-3-Clause license as the default license. See LICENSE
-    file for details.
+    The default license for ODP project is BSD-3-Clause (see LICENSE file).
+    SPDX short-form identifiers (https://spdx.dev/ids/) are used in project
+    source files to identify the used license. The SPDX license list can be
+    found from https://spdx.org/licenses/.
 
 Mailing list:
     odp@lists.opendataplane.org
