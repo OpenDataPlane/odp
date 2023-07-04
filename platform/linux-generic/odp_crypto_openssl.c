@@ -55,7 +55,7 @@
  * Keep sorted: first by key length, then by IV length
  */
 static const odp_crypto_cipher_capability_t cipher_capa_null[] = {
-{.key_len = 0, .iv_len = 0, .bit_mode = 0} };
+{.key_len = 0, .iv_len = 0, .bit_mode = 1} };
 
 static const odp_crypto_cipher_capability_t cipher_capa_trides_cbc[] = {
 {.key_len = 24, .iv_len = 8} };
@@ -106,7 +106,7 @@ static const odp_crypto_cipher_capability_t cipher_capa_chacha20_poly1305[] = {
 #endif
 
 static const odp_crypto_cipher_capability_t cipher_capa_aes_eea2[] = {
-{.key_len = 16, .iv_len = 16, .bit_mode = 0} };
+{.key_len = 16, .iv_len = 16, .bit_mode = 1} };
 
 /*
  * Authentication algorithm capabilities
@@ -114,7 +114,7 @@ static const odp_crypto_cipher_capability_t cipher_capa_aes_eea2[] = {
  * Keep sorted: first by digest length, then by key length
  */
 static const odp_crypto_auth_capability_t auth_capa_null[] = {
-{.digest_len = 0, .key_len = 0, .aad_len = {.min = 0, .max = 0, .inc = 0}, .bit_mode = 0} };
+{.digest_len = 0, .key_len = 0, .aad_len = {.min = 0, .max = 0, .inc = 0}, .bit_mode = 1} };
 
 static const odp_crypto_auth_capability_t auth_capa_md5_hmac[] = {
 {.digest_len = 12, .key_len = 16, .aad_len = {.min = 0, .max = 0, .inc = 0} },
@@ -1815,7 +1815,7 @@ int odp_crypto_capability(odp_crypto_capability_t *capa)
 #if _ODP_HAVE_CHACHA20_POLY1305
 	capa->ciphers.bit.chacha20_poly1305 = 1;
 #endif
-	capa->ciphers.bit.aes_eea2 = 0;
+	capa->ciphers.bit.aes_eea2   = 1;
 
 	capa->auths.bit.null         = 1;
 	capa->auths.bit.md5_hmac     = 1;
