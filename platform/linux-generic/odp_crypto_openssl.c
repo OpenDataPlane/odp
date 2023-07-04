@@ -216,7 +216,6 @@ struct odp_crypto_generic_session_t {
 	odp_bool_t do_cipher_first;
 	uint8_t cipher_range_in_bits : 1;
 	uint8_t auth_range_in_bits : 1;
-	uint8_t cipher_range_used : 1;
 	uint8_t auth_range_used : 1;
 
 	struct {
@@ -2059,7 +2058,6 @@ odp_crypto_session_create(const odp_crypto_session_param_t *param,
 	session->cipher_range_in_bits = !!param->cipher_range_in_bits;
 	session->auth_range_in_bits = !!param->auth_range_in_bits;
 	session->auth_range_used = 1;
-	session->cipher_range_used = 1;
 
 	if (session->p.cipher_iv_len > EVP_MAX_IV_LENGTH) {
 		_ODP_DBG("Maximum IV length exceeded\n");
@@ -2084,7 +2082,6 @@ odp_crypto_session_create(const odp_crypto_session_param_t *param,
 	case ODP_CIPHER_ALG_NULL:
 		session->cipher.func = null_crypto_routine;
 		session->cipher.init = null_crypto_init_routine;
-		session->cipher_range_used = 0;
 		cipher_bit_mode_supported = 1;
 		rc = 0;
 		break;
@@ -2210,7 +2207,6 @@ odp_crypto_session_create(const odp_crypto_session_param_t *param,
 	case ODP_AUTH_ALG_NULL:
 		session->auth.func = null_crypto_routine;
 		session->auth.init = null_crypto_init_routine;
-		session->auth_range_used = 0;
 		auth_bit_mode_supported = 1;
 		rc = 0;
 		break;
@@ -2655,7 +2651,7 @@ static void copy_ranges(odp_packet_t dst,
 		a_range.length = (a_range.length + 7) / 8;
 	}
 
-	if (session->cipher_range_used) {
+	if (c_range.length > 0) {
 		rc = odp_packet_copy_from_pkt(dst, c_range.offset + shift,
 					      src, c_range.offset,
 					      c_range.length);
@@ -2664,7 +2660,7 @@ static void copy_ranges(odp_packet_t dst,
 			return;
 		}
 	}
-	if (session->auth_range_used) {
+	if (session->auth_range_used && a_range.length > 0) {
 		rc = odp_packet_copy_from_pkt(dst, a_range.offset + shift,
 					      src, a_range.offset,
 					      a_range.length);
