@@ -178,7 +178,6 @@ static void prepare_crypto_ranges(const crypto_op_test_param_t *param,
 				  odp_packet_data_range_t *cipher_range,
 				  odp_packet_data_range_t *auth_range)
 {
-	odp_packet_data_range_t zero_range = {.offset = 0, .length = 0};
 	uint32_t c_scale = param->session.cipher_range_in_bits ? 8 : 1;
 	uint32_t a_scale = param->session.auth_range_in_bits ? 8 : 1;
 
@@ -186,11 +185,6 @@ static void prepare_crypto_ranges(const crypto_op_test_param_t *param,
 	*auth_range = param->auth_range;
 	cipher_range->offset += c_scale * param->header_len;
 	auth_range->offset += a_scale * param->header_len;
-
-	if (param->ref->cipher == ODP_CIPHER_ALG_NULL)
-		*cipher_range = zero_range;
-	if (param->ref->auth == ODP_AUTH_ALG_NULL)
-		*auth_range = zero_range;
 }
 
 static int prepare_input_packet(const crypto_op_test_param_t *param,
@@ -391,13 +385,10 @@ static void prepare_expected_data(const crypto_op_test_param_t *param,
 		auth_offset /= 8;
 		auth_len = (auth_len + 7) / 8;
 	}
-	if (param->ref->cipher == ODP_CIPHER_ALG_NULL)
-		cipher_len = 0;
-	if (param->ref->auth == ODP_AUTH_ALG_NULL ||
-	    param->ref->auth == ODP_AUTH_ALG_AES_GCM ||
+	if (param->ref->auth == ODP_AUTH_ALG_AES_GCM ||
 	    param->ref->auth == ODP_AUTH_ALG_AES_CCM ||
 	    param->ref->auth == ODP_AUTH_ALG_CHACHA20_POLY1305) {
-		/* auth range is ignored with null and AEAD algorithms */
+		/* auth range is ignored with AEAD algorithms */
 		auth_len = 0;
 	}
 

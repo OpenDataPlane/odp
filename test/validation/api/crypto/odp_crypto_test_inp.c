@@ -714,6 +714,7 @@ static void test_auth_hash_in_auth_range(odp_auth_alg_t auth,
  * Cipher algorithms that are not AEAD algorithms
  */
 static odp_cipher_alg_t cipher_algs[] = {
+	ODP_CIPHER_ALG_NULL,
 	ODP_CIPHER_ALG_DES,
 	ODP_CIPHER_ALG_3DES_CBC,
 	ODP_CIPHER_ALG_3DES_ECB,
@@ -729,10 +730,11 @@ static odp_cipher_alg_t cipher_algs[] = {
 };
 
 /*
- * Authentication algorithms and hashes that use auth_range
+ * Authentication algorithms and hashes that may use auth_range
  * parameter. AEAD algorithms are excluded.
  */
 static odp_auth_alg_t auth_algs[] = {
+	ODP_AUTH_ALG_NULL,
 	ODP_AUTH_ALG_MD5_HMAC,
 	ODP_AUTH_ALG_SHA1_HMAC,
 	ODP_AUTH_ALG_SHA224_HMAC,
