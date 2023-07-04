@@ -254,6 +254,7 @@ static void alg_test_ses(odp_crypto_op_t op,
 {
 	unsigned int initial_num_failures = CU_get_number_of_failures();
 	const uint32_t reflength = ref_length_in_bytes(ref);
+	const uint32_t auth_scale = is_bit_mode_auth ? 8 : 1;
 	hash_test_mode_t hash_mode = HASH_NO_OVERLAP;
 	odp_crypto_session_t session;
 	int rc;
@@ -261,8 +262,8 @@ static void alg_test_ses(odp_crypto_op_t op,
 	uint32_t max_shift;
 	crypto_op_test_param_t test_param;
 
-	if (digest_offset >= auth_range.offset &&
-	    digest_offset < auth_range.offset + auth_range.length)
+	if (digest_offset * auth_scale >= auth_range.offset &&
+	    digest_offset * auth_scale < auth_range.offset + auth_range.length)
 		hash_mode = HASH_OVERLAP;
 
 	session = session_create(op, op_type, order, ref, hash_mode);
