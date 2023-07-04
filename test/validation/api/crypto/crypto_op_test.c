@@ -498,6 +498,7 @@ void test_crypto_op(const crypto_op_test_param_t *param)
 		.aad_ptr = param->ref->aad,
 		.dst_offset_shift = param->oop_shift,
 	};
+	odp_bool_t failure_allowed = false;
 
 	/*
 	 * Test detection of wrong digest value in input packet
@@ -518,6 +519,14 @@ void test_crypto_op(const crypto_op_test_param_t *param)
 		pkt_copy = odp_packet_copy(pkt, suite_context.pool);
 		CU_ASSERT_FATAL(pkt_copy != ODP_PACKET_INVALID);
 		test_packet_get_md(pkt_out, &md_out_orig);
+
+		/* Non-zero-length ranges do not have to be supported. */
+		if ((param->ref->cipher == ODP_CIPHER_ALG_NULL &&
+		     op_params.cipher_range.length != 0))
+			failure_allowed = true;
+		if ((param->ref->auth == ODP_AUTH_ALG_NULL &&
+		     op_params.auth_range.length != 0))
+			failure_allowed = true;
 	}
 
 	prepare_expected_data(param, &op_params.cipher_range, &op_params.auth_range,
@@ -564,9 +573,11 @@ void test_crypto_op(const crypto_op_test_param_t *param)
 		 * range, so allow crypto op failure without further checks
 		 * in this case.
 		 */
-		if (!ok)
-			goto out;
+		failure_allowed = true;
 	}
+
+	if (!ok && failure_allowed)
+		goto out;
 
 	if (param->wrong_digest) {
 		CU_ASSERT(!ok);
