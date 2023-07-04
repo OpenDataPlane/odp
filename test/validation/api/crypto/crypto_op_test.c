@@ -472,6 +472,23 @@ static void check_output_packet_data(odp_packet_t pkt, expected_t *ex)
 	}
 }
 
+static int is_digest_in_cipher_range(const crypto_op_test_param_t *param,
+				     const odp_crypto_packet_op_param_t *op_params)
+{
+	/*
+	 * Do not use op_params.hash_result_offset here as it refers to
+	 * the output packet which (in the OOP case) might be shifted
+	 * relative to the input packet.
+	 */
+	uint32_t d_offset = param->digest_offset;
+
+	if (param->is_bit_mode_cipher)
+		d_offset *= 8;
+
+	return d_offset >= op_params->cipher_range.offset &&
+		d_offset < op_params->cipher_range.offset + op_params->cipher_range.length;
+}
+
 void test_crypto_op(const crypto_op_test_param_t *param)
 {
 	odp_bool_t ok = false;
@@ -548,8 +565,7 @@ void test_crypto_op(const crypto_op_test_param_t *param)
 
 	if (param->ref->cipher != ODP_CIPHER_ALG_NULL &&
 	    param->ref->auth != ODP_AUTH_ALG_NULL &&
-	    param->digest_offset >= op_params.cipher_range.offset &&
-	    param->digest_offset < op_params.cipher_range.offset + op_params.cipher_range.length) {
+	    is_digest_in_cipher_range(param, &op_params)) {
 		/*
 		 * Not all implementations support digest offset in cipher
 		 * range, so allow crypto op failure without further checks
