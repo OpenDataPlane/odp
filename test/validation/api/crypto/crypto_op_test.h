@@ -12,17 +12,21 @@
 #include <stdint.h>
 #include "test_vectors.h"
 
-typedef struct crypto_op_test_param_t {
+typedef struct crypto_session_t {
 	odp_crypto_session_t session;
 	odp_crypto_op_t op;
 	odp_crypto_op_type_t op_type;
+	odp_bool_t cipher_range_in_bits;
+	odp_bool_t auth_range_in_bits;
+} crypto_session_t;
+
+typedef struct crypto_op_test_param_t {
+	crypto_session_t session;
 	int32_t oop_shift;
 	crypto_test_reference_t *ref;
 	odp_packet_data_range_t cipher_range;
 	odp_packet_data_range_t auth_range;
 	uint32_t digest_offset;
-	odp_bool_t is_bit_mode_cipher;
-	odp_bool_t is_bit_mode_auth;
 	odp_bool_t adjust_segmentation;
 	odp_bool_t wrong_digest;
 	uint32_t first_seg_len;

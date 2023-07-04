@@ -53,15 +53,10 @@ static void test_default_values(void)
 
 static void print_alg_test_param(const crypto_op_test_param_t *p)
 {
-	const char *cipher_mode = p->is_bit_mode_cipher ? "bit" : "byte";
+	const char *cipher_mode = p->session.cipher_range_in_bits ? "bit" : "byte";
+	const char *auth_mode   = p->session.auth_range_in_bits   ? "bit" : "byte";
 
-
-
-
-
-	const char *auth_mode = p->is_bit_mode_auth ? "bit" : "byte";
-
-	switch (p->op_type) {
+	switch (p->session.op_type) {
 	case ODP_CRYPTO_OP_TYPE_LEGACY:
 		printf("legacy ");
 		break;
@@ -72,7 +67,7 @@ static void print_alg_test_param(const crypto_op_test_param_t *p)
 		printf("out-of-place ");
 		break;
 	}
-	printf("%s\n", p->op == ODP_CRYPTO_OP_ENCODE ? "encode" : "decode");
+	printf("%s\n", p->session.op == ODP_CRYPTO_OP_ENCODE ? "encode" : "decode");
 
 	printf("cipher: %s, %s mode\n", cipher_alg_name(p->ref->cipher), cipher_mode);
 	printf("  key length: %d, iv length: %d\n",
@@ -93,7 +88,7 @@ static void print_alg_test_param(const crypto_op_test_param_t *p)
 	printf("header length: %d, trailer length: %d\n", p->header_len, p->trailer_len);
 	if (p->adjust_segmentation)
 		printf("segmentation adjusted, first_seg_len: %d\n", p->first_seg_len);
-	if (p->op_type == ODP_CRYPTO_OP_TYPE_OOP)
+	if (p->session.op_type == ODP_CRYPTO_OP_TYPE_OOP)
 		printf("oop_shift: %d\n", p->oop_shift);
 }
 
@@ -122,7 +117,7 @@ static void alg_test_op(crypto_op_test_param_t *param)
 
 	for (uint32_t n = 0; n < ARRAY_SIZE(oop_shifts); n++) {
 		if (oop_shifts[n] != 0 &&
-		    param->op_type != ODP_CRYPTO_OP_TYPE_OOP)
+		    param->session.op_type != ODP_CRYPTO_OP_TYPE_OOP)
 			continue;
 		if ((int32_t)param->header_len + oop_shifts[n] < 0)
 			continue;
@@ -271,14 +266,14 @@ static void alg_test_ses(odp_crypto_op_t op,
 		return;
 
 	memset(&test_param, 0, sizeof(test_param));
-	test_param.session = session;
-	test_param.op = op;
-	test_param.op_type = op_type;
+	test_param.session.session = session;
+	test_param.session.op = op;
+	test_param.session.op_type = op_type;
+	test_param.session.cipher_range_in_bits = is_bit_mode_cipher;
+	test_param.session.auth_range_in_bits = is_bit_mode_auth;
 	test_param.ref = ref;
 	test_param.cipher_range = cipher_range;
 	test_param.auth_range = auth_range;
-	test_param.is_bit_mode_cipher = is_bit_mode_cipher;
-	test_param.is_bit_mode_auth = is_bit_mode_auth;
 	test_param.digest_offset = digest_offset;
 
 	alg_test_op(&test_param);
