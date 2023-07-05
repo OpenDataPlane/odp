@@ -1,5 +1,5 @@
 /* Copyright (c) 2018, Linaro Limited
- * Copyright (c) 2020-2022, Nokia
+ * Copyright (c) 2020-2023, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -25,7 +25,7 @@ typedef struct {
 
 static hwcap_feat_flag_t hwcap_flags[] = {
 	{
-		/* Floating-point Extensions */
+		/* Floating-point support for single-precision and double-precision types */
 		.feat_flag = "FEAT_FP",
 #ifdef HWCAP_FP
 		.hwcap_field = HWCAP_FP,
@@ -34,8 +34,10 @@ static hwcap_feat_flag_t hwcap_flags[] = {
 	},
 
 	{
-		/* Floating-point Extensions */
-		.feat_flag = "FEAT_FP",
+		/* Advanced SIMD support for:
+		 *  - integer byte, halfword, word and doubleword element operations
+		 *  - single-precision and double-precision floating-point arithmetic */
+		.feat_flag = "ASIMD",
 #ifdef HWCAP_ASIMD
 		.hwcap_field = HWCAP_ASIMD,
 		.valid = 1,
@@ -44,7 +46,7 @@ static hwcap_feat_flag_t hwcap_flags[] = {
 
 	{
 		/* Generic Timer is configured to generate events at approx. 10KHz */
-		.feat_flag = "HWCAP_EVTSTRM",
+		.feat_flag = "EVTSTRM",
 #ifdef HWCAP_EVTSTRM
 		.hwcap_field = HWCAP_EVTSTRM,
 		.valid = 1,
@@ -115,8 +117,8 @@ static hwcap_feat_flag_t hwcap_flags[] = {
 	},
 
 	{
-		/* Half-precision Floating-point Data Processing Instructions */
-		.feat_flag = "FEAT_FP16",
+		/* Advanced SIMD support with half-precision floating-point arithmetic */
+		.feat_flag = "ASIMDHP",
 #ifdef HWCAP_ASIMDHP
 		.hwcap_field = HWCAP_ASIMDHP,
 		.valid = 1,
@@ -125,7 +127,7 @@ static hwcap_feat_flag_t hwcap_flags[] = {
 
 	{
 		/* Availability of EL0 Access to certain ID Registers */
-		.feat_flag = "HWCAP_CPUID",
+		.feat_flag = "CPUID",
 #ifdef HWCAP_CPUID
 		.hwcap_field = HWCAP_CPUID,
 		.valid = 1,
@@ -305,7 +307,7 @@ static hwcap_feat_flag_t hwcap_flags[] = {
 
 	{
 		/* Generic Authentication Extensions */
-		.feat_flag = "HWCAP_PACG",
+		.feat_flag = "PACG",
 #ifdef HWCAP_PACG
 		.hwcap_field = HWCAP_PACG,
 		.valid = 1,
@@ -397,7 +399,7 @@ static hwcap_feat_flag_t hwcap2_flags[] = {
 
 	{
 		/* SVE Int8 Matrix Multiplication Instructions */
-		.feat_flag = "FEAT_I8MM",
+		.feat_flag = "SVEI8MM",
 #ifdef HWCAP2_SVEI8MM
 		.hwcap_field = HWCAP2_SVEI8MM,
 		.valid = 1,
@@ -424,7 +426,7 @@ static hwcap_feat_flag_t hwcap2_flags[] = {
 
 	{
 		/* SVE BFloat16 Instructions */
-		.feat_flag = "FEAT_BF16",
+		.feat_flag = "SVEBF16",
 #ifdef HWCAP2_SVEBF16
 		.hwcap_field = HWCAP2_SVEBF16,
 		.valid = 1,
@@ -868,26 +870,6 @@ static void _odp_sys_info_print_acle_flags(void)
 	_ODP_PRINT("\n");
 }
 
-static int check_hwcap_duplicates(unsigned int hwcap_field)
-{
-	int ret = 0;
-
-	/* FP and AdvSIMD fields of the AArch64 Processor
-	 * Feature Register 0 must have the same value and are
-	 * defined by the same feature flag. Print the flag
-	 * only once. */
-#ifdef HWCAP_ASIMD
-		if (hwcap_field == HWCAP_ASIMD)
-			ret = 1;
-#endif
-#ifdef HWCAP_ASIMDHP
-		if (hwcap_field == HWCAP_ASIMDHP)
-			ret = 1;
-#endif
-
-	return ret;
-}
-
 static void _odp_sys_info_print_hwcap_flags(void)
 {
 	unsigned long hwcaps, hwcaps2;
@@ -901,11 +883,6 @@ static void _odp_sys_info_print_hwcap_flags(void)
 	size = _ODP_ARRAY_SIZE(hwcap_flags);
 	for (unsigned int i = 0; i < size; i++) {
 		if (hwcap_flags[i].valid) {
-			if (check_hwcap_duplicates(hwcap_flags[i].hwcap_field)) {
-				hwcaps = hwcaps >> 1;
-				continue;
-			}
-
 			if (hwcaps & 0x01)
 				_ODP_PRINT("%s ", hwcap_flags[i].feat_flag);
 			hwcaps = hwcaps >> 1;
@@ -935,11 +912,6 @@ static void _odp_sys_info_print_hwcap_flags(void)
 	hwcaps = getauxval(AT_HWCAP);
 	for (unsigned long i = 0; i < size; i++) {
 		if (hwcap_flags[i].valid) {
-			if (check_hwcap_duplicates(hwcap_flags[i].hwcap_field)) {
-				hwcaps = hwcaps >> 1;
-				continue;
-			}
-
 			if (!(hwcaps & 0x01))
 				_ODP_PRINT("%s ", hwcap_flags[i].feat_flag);
 			hwcaps = hwcaps >> 1;
