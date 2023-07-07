@@ -18,8 +18,8 @@
 #include <sys/auxv.h>
 
 typedef struct {
-	const char *feat_flag;
-	const unsigned int hwcap_field;
+	const char *name;
+	const uint64_t bit_mask;
 } hwcap_feat_flag_t;
 
 /* Linux HWCAP and HWCAP2 flags
@@ -29,9 +29,9 @@ typedef struct {
 static hwcap_feat_flag_t hwcap_flags[] = {
 	{
 		/* Floating-point support for single-precision and double-precision types */
-		.feat_flag = "FEAT_FP",
+		.name = "FEAT_FP",
 #ifdef HWCAP_FP
-		.hwcap_field = HWCAP_FP,
+		.bit_mask = HWCAP_FP,
 #endif
 	},
 
@@ -39,249 +39,249 @@ static hwcap_feat_flag_t hwcap_flags[] = {
 		/* Advanced SIMD support for:
 		 *  - integer byte, halfword, word and doubleword element operations
 		 *  - single-precision and double-precision floating-point arithmetic */
-		.feat_flag = "ASIMD",
+		.name = "ASIMD",
 #ifdef HWCAP_ASIMD
-		.hwcap_field = HWCAP_ASIMD,
+		.bit_mask = HWCAP_ASIMD,
 #endif
 	},
 
 	{
 		/* Generic Timer is configured to generate events at approx. 10KHz */
-		.feat_flag = "EVTSTRM",
+		.name = "EVTSTRM",
 #ifdef HWCAP_EVTSTRM
-		.hwcap_field = HWCAP_EVTSTRM,
+		.bit_mask = HWCAP_EVTSTRM,
 #endif
 	},
 
 	{
 		/* Advanced SIMD AES Instructions */
-		.feat_flag = "FEAT_AES",
+		.name = "FEAT_AES",
 #ifdef HWCAP_AES
-		.hwcap_field = HWCAP_AES,
+		.bit_mask = HWCAP_AES,
 #endif
 	},
 
 	{
 		/* Advanced SIMD PMULL Instructions */
-		.feat_flag = "FEAT_PMULL",
+		.name = "FEAT_PMULL",
 #ifdef HWCAP_PMULL
-		.hwcap_field = HWCAP_PMULL,
+		.bit_mask = HWCAP_PMULL,
 #endif
 	},
 
 	{
 		/* Advanced SIMD SHA1 Instructions */
-		.feat_flag = "FEAT_SHA1",
+		.name = "FEAT_SHA1",
 #ifdef HWCAP_SHA1
-		.hwcap_field = HWCAP_SHA1,
+		.bit_mask = HWCAP_SHA1,
 #endif
 	},
 
 	{
 		/* Advanced SIMD SHA256 Instructions */
-		.feat_flag = "FEAT_SHA256",
+		.name = "FEAT_SHA256",
 #ifdef HWCAP_SHA2
-		.hwcap_field = HWCAP_SHA2,
+		.bit_mask = HWCAP_SHA2,
 #endif
 	},
 
 	{
 		/* CRC32 Instructions */
-		.feat_flag = "FEAT_CRC32",
+		.name = "FEAT_CRC32",
 #ifdef HWCAP_CRC32
-		.hwcap_field = HWCAP_CRC32,
+		.bit_mask = HWCAP_CRC32,
 #endif
 	},
 
 	{
 		/* Large System Extensions */
-		.feat_flag = "FEAT_LSE",
+		.name = "FEAT_LSE",
 #ifdef HWCAP_ATOMICS
-		.hwcap_field = HWCAP_ATOMICS,
+		.bit_mask = HWCAP_ATOMICS,
 #endif
 	},
 
 	{
 		/* Half-precision Floating-point Data Processing Instructions */
-		.feat_flag = "FEAT_FP16",
+		.name = "FEAT_FP16",
 #ifdef HWCAP_FPHP
-		.hwcap_field = HWCAP_FPHP,
+		.bit_mask = HWCAP_FPHP,
 #endif
 	},
 
 	{
 		/* Advanced SIMD support with half-precision floating-point arithmetic */
-		.feat_flag = "ASIMDHP",
+		.name = "ASIMDHP",
 #ifdef HWCAP_ASIMDHP
-		.hwcap_field = HWCAP_ASIMDHP,
+		.bit_mask = HWCAP_ASIMDHP,
 #endif
 	},
 
 	{
 		/* Availability of EL0 Access to certain ID Registers */
-		.feat_flag = "CPUID",
+		.name = "CPUID",
 #ifdef HWCAP_CPUID
-		.hwcap_field = HWCAP_CPUID,
+		.bit_mask = HWCAP_CPUID,
 #endif
 	},
 
 	{
 		/* Rounding Double Multiply Accumulate Extensions */
-		.feat_flag = "FEAT_RDM",
+		.name = "FEAT_RDM",
 #ifdef HWCAP_ASIMDRDM
-		.hwcap_field = HWCAP_ASIMDRDM,
+		.bit_mask = HWCAP_ASIMDRDM,
 #endif
 	},
 
 	{
 		/* JavaScript FJCVTS Conversion Instructions */
-		.feat_flag = "FEAT_JSCVT",
+		.name = "FEAT_JSCVT",
 #ifdef HWCAP_JSCVT
-		.hwcap_field = HWCAP_JSCVT,
+		.bit_mask = HWCAP_JSCVT,
 #endif
 	},
 
 	{
 		/* Floating-point FCMLA and FCADD Instructions */
-		.feat_flag = "FEAT_FCMA",
+		.name = "FEAT_FCMA",
 #ifdef HWCAP_FCMA
-		.hwcap_field = HWCAP_FCMA,
+		.bit_mask = HWCAP_FCMA,
 #endif
 	},
 
 	{
 		/* Load-acquire RCpc Instructions */
-		.feat_flag = "FEAT_LRCPC",
+		.name = "FEAT_LRCPC",
 #ifdef HWCAP_LRCPC
-		.hwcap_field = HWCAP_LRCPC,
+		.bit_mask = HWCAP_LRCPC,
 #endif
 	},
 
 	{
 		/* DC CVAP Instructions */
-		.feat_flag = "FEAT_DPB",
+		.name = "FEAT_DPB",
 #ifdef HWCAP_DCPOP
-		.hwcap_field = HWCAP_DCPOP,
+		.bit_mask = HWCAP_DCPOP,
 #endif
 	},
 
 	{
 		/* Advanced SIMD EOR3, RAX1, XAR, and BCAX Instructions */
-		.feat_flag = "FEAT_SHA3",
+		.name = "FEAT_SHA3",
 #ifdef HWCAP_SHA3
-		.hwcap_field = HWCAP_SHA3,
+		.bit_mask = HWCAP_SHA3,
 #endif
 	},
 
 	{
 		/* Advanced SIMD SM3 Instructions */
-		.feat_flag = "FEAT_SM3",
+		.name = "FEAT_SM3",
 #ifdef HWCAP_SM3
-		.hwcap_field = HWCAP_SM3,
+		.bit_mask = HWCAP_SM3,
 #endif
 	},
 
 	{
 		/* Advanced SIMD SM4 Instructions */
-		.feat_flag = "FEAT_SM4",
+		.name = "FEAT_SM4",
 #ifdef HWCAP_SM4
-		.hwcap_field = HWCAP_SM4,
+		.bit_mask = HWCAP_SM4,
 #endif
 	},
 
 	{
 		/* Advanced SIMD Int8 Dot Product Instructions */
-		.feat_flag = "FEAT_DotProd",
+		.name = "FEAT_DotProd",
 #ifdef HWCAP_ASIMDDP
-		.hwcap_field = HWCAP_ASIMDDP,
+		.bit_mask = HWCAP_ASIMDDP,
 #endif
 	},
 
 	{
 		/* Advanced SIMD SHA512 Instructions */
-		.feat_flag = "FEAT_SHA512",
+		.name = "FEAT_SHA512",
 #ifdef HWCAP_SHA512
-		.hwcap_field = HWCAP_SHA512,
+		.bit_mask = HWCAP_SHA512,
 #endif
 	},
 
 	{
 		/* Scalable Vector Extensions */
-		.feat_flag = "FEAT_SVE",
+		.name = "FEAT_SVE",
 #ifdef HWCAP_SVE
-		.hwcap_field = HWCAP_SVE,
+		.bit_mask = HWCAP_SVE,
 #endif
 	},
 
 	{
 		/* Half-precision Floating-point FMLAL Instructions */
-		.feat_flag = "FEAT_FHM",
+		.name = "FEAT_FHM",
 #ifdef HWCAP_ASIMDFHM
-		.hwcap_field = HWCAP_ASIMDFHM,
+		.bit_mask = HWCAP_ASIMDFHM,
 #endif
 	},
 
 	{
 		/* Data Independent Timing Instructions */
-		.feat_flag = "FEAT_DIT",
+		.name = "FEAT_DIT",
 #ifdef HWCAP_DIT
-		.hwcap_field = HWCAP_DIT,
+		.bit_mask = HWCAP_DIT,
 #endif
 	},
 
 	{
 		/* Large System Extensions Version 2 */
-		.feat_flag = "FEAT_LSE2",
+		.name = "FEAT_LSE2",
 #ifdef HWCAP_USCAT
-		.hwcap_field = HWCAP_USCAT,
+		.bit_mask = HWCAP_USCAT,
 #endif
 	},
 
 	{
 		/* Load-acquire RCpc Instructions Version 2 */
-		.feat_flag = "FEAT_LRCPC2",
+		.name = "FEAT_LRCPC2",
 #ifdef HWCAP_ILRCPC
-		.hwcap_field = HWCAP_ILRCPC,
+		.bit_mask = HWCAP_ILRCPC,
 #endif
 	},
 
 	{
 		/* Condition Flag Manipulation Extensions */
-		.feat_flag = "FEAT_FlagM",
+		.name = "FEAT_FlagM",
 #ifdef HWCAP_FLAGM
-		.hwcap_field = HWCAP_FLAGM,
+		.bit_mask = HWCAP_FLAGM,
 #endif
 	},
 
 	{
 		/* Speculative Store Bypass Safe Instructions */
-		.feat_flag = "FEAT_SSBS2",
+		.name = "FEAT_SSBS2",
 #ifdef HWCAP_SSBS
-		.hwcap_field = HWCAP_SSBS,
+		.bit_mask = HWCAP_SSBS,
 #endif
 	},
 
 	{
 		/* Speculation Barrier Instructions */
-		.feat_flag = "FEAT_SB",
+		.name = "FEAT_SB",
 #ifdef HWCAP_SB
-		.hwcap_field = HWCAP_SB,
+		.bit_mask = HWCAP_SB,
 #endif
 	},
 
 	{
 		/* Pointer Authentication Extensions */
-		.feat_flag = "FEAT_PAuth",
+		.name = "FEAT_PAuth",
 #ifdef HWCAP_PACA
-		.hwcap_field = HWCAP_PACA,
+		.bit_mask = HWCAP_PACA,
 #endif
 	},
 
 	{
 		/* Generic Authentication Extensions */
-		.feat_flag = "PACG",
+		.name = "PACG",
 #ifdef HWCAP_PACG
-		.hwcap_field = HWCAP_PACG,
+		.bit_mask = HWCAP_PACG,
 #endif
 	}
 };
@@ -289,153 +289,153 @@ static hwcap_feat_flag_t hwcap_flags[] = {
 static hwcap_feat_flag_t hwcap2_flags[] = {
 	{
 		/* DC CVADP instructions */
-		.feat_flag = "FEAT_DPB2",
+		.name = "FEAT_DPB2",
 #ifdef HWCAP2_DCPODP
-		.hwcap_field = HWCAP2_DCPODP,
+		.bit_mask = HWCAP2_DCPODP,
 #endif
 	},
 
 	{
 		/* Scalable Vector Extensions Version 2 */
-		.feat_flag = "FEAT_SVE2",
+		.name = "FEAT_SVE2",
 #ifdef HWCAP2_SVE2
-		.hwcap_field = HWCAP2_SVE2,
+		.bit_mask = HWCAP2_SVE2,
 #endif
 	},
 
 	{
 		/* SVE AES Instructions */
-		.feat_flag = "FEAT_SVE_AES",
+		.name = "FEAT_SVE_AES",
 #ifdef HWCAP2_SVEAES
-		.hwcap_field = HWCAP2_SVEAES,
+		.bit_mask = HWCAP2_SVEAES,
 #endif
 	},
 
 	{
 		/* SVE PMULL Instructions */
-		.feat_flag = "FEAT_SVE_PMULL128",
+		.name = "FEAT_SVE_PMULL128",
 #ifdef HWCAP2_SVEPMULL
-		.hwcap_field = HWCAP2_SVEPMULL,
+		.bit_mask = HWCAP2_SVEPMULL,
 #endif
 	},
 
 	{
 		/* SVE Bit Permute Instructions */
-		.feat_flag = "FEAT_SVE_BitPerm",
+		.name = "FEAT_SVE_BitPerm",
 #ifdef HWCAP2_SVEBITPERM
-		.hwcap_field = HWCAP2_SVEBITPERM,
+		.bit_mask = HWCAP2_SVEBITPERM,
 #endif
 	},
 
 	{
 		/* SVE SHA-3 Instructions */
-		.feat_flag = "FEAT_SVE_SHA3",
+		.name = "FEAT_SVE_SHA3",
 #ifdef HWCAP2_SVESHA3
-		.hwcap_field = HWCAP2_SVESHA3,
+		.bit_mask = HWCAP2_SVESHA3,
 #endif
 	},
 
 	{
 		/* SVE SM4 Instructions */
-		.feat_flag = "FEAT_SVE_SM4",
+		.name = "FEAT_SVE_SM4",
 #ifdef HWCAP2_SVESM4
-		.hwcap_field = HWCAP2_SVESM4,
+		.bit_mask = HWCAP2_SVESM4,
 #endif
 	},
 
 	{
 		/* Condition Flag Manipulation Extensions Version 2 */
-		.feat_flag = "FEAT_FlagM2",
+		.name = "FEAT_FlagM2",
 #ifdef HWCAP2_FLAGM2
-		.hwcap_field = HWCAP2_FLAGM2,
+		.bit_mask = HWCAP2_FLAGM2,
 #endif
 	},
 
 	{
 		/* FRINT32Z, FRINT32X, FRINT64Z, and FRINT64X instructions */
-		.feat_flag = "FEAT_FRINTTS",
+		.name = "FEAT_FRINTTS",
 #ifdef HWCAP2_FRINT
-		.hwcap_field = HWCAP2_FRINT,
+		.bit_mask = HWCAP2_FRINT,
 #endif
 	},
 
 	{
 		/* SVE Int8 Matrix Multiplication Instructions */
-		.feat_flag = "SVEI8MM",
+		.name = "SVEI8MM",
 #ifdef HWCAP2_SVEI8MM
-		.hwcap_field = HWCAP2_SVEI8MM,
+		.bit_mask = HWCAP2_SVEI8MM,
 #endif
 	},
 
 	{
 		/* SVE Single-precision Floating-point Matrix Multiply Instructions */
-		.feat_flag = "FEAT_F32MM",
+		.name = "FEAT_F32MM",
 #ifdef HWCAP2_SVEF32MM
-		.hwcap_field = HWCAP2_SVEF32MM,
+		.bit_mask = HWCAP2_SVEF32MM,
 #endif
 	},
 
 	{
 		/* SVE Double-precision Floating-point Matrix Multiply Instructions */
-		.feat_flag = "FEAT_F64MM",
+		.name = "FEAT_F64MM",
 #ifdef HWCAP2_SVEF64MM
-		.hwcap_field = HWCAP2_SVEF64MM,
+		.bit_mask = HWCAP2_SVEF64MM,
 #endif
 	},
 
 	{
 		/* SVE BFloat16 Instructions */
-		.feat_flag = "SVEBF16",
+		.name = "SVEBF16",
 #ifdef HWCAP2_SVEBF16
-		.hwcap_field = HWCAP2_SVEBF16,
+		.bit_mask = HWCAP2_SVEBF16,
 #endif
 	},
 
 	{
 		/* Advanced SIMD and Floating-point Int8 Matrix Multiplication Instructions */
-		.feat_flag = "FEAT_I8MM",
+		.name = "FEAT_I8MM",
 #ifdef HWCAP2_I8MM
-		.hwcap_field = HWCAP2_I8MM,
+		.bit_mask = HWCAP2_I8MM,
 #endif
 	},
 
 	{
 		/* Advanced SIMD and Floating-point BFloat16 Instructions */
-		.feat_flag = "FEAT_BF16",
+		.name = "FEAT_BF16",
 #ifdef HWCAP2_BF16
-		.hwcap_field = HWCAP2_BF16,
+		.bit_mask = HWCAP2_BF16,
 #endif
 	},
 
 	{
 		/* Data Gathering Hint Extensions */
-		.feat_flag = "FEAT_DGH",
+		.name = "FEAT_DGH",
 #ifdef HWCAP2_DGH
-		.hwcap_field = HWCAP2_DGH,
+		.bit_mask = HWCAP2_DGH,
 #endif
 	},
 
 	{
 		/* Random Number Generation Extensions */
-		.feat_flag = "FEAT_RNG",
+		.name = "FEAT_RNG",
 #ifdef HWCAP2_RNG
-		.hwcap_field = HWCAP2_RNG,
+		.bit_mask = HWCAP2_RNG,
 #endif
 	},
 
 	{
 		/* Branch Target Identification Extensions */
-		.feat_flag = "FEAT_BTI",
+		.name = "FEAT_BTI",
 #ifdef HWCAP2_BTI
-		.hwcap_field = HWCAP2_BTI,
+		.bit_mask = HWCAP2_BTI,
 #endif
 	},
 
 	{
 		/* Full Memory Tagging Extensions */
-		.feat_flag = "FEAT_MTE2",
+		.name = "FEAT_MTE2",
 #ifdef HWCAP2_MTE
-		.hwcap_field = HWCAP2_MTE,
+		.bit_mask = HWCAP2_MTE,
 #endif
 	}
 };
@@ -836,36 +836,36 @@ static void _odp_sys_info_print_hwcap_flags(void)
 
 	/* Supported HWCAP flags */
 	for (i = 0; i < size; i++)
-		if (hwcap & hwcap_flags[i].hwcap_field)
-			_ODP_PRINT("%s ", hwcap_flags[i].feat_flag);
+		if (hwcap & hwcap_flags[i].bit_mask)
+			_ODP_PRINT("%s ", hwcap_flags[i].name);
 
 	/* Supported HWCAP2 flags */
 	for (i = 0; i < size2; i++)
-		if (hwcap2 & hwcap2_flags[i].hwcap_field)
-			_ODP_PRINT("%s ", hwcap2_flags[i].feat_flag);
+		if (hwcap2 & hwcap2_flags[i].bit_mask)
+			_ODP_PRINT("%s ", hwcap2_flags[i].name);
 
 	_ODP_PRINT("\n\nARM FEATURES NOT SUPPORTED BY HARDWARE:\n");
 
 	/* Unsupported HWCAP flags */
 	for (i = 0; i < size; i++)
-		if (hwcap_flags[i].hwcap_field && (hwcap & hwcap_flags[i].hwcap_field) == 0)
-			_ODP_PRINT("%s ", hwcap_flags[i].feat_flag);
+		if (hwcap_flags[i].bit_mask && (hwcap & hwcap_flags[i].bit_mask) == 0)
+			_ODP_PRINT("%s ", hwcap_flags[i].name);
 
 	/* Unsupported HWCAP2 flags */
 	for (i = 0; i < size2; i++)
-		if (hwcap2_flags[i].hwcap_field && (hwcap2 & hwcap2_flags[i].hwcap_field) == 0)
-			_ODP_PRINT("%s ", hwcap2_flags[i].feat_flag);
+		if (hwcap2_flags[i].bit_mask && (hwcap2 & hwcap2_flags[i].bit_mask) == 0)
+			_ODP_PRINT("%s ", hwcap2_flags[i].name);
 
 	_ODP_PRINT("\n\nARM FEATURES UNKNOWN TO LINUX VERSION:\n");
 	/* Unknown HWCAP flags */
 	for (i = 0; i < size; i++)
-		if (hwcap_flags[i].hwcap_field == 0)
-			_ODP_PRINT("%s ", hwcap_flags[i].feat_flag);
+		if (hwcap_flags[i].bit_mask == 0)
+			_ODP_PRINT("%s ", hwcap_flags[i].name);
 
 	/* Unknown HWCAP2 flags */
 	for (i = 0; i < size2; i++)
-		if (hwcap2_flags[i].hwcap_field == 0)
-			_ODP_PRINT("%s ", hwcap2_flags[i].feat_flag);
+		if (hwcap2_flags[i].bit_mask == 0)
+			_ODP_PRINT("%s ", hwcap2_flags[i].name);
 
 	_ODP_PRINT("\n\n");
 }
