@@ -437,7 +437,182 @@ static hwcap_feat_flag_t hwcap2_flags[] = {
 #ifdef HWCAP2_MTE
 		.bit_mask = HWCAP2_MTE,
 #endif
-	}
+	},
+
+	{
+		.name = "ECV",
+#ifdef HWCAP2_ECV
+		.bit_mask = HWCAP2_ECV,
+#endif
+	},
+
+	{
+		.name = "AFP",
+#ifdef HWCAP2_AFP
+		.bit_mask = HWCAP2_AFP,
+#endif
+	},
+
+	{
+		.name = "RPRES",
+#ifdef HWCAP2_RPRES
+		.bit_mask = HWCAP2_RPRES,
+#endif
+	},
+
+	{
+		.name = "MTE3",
+#ifdef HWCAP2_MTE3
+		.bit_mask = HWCAP2_MTE3,
+#endif
+	},
+
+	{
+		.name = "SME",
+#ifdef HWCAP2_SME
+		.bit_mask = HWCAP2_SME,
+#endif
+	},
+
+	{
+		.name = "SME_I16I64",
+#ifdef HWCAP2_SME_I16I64
+		.bit_mask = HWCAP2_SME_I16I64,
+#endif
+	},
+
+	{
+		.name = "SME_F64F64",
+#ifdef HWCAP2_SME_F64F64
+		.bit_mask = HWCAP2_SME_F64F64,
+#endif
+	},
+
+	{
+		.name = "SME_I8I32",
+#ifdef HWCAP2_SME_I8I32
+		.bit_mask = HWCAP2_SME_I8I32,
+#endif
+	},
+
+	{
+		.name = "SME_F16F32",
+#ifdef HWCAP2_SME_F16F32
+		.bit_mask = HWCAP2_SME_F16F32,
+#endif
+	},
+
+	{
+		.name = "SME_B16F32",
+#ifdef HWCAP2_SME_B16F32
+		.bit_mask = HWCAP2_SME_B16F32,
+#endif
+	},
+
+	{
+		.name = "SME_F32F32",
+#ifdef HWCAP2_SME_F32F32
+		.bit_mask = HWCAP2_SME_F32F32,
+#endif
+	},
+
+	{
+		.name = "SME_FA64",
+#ifdef HWCAP2_SME_FA64
+		.bit_mask = HWCAP2_SME_FA64,
+#endif
+	},
+
+	{
+		.name = "WFXT",
+#ifdef HWCAP2_WFXT
+		.bit_mask = HWCAP2_WFXT,
+#endif
+	},
+
+	{
+		.name = "EBF16",
+#ifdef HWCAP2_EBF16
+		.bit_mask = HWCAP2_EBF16,
+#endif
+	},
+
+	{
+		.name = "SVE_EBF16",
+#ifdef HWCAP2_SVE_EBF16
+		.bit_mask = HWCAP2_SVE_EBF16,
+#endif
+	},
+
+	{
+		.name = "CSSC",
+#ifdef HWCAP2_CSSC
+		.bit_mask = HWCAP2_CSSC,
+#endif
+	},
+
+	{
+		.name = "RPRFM",
+#ifdef HWCAP2_RPRFM
+		.bit_mask = HWCAP2_RPRFM,
+#endif
+	},
+
+	{
+		.name = "SVE2P1",
+#ifdef HWCAP2_SVE2P1
+		.bit_mask = HWCAP2_SVE2P1,
+#endif
+	},
+
+	{
+		.name = "SME2",
+#ifdef HWCAP2_SME2
+		.bit_mask = HWCAP2_SME2,
+#endif
+	},
+
+	{
+		.name = "SME2P1",
+#ifdef HWCAP2_SME2P1
+		.bit_mask = HWCAP2_SME2P1,
+#endif
+	},
+
+	{
+		.name = "SME_I16I32",
+#ifdef HWCAP2_SME_I16I32
+		.bit_mask = HWCAP2_SME_I16I32,
+#endif
+	},
+
+	{
+		.name = "SME_BI32I32",
+#ifdef HWCAP2_SME_BI32I32
+		.bit_mask = HWCAP2_SME_BI32I32,
+#endif
+	},
+
+	{
+		.name = "SME_B16B16",
+#ifdef HWCAP2_SME_B16B16
+		.bit_mask = HWCAP2_SME_B16B16,
+#endif
+	},
+
+	{
+		.name = "SME_F16F16",
+#ifdef HWCAP2_SME_F16F16
+		.bit_mask = HWCAP2_SME_F16F16,
+#endif
+	},
+
+	{
+		.name = "MOPS",
+#ifdef HWCAP2_MOPS
+		.bit_mask = HWCAP2_MOPS,
+#endif
+	},
 };
 
 static void _odp_sys_info_print_acle_flags(void)
