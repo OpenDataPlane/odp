@@ -1,3 +1,69 @@
+== OpenDataPlane (1.42.0.0)
+
+=== Backward incompatible API changes
+==== Crypto
+* Add `odp_crypto_session_param_t.cipher_range_in_bits` and
+`odp_crypto_session_param_t.auth_range_in_bits` session parameters that control
+whether cipher/auth range is given in bits or bytes.
+* Change `odp_crypto_cipher_capability_t.bit_mode` cipher/auth capability flag
+to indicate whether bit mode is supported in addition to byte mode that is
+always supported.
+
+=== Backward compatible API changes
+==== Barrier
+* Add memory barriers (`odp_mb_sync()`, `odp_mb_sync_load()`,
+`odp_mb_sync_store()`) which ensure that load/store instructions started before
+the barrier are complete, before load/store instructions after the barrier are
+started.
+
+==== Crypto
+* Allow non-zero-length cipher and auth ranges
+(`odp_crypto_packet_op_param_t.cipher_range/auth_range`) for the null cipher and
+auth algorithms in the OOP operation type.
+
+==== DMA
+* Add new `odp_dma_pool_capability_t.uarea_persistence` pool capability to
+signal if implementation is able to maintain the content of pool user areas
+across frees and allocations.
+* Add new `odp_dma_pool_param_t.uarea_init` pool parameters `init_fn` and
+`args` that can be used to initialize event user areas of a pool at pool
+creation time.
+* Move `odp_dma_seg_t` structure fields so that `addr/packet` field is directly
+followed by `len` and `offset` fields. After this change all commonly used
+fields are located in the first 16 bytes of the structure.
+
+==== Event
+* Add new `odp_event_types_multi()` function for reading event types and
+subtypes (optional) from all given events.
+* Add new `odp_event_user_area_and_flag()` function for reading both event
+user area pointer and user flag value.
+
+==== Init
+* Add new `ODP_LOG_WARN` log level to `odp_log_level_t`.
+
+==== Packet
+* Change `odp_packet_user_flag()` and `odp_packet_vector_user_flag()`
+documentations to specify that the return values are positive if user flag is
+set.
+
+==== Pool
+* Add new `uarea_persistence` pool capability to signal if implementation is
+able to maintain the content of pool user areas across frees and allocations.
+* Add new `uarea_init` pool parameters `init_fn` and `args` that can be used to
+initialize event user areas of a pool at pool creation time.
+
+==== Timer
+* Add new `odp_timeout_from_event_multi()` function for converting multiple
+events of type `ODP_EVENT_TIMEOUT` to timeout handles.
+* Clarify `odp_timer_alloc()` and `odp_timer_restart()` documentation.
+
+=== Implementation
+==== Time
+* Refactor time codebase to enable more optimized architecture specific
+implementations. x86 and aarch64 architectures are assumed to always have
+support for HW time and fallback to POSIX time functions has been removed for
+improved performance.
+
 == OpenDataPlane (1.41.1.0)
 
 === Backward compatible API changes
