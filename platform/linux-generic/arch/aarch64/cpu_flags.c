@@ -23,6 +23,10 @@ typedef struct {
 	bool valid;
 } hwcap_feat_flag_t;
 
+/* Linux HWCAP and HWCAP2 flags
+ *
+ * See https://docs.kernel.org/arch/arm64/elf_hwcaps.html for meaning of each flag.
+ */
 static hwcap_feat_flag_t hwcap_flags[] = {
 	{
 		/* Floating-point support for single-precision and double-precision types */
@@ -872,74 +876,48 @@ static void _odp_sys_info_print_acle_flags(void)
 
 static void _odp_sys_info_print_hwcap_flags(void)
 {
-	unsigned long hwcaps, hwcaps2;
-	unsigned int size, size2;
+	uint64_t hwcap, hwcap2;
+	uint32_t size, size2, i;
+
+	hwcap  = getauxval(AT_HWCAP);
+	hwcap2 = getauxval(AT_HWCAP2);
+	size   = _ODP_ARRAY_SIZE(hwcap_flags);
+	size2  = _ODP_ARRAY_SIZE(hwcap2_flags);
 
 	_ODP_PRINT("ARM FEATURES SUPPORTED BY HARDWARE:\n");
 
-	/* Print supported hardware flags via AT_HWCAP entry of the hwcaps
-	 * auxiliary vector. */
-	hwcaps = getauxval(AT_HWCAP);
-	size = _ODP_ARRAY_SIZE(hwcap_flags);
-	for (unsigned int i = 0; i < size; i++) {
-		if (hwcap_flags[i].valid) {
-			if (hwcaps & 0x01)
-				_ODP_PRINT("%s ", hwcap_flags[i].feat_flag);
-			hwcaps = hwcaps >> 1;
-		}
-	}
-
-	/* Print supported hardware flags via AT_HWCAP2 entry of the hwcaps
-	 * auxiliary vector. */
-	hwcaps2 = getauxval(AT_HWCAP2);
-	size2 = _ODP_ARRAY_SIZE(hwcap2_flags);
-	for (unsigned long i = 0; i < size2; i++) {
-		if (hwcap2_flags[i].valid) {
-			if (hwcaps2 & 0x01)
-				_ODP_PRINT("%s ", hwcap2_flags[i].feat_flag);
-			hwcaps2 = hwcaps2 >> 1;
-		}
-	}
-
-	_ODP_PRINT("\n");
-
-	/* Re-initialize hwcaps and hwcaps2 */
-	hwcaps = 0;
-	hwcaps2 = 0;
-
-	_ODP_PRINT("\nARM FEATURES NOT SUPPORTED BY HARDWARE:\n");
-
-	hwcaps = getauxval(AT_HWCAP);
-	for (unsigned long i = 0; i < size; i++) {
-		if (hwcap_flags[i].valid) {
-			if (!(hwcaps & 0x01))
-				_ODP_PRINT("%s ", hwcap_flags[i].feat_flag);
-			hwcaps = hwcaps >> 1;
-		}
-	}
-
-	hwcaps2 = getauxval(AT_HWCAP2);
-	for (unsigned long i = 0; i < size2; i++) {
-		if (hwcap2_flags[i].valid) {
-			if (!(hwcaps2 & 0x01))
-				_ODP_PRINT("%s ", hwcap2_flags[i].feat_flag);
-			hwcaps2 = hwcaps2 >> 1;
-		}
-	}
-
-	_ODP_PRINT("\n");
-
-	_ODP_PRINT("\nARM FEATURES NOT SUPPORTED BY KERNEL:\n");
-
-	for (unsigned long i = 0; i < size; i++) {
-		if (!hwcap_flags[i].valid)
+	/* Supported HWCAP flags */
+	for (i = 0; i < size; i++)
+		if (hwcap & hwcap_flags[i].hwcap_field)
 			_ODP_PRINT("%s ", hwcap_flags[i].feat_flag);
-	}
 
-	for (unsigned long i = 0; i < size2; i++) {
-		if (!hwcap2_flags[i].valid)
+	/* Supported HWCAP2 flags */
+	for (i = 0; i < size2; i++)
+		if (hwcap2 & hwcap2_flags[i].hwcap_field)
 			_ODP_PRINT("%s ", hwcap2_flags[i].feat_flag);
-	}
+
+	_ODP_PRINT("\n\nARM FEATURES NOT SUPPORTED BY HARDWARE:\n");
+
+	/* Unsupported HWCAP flags */
+	for (i = 0; i < size; i++)
+		if (hwcap_flags[i].hwcap_field && (hwcap & hwcap_flags[i].hwcap_field) == 0)
+			_ODP_PRINT("%s ", hwcap_flags[i].feat_flag);
+
+	/* Unsupported HWCAP2 flags */
+	for (i = 0; i < size2; i++)
+		if (hwcap2_flags[i].hwcap_field && (hwcap2 & hwcap2_flags[i].hwcap_field) == 0)
+			_ODP_PRINT("%s ", hwcap2_flags[i].feat_flag);
+
+	_ODP_PRINT("\n\nARM FEATURES UNKNOWN TO LINUX VERSION:\n");
+	/* Unknown HWCAP flags */
+	for (i = 0; i < size; i++)
+		if (hwcap_flags[i].hwcap_field == 0)
+			_ODP_PRINT("%s ", hwcap_flags[i].feat_flag);
+
+	/* Unknown HWCAP2 flags */
+	for (i = 0; i < size2; i++)
+		if (hwcap2_flags[i].hwcap_field == 0)
+			_ODP_PRINT("%s ", hwcap2_flags[i].feat_flag);
 
 	_ODP_PRINT("\n\n");
 }
