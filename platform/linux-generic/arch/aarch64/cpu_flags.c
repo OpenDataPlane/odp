@@ -20,7 +20,6 @@
 typedef struct {
 	const char *feat_flag;
 	const unsigned int hwcap_field;
-	bool valid;
 } hwcap_feat_flag_t;
 
 /* Linux HWCAP and HWCAP2 flags
@@ -33,7 +32,6 @@ static hwcap_feat_flag_t hwcap_flags[] = {
 		.feat_flag = "FEAT_FP",
 #ifdef HWCAP_FP
 		.hwcap_field = HWCAP_FP,
-		.valid = 1,
 #endif
 	},
 
@@ -44,7 +42,6 @@ static hwcap_feat_flag_t hwcap_flags[] = {
 		.feat_flag = "ASIMD",
 #ifdef HWCAP_ASIMD
 		.hwcap_field = HWCAP_ASIMD,
-		.valid = 1,
 #endif
 	},
 
@@ -53,7 +50,6 @@ static hwcap_feat_flag_t hwcap_flags[] = {
 		.feat_flag = "EVTSTRM",
 #ifdef HWCAP_EVTSTRM
 		.hwcap_field = HWCAP_EVTSTRM,
-		.valid = 1,
 #endif
 	},
 
@@ -62,7 +58,6 @@ static hwcap_feat_flag_t hwcap_flags[] = {
 		.feat_flag = "FEAT_AES",
 #ifdef HWCAP_AES
 		.hwcap_field = HWCAP_AES,
-		.valid = 1,
 #endif
 	},
 
@@ -71,7 +66,6 @@ static hwcap_feat_flag_t hwcap_flags[] = {
 		.feat_flag = "FEAT_PMULL",
 #ifdef HWCAP_PMULL
 		.hwcap_field = HWCAP_PMULL,
-		.valid = 1,
 #endif
 	},
 
@@ -80,7 +74,6 @@ static hwcap_feat_flag_t hwcap_flags[] = {
 		.feat_flag = "FEAT_SHA1",
 #ifdef HWCAP_SHA1
 		.hwcap_field = HWCAP_SHA1,
-		.valid = 1,
 #endif
 	},
 
@@ -89,7 +82,6 @@ static hwcap_feat_flag_t hwcap_flags[] = {
 		.feat_flag = "FEAT_SHA256",
 #ifdef HWCAP_SHA2
 		.hwcap_field = HWCAP_SHA2,
-		.valid = 1,
 #endif
 	},
 
@@ -98,7 +90,6 @@ static hwcap_feat_flag_t hwcap_flags[] = {
 		.feat_flag = "FEAT_CRC32",
 #ifdef HWCAP_CRC32
 		.hwcap_field = HWCAP_CRC32,
-		.valid = 1,
 #endif
 	},
 
@@ -107,7 +98,6 @@ static hwcap_feat_flag_t hwcap_flags[] = {
 		.feat_flag = "FEAT_LSE",
 #ifdef HWCAP_ATOMICS
 		.hwcap_field = HWCAP_ATOMICS,
-		.valid = 1,
 #endif
 	},
 
@@ -116,7 +106,6 @@ static hwcap_feat_flag_t hwcap_flags[] = {
 		.feat_flag = "FEAT_FP16",
 #ifdef HWCAP_FPHP
 		.hwcap_field = HWCAP_FPHP,
-		.valid = 1,
 #endif
 	},
 
@@ -125,7 +114,6 @@ static hwcap_feat_flag_t hwcap_flags[] = {
 		.feat_flag = "ASIMDHP",
 #ifdef HWCAP_ASIMDHP
 		.hwcap_field = HWCAP_ASIMDHP,
-		.valid = 1,
 #endif
 	},
 
@@ -134,7 +122,6 @@ static hwcap_feat_flag_t hwcap_flags[] = {
 		.feat_flag = "CPUID",
 #ifdef HWCAP_CPUID
 		.hwcap_field = HWCAP_CPUID,
-		.valid = 1,
 #endif
 	},
 
@@ -143,7 +130,6 @@ static hwcap_feat_flag_t hwcap_flags[] = {
 		.feat_flag = "FEAT_RDM",
 #ifdef HWCAP_ASIMDRDM
 		.hwcap_field = HWCAP_ASIMDRDM,
-		.valid = 1,
 #endif
 	},
 
@@ -152,7 +138,6 @@ static hwcap_feat_flag_t hwcap_flags[] = {
 		.feat_flag = "FEAT_JSCVT",
 #ifdef HWCAP_JSCVT
 		.hwcap_field = HWCAP_JSCVT,
-		.valid = 1,
 #endif
 	},
 
@@ -161,7 +146,6 @@ static hwcap_feat_flag_t hwcap_flags[] = {
 		.feat_flag = "FEAT_FCMA",
 #ifdef HWCAP_FCMA
 		.hwcap_field = HWCAP_FCMA,
-		.valid = 1,
 #endif
 	},
 
@@ -170,7 +154,6 @@ static hwcap_feat_flag_t hwcap_flags[] = {
 		.feat_flag = "FEAT_LRCPC",
 #ifdef HWCAP_LRCPC
 		.hwcap_field = HWCAP_LRCPC,
-		.valid = 1,
 #endif
 	},
 
@@ -179,7 +162,6 @@ static hwcap_feat_flag_t hwcap_flags[] = {
 		.feat_flag = "FEAT_DPB",
 #ifdef HWCAP_DCPOP
 		.hwcap_field = HWCAP_DCPOP,
-		.valid = 1,
 #endif
 	},
 
@@ -188,7 +170,6 @@ static hwcap_feat_flag_t hwcap_flags[] = {
 		.feat_flag = "FEAT_SHA3",
 #ifdef HWCAP_SHA3
 		.hwcap_field = HWCAP_SHA3,
-		.valid = 1,
 #endif
 	},
 
@@ -197,7 +178,6 @@ static hwcap_feat_flag_t hwcap_flags[] = {
 		.feat_flag = "FEAT_SM3",
 #ifdef HWCAP_SM3
 		.hwcap_field = HWCAP_SM3,
-		.valid = 1,
 #endif
 	},
 
@@ -206,7 +186,6 @@ static hwcap_feat_flag_t hwcap_flags[] = {
 		.feat_flag = "FEAT_SM4",
 #ifdef HWCAP_SM4
 		.hwcap_field = HWCAP_SM4,
-		.valid = 1,
 #endif
 	},
 
@@ -215,7 +194,6 @@ static hwcap_feat_flag_t hwcap_flags[] = {
 		.feat_flag = "FEAT_DotProd",
 #ifdef HWCAP_ASIMDDP
 		.hwcap_field = HWCAP_ASIMDDP,
-		.valid = 1,
 #endif
 	},
 
@@ -224,7 +202,6 @@ static hwcap_feat_flag_t hwcap_flags[] = {
 		.feat_flag = "FEAT_SHA512",
 #ifdef HWCAP_SHA512
 		.hwcap_field = HWCAP_SHA512,
-		.valid = 1,
 #endif
 	},
 
@@ -233,7 +210,6 @@ static hwcap_feat_flag_t hwcap_flags[] = {
 		.feat_flag = "FEAT_SVE",
 #ifdef HWCAP_SVE
 		.hwcap_field = HWCAP_SVE,
-		.valid = 1,
 #endif
 	},
 
@@ -242,7 +218,6 @@ static hwcap_feat_flag_t hwcap_flags[] = {
 		.feat_flag = "FEAT_FHM",
 #ifdef HWCAP_ASIMDFHM
 		.hwcap_field = HWCAP_ASIMDFHM,
-		.valid = 1,
 #endif
 	},
 
@@ -251,7 +226,6 @@ static hwcap_feat_flag_t hwcap_flags[] = {
 		.feat_flag = "FEAT_DIT",
 #ifdef HWCAP_DIT
 		.hwcap_field = HWCAP_DIT,
-		.valid = 1,
 #endif
 	},
 
@@ -260,7 +234,6 @@ static hwcap_feat_flag_t hwcap_flags[] = {
 		.feat_flag = "FEAT_LSE2",
 #ifdef HWCAP_USCAT
 		.hwcap_field = HWCAP_USCAT,
-		.valid = 1,
 #endif
 	},
 
@@ -269,7 +242,6 @@ static hwcap_feat_flag_t hwcap_flags[] = {
 		.feat_flag = "FEAT_LRCPC2",
 #ifdef HWCAP_ILRCPC
 		.hwcap_field = HWCAP_ILRCPC,
-		.valid = 1,
 #endif
 	},
 
@@ -278,7 +250,6 @@ static hwcap_feat_flag_t hwcap_flags[] = {
 		.feat_flag = "FEAT_FlagM",
 #ifdef HWCAP_FLAGM
 		.hwcap_field = HWCAP_FLAGM,
-		.valid = 1,
 #endif
 	},
 
@@ -287,7 +258,6 @@ static hwcap_feat_flag_t hwcap_flags[] = {
 		.feat_flag = "FEAT_SSBS2",
 #ifdef HWCAP_SSBS
 		.hwcap_field = HWCAP_SSBS,
-		.valid = 1,
 #endif
 	},
 
@@ -296,7 +266,6 @@ static hwcap_feat_flag_t hwcap_flags[] = {
 		.feat_flag = "FEAT_SB",
 #ifdef HWCAP_SB
 		.hwcap_field = HWCAP_SB,
-		.valid = 1,
 #endif
 	},
 
@@ -305,7 +274,6 @@ static hwcap_feat_flag_t hwcap_flags[] = {
 		.feat_flag = "FEAT_PAuth",
 #ifdef HWCAP_PACA
 		.hwcap_field = HWCAP_PACA,
-		.valid = 1,
 #endif
 	},
 
@@ -314,7 +282,6 @@ static hwcap_feat_flag_t hwcap_flags[] = {
 		.feat_flag = "PACG",
 #ifdef HWCAP_PACG
 		.hwcap_field = HWCAP_PACG,
-		.valid = 1,
 #endif
 	}
 };
@@ -325,7 +292,6 @@ static hwcap_feat_flag_t hwcap2_flags[] = {
 		.feat_flag = "FEAT_DPB2",
 #ifdef HWCAP2_DCPODP
 		.hwcap_field = HWCAP2_DCPODP,
-		.valid = 1,
 #endif
 	},
 
@@ -334,7 +300,6 @@ static hwcap_feat_flag_t hwcap2_flags[] = {
 		.feat_flag = "FEAT_SVE2",
 #ifdef HWCAP2_SVE2
 		.hwcap_field = HWCAP2_SVE2,
-		.valid = 1,
 #endif
 	},
 
@@ -343,7 +308,6 @@ static hwcap_feat_flag_t hwcap2_flags[] = {
 		.feat_flag = "FEAT_SVE_AES",
 #ifdef HWCAP2_SVEAES
 		.hwcap_field = HWCAP2_SVEAES,
-		.valid = 1,
 #endif
 	},
 
@@ -352,7 +316,6 @@ static hwcap_feat_flag_t hwcap2_flags[] = {
 		.feat_flag = "FEAT_SVE_PMULL128",
 #ifdef HWCAP2_SVEPMULL
 		.hwcap_field = HWCAP2_SVEPMULL,
-		.valid = 1,
 #endif
 	},
 
@@ -361,7 +324,6 @@ static hwcap_feat_flag_t hwcap2_flags[] = {
 		.feat_flag = "FEAT_SVE_BitPerm",
 #ifdef HWCAP2_SVEBITPERM
 		.hwcap_field = HWCAP2_SVEBITPERM,
-		.valid = 1,
 #endif
 	},
 
@@ -370,7 +332,6 @@ static hwcap_feat_flag_t hwcap2_flags[] = {
 		.feat_flag = "FEAT_SVE_SHA3",
 #ifdef HWCAP2_SVESHA3
 		.hwcap_field = HWCAP2_SVESHA3,
-		.valid = 1,
 #endif
 	},
 
@@ -379,7 +340,6 @@ static hwcap_feat_flag_t hwcap2_flags[] = {
 		.feat_flag = "FEAT_SVE_SM4",
 #ifdef HWCAP2_SVESM4
 		.hwcap_field = HWCAP2_SVESM4,
-		.valid = 1,
 #endif
 	},
 
@@ -388,7 +348,6 @@ static hwcap_feat_flag_t hwcap2_flags[] = {
 		.feat_flag = "FEAT_FlagM2",
 #ifdef HWCAP2_FLAGM2
 		.hwcap_field = HWCAP2_FLAGM2,
-		.valid = 1,
 #endif
 	},
 
@@ -397,7 +356,6 @@ static hwcap_feat_flag_t hwcap2_flags[] = {
 		.feat_flag = "FEAT_FRINTTS",
 #ifdef HWCAP2_FRINT
 		.hwcap_field = HWCAP2_FRINT,
-		.valid = 1,
 #endif
 	},
 
@@ -406,7 +364,6 @@ static hwcap_feat_flag_t hwcap2_flags[] = {
 		.feat_flag = "SVEI8MM",
 #ifdef HWCAP2_SVEI8MM
 		.hwcap_field = HWCAP2_SVEI8MM,
-		.valid = 1,
 #endif
 	},
 
@@ -415,7 +372,6 @@ static hwcap_feat_flag_t hwcap2_flags[] = {
 		.feat_flag = "FEAT_F32MM",
 #ifdef HWCAP2_SVEF32MM
 		.hwcap_field = HWCAP2_SVEF32MM,
-		.valid = 1,
 #endif
 	},
 
@@ -424,7 +380,6 @@ static hwcap_feat_flag_t hwcap2_flags[] = {
 		.feat_flag = "FEAT_F64MM",
 #ifdef HWCAP2_SVEF64MM
 		.hwcap_field = HWCAP2_SVEF64MM,
-		.valid = 1,
 #endif
 	},
 
@@ -433,7 +388,6 @@ static hwcap_feat_flag_t hwcap2_flags[] = {
 		.feat_flag = "SVEBF16",
 #ifdef HWCAP2_SVEBF16
 		.hwcap_field = HWCAP2_SVEBF16,
-		.valid = 1,
 #endif
 	},
 
@@ -442,7 +396,6 @@ static hwcap_feat_flag_t hwcap2_flags[] = {
 		.feat_flag = "FEAT_I8MM",
 #ifdef HWCAP2_I8MM
 		.hwcap_field = HWCAP2_I8MM,
-		.valid = 1,
 #endif
 	},
 
@@ -451,7 +404,6 @@ static hwcap_feat_flag_t hwcap2_flags[] = {
 		.feat_flag = "FEAT_BF16",
 #ifdef HWCAP2_BF16
 		.hwcap_field = HWCAP2_BF16,
-		.valid = 1,
 #endif
 	},
 
@@ -460,7 +412,6 @@ static hwcap_feat_flag_t hwcap2_flags[] = {
 		.feat_flag = "FEAT_DGH",
 #ifdef HWCAP2_DGH
 		.hwcap_field = HWCAP2_DGH,
-		.valid = 1,
 #endif
 	},
 
@@ -469,7 +420,6 @@ static hwcap_feat_flag_t hwcap2_flags[] = {
 		.feat_flag = "FEAT_RNG",
 #ifdef HWCAP2_RNG
 		.hwcap_field = HWCAP2_RNG,
-		.valid = 1,
 #endif
 	},
 
@@ -478,7 +428,6 @@ static hwcap_feat_flag_t hwcap2_flags[] = {
 		.feat_flag = "FEAT_BTI",
 #ifdef HWCAP2_BTI
 		.hwcap_field = HWCAP2_BTI,
-		.valid = 1,
 #endif
 	},
 
@@ -487,7 +436,6 @@ static hwcap_feat_flag_t hwcap2_flags[] = {
 		.feat_flag = "FEAT_MTE2",
 #ifdef HWCAP2_MTE
 		.hwcap_field = HWCAP2_MTE,
-		.valid = 1,
 #endif
 	}
 };
