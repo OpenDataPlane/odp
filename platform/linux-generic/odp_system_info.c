@@ -55,7 +55,7 @@ static int read_cache_line_size(void)
 	file = fopen(CACHE_LNSZ_FILE, "rt");
 	if (file == NULL) {
 		/* File not found */
-		_ODP_PRINT("WARN: unable to read host CPU cache line size. "
+		_ODP_WARN("Unable to read host CPU cache line size. "
 			  "Using ODP_CACHE_LINE_SIZE instead.\n");
 		return ODP_CACHE_LINE_SIZE;
 	}
@@ -299,7 +299,7 @@ static int system_cache_line(system_info_t *sysinfo)
 	sysinfo->cache_line_size = ret;
 
 	if (ret != ODP_CACHE_LINE_SIZE)
-		_ODP_PRINT("WARN: host CPU cache line size and ODP_CACHE_LINE_SIZE don't match.\n");
+		_ODP_WARN("Host CPU cache line size and ODP_CACHE_LINE_SIZE don't match.\n");
 
 	return 0;
 }

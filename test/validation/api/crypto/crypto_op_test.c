@@ -178,19 +178,13 @@ static void prepare_crypto_ranges(const crypto_op_test_param_t *param,
 				  odp_packet_data_range_t *cipher_range,
 				  odp_packet_data_range_t *auth_range)
 {
-	odp_packet_data_range_t zero_range = {.offset = 0, .length = 0};
-	uint32_t c_scale = param->is_bit_mode_cipher ? 8 : 1;
-	uint32_t a_scale = param->is_bit_mode_auth ? 8 : 1;
+	uint32_t c_scale = param->session.cipher_range_in_bits ? 8 : 1;
+	uint32_t a_scale = param->session.auth_range_in_bits ? 8 : 1;
 
 	*cipher_range = param->cipher_range;
 	*auth_range = param->auth_range;
 	cipher_range->offset += c_scale * param->header_len;
 	auth_range->offset += a_scale * param->header_len;
-
-	if (param->ref->cipher == ODP_CIPHER_ALG_NULL)
-		*cipher_range = zero_range;
-	if (param->ref->auth == ODP_AUTH_ALG_NULL)
-		*auth_range = zero_range;
 }
 
 static int prepare_input_packet(const crypto_op_test_param_t *param,
@@ -217,7 +211,7 @@ static int prepare_input_packet(const crypto_op_test_param_t *param,
 
 	write_header_and_trailer(pkt, param->header_len, param->trailer_len);
 
-	if (param->op == ODP_CRYPTO_OP_ENCODE) {
+	if (param->session.op == ODP_CRYPTO_OP_ENCODE) {
 		odp_packet_copy_from_mem(pkt, param->header_len,
 					 reflength, ref->plaintext);
 	} else {
@@ -322,7 +316,7 @@ static void prepare_ignore_info(const crypto_op_test_param_t *param,
 	 * Leftover bits in the last byte of the cipher range of bit mode
 	 * ciphers have undefined values.
 	 */
-	if (param->is_bit_mode_cipher &&
+	if (param->session.cipher_range_in_bits &&
 	    param->ref->cipher != ODP_CIPHER_ALG_NULL) {
 		uint8_t leftover_bits = ref_length_in_bits(param->ref) % 8;
 
@@ -338,10 +332,10 @@ static void prepare_ignore_info(const crypto_op_test_param_t *param,
 	 * undefined values.
 	 */
 	if (param->ref->auth != ODP_AUTH_ALG_NULL &&
-	    param->op == ODP_CRYPTO_OP_DECODE) {
+	    param->session.op == ODP_CRYPTO_OP_DECODE) {
 		uint32_t offs = param->digest_offset;
 
-		if (param->op_type != ODP_CRYPTO_OP_TYPE_OOP ||
+		if (param->session.op_type != ODP_CRYPTO_OP_TYPE_OOP ||
 		    is_in_range(offs, cipher_offset, cipher_len) ||
 		    is_in_range(offs, auth_offset, auth_len)) {
 			add_ignored_range(ignore,
@@ -351,11 +345,11 @@ static void prepare_ignore_info(const crypto_op_test_param_t *param,
 	}
 
 	/* Decrypted bytes are undefined if authentication fails. */
-	if (param->op == ODP_CRYPTO_OP_DECODE &&
+	if (param->session.op == ODP_CRYPTO_OP_DECODE &&
 	    param->wrong_digest) {
 		add_ignored_range(ignore, cipher_offset + shift, cipher_len);
 		/* In OOP case, auth range may not get copied */
-		if (param->op_type == ODP_CRYPTO_OP_TYPE_OOP)
+		if (param->session.op_type == ODP_CRYPTO_OP_TYPE_OOP)
 			add_ignored_range(ignore, auth_offset + shift, auth_len);
 	}
 }
@@ -372,30 +366,29 @@ static void prepare_expected_data(const crypto_op_test_param_t *param,
 	uint32_t cipher_len = cipher_range->length;
 	uint32_t auth_offset = auth_range->offset;
 	uint32_t auth_len = auth_range->length;
-	const int32_t shift = param->op_type == ODP_CRYPTO_OP_TYPE_OOP ? param->oop_shift : 0;
-	const odp_packet_t base_pkt = param->op_type == ODP_CRYPTO_OP_TYPE_OOP ? pkt_out : pkt_in;
+	const int32_t shift = param->session.op_type == ODP_CRYPTO_OP_TYPE_OOP ? param->oop_shift
+									       : 0;
+	const odp_packet_t base_pkt = param->session.op_type == ODP_CRYPTO_OP_TYPE_OOP ? pkt_out
+										       : pkt_in;
 	int rc;
 	uint32_t cipher_offset_in_ref = param->cipher_range.offset;
 
-	if (param->op == ODP_CRYPTO_OP_ENCODE)
+	if (param->session.op == ODP_CRYPTO_OP_ENCODE)
 		digest_offset += shift;
 
-	if (param->is_bit_mode_cipher) {
+	if (param->session.cipher_range_in_bits) {
 		cipher_offset_in_ref /= 8;
 		cipher_offset /= 8;
 		cipher_len = (cipher_len + 7) / 8;
 	}
-	if (param->is_bit_mode_auth) {
+	if (param->session.auth_range_in_bits) {
 		auth_offset /= 8;
 		auth_len = (auth_len + 7) / 8;
 	}
-	if (param->ref->cipher == ODP_CIPHER_ALG_NULL)
-		cipher_len = 0;
-	if (param->ref->auth == ODP_AUTH_ALG_NULL ||
-	    param->ref->auth == ODP_AUTH_ALG_AES_GCM ||
+	if (param->ref->auth == ODP_AUTH_ALG_AES_GCM ||
 	    param->ref->auth == ODP_AUTH_ALG_AES_CCM ||
 	    param->ref->auth == ODP_AUTH_ALG_CHACHA20_POLY1305) {
-		/* auth range is ignored with null and AEAD algorithms */
+		/* auth range is ignored with AEAD algorithms */
 		auth_len = 0;
 	}
 
@@ -405,14 +398,14 @@ static void prepare_expected_data(const crypto_op_test_param_t *param,
 	rc = odp_packet_copy_to_mem(base_pkt, 0, ex->len, ex->data);
 	CU_ASSERT(rc == 0);
 
-	if (param->op_type == ODP_CRYPTO_OP_TYPE_OOP && auth_len > 0) {
+	if (param->session.op_type == ODP_CRYPTO_OP_TYPE_OOP && auth_len > 0) {
 		/* copy auth range from input packet */
 		rc = odp_packet_copy_to_mem(pkt_in, auth_offset, auth_len,
 					    ex->data + auth_offset + shift);
 		CU_ASSERT(rc == 0);
 	}
 
-	if (param->op == ODP_CRYPTO_OP_ENCODE) {
+	if (param->session.op == ODP_CRYPTO_OP_ENCODE) {
 		/* copy hash first */
 		memcpy(ex->data + digest_offset,
 		       param->ref->digest,
@@ -472,6 +465,23 @@ static void check_output_packet_data(odp_packet_t pkt, expected_t *ex)
 	}
 }
 
+static int is_digest_in_cipher_range(const crypto_op_test_param_t *param,
+				     const odp_crypto_packet_op_param_t *op_params)
+{
+	/*
+	 * Do not use op_params.hash_result_offset here as it refers to
+	 * the output packet which (in the OOP case) might be shifted
+	 * relative to the input packet.
+	 */
+	uint32_t d_offset = param->digest_offset;
+
+	if (param->session.cipher_range_in_bits)
+		d_offset *= 8;
+
+	return d_offset >= op_params->cipher_range.offset &&
+		d_offset < op_params->cipher_range.offset + op_params->cipher_range.length;
+}
+
 void test_crypto_op(const crypto_op_test_param_t *param)
 {
 	odp_bool_t ok = false;
@@ -481,13 +491,14 @@ void test_crypto_op(const crypto_op_test_param_t *param)
 	test_packet_md_t md_in, md_out, md_out_orig;
 	expected_t expected;
 	odp_crypto_packet_op_param_t op_params = {
-		.session = param->session,
+		.session = param->session.session,
 		.cipher_iv_ptr = param->ref->cipher_iv,
 		.auth_iv_ptr = param->ref->auth_iv,
 		.hash_result_offset = param->digest_offset,
 		.aad_ptr = param->ref->aad,
 		.dst_offset_shift = param->oop_shift,
 	};
+	odp_bool_t failure_allowed = false;
 
 	/*
 	 * Test detection of wrong digest value in input packet
@@ -495,26 +506,34 @@ void test_crypto_op(const crypto_op_test_param_t *param)
 	 */
 	if (param->wrong_digest &&
 	    (param->ref->auth == ODP_AUTH_ALG_NULL ||
-	     param->op == ODP_CRYPTO_OP_ENCODE))
+	     param->session.op == ODP_CRYPTO_OP_ENCODE))
 		return;
 
 	prepare_crypto_ranges(param, &op_params.cipher_range, &op_params.auth_range);
 	if (prepare_input_packet(param, &pkt))
 		return;
 
-	if (param->op_type == ODP_CRYPTO_OP_TYPE_OOP) {
+	if (param->session.op_type == ODP_CRYPTO_OP_TYPE_OOP) {
 		prepare_oop_output_packet(param, &pkt_out, odp_packet_len(pkt));
 
 		pkt_copy = odp_packet_copy(pkt, suite_context.pool);
 		CU_ASSERT_FATAL(pkt_copy != ODP_PACKET_INVALID);
 		test_packet_get_md(pkt_out, &md_out_orig);
+
+		/* Non-zero-length ranges do not have to be supported. */
+		if ((param->ref->cipher == ODP_CIPHER_ALG_NULL &&
+		     op_params.cipher_range.length != 0))
+			failure_allowed = true;
+		if ((param->ref->auth == ODP_AUTH_ALG_NULL &&
+		     op_params.auth_range.length != 0))
+			failure_allowed = true;
 	}
 
 	prepare_expected_data(param, &op_params.cipher_range, &op_params.auth_range,
 			      pkt, pkt_out, &expected);
 
-	if (param->op_type == ODP_CRYPTO_OP_TYPE_OOP &&
-	    param->op == ODP_CRYPTO_OP_ENCODE) {
+	if (param->session.op_type == ODP_CRYPTO_OP_TYPE_OOP &&
+	    param->session.op == ODP_CRYPTO_OP_ENCODE) {
 		/*
 		 * In this type of sessions digest offset is an offset to the output
 		 * packet, so apply the shift.
@@ -525,12 +544,12 @@ void test_crypto_op(const crypto_op_test_param_t *param)
 	test_packet_set_md(pkt);
 	test_packet_get_md(pkt, &md_in);
 
-	if (crypto_op(pkt, &pkt_out, &ok, &op_params, param->op_type))
+	if (crypto_op(pkt, &pkt_out, &ok, &op_params, param->session.op_type))
 		return;
 
 	test_packet_get_md(pkt_out, &md_out);
 
-	if (param->op_type == ODP_CRYPTO_OP_TYPE_OOP) {
+	if (param->session.op_type == ODP_CRYPTO_OP_TYPE_OOP) {
 		test_packet_md_t md;
 
 		/* check that input packet has not changed */
@@ -548,16 +567,17 @@ void test_crypto_op(const crypto_op_test_param_t *param)
 
 	if (param->ref->cipher != ODP_CIPHER_ALG_NULL &&
 	    param->ref->auth != ODP_AUTH_ALG_NULL &&
-	    param->digest_offset >= op_params.cipher_range.offset &&
-	    param->digest_offset < op_params.cipher_range.offset + op_params.cipher_range.length) {
+	    is_digest_in_cipher_range(param, &op_params)) {
 		/*
 		 * Not all implementations support digest offset in cipher
 		 * range, so allow crypto op failure without further checks
 		 * in this case.
 		 */
-		if (!ok)
-			goto out;
+		failure_allowed = true;
 	}
+
+	if (!ok && failure_allowed)
+		goto out;
 
 	if (param->wrong_digest) {
 		CU_ASSERT(!ok);

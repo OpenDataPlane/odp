@@ -14,6 +14,7 @@
 #include <odp/api/timer_types.h>
 
 #include <odp/api/plat/buffer_inline_types.h>
+#include <odp/api/plat/debug_inlines.h>
 #include <odp/api/plat/event_inline_types.h>
 #include <odp/api/plat/event_vector_inline_types.h>
 #include <odp/api/plat/packet_inline_types.h>
@@ -27,8 +28,10 @@
 	#define odp_event_type __odp_event_type
 	#define odp_event_type_multi __odp_event_type_multi
 	#define odp_event_user_area __odp_event_user_area
+	#define odp_event_user_area_and_flag __odp_event_user_area_and_flag
 	#define odp_event_subtype __odp_event_subtype
 	#define odp_event_types __odp_event_types
+	#define odp_event_types_multi __odp_event_types_multi
 	#define odp_event_flow_id __odp_event_flow_id
 	#define odp_event_flow_id_set __odp_event_flow_id_set
 #else
@@ -84,6 +87,46 @@ _ODP_INLINE void *odp_event_user_area(odp_event_t event)
 	}
 }
 
+_ODP_INLINE void *odp_event_user_area_and_flag(odp_event_t event, int *flag)
+{
+	const odp_event_type_t type = __odp_event_type_get(event);
+
+	_ODP_ASSERT(flag != NULL);
+
+	switch (type) {
+	case ODP_EVENT_BUFFER:
+	case ODP_EVENT_DMA_COMPL:
+		*flag = -1;
+		return _odp_buffer_get((odp_buffer_t)event, void *, uarea_addr);
+	case ODP_EVENT_PACKET:
+	{
+		_odp_packet_flags_t pkt_flags;
+		odp_packet_t pkt = (odp_packet_t)event;
+
+		pkt_flags.all_flags = _odp_pkt_get(pkt, uint32_t, flags);
+		*flag = pkt_flags.user_flag;
+
+		return _odp_pkt_get(pkt, void *, user_area);
+	}
+	case ODP_EVENT_PACKET_VECTOR:
+	{
+		_odp_event_vector_flags_t pktv_flags;
+		odp_packet_vector_t pktv = (odp_packet_vector_t)event;
+
+		pktv_flags.all_flags = _odp_event_vect_get(pktv, uint32_t, flags);
+		*flag = pktv_flags.user_flag;
+
+		return _odp_event_vect_get(pktv, void *, uarea_addr);
+	}
+	case ODP_EVENT_TIMEOUT:
+		*flag = -1;
+		return _odp_timeout_hdr_field((odp_timeout_t)event, void *, uarea_addr);
+	default:
+		*flag = -1;
+		return NULL;
+	}
+}
+
 _ODP_INLINE odp_event_subtype_t odp_event_subtype(odp_event_t event)
 {
 	if (__odp_event_type_get(event) != ODP_EVENT_PACKET)
@@ -102,6 +145,22 @@ _ODP_INLINE odp_event_type_t odp_event_types(odp_event_t event,
 			ODP_EVENT_NO_SUBTYPE;
 
 	return event_type;
+}
+
+_ODP_INLINE void odp_event_types_multi(const odp_event_t event[], odp_event_type_t type[],
+				       odp_event_subtype_t subtype[], int num)
+{
+	for (int i = 0; i < num; i++)
+		type[i] = __odp_event_type_get(event[i]);
+
+	if (subtype == NULL)
+		return;
+
+	for (int i = 0; i < num; i++) {
+		subtype[i] = (type[i] == ODP_EVENT_PACKET) ?
+				(odp_event_subtype_t)_odp_pkt_get((odp_packet_t)event[i], int8_t,
+								  subtype) : ODP_EVENT_NO_SUBTYPE;
+	}
 }
 
 _ODP_INLINE uint32_t odp_event_flow_id(odp_event_t event)

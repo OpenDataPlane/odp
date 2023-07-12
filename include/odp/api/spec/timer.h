@@ -1,5 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
- * Copyright (c) 2019-2022, Nokia
+ * Copyright (c) 2019-2023, Nokia
  *
  * All rights reserved.
  *
@@ -227,13 +227,20 @@ int odp_timer_pool_info(odp_timer_pool_t timer_pool,
 /**
  * Allocate a timer
  *
- * Create a timer (allocating all necessary resources e.g. timeout event) from
- * the timer pool. The user_ptr is copied to timeouts and can be retrieved
- * using the odp_timeout_user_ptr() call.
+ * Allocates a timer from the timer pool. Depending on timer type, the allocated timer is started
+ * with either odp_timer_start() or odp_timer_periodic_start() call. A timer may be reused multiple
+ * times before freeing it back into the timer pool.
+ *
+ * When timer expires, the timeout event defined in timer start parameters (see
+ * odp_timer_start_t::tmo_ev or odp_timer_periodic_start_t::tmo_ev) is sent into the provided
+ * destination queue.
+ *
+ * The provided user pointer value is copied into timeout events when the event type is
+ * ODP_EVENT_TIMEOUT. The value can be retrieved from an event with odp_timeout_user_ptr() call.
  *
  * @param timer_pool  Timer pool
- * @param queue       Destination queue for timeout notifications
- * @param user_ptr    User defined pointer or NULL to be copied to timeouts
+ * @param queue       Destination queue for timeout events
+ * @param user_ptr    User defined pointer value or NULL
  *
  * @return Timer handle on success
  * @retval ODP_TIMER_INVALID on failure
@@ -286,9 +293,12 @@ int odp_timer_start(odp_timer_t timer, const odp_timer_start_t *start_param);
  * Restart a timer
  *
  * A successful restart call updates the expiration time of an active timer. The timeout event
- * is not changed. The timer is not modified when a failure is returned. The call returns
- * ODP_TIMER_FAIL if the timer has expired already, or is so close to expire that it cannot be
- * restarted anymore.
+ * is not changed.
+ *
+ * The timer is not modified when a failure is returned. The call returns #ODP_TIMER_FAIL if
+ * the timer has expired already, or is so close to expire that it cannot be restarted anymore.
+ * A failure is returned also when the new expiration time is too near to the current time
+ * (#ODP_TIMER_TOO_NEAR) or too far from the current time (#ODP_TIMER_TOO_FAR).
  *
  * The new expiration time is passed the same way as with odp_timer_start() call.
  *
@@ -476,6 +486,17 @@ int odp_timer_cancel(odp_timer_t timer, odp_event_t *tmo_ev);
  * @return timeout handle
  */
 odp_timeout_t odp_timeout_from_event(odp_event_t ev);
+
+/**
+ * Convert multiple timeout events to timeout handles
+ *
+ * All events must be of type ODP_EVENT_TIMEOUT.
+ *
+ * @param[out] tmo  Timeout handle array for output
+ * @param      ev   Array of event handles to convert
+ * @param      num  Number of timeouts and events
+ */
+void odp_timeout_from_event_multi(odp_timeout_t tmo[], const odp_event_t ev[], int num);
 
 /**
  * Convert timeout handle to event handle

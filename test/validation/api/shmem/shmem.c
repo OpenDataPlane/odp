@@ -99,7 +99,7 @@ static int run_test_basic_thread(void *arg ODP_UNUSED)
 	odp_shm_print_all();
 	CU_ASSERT(TEST_SHARE_FOO == shared_test_data->foo);
 	CU_ASSERT(TEST_SHARE_BAR == shared_test_data->bar);
-	CU_ASSERT(0 == odp_shm_info(shm, &info));
+	CU_ASSERT_FATAL(0 == odp_shm_info(shm, &info));
 	CU_ASSERT(0 == strcmp(MEM_NAME, info.name));
 	CU_ASSERT(0 == info.flags);
 	CU_ASSERT(shared_test_data == info.addr);

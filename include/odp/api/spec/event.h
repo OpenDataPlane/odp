@@ -64,6 +64,22 @@ odp_event_type_t odp_event_types(odp_event_t event,
 				 odp_event_subtype_t *subtype);
 
 /**
+ * Event types and subtypes of multiple events
+ *
+ * Outputs the event types and subtypes (optional) of all given events into the
+ * output arrays. Application can pass NULL as 'subtype' parameter if subtype
+ * values are not required. The types are written in the same order as input
+ * events.
+ *
+ * @param      event    Array of event handles
+ * @param[out] type     Event type array for output
+ * @param[out] subtype  Event subtype array for output, or NULL
+ * @param      num      Number of events, event types, and optionally subtypes
+ */
+void odp_event_types_multi(const odp_event_t event[], odp_event_type_t type[],
+			   odp_event_subtype_t subtype[], int num);
+
+/**
  * Event type of multiple events
  *
  * Returns the number of first events in the array which have the same event
@@ -92,6 +108,28 @@ int odp_event_type_multi(const odp_event_t event[], int num,
  * @retval NULL  The event does not have user area
  */
 void *odp_event_user_area(odp_event_t event);
+
+/**
+ * Event user area and flag
+ *
+ * Returns pointer to the user area and outputs value of user flag associated
+ * with the event. The user area maps to the user area of underlying event type
+ * (e.g. odp_packet_user_area() for packets). If the event does not have user
+ * area, NULL is returned.
+ *
+ * The user flag maps to the user flag value of underlying event type (e.g.
+ * odp_packet_user_flag() for packets). If the event does not have user flag, a
+ * negative value is outputted.
+ *
+ * @param      event    Event handle
+ * @param[out] flag     User flag value pointer for output. >0 if user flag is
+ *                      set, 0 if flags is not set, or <0 if event does not have
+ *                      user flag.
+ *
+ * @return Pointer to the user area of the event
+ * @retval NULL  The event does not have user area
+ */
+void *odp_event_user_area_and_flag(odp_event_t event, int *flag);
 
 /**
  * Filter and convert packet events

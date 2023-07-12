@@ -604,6 +604,14 @@ static void init_buffers(pool_t *pool)
 			ring_ptr_enq(ring, mask, event_hdr);
 	}
 	pool->skipped_blocks = skipped_blocks;
+
+	if (pool->uarea_size && pool->params.uarea_init.init_fn) {
+		for (uint32_t i = 0; i < pool->num; i++) {
+			uarea = &pool->uarea_base_addr[i * pool->uarea_size];
+			pool->params.uarea_init.init_fn(uarea, pool->param_uarea_size,
+							pool->params.uarea_init.args, i);
+		}
+	}
 }
 
 static bool shm_is_from_huge_pages(odp_shm_t shm)
@@ -1479,6 +1487,7 @@ int odp_pool_capability(odp_pool_capability_t *capa)
 	capa->buf.max_size  = MAX_SIZE;
 	capa->buf.max_num   = CONFIG_POOL_MAX_NUM;
 	capa->buf.max_uarea_size = MAX_UAREA_SIZE;
+	capa->buf.uarea_persistence = true;
 	capa->buf.min_cache_size = 0;
 	capa->buf.max_cache_size = CONFIG_POOL_CACHE_MAX_SIZE;
 	capa->buf.stats.all = supported_stats.all;
@@ -1495,6 +1504,7 @@ int odp_pool_capability(odp_pool_capability_t *capa)
 	capa->pkt.min_seg_len      = CONFIG_PACKET_SEG_LEN_MIN;
 	capa->pkt.max_seg_len      = max_seg_len;
 	capa->pkt.max_uarea_size   = MAX_UAREA_SIZE;
+	capa->pkt.uarea_persistence = true;
 	capa->pkt.min_cache_size   = 0;
 	capa->pkt.max_cache_size   = CONFIG_POOL_CACHE_MAX_SIZE;
 	capa->pkt.stats.all = supported_stats.all;
@@ -1503,6 +1513,7 @@ int odp_pool_capability(odp_pool_capability_t *capa)
 	capa->tmo.max_pools = max_pools;
 	capa->tmo.max_num   = CONFIG_POOL_MAX_NUM;
 	capa->tmo.max_uarea_size = MAX_UAREA_SIZE;
+	capa->tmo.uarea_persistence = true;
 	capa->tmo.min_cache_size = 0;
 	capa->tmo.max_cache_size = CONFIG_POOL_CACHE_MAX_SIZE;
 	capa->tmo.stats.all = supported_stats.all;
@@ -1512,6 +1523,7 @@ int odp_pool_capability(odp_pool_capability_t *capa)
 	capa->vector.max_num   = CONFIG_POOL_MAX_NUM;
 	capa->vector.max_size = CONFIG_PACKET_VECTOR_MAX_SIZE;
 	capa->vector.max_uarea_size = MAX_UAREA_SIZE;
+	capa->vector.uarea_persistence = true;
 	capa->vector.min_cache_size = 0;
 	capa->vector.max_cache_size = CONFIG_POOL_CACHE_MAX_SIZE;
 	capa->vector.stats.all = supported_stats.all;
@@ -1869,6 +1881,7 @@ int odp_pool_ext_capability(odp_pool_type_t type, odp_pool_ext_capability_t *cap
 	capa->pkt.max_headroom_size   = CONFIG_PACKET_HEADROOM;
 	capa->pkt.max_segs_per_pkt    = PKT_MAX_SEGS;
 	capa->pkt.max_uarea_size      = MAX_UAREA_SIZE;
+	capa->pkt.uarea_persistence   = true;
 
 	return 0;
 }
@@ -2096,8 +2109,18 @@ int odp_pool_ext_populate(odp_pool_t pool_hdl, void *buf[], uint32_t buf_size, u
 	pool->base_addr = min_addr;
 	pool->max_addr = max_addr;
 
-	if (flags & ODP_POOL_POPULATE_DONE)
+	if (flags & ODP_POOL_POPULATE_DONE) {
 		pool->max_addr = max_addr + buf_size - 1;
+
+		if (pool->uarea_size && pool->ext_param.uarea_init.init_fn) {
+			for (i = 0; i < pool->num_populated; i++) {
+				uarea = &pool->uarea_base_addr[i * pool->uarea_size];
+				pool->ext_param.uarea_init.init_fn(uarea, pool->param_uarea_size,
+								   pool->ext_param.uarea_init.args,
+								   i);
+			}
+		}
+	}
 
 	return 0;
 }

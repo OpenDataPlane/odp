@@ -1,4 +1,4 @@
-/* Copyright (c) 2021-2022, Nokia
+/* Copyright (c) 2021-2023, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -80,6 +80,12 @@ typedef struct odp_dma_pool_capability_t {
 	/** Maximum user area size in bytes */
 	uint32_t max_uarea_size;
 
+	/** Pool user area persistence
+	 *
+	 *  See buf.uarea_persistence of odp_pool_capability_t for details
+	 *  (odp_pool_capability_t::uarea_persistence). */
+	odp_bool_t uarea_persistence;
+
 	/** Minimum size of thread local cache */
 	uint32_t min_cache_size;
 
@@ -103,6 +109,19 @@ typedef struct odp_dma_pool_param_t {
 	 *  area is needed. The default value is 0.
 	 */
 	uint32_t uarea_size;
+
+	/** Parameters for user area initialization */
+	struct {
+		/** See uarea_init.init_fn of odp_pool_param_t for details
+		 *  (odp_pool_param_t::init_fn). Function is called during
+		 *  odp_dma_pool_create(). */
+		void (*init_fn)(void *uarea, uint32_t size, void *args, uint32_t index);
+
+		/** See uarea_init.args of odp_pool_param_t for details
+		 *  (odp_pool_param_t::args). */
+		void *args;
+
+	} uarea_init;
 
 	/** Maximum number of events cached locally per thread
 	 *
@@ -365,40 +384,38 @@ typedef struct odp_dma_param_t {
  * DMA segment
  */
 typedef struct odp_dma_seg_t {
-	/** Segment start */
+	/** Segment start address or packet handle */
 	union {
 		/** Segment start address in memory
 		 *
-		 *  Defines segment start when data format is ODP_DMA_FORMAT_ADDR. Ignored with
+		 *  Defines segment start when data format is #ODP_DMA_FORMAT_ADDR. Ignored with
 		 *  other data formats.
 		 */
 		void *addr;
 
-		/** Segment start as an offset into a packet */
-		struct {
-			/** Packet handle
-			 *
-			 *  Defines the packet when data format is ODP_DMA_FORMAT_PACKET. Ignored
-			 *  with other data formats. */
-			odp_packet_t packet;
+		/** Packet handle
+		 *
+		 *  Defines the packet when data format is #ODP_DMA_FORMAT_PACKET. Ignored
+		 *  with other data formats. */
+		odp_packet_t packet;
 
-			/** Segment start offset into the packet
-			 *
-			 *  Defines segment start when data format is ODP_DMA_FORMAT_PACKET.
-			 *  The offset is calculated from odp_packet_data() position, and the value
-			 *  must not exceed odp_packet_len().
-			 */
-			uint32_t offset;
-		};
 	};
 
 	/** Segment length in bytes
 	 *
 	 *  Defines segment length with all data formats. The maximum value is defined by
-	 *  max_seg_len capability. When data format is ODP_DMA_FORMAT_PACKET, the value must not
+	 *  max_seg_len capability. When data format is #ODP_DMA_FORMAT_PACKET, the value must not
 	 *  exceed odp_packet_len() - 'offset'.
 	 */
 	uint32_t len;
+
+	/** Segment start offset into the packet
+	 *
+	 *  Defines segment start within the packet data. The offset is calculated from
+	 *  odp_packet_data() position, and the value must not exceed odp_packet_len().
+	 *  Ignored when data format is other than #ODP_DMA_FORMAT_PACKET.
+	 */
+	uint32_t offset;
 
 	/** Segment hints
 	 *
