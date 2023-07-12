@@ -1,5 +1,5 @@
 /* Copyright (c) 2014-2018, Linaro Limited
- * Copyright (c) 2021-2023, Nokia
+ * Copyright (c) 2021-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -509,7 +509,7 @@ typedef struct odp_crypto_key {
  */
 typedef enum odp_crypto_op_type_t {
 	/**
-	 * Input packet data and metadata are copied to the output packet
+	 * Input packet data and metadata are copied in the output packet
 	 * and then processed. Output packet is allocated by the caller
 	 * or by ODP.
 	 *
@@ -518,7 +518,7 @@ typedef enum odp_crypto_op_type_t {
 	ODP_CRYPTO_OP_TYPE_LEGACY,
 
 	/**
-	 * Input packet data and metadata are copied to the output packet
+	 * Input packet data and metadata are copied in the output packet
 	 * and then processed. Output packet is allocated by ODP.
 	 */
 	ODP_CRYPTO_OP_TYPE_BASIC,
@@ -559,30 +559,6 @@ typedef struct odp_crypto_session_param_t {
 	 *  The default value is ODP_CRYPTO_OP_TYPE_LEGACY.
 	 */
 	odp_crypto_op_type_t op_type;
-
-	/** Cipher range unit
-	 *
-	 *  When this flag is true, cipher range offset and length are in bits.
-	 *  Otherwise the offset and length are in bytes.
-	 *
-	 *  If cipher capabilities do not include bit_mode, setting this to
-	 *  true causes a session creation failure.
-	 *
-	 *  The default value is false.
-	 */
-	odp_bool_t cipher_range_in_bits;
-
-	/** Auth range unit
-	 *
-	 *  When this flag is true, auth range offset and length are in bits.
-	 *  Otherwise the offset and length are in bytes.
-	 *
-	 *  If auth capabilities do not include bit_mode, setting this to
-	 *  true causes a session creation failure.
-	 *
-	 *  The default value is false.
-	 */
-	odp_bool_t auth_range_in_bits;
 
 	/** Authenticate cipher vs. plain text
 	 *
@@ -749,41 +725,23 @@ typedef struct odp_crypto_packet_op_param_t {
 
 	/** Data range to be ciphered.
 	 *
-	 *  The range is given in bits or bytes as configured at session
-	 *  creation.
-	 *
 	 *  Ignored by the null cipher with operation types other than
-	 *  ODP_CRYPTO_OP_TYPE_OOP.
-	 *
-	 *  With the OOP operation type the cipher range is copied to the
-	 *  output packet even with the null cipher. Non-zero-length ranges
-	 *  are not necessarily supported with the null cipher and the OOP
-	 *  operation type. If the requested range is not supported, the
-	 *  crypto operation will fail. The failure is indicated through
-	 *  odp_crypto_result() or through a negative return value of
-	 *  odp_crypto_op()/odp_crypto_op_enq().
+	 *  ODP_CRYPTO_OP_TYPE_OOP. Must be set to zero range (zero offset
+	 *  and zero length) with the null cipher used with the out-of-place
+	 *  operation type.
 	 **/
 	odp_packet_data_range_t cipher_range;
 
 	/** Data range to be authenticated
-	 *
-	 *  The range is given in bits or bytes as configured at session
-	 *  creation.
 	 *
 	 *  The value is ignored with authenticated encryption algorithms,
 	 *  such as AES-GCM, which authenticate data in the cipher range
 	 *  and the AAD.
 	 *
 	 *  Ignored by the null auth algorithm with operation types other than
-	 *  ODP_CRYPTO_OP_TYPE_OOP.
-	 *
-	 *  With the OOP operation type the auth range is copied to the
-	 *  output packet even with the null auth algorithm. Non-zero-length
-	 *  ranges are not necessarily supported with the null algorithm and
-	 *  the OOP operation type. If the requested range is not supported,
-	 *  the crypto operation will fail. The failure is indicated through
-	 *  odp_crypto_result() or through a negative return value of
-	 *  odp_crypto_op()/odp_crypto_op_enq().
+	 *  ODP_CRYPTO_OP_TYPE_OOP. Must be set to zero range (zero offset
+	 *  and zero length) with the null cipher used with the out-of-place
+	 *  operation type.
 	 *
 	 *  As a special case AES-GMAC uses this field instead of aad_ptr
 	 *  for the data bytes to be authenticated.
@@ -979,23 +937,22 @@ typedef struct odp_crypto_cipher_capability_t {
 	/** IV length in bytes */
 	uint32_t iv_len;
 
-	/** Cipher supports bit mode
+	/** Cipher is operating in bitwise mode
 	 *
-	 * This cipher can work on a range of bits in addition to a range of
-	 * bytes. When this capability is not present, only byte ranges are
-	 * supported. The unit of cipher range is selected at session creation
-	 * through the cipher_range_in_bits session parameter.
+	 * This cipher works on series of bits, rather than sequences of bytes:
+	 * cipher_range in odp_crypto_op_param_t and
+	 * odp_crypto_packet_op_param_t will use bits, rather than bytes.
 	 *
-	 * Note: In bit mode the cipher range must start on a byte boundary.
-	 * Using an offset which is not divisible by 8 will result in
-	 * undefined behaviour.
+	 * Note: data buffer MUST start on the byte boundary, using offset
+	 * which is not divisible by 8 is unsupported and will result in
+	 * unspecified behaviour.
 	 *
-	 * Note2: If the range length in bit mode is not a multiple of 8,
-	 * the remaining bits of the data in the last byte of the input/output
-	 * will be the most significant bits, i.e. the most significant bit is
-	 * considered to be the first bit of a byte for the purpose of input
-	 * and output data range. The output bits that fall out of the output
-	 * range are undefined.
+	 * Note2: If the data length is not a multiple of 8, the remaining
+	 * bits of the data in the last byte of the input/output will be the
+	 * most significant bits, i.e. the most significant bit is considered
+	 * to be the first bit of a byte for the purpose of input and output
+	 * data range. The output bits that fall out of the output range are
+	 * undefined.
 	 */
 	odp_bool_t bit_mode;
 
@@ -1027,23 +984,22 @@ typedef struct odp_crypto_auth_capability_t {
 		uint32_t inc;
 	} aad_len;
 
-	/** Auth algorithm supports bit mode
+	/** Auth is operating in bitstring mode
 	 *
-	 * This auth algorithm can work on a range of bits in addition to
-	 * a range of bytes. When this capability is not present, only byte
-	 * ranges are supported. The unit of auth range is selected at session
-	 * creation through the auth_range_in_bits session parameter.
+	 * This auth works on series of bits, rather than sequences of bytes:
+	 * auth_range in odp_crypto_op_param_t and
+	 * odp_crypto_packet_op_param_t will use bits, rather than bytes.
 	 *
-	 * Note: In bit mode the auth range must start on a byte boundary.
-	 * Using an offset which is not divisible by 8 will result in
-	 * undefined behaviour.
+	 * Note: data buffer MUST start on the byte boundary, using offset
+	 * which is not divisible by 8 is unsupported and will result in
+	 * unpredictable behaviour.
 	 *
-	 * Note2: If the range length in bit mode is not a multiple of 8,
-	 * the remaining bits of the data in the last byte of the input/output
-	 * will be the most significant bits, i.e. the most significant bit is
-	 * considered to be the first bit of a byte for the purpose of input
-	 * and output data range. The output bits that fall out of the output
-	 * range are undefined.
+	 * Note2: If the data length is not a multiple of 8, the remaining
+	 * bits of the data in the last byte of the input/output will be the
+	 * most significant bits, i.e. the most significant bit is considered
+	 * to be the first bit of a byte for the purpose of input and output
+	 * data range. The output bits that fall out of the output range are
+	 * undefined.
 	 */
 	odp_bool_t bit_mode;
 

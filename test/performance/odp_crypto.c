@@ -1,5 +1,5 @@
 /* Copyright (c) 2015-2018, Linaro Limited
- * Copyright (c) 2023, Nokia
+ * Copyright (c) 2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:	BSD-3-Clause
@@ -1169,12 +1169,6 @@ static int run_measure_one_config(test_run_arg_t *arg)
 		printf("    Auth algorithm not supported\n");
 		rc = 1;
 	}
-
-#if ODP_VERSION_API >= ODP_VERSION_API_NUM(1, 42, 0)
-	/* Bit mode ciphers can now be used in byte mode. */
-	config->cipher_in_bit_mode = 0;
-	config->auth_in_bit_mode = 0;
-#endif
 
 	if (rc == 0)
 		rc = create_session_from_config(&session, config, cargs);

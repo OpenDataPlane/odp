@@ -51,9 +51,6 @@ typedef enum {
 	/** Debug */
 	ODP_LOG_DBG,
 
-	/** Warning */
-	ODP_LOG_WARN,
-
 	/** Error */
 	ODP_LOG_ERR,
 

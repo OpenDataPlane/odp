@@ -1502,7 +1502,7 @@ uint32_t odp_packet_user_area_size(odp_packet_t pkt);
  * @param pkt   Packet handle
  *
  * @retval 0    User flag is clear
- * @retval >0   User flag is set
+ * @retval !0   User flag is set
  */
 int odp_packet_user_flag(odp_packet_t pkt);
 
@@ -2306,7 +2306,7 @@ void *odp_packet_vector_user_area(odp_packet_vector_t pktv);
  * @param pktv  Packet vector handle
  *
  * @retval 0    User flag is clear
- * @retval >0   User flag is set
+ * @retval !0   User flag is set
  */
 int odp_packet_vector_user_flag(odp_packet_vector_t pktv);
 

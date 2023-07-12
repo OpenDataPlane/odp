@@ -235,6 +235,8 @@ typedef struct timer_local_t {
 	odp_time_t last_run;
 	int        run_cnt;
 	uint8_t    poll_shared;
+	uint64_t   nsec;
+	uint64_t   rounds;
 
 } timer_local_t;
 
@@ -871,8 +873,27 @@ void _odp_timer_run_inline(int dec)
 		timer_local.last_run = now;
 	}
 
-	/* Check the timer pools. */
-	timer_pool_scan_inline(num, now);
+	if (CONFIG_INLINE_PERF_BENCH) {
+		odp_time_t t1 = odp_time_local();
+
+		timer_pool_scan_inline(num, now);
+		odp_time_t t2 = odp_time_local();
+
+		timer_local.nsec += odp_time_diff_ns(t2, t1);
+		timer_local.rounds++;
+	} else {
+		timer_pool_scan_inline(num, now);
+	}
+}
+
+uint64_t odp_timer_nsec(void)
+{
+	return timer_local.nsec;
+}
+
+uint64_t odp_timer_rounds(void)
+{
+	return timer_local.rounds;
 }
 
 /******************************************************************************
@@ -2119,6 +2140,8 @@ int _odp_timer_init_local(void)
 	timer_local.last_run = odp_time_global_from_ns(0);
 	timer_local.run_cnt = 1;
 	timer_local.poll_shared = 0;
+	timer_local.nsec = 0;
+	timer_local.rounds = 0;
 
 	/* Timer feature disabled */
 	if (timer_global == NULL)

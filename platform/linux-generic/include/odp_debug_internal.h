@@ -55,7 +55,7 @@ extern "C" {
 	do { \
 		if (ODP_DEBUG_PRINT == 1 && CONFIG_DEBUG_LEVEL >= (level)) \
 			__extension__ ({ \
-				_ODP_LOG(ODP_LOG_DBG, "DBG", ##__VA_ARGS__); \
+				_ODP_LOG(ODP_LOG_DBG, ##__VA_ARGS__); \
 			}); \
 	} while (0)
 

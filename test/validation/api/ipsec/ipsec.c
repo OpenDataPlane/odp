@@ -447,7 +447,6 @@ static void ipsec_status_event_handle(odp_event_t ev_status,
 				      odp_ipsec_sa_t sa,
 				      enum ipsec_test_sa_expiry sa_expiry)
 {
-	int flag;
 	odp_ipsec_status_t status = {
 		.id = 0,
 		.sa = ODP_IPSEC_SA_INVALID,
@@ -461,8 +460,6 @@ static void ipsec_status_event_handle(odp_event_t ev_status,
 
 	/* No user area for IPsec status events */
 	CU_ASSERT(odp_event_user_area(ev_status) == NULL);
-	CU_ASSERT(odp_event_user_area_and_flag(ev_status, &flag) == NULL);
-	CU_ASSERT(flag < 0);
 
 	CU_ASSERT_EQUAL(0, odp_ipsec_status(&status, ev_status));
 	CU_ASSERT_EQUAL(ODP_IPSEC_STATUS_WARN, status.id);

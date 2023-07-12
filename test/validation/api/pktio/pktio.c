@@ -3513,7 +3513,7 @@ static void pktio_test_pktout_compl_event(bool use_plain_queue)
 	pktio_info_t pktio_rx_info;
 	odp_pktio_config_t config;
 	odp_queue_param_t qparam;
-	int flag, ret, i, num_rx = 0;
+	int ret, i, num_rx = 0;
 	odp_event_t ev;
 	uint64_t wait;
 
@@ -3647,8 +3647,6 @@ static void pktio_test_pktout_compl_event(bool use_plain_queue)
 
 			/* No user area for TX completion events */
 			CU_ASSERT(odp_event_user_area(ev) == NULL);
-			CU_ASSERT(odp_event_user_area_and_flag(ev, &flag) == NULL);
-			CU_ASSERT(flag < 0);
 
 			/* Alternatively call event free / compl free */
 			if (i % 2)
@@ -3687,8 +3685,6 @@ static void pktio_test_pktout_compl_event(bool use_plain_queue)
 
 			/* No user area for TX completion events */
 			CU_ASSERT(odp_event_user_area(ev) == NULL);
-			CU_ASSERT(odp_event_user_area_and_flag(ev, &flag) == NULL);
-			CU_ASSERT(flag < 0);
 
 			/* Check that sequence number is found */
 			CU_ASSERT(j < TX_BATCH_LEN);
