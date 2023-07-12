@@ -453,50 +453,6 @@ static void timer_test_timeout_pool_alloc(void)
 	CU_ASSERT(odp_pool_destroy(pool) == 0);
 }
 
-static void timer_test_timeout_from_event(void)
-{
-	odp_pool_t pool;
-	odp_pool_param_t param;
-	uint32_t i;
-	const uint32_t num = 10;
-	uint32_t num_alloc = 0;
-	odp_timeout_t tmo_tbl[num];
-	odp_timeout_t tmo2_tbl[num];
-	odp_event_t ev_tbl[num];
-
-	odp_pool_param_init(&param);
-	param.type           = ODP_POOL_TIMEOUT;
-	param.tmo.num        = num;
-
-	pool = odp_pool_create("test_timeout_from_event", &param);
-	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
-
-	for (i = 0; i < num; i++) {
-		tmo_tbl[i] = odp_timeout_alloc(pool);
-		if (tmo_tbl[i] == ODP_TIMEOUT_INVALID)
-			break;
-		ev_tbl[i] = odp_timeout_to_event(tmo_tbl[i]);
-		num_alloc++;
-	}
-
-	CU_ASSERT(num_alloc == num);
-
-	for (i = 0; i < num_alloc; i++) {
-		odp_timeout_t tmo = odp_timeout_from_event(ev_tbl[i]);
-
-		CU_ASSERT(odp_timeout_to_u64(tmo) == odp_timeout_to_u64(tmo_tbl[i]));
-	}
-
-	odp_timeout_from_event_multi(tmo2_tbl, ev_tbl, num_alloc);
-	for (i = 0; i < num_alloc; i++)
-		CU_ASSERT(odp_timeout_to_u64(tmo2_tbl[i]) == odp_timeout_to_u64(tmo_tbl[i]));
-
-	for (i = 0; i < num_alloc; i++)
-		odp_timeout_free(tmo_tbl[i]);
-
-	CU_ASSERT_FATAL(odp_pool_destroy(pool) == 0);
-}
-
 static void timer_test_timeout_pool_free(void)
 {
 	odp_pool_t pool;
@@ -562,7 +518,6 @@ static void timer_test_timeout_user_area(void)
 
 	for (i = 0; i < num; i++) {
 		odp_event_t ev;
-		int flag;
 
 		tmo[i] = odp_timeout_alloc(pool);
 
@@ -577,8 +532,6 @@ static void timer_test_timeout_user_area(void)
 
 		ev = odp_timeout_to_event(tmo[i]);
 		CU_ASSERT(odp_event_user_area(ev) == addr);
-		CU_ASSERT(odp_event_user_area_and_flag(ev, &flag) == addr);
-		CU_ASSERT(flag < 0);
 
 		prev = addr;
 		memset(addr, 0, size);
@@ -3060,7 +3013,6 @@ odp_testinfo_t timer_suite[] = {
 	ODP_TEST_INFO(timer_test_capa),
 	ODP_TEST_INFO(timer_test_param_init),
 	ODP_TEST_INFO(timer_test_timeout_pool_alloc),
-	ODP_TEST_INFO(timer_test_timeout_from_event),
 	ODP_TEST_INFO(timer_test_timeout_pool_free),
 	ODP_TEST_INFO(timer_test_timeout_user_area),
 	ODP_TEST_INFO(timer_pool_create_destroy),

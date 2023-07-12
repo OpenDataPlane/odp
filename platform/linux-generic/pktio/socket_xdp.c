@@ -309,7 +309,8 @@ static int sock_xdp_open(odp_pktio_t pktio, pktio_entry_t *pktio_entry, const ch
 
 	if (!get_nic_queue_count(priv->helper_sock, devname, &priv->q_num_conf.drv_channels) ||
 	    !get_nic_rss_indir_count(priv->helper_sock, devname, &priv->q_num_conf.drv_num_rss))
-		_ODP_WARN("Unable to query NIC queue count/RSS, manual cleanup required\n");
+		_ODP_PRINT("Warning: Unable to query NIC queue count/RSS, manual cleanup"
+			   " required\n");
 
 	priv->is_shadow_q = is_shadow_q_driver(priv->helper_sock, pktio_entry->name);
 	parse_options(priv->umem_info);
@@ -542,7 +543,8 @@ static int sock_xdp_start(pktio_entry_t *pktio_entry)
 	channels.combined = priv->q_num_conf.num_qs;
 
 	if (!set_nic_queue_count(priv->helper_sock, pktio_entry->name, &channels))
-		_ODP_WARN("Unable to configure NIC queue count, manual configuration required\n");
+		_ODP_PRINT("Warning: Unable to configure NIC queue count, manual configuration"
+			   " required\n");
 
 	if (priv->q_num_conf.num_in_conf_qs > 0U && !priv->is_shadow_q) {
 		indir->indir_size = priv->q_num_conf.drv_num_rss;
@@ -551,7 +553,8 @@ static int sock_xdp_start(pktio_entry_t *pktio_entry)
 			indir->rss_config[i] = (i % priv->q_num_conf.num_in_conf_qs);
 
 		if (!set_nic_rss_indir(priv->helper_sock, pktio_entry->name, indir))
-			_ODP_WARN("Unable to configure NIC RSS, manual configuration required\n");
+			_ODP_PRINT("Warning: Unable to configure NIC RSS, manual configuration"
+				   " required\n");
 	}
 
 	if (!create_sockets(priv, pktio_entry->name))

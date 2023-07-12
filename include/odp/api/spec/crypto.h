@@ -255,7 +255,9 @@ int odp_crypto_result(odp_crypto_packet_result_t *result,
  * input packet to the output packet and then the crypto operation
  * was applied to the output packet.
  *
- * Auth range of (AEAD) algorithms that ignore auth range is not copied.
+ * Crypto range and auth range of null cipher and auth algorithms are
+ * ignored, i.e. not copied in the output packet. Auth range of (AEAD)
+ * algorithms that ignore auth range is not copied.
  *
  * The offset of the crypto range and auth range in the output packet is
  * the same as in the input packet, adjusted by dst_offset_shift operation
