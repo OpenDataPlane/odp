@@ -9,6 +9,7 @@ odp_bench_timer
 odp_cpu_bench
 odp_crc
 odp_crypto
+odp_dmafwd
 odp_dma_perf
 odp_ipsec
 odp_ipsecfwd
