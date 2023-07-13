@@ -18,6 +18,7 @@ EXECUTABLES = odp_atomic_perf \
 
 COMPILE_ONLY = odp_cpu_bench \
 	       odp_crypto \
+	       odp_dmafwd \
 	       odp_dma_perf \
 	       odp_ipsec \
 	       odp_l2fwd \
@@ -65,6 +66,7 @@ odp_bench_timer_SOURCES = odp_bench_timer.c
 odp_cpu_bench_SOURCES = odp_cpu_bench.c
 odp_crc_SOURCES = odp_crc.c
 odp_crypto_SOURCES = odp_crypto.c
+odp_dmafwd_SOURCES = odp_dmafwd.c
 odp_dma_perf_SOURCES = odp_dma_perf.c
 odp_ipsec_SOURCES = odp_ipsec.c
 odp_lock_perf_SOURCES = odp_lock_perf.c
