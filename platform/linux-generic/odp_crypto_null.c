@@ -96,6 +96,9 @@ odp_crypto_generic_session_t *alloc_session(void)
 	}
 	odp_spinlock_unlock(&global->lock);
 
+	if (!session)
+		return NULL;
+
 	session->idx = session - global->sessions;
 
 	for (i = 0; i < ODP_THREAD_COUNT_MAX; i++)
