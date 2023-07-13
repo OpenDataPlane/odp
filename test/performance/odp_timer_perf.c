@@ -16,7 +16,8 @@
 #include <odp/helper/odph_api.h>
 
 #define MODE_SCHED_OVERH  0
-#define MODE_SET_CANCEL   1
+#define MODE_START_CANCEL 1
+#define MODE_START_EXPIRE 2
 #define MAX_TIMER_POOLS   32
 #define MAX_TIMERS        10000
 #define START_NS          (100 * ODP_TIME_MSEC_IN_NS)
@@ -79,6 +80,7 @@ typedef struct thread_arg_t {
 
 typedef struct timer_ctx_t {
 	uint64_t target_ns;
+	uint64_t target_tick;
 	uint32_t tp_idx;
 	uint32_t timer_idx;
 	int last;
@@ -131,6 +133,7 @@ static void print_usage(void)
 	       "  -m, --mode             Select test mode. Default: 0\n"
 	       "                           0: Measure odp_schedule() overhead when using timers\n"
 	       "                           1: Measure timer set + cancel performance\n"
+	       "                           2: Measure odp_schedule() overhead while continuously restarting expiring timers\n"
 	       "  -R, --rounds           Number of test rounds in timer set + cancel test.\n"
 	       "                           Default: 100000\n"
 	       "  -h, --help             This help\n"
@@ -279,6 +282,16 @@ static int create_timer_pools(test_global_t *global)
 
 	max_tmo_ns = START_NS + (num_timer * period_ns);
 	min_tmo_ns = START_NS / 2;
+
+	if (test_options->mode == MODE_START_EXPIRE) {
+		/*
+		 * Timers are set to 1-2 periods from current time. Add an
+		 * arbitrary margin of one period, resulting in maximum of
+		 * three periods.
+		 */
+		max_tmo_ns = period_ns * 3;
+		min_tmo_ns = test_options->res_ns / 2;
+	}
 
 	priv = 0;
 	if (test_options->shared == 0)
@@ -462,6 +475,14 @@ static int set_timers(test_global_t *global)
 			start_param.tick_type = ODP_TIMER_TICK_ABS;
 			start_param.tick = tick_cur + tick_ns;
 			start_param.tmo_ev = ev;
+
+			if (test_options->mode == MODE_START_EXPIRE) {
+				uint64_t offset_ns = period_ns + j * period_ns / num_timer;
+
+				ctx->target_ns = time_ns + offset_ns;
+				ctx->target_tick = tick_cur + odp_timer_ns_to_tick(tp, offset_ns);
+				start_param.tick = ctx->target_tick;
+			}
 
 			status = odp_timer_start(timer, &start_param);
 			if (status != ODP_TIMER_SUCCESS) {
@@ -805,6 +826,128 @@ static int set_cancel_mode_worker(void *arg)
 	return ret;
 }
 
+static int set_expire_mode_worker(void *arg)
+{
+	int status, thr;
+	uint32_t i, j, exit_test;
+	odp_event_t ev;
+	odp_timeout_t tmo;
+	uint64_t c2, diff, nsec, time_ns, target_ns, period_tick;
+	odp_timer_t timer;
+	odp_timer_start_t start_param;
+	odp_time_t t1, t2;
+	time_stat_t before, after;
+	timer_ctx_t *ctx;
+	thread_arg_t *thread_arg = arg;
+	test_global_t *global = thread_arg->global;
+	test_options_t *opt = &global->test_options;
+	uint32_t num_tp = opt->num_tp;
+	uint64_t cycles = 0;
+	uint64_t events = 0;
+	uint64_t rounds = 0;
+	uint64_t c1 = 0;
+	int meas = 1;
+	int ret = 0;
+
+	memset(&before, 0, sizeof(time_stat_t));
+	memset(&after, 0, sizeof(time_stat_t));
+
+	thr = odp_thread_id();
+
+	/* Start all workers at the same time */
+	odp_barrier_wait(&global->barrier);
+
+	t1 = odp_time_local();
+
+	while (events < opt->test_rounds * opt->num_timer / opt->num_cpu) {
+		if (meas) {
+			c1   = odp_cpu_cycles();
+			meas = 0;
+		}
+
+		ev = odp_schedule(NULL, ODP_SCHED_NO_WAIT);
+		rounds++;
+
+		exit_test = odp_atomic_load_u32(&global->exit_test);
+		if (odp_likely(ev == ODP_EVENT_INVALID && exit_test < num_tp))
+			continue;
+
+		c2      = odp_cpu_cycles();
+		diff    = odp_cpu_cycles_diff(c2, c1);
+		cycles += diff;
+
+		if (ev == ODP_EVENT_INVALID && exit_test >= num_tp)
+			break;
+
+		events++;
+		meas = 1;
+		tmo = odp_timeout_from_event(ev);
+		ctx = odp_timeout_user_ptr(tmo);
+		i = ctx->tp_idx;
+		j = ctx->timer_idx;
+		timer = global->timer[i][j];
+		period_tick = global->timer_pool[i].period_tick;
+		time_ns = odp_time_global_ns();
+		target_ns = ctx->target_ns;
+
+		if (time_ns < target_ns) {
+			diff = target_ns - time_ns;
+			before.num++;
+			before.sum_ns += diff;
+			if (diff > before.max_ns)
+				before.max_ns = diff;
+
+			ODPH_DBG("before %" PRIu64 "\n", diff);
+		} else {
+			diff = time_ns - target_ns;
+			after.num++;
+			after.sum_ns += diff;
+			if (diff > after.max_ns)
+				after.max_ns = diff;
+
+			ODPH_DBG("after %" PRIu64 "\n", diff);
+		}
+
+		/* Start the timer again */
+		start_param.tick_type = ODP_TIMER_TICK_ABS;
+		ctx->target_ns += opt->period_ns;
+		ctx->target_tick += period_tick;
+		start_param.tick = ctx->target_tick;
+		start_param.tmo_ev = ev;
+		status = odp_timer_start(timer, &start_param);
+
+		if (status != ODP_TIMER_SUCCESS) {
+			ODPH_ERR("Timer set (tmo) failed (ret %i)\n", status);
+			ret = -1;
+			break;
+		}
+	}
+
+	t2   = odp_time_local();
+	nsec = odp_time_diff_ns(t2, t1);
+
+	/* Cancel all timers that belong to this thread */
+	cancel_timers(global, thread_arg->worker_idx);
+
+	/* Free already scheduled events */
+	while (1) {
+		ev = odp_schedule(NULL, ODP_SCHED_NO_WAIT);
+		if (ev == ODP_EVENT_INVALID)
+			break;
+		odp_event_free(ev);
+	}
+
+	/* Update stats*/
+	global->stat[thr].events = events;
+	global->stat[thr].cycles = cycles;
+	global->stat[thr].rounds = rounds;
+	global->stat[thr].nsec   = nsec;
+	global->stat[thr].before = before;
+	global->stat[thr].after  = after;
+
+	return ret;
+}
+
 static int start_workers(test_global_t *global, odp_instance_t instance)
 {
 	odph_thread_common_param_t thr_common;
@@ -824,8 +967,10 @@ static int start_workers(test_global_t *global, odp_instance_t instance)
 
 		if (test_options->mode == MODE_SCHED_OVERH)
 			thr_param[i].start = sched_mode_worker;
-		else
+		else if (test_options->mode == MODE_START_CANCEL)
 			thr_param[i].start = set_cancel_mode_worker;
+		else
+			thr_param[i].start = set_expire_mode_worker;
 
 		thr_param[i].arg      = &global->thread_arg[i];
 		thr_param[i].thr_type = ODP_THREAD_WORKER;
@@ -1076,9 +1221,14 @@ int main(int argc, char **argv)
 				ODPH_ERR("Sched_mode_worker failed\n");
 				return -1;
 			}
-		} else {
+		} else if (mode == MODE_START_CANCEL) {
 			if (set_cancel_mode_worker(&global->thread_arg[0])) {
 				ODPH_ERR("Set_cancel_mode_worker failed\n");
+				return -1;
+			}
+		} else {
+			if (set_expire_mode_worker(&global->thread_arg[0])) {
+				ODPH_ERR("Set_expire_mode_worker failed\n");
 				return -1;
 			}
 		}
@@ -1090,7 +1240,7 @@ int main(int argc, char **argv)
 
 	sum_stat(global);
 
-	if (mode == MODE_SCHED_OVERH)
+	if (mode == MODE_SCHED_OVERH || mode == MODE_START_EXPIRE)
 		print_stat_sched_mode(global);
 	else
 		print_stat_set_cancel_mode(global);
