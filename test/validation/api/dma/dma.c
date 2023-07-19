@@ -1318,8 +1318,9 @@ static void test_dma_addr_to_addr_sync_res(void)
 
 static void get_seg_lens(uint32_t max_len, uint32_t *src, uint32_t *dst)
 {
-	uint32_t src_segs = *src, dst_segs = *dst;
+	uint32_t src_segs = *src, dst_segs = *dst, denom = MIN(src_segs, dst_segs);
 
+	max_len = MIN(max_len / denom, global.dma_capa.max_seg_len) * denom;
 	*src = max_len / src_segs;
 	*dst = *src * src_segs / dst_segs + *src * src_segs % dst_segs;
 }
