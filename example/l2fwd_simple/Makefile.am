@@ -5,9 +5,7 @@ bin_PROGRAMS = odp_l2fwd_simple
 odp_l2fwd_simple_SOURCES = odp_l2fwd_simple.c
 
 if test_example
-if ODP_PKTIO_PCAP
 TESTS = l2fwd_simple_run.sh
-endif
 endif
 EXTRA_DIST = l2fwd_simple_run.sh udp64.pcap
 
@@ -24,8 +22,6 @@ all-local:
 			fi \
 		done \
 	fi
-	ln -f -s $(top_srcdir)/platform/$(with_platform)/test/example/l2fwd_simple/pktio_env \
-		pktio_env
 clean-local:
 	if [ "x$(srcdir)" != "x$(builddir)" ]; then \
 		for f in $(EXTRA_DIST); do \

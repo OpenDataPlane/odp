@@ -5,9 +5,7 @@ bin_PROGRAMS = odp_classifier
 odp_classifier_SOURCES = odp_classifier.c
 
 if test_example
-if ODP_PKTIO_PCAP
 TESTS = odp_classifier_run.sh
-endif
 endif
 EXTRA_DIST = odp_classifier_run.sh udp64.pcap
 
@@ -24,8 +22,6 @@ all-local:
 			fi \
 		done \
 	fi
-	ln -f -s $(top_srcdir)/platform/$(with_platform)/test/example/classifier/pktio_env \
-		pktio_env
 clean-local:
 	if [ "x$(srcdir)" != "x$(builddir)" ]; then \
 		for f in $(EXTRA_DIST); do \

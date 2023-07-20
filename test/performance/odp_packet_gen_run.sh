@@ -49,8 +49,14 @@ run_packet_gen()
 	# Runs 500 * 10ms = 5 sec
 	# Sends 500 packets through both interfaces => total 1000 packets
 
+	if [ "$(which stdbuf)" != "" ]; then
+		STDBUF="stdbuf -o 0"
+	else
+		STDBUF=
+	fi
+
 	# Static packet length
-	odp_packet_gen${EXEEXT} -i $IF0,$IF1 -b 1 -g 10000000 -q 500 -w 10
+	$STDBUF odp_packet_gen${EXEEXT} -i $IF0,$IF1 -b 1 -g 10000000 -q 500 -w 10
 	ret=$?
 
 	if [ $ret -eq 2 ]; then
@@ -63,7 +69,7 @@ run_packet_gen()
 	fi
 
 	# Random packet length
-	odp_packet_gen${EXEEXT} -i $IF0,$IF1 -b 1 -g 10000000 -q 500 -L 60,1514,10 -w 10
+	$STDBUF odp_packet_gen${EXEEXT} -i $IF0,$IF1 -b 1 -g 10000000 -q 500 -L 60,1514,10 -w 10
 	ret=$?
 
 	if [ $ret -eq 2 ]; then

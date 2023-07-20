@@ -54,8 +54,14 @@ run_sched_pktio()
 		exit 1
 	fi
 
+	if [ "$(which stdbuf)" != "" ]; then
+		STDBUF="stdbuf -o 0"
+	else
+		STDBUF=
+	fi
+
 	# 1 worker
-	odp_sched_pktio${EXEEXT} -i $IF1,$IF2 -c 1 -s &
+	$STDBUF odp_sched_pktio${EXEEXT} -i $IF1,$IF2 -c 1 -s &
 
 	TEST_PID=$!
 

@@ -5,9 +5,7 @@ bin_PROGRAMS = odp_switch
 odp_switch_SOURCES = odp_switch.c
 
 if test_example
-if ODP_PKTIO_PCAP
 TESTS = switch_run.sh
-endif
 endif
 EXTRA_DIST = switch_run.sh udp64.pcap
 
@@ -24,8 +22,6 @@ all-local:
 			fi \
 		done \
 	fi
-	ln -f -s $(top_srcdir)/platform/$(with_platform)/test/example/switch/pktio_env \
-		pktio_env
 clean-local:
 	if [ "x$(srcdir)" != "x$(builddir)" ]; then \
 		for f in $(EXTRA_DIST); do \
