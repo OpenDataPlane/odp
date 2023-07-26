@@ -2218,7 +2218,7 @@ int odp_packet_tx_compl_request(odp_packet_t pkt, const odp_packet_tx_compl_opt_
 {
 	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
 
-	pkt_hdr->p.flags.tx_compl = opt->mode == ODP_PACKET_TX_COMPL_EVENT ? 1 : 0;
+	pkt_hdr->p.flags.tx_compl_ev = opt->mode == ODP_PACKET_TX_COMPL_EVENT ? 1 : 0;
 	pkt_hdr->dst_queue = opt->queue;
 
 	return 0;
@@ -2228,7 +2228,7 @@ int odp_packet_has_tx_compl_request(odp_packet_t pkt)
 {
 	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
 
-	return pkt_hdr->p.flags.tx_compl;
+	return pkt_hdr->p.flags.tx_compl_ev;
 }
 
 void odp_packet_tx_compl_free(odp_packet_tx_compl_t tx_compl)

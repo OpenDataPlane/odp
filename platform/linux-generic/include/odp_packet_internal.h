@@ -147,6 +147,9 @@ typedef struct ODP_ALIGNED_CACHE odp_packet_hdr_t {
 	 * request + requested drop timeout). */
 	uint64_t tx_aging_ns;
 
+	/* Tx completion poll completion identifier */
+	uint32_t tx_compl_id;
+
 	/* LSO profile index */
 	uint8_t lso_profile_idx;
 
