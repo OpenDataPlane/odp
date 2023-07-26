@@ -2632,7 +2632,7 @@ uint64_t odp_pktin_wait_time(uint64_t nsec)
 static void check_tx_compl_ev(const odp_packet_hdr_t *hdr, int pkt_idx, tx_compl_info_t *info,
 			      uint16_t *num)
 {
-	if (odp_unlikely(hdr->p.flags.tx_compl)) {
+	if (odp_unlikely(hdr->p.flags.tx_compl_ev)) {
 		info[*num].user_ptr = hdr->user_ptr;
 		info[*num].queue = hdr->dst_queue;
 		info[*num].idx = pkt_idx;
@@ -3233,7 +3233,7 @@ void _odp_pktio_allocate_and_send_tx_compl_events(const pktio_entry_t *entry,
 	odp_packet_hdr_t *hdr;
 
 	for (int i = 0; i < num; i++)
-		if (odp_unlikely(packet_hdr(packets[i])->p.flags.tx_compl))
+		if (odp_unlikely(packet_hdr(packets[i])->p.flags.tx_compl_ev))
 			idx[num_tx_cevs++] = i;
 
 	if (odp_unlikely(num_tx_cevs)) {
