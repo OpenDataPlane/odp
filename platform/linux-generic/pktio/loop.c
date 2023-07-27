@@ -677,7 +677,7 @@ static int loopback_init_capability(pktio_entry_t *pktio_entry)
 	capa->config.pktout.bit.tx_compl_ena = 1;
 	capa->tx_compl.mode_all = 1;
 	capa->tx_compl.mode_event = 1;
-	capa->tx_compl.mode_poll = 0;
+	capa->tx_compl.mode_poll = 1;
 
 	if (odp_global_ro.disable.ipsec == 0) {
 		capa->config.inbound_ipsec = 1;

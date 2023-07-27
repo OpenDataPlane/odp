@@ -926,7 +926,7 @@ static int ipc_capability(pktio_entry_t *pktio_entry ODP_UNUSED, odp_pktio_capab
 	capa->config.pktout.bit.tx_compl_ena = 1;
 	capa->tx_compl.mode_all = 1;
 	capa->tx_compl.mode_event = 1;
-	capa->tx_compl.mode_poll = 0;
+	capa->tx_compl.mode_poll = 1;
 
 	return 0;
 }
