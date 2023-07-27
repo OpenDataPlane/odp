@@ -3793,7 +3793,7 @@ static void pktio_test_pktout_compl_poll(void)
 	for (i = 0; i < TX_BATCH_LEN;  i++) {
 		CU_ASSERT(odp_packet_has_tx_compl_request(pkt_tbl[i]) == 0);
 		opt.compl_id = i;
-		opt.mode = ODP_PACKET_TX_COMPL_EVENT;
+		opt.mode = ODP_PACKET_TX_COMPL_POLL;
 		odp_packet_tx_compl_request(pkt_tbl[i], &opt);
 		CU_ASSERT(odp_packet_has_tx_compl_request(pkt_tbl[i]) != 0);
 		/* Set pkt sequence number as its user ptr */
