@@ -235,7 +235,8 @@ typedef struct timer_local_t {
 	odp_time_t last_run;
 	int        run_cnt;
 	uint8_t    poll_shared;
-
+	uint64_t   prof_nsec;
+	uint64_t   prof_rounds;
 } timer_local_t;
 
 /* Points to timer global data */
@@ -872,7 +873,17 @@ void _odp_timer_run_inline(int dec)
 	}
 
 	/* Check the timer pools. */
-	timer_pool_scan_inline(num, now);
+	if (CONFIG_TIMER_PROFILE_INLINE) {
+		odp_time_t t1 = odp_time_local_strict();
+
+		timer_pool_scan_inline(num, now);
+		odp_time_t t2 = odp_time_local_strict();
+
+		timer_local.prof_nsec += odp_time_diff_ns(t2, t1);
+		timer_local.prof_rounds++;
+	} else {
+		timer_pool_scan_inline(num, now);
+	}
 }
 
 /******************************************************************************
@@ -2119,6 +2130,8 @@ int _odp_timer_init_local(void)
 	timer_local.last_run = odp_time_global_from_ns(0);
 	timer_local.run_cnt = 1;
 	timer_local.poll_shared = 0;
+	timer_local.prof_nsec = 0;
+	timer_local.prof_rounds = 0;
 
 	/* Timer feature disabled */
 	if (timer_global == NULL)
@@ -2140,5 +2153,16 @@ int _odp_timer_init_local(void)
 
 int _odp_timer_term_local(void)
 {
+	if (CONFIG_TIMER_PROFILE_INLINE) {
+		if (timer_local.prof_rounds) {
+			_ODP_PRINT("\n"
+				   "Inline timer profiling for thread %i:\n"
+				   "scan rounds:   %" PRIu64 "\n"
+				   "ave scan nsec: %.1f\n",
+				   odp_thread_id(), timer_local.prof_rounds,
+				   (double)timer_local.prof_nsec / timer_local.prof_rounds);
+		}
+	}
+
 	return 0;
 }
