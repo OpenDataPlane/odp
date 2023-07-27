@@ -2218,8 +2218,26 @@ int odp_packet_tx_compl_request(odp_packet_t pkt, const odp_packet_tx_compl_opt_
 {
 	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
 
-	pkt_hdr->p.flags.tx_compl_ev = opt->mode == ODP_PACKET_TX_COMPL_EVENT ? 1 : 0;
-	pkt_hdr->dst_queue = opt->queue;
+	switch (opt->mode) {
+	case ODP_PACKET_TX_COMPL_DISABLED:
+		pkt_hdr->p.flags.tx_compl_ev = 0;
+		pkt_hdr->p.flags.tx_compl_poll = 0;
+		break;
+	case ODP_PACKET_TX_COMPL_EVENT:
+		_ODP_ASSERT(opt->queue != ODP_QUEUE_INVALID);
+		pkt_hdr->p.flags.tx_compl_ev = 1;
+		pkt_hdr->p.flags.tx_compl_poll = 0;
+		pkt_hdr->dst_queue = opt->queue;
+		break;
+	case ODP_PACKET_TX_COMPL_POLL:
+		pkt_hdr->p.flags.tx_compl_ev = 0;
+		pkt_hdr->p.flags.tx_compl_poll = 1;
+		pkt_hdr->tx_compl_id = opt->compl_id;
+		break;
+	default:
+		_ODP_ERR("Bad TX completion mode: %i\n", opt->mode);
+		return -1;
+	}
 
 	return 0;
 }
@@ -2228,7 +2246,7 @@ int odp_packet_has_tx_compl_request(odp_packet_t pkt)
 {
 	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
 
-	return pkt_hdr->p.flags.tx_compl_ev;
+	return pkt_hdr->p.flags.tx_compl_ev || pkt_hdr->p.flags.tx_compl_poll;
 }
 
 void odp_packet_tx_compl_free(odp_packet_tx_compl_t tx_compl)
@@ -2255,10 +2273,7 @@ void *odp_packet_tx_compl_user_ptr(odp_packet_tx_compl_t tx_compl)
 
 int odp_packet_tx_compl_done(odp_pktio_t pktio, uint32_t compl_id)
 {
-	(void)pktio;
-	(void)compl_id;
-
-	return -1;
+	return odp_atomic_load_acq_u32(&get_pktio_entry(pktio)->tx_compl_status[compl_id]);
 }
 
 void odp_packet_free_ctrl_set(odp_packet_t pkt, odp_packet_free_ctrl_t ctrl)
