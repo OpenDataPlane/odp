@@ -142,6 +142,10 @@ typedef struct ODP_ALIGNED_CACHE {
 
 	/* Pool for Tx completion events */
 	odp_pool_t tx_compl_pool;
+	/* Status map SHM handle */
+	odp_shm_t tx_compl_status_shm;
+	/* Status map for Tx completion identifiers */
+	odp_atomic_u32_t *tx_compl_status;
 
 	/* Storage for queue handles
 	 * Multi-queue support is pktio driver specific */
@@ -338,8 +342,8 @@ int _odp_lso_create_packets(odp_packet_t packet, const odp_packet_lso_opt_t *lso
 			    uint32_t payload_len, uint32_t left_over_len,
 			    odp_packet_t pkt_out[], int num_pkt);
 
-void _odp_pktio_allocate_and_send_tx_compl_events(const pktio_entry_t *entry,
-						  const odp_packet_t packets[], int num);
+void _odp_pktio_process_tx_compl(const pktio_entry_t *entry, const odp_packet_t packets[],
+				 int num);
 
 static inline int _odp_pktio_packet_to_pool(odp_packet_t *pkt,
 					    odp_packet_hdr_t **pkt_hdr,

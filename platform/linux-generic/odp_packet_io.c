@@ -56,9 +56,17 @@
 #define MAX_TX_AGING_TMO_NS 3600000000000ULL
 
 typedef struct {
-	const void *user_ptr;
-	odp_queue_t queue;
+	union {
+		struct {
+			odp_buffer_t buf;
+			const void *user_ptr;
+			odp_queue_t queue;
+		};
+
+		odp_atomic_u32_t *status;
+	};
 	uint16_t idx;
+	uint8_t mode;
 } tx_compl_info_t;
 
 /* Global variables */
@@ -266,6 +274,7 @@ static void init_pktio_entry(pktio_entry_t *entry)
 	entry->enabled.all_flags = 0;
 
 	entry->tx_compl_pool = ODP_POOL_INVALID;
+	entry->tx_compl_status_shm = ODP_SHM_INVALID;
 
 	odp_atomic_init_u64(&entry->stats_extra.in_discards, 0);
 	odp_atomic_init_u64(&entry->stats_extra.in_errors, 0);
@@ -514,9 +523,17 @@ int odp_pktio_close(odp_pktio_t hdl)
 	entry->num_out_queue = 0;
 
 	if (entry->tx_compl_pool != ODP_POOL_INVALID) {
-		if (odp_pool_destroy(entry->tx_compl_pool)) {
+		if (odp_pool_destroy(entry->tx_compl_pool) == -1) {
 			unlock_entry(entry);
 			_ODP_ERR("Unable to destroy Tx event completion pool\n");
+			return -1;
+		}
+	}
+
+	if (entry->tx_compl_status_shm != ODP_SHM_INVALID) {
+		if (odp_shm_free(entry->tx_compl_status_shm) < 0) {
+			unlock_entry(entry);
+			_ODP_ERR("Unable to destroy Tx poll completion SHM\n");
 			return -1;
 		}
 	}
@@ -537,14 +554,13 @@ int odp_pktio_close(odp_pktio_t hdl)
 static int configure_tx_event_compl(pktio_entry_t *entry)
 {
 	odp_pool_param_t params;
-	const char *name_base = "_odp_pktio_tx_compl_pool_";
+	const char *name_base = "_odp_pktio_tx_compl_";
 	char pool_name[ODP_POOL_NAME_LEN];
 
 	if (entry->tx_compl_pool != ODP_POOL_INVALID)
 		return 0;
 
-	snprintf(pool_name, sizeof(pool_name), "%s%d", name_base,
-		 odp_pktio_index(entry->handle));
+	snprintf(pool_name, sizeof(pool_name), "%s%d", name_base, odp_pktio_index(entry->handle));
 	odp_pool_param_init(&params);
 
 	params.type = ODP_POOL_BUFFER;
@@ -554,6 +570,33 @@ static int configure_tx_event_compl(pktio_entry_t *entry)
 
 	if (entry->tx_compl_pool == ODP_POOL_INVALID)
 		return -1;
+
+	return 0;
+}
+
+static int configure_tx_poll_compl(pktio_entry_t *entry, uint32_t count)
+{
+	odp_shm_t shm;
+	const char *name_base = "_odp_pktio_tx_compl_";
+	char shm_name[ODP_SHM_NAME_LEN];
+
+	if (entry->tx_compl_status_shm != ODP_SHM_INVALID)
+		return 0;
+
+	snprintf(shm_name, sizeof(shm_name), "%s%d", name_base, odp_pktio_index(entry->handle));
+	shm = odp_shm_reserve(shm_name, sizeof(odp_atomic_u32_t) * count, ODP_CACHE_LINE_SIZE, 0);
+
+	if (shm == ODP_SHM_INVALID)
+		return -1;
+
+	entry->tx_compl_status_shm = shm;
+	entry->tx_compl_status = odp_shm_addr(shm);
+
+	if (entry->tx_compl_status == NULL)
+		return -1;
+
+	for (uint32_t i = 0; i < count; i++)
+		odp_atomic_init_u32(&entry->tx_compl_status[i], 0);
 
 	return 0;
 }
@@ -610,14 +653,25 @@ int odp_pktio_config(odp_pktio_t hdl, const odp_pktio_config_t *config)
 	entry->config = *config;
 
 	entry->enabled.tx_ts = config->pktout.bit.ts_ena;
-	entry->enabled.tx_compl = (config->pktout.bit.tx_compl_ena || config->tx_compl.mode_event);
+	entry->enabled.tx_compl = (config->pktout.bit.tx_compl_ena ||
+				   config->tx_compl.mode_event ||
+				   config->tx_compl.mode_poll);
 
-	if (entry->enabled.tx_compl)
-		if (configure_tx_event_compl(entry)) {
+	if (entry->enabled.tx_compl) {
+		if ((config->pktout.bit.tx_compl_ena || config->tx_compl.mode_event) &&
+		    configure_tx_event_compl(entry)) {
 			unlock_entry(entry);
 			_ODP_ERR("Unable to configure Tx event completion\n");
 			return -1;
 		}
+
+		if (config->tx_compl.mode_poll &&
+		    configure_tx_poll_compl(entry, config->tx_compl.max_compl_id + 1)) {
+			unlock_entry(entry);
+			_ODP_ERR("Unable to configure Tx poll completion\n");
+			return -1;
+		}
+	}
 
 	entry->enabled.tx_aging = config->pktout.bit.aging_ena;
 
@@ -2629,18 +2683,54 @@ uint64_t odp_pktin_wait_time(uint64_t nsec)
 	return (nsec / (1000)) + 1;
 }
 
-static void check_tx_compl_ev(const odp_packet_hdr_t *hdr, int pkt_idx, tx_compl_info_t *info,
-			      uint16_t *num)
+static inline odp_bool_t check_tx_compl(const odp_packet_hdr_t *hdr, int pkt_idx,
+					tx_compl_info_t *info, odp_pool_t pool,
+					odp_atomic_u32_t *status_map, uint16_t *num)
 {
-	if (odp_unlikely(hdr->p.flags.tx_compl_ev)) {
-		info[*num].user_ptr = hdr->user_ptr;
-		info[*num].queue = hdr->dst_queue;
-		info[*num].idx = pkt_idx;
-		(*num)++;
+	tx_compl_info_t *i;
+
+	if (odp_likely(hdr->p.flags.tx_compl_ev == 0 && hdr->p.flags.tx_compl_poll == 0))
+		return true;
+
+	i = &info[*num];
+	i->idx = pkt_idx;
+
+	if (hdr->p.flags.tx_compl_ev) {
+		i->buf = odp_buffer_alloc(pool);
+
+		if (i->buf == ODP_BUFFER_INVALID)
+			return false;
+
+		i->user_ptr = hdr->user_ptr;
+		i->queue = hdr->dst_queue;
+		i->mode = ODP_PACKET_TX_COMPL_EVENT;
+	} else {
+		i->status = &status_map[hdr->tx_compl_id];
+		odp_atomic_store_rel_u32(i->status, 0);
+		i->mode = ODP_PACKET_TX_COMPL_POLL;
 	}
+
+	(*num)++;
+
+	return true;
 }
 
-static void send_tx_compl_event(odp_buffer_t buf, const void *user_ptr, odp_queue_t queue)
+static inline int prepare_tx_compl(const odp_packet_t packets[], int num, tx_compl_info_t *info,
+				   odp_pool_t pool, odp_atomic_u32_t *status_map,
+				   uint16_t *num_tx_c)
+{
+	int num_to_send = num;
+
+	for (int i = 0; i < num; i++)
+		if (!check_tx_compl(packet_hdr(packets[i]), i, info, pool, status_map, num_tx_c)) {
+			num_to_send = info[*num_tx_c].idx;
+			break;
+		}
+
+	return num_to_send;
+}
+
+static inline void send_tx_compl_event(odp_buffer_t buf, const void *user_ptr, odp_queue_t queue)
 {
 	_odp_pktio_tx_compl_t *data;
 	odp_event_t ev;
@@ -2656,15 +2746,20 @@ static void send_tx_compl_event(odp_buffer_t buf, const void *user_ptr, odp_queu
 	}
 }
 
-static void send_tx_compl_events(tx_compl_info_t *info, uint16_t num, odp_buffer_t bufs[],
-				 int num_sent)
+static inline void finish_tx_compl(tx_compl_info_t *info, uint16_t num, int num_sent)
 {
-	for (int i = 0; i < num; i++) {
-		if (info[i].idx < num_sent) {
-			send_tx_compl_event(bufs[i], info[i].user_ptr, info[i].queue);
-		} else {
-			odp_buffer_free_multi(&bufs[i], num - i);
-			break;
+	tx_compl_info_t *i;
+
+	for (int j = 0; j < num; j++) {
+		i = &info[j];
+
+		if (i->idx < num_sent) {
+			if (i->mode == ODP_PACKET_TX_COMPL_EVENT)
+				send_tx_compl_event(i->buf, i->user_ptr, i->queue);
+			else
+				odp_atomic_store_rel_u32(i->status, 1);
+		} else if (i->mode == ODP_PACKET_TX_COMPL_EVENT) {
+			odp_buffer_free(i->buf);
 		}
 	}
 }
@@ -2674,9 +2769,8 @@ int odp_pktout_send(odp_pktout_queue_t queue, const odp_packet_t packets[],
 {
 	pktio_entry_t *entry;
 	odp_pktio_t pktio = queue.pktio;
-	uint16_t num_tx_cevs = 0;
 	tx_compl_info_t tx_compl_info[num];
-	odp_buffer_t bufs[num];
+	uint16_t num_tx_c = 0;
 	int num_to_send = num, num_sent;
 
 	entry = get_pktio_entry(pktio);
@@ -2692,27 +2786,17 @@ int odp_pktout_send(odp_pktout_queue_t queue, const odp_packet_t packets[],
 		_odp_pcapng_dump_pkts(entry, queue.index, packets, num);
 
 	if (odp_unlikely(_odp_pktio_tx_compl_enabled(entry))) {
-		for (int i = 0; i < num; i++)
-			check_tx_compl_ev(packet_hdr(packets[i]), i, tx_compl_info, &num_tx_cevs);
+		odp_pool_t tx_compl_pool = entry->tx_compl_pool;
+		odp_atomic_u32_t *tx_compl_status = entry->tx_compl_status;
 
-		if (odp_unlikely(num_tx_cevs)) {
-			int num_alloc = odp_buffer_alloc_multi(entry->tx_compl_pool, bufs,
-							       num_tx_cevs);
-
-			if (odp_unlikely(num_alloc < num_tx_cevs)) {
-				if (odp_unlikely(num_alloc < 0))
-					num_alloc = 0;
-
-				num_to_send = tx_compl_info[num_alloc].idx;
-				num_tx_cevs = num_alloc;
-			}
-		}
+		num_to_send = prepare_tx_compl(packets, num, tx_compl_info, tx_compl_pool,
+					       tx_compl_status, &num_tx_c);
 	}
 
 	num_sent = entry->ops->send(entry, queue.index, packets, num_to_send);
 
-	if (odp_unlikely(num_tx_cevs))
-		send_tx_compl_events(tx_compl_info, num_tx_cevs, bufs, num_sent);
+	if (odp_unlikely(num_tx_c))
+		finish_tx_compl(tx_compl_info, num_tx_c, num_sent);
 
 	return num_sent;
 }
@@ -3224,24 +3308,28 @@ int odp_pktout_send_lso(odp_pktout_queue_t queue, const odp_packet_t packet[], i
 	return i;
 }
 
-void _odp_pktio_allocate_and_send_tx_compl_events(const pktio_entry_t *entry,
-						  const odp_packet_t packets[], int num)
+void _odp_pktio_process_tx_compl(const pktio_entry_t *entry, const odp_packet_t packets[], int num)
 {
-	uint16_t num_tx_cevs = 0, num_alloc;
-	int idx[num];
-	odp_buffer_t bufs[num];
 	odp_packet_hdr_t *hdr;
+	odp_pool_t pool = entry->tx_compl_pool;
+	odp_buffer_t buf;
+	odp_atomic_u32_t *status_map = entry->tx_compl_status;
 
-	for (int i = 0; i < num; i++)
-		if (odp_unlikely(packet_hdr(packets[i])->p.flags.tx_compl_ev))
-			idx[num_tx_cevs++] = i;
+	for (int i = 0; i < num; i++) {
+		hdr = packet_hdr(packets[i]);
 
-	if (odp_unlikely(num_tx_cevs)) {
-		num_alloc = odp_buffer_alloc_multi(entry->tx_compl_pool, bufs, num_tx_cevs);
+		if (odp_likely(hdr->p.flags.tx_compl_ev == 0 && hdr->p.flags.tx_compl_poll == 0))
+			continue;
 
-		for (int i = 0; i < num_alloc; i++) {
-			hdr = packet_hdr(packets[idx[i]]);
-			send_tx_compl_event(bufs[i], hdr->user_ptr, hdr->dst_queue);
+		if (hdr->p.flags.tx_compl_ev) {
+			buf = odp_buffer_alloc(pool);
+
+			if (odp_unlikely(buf == ODP_BUFFER_INVALID))
+				continue;
+
+			send_tx_compl_event(buf, hdr->user_ptr, hdr->dst_queue);
+		} else {
+			odp_atomic_store_rel_u32(&status_map[hdr->tx_compl_id], 1);
 		}
 	}
 }
