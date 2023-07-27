@@ -190,6 +190,9 @@ extern "C" {
  */
 #define CONFIG_TIMER_128BIT_ATOMICS 1
 
+/* Enable timer scan performance benchmark. This works with inline enabled. */
+#define CONFIG_TIMER_PROFILE_INLINE 0
+
 #ifdef __cplusplus
 }
 #endif
