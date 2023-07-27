@@ -1599,7 +1599,7 @@ int odp_pktio_capability(odp_pktio_t pktio, odp_pktio_capability_t *capa)
 
 	capa->tx_compl.queue_type_sched = 1;
 	capa->tx_compl.queue_type_plain = 1;
-	capa->tx_compl.max_compl_id = 0;
+	capa->tx_compl.max_compl_id = UINT32_MAX - 1;
 	capa->free_ctrl.dont_free = 0;
 
 	capa->config.pktout.bit.aging_ena = 1;

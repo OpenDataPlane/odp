@@ -508,7 +508,7 @@ static int pcapif_capability(pktio_entry_t *pktio_entry ODP_UNUSED,
 	capa->config.pktout.bit.tx_compl_ena = 1;
 	capa->tx_compl.mode_all = 1;
 	capa->tx_compl.mode_event = 1;
-	capa->tx_compl.mode_poll = 0;
+	capa->tx_compl.mode_poll = 1;
 
 	capa->stats.pktio.counter.in_octets = 1;
 	capa->stats.pktio.counter.in_packets = 1;
