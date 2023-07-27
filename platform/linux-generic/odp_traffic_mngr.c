@@ -2283,8 +2283,7 @@ static void tm_send_pkt(tm_system_t *tm_system, uint32_t max_sends)
 				ret = odp_pktout_send(tm_system->pktout, &odp_pkt, 1);
 			if (odp_unlikely(ret != 1)) {
 				if (odp_unlikely(_odp_pktio_tx_compl_enabled(pktio_entry)))
-					_odp_pktio_allocate_and_send_tx_compl_events(pktio_entry,
-										     &odp_pkt, 1);
+					_odp_pktio_process_tx_compl(pktio_entry, &odp_pkt, 1);
 				odp_packet_free(odp_pkt);
 				if (odp_unlikely(ret < 0))
 					odp_atomic_inc_u64(&tm_queue_obj->stats.errors);
