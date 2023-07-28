@@ -344,6 +344,9 @@ jobs:
       - name: Failure log
         if: ${{ failure() }}
         run: find . -name "*.trs" | xargs grep -l '^.test-result. FAIL' | while read trs ; do echo FAILURE detected at $trs; cat ${trs%%.trs}.log ; done
+      - name: Success log
+        if: ${{ success() }}
+        run: find . -name "*.log" -exec echo -e "\n\n        @@@@@ {} @@@@@\n\n" \; -exec cat {} \;
 
   Run_OS:
     runs-on: ubuntu-20.04
