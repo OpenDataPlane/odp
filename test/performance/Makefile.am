@@ -13,6 +13,7 @@ EXECUTABLES = odp_atomic_perf \
 	      odp_pktio_perf \
 	      odp_pool_perf \
 	      odp_queue_perf \
+	      odp_stash_perf \
 	      odp_random \
 	      odp_stress
 
