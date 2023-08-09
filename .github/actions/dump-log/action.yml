@@ -1,0 +1,7 @@
+name: 'Dump Logs'
+description: 'Dump logs of successful run'
+runs:
+  using: 'composite'
+  steps:
+    - run: find . -name "*.log" -exec echo -e "\n\n        @@@@@ {} @@@@@\n\n" \; -exec cat {} \;
+      shell: bash

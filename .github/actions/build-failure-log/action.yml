@@ -1,0 +1,7 @@
+name: 'Build Failure Logger'
+description: 'Log output of failing build'
+runs:
+  using: 'composite'
+  steps:
+    - run: find . -name config.log -exec cat {} \;
+      shell: bash
