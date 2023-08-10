@@ -26,7 +26,6 @@
 #define MIN_PKT_SEG_LEN   64
 #define CHECK_PERIOD      10000
 #define TEST_PASSED_LIMIT 5000
-#define TIMEOUT_OFFSET_NS 1000000
 #define SCHED_MODE_PARAL  1
 #define SCHED_MODE_ATOMIC 2
 #define SCHED_MODE_ORDER  3
@@ -1337,10 +1336,6 @@ static int start_timers(test_global_t *test_global)
 	if (test_global->opt.timeout_us == 0)
 		return 0;
 
-	/* Delay the first timeout so that workers have time to startup */
-	timeout_tick += odp_timer_ns_to_tick(test_global->timer.timer_pool,
-					     TIMEOUT_OFFSET_NS);
-
 	start_param.tick_type = ODP_TIMER_TICK_REL;
 	start_param.tick = timeout_tick;
 
@@ -1532,7 +1527,7 @@ int main(int argc, char *argv[])
 	if (create_timers(test_global))
 		goto quit;
 
-	if (start_timers(test_global))
+	if (start_pktios(test_global))
 		goto quit;
 
 	odp_barrier_init(&test_global->worker_start,
@@ -1540,14 +1535,14 @@ int main(int argc, char *argv[])
 
 	start_workers(thread, test_global);
 
-	/* Synchronize pktio configuration with workers. Worker are now ready
-	 * to process packets. */
-	odp_barrier_wait(&test_global->worker_start);
-
-	if (start_pktios(test_global)) {
+	if (start_timers(test_global)) {
 		test_global->stop_workers = 1;
 		odp_mb_full();
 	}
+
+	/* Synchronize pktio configuration with workers. Worker are now ready
+	 * to process packets. */
+	odp_barrier_wait(&test_global->worker_start);
 
 	t1 = odp_time_local();
 
