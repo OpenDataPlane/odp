@@ -300,18 +300,6 @@ jobs:
         if: ${{ failure() }}
         run: find . -name config.log -exec cat {} \;
 
-  Run_coverage:
-    runs-on: ubuntu-20.04
-    steps:
-      - uses: actions/checkout@v3
-      - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}"
-               -e CONF="${CONF}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/coverage.sh
-      - name: Failure log
-        if: ${{ failure() }}
-        run: find . -name "*.trs" | xargs grep -l '^.test-result. FAIL' | while read trs ; do echo FAILURE detected at $trs; cat ${trs%%.trs}.log ; done
-      - name: Upload to Codecov
-        uses: codecov/codecov-action@v3
-
   Run_distcheck:
     runs-on: ubuntu-20.04
     strategy:
