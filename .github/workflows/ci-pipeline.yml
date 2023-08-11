@@ -11,55 +11,51 @@ jobs:
   Checkpatch:
     runs-on: ubuntu-20.04
     steps:
-    - uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
-
-    - name: Install dependencies
-      run: |
-        sudo apt update
-        sudo apt install codespell
-
-    - name: Check pull request
-      if: github.event_name == 'pull_request'
-      env:
-        CHECKPATCH_COMMAND: ./scripts/checkpatch.pl
-      uses: webispy/checkpatch-action@v8
-
-    - name: Check push
-      if: github.event_name == 'push' && github.ref != 'refs/heads/master'
-      run: |
-        AFTER=${{ github.event.after }}
-        BEFORE=${{ github.event.before }}
-        if [ -z "${BEFORE//0}" ] || [ -z "${AFTER//0}" ]; then
-          COMMIT_RANGE=""
-        else
-          COMMIT_RANGE="${BEFORE}..${AFTER}"
-        fi
-        ./scripts/ci-checkpatches.sh ${COMMIT_RANGE}
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install codespell
+      - name: Check pull request
+        if: github.event_name == 'pull_request'
+        env:
+          CHECKPATCH_COMMAND: ./scripts/checkpatch.pl
+        uses: webispy/checkpatch-action@v8
+      - name: Check push
+        if: github.event_name == 'push' && github.ref != 'refs/heads/master'
+        run: |
+          AFTER=${{ github.event.after }}
+          BEFORE=${{ github.event.before }}
+          if [ -z "${BEFORE//0}" ] || [ -z "${AFTER//0}" ]; then
+            COMMIT_RANGE=""
+          else
+            COMMIT_RANGE="${BEFORE}..${AFTER}"
+          fi
+          ./scripts/ci-checkpatches.sh ${COMMIT_RANGE}
 
   Documentation:
     runs-on: ubuntu-20.04
     steps:
-    - uses: actions/checkout@v3
-
-    - name: Install dependencies
-      run: |
-        sudo apt update
-        sudo apt install doxygen asciidoctor libconfig-dev libssl-dev mscgen cmake graphviz
-        sudo gem install asciidoctor
-    - name: Build
-      shell: bash
-      run: |
-        ./bootstrap
-        ./configure --enable-user-guides
-        pushd doc
-        make
-        popd
-        touch ./doxygen.log
-        # Doxygen does not trap on warnings, check for them here.
-        make doxygen-doc 2>&1 | tee ./doxygen.log
-        ! fgrep -rq warning ./doxygen.log
+      - uses: actions/checkout@v3
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install doxygen asciidoctor libconfig-dev libssl-dev mscgen cmake graphviz
+          sudo gem install asciidoctor
+      - name: Build
+        shell: bash
+        run: |
+          ./bootstrap
+          ./configure --enable-user-guides
+          pushd doc
+          make
+          popd
+          touch ./doxygen.log
+          # Doxygen does not trap on warnings, check for them here.
+          make doxygen-doc 2>&1 | tee ./doxygen.log
+          ! fgrep -rq warning ./doxygen.log
 
   Build:
     runs-on: ubuntu-20.04
@@ -264,11 +260,11 @@ jobs:
   Build_out-of-tree:
     runs-on: ubuntu-20.04
     steps:
-    - uses: actions/checkout@v3
-    - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}"
-             -e CONF="${CONF}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/out_of_tree.sh
-    - if: ${{ failure() }}
-      uses: ./.github/actions/build-failure-log
+      - uses: actions/checkout@v3
+      - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}"
+              -e CONF="${CONF}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/out_of_tree.sh
+      - if: ${{ failure() }}
+        uses: ./.github/actions/build-failure-log
 
   Build_XDP:
     runs-on: ubuntu-20.04
@@ -293,11 +289,11 @@ jobs:
       matrix:
         conf: ['--enable-user-guides', '--enable-user-guides --enable-abi-compat']
     steps:
-    - uses: actions/checkout@v3
-    - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}"
-             -e CONF="${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/distcheck.sh
-    - if: ${{ failure() }}
-      uses: ./.github/actions/run-failure-log
+      - uses: actions/checkout@v3
+      - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}"
+              -e CONF="${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/distcheck.sh
+      - if: ${{ failure() }}
+        uses: ./.github/actions/run-failure-log
 
   Run:
     runs-on: ubuntu-20.04
@@ -318,7 +314,6 @@ jobs:
         uses: ./.github/actions/run-failure-log
       - if: ${{ success() }}
         uses: ./.github/actions/dump-log
-
 
   Run_OS:
     runs-on: ubuntu-20.04
