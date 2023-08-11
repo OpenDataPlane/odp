@@ -2206,7 +2206,7 @@ static void ipsec_out_prepare(const odp_packet_t pkt_in[], odp_packet_t pkt_out[
 	opt_inc = (param->num_opt > 1) ? 1 : 0;
 	/* No need to do _odp_ipsec_sa_use() here since an ODP application is not allowed to do
 	 * call IPsec output before SA creation has completed nor call odp_ipsec_sa_disable()
-	 * before IPsec output has completed. IOW, the needed sychronization between threads is
+	 * before IPsec output has completed. IOW, the needed synchronization between threads is
 	 * done by the application. */
 	*num_crypto = 0;
 

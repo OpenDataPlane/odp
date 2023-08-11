@@ -837,7 +837,7 @@ int odp_ipsec_sa_destroy(odp_ipsec_sa_t sa)
 	uint32_t state = odp_atomic_load_u32(&ipsec_sa->state);
 
 	if (IPSEC_SA_STATE_DISABLE != state) {
-		_ODP_ERR("Distroying not disabled ipsec_sa: %u\n", ipsec_sa->ipsec_sa_idx);
+		_ODP_ERR("Destroying not disabled ipsec_sa: %u\n", ipsec_sa->ipsec_sa_idx);
 		return -1;
 	}
 

@@ -23,7 +23,7 @@
 #define TEST_SHARE_BAR (0xf0f0f0f)
 
 /* The C unit test harness is run by ODP1 app which will be told the return
- * staus of this process. See top of shmem_linux.c for chart flow of events
+ * status of this process. See top of shmem_linux.c for chart flow of events
  */
 int main(int argc, char *argv[])
 {
@@ -100,6 +100,6 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	printf("%s SUCSESS\n", __FILE__);
+	printf("%s SUCCESS\n", __FILE__);
 	return 0;
 }

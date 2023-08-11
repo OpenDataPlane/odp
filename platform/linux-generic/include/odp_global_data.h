@@ -53,7 +53,7 @@ typedef struct {
  * to enable process more support. */
 typedef struct odp_global_data_ro_t {
 	odp_init_t init_param;
-	/* directory for odp mmaped files */
+	/* directory for odp mapped files */
 	char *shm_dir;
 	/* overload default with env */
 	int   shm_dir_from_env;

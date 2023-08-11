@@ -12,7 +12,7 @@ extern "C" {
 #endif
 
 /*
- * the following enum defines the different contextes by which the
+ * the following enum defines the different contexts by which the
  * FD server may be used: In the FD server, the keys used to store/retrieve
  * a file descriptor are actually context based:
  * Both the context and the key are stored at fd registration time,
