@@ -1317,7 +1317,7 @@ typedef struct odp_schedule_config_t {
 	 *  scheduling of the event and synchronization is maintained per flow
 	 *  within each queue.
 	 *
-	 *  Depeding on implementation, there may be much more flows supported
+	 *  Depending on implementation, there may be much more flows supported
 	 *  than queues, as flows are lightweight entities.
 	 *
 	 *  @see odp_schedule_capability_t, odp_event_flow_id()

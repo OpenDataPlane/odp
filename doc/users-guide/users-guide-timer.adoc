@@ -29,7 +29,7 @@ _i.e.,_ trigger both state machines.
 .ODP Timers lifecycle State Diagram
 image::timer_fsm.svg[align="center"]
 
-.ODP Timeout event lifecyle State Diagram
+.ODP Timeout event lifecycle State Diagram
 image::timeout_fsm.svg[align="center"]
 
 Reminder:
