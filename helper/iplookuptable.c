@@ -155,7 +155,7 @@ cache_destroy(odph_iplookup_table_impl *impl)
 	}
 }
 
-/** According to the type of cahce, set the value of
+/** According to the type of cache, set the value of
  *  a buffer to the initial value.
  */
 static void

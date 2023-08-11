@@ -11,7 +11,7 @@
  *
  * This file is not part of ODP APIs, but can be optionally used to ease common
  * setups in a Linux system. User is free to implement the same setups in
- * otherways (not via this file).
+ * other ways (not via this file).
  */
 
 #ifndef ODPH_LINUX_PTHREAD_H_
