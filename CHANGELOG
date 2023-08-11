@@ -2673,7 +2673,7 @@ The ODP Reference Implementation corporates a number of improvements that
 result in better code organization as well as improved processing efficiency.
 
 ==== Pktio null device support
-In the LNG Reference Implemenations of ODP, the `odp_pktio_open()` API may now
+In the LNG Reference Implementations of ODP, the `odp_pktio_open()` API may now
 specify devices of class `null` to indicate the PktIO is treated as a dummy
 device. Null devices behave just like Linux `/dev/null` in that they never
 receive packets and simply discard any packets sent to them.
@@ -3750,7 +3750,7 @@ directory to provide stress-testing of packet ordering features of ODP.
 
 === Documentation
 In addition to expanded documentation related to the new packet reference APIs,
-a section on applicatin portability has been added that discusses the types
+a section on application portability has been added that discusses the types
 of portability offered by ODP and the tradeoffs that application writers should
 consider when using ODP.
 
@@ -3934,7 +3934,7 @@ manipulation.
 
 ==== Ordered Queue Improvements
 The implementation of ordered queues has been streamlined and made more
-scaleable in multi-core systems.
+scalable in multi-core systems.
 
 ==== Packet Segmentation Improvements
 The more advance segmentation capabilities present in the new ODP packet
@@ -4440,9 +4440,9 @@ containing a larger number of CPUs (typically 24 or more).
   implementation-specific capability limits for enhanced program portability.
 
 ==== Classification
-* Addtion of a structure that defines system level classification capability
+* Addition of a structure that defines system level classification capability
 * Addition of range PMRs to complement the existing value PMRs to permit
-  application to specifiy classification rules over a range of values.
+  application to specify classification rules over a range of values.
 
 ==== Cryptography
 * Provides a way to get the available cipher and authentication algorithms.
@@ -4467,13 +4467,13 @@ containing a larger number of CPUs (typically 24 or more).
 * Replaced config definition for maximum pktio entries with maximum packet IO
   index call
 * Added the classify_enable bit to the odp_pktin_queue_param_t that allows
-  applications to explicity control which pktin queues are subject to full
+  applications to explicitly control which pktin queues are subject to full
   classifier support.
 * Addition of pktin configuration options to control packet timestamping
   and checksum validation processing.
 * Addition of pktout configuration options to control packet checksum
   offload processing.
-* Add the ability to query (via capabilties) whether a pktio interface
+* Add the ability to query (via capabilities) whether a pktio interface
   supports operating in loopback mode and if so to enable/disable this
   mode of operation.
 * Round out the polling APIs be adding the ability to receive packets in
@@ -4499,8 +4499,8 @@ containing a larger number of CPUs (typically 24 or more).
 * Add a capability inquiry API to obtain implementation traffic mngr limits.
 * Split TOS marking into two separate calls.
 * Add new APIs to support VLAN, ECN, and drop precedence marking.
-* Add destroy APIs for shapers, scheduler profiles, threshholds, WRED profiles,
-  TM queues, and TM nodes for symmetry and completeness to allow applictions
+* Add destroy APIs for shapers, scheduler profiles, thresholds, WRED profiles,
+  TM queues, and TM nodes for symmetry and completeness to allow applications
   to terminate gracefully without resource leakage.
 * Add the ability to disconnect TM queues from their fanouts.
 * Add TM node contexts to permit applications to anchor user context areas
@@ -4585,7 +4585,7 @@ opendataplane (1.8.0.0)
        - test: performance: crypto: measure crypto operation performance
        - test: pktio_perf: finalize port to use new pktio api
        - test: pktio_perf: port to use new pktio api
-       - validataion: packet: add tests for broadcast and multicast flags
+       - validation: packet: add tests for broadcast and multicast flags
        - validation: classification: add test case for odp_cos_drop() function
        - validation: classifier: port to use new pktio api
        - validation: packet: test if user area is properly set
@@ -4827,10 +4827,10 @@ opendataplane (1.7.0.0)
        - linux-generic: sysinfo: make the cpu_hz per-CPU data
        - linux-generic: sysinfo: make the model_str per-CPU data
        - linux-generic: sysinfo: move ARM system info codes to default arch file
-       - linux-generic: sysinfo: move MIPS system info codes to its plarform file
-       - linux-generic: sysinfo: move PowerPC system info codes to its plarform file
+       - linux-generic: sysinfo: move MIPS system info codes to its platform file
+       - linux-generic: sysinfo: move PowerPC system info codes to its platform file
        - linux-generic: sysinfo: move cpu_arch_str to odp_system_info_t
-       - linux-generic: sysinfo: move x86 system info codes to its plarform file
+       - linux-generic: sysinfo: move x86 system info codes to its platform file
        - linux-generic: sysinfo: rename odp_cpu_hz_current with odp_ prefix
        - linux-generic: sysinfo: rename variable cpu_hz to cpu_hz_max
        - linux-generic: sysinfo: revise odp_cpu_hz() to return current frequency
@@ -5043,7 +5043,7 @@ opendataplane (1.4.0.0)
        - odp_cpumask_def_control() renamed to odp_cpumask_default_control()
        - odp init extended with num worker and control threads
        - new: int odp_queue_lock_count(odp_queue_t queue);
-       - refine api doc for scheduler and schedule orderd locks
+       - refine api doc for scheduler and schedule ordered locks
        - argument of odp_schedule_order_lock() and odp_schedule_order_unlock changed to unsigned
        - new: int odp_thread_count_max(void)
        - ** Packet **
@@ -5120,7 +5120,7 @@ opendataplane (1.4.0.0)
        - pktio: fill in L2 parse results by default
        - pktio: implement odp_pktio_param_init() API
        - packet: implement flow hash support
-       - schedule: fix odp_schdule_wait_time
+       - schedule: fix odp_schedule_wait_time
        - queue: change lock_index from uint32_t to unsigned to match API
        - queue: direct internal enqueues to target queue
        - queue: fix pktout_enqueue() logic
@@ -5217,7 +5217,7 @@ opendataplane (1.3.0.0)
 opendataplane (1.2.0.0)
    * API:
        - docs: doxygen grouping clean up and remove excess references to ODP
-       - pool: remove shm paramter from odp_pool_create()
+       - pool: remove shm parameter from odp_pool_create()
        - packet_io: clarify what happens when not all packets are sent
        - cpumask: added default masks and cpumask_setall
        - thrmask: added thread mask
@@ -5232,7 +5232,7 @@ opendataplane (1.2.0.0)
        - deleted odph_linux_cpumask_default
    * test:
        * validation:
-           - tests execution moved to platfrom side
+           - tests execution moved to platform side
            - test: pktio_perf: add missing atomic init
            - test: synchronizers: use thread_id instead of cpu_id to detect slow threa
            - validation: pktio: do not dequeue from scheduled queue
@@ -5393,7 +5393,7 @@ opendataplane (1.0.2)
            - example: l2fwd print packets per second
            - linux-generic: linux: destroy used pthread attr
    * bugs:
-           - validation: packet: use non-zero as true indicato
+           - validation: packet: use non-zero as true indication
            - linux-generic: pktio check for NULL entry
            - linux-generic: fix incorrect pmr_term_value update in odp_pmr_create_xxx() function
            - replace strtok_r with strtok and fix leaks
