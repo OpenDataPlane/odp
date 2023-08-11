@@ -392,7 +392,7 @@ static int test_five_keys(void)
 #define BUCKET_ENTRIES 4
 #define HASH_ENTRIES_MAX 1048576
 /*
- * Do tests for cuchoo tabke creation with bad parameters.
+ * Do tests for cuchoo table creation with bad parameters.
  */
 static int test_creation_with_bad_parameters(void)
 {

@@ -56,7 +56,7 @@
  *     actions and action meta-data describing what processing to be
  *     applied for the packets of the current flow, such as whether
  *     encryption/decryption is required on this packet, what kind of cipher
- *     algorithm should be chosed.
+ *     algorithm should be chosen.
  *   <li>Algorithm: Hash
  *   </ol>
  *
@@ -149,7 +149,7 @@ typedef int (*odph_table_destroy)(odph_table_t table);
 
 /**
  * Add (key,associated data) pair into the specific table.
- * When no associated data is currently assocated with key,
+ * When no associated data is currently associated with key,
  * then the (key,assocatied data) association is created.
  * When key is already associated with data0, then association (key, data0)
  * will be removed and association (key, associated data) is created.

@@ -87,7 +87,7 @@ struct cuckoo_table_key_value {
 };
 
 /** @internal bucket structure
- *  Put the elements with defferent keys but a same signature
+ *  Put the elements with different keys but a same signature
  *  into a bucket, and each bucket has at most HASH_BUCKET_ENTRIES
  *  elements.
  */

@@ -28,7 +28,7 @@
 typedef struct {
 	uint32_t magicword; /**< for check */
 	uint32_t init_cap; /**< input param of capacity */
-	/** given the capacity, caculate out the max supported nodes number */
+	/** given the capacity, calculate out the max supported nodes number */
 	uint32_t node_sum;
 	/** size of a lineartable element,including the rwlock in the head */
 	uint32_t value_size;
@@ -54,7 +54,7 @@ odph_table_t odph_linear_table_create(const char *name, uint32_t capacity,
 		printf("create para input error or less than !");
 		return NULL;
 	}
-	/* check name confict in shm*/
+	/* check name conflict in shm*/
 	if (odp_shm_lookup(name) != ODP_SHM_INVALID) {
 		ODPH_DBG("name already exist\n");
 		return NULL;
@@ -75,7 +75,7 @@ odph_table_t odph_linear_table_create(const char *name, uint32_t capacity,
 
 	strncpy(tbl->name, name, ODPH_TABLE_NAME_LEN - 1);
 
-	/* for linear table, the key is just the index, without confict
+	/* for linear table, the key is just the index, without conflict
 	 * so we just need to record the value content
 	 * there is a rwlock in the head of every node
 	 */

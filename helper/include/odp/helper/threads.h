@@ -13,7 +13,7 @@
  *
  * This file is an optional helper to ODP APIs. These functions are provided
  * to ease common setups in a Linux system. User is free to implement the same
- * setups in otherways (not via this API).
+ * setups in other ways (not via this API).
  */
 
 #ifndef ODPH_LINUX_H_
