@@ -71,7 +71,7 @@ void resolve_fwd_db(char *intf, odp_pktio_t pktio, odp_pktout_queue_t pktout,
 		    uint8_t *mac);
 
 /**
- * Display one fowarding database entry
+ * Display one forwarding database entry
  *
  * @param entry  Pointer to entry to display
  */

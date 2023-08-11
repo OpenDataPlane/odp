@@ -317,7 +317,7 @@ odp_event_t polled_odp_schedule_cb(odp_queue_t *from)
 }
 
 /**
- * IPsec pre argument processing intialization
+ * IPsec pre argument processing initialization
  */
 static
 void ipsec_init_pre(void)
@@ -376,7 +376,7 @@ void ipsec_init_pre(void)
 }
 
 /**
- * IPsec post argument processing intialization
+ * IPsec post argument processing initialization
  *
  * Resolve SP DB with SA DB and create corresponding IPsec cache entries
  *
@@ -1629,7 +1629,7 @@ static void print_info(char *progname, appl_args_t *appl_args)
 }
 
 /**
- * Prinf usage information
+ * Print usage information
  */
 static void usage(char *progname)
 {

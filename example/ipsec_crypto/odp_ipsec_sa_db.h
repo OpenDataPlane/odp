@@ -29,7 +29,7 @@ typedef enum sa_flags_s {
 typedef struct sa_db_entry_s {
 	struct sa_db_entry_s *next;      /**< Next entry on list */
 	uint32_t              src_ip;    /**< Source IPv4 address */
-	uint32_t              dst_ip;    /**< Desitnation IPv4 address */
+	uint32_t              dst_ip;    /**< Destination IPv4 address */
 	uint32_t              spi;       /**< Security Parameter Index */
 	ipsec_alg_t           alg;       /**< Cipher/auth algorithm */
 	ipsec_key_t           key;       /**< Cipher/auth key */
