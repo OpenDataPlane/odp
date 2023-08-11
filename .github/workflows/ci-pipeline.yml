@@ -78,9 +78,8 @@ jobs:
       - uses: actions/checkout@v3
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}"
                -e CONF="${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/build_${ARCH}.sh
-      - name: Failure log
-        if: ${{ failure() }}
-        run: find . -name config.log -exec cat {} \;
+      - if: ${{ failure() }}
+        uses: ./.github/actions/build-failure-log
 
   Build_static_u20:
     runs-on: ubuntu-20.04
@@ -95,9 +94,8 @@ jobs:
       - uses: actions/checkout@v3
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="gcc-${{matrix.cc_ver}}" -e CXX="g++-${{matrix.cc_ver}}"
                -e CONF="${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/build_static.sh
-      - name: Failure log
-        if: ${{ failure() }}
-        run: find . -name config.log -exec cat {} \;
+      - if: ${{ failure() }}
+        uses: ./.github/actions/build-failure-log
 
   Build_static_u22:
     runs-on: ubuntu-20.04
@@ -113,9 +111,8 @@ jobs:
       - uses: actions/checkout@v3
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="gcc-${{matrix.cc_ver}}" -e CXX="g++-${{matrix.cc_ver}}"
                -e CONF="${CONF} ${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/build_static.sh
-      - name: Failure log
-        if: ${{ failure() }}
-        run: find . -name config.log -exec cat {} \;
+      - if: ${{ failure() }}
+        uses: ./.github/actions/build-failure-log
 
   Build_arm64:
     runs-on: ubuntu-20.04
@@ -132,9 +129,8 @@ jobs:
       - uses: actions/checkout@v3
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}"
                -e CONF="${CONF} ${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/build_${ARCH}.sh
-      - name: Failure log
-        if: ${{ failure() }}
-        run: find . -name config.log -exec cat {} \;
+      - if: ${{ failure() }}
+        uses: ./.github/actions/build-failure-log
 
   Build_arm64_u18:
     runs-on: ubuntu-20.04
@@ -149,9 +145,8 @@ jobs:
       - uses: actions/checkout@v3
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}"
                -e CONF="${CONF}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/build_${ARCH}.sh
-      - name: Failure log
-        if: ${{ failure() }}
-        run: find . -name config.log -exec cat {} \;
+      - if: ${{ failure() }}
+        uses: ./.github/actions/build-failure-log
 
   Build_armhf:
     runs-on: ubuntu-20.04
@@ -166,9 +161,8 @@ jobs:
       - uses: actions/checkout@v3
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}"
                -e CONF="${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/build_${ARCH}.sh
-      - name: Failure log
-        if: ${{ failure() }}
-        run: find . -name config.log -exec cat {} \;
+      - if: ${{ failure() }}
+        uses: ./.github/actions/build-failure-log
 
   Build_ppc64el:
     runs-on: ubuntu-20.04
@@ -184,9 +178,8 @@ jobs:
       - uses: actions/checkout@v3
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}"
                -e CONF="${CONF} ${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/build_${ARCH}.sh
-      - name: Failure log
-        if: ${{ failure() }}
-        run: find . -name config.log -exec cat {} \;
+      - if: ${{ failure() }}
+        uses: ./.github/actions/build-failure-log
 
   Build_i386:
     runs-on: ubuntu-20.04
@@ -202,9 +195,8 @@ jobs:
       - uses: actions/checkout@v3
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}"
                -e CONF="${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/build_${ARCH}.sh
-      - name: Failure log
-        if: ${{ failure() }}
-        run: find . -name config.log -exec cat {} \;
+      - if: ${{ failure() }}
+        uses: ./.github/actions/build-failure-log
 
   Build_riscv64:
     runs-on: ubuntu-20.04
@@ -219,9 +211,8 @@ jobs:
       - uses: actions/checkout@v3
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}"
                -e CONF="${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/build_${ARCH}.sh
-      - name: Failure log
-        if: ${{ failure() }}
-        run: find . -name config.log -exec cat {} \;
+      - if: ${{ failure() }}
+        uses: ./.github/actions/build-failure-log
 
   Build_OS:
     runs-on: ubuntu-20.04
@@ -235,9 +226,8 @@ jobs:
       - uses: actions/checkout@v3
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}"
                -e CONF="${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${{matrix.os}}-${ARCH} /odp/scripts/ci/build_${ARCH}.sh
-      - name: Failure log
-        if: ${{ failure() }}
-        run: find . -name config.log -exec cat {} \;
+      - if: ${{ failure() }}
+        uses: ./.github/actions/build-failure-log
 
   Build_gcc_u18:
     runs-on: ubuntu-20.04
@@ -252,9 +242,8 @@ jobs:
       - uses: actions/checkout@v3
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="gcc-${{matrix.cc_ver}}" -e CXX="g++-${{matrix.cc_ver}}"
                -e CONF="${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/build_${ARCH}.sh
-      - name: Failure log
-        if: ${{ failure() }}
-        run: find . -name config.log -exec cat {} \;
+      - if: ${{ failure() }}
+        uses: ./.github/actions/build-failure-log
 
   Build_gcc_u22:
     runs-on: ubuntu-20.04
@@ -269,9 +258,8 @@ jobs:
       - uses: actions/checkout@v3
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="gcc-${{matrix.cc_ver}}" -e CXX="g++-${{matrix.cc_ver}}"
                -e CONF="${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/build_${ARCH}.sh
-      - name: Failure log
-        if: ${{ failure() }}
-        run: find . -name config.log -exec cat {} \;
+      - if: ${{ failure() }}
+        uses: ./.github/actions/build-failure-log
 
   Build_out-of-tree:
     runs-on: ubuntu-20.04
@@ -279,9 +267,8 @@ jobs:
     - uses: actions/checkout@v3
     - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}"
              -e CONF="${CONF}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/out_of_tree.sh
-    - name: Failure log
-      if: ${{ failure() }}
-      run: find . -name config.log -exec cat {} \;
+    - if: ${{ failure() }}
+      uses: ./.github/actions/build-failure-log
 
   Build_XDP:
     runs-on: ubuntu-20.04
@@ -296,9 +283,8 @@ jobs:
       - uses: actions/checkout@v3
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}"
                -e CONF="${CONF}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/build_${ARCH}.sh
-      - name: Failure log
-        if: ${{ failure() }}
-        run: find . -name config.log -exec cat {} \;
+      - if: ${{ failure() }}
+        uses: ./.github/actions/build-failure-log
 
   Run_distcheck:
     runs-on: ubuntu-20.04
@@ -310,9 +296,8 @@ jobs:
     - uses: actions/checkout@v3
     - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}"
              -e CONF="${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/distcheck.sh
-    - name: Failure log
-      if: ${{ failure() }}
-      run: find . -name "*.trs" | xargs grep -l '^.test-result. FAIL' | while read trs ; do echo FAILURE detected at $trs; cat ${trs%%.trs}.log ; done
+    - if: ${{ failure() }}
+      uses: ./.github/actions/run-failure-log
 
   Run:
     runs-on: ubuntu-20.04
@@ -329,9 +314,11 @@ jobs:
       - uses: actions/checkout@v3
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}" -e ARCH="${ARCH}"
                -e CXX=g++-10 -e CONF="${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/check.sh
-      - name: Failure log
-        if: ${{ failure() }}
-        run: find . -name "*.trs" | xargs grep -l '^.test-result. FAIL' | while read trs ; do echo FAILURE detected at $trs; cat ${trs%%.trs}.log ; done
+      - if: ${{ failure() }}
+        uses: ./.github/actions/run-failure-log
+      - if: ${{ success() }}
+        uses: ./.github/actions/dump-log
+
 
   Run_OS:
     runs-on: ubuntu-20.04
@@ -344,9 +331,8 @@ jobs:
       - uses: actions/checkout@v3
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}" -e ARCH="${ARCH}"
                -e CONF="${CONF}" $CONTAINER_NAMESPACE/odp-ci-${{matrix.os}}-${ARCH} /odp/scripts/ci/check.sh
-      - name: Failure log
-        if: ${{ failure() }}
-        run: find . -name "*.trs" | xargs grep -l '^.test-result. FAIL' | while read trs ; do echo FAILURE detected at $trs; cat ${trs%%.trs}.log ; done
+      - if: ${{ failure() }}
+        uses: ./.github/actions/run-failure-log
 
   Run_sched_config:
     runs-on: ubuntu-20.04
@@ -354,9 +340,8 @@ jobs:
       - uses: actions/checkout@v3
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}" -e ARCH="${ARCH}"
                -e CONF="${CONF}" -e ODP_CONFIG_FILE=/odp/platform/linux-generic/test/sched-basic.conf $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/check.sh
-      - name: Failure log
-        if: ${{ failure() }}
-        run: find . -name "*.trs" | xargs grep -l '^.test-result. FAIL' | while read trs ; do echo FAILURE detected at $trs; cat ${trs%%.trs}.log ; done
+      - if: ${{ failure() }}
+        uses: ./.github/actions/run-failure-log
 
   Run_stash_config:
     runs-on: ubuntu-20.04
@@ -364,9 +349,8 @@ jobs:
       - uses: actions/checkout@v3
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}" -e ARCH="${ARCH}"
                -e CONF="${CONF}" -e ODP_CONFIG_FILE=/odp/platform/linux-generic/test/stash-custom.conf $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/check.sh
-      - name: Failure log
-        if: ${{ failure() }}
-        run: find . -name "*.trs" | xargs grep -l '^.test-result. FAIL' | while read trs ; do echo FAILURE detected at $trs; cat ${trs%%.trs}.log ; done
+      - if: ${{ failure() }}
+        uses: ./.github/actions/run-failure-log
 
   Run_scheduler_sp:
     runs-on: ubuntu-20.04
@@ -374,9 +358,8 @@ jobs:
       - uses: actions/checkout@v3
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}" -e ARCH="${ARCH}"
                -e CONF="${CONF}" -e ODP_SCHEDULER=sp $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/check.sh
-      - name: Failure log
-        if: ${{ failure() }}
-        run: find . -name "*.trs" | xargs grep -l '^.test-result. FAIL' | while read trs ; do echo FAILURE detected at $trs; cat ${trs%%.trs}.log ; done
+      - if: ${{ failure() }}
+        uses: ./.github/actions/run-failure-log
 
   Run_scheduler_scalable:
     runs-on: ubuntu-20.04
@@ -384,9 +367,8 @@ jobs:
       - uses: actions/checkout@v3
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}" -e ARCH="${ARCH}"
                -e CONF="${CONF}" -e ODP_SCHEDULER=scalable -e CI_SKIP=pktio_test_pktin_event_sched $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/check.sh
-      - name: Failure log
-        if: ${{ failure() }}
-        run: find . -name "*.trs" | xargs grep -l '^.test-result. FAIL' | while read trs ; do echo FAILURE detected at $trs; cat ${trs%%.trs}.log ; done
+      - if: ${{ failure() }}
+        uses: ./.github/actions/run-failure-log
 
   Run_process_mode:
     runs-on: ubuntu-20.04
@@ -395,9 +377,8 @@ jobs:
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}" -e ARCH="${ARCH}"
                -e CONF="${CONF}" -e ODP_CONFIG_FILE=/odp/platform/linux-generic/test/process-mode.conf
                -e ODPH_PROC_MODE=1 $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/check.sh
-      - name: Failure log
-        if: ${{ failure() }}
-        run: find . -name "*.trs" | xargs grep -l '^.test-result. FAIL' | while read trs ; do echo FAILURE detected at $trs; cat ${trs%%.trs}.log ; done
+      - if: ${{ failure() }}
+        uses: ./.github/actions/run-failure-log
 
   Run_inline_timer:
     runs-on: ubuntu-20.04
@@ -406,9 +387,8 @@ jobs:
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}" -e ARCH="${ARCH}"
                -e CONF="${CONF}" -e ODP_CONFIG_FILE=/odp/platform/linux-generic/test/inline-timer.conf
                $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/check_inline_timer.sh
-      - name: Failure log
-        if: ${{ failure() }}
-        run: find . -name "*.trs" | xargs grep -l '^.test-result. FAIL' | while read trs ; do echo FAILURE detected at $trs; cat ${trs%%.trs}.log ; done
+      - if: ${{ failure() }}
+        uses: ./.github/actions/run-failure-log
 
   Run_packet_align:
     runs-on: ubuntu-20.04
@@ -417,9 +397,8 @@ jobs:
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}" -e ARCH="${ARCH}"
                -e CONF="${CONF}" -e ODP_CONFIG_FILE=/odp/platform/linux-generic/test/packet_align.conf
                $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/check_pktio.sh
-      - name: Failure log
-        if: ${{ failure() }}
-        run: find . -name "*.trs" | xargs grep -l '^.test-result. FAIL' | while read trs ; do echo FAILURE detected at $trs; cat ${trs%%.trs}.log ; done
+      - if: ${{ failure() }}
+        uses: ./.github/actions/run-failure-log
 
   Run_dpdk-19_11:
     runs-on: ubuntu-20.04
@@ -427,9 +406,8 @@ jobs:
       - uses: actions/checkout@v3
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}" -e ARCH="${ARCH}"
                -e CONF="${CONF}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-dpdk_19.11 /odp/scripts/ci/check.sh
-      - name: Failure log
-        if: ${{ failure() }}
-        run: find . -name "*.trs" | xargs grep -l '^.test-result. FAIL' | while read trs ; do echo FAILURE detected at $trs; cat ${trs%%.trs}.log ; done
+      - if: ${{ failure() }}
+        uses: ./.github/actions/run-failure-log
 
   Run_dpdk-20_11:
     runs-on: ubuntu-20.04
@@ -437,9 +415,8 @@ jobs:
       - uses: actions/checkout@v3
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}" -e ARCH="${ARCH}"
                -e CONF="${CONF}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-dpdk_20.11 /odp/scripts/ci/check.sh
-      - name: Failure log
-        if: ${{ failure() }}
-        run: find . -name "*.trs" | xargs grep -l '^.test-result. FAIL' | while read trs ; do echo FAILURE detected at $trs; cat ${trs%%.trs}.log ; done
+      - if: ${{ failure() }}
+        uses: ./.github/actions/run-failure-log
 
   Run_dpdk-21_11:
     runs-on: ubuntu-20.04
@@ -447,6 +424,5 @@ jobs:
       - uses: actions/checkout@v3
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}" -e ARCH="${ARCH}"
                -e CONF="${CONF}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-dpdk_21.11 /odp/scripts/ci/check.sh
-      - name: Failure log
-        if: ${{ failure() }}
-        run: find . -name "*.trs" | xargs grep -l '^.test-result. FAIL' | while read trs ; do echo FAILURE detected at $trs; cat ${trs%%.trs}.log ; done
+      - if: ${{ failure() }}
+        uses: ./.github/actions/run-failure-log
