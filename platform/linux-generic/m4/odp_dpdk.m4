@@ -41,7 +41,7 @@ AC_ARG_ENABLE([dpdk-zero-copy],
 # Check for DPDK availability
 #
 # DPDK pmd drivers are not linked unless the --whole-archive option is
-# used. No spaces are allowed between the --whole-arhive flags.
+# used. No spaces are allowed between the --whole-archive flags.
 ##########################################################################
 if test x$pktio_dpdk_support = xyes
 then

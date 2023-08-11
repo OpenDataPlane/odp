@@ -39,7 +39,7 @@
  *   exit with failure code.            |      -------------------
  *                                      |
  *   forks odp app2 process             |       ODP APP2 process
- *   wait for child terminaison & status|       (shmem_odp2.c)
+ *   wait for child termination & status|       (shmem_odp2.c)
  *                                      |  lookup ODP_APP1 shared memory,
  *                                      |  check if memory contents is OK
  *                                      |  Exit(0) on success, exit(1) on fail
@@ -47,7 +47,7 @@
  *   exit with failure code.            |      -------------------
  *                                      |
  *   OK, write "S" in fifo,             |
- *   wait for child terminaison & status|
+ *   wait for child termination & status|
  *   terminate with same status as child|
  *					|       ODP APP1 process
  *					|       (shmem_odp1.c)
@@ -56,7 +56,7 @@
  *					|   read S(success) or F(fail) from fifo
  *					|   report success or failure to C-Unit
  *					|   Exit(0) on success, exit(1) on fail
- *  wait for child terminaison & status	|
+ *  wait for child termination & status	|
  *  terminate with same status as child	|
  *					|
  *				       \|/
@@ -91,25 +91,25 @@
 #define MAX_FIFO_WAIT 30         /* Max time waiting for the fifo (sec)      */
 
 /*
- * read the attributes of a externaly shared mem object:
+ * read the attributes of an externally shared mem object:
  * input: ext_odp_pid, blockname: the remote ODP instance and the exported
  *				  block name to be searched.
- * Output: filename: the memory block underlaying file to be opened
+ * Output: filename: the memory block underlying file to be opened
  *		     (the given buffer should be big enough i.e. at
  *		      least ISHM_FILENAME_MAXLEN bytes)
  *   The 3 following parameters are really here for debug
- *   as they are really meaningles in a non-odp process:
+ *   as they are really meaningless in a non-odp process:
  *	   len: the block real length (bytes, multiple of page sz)
  *	   flags: the _ishm flags setting the block was created with
- *	   align: the alignement setting the block was created with
+ *	   align: the alignment setting the block was created with
  *
  * return 0 on success, non zero on error
  */
-static int read_shmem_attribues(uint64_t ext_odp_pid, const char *blockname,
-				char *filename, uint64_t *len,
-				uint32_t *flags, uint64_t *user_len,
-				uint32_t *user_flags, uint32_t *align,
-				uint64_t *offset)
+static int read_shmem_attributes(uint64_t ext_odp_pid, const char *blockname,
+				 char *filename, uint64_t *len,
+				 uint32_t *flags, uint64_t *user_len,
+				 uint32_t *user_flags, uint32_t *align,
+				 uint64_t *offset)
 {
 	char shm_attr_filename[PATH_MAX];
 	FILE *export_file;
@@ -261,11 +261,11 @@ int main(int argc __attribute__((unused)), char *argv[])
 	 * check to see if linux can see the created shared memory: */
 
 	/* read the shared memory attributes (includes the shm filename): */
-	if (read_shmem_attribues(odp_app1, SHM_NAME,
-				 shm_filename, &len, &flags,
-				 &user_len, &user_flags, &align,
-				 &offset) != 0) {
-		printf("error read_shmem_attribues\n");
+	if (read_shmem_attributes(odp_app1, SHM_NAME,
+				  shm_filename, &len, &flags,
+				  &user_len, &user_flags, &align,
+				  &offset) != 0) {
+		printf("error read_shmem_attributes\n");
 		test_failure(fifo_name, fifo_fd, odp_app1);
 	}
 
@@ -279,7 +279,7 @@ int main(int argc __attribute__((unused)), char *argv[])
 		test_failure(fifo_name, fifo_fd, odp_app1); /* no return */
 	}
 
-	/* linux ODP guarantees page size alignement. Larger alignment may
+	/* linux ODP guarantees page size alignment. Larger alignment may
 	 * fail as 2 different processes will have fully unrelated
 	 * virtual spaces.
 	 */

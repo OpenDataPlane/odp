@@ -709,7 +709,7 @@ static int ipc_pktio_recv_lockless(pktio_entry_t *pktio_entry,
 		pkt_table[i] = pkt;
 	}
 
-	/* put back to rx ring dequed but not processed packets*/
+	/* put back to rx ring dequeued but not processed packets*/
 	if (pkts != i) {
 		ipcbufs_p = (void *)&offsets[i];
 		r_p = pktio_ipc->rx.cache;

@@ -32,7 +32,7 @@
  * returned to this same queue when freed.
  *
  * The reason for not using malloc() is that malloc does not guarantee
- * memory sharability between ODP threads (regardless of their implememtation)
+ * memory sharability between ODP threads (regardless of their implementation)
  * which ishm_reserve() can do. see the comments around
  * _odp_ishmbud_pool_create() and ishm_reserve() for more details.
  *
@@ -401,7 +401,7 @@ static int _odp_ishmbud_free(pool_t *bpool, void *addr)
 		/*merge: make sure we point at start of block: */
 		if (bblock > buddy)
 			bblock = buddy;
-		/*merge: size of bloack has dubbled: increse order: */
+		/*merge: size of block has doubled: increase order: */
 		order++;
 	}
 

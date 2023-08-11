@@ -59,7 +59,7 @@ extern "C" {
 ODP_STATIC_ASSERT(CLS_COS_MAX_ENTRY <= UINT16_MAX, "CoS_does_not_fit_16_bits");
 
 typedef union {
-	/* All proto fileds */
+	/* All proto fields */
 	uint32_t all;
 
 	struct {

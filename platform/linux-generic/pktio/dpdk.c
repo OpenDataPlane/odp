@@ -2098,7 +2098,7 @@ static int dpdk_start(pktio_entry_t *pktio_entry)
 	if (dpdk_setup_eth_rx(pktio_entry, pkt_dpdk, &dev_info))
 		return -1;
 
-	/* Restore MTU value resetted by dpdk_setup_eth_rx() */
+	/* Restore MTU value reset by dpdk_setup_eth_rx() */
 	if (pkt_dpdk->mtu_set && pktio_entry->capa.set_op.op.maxlen) {
 		ret = dpdk_maxlen_set(pktio_entry, pkt_dpdk->mtu, 0);
 		if (ret) {

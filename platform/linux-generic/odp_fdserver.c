@@ -29,7 +29,7 @@
  * _odp_fdserver_deregister_fd(context, key);
  * _odp_fdserver_lookup_fd(context, key);
  *
- * which are used to register/deregister or querry for file descriptor based
+ * which are used to register/deregister or query for file descriptor based
  * on a context and key value couple, which has to be unique.
  *
  * Note again that the file descriptors stored here are local to this server
@@ -129,7 +129,7 @@ static int send_fdserver_msg(int sock, int command,
 
 	char ancillary_data[CMSG_SPACE(sizeof(int))];
 
-	/* prepare the register request body (single framgent): */
+	/* prepare the register request body (single fragment): */
 	msg.command = command;
 	msg.context = context;
 	msg.key = key;
@@ -387,7 +387,7 @@ int _odp_fdserver_lookup_fd(fd_server_context_e context, uint64_t key)
 }
 
 /*
- * request server terminaison:
+ * request server termination:
  */
 static int stop_server(void)
 {

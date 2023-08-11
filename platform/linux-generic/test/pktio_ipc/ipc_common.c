@@ -147,7 +147,7 @@ void print_info(char *progname)
 }
 
 /**
- * Prinf usage information
+ * Print usage information
  */
 void usage(char *progname)
 {

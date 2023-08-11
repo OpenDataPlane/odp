@@ -349,7 +349,7 @@ sched_update_deq(sched_elem_t *q,
 		if ((oss.numevts > 0 && nss.numevts <= 0) ||
 		    oss.wrr_budget <= actual) {
 			/* If we have emptied parallel/ordered queue or
-			 * exchausted its WRR budget, we need a ticket
+			 * exhausted its WRR budget, we need a ticket
 			 * for a later pop.
 			 */
 			ticket = nss.nxt_ticket++;
