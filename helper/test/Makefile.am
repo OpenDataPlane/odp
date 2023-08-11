@@ -3,10 +3,11 @@ include $(top_srcdir)/test/Makefile.inc
 EXECUTABLES = version \
 	      debug \
 	      chksum \
-              cuckootable \
-              parse\
-              table \
-              iplookuptable
+	      cuckootable \
+	      macros \
+	      parse\
+	      table \
+	      iplookuptable
 
 #These are platform specific extensions that are not portable
 #They are a convenience to app writers who have chosen to
@@ -39,6 +40,7 @@ dist_check_SCRIPTS = odpthreads_as_processes odpthreads_as_pthreads
 
 chksum_SOURCES = chksum.c
 cuckootable_SOURCES = cuckootable.c
+macros_SOURCES = macros.c
 odpthreads_SOURCES = odpthreads.c
 parse_SOURCES = parse.c
 table_SOURCES = table.c
