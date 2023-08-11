@@ -1421,7 +1421,7 @@ static void init_port_lookup_tbl(void)
 }
 
 /*
- * Prinf usage information
+ * Print usage information
  */
 static void usage(char *progname)
 {

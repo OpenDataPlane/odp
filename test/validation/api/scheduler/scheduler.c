@@ -1250,7 +1250,7 @@ static void scheduler_test_groups(void)
 			num--;
 		}
 
-		/* Release schduler context and leave groups */
+		/* Release scheduler context and leave groups */
 		odp_schedule_group_join(mygrp1, &mymask);
 		odp_schedule_group_join(mygrp2, &mymask);
 		CU_ASSERT(drain_queues() == 0);

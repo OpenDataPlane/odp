@@ -339,7 +339,7 @@ static int run_thread(void *arg)
 }
 
 /*
- * Prinf usage information
+ * Print usage information
  */
 static void usage(char *progname)
 {

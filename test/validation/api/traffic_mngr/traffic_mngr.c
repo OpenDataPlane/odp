@@ -211,7 +211,7 @@ static const char ALPHABET[] =
 /* The following constant table determines the minimum and maximum number of
  * pkts that will be received when sending 100 pkts through a system with a
  * drop probability of p% (using a uniform probability distribution), with a
- * confidence of 99.9% 99.99% and 99.999%. The confidence is interepreted as
+ * confidence of 99.9% 99.99% and 99.999%. The confidence is interpreted as
  * follows: a 99.99% confidence says that receiving LESS pkts than the given
  * minimum or receiving MORE pkts than the given maximum (assuming a uniform
  * drop percent of p) will happen less than 1 time in 10,000 trials.

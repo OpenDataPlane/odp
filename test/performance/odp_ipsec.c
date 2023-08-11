@@ -1022,7 +1022,7 @@ static int run_thr_func(void *arg)
 }
 
 /**
- * Prinf usage information
+ * Print usage information
  */
 static void usage(char *progname)
 {

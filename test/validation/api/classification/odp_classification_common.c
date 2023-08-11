@@ -113,7 +113,7 @@ static uint32_t seqno_offset(odp_packet_t pkt)
 		CU_ASSERT_FATAL(rc == 0);
 		len = sizeof(ip) + odp_be_to_cpu_16(ip.payload_len);
 	} else {
-		CU_FAIL_FATAL("Unexcpected packet type");
+		CU_FAIL_FATAL("Unexpected packet type");
 	}
 
 	return l3_offset + len - sizeof(cls_test_packet_t);
