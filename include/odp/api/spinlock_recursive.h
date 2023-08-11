@@ -7,7 +7,7 @@
 /**
  * @file
  *
- * ODP resursive spinlock
+ * ODP recursive spinlock
  */
 
 #ifndef ODP_API_SPINLOCK_RECURSIVE_H_

@@ -1001,7 +1001,7 @@ typedef struct odp_ipsec_stats_t {
 	/** Number of packets with algorithm errors */
 	uint64_t alg_err;
 
-	/** Number of packes with MTU errors */
+	/** Number of packets with MTU errors */
 	uint64_t mtu_err;
 
 	/** Number of packets with hard lifetime(bytes) expired */

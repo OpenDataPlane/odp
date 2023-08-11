@@ -7,7 +7,7 @@
 /**
  * @file
  *
- * ODP resursive read/write lock
+ * ODP recursive read/write lock
  */
 
 #ifndef ODP_API_RWLOCK_RECURSIVE_H_

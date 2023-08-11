@@ -550,7 +550,7 @@ typedef struct odp_cls_capability_t {
 	 * supported. */
 	uint32_t max_cos_stats;
 
-	/** Maximun number of queues supported per CoS
+	/** Maximum number of queues supported per CoS
 	 * if the value is 1, then hashing is not supported*/
 	uint32_t max_hash_queues;
 
