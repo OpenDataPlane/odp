@@ -156,7 +156,7 @@ typedef struct {
 	/* Wait and handle finished transfer. */
 	void (*wait_fn)(sd_t *sd, stats_t *stats);
 	/* Handle all unfinished transfers after main test has been stopped. */
-	void (*drain_fn)(void);
+	void (*drain_fn)(sd_t *sd);
 	/* Free any resources that might have been allocated during setup phase. */
 	void (*free_fn)(const sd_t *sd);
 } test_api_t;
@@ -1111,7 +1111,7 @@ static void wait_compl_event(sd_t *sd, stats_t *stats)
 	}
 }
 
-static void drain_compl_events(void)
+static void drain_compl_events(ODP_UNUSED sd_t *sd)
 {
 	odp_event_t ev;
 
@@ -1120,6 +1120,25 @@ static void drain_compl_events(void)
 
 		if (ev == ODP_EVENT_INVALID)
 			break;
+	}
+}
+
+static void drain_poll_transfers(sd_t *sd)
+{
+	const uint32_t count = sd->dma.num_inflight;
+	trs_info_t *infos = sd->dma.infos, *info;
+	odp_dma_t handle = sd->dma.handle;
+	int rc;
+
+	for (uint32_t i = 0U; i < count; ++i) {
+		info = &infos[i];
+
+		if (info->is_running) {
+			do {
+				rc = odp_dma_transfer_done(handle, info->compl_param.transfer_id,
+							   NULL);
+			} while (rc == 0);
+		}
 	}
 }
 
@@ -1147,7 +1166,7 @@ static void setup_api(prog_config_t *config)
 			config->api.bootstrap_fn = NULL;
 			config->api.wait_fn = config->num_workers == 1 || config->policy == MANY ?
 						poll_transfers_mt_unsafe : poll_transfers_mt_safe;
-			config->api.drain_fn = NULL;
+			config->api.drain_fn = drain_poll_transfers;
 		} else {
 			config->api.session_cfg_fn = configure_event_compl_session;
 			config->api.compl_fn = configure_event_compl;
@@ -1245,7 +1264,7 @@ static int transfer(void *args)
 	thr_config->stats.tot_tm = end_tm - start_tm;
 
 	if (api->drain_fn != NULL)
-		api->drain_fn();
+		api->drain_fn(sd);
 
 out:
 	odp_barrier_wait(&prog_config->term_barrier);
