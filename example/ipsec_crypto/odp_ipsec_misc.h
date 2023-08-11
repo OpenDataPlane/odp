@@ -30,7 +30,7 @@ extern "C" {
 #define KEY_BITS_SHA1_96    160  /**< MD5_96 auth key length in bits */
 #define KEY_BITS_SHA256_128 256  /**< SHA256_128 auth key length in bits */
 
-/**< Number of bits represnted by a string of hexadecimal characters */
+/**< Number of bits represented by a string of hexadecimal characters */
 #define KEY_STR_BITS(str) (4 * strlen(str))
 
 /** IPv4 helpers for data length and uint8t pointer */

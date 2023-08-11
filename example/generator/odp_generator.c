@@ -119,7 +119,7 @@ typedef struct {
 /** * Thread specific arguments
  */
 typedef struct {
-	counters_t counters;	/**< Packet conters */
+	counters_t counters;	/**< Packet counters */
 	odp_bool_t stop; /**< Stop packet processing */
 	union {
 		struct {
@@ -1700,7 +1700,7 @@ static void print_info(char *progname, appl_args_t *appl_args)
 }
 
 /**
- * Prinf usage information
+ * Print usage information
  */
 static void usage(char *progname)
 {

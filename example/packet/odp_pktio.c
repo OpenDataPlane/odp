@@ -718,7 +718,7 @@ static void print_info(char *progname, appl_args_t *appl_args)
 }
 
 /**
- * Prinf usage information
+ * Print usage information
  */
 static void usage(char *progname)
 {
