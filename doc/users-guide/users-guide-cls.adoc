@@ -203,7 +203,7 @@ with either cost1, cos11, cos12. In this case the packet was subjected to two
 match attempts in total.
 
 The remaining two lines illustrate how a packet that matches pmr_match11 could
-end up wth either cos11, cos21 or cos31, depending on whether it matches
+end up with either cos11, cos21 or cos31, depending on whether it matches
 pmr_march1, pmr_march2 or pmr_match3.
 
 === Practical example

@@ -314,7 +314,7 @@ typedef union odp_pktin_config_opt_t {
 	uint64_t all_bits;
 } odp_pktin_config_opt_t;
 -----
-These are used to control packet timestamping as well as default packet checkum
+These are used to control packet timestamping as well as default packet checksum
 verification processing.
 
 ==== PktIO Parsing Configuration
