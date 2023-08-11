@@ -809,7 +809,7 @@ static void init_forwarding_tbl(void)
 }
 
 /**
- * Prinf usage information
+ * Print usage information
  */
 static void usage(char *progname)
 {

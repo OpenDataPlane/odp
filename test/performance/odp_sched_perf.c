@@ -1148,7 +1148,7 @@ static int start_workers(test_global_t *global, odp_instance_t instance)
 
 		if (num_group > 0 && num_join) {
 			/* Each thread joins only num_join groups, starting
-			 * from this group index and wraping around the group
+			 * from this group index and wrapping around the group
 			 * table. */
 			int first_group = (i * num_join) % num_group;
 

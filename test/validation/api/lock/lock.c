@@ -400,7 +400,7 @@ static int no_lock_functional_test(void *arg UNUSED)
 	lock_owner_delay = BASE_DELAY;
 
 	/*
-	* Tunning the iteration number:
+	* Tuning the iteration number:
 	* Here, we search for an iteration number that guarantees to show
 	* race conditions between the odp threads.
 	* Iterations is set to ITER_MPLY_FACTOR * cnt where cnt is when
@@ -470,7 +470,7 @@ static int no_lock_functional_test(void *arg UNUSED)
 	CU_ASSERT(sync_failures != 0 || global_mem->g_num_threads == 1);
 
 	/*
-	* set the iterration for the future tests to be far above the
+	* set the iteration for the future tests to be far above the
 	* contention level
 	*/
 	iterations *= ITER_MPLY_FACTOR;
