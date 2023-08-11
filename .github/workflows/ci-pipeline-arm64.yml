@@ -11,7 +11,6 @@ env:
   OS: ubuntu_20.04
 
 jobs:
-
   Build:
     if: ${{ github.repository == 'OpenDataPlane/odp' }}
     runs-on: [self-hosted, ARM64]
