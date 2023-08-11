@@ -23,6 +23,7 @@ helperinclude_HEADERS = \
 		  include/odp/helper/igmp.h\
 		  include/odp/helper/ip.h\
 		  include/odp/helper/ipsec.h\
+		  include/odp/helper/macros.h\
 		  include/odp/helper/odph_api.h\
 		  include/odp/helper/odph_cuckootable.h\
 		  include/odp/helper/odph_hashtable.h\
