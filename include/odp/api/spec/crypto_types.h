@@ -887,7 +887,7 @@ typedef enum {
 } ODP_DEPRECATE(odp_crypto_hw_err_t);
 
 /**
- * Cryto API per packet operation completion status
+ * Crypto API per packet operation completion status
  */
 typedef struct odp_crypto_op_status {
 	/** Algorithm specific return code */

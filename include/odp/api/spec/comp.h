@@ -184,7 +184,7 @@ typedef struct odp_comp_capability_t {
 	/** Synchronous compression mode support (ODP_COMP_OP_MODE_SYNC) */
 	odp_support_t sync;
 
-	/** Aynchronous compression mode support (ODP_COMP_OP_MODE_ASYNC) */
+	/** Asynchronous compression mode support (ODP_COMP_OP_MODE_ASYNC) */
 	odp_support_t async;
 } odp_comp_capability_t;
 
