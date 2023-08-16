@@ -1,4 +1,4 @@
-/* Copyright (c) 2022, Nokia
+/* Copyright (c) 2022-2023, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -521,6 +521,18 @@ static int cpu_hz(void)
 	return i;
 }
 
+static int cpu_hz_id(void)
+{
+	int i;
+	const int id = odp_cpu_id();
+	uint64_t *a1 = gbl_args->a1;
+
+	for (i = 0; i < REPEAT_COUNT; i++)
+		a1[i] = odp_cpu_hz_id(id);
+
+	return i;
+}
+
 static int cpu_hz_max(void)
 {
 	int i;
@@ -528,6 +540,18 @@ static int cpu_hz_max(void)
 
 	for (i = 0; i < REPEAT_COUNT; i++)
 		a1[i] = odp_cpu_hz_max();
+
+	return i;
+}
+
+static int cpu_hz_max_id(void)
+{
+	int i;
+	const int id = odp_cpu_id();
+	uint64_t *a1 = gbl_args->a1;
+
+	for (i = 0; i < REPEAT_COUNT; i++)
+		a1[i] = odp_cpu_hz_max_id(id);
 
 	return i;
 }
@@ -565,6 +589,17 @@ static int cpu_cycles_max(void)
 
 	for (i = 0; i < REPEAT_COUNT; i++)
 		a1[i] = odp_cpu_cycles_max();
+
+	return i;
+}
+
+static int cpu_cycles_resolution(void)
+{
+	int i;
+	uint64_t *a1 = gbl_args->a1;
+
+	for (i = 0; i < REPEAT_COUNT; i++)
+		a1[i] = odp_cpu_cycles_resolution();
 
 	return i;
 }
@@ -819,10 +854,13 @@ bench_info_t test_suite[] = {
 	BENCH_INFO(cpu_id, NULL, 0, NULL),
 	BENCH_INFO(cpu_count, NULL, 0, NULL),
 	BENCH_INFO(cpu_hz, NULL, 1, NULL),
+	BENCH_INFO(cpu_hz_id, NULL, 1, NULL),
 	BENCH_INFO(cpu_hz_max, NULL, 0, NULL),
+	BENCH_INFO(cpu_hz_max_id, NULL, 0, NULL),
 	BENCH_INFO(cpu_cycles, NULL, 0, NULL),
 	BENCH_INFO(cpu_cycles_diff, init_cpu_cycles, 0, NULL),
 	BENCH_INFO(cpu_cycles_max, NULL, 0, NULL),
+	BENCH_INFO(cpu_cycles_resolution, NULL, 0, NULL),
 	BENCH_INFO(cpu_pause, NULL, 0, NULL),
 	BENCH_INFO(thread_id, NULL, 0, NULL),
 	BENCH_INFO(thread_count, NULL, 0, NULL),
