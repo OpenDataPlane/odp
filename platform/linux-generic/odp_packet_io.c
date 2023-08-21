@@ -1612,12 +1612,8 @@ int odp_pktio_capability(odp_pktio_t pktio, odp_pktio_capability_t *capa)
 	capa->lso.proto.custom           = 1;
 	capa->lso.mod_op.add_segment_num = 1;
 
-	capa->config.pktout.bit.tx_compl_ena = 1;
 	capa->tx_compl.queue_type_sched = 1;
 	capa->tx_compl.queue_type_plain = 1;
-	capa->tx_compl.mode_all = 1;
-	capa->tx_compl.mode_event = 1;
-	capa->tx_compl.mode_poll = 0;
 	capa->tx_compl.max_compl_id = 0;
 	capa->free_ctrl.dont_free = 0;
 

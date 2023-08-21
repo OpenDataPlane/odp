@@ -1816,6 +1816,13 @@ static int dpdk_init_capability(pktio_entry_t *pktio_entry,
 		capa->config.pktout.bit.tcp_chksum;
 	capa->config.pktout.bit.ts_ena = 1;
 
+	if (!_ODP_DPDK_ZERO_COPY) {
+		capa->config.pktout.bit.tx_compl_ena = 1;
+		capa->tx_compl.mode_all = 1;
+		capa->tx_compl.mode_event = 1;
+		capa->tx_compl.mode_poll = 0;
+	}
+
 	/* Copy for fast path access */
 	pkt_dpdk->pktout_capa = capa->config.pktout;
 
