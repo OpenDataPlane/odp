@@ -923,6 +923,10 @@ static int ipc_capability(pktio_entry_t *pktio_entry ODP_UNUSED, odp_pktio_capab
 
 	capa->max_input_queues  = 1;
 	capa->max_output_queues = 1;
+	capa->config.pktout.bit.tx_compl_ena = 1;
+	capa->tx_compl.mode_all = 1;
+	capa->tx_compl.mode_event = 1;
+	capa->tx_compl.mode_poll = 0;
 
 	return 0;
 }

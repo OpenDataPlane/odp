@@ -587,6 +587,10 @@ static int sock_capability(pktio_entry_t *pktio_entry,
 	capa->config.pktin.bit.ts_ptp = 1;
 
 	capa->config.pktout.bit.ts_ena = 1;
+	capa->config.pktout.bit.tx_compl_ena = 1;
+	capa->tx_compl.mode_all = 1;
+	capa->tx_compl.mode_event = 1;
+	capa->tx_compl.mode_poll = 0;
 
 	/* Fill statistics capabilities */
 	_odp_sock_stats_capa(pktio_entry, capa);
