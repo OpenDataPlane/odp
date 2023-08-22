@@ -1,5 +1,5 @@
 /* Copyright (c) 2018, Linaro Limited
- * Copyright (c) 2021, Nokia
+ * Copyright (c) 2021-2023, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -34,6 +34,7 @@ typedef struct test_stat_t {
 	uint64_t nsec;
 	uint64_t cycles;
 	uint64_t deq_retry;
+	uint64_t enq_retry;
 
 } test_stat_t;
 
@@ -364,7 +365,8 @@ static int run_test(void *arg)
 	test_global_t *global = arg;
 	test_options_t *test_options = &global->options;
 	odp_queue_t queue;
-	uint64_t num_retry = 0;
+	uint64_t num_deq_retry = 0;
+	uint64_t num_enq_retry = 0;
 	uint64_t events = 0;
 	uint32_t num_queue = test_options->num_queue;
 	uint32_t num_round = test_options->num_round;
@@ -383,6 +385,8 @@ static int run_test(void *arg)
 	c1 = odp_cpu_cycles();
 
 	for (rounds = 0; rounds < num_round; rounds++) {
+		int num_enq = 0;
+
 		do {
 			queue = global->queue[i++];
 
@@ -391,17 +395,25 @@ static int run_test(void *arg)
 
 			num_ev = odp_queue_deq_multi(queue, ev, max_burst);
 
-			if (odp_unlikely(num_ev <= 0))
-				num_retry++;
+			if (odp_unlikely(num_ev < 0))
+				ODPH_ABORT("odp_queue_deq_multi() failed\n");
 
-		} while (num_ev <= 0);
+			if (odp_unlikely(num_ev == 0))
+				num_deq_retry++;
 
-		if (odp_queue_enq_multi(queue, ev, num_ev) != num_ev) {
-			printf("Error: Queue enq failed %u\n", i);
-			ret = -1;
-			goto error;
+		} while (num_ev == 0);
+
+		while (num_enq < num_ev) {
+			int num = odp_queue_enq_multi(queue, &ev[num_enq], num_ev - num_enq);
+
+			if (odp_unlikely(num < 0))
+				ODPH_ABORT("odp_queue_enq_multi() failed\n");
+
+			num_enq += num;
+
+			if (odp_unlikely(num_enq != num_ev))
+				num_enq_retry++;
 		}
-
 		events += num_ev;
 	}
 
@@ -415,9 +427,9 @@ static int run_test(void *arg)
 	stat->events = events;
 	stat->nsec   = nsec;
 	stat->cycles = cycles;
-	stat->deq_retry = num_retry;
+	stat->deq_retry = num_deq_retry;
+	stat->enq_retry = num_enq_retry;
 
-error:
 	return ret;
 }
 
@@ -467,14 +479,15 @@ static int start_workers(test_global_t *global)
 static void print_stat(test_global_t *global)
 {
 	int i, num;
-	double rounds_ave, events_ave, nsec_ave, cycles_ave, retry_ave;
+	double rounds_ave, events_ave, nsec_ave, cycles_ave;
 	test_options_t *test_options = &global->options;
 	int num_cpu = test_options->num_cpu;
 	uint64_t rounds_sum = 0;
 	uint64_t events_sum = 0;
 	uint64_t nsec_sum = 0;
 	uint64_t cycles_sum = 0;
-	uint64_t retry_sum = 0;
+	uint64_t deq_retry_sum = 0;
+	uint64_t enq_retry_sum = 0;
 
 	/* Averages */
 	for (i = 0; i < ODP_THREAD_COUNT_MAX; i++) {
@@ -482,7 +495,8 @@ static void print_stat(test_global_t *global)
 		events_sum   += global->stat[i].events;
 		nsec_sum     += global->stat[i].nsec;
 		cycles_sum   += global->stat[i].cycles;
-		retry_sum    += global->stat[i].deq_retry;
+		deq_retry_sum += global->stat[i].deq_retry;
+		enq_retry_sum += global->stat[i].enq_retry;
 	}
 
 	if (rounds_sum == 0) {
@@ -494,7 +508,6 @@ static void print_stat(test_global_t *global)
 	events_ave   = events_sum / num_cpu;
 	nsec_ave     = nsec_sum / num_cpu;
 	cycles_ave   = cycles_sum / num_cpu;
-	retry_ave    = retry_sum / num_cpu;
 	num = 0;
 
 	printf("RESULTS - per thread (Million events per sec):\n");
@@ -521,8 +534,8 @@ static void print_stat(test_global_t *global)
 	       events_ave / rounds_ave);
 	printf("  cycles per event:         %.3f\n",
 	       cycles_ave / events_ave);
-	printf("  deq retries per sec:      %.3f k\n",
-	       (1000000.0 * retry_ave) / nsec_ave);
+	printf("  dequeue retries:          %" PRIu64 "\n", deq_retry_sum);
+	printf("  enqueue retries:          %" PRIu64 "\n", enq_retry_sum);
 	printf("  events per sec:           %.3f M\n\n",
 	       (1000.0 * events_ave) / nsec_ave);
 
