@@ -22,20 +22,47 @@ extern "C" {
 
 #include <odp_ring_common.h>
 
-/* Ring of uint32_t data
+/* Ring of uint32_t/uint64_t data
  *
  * Ring stores head and tail counters. Ring indexes are formed from these
  * counters with a mask (mask = ring_size - 1), which requires that ring size
  * must be a power of two.
  *
+ * The following figures depict an example where a ring is being simultaneously
+ * enqueued to and dequeued from. Ring slots containing data are marked with
+ * letter D, empty slots with E, and slots being modified with X.
+ *
+ * Ring status before enq/deq operations.
+ *
  *    0   1   2   3   4   5   6   7   8   9   10  11  12  13  14  15
  *  +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
- *  | E | E |   |   |   |   |   |   |   |   |   | E | E | E | E | E |
+ *  | E | E | D | D | D | D | D | D | E | E | E | E | E | E | E | E |
+ *  +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
+ *        ^                       ^
+ *        |                       |
+ *     r_head                  w_head
+ *     r_tail                  w_tail
+ *
+ * Ring status while being enqueued and dequeued.
+ *
+ *    0   1   2   3   4   5   6   7   8   9   10  11  12  13  14  15
+ *  +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
+ *  | E | E | X | X | D | D | D | D | X | X | X | E | E | E | E | E |
  *  +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
  *        ^       ^               ^           ^
  *        |       |               |           |
  *     r_tail  r_head          w_tail      w_head
  *
+ * Ring status after enq/deq operations.
+ *
+ *    0   1   2   3   4   5   6   7   8   9   10  11  12  13  14  15
+ *  +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
+ *  | E | E | E | E | D | D | D | D | D | D | D | E | E | E | E | E |
+ *  +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
+ *                ^                           ^
+ *                |                           |
+ *             r_head                      w_head
+ *             r_tail                      w_tail
  */
 
 struct ring_mpmc_common {
