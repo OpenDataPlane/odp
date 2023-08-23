@@ -1,8 +1,5 @@
-/* Copyright (c) 2022, Nokia
- *
- * All rights reserved.
- *
- * SPDX-License-Identifier:     BSD-3-Clause
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2022-2023 Nokia
  */
 
 #ifndef _GNU_SOURCE
@@ -419,7 +416,8 @@ static void print_usage(void)
 	       "                      options are ignored, input and output queue counts will\n"
 	       "                      match worker count.\n"
 	       "  -h, --help          This help.\n"
-	       "\n", MIN(pool_capa.pkt.max_num, PKT_CNT), MIN(pool_capa.pkt.max_len, PKT_SIZE));
+	       "\n", pool_capa.pkt.max_num > 0U ? MIN(pool_capa.pkt.max_num, PKT_CNT) : PKT_CNT,
+	       pool_capa.pkt.max_len > 0U ? MIN(pool_capa.pkt.max_len, PKT_SIZE) : PKT_SIZE);
 }
 
 static inline odp_ipsec_sa_t *get_in_sa(odp_packet_t pkt)
@@ -1394,23 +1392,25 @@ static parse_result_t check_options(prog_config_t *config)
 		return PRS_NOK;
 	}
 
-	if (config->num_pkts > pool_capa.pkt.max_num) {
+	if (pool_capa.pkt.max_num > 0U && config->num_pkts > pool_capa.pkt.max_num) {
 		ODPH_ERR("Invalid pool packet count: %u (max: %u)\n", config->num_pkts,
 			 pool_capa.pkt.max_num);
 		return PRS_NOK;
 	}
 
 	if (config->num_pkts == 0U)
-		config->num_pkts = MIN(pool_capa.pkt.max_num, PKT_CNT);
+		config->num_pkts = pool_capa.pkt.max_num > 0U ?
+					MIN(pool_capa.pkt.max_num, PKT_CNT) : PKT_CNT;
 
-	if (config->pkt_len > pool_capa.pkt.max_len) {
+	if (pool_capa.pkt.max_len > 0U && config->pkt_len > pool_capa.pkt.max_len) {
 		ODPH_ERR("Invalid pool packet length: %u (max: %u)\n", config->pkt_len,
 			 pool_capa.pkt.max_len);
 		return PRS_NOK;
 	}
 
 	if (config->pkt_len == 0U)
-		config->pkt_len = MIN(pool_capa.pkt.max_len, PKT_SIZE);
+		config->pkt_len = pool_capa.pkt.max_len > 0U ?
+					MIN(pool_capa.pkt.max_len, PKT_SIZE) : PKT_SIZE;
 
 	if (config->num_thrs <= 0 || config->num_thrs > MAX_WORKERS) {
 		ODPH_ERR("Invalid thread count: %d (min: 1, max: %d)\n", config->num_thrs,
