@@ -1866,6 +1866,40 @@ static void stop_test(prog_config_t *config)
 	(void)odph_thread_join(config->thread_tbl, config->num_thrs);
 }
 
+static void print_stats(const prog_config_t *config)
+{
+	const stats_t *stats;
+
+	printf("\n====================\n\n"
+	       "IPsec forwarder done\n\n"
+	       "    configuration file: %s\n"
+	       "    queuing mode:       %s\n"
+	       "    input queue count:  %u\n"
+	       "    SA queue count:     %u\n"
+	       "    output queue count: %u\n"
+	       "    RX mode:            %s\n", config->conf_file,
+	       config->mode == ORDERED ? "ordered" : "parallel", config->num_input_qs,
+	       config->num_sa_qs, config->num_output_qs,
+	       config->is_dir_rx ? "direct" : "scheduled");
+
+	for (int i = 0; i < config->num_thrs; ++i) {
+		stats = &config->thread_config[i].stats;
+
+		printf("\n    worker %d:\n"
+		"        IPsec in packets:        %" PRIu64 "\n"
+		"        IPsec out packets:       %" PRIu64 "\n"
+		"        IPsec in packet errors:  %" PRIu64 "\n"
+		"        IPsec out packet errors: %" PRIu64 "\n"
+		"        IPsec status errors:     %" PRIu64 "\n"
+		"        packets forwarded:       %" PRIu64 "\n"
+		"        packets dropped:         %" PRIu64 "\n", i, stats->ipsec_in_pkts,
+		stats->ipsec_out_pkts, stats->ipsec_in_errs, stats->ipsec_out_errs,
+		stats->status_errs, stats->fwd_pkts, stats->discards);
+	}
+
+	printf("\n====================\n");
+}
+
 static void wait_sas_disabled(uint32_t num_sas)
 {
 	uint32_t num_sas_dis = 0U;
@@ -1925,28 +1959,6 @@ static void teardown_test(const prog_config_t *config)
 		(void)odp_queue_destroy(config->compl_q);
 
 	free(config->conf_file);
-}
-
-static void print_stats(const prog_config_t *config)
-{
-	const stats_t *stats;
-
-	printf("\nProgram finished:\n");
-
-	for (int i = 0; i < config->num_thrs; ++i) {
-		stats = &config->thread_config[i].stats;
-
-		printf("\n    Worker %d:\n"
-		"        IPsec in packets: %" PRIu64 "\n"
-		"        IPsec out packets: %" PRIu64 "\n"
-		"        IPsec in packet errors: %" PRIu64 "\n"
-		"        IPsec out packet errors: %" PRIu64 "\n"
-		"        IPsec status errors: %" PRIu64 "\n"
-		"        Packets forwarded: %" PRIu64 "\n"
-		"        Packets dropped: %" PRIu64 "\n", i, stats->ipsec_in_pkts,
-		stats->ipsec_out_pkts, stats->ipsec_in_errs, stats->ipsec_out_errs,
-		stats->status_errs, stats->fwd_pkts, stats->discards);
-	}
 }
 
 int main(int argc, char **argv)
