@@ -212,13 +212,17 @@ static inline uint32_t _RING_MPMC_ENQ_MULTI(_ring_mpmc_gen_t *ring,
 	uint32_t old_head, new_head, r_tail, num_free, i;
 	uint32_t size = ring_mask + 1;
 
-	/* Load acquires ensure that w_head load happens after r_tail load,
-	 * and thus r_tail value is always behind or equal to w_head value.
-	 * When CAS operation succeeds, this thread owns data between old
-	 * and new w_head. */
+	/* The CAS operation guarantees that w_head value is up to date. Load
+	 * acquire is used to ensure that r_tail is read after w_head. This
+	 * guarantees that w_head - r_tail <= size. Any additional delay in
+	 * reading r_tail makes the subtraction result only smaller. This
+	 * avoids returning zero when the ring is not actually full.
+	 *
+	 * When CAS operation succeeds, this thread owns data between old and
+	 * new w_head. */
 	do {
-		r_tail   = odp_atomic_load_acq_u32(&ring->r.r_tail);
 		old_head = odp_atomic_load_acq_u32(&ring->r.w_head);
+		r_tail   = odp_atomic_load_acq_u32(&ring->r.r_tail);
 
 		num_free = size - (old_head - r_tail);
 
@@ -259,13 +263,17 @@ static inline uint32_t _RING_MPMC_ENQ_BATCH(_ring_mpmc_gen_t *ring,
 	uint32_t old_head, new_head, r_tail, num_free, i;
 	uint32_t size = ring_mask + 1;
 
-	/* Load acquires ensure that w_head load happens after r_tail load,
-	 * and thus r_tail value is always behind or equal to w_head value.
-	 * When CAS operation succeeds, this thread owns data between old
-	 * and new w_head. */
+	/* The CAS operation guarantees that w_head value is up to date. Load
+	 * acquire is used to ensure that r_tail is read after w_head. This
+	 * guarantees that w_head - r_tail <= size. Any additional delay in
+	 * reading r_tail makes the subtraction result only smaller. This
+	 * avoids returning zero when the ring is not actually full.
+	 *
+	 * When CAS operation succeeds, this thread owns data between old and
+	 * new w_head. */
 	do {
-		r_tail   = odp_atomic_load_acq_u32(&ring->r.r_tail);
 		old_head = odp_atomic_load_acq_u32(&ring->r.w_head);
+		r_tail   = odp_atomic_load_acq_u32(&ring->r.r_tail);
 
 		num_free = size - (old_head - r_tail);
 
