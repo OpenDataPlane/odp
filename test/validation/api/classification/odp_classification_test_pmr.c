@@ -1699,7 +1699,7 @@ static void cls_pmr_term_icmp_type(void)
 	odp_pmr_param_t pmr_param;
 	cls_packet_info_t pkt_info;
 
-	val  = ICMP_ECHO;
+	val  = ODPH_ICMP_ECHO;
 	mask = 0xff;
 
 	odp_cls_pmr_param_init(&pmr_param);
@@ -1720,7 +1720,7 @@ static void cls_pmr_term_icmp_type(void)
 	pkt = create_packet(pkt_info);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	icmp = (odph_icmphdr_t *)odp_packet_l4_ptr(pkt, NULL);
-	icmp->type = ICMP_ECHOREPLY;
+	icmp->type = ODPH_ICMP_ECHOREPLY;
 
 	test_pmr(&pmr_param, pkt, NO_MATCH);
 }

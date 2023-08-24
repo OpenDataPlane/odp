@@ -1,7 +1,5 @@
-/* Copyright (c) 2019-2023, Nokia
- * All rights reserved.
- *
- * SPDX-License-Identifier:     BSD-3-Clause
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2019-2023 Nokia
  */
 
 #include <stdio.h>
@@ -560,12 +558,12 @@ static void icmp_reply(test_global_t *global, odp_packet_t pkt)
 	if (icmp_hdr == NULL || len < 4)
 		goto error;
 
-	if (icmp_hdr->type != 8 || icmp_hdr->code != 0)
+	if (icmp_hdr->type != ODPH_ICMP_ECHO || icmp_hdr->code != 0)
 		goto error;
 
 	/* Echo reply */
 	old = *(uint16_t *)(uintptr_t)icmp_hdr;
-	icmp_hdr->type = 0;
+	icmp_hdr->type = ODPH_ICMP_ECHOREPLY;
 	new = *(uint16_t *)(uintptr_t)icmp_hdr;
 	icmp_hdr->chksum = update_chksum(icmp_hdr->chksum, old, new);
 

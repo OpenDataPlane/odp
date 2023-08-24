@@ -462,7 +462,7 @@ static odp_packet_t setup_icmp_pkt_ref(odp_pool_t pool,
 
 	/* icmp */
 	icmp = (odph_icmphdr_t *)(buf + ODPH_ETHHDR_LEN + ODPH_IPV4HDR_LEN);
-	icmp->type = ICMP_ECHO;
+	icmp->type = ODPH_ICMP_ECHO;
 	icmp->code = 0;
 	icmp->un.echo.id = 0;
 	icmp->un.echo.sequence = 0;
@@ -813,7 +813,7 @@ static void process_icmp_pkt(int thr, thread_args_t *thr_args,
 	uint64_t rtt_ms, rtt_us;
 	odph_icmphdr_t *icmp = (odph_icmphdr_t *)_icmp;
 
-	if (icmp->type == ICMP_ECHOREPLY) {
+	if (icmp->type == ODPH_ICMP_ECHOREPLY) {
 		thr_args->counters.ctr_icmp_reply_rcv++;
 
 		memcpy(&tsend, (uint8_t *)icmp + ODPH_ICMPHDR_LEN,
@@ -826,7 +826,7 @@ static void process_icmp_pkt(int thr, thread_args_t *thr_args,
 			PRIu64 ".%.03" PRIu64" ms\n", thr,
 			odp_be_to_cpu_16(icmp->un.echo.sequence),
 			rtt_ms, rtt_us);
-	} else if (icmp->type == ICMP_ECHO) {
+	} else if (icmp->type == ODPH_ICMP_ECHO) {
 		printf("  [%02i] ICMP Echo Request\n", thr);
 	}
 }

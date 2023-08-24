@@ -324,7 +324,7 @@ odp_packet_t create_ipv4_packet(stream_db_entry_t *stream,
 	/* ICMP header so we can see it on wireshark */
 	icmp = (odph_icmphdr_t *)data;
 	data += sizeof(*icmp);
-	icmp->type = ICMP_ECHO;
+	icmp->type = ODPH_ICMP_ECHO;
 	icmp->code = 0;
 	icmp->un.echo.id = odp_cpu_to_be_16(0x1234);
 	icmp->un.echo.sequence = odp_cpu_to_be_16(stream->created);
@@ -583,7 +583,7 @@ clear_packet:
 
 	/* Verify ICMP header */
 	data += sizeof(*icmp);
-	if (ICMP_ECHO != icmp->type)
+	if (ODPH_ICMP_ECHO != icmp->type)
 		return FALSE;
 	if (0x1234 != odp_be_to_cpu_16(icmp->un.echo.id))
 		return FALSE;
