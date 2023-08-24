@@ -30,8 +30,11 @@ extern "C" {
 #pragma GCC diagnostic ignored "-Wgnu-zero-variadic-macro-arguments"
 #endif
 
-/** @addtogroup odph_debug ODPH DEBUG
- *  @{
+/**
+ * @defgroup odph_debug ODPH DEBUG
+ * Debug logging
+ *
+ * @{
  */
 
 /**

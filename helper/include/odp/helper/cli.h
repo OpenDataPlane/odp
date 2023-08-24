@@ -7,11 +7,7 @@
 /**
  * @file
  *
- * ODP CLI helper API
- *
- * This API allows control of ODP CLI server, which may be connected to
- * using a telnet client. CLI commands may be used to get information
- * from an ODP instance, for debugging purposes.
+ * ODP CLI helper
  */
 
 #ifndef ODPH_CLI_H_
@@ -25,7 +21,14 @@ extern "C" {
 #include <stdarg.h>
 
 /**
- * @addtogroup odph_cli ODPH CLI
+ * @defgroup odph_cli ODPH CLI
+ * Command line interface
+ *
+ * @details
+ * This API allows control of ODP CLI server, which may be connected to using a
+ * telnet client. CLI commands may be used to get information from an ODP
+ * instance, for debugging purposes.
+ *
  * @{
  */
 

@@ -19,8 +19,11 @@ extern "C" {
 
 #include <odp_api.h>
 
-/** @addtogroup odph_header ODPH HEADER
- *  @{
+/**
+ * @defgroup odph_protocols ODPH PROTOCOLS
+ * Network protocols
+ *
+ * @{
  */
 
 #define ODPH_ETHADDR_LEN     6    /**< Ethernet address length */
@@ -51,7 +54,7 @@ extern "C" {
  * Ethernet MAC address
  */
 typedef struct ODP_PACKED {
-	uint8_t addr[ODPH_ETHADDR_LEN]; /**< @private Address */
+	uint8_t addr[ODPH_ETHADDR_LEN]; /**< Address */
 } odph_ethaddr_t;
 
 /** @internal Compile time assert */

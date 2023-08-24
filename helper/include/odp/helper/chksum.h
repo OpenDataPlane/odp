@@ -18,8 +18,10 @@ extern "C" {
 
 #include <odp_api.h>
 
-/** @addtogroup odph_chksum ODPH CHECK SUM
- *  @{
+/** @defgroup odph_chksum ODPH CHECKSUM
+ * TCP/UDP/SCTP checksum
+ *
+ * @{
  */
 
 /**

@@ -20,8 +20,9 @@ extern "C" {
 #include <odp_api.h>
 #include <odp/helper/chksum.h>
 
-/** @addtogroup odph_header ODPH HEADER
- *  @{
+/**
+ * @addtogroup odph_protocols
+ * @{
  */
 
 /** UDP header length */

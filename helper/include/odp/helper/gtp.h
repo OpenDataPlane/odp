@@ -16,6 +16,11 @@ extern "C" {
 #include <odp_api.h>
 
 /**
+ * @addtogroup odph_protocols
+ * @{
+ */
+
+/**
  * Simplified GTP protocol header.
  * Contains 8-bit gtp_hdr_info, 8-bit msg_type,
  * 16-bit plen, 32-bit teid.
@@ -30,6 +35,10 @@ typedef struct ODP_PACKED {
 
 /** GTP header length */
 #define ODP_GTP_HLEN sizeof(odph_gtphdr_t)
+
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }

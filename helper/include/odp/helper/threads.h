@@ -30,8 +30,11 @@ extern "C" {
 #include <getopt.h>
 #include <sys/types.h>
 
-/** @addtogroup odph_linux ODPH LINUX
- *  @{
+/**
+ * @defgroup odph_thread ODPH THREAD
+ * Setup threads/processes
+ *
+ * @{
  */
 
 /** Thread parameter for Linux pthreads and processes */

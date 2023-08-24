@@ -19,7 +19,9 @@ extern "C" {
 #endif
 
 /**
- * @defgroup odph_version VERSION
+ * @defgroup odph_version ODPH VERSION
+ * Helper library version
+ *
  * @{
  */
 

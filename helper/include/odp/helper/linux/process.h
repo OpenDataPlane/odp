@@ -24,8 +24,9 @@
 extern "C" {
 #endif
 
-/** @ingroup odph_linux
- *  @{
+/**
+ * @addtogroup odph_thread
+ * @{
  */
 
 /**
