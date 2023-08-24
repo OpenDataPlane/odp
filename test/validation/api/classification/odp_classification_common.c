@@ -465,7 +465,7 @@ odp_packet_t create_packet(cls_packet_info_t pkt_info)
 		igmp->code = 0;
 		igmp->csum = 0;
 	} else if (pkt_info.l4_type == CLS_PKT_L4_ICMP) {
-		icmp->type = ICMP_ECHO;
+		icmp->type = ODPH_ICMP_ECHO;
 		icmp->code = 0;
 		icmp->un.echo.id = 0;
 		icmp->un.echo.sequence = 0;
