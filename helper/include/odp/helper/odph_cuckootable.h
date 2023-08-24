@@ -53,7 +53,9 @@ extern "C" {
 #endif
 
 /**
- * @addtogroup odph_cuckootable ODPH CUCKOO TABLE
+ * @defgroup odph_cuckootable ODPH CUCKOO TABLE
+ * Cuckoo table
+ *
  * @{
  */
 

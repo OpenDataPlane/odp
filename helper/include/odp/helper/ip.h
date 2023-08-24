@@ -22,8 +22,9 @@ extern "C" {
 
 #include <string.h>
 
-/** @addtogroup odph_header ODPH HEADER
- *  @{
+/**
+ * @addtogroup odph_protocols
+ * @{
  */
 
 #define ODPH_IPV4             4  /**< IP version 4 */
@@ -247,9 +248,9 @@ typedef struct ODP_PACKED {
 	uint8_t    filler[6];    /**< Fill out first 8 byte segment */
 } odph_ipv6hdr_ext_t;
 
-/** @name
+/*
  * IP protocol values (IPv4:'proto' or IPv6:'next_hdr')
- * @{*/
+ */
 #define ODPH_IPPROTO_HOPOPTS 0x00 /**< IPv6 hop-by-hop options */
 #define ODPH_IPPROTO_ICMPV4  0x01 /**< Internet Control Message Protocol (1) */
 #define ODPH_IPPROTO_IGMP    0x02 /**< Internet Group Message Protocol (1) */
@@ -263,8 +264,6 @@ typedef struct ODP_PACKED {
 #define ODPH_IPPROTO_SCTP    0x84 /**< Stream Control Transmission protocol
 				       (132) */
 #define ODPH_IPPROTO_INVALID 0xFF /**< Reserved invalid by IANA */
-
-/**@}*/
 
 /**
  * Parse IPv4 address from a string

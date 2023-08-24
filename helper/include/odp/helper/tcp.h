@@ -20,8 +20,9 @@ extern "C" {
 
 #include <odp_api.h>
 
-/** @addtogroup odph_header ODPH HEADER
- *  @{
+/**
+ * @addtogroup odph_protocols
+ * @{
  */
 
 #define ODPH_TCPHDR_LEN 20 /**< Min length of TCP header (no options) */

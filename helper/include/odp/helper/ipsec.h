@@ -21,8 +21,9 @@ extern "C" {
 
 #include <odp_api.h>
 
-/** @addtogroup odph_header ODPH HEADER
- *  @{
+/**
+ * @addtogroup odph_protocols
+ * @{
  */
 
 #define ODPH_ESPHDR_LEN      8    /**< IPSec ESP header length */

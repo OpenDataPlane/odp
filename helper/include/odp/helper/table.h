@@ -8,7 +8,20 @@
  * @file
  *
  * ODP table
+ */
+
+#ifndef ODPH_TABLE_H_
+#define ODPH_TABLE_H_
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/**
+ * @defgroup odph_tables ODPH TABLES
+ * Table interface
  *
+ * @details
  * TCAM(Ternary Content Addressable Memory) is used widely in packet
  * forwarding to speedup the table lookup.
  *
@@ -71,17 +84,6 @@
  *  notes: key/value and key/associated data mean the same thing
  *         in this file unless otherwise mentioned.
  *
- */
-
-#ifndef ODPH_TABLE_H_
-#define ODPH_TABLE_H_
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-/**
- * @addtogroup odph_tables ODPH TABLES
  * @{
  */
 

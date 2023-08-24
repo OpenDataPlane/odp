@@ -20,7 +20,9 @@ extern "C" {
 #endif
 
 /**
- * @addtogroup odph_hash_table ODPH HASH TABLE
+ * @defgroup odph_hash_table ODPH HASH TABLE
+ * Hash table
+ *
  * @{
  */
 

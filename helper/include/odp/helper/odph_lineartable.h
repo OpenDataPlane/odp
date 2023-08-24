@@ -21,7 +21,9 @@ extern "C" {
 #endif
 
 /**
- * @addtogroup odph_lineartable ODPH LINEAR TABLE
+ * @defgroup odph_lineartable ODPH LINEAR TABLE
+ * Linear table
+ *
  * @{
  */
 
