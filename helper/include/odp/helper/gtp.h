@@ -35,7 +35,7 @@ typedef struct ODP_PACKED {
 } odph_gtphdr_t;
 
 /** GTP header length */
-#define ODP_GTP_HLEN sizeof(odph_gtphdr_t)
+#define ODPH_GTP_HLEN sizeof(odph_gtphdr_t)
 
 /**
  * @}
