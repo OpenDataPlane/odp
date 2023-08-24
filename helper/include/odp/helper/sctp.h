@@ -35,9 +35,10 @@ typedef struct ODP_PACKED {
 	odp_u32be_t chksum;   /**< SCTP header and data checksum */
 } odph_sctphdr_t;
 
-/** @internal Compile time assert */
+/** @cond _ODP_HIDE_FROM_DOXYGEN_ */
 ODP_STATIC_ASSERT(sizeof(odph_sctphdr_t) == ODPH_SCTPHDR_LEN,
 		  "ODPH_SCTPHDR_T__SIZE_ERROR");
+/** @endcond */
 
 /**
  * @}

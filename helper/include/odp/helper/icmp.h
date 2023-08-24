@@ -95,9 +95,10 @@ typedef struct ODP_PACKED {
 #define ICMP_EXC_FRAGTIME	1	/**< Fragment Reass time
 								exceeded*/
 
-/** @internal Compile time assert */
+/** @cond _ODP_HIDE_FROM_DOXYGEN_ */
 ODP_STATIC_ASSERT(sizeof(odph_icmphdr_t) == ODPH_ICMPHDR_LEN,
 		  "ODPH_ICMPHDR_T__SIZE_ERROR");
+/** @endcond */
 
 /**
  * @}

@@ -53,9 +53,10 @@ static inline uint16_t odph_ipv4_udp_chksum(odp_packet_t pkt)
 	return (rc == 0) ? chksum : 0;
 }
 
-/** @internal Compile time assert */
+/** @cond _ODP_HIDE_FROM_DOXYGEN_ */
 ODP_STATIC_ASSERT(sizeof(odph_udphdr_t) == ODPH_UDPHDR_LEN,
 		  "ODPH_UDPHDR_T__SIZE_ERROR");
+/** @endcond */
 
 /**
  * @}
