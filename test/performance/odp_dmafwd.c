@@ -19,6 +19,7 @@
 #include <stdlib.h>
 #include <signal.h>
 #include <stdio.h>
+#include <unistd.h>
 
 #include <odp_api.h>
 #include <odp/helper/odph_api.h>
@@ -35,6 +36,7 @@ enum {
 #define DEF_CNT 32768U
 #define DEF_LEN 1024U
 #define DEF_WORKERS 1U
+#define DEF_TIME 0U
 
 #define MAX_IFS 2U
 #define MAX_OUT_QS 32U
@@ -118,6 +120,7 @@ typedef struct prog_config_s {
 	uint32_t num_pkts;
 	uint32_t pkt_len;
 	uint32_t cache_size;
+	uint32_t time_sec;
 	int num_thrs;
 	uint8_t num_ifs;
 	uint8_t copy_type;
@@ -175,6 +178,7 @@ static void init_config(prog_config_t *config)
 	config->num_pkts = config->dyn_defs.num_pkts;
 	config->pkt_len = config->dyn_defs.pkt_len;
 	config->cache_size = config->dyn_defs.cache_size;
+	config->time_sec = DEF_TIME;
 	config->num_thrs = DEF_WORKERS;
 	config->copy_type = DEF_CPY_TYPE;
 
@@ -219,9 +223,10 @@ static void print_usage(dynamic_defs_t *dyn_defs)
 	       "                     default.\n"
 	       "  -c, --worker_count Amount of workers. %u by default.\n"
 	       "  -C, --cache_size   Packet pool cache size. %u by default.\n"
+	       "  -T, --time_sec     Time in seconds to run. 0 means infinite. %u by default.\n"
 	       "  -h, --help         This help.\n"
 	       "\n", DEF_CPY_TYPE, dyn_defs->burst_size, dyn_defs->num_pkts, dyn_defs->pkt_len,
-	       DEF_WORKERS, dyn_defs->cache_size);
+	       DEF_WORKERS, dyn_defs->cache_size, DEF_TIME);
 }
 
 static void parse_interfaces(prog_config_t *config, const char *optarg)
@@ -353,11 +358,12 @@ static parse_result_t parse_options(int argc, char **argv, prog_config_t *config
 		{ "pkt_len", required_argument, NULL, 'l' },
 		{ "worker_count", required_argument, NULL, 'c' },
 		{ "cache_size", required_argument, NULL, 'C' },
+		{ "time_sec", required_argument, NULL, 'T' },
 		{ "help", no_argument, NULL, 'h' },
 		{ NULL, 0, NULL, 0 }
 	};
 
-	static const char *shortopts = "i:t:b:n:l:c:C:h";
+	static const char *shortopts = "i:t:b:n:l:c:C:T:h";
 
 	init_config(config);
 
@@ -388,6 +394,9 @@ static parse_result_t parse_options(int argc, char **argv, prog_config_t *config
 			break;
 		case 'C':
 			config->cache_size = atoi(optarg);
+			break;
+		case 'T':
+			config->time_sec = atoi(optarg);
 			break;
 		case 'h':
 			print_usage(&config->dyn_defs);
@@ -1095,8 +1104,13 @@ int main(int argc, char **argv)
 		goto out_test;
 	}
 
-	while (odp_atomic_load_u32(&prog_conf->is_running))
-		odp_cpu_pause();
+	if (prog_conf->time_sec) {
+		sleep(prog_conf->time_sec);
+		odp_atomic_store_u32(&prog_conf->is_running, 0U);
+	} else {
+		while (odp_atomic_load_u32(&prog_conf->is_running))
+			sleep(1U);
+	}
 
 	stop_test(prog_conf);
 	print_stats(prog_conf);
