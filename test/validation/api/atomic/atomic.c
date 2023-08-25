@@ -25,9 +25,6 @@
 
 #define UNUSED			__attribute__((__unused__))
 
-#define min(a, b) (a < b ? a : b)
-#define max(a, b) (a > b ? a : b)
-
 typedef __volatile uint32_t volatile_u32_t;
 typedef __volatile uint64_t volatile_u64_t;
 
@@ -929,7 +926,7 @@ static void test_atomic_validate_max_min(void)
 	 * a long test, counter may overflow, in which case max is saturated at
 	 * UINT32_MAX, and min at 0.
 	 */
-	const uint32_t a32u_max = min(U32_INIT_VAL + total_count - 1, UINT32_MAX);
+	const uint32_t a32u_max = ODPH_MIN(U32_INIT_VAL + total_count - 1, UINT32_MAX);
 	const uint32_t a32u_min = U32_INIT_VAL + total_count - 1 > UINT32_MAX ? 0 : U32_INIT_VAL;
 
 	CU_ASSERT(odp_atomic_load_u32(&global_mem->a32u_max) == a32u_max);
@@ -1546,7 +1543,7 @@ static void test_atomic_validate_max(void)
 {
 	const uint64_t total_count = CNT * global_mem->g_num_threads - 1;
 	/* In a long test, counter may overflow, in which case max is saturated at UINT32_MAX. */
-	const uint32_t a32u_max = min(U32_INIT_VAL + total_count, UINT32_MAX);
+	const uint32_t a32u_max = ODPH_MIN(U32_INIT_VAL + total_count, UINT32_MAX);
 
 	CU_ASSERT(a32u_max == odp_atomic_load_u32(&global_mem->a32u_max));
 	CU_ASSERT(U64_INIT_VAL + total_count == odp_atomic_load_u64(&global_mem->a64u_max));
@@ -1561,7 +1558,7 @@ static void test_atomic_validate_min(void)
 {
 	const uint64_t total_count = CNT * global_mem->g_num_threads - 1;
 	/* In a long test, counter may underflow, in which case min is saturated at 0. */
-	const uint32_t a32u_min = max((int64_t)U32_INIT_VAL - (int64_t)total_count, 0);
+	const uint32_t a32u_min = ODPH_MAX((int64_t)U32_INIT_VAL - (int64_t)total_count, 0);
 
 	CU_ASSERT(a32u_min == odp_atomic_load_u32(&global_mem->a32u_min));
 	CU_ASSERT(U64_INIT_VAL - total_count == odp_atomic_load_u64(&global_mem->a64u_min));
