@@ -35,7 +35,7 @@ typedef struct ODP_PACKED {
 } odph_igmphdr_t;
 
 /** IGMP header length */
-#define ODP_IGMP_HLEN sizeof(odph_igmphdr_t)
+#define ODPH_IGMP_HLEN sizeof(odph_igmphdr_t)
 
 /**
  * @}

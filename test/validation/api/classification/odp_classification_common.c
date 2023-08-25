@@ -360,7 +360,7 @@ odp_packet_t create_packet(cls_packet_info_t pkt_info)
 		break;
 	case CLS_PKT_L4_IGMP:
 		next_hdr = ODPH_IPPROTO_IGMP;
-		l4_hdr_len = ODP_IGMP_HLEN;
+		l4_hdr_len = ODPH_IGMP_HLEN;
 		break;
 	case CLS_PKT_L4_AH:
 		next_hdr = ODPH_IPPROTO_AH;
