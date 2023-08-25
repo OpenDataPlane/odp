@@ -947,11 +947,12 @@ static void teardown(prog_config_t *config)
 {
 	thread_config_t *thr;
 
-	for (uint32_t i = 0U; i < config->num_ifs; ++i)
-		if (config->pktios[i].handle != ODP_PKTIO_INVALID) {
+	for (uint32_t i = 0U; i < config->num_ifs; ++i) {
+		free(config->pktios[i].name);
+
+		if (config->pktios[i].handle != ODP_PKTIO_INVALID)
 			(void)odp_pktio_close(config->pktios[i].handle);
-			free(config->pktios[i].name);
-		}
+	}
 
 	if (config->pktio_pool != ODP_POOL_INVALID)
 		(void)odp_pool_destroy(config->pktio_pool);
