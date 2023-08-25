@@ -19,8 +19,6 @@
 
 #include <odp/helper/odph_api.h>
 
-#define MAX(a, b) (((a) > (b)) ? (a) : (b))
-
 int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 {
 	odp_instance_t instance;
@@ -71,8 +69,8 @@ int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 	}
 
 	odp_timer_pool_param_init(&tparams);
-	tparams.res_ns = MAX(10 * ODP_TIME_MSEC_IN_NS,
-			     timer_capa.highest_res_ns);
+	tparams.res_ns = ODPH_MAX(10 * ODP_TIME_MSEC_IN_NS,
+				  timer_capa.highest_res_ns);
 	tparams.min_tmo = 10 * ODP_TIME_MSEC_IN_NS;
 	tparams.max_tmo = 1 * ODP_TIME_SEC_IN_NS;
 	tparams.num_timers = 1; /* One timer per worker */
