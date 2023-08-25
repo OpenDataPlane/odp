@@ -22,8 +22,6 @@
 #define SHORT_PROG_NAME "ipsfwd"
 #define DELIMITER ","
 
-#define MIN(a, b)  (((a) <= (b)) ? (a) : (b))
-
 #define MAX_IFS 2U
 #define MAX_SAS 4000U
 #define MAX_FWDS 64U
@@ -416,8 +414,9 @@ static void print_usage(void)
 	       "                      options are ignored, input and output queue counts will\n"
 	       "                      match worker count.\n"
 	       "  -h, --help          This help.\n"
-	       "\n", pool_capa.pkt.max_num > 0U ? MIN(pool_capa.pkt.max_num, PKT_CNT) : PKT_CNT,
-	       pool_capa.pkt.max_len > 0U ? MIN(pool_capa.pkt.max_len, PKT_SIZE) : PKT_SIZE);
+	       "\n", pool_capa.pkt.max_num > 0U ? ODPH_MIN(pool_capa.pkt.max_num, PKT_CNT) :
+	       PKT_CNT, pool_capa.pkt.max_len > 0U ? ODPH_MIN(pool_capa.pkt.max_len, PKT_SIZE) :
+	       PKT_SIZE);
 }
 
 static inline odp_ipsec_sa_t *get_in_sa(odp_packet_t pkt)
@@ -965,7 +964,7 @@ static odp_bool_t create_sa_dest_queues(odp_ipsec_capability_t *ipsec_capa,
 					prog_config_t *config)
 {
 	odp_queue_param_t q_param;
-	const uint32_t max_sa_qs = MIN(MAX_SA_QUEUES, ipsec_capa->max_queues);
+	const uint32_t max_sa_qs = ODPH_MIN(MAX_SA_QUEUES, ipsec_capa->max_queues);
 
 	if (config->num_sa_qs == 0U || config->num_sa_qs > max_sa_qs) {
 		ODPH_ERR("Invalid number of SA queues: %u (min: 1, max: %u)\n", config->num_sa_qs,
@@ -1276,7 +1275,7 @@ static void parse_sas(config_t *cfg, prog_config_t *config)
 	if (!config->is_dir_rx && !create_sa_dest_queues(&ipsec_capa, config))
 		return;
 
-	max_num_sa = MIN(MAX_SAS, ipsec_capa.max_num_sa);
+	max_num_sa = ODPH_MIN(MAX_SAS, ipsec_capa.max_num_sa);
 	parse_and_create_sa_entries(cfg, config, max_num_sa);
 }
 
@@ -1400,7 +1399,7 @@ static parse_result_t check_options(prog_config_t *config)
 
 	if (config->num_pkts == 0U)
 		config->num_pkts = pool_capa.pkt.max_num > 0U ?
-					MIN(pool_capa.pkt.max_num, PKT_CNT) : PKT_CNT;
+					ODPH_MIN(pool_capa.pkt.max_num, PKT_CNT) : PKT_CNT;
 
 	if (pool_capa.pkt.max_len > 0U && config->pkt_len > pool_capa.pkt.max_len) {
 		ODPH_ERR("Invalid pool packet length: %u (max: %u)\n", config->pkt_len,
@@ -1410,7 +1409,7 @@ static parse_result_t check_options(prog_config_t *config)
 
 	if (config->pkt_len == 0U)
 		config->pkt_len = pool_capa.pkt.max_len > 0U ?
-					MIN(pool_capa.pkt.max_len, PKT_SIZE) : PKT_SIZE;
+					ODPH_MIN(pool_capa.pkt.max_len, PKT_SIZE) : PKT_SIZE;
 
 	if (config->num_thrs <= 0 || config->num_thrs > MAX_WORKERS) {
 		ODPH_ERR("Invalid thread count: %d (min: 1, max: %d)\n", config->num_thrs,
@@ -1620,7 +1619,7 @@ static odp_bool_t setup_pktios(prog_config_t *config)
 			return false;
 		}
 
-		max_output_qs = MIN(MAX_QUEUES, capa.max_output_queues);
+		max_output_qs = ODPH_MIN(MAX_QUEUES, capa.max_output_queues);
 
 		if (config->num_output_qs == 0U || config->num_output_qs > max_output_qs) {
 			ODPH_ERR("Invalid number of output queues for packet I/O: %u (min: 1, "

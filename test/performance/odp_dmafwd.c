@@ -45,8 +45,6 @@ enum {
 #define MAX_BURST 32U
 #define MAX_WORKERS (ODP_THREAD_COUNT_MAX - 1)
 
-#define MIN(a, b) (((a) <= (b)) ? (a) : (b))
-#define MAX(a, b) (((a) >= (b)) ? (a) : (b))
 #define DIV_IF(a, b) ((b) > 0U ? ((a) / (b)) : 0U)
 
 ODP_STATIC_ASSERT(MAX_IFS < UINT8_MAX, "Too large maximum interface count");
@@ -185,16 +183,16 @@ static void init_config(prog_config_t *config)
 	memset(config, 0, sizeof(*config));
 
 	if (odp_dma_capability(&dma_capa) == 0) {
-		burst_size = MIN(dma_capa.max_src_segs, dma_capa.max_dst_segs);
-		burst_size = MIN(burst_size, MAX_BURST);
+		burst_size = ODPH_MIN(dma_capa.max_src_segs, dma_capa.max_dst_segs);
+		burst_size = ODPH_MIN(burst_size, MAX_BURST);
 		config->dyn_defs.burst_size = burst_size;
 	}
 
 	if (odp_pool_capability(&pool_capa) == 0) {
 		config->dyn_defs.num_pkts = pool_capa.pkt.max_num > 0U ?
-						MIN(pool_capa.pkt.max_num, DEF_CNT) : DEF_CNT;
+						ODPH_MIN(pool_capa.pkt.max_num, DEF_CNT) : DEF_CNT;
 		config->dyn_defs.pkt_len = pool_capa.pkt.max_len > 0U ?
-						MIN(pool_capa.pkt.max_len, DEF_LEN) : DEF_LEN;
+						ODPH_MIN(pool_capa.pkt.max_len, DEF_LEN) : DEF_LEN;
 		odp_pool_param_init(&pool_param);
 		config->dyn_defs.cache_size = pool_param.pkt.cache_size;
 	}
@@ -333,8 +331,8 @@ static parse_result_t check_options(prog_config_t *config)
 		return PRS_NOT_SUP;
 	}
 
-	burst_size = MIN(dma_capa.max_src_segs, dma_capa.max_dst_segs);
-	burst_size = MIN(burst_size, MAX_BURST);
+	burst_size = ODPH_MIN(dma_capa.max_src_segs, dma_capa.max_dst_segs);
+	burst_size = ODPH_MIN(burst_size, MAX_BURST);
 
 	if (config->burst_size == 0U || config->burst_size > burst_size) {
 		ODPH_ERR("Invalid segment count for DMA: %u (min: 1, max: %u)\n",
@@ -363,8 +361,9 @@ static parse_result_t check_options(prog_config_t *config)
 	}
 
 	if (config->copy_type != SW_COPY)
-		config->trs_cache_size = MIN(MAX(config->cache_size, pool_capa.buf.min_cache_size),
-					     pool_capa.buf.max_cache_size);
+		config->trs_cache_size = ODPH_MIN(ODPH_MAX(config->cache_size,
+							   pool_capa.buf.min_cache_size),
+						  pool_capa.buf.max_cache_size);
 
 	if (config->copy_type == DMA_COPY_EV) {
 		if ((dma_capa.compl_mode_mask & ODP_DMA_COMPL_EVENT) == 0U ||
@@ -387,9 +386,9 @@ static parse_result_t check_options(prog_config_t *config)
 			return PRS_NOK;
 		}
 
-		config->compl_cache_size = MIN(MAX(config->cache_size,
-						   dma_capa.pool.min_cache_size),
-					       dma_capa.pool.max_cache_size);
+		config->compl_cache_size = ODPH_MIN(ODPH_MAX(config->cache_size,
+							     dma_capa.pool.min_cache_size),
+						    dma_capa.pool.max_cache_size);
 	} else if (config->copy_type == DMA_COPY_POLL) {
 		if ((dma_capa.compl_mode_mask & ODP_DMA_COMPL_POLL) == 0U) {
 			ODPH_ERR("Unsupported DMA completion mode: poll (mode support: %x)\n",
@@ -430,7 +429,7 @@ static parse_result_t check_options(prog_config_t *config)
 		}
 
 		config->inflight_obj_size = obj_size;
-		config->stash_cache_size = MIN(config->cache_size, stash_capa.max_cache_size);
+		config->stash_cache_size = ODPH_MIN(config->cache_size, stash_capa.max_cache_size);
 	}
 
 	if (config->num_pkts == 0U ||
@@ -963,9 +962,9 @@ static odp_bool_t setup_pktios(prog_config_t *config)
 			return false;
 		}
 
-		num_input_qs = MIN((uint32_t)config->num_thrs, capa.max_input_queues);
-		num_output_qs = MIN((uint32_t)config->num_thrs, capa.max_output_queues);
-		num_output_qs = MIN(num_output_qs, MAX_OUT_QS);
+		num_input_qs = ODPH_MIN((uint32_t)config->num_thrs, capa.max_input_queues);
+		num_output_qs = ODPH_MIN((uint32_t)config->num_thrs, capa.max_output_queues);
+		num_output_qs = ODPH_MIN(num_output_qs, MAX_OUT_QS);
 		odp_pktin_queue_param_init(&pktin_param);
 
 		if (num_input_qs > 1) {
