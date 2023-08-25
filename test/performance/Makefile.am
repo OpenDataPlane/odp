@@ -47,7 +47,8 @@ TESTSCRIPTS = odp_cpu_bench_run.sh \
 	      odp_timer_perf_run.sh
 
 if ODP_PKTIO_PCAP
-TESTSCRIPTS += odp_pktio_ordered_run.sh
+TESTSCRIPTS += odp_dmafwd_run.sh \
+	       odp_pktio_ordered_run.sh
 endif
 
 TEST_EXTENSIONS = .sh

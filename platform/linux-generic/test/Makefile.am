@@ -15,10 +15,11 @@ TESTS += validation/api/pktio/pktio_run.sh \
 	 validation/api/pktio/pktio_run_tap.sh \
 	 validation/api/shmem/shmem_linux$(EXEEXT)
 
-SUBDIRS += validation/api/pktio\
-	  validation/api/shmem\
-	  pktio_ipc \
-	  example
+SUBDIRS += validation/api/pktio \
+	   validation/api/shmem \
+	   pktio_ipc \
+	   example \
+	   performance
 
 if ODP_PKTIO_PCAP
 TESTS += validation/api/pktio/pktio_run_pcap.sh
@@ -31,7 +32,8 @@ SUBDIRS += pktio_ipc
 else
 #performance tests refer to pktio_env
 if test_perf
-SUBDIRS += validation/api/pktio
+SUBDIRS += validation/api/pktio \
+	   performance
 endif
 endif
 
