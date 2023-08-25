@@ -24,6 +24,7 @@
 #include <odp_api.h>
 #include <odp/helper/odph_api.h>
 
+#define EXIT_NOT_SUP 2
 #define PROG_NAME "odp_dmafwd"
 #define DELIMITER ","
 
@@ -60,7 +61,8 @@ typedef struct {
 typedef enum {
 	PRS_OK,
 	PRS_NOK,
-	PRS_TERM
+	PRS_TERM,
+	PRS_NOT_SUP
 } parse_result_t;
 
 typedef struct prog_config_s prog_config_t;
@@ -287,7 +289,7 @@ static parse_result_t check_options(prog_config_t *config)
 	if ((uint32_t)config->num_thrs > dma_capa.max_sessions) {
 		ODPH_ERR("Not enough DMA sessions supported: %d (max: %u)\n", config->num_thrs,
 			 dma_capa.max_sessions);
-		return PRS_NOK;
+		return PRS_NOT_SUP;
 	}
 
 	burst_size = MIN(dma_capa.max_src_segs, dma_capa.max_dst_segs);
@@ -308,7 +310,7 @@ static parse_result_t check_options(prog_config_t *config)
 	if ((dma_capa.compl_mode_mask & ODP_DMA_COMPL_EVENT) == 0U || !dma_capa.queue_type_sched) {
 		ODPH_ERR("Unsupported completion mode (mode support: %x, scheduled queue "
 			 "support: %u\n", dma_capa.compl_mode_mask, dma_capa.queue_type_sched);
-		return PRS_NOK;
+		return PRS_NOT_SUP;
 	}
 
 	if ((uint32_t)config->num_thrs > dma_capa.pool.max_pools) {
@@ -1087,6 +1089,11 @@ int main(int argc, char **argv)
 
 	if (parse_res == PRS_TERM) {
 		ret = EXIT_SUCCESS;
+		goto out_test;
+	}
+
+	if (parse_res == PRS_NOT_SUP) {
+		ret = EXIT_NOT_SUP;
 		goto out_test;
 	}
 
