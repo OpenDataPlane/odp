@@ -54,9 +54,6 @@ enum {
 #define MAX_SEGS 1024U
 #define MAX_WORKERS 24
 
-#define MIN(a, b)  (((a) < (b)) ? (a) : (b))
-#define MAX(a, b)  (((a) < (b)) ? (b) : (a))
-
 #define GIGAS 1000000000
 #define MEGAS 1000000
 #define KILOS 1000
@@ -314,7 +311,7 @@ static parse_result_t check_options(prog_config_t *config)
 		return PRS_NOK;
 	}
 
-	max_workers = MIN(odp_thread_count_max() - 1, MAX_WORKERS);
+	max_workers = ODPH_MIN(odp_thread_count_max() - 1, MAX_WORKERS);
 
 	if (config->num_workers <= 0 || config->num_workers > max_workers) {
 		ODPH_ERR("Invalid thread count: %d (min: 1, max: %d)\n", config->num_workers,
@@ -364,7 +361,7 @@ static parse_result_t check_options(prog_config_t *config)
 			      config->num_out_segs + config->src_seg_len *
 			      config->num_in_segs % config->num_out_segs;
 
-	max_seg_len = MAX(config->src_seg_len, config->dst_seg_len);
+	max_seg_len = ODPH_MAX(config->src_seg_len, config->dst_seg_len);
 
 	if (max_seg_len > dma_capa.max_seg_len) {
 		ODPH_ERR("Unsupported total DMA segment length: %u (max: %u)\n", max_seg_len,
@@ -422,7 +419,7 @@ static parse_result_t check_options(prog_config_t *config)
 		config->compl_mode_mask |= mode_map[config->compl_mode];
 	}
 
-	max_trs = MIN(dma_capa.max_transfers, MAX_SEGS);
+	max_trs = ODPH_MIN(dma_capa.max_transfers, MAX_SEGS);
 
 	if (config->num_inflight == 0U)
 		config->num_inflight = max_trs;
@@ -435,7 +432,7 @@ static parse_result_t check_options(prog_config_t *config)
 
 	max_in = config->num_in_segs * config->num_inflight;
 	max_out = config->num_out_segs * config->num_inflight;
-	max_segs = MAX(max_in, max_out);
+	max_segs = ODPH_MAX(max_in, max_out);
 
 	if (max_segs > MAX_SEGS) {
 		ODPH_ERR("Unsupported input/output * inflight segment combination: %u (max: %u)\n",
@@ -690,7 +687,7 @@ static void configure_packet_dma_transfer(sd_t *sd)
 			seg = &start_dst_seg[j];
 			seg->packet = pkt;
 			seg->offset = 0U;
-			seg->len = MIN(len, sd->dma.dst_seg_len);
+			seg->len = ODPH_MIN(len, sd->dma.dst_seg_len);
 			len -= sd->dma.dst_seg_len;
 		}
 
@@ -769,7 +766,7 @@ static void configure_address_dma_transfer(sd_t *sd)
 		for (uint32_t j = 0U; j < sd->dma.num_out_segs; ++j, ++z) {
 			seg = &start_dst_seg[j];
 			seg->addr = (uint8_t *)sd->seg.dst + z * sd->dma.dst_seg_len;
-			seg->len = MIN(len, sd->dma.dst_seg_len);
+			seg->len = ODPH_MIN(len, sd->dma.dst_seg_len);
 			len -= sd->dma.dst_seg_len;
 		}
 
@@ -809,17 +806,17 @@ static void run_transfer(odp_dma_t handle, trs_info_t *info, stats_t *stats)
 		++stats->start_errs;
 	} else {
 		trs_tm = end_tm - start_tm;
-		stats->max_trs_tm = MAX(trs_tm, stats->max_trs_tm);
-		stats->min_trs_tm = MIN(trs_tm, stats->min_trs_tm);
+		stats->max_trs_tm = ODPH_MAX(trs_tm, stats->max_trs_tm);
+		stats->min_trs_tm = ODPH_MIN(trs_tm, stats->min_trs_tm);
 		stats->trs_tm += trs_tm;
 		trs_cc = odp_cpu_cycles_diff(end_cc, start_cc);
-		stats->max_trs_cc = MAX(trs_cc, stats->max_trs_cc);
-		stats->min_trs_cc = MIN(trs_cc, stats->min_trs_cc);
+		stats->max_trs_cc = ODPH_MAX(trs_cc, stats->max_trs_cc);
+		stats->min_trs_cc = ODPH_MIN(trs_cc, stats->min_trs_cc);
 		stats->trs_cc += trs_cc;
 		++stats->trs_cnt;
 		start_cc_diff = odp_cpu_cycles_diff(end_cc, start_cc);
-		stats->max_start_cc = MAX(start_cc_diff, stats->max_start_cc);
-		stats->min_start_cc = MIN(start_cc_diff, stats->min_start_cc);
+		stats->max_start_cc = ODPH_MAX(start_cc_diff, stats->max_start_cc);
+		stats->min_start_cc = ODPH_MIN(start_cc_diff, stats->min_start_cc);
 		stats->start_cc += start_cc_diff;
 		++stats->start_cnt;
 
@@ -894,8 +891,8 @@ static void poll_transfer(odp_dma_t handle, trs_info_t *info, stats_t *stats)
 
 		++info->trs_poll_cnt;
 		wait_cc = odp_cpu_cycles_diff(end_cc, start_cc);
-		stats->max_wait_cc = MAX(wait_cc, stats->max_wait_cc);
-		stats->min_wait_cc = MIN(wait_cc, stats->min_wait_cc);
+		stats->max_wait_cc = ODPH_MAX(wait_cc, stats->max_wait_cc);
+		stats->min_wait_cc = ODPH_MIN(wait_cc, stats->min_wait_cc);
 		stats->wait_cc += wait_cc;
 		++stats->wait_cnt;
 
@@ -903,12 +900,12 @@ static void poll_transfer(odp_dma_t handle, trs_info_t *info, stats_t *stats)
 			return;
 
 		trs_tm = odp_time_global_strict_ns() - info->trs_start_tm;
-		stats->max_trs_tm = MAX(trs_tm, stats->max_trs_tm);
-		stats->min_trs_tm = MIN(trs_tm, stats->min_trs_tm);
+		stats->max_trs_tm = ODPH_MAX(trs_tm, stats->max_trs_tm);
+		stats->min_trs_tm = ODPH_MIN(trs_tm, stats->min_trs_tm);
 		stats->trs_tm += trs_tm;
 		trs_cc = odp_cpu_cycles_diff(odp_cpu_cycles(), info->trs_start_cc);
-		stats->max_trs_cc = MAX(trs_cc, stats->max_trs_cc);
-		stats->min_trs_cc = MIN(trs_cc, stats->min_trs_cc);
+		stats->max_trs_cc = ODPH_MAX(trs_cc, stats->max_trs_cc);
+		stats->min_trs_cc = ODPH_MIN(trs_cc, stats->min_trs_cc);
 		stats->trs_cc += trs_cc;
 		stats->trs_poll_cnt += info->trs_poll_cnt;
 		++stats->trs_cnt;
@@ -932,8 +929,8 @@ static void poll_transfer(odp_dma_t handle, trs_info_t *info, stats_t *stats)
 			info->trs_start_cc = start_cc;
 			info->trs_poll_cnt = 0U;
 			start_cc_diff = odp_cpu_cycles_diff(end_cc, start_cc);
-			stats->max_start_cc = MAX(start_cc_diff, stats->max_start_cc);
-			stats->min_start_cc = MIN(start_cc_diff, stats->min_start_cc);
+			stats->max_start_cc = ODPH_MAX(start_cc_diff, stats->max_start_cc);
+			stats->min_start_cc = ODPH_MIN(start_cc_diff, stats->min_start_cc);
 			stats->start_cc += start_cc_diff;
 			++stats->start_cnt;
 			info->is_running = true;
@@ -1074,17 +1071,17 @@ static void wait_compl_event(sd_t *sd, stats_t *stats)
 	odp_dma_compl_result(odp_dma_compl_from_event(ev), &res);
 	info = res.user_ptr;
 	trs_tm = odp_time_global_strict_ns() - info->trs_start_tm;
-	stats->max_trs_tm = MAX(trs_tm, stats->max_trs_tm);
-	stats->min_trs_tm = MIN(trs_tm, stats->min_trs_tm);
+	stats->max_trs_tm = ODPH_MAX(trs_tm, stats->max_trs_tm);
+	stats->min_trs_tm = ODPH_MIN(trs_tm, stats->min_trs_tm);
 	stats->trs_tm += trs_tm;
 	trs_cc = odp_cpu_cycles_diff(odp_cpu_cycles(), info->trs_start_cc);
-	stats->max_trs_cc = MAX(trs_cc, stats->max_trs_cc);
-	stats->min_trs_cc = MIN(trs_cc, stats->min_trs_cc);
+	stats->max_trs_cc = ODPH_MAX(trs_cc, stats->max_trs_cc);
+	stats->min_trs_cc = ODPH_MIN(trs_cc, stats->min_trs_cc);
 	stats->trs_cc += trs_cc;
 	++stats->trs_cnt;
 	wait_cc = odp_cpu_cycles_diff(end_cc, start_cc);
-	stats->max_wait_cc = MAX(wait_cc, stats->max_wait_cc);
-	stats->min_wait_cc = MIN(wait_cc, stats->min_wait_cc);
+	stats->max_wait_cc = ODPH_MAX(wait_cc, stats->max_wait_cc);
+	stats->min_wait_cc = ODPH_MIN(wait_cc, stats->min_wait_cc);
 	stats->wait_cc += wait_cc;
 	++stats->wait_cnt;
 
@@ -1104,8 +1101,8 @@ static void wait_compl_event(sd_t *sd, stats_t *stats)
 		info->trs_start_tm = start_tm;
 		info->trs_start_cc = start_cc;
 		start_cc_diff = odp_cpu_cycles_diff(end_cc, start_cc);
-		stats->max_start_cc = MAX(start_cc_diff, stats->max_start_cc);
-		stats->min_start_cc = MIN(start_cc_diff, stats->min_start_cc);
+		stats->max_start_cc = ODPH_MAX(start_cc_diff, stats->max_start_cc);
+		stats->min_start_cc = ODPH_MIN(start_cc_diff, stats->min_start_cc);
 		stats->start_cc += start_cc_diff;
 		++stats->start_cnt;
 	}
@@ -1418,10 +1415,10 @@ static void print_stats(const prog_config_t *config)
 		tot_trs_tm += stats->trs_tm;
 		tot_trs_cc += stats->trs_cc;
 		tot_trs_cnt += stats->trs_cnt;
-		tot_min_tm = MIN(tot_min_tm, stats->min_trs_tm);
-		tot_max_tm = MAX(tot_max_tm, stats->max_trs_tm);
-		tot_min_cc = MIN(tot_min_cc, stats->min_trs_cc);
-		tot_max_cc = MAX(tot_max_cc, stats->max_trs_cc);
+		tot_min_tm = ODPH_MIN(tot_min_tm, stats->min_trs_tm);
+		tot_max_tm = ODPH_MAX(tot_max_tm, stats->max_trs_tm);
+		tot_min_cc = ODPH_MIN(tot_min_cc, stats->min_trs_cc);
+		tot_max_cc = ODPH_MAX(tot_max_cc, stats->max_trs_cc);
 
 		printf("    worker %d:\n", i);
 		printf("        successful transfers: %" PRIu64 "\n"
