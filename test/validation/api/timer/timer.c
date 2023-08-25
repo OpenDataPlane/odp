@@ -21,8 +21,6 @@
 
 #define GLOBAL_SHM_NAME	"GlobalTimerTest"
 
-#define MAX(a, b) (((a) > (b)) ? (a) : (b))
-
 #define MAX_TIMER_POOLS  1024
 
 /* Timeout range in milliseconds (ms) */

@@ -19,10 +19,8 @@
 #define MULTI        1
 #define RESULT       1
 #define USER_DATA    0xdeadbeef
-#define ELEM_NUM     10
+#define ELEM_NUM     10u
 #define UAREA        0xaa
-
-#define MIN(a, b) (a < b ? a : b)
 
 typedef struct global_t {
 	odp_dma_capability_t dma_capa;
@@ -105,7 +103,7 @@ static int dma_suite_init(void)
 	if (pkt_len == 0)
 		pkt_len = 4000;
 
-	pkt_len = MIN(pkt_len, global.dma_capa.max_seg_len);
+	pkt_len = ODPH_MIN(pkt_len, global.dma_capa.max_seg_len);
 	odp_pool_param_init(&pool_param);
 	pool_param.type = ODP_POOL_PACKET;
 	pool_param.pkt.num = global.dma_capa.max_src_segs + global.dma_capa.max_dst_segs;
@@ -426,7 +424,7 @@ static void test_dma_compl_pool_max_pools(void)
 static void test_dma_compl_user_area(void)
 {
 	odp_dma_pool_param_t dma_pool_param;
-	uint32_t num = MIN(ELEM_NUM, global.dma_capa.pool.max_num),
+	uint32_t num = ODPH_MIN(ELEM_NUM, global.dma_capa.pool.max_num),
 	size = global.dma_capa.pool.max_uarea_size, i;
 	odp_pool_t pool;
 	odp_dma_compl_t compl_evs[num];
@@ -482,7 +480,7 @@ static void init_event_uarea(void *uarea, uint32_t size, void *args, uint32_t in
 static void test_dma_compl_user_area_init(void)
 {
 	odp_dma_pool_param_t dma_pool_param;
-	uint32_t num = MIN(ELEM_NUM, global.dma_capa.pool.max_num), i;
+	uint32_t num = ODPH_MIN(ELEM_NUM, global.dma_capa.pool.max_num), i;
 	odp_pool_t pool;
 	uarea_init_t data;
 	odp_dma_compl_t compl_evs[num];
@@ -721,7 +719,7 @@ static void test_dma_addr_to_addr(odp_dma_compl_mode_t compl_mode_mask, uint32_t
 	uint32_t i, cur_len;
 	uint8_t *src = global.src_addr + OFFSET;
 	uint8_t *dst = global.dst_addr + OFFSET;
-	uint32_t seg_len = MIN(global.len / num, global.dma_capa.max_seg_len);
+	uint32_t seg_len = ODPH_MIN(global.len / num, global.dma_capa.max_seg_len);
 	uint32_t len = seg_len * num;
 	uint32_t offset = 0;
 
@@ -781,7 +779,7 @@ static void test_dma_addr_to_addr_trs(odp_dma_compl_mode_t compl_mode_mask, uint
 	odp_dma_compl_mode_t compl_mode;
 	uint8_t *src = global.src_addr + OFFSET;
 	uint8_t *dst = global.dst_addr + OFFSET;
-	uint32_t trs_len = MIN(global.len / num_trs, global.dma_capa.max_seg_len);
+	uint32_t trs_len = ODPH_MIN(global.len / num_trs, global.dma_capa.max_seg_len);
 	uint32_t len = trs_len * num_trs;
 	uint32_t offset = 0;
 	int ret = -1;
@@ -852,7 +850,7 @@ static void test_dma_addr_to_addr_max_trs(odp_dma_compl_mode_t compl_mode_mask)
 	uint32_t i, cur_len;
 	uint8_t *src = global.src_addr + OFFSET;
 	uint8_t *dst = global.dst_addr + OFFSET;
-	uint32_t seg_len = MIN(global.len / num_trs, global.dma_capa.max_seg_len);
+	uint32_t seg_len = ODPH_MIN(global.len / num_trs, global.dma_capa.max_seg_len);
 	uint32_t len = seg_len * num_trs;
 	uint32_t offset = 0;
 
@@ -1315,9 +1313,9 @@ static void test_dma_addr_to_addr_sync_res(void)
 
 static void get_seg_lens(uint32_t max_len, uint32_t *src, uint32_t *dst)
 {
-	uint32_t src_segs = *src, dst_segs = *dst, denom = MIN(src_segs, dst_segs);
+	uint32_t src_segs = *src, dst_segs = *dst, denom = ODPH_MIN(src_segs, dst_segs);
 
-	max_len = MIN(max_len / denom, global.dma_capa.max_seg_len) * denom;
+	max_len = ODPH_MIN(max_len / denom, global.dma_capa.max_seg_len) * denom;
 	*src = max_len / src_segs;
 	*dst = *src * src_segs / dst_segs + *src * src_segs % dst_segs;
 }
@@ -1358,7 +1356,7 @@ static void test_dma_addr_to_addr_sync_max_seg(void)
 
 		memset(&dst_seg[i], 0, sizeof(odp_dma_seg_t));
 		dst_seg[i].addr = addr;
-		dst_seg[i].len = MIN(len, dst_len);
+		dst_seg[i].len = ODPH_MIN(len, dst_len);
 		len -= dst_len;
 	}
 
@@ -1441,7 +1439,7 @@ static void test_dma_pkt_to_pkt_sync_max_seg(void)
 		memset(odp_packet_data(pkt), 0, dst_len);
 		memset(&dst_seg[i], 0, sizeof(odp_dma_seg_t));
 		dst_seg[i].packet = pkt;
-		dst_seg[i].len = MIN(len, dst_len);
+		dst_seg[i].len = ODPH_MIN(len, dst_len);
 		len -= dst_len;
 	}
 
