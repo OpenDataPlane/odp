@@ -21,6 +21,7 @@
 #include <unistd.h>
 
 #include <odp_api.h>
+#include <odp/helper/odph_api.h>
 
 #define NUM_SVC_CLASSES     4
 #define USERS_PER_SVC_CLASS 2
@@ -38,9 +39,6 @@
 
 #define FALSE  0
 #define TRUE   1
-
-#define MAX(a, b) (((a) > (b)) ? (a) : (b))
-#define MIN(a, b) (((a) < (b)) ? (a) : (b))
 
 #define RANDOM_BUF_LEN  1024
 
@@ -302,7 +300,7 @@ static uint32_t tm_shaper_max_burst;
 static uint64_t
 clamp_rate(uint64_t rate)
 {
-	uint64_t val = MIN(MAX(rate, tm_shaper_min_rate), tm_shaper_max_rate);
+	uint64_t val = ODPH_MIN(ODPH_MAX(rate, tm_shaper_min_rate), tm_shaper_max_rate);
 
 	if (!rate)
 		return 0;
@@ -316,7 +314,7 @@ clamp_rate(uint64_t rate)
 static uint32_t
 clamp_burst(uint32_t burst)
 {
-	uint32_t val = MIN(MAX(burst, tm_shaper_min_burst), tm_shaper_max_burst);
+	uint32_t val = ODPH_MIN(ODPH_MAX(burst, tm_shaper_min_burst), tm_shaper_max_burst);
 
 	if (!burst)
 		return 0;
@@ -765,7 +763,7 @@ static int traffic_generator(uint32_t pkts_to_send)
 		queue_num = random_16() & (TM_QUEUES_PER_CLASS - 1);
 		tm_queue  = queue_num_tbls[svc_class][queue_num];
 		pkt_len   = ((uint32_t)((random_8() & 0x7F) + 2)) * 32;
-		pkt_len   = MIN(pkt_len, 1500);
+		pkt_len   = ODPH_MIN(pkt_len, 1500u);
 		pkt       = make_odp_packet(pkt_len);
 
 		pkt_cnt++;

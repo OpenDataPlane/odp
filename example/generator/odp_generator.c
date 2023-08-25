@@ -35,7 +35,6 @@
 #define APPL_MODE_UDP    0			/**< UDP mode */
 #define APPL_MODE_PING   1			/**< ping mode */
 #define APPL_MODE_RCV    2			/**< receive mode */
-#define MAX(a, b) (((a) > (b)) ? (a) : (b))
 
 #define PING_THR_TX 0
 #define PING_THR_RX 1

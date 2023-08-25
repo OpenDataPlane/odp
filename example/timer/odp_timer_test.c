@@ -21,7 +21,6 @@
 #define MAX_WORKERS           (ODP_THREAD_COUNT_MAX - 1)
 #define NUM_TMOS              10000         /**< Number of timers */
 #define WAIT_NUM	      10    /**< Max tries to rx last tmo per worker */
-#define MAX(a, b) (((a) > (b)) ? (a) : (b))
 
 /** Test arguments */
 typedef struct {
@@ -282,9 +281,7 @@ static int parse_args(int argc, char *argv[], test_args_t *args)
 		return -1;
 
 	args->cpu_count     = 1;
-	args->resolution_us = MAX(10000,
-				  timer_capa.highest_res_ns /
-					ODP_TIME_USEC_IN_NS);
+	args->resolution_us = ODPH_MAX(10000u, timer_capa.highest_res_ns / ODP_TIME_USEC_IN_NS);
 	args->min_us        = 0;
 	args->max_us        = 10000000;
 	args->period_us     = 1000000;
