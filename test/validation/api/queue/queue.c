@@ -1,5 +1,5 @@
 /* Copyright (c) 2014-2018, Linaro Limited
- * Copyright (c) 2021-2022, Nokia
+ * Copyright (c) 2021-2023, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -900,34 +900,35 @@ static uint32_t dequeue_and_free_all(odp_queue_t queue)
 static int enqueue_with_retry(odp_queue_t queue, odp_event_t ev)
 {
 	int i;
+	int num_retries = 0;
 
-	for (i = 0; i < ENQ_RETRIES; i++)
+	for (i = 0; i < ENQ_RETRIES; i++) {
 		if (odp_queue_enq(queue, ev) == 0)
-			return 0;
+			return num_retries;
+		num_retries++;
+	}
 
 	return -1;
 }
 
 static int queue_test_worker(void *arg)
 {
-	uint32_t num, retries, num_workers;
-	int thr_id, ret;
+	uint32_t num;
+	int ret;
 	odp_event_t ev;
-	odp_queue_t queue;
 	test_globals_t *globals = arg;
-
-	thr_id      = odp_thread_id();
-	queue       = globals->queue;
-	num_workers = globals->num_workers;
+	int thr_id = odp_thread_id();
+	int num_workers = globals->num_workers;
+	odp_queue_t queue = globals->queue;
+	uint32_t retries = 0;
+	const uint32_t test_rounds = num_workers * 10000;
 
 	if (num_workers > 1)
 		odp_barrier_wait(&globals->barrier);
 
-	retries = 0;
-	num     = odp_atomic_fetch_inc_u32(&globals->num_event);
+	num = odp_atomic_fetch_inc_u32(&globals->num_event);
 
-	/* On average, each worker deq-enq each event once */
-	while (num < (num_workers * MAX_NUM_EVENT)) {
+	while (num < test_rounds) {
 		ev = odp_queue_deq(queue);
 
 		if (ev == ODP_EVENT_INVALID) {
@@ -946,6 +947,8 @@ static int queue_test_worker(void *arg)
 
 		ret = enqueue_with_retry(queue, ev);
 
+		/* There should be always room in the queue, so retries are
+		 * interpreted as failures. */
 		CU_ASSERT(ret == 0);
 
 		num = odp_atomic_fetch_inc_u32(&globals->num_event);
@@ -964,7 +967,7 @@ static void reset_thread_stat(test_globals_t *globals)
 		globals->thread[i].num_event = 0;
 }
 
-static void multithread_test(odp_nonblocking_t nonblocking)
+static void multithread_test(odp_nonblocking_t nonblocking, odp_bool_t full_queue)
 {
 	odp_shm_t shm;
 	test_globals_t *globals;
@@ -976,9 +979,15 @@ static void multithread_test(odp_nonblocking_t nonblocking)
 	int num_workers;
 	void *arg;
 
-	CU_ASSERT(odp_queue_capability(&capa) == 0);
+	CU_ASSERT_FATAL(odp_queue_capability(&capa) == 0);
 
-	queue_size = 2 * MAX_NUM_EVENT;
+	shm = odp_shm_lookup(GLOBALS_NAME);
+	CU_ASSERT_FATAL(shm != ODP_SHM_INVALID);
+
+	globals = odp_shm_addr(shm);
+	num_workers = globals->num_workers;
+
+	queue_size = full_queue ? num_workers : 2 * MAX_NUM_EVENT;
 
 	max_size = capa.plain.max_size;
 
@@ -997,13 +1006,7 @@ static void multithread_test(odp_nonblocking_t nonblocking)
 	num = MAX_NUM_EVENT;
 
 	if (num > queue_size)
-		num = queue_size / 2;
-
-	shm = odp_shm_lookup(GLOBALS_NAME);
-	CU_ASSERT_FATAL(shm != ODP_SHM_INVALID);
-
-	globals = odp_shm_addr(shm);
-	num_workers = globals->num_workers;
+		num = full_queue ? queue_size : queue_size / 2;
 
 	odp_queue_param_init(&qparams);
 	qparams.type = ODP_QUEUE_TYPE_PLAIN;
@@ -1038,12 +1041,22 @@ static void multithread_test(odp_nonblocking_t nonblocking)
 
 static void queue_test_mt_plain_block(void)
 {
-	multithread_test(ODP_BLOCKING);
+	multithread_test(ODP_BLOCKING, false);
 }
 
 static void queue_test_mt_plain_nonblock_lf(void)
 {
-	multithread_test(ODP_NONBLOCKING_LF);
+	multithread_test(ODP_NONBLOCKING_LF, false);
+}
+
+static void queue_test_mt_plain_block_full(void)
+{
+	multithread_test(ODP_BLOCKING, true);
+}
+
+static void queue_test_mt_plain_nonblock_lf_full(void)
+{
+	multithread_test(ODP_NONBLOCKING_LF, true);
 }
 
 odp_testinfo_t queue_suite[] = {
@@ -1073,6 +1086,8 @@ odp_testinfo_t queue_suite[] = {
 	ODP_TEST_INFO(queue_test_info),
 	ODP_TEST_INFO(queue_test_mt_plain_block),
 	ODP_TEST_INFO(queue_test_mt_plain_nonblock_lf),
+	ODP_TEST_INFO(queue_test_mt_plain_block_full),
+	ODP_TEST_INFO(queue_test_mt_plain_nonblock_lf_full),
 	ODP_TEST_INFO_NULL,
 };
 
