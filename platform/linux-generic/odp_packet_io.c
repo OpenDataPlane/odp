@@ -8,6 +8,7 @@
 #include <odp_posix_extensions.h>
 
 #include <odp/api/buffer.h>
+#include <odp/api/debug.h>
 #include <odp/api/packet.h>
 #include <odp/api/packet_io.h>
 #include <odp/api/proto_stats.h>
@@ -1624,6 +1625,9 @@ int odp_pktio_capability(odp_pktio_t pktio, odp_pktio_capability_t *capa)
 
 	return 0;
 }
+
+ODP_STATIC_ASSERT(ODP_CONFIG_PKTIO_ENTRIES - 1 <= ODP_PKTIO_MAX_INDEX,
+		  "ODP_CONFIG_PKTIO_ENTRIES larger than ODP_PKTIO_MAX_INDEX");
 
 unsigned int odp_pktio_max_index(void)
 {
