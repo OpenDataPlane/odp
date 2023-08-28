@@ -741,6 +741,9 @@ static void timer_pool_create_max(void)
 			ODPH_ERR("Timer alloc failed: %u / %u\n", i, num);
 
 		CU_ASSERT_FATAL(timer[i] != ODP_TIMER_INVALID);
+
+		/* Pool should have only one timer */
+		CU_ASSERT_FATAL(odp_timer_alloc(tp[i], queue, USER_PTR) == ODP_TIMER_INVALID);
 	}
 
 	for (i = 0; i < num; i++)
@@ -2906,6 +2909,9 @@ static void timer_test_periodic(odp_queue_type_t queue_type, int use_first, int 
 
 	timer = odp_timer_alloc(timer_pool, queue, user_ctx);
 	CU_ASSERT_FATAL(timer != ODP_TIMER_INVALID);
+
+	/* Pool should have only one timer */
+	CU_ASSERT_FATAL(odp_timer_alloc(timer_pool, queue, user_ctx) == ODP_TIMER_INVALID);
 
 	memset(&start_param, 0, sizeof(odp_timer_periodic_start_t));
 	offset_ns = period_ns / 2;
