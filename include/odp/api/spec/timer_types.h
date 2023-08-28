@@ -386,8 +386,7 @@ typedef struct {
 
 	} periodic;
 
-	/** Number of timers needed. Application will create in maximum this
-	 *  many concurrent timers from the timer pool. */
+	/** Number of timers in the pool. */
 	uint32_t num_timers;
 
 	/** Thread private timer pool. When zero, multiple thread may use the
