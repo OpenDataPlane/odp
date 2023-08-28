@@ -16,7 +16,7 @@
 
 #define DEBUG_PRINT       0
 #define MAX_WORKERS       64
-#define MAX_PKTIOS        32
+#define MAX_PKTIOS        (ODP_PKTIO_MAX_INDEX + 1)
 #define MAX_PKTIO_NAME    31
 #define MAX_PKTIO_QUEUES  MAX_WORKERS
 #define MAX_PIPE_STAGES   64

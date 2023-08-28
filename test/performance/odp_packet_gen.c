@@ -48,8 +48,6 @@ ODP_STATIC_ASSERT(MAX_WORKERS >= 2, "Too few threads");
 #define RAND_16BIT_WORDS  128
 /* Max retries to generate random data */
 #define MAX_RAND_RETRIES  1000
-/* Maximum pktio index table size */
-#define MAX_PKTIO_INDEXES 1024
 
 /* Used don't free */
 #define TX_MODE_DF        0
@@ -174,7 +172,7 @@ typedef struct test_global_t {
 	} pktio[MAX_PKTIOS];
 
 	/* Interface lookup table. Table index is pktio_index of the API. */
-	uint8_t if_from_pktio_idx[MAX_PKTIO_INDEXES];
+	uint8_t if_from_pktio_idx[ODP_PKTIO_MAX_INDEX + 1];
 
 	uint32_t num_tx_pkt;
 	uint32_t num_bins;
@@ -883,9 +881,6 @@ static int open_pktios(test_global_t *global)
 
 	global->pool = pool;
 
-	if (odp_pktio_max_index() >= MAX_PKTIO_INDEXES)
-		ODPH_ERR("Warning: max pktio index (%u) is too large\n", odp_pktio_max_index());
-
 	odp_pktio_param_init(&pktio_param);
 
 	if (test_options->direct_rx)
@@ -913,8 +908,8 @@ static int open_pktios(test_global_t *global)
 		odp_pktio_print(pktio);
 
 		pktio_idx = odp_pktio_index(pktio);
-		if (pktio_idx < 0 || pktio_idx >= MAX_PKTIO_INDEXES) {
-			ODPH_ERR("Error (%s): Bad pktio index: %i\n", name, pktio_idx);
+		if (pktio_idx < 0) {
+			ODPH_ERR("Error (%s): Reading pktio index failed: %i\n", name, pktio_idx);
 			return -1;
 		}
 		global->if_from_pktio_idx[pktio_idx] = i;
