@@ -1705,6 +1705,9 @@ static void pktio_test_index(void)
 	ndx = odp_pktio_index(pktio);
 	CU_ASSERT(ndx >= 0);
 
+	CU_ASSERT(ODP_PKTIO_MAX_INDEX >= odp_pktio_max_index());
+	CU_ASSERT(ODP_PKTIO_MAX_INDEX >= 0 && ODP_PKTIO_MAX_INDEX <= 1024);
+
 	CU_ASSERT(odp_pktio_close(pktio) == 0);
 }
 
