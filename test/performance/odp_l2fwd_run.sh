@@ -85,7 +85,7 @@ run_l2fwd()
 	LOG=odp_l2fwd_tmp.log
 
 	# Max 2 workers
-	$STDBUF odp_l2fwd${EXEEXT} -i $IF1,$IF2 -m 0 -t 30 -c 2 | tee $LOG
+	$STDBUF odp_l2fwd${EXEEXT} -i $IF1,$IF2 -m 0 -t 5 -c 2 | tee $LOG
 	ret=${PIPESTATUS[0]}
 
 	kill -2 ${GEN_PID}
