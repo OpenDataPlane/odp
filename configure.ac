@@ -247,7 +247,14 @@ AC_ARG_ENABLE([lto],
 		# Fat LTO object file contains GIMPLE bytecodes and the usual
 		# final code. There are less build problems (e.g. due to older
 		# binutils), but object files are larger.
-		ODP_LTO_FLAGS="-flto -ffat-lto-objects"
+		#
+		# -flto=auto and -ffat-lto-objects are currently not supported by clang.
+		$CC --version | grep -q clang
+		if test $? -ne 0; then
+			ODP_LTO_FLAGS="-flto=auto -ffat-lto-objects"
+		else
+			ODP_LTO_FLAGS="-flto"
+		fi
 	fi])
 
 ODP_CFLAGS="$ODP_CFLAGS $ODP_LTO_FLAGS"
