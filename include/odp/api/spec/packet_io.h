@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2013-2018 Linaro Limited
- * Copyright (c) 2020-2022 Nokia
+ * Copyright (c) 2020-2023 Nokia
  */
 
 /**
@@ -126,6 +126,7 @@ int odp_pktio_capability(odp_pktio_t pktio, odp_pktio_capability_t *capa);
  *
  * Return the maximum packet IO interface index. Interface indexes
  * (e.g. returned by odp_pktio_index()) range from zero to this maximum value.
+ * The return value does not exceed #ODP_PKTIO_MAX_INDEX.
  *
  * @return Maximum packet IO interface index
  */
