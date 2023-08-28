@@ -59,6 +59,12 @@ extern "C" {
  */
 
 /**
+ * @def ODP_PKTIO_MAX_INDEX
+ * Maximum packet IO interface index. Use odp_pktio_max_index() to check the
+ * runtime maximum value, which may be smaller than this value.
+ */
+
+/**
  * @def ODP_PKTIO_MACADDR_MAXSIZE
  * Minimum size of output buffer for odp_pktio_mac_addr()
  * Actual MAC address sizes may be different.

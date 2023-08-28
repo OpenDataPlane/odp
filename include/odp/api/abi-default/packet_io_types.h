@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2015-2018 Linaro Limited
- * Copyright (c) 2020-2022 Nokia
+ * Copyright (c) 2020-2023 Nokia
  */
 
 /**
@@ -46,6 +46,8 @@ typedef struct odp_pktout_queue_t {
 
 #define ODP_PKTIO_INVALID ((odp_pktio_t)0)
 #define ODP_LSO_PROFILE_INVALID ((odp_lso_profile_t)0)
+
+#define ODP_PKTIO_MAX_INDEX 63
 
 #define ODP_PKTIO_MACADDR_MAXSIZE 16
 
