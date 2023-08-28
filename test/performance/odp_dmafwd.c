@@ -44,7 +44,6 @@ enum {
 #define MAX_OUT_QS 32U
 #define MAX_BURST 32U
 #define MAX_WORKERS (ODP_THREAD_COUNT_MAX - 1)
-#define MAX_PKTIO_INDEXES 1024U
 
 #define MIN(a, b) (((a) <= (b)) ? (a) : (b))
 #define MAX(a, b) (((a) >= (b)) ? (a) : (b))
@@ -126,7 +125,7 @@ typedef void (*pkt_fn_t)(odp_packet_t pkts[], int num, pktio_t *pktio, init_fn_t
 typedef void (*drain_fn_t)(thread_config_t *config);
 
 typedef struct prog_config_s {
-	uint8_t pktio_idx_map[MAX_PKTIO_INDEXES];
+	uint8_t pktio_idx_map[ODP_PKTIO_MAX_INDEX + 1];
 	odph_thread_t thread_tbl[MAX_WORKERS];
 	thread_config_t thread_config[MAX_WORKERS];
 	pktio_t pktios[MAX_IFS];
@@ -298,7 +297,6 @@ static odp_bool_t get_stash_capa(odp_stash_capability_t *stash_capa, odp_stash_t
 
 static parse_result_t check_options(prog_config_t *config)
 {
-	const unsigned int idx = odp_pktio_max_index();
 	odp_dma_capability_t dma_capa;
 	uint32_t burst_size;
 	odp_stash_capability_t stash_capa;
@@ -310,11 +308,6 @@ static parse_result_t check_options(prog_config_t *config)
 		ODPH_ERR("Invalid number of interfaces: %u (min: 1, max: %u)\n", config->num_ifs,
 			 MAX_IFS);
 		return PRS_NOK;
-	}
-
-	if (idx >= MAX_PKTIO_INDEXES) {
-		ODPH_ERR("Invalid packet I/O maximum index: %u (max: %u)\n", idx,
-			 MAX_PKTIO_INDEXES);
 	}
 
 	if (config->copy_type != SW_COPY && config->copy_type != DMA_COPY_EV &&
