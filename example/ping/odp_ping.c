@@ -1,4 +1,4 @@
-/* Copyright (c) 2019-2022, Nokia
+/* Copyright (c) 2019-2023, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -16,7 +16,6 @@
 #include <odp/helper/odph_api.h>
 
 #define MAX_PKTIOS        32
-#define MAX_PKTIO_INDEXES 1024
 #define MAX_PKTIO_NAME    255
 #define MAX_PKT_NUM       1024
 
@@ -48,7 +47,7 @@ typedef struct test_global_t {
 	} pktio[MAX_PKTIOS];
 
 	/* Pktio index lookup table */
-	uint8_t pktio_from_idx[MAX_PKTIO_INDEXES];
+	uint8_t pktio_from_idx[ODP_PKTIO_MAX_INDEX + 1];
 
 } test_global_t;
 
@@ -196,9 +195,6 @@ static int open_pktios(test_global_t *global)
 		return -1;
 	}
 
-	if (odp_pktio_max_index() >= MAX_PKTIO_INDEXES)
-		printf("Warning: max pktio index (%u) is too large\n", odp_pktio_max_index());
-
 	odp_pktio_param_init(&pktio_param);
 	pktio_param.in_mode  = ODP_PKTIN_MODE_SCHED;
 	pktio_param.out_mode = ODP_PKTOUT_MODE_DIRECT;
@@ -287,8 +283,8 @@ static int init_pktio_lookup_tbl(test_global_t *global)
 		odp_pktio_t pktio = global->pktio[i].pktio;
 		int pktio_idx = odp_pktio_index(pktio);
 
-		if (pktio_idx < 0 || pktio_idx >= MAX_PKTIO_INDEXES) {
-			ODPH_ERR("Bad pktio index: %i\n", pktio_idx);
+		if (pktio_idx < 0) {
+			ODPH_ERR("odp_pktio_index() failed: %s\n", global->opt.pktio_name[i]);
 			return -1;
 		}
 
