@@ -1,8 +1,6 @@
-/* Copyright (c) 2013-2018, Linaro Limited
- * Copyright (c) 2021, ARM Limited
- * All rights reserved.
- *
- * SPDX-License-Identifier:     BSD-3-Clause
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2013-2018 Linaro Limited
+ * Copyright (c) 2021 ARM Limited
  */
 
 /**

@@ -1,7 +1,5 @@
-/* Copyright (c) 2021, Marvell
- * All rights reserved.
- *
- * SPDX-License-Identifier: BSD-3-Clause
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2021 Marvell
  */
 
 #ifndef ODP_ABI_PROTO_STATS_H_
