@@ -1856,8 +1856,21 @@ int odp_pool_ext_capability(odp_pool_type_t type, odp_pool_ext_capability_t *cap
 {
 	odp_pool_stats_opt_t supported_stats;
 
-	if (type != ODP_POOL_PACKET)
+	_ODP_ASSERT(capa != NULL);
+
+	switch (type) {
+	case ODP_POOL_PACKET:
+		break;
+	case ODP_POOL_BUFFER:
+	case ODP_POOL_TIMEOUT:
+	case ODP_POOL_VECTOR:
+	case ODP_POOL_DMA_COMPL:
+		memset(capa, 0, sizeof(odp_pool_ext_capability_t));
+		return 0;
+	default:
+		_ODP_ERR("Invalid pool type: %d\n", type);
 		return -1;
+	}
 
 	supported_stats.all = 0;
 
