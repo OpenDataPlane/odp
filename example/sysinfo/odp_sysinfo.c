@@ -35,6 +35,8 @@ typedef struct {
 typedef struct {
 	int num_pktio;
 	pktio_t pktio[MAX_IFACES];
+	int num_timer;
+	odp_timer_capability_t timer[ODP_CLOCK_NUM_SRC];
 } appl_args_t;
 
 /* Check that prints can use %u instead of %PRIu32 */
@@ -533,6 +535,65 @@ static void print_proto_stats_capa(appl_args_t *appl_args)
 	}
 }
 
+static int timer_capability(appl_args_t *appl_args)
+{
+	for (int i = 0; i < ODP_CLOCK_NUM_SRC; i++) {
+		int ret  = odp_timer_capability(i, &appl_args->timer[appl_args->num_timer]);
+
+		if (ret && i == ODP_CLOCK_DEFAULT) {
+			ODPH_ERR("odp_timer_capability() failed for default clock source: %d\n",
+				 ret);
+			return -1;
+		}
+		if (ret == -1)
+			continue;
+		if (ret < -1) {
+			ODPH_ERR("odp_timer_capability() failed: %d\n", ret);
+			return -1;
+		}
+		appl_args->num_timer++;
+	}
+	return 0;
+}
+
+static void print_timer_capa(appl_args_t *appl_args)
+{
+	for (int i = 0; i < appl_args->num_timer; i++) {
+		odp_timer_capability_t *capa = &appl_args->timer[i];
+
+		printf("\n");
+		printf("  TIMER (SRC %d)\n", i);
+
+		printf("    max_pools_combined:   %u\n", capa->max_pools_combined);
+		printf("    max_pools:            %u\n", capa->max_pools);
+		printf("    max_timers:           %u\n", capa->max_timers);
+		printf("    queue_type_sched:     %i\n", capa->queue_type_sched);
+		printf("    queue_type_plain:     %i\n", capa->queue_type_plain);
+		printf("    highest_res_ns:       %" PRIu64 " nsec\n", capa->highest_res_ns);
+		printf("    maximum resolution\n");
+		printf("      res_ns:             %" PRIu64 " nsec\n", capa->max_res.res_ns);
+		printf("      res_hz:             %" PRIu64 " hz\n", capa->max_res.res_hz);
+		printf("      min_tmo:            %" PRIu64 " nsec\n", capa->max_res.min_tmo);
+		printf("      max_tmo:            %" PRIu64 " nsec\n", capa->max_res.max_tmo);
+		printf("    maximum timeout\n");
+		printf("      res_ns:             %" PRIu64 " nsec\n", capa->max_tmo.res_ns);
+		printf("      res_hz:             %" PRIu64 " hz\n", capa->max_tmo.res_hz);
+		printf("      min_tmo:            %" PRIu64 " nsec\n", capa->max_tmo.min_tmo);
+		printf("      max_tmo:            %" PRIu64 " nsec\n", capa->max_tmo.max_tmo);
+		printf("    periodic\n");
+		printf("      max_pools:          %u\n", capa->periodic.max_pools);
+		printf("      max_timers:         %u\n", capa->periodic.max_timers);
+		printf("      min_base_freq_hz:   %" PRIu64 " %" PRIu64 "/%" PRIu64 " Hz\n",
+		       capa->periodic.min_base_freq_hz.integer,
+		       capa->periodic.min_base_freq_hz.numer,
+		       capa->periodic.min_base_freq_hz.denom);
+		printf("      max_base_freq_hz:   %" PRIu64 " %" PRIu64 "/%" PRIu64 " Hz\n",
+		       capa->periodic.max_base_freq_hz.integer,
+		       capa->periodic.max_base_freq_hz.numer,
+		       capa->periodic.max_base_freq_hz.denom);
+	}
+}
+
 static void usage(void)
 {
 	printf("\n"
@@ -619,7 +680,6 @@ int main(int argc, char **argv)
 	odp_comp_capability_t comp_capa;
 	odp_dma_capability_t dma_capa;
 	odp_queue_capability_t queue_capa;
-	odp_timer_capability_t timer_capa;
 	odp_crypto_capability_t crypto_capa;
 	odp_ipsec_capability_t ipsec_capa;
 	odp_schedule_capability_t schedule_capa;
@@ -734,7 +794,7 @@ int main(int argc, char **argv)
 		return -1;
 	}
 
-	if (odp_timer_capability(ODP_CLOCK_DEFAULT, &timer_capa)) {
+	if (timer_capability(&appl_args)) {
 		printf("timer capability failed\n");
 		return -1;
 	}
@@ -922,27 +982,10 @@ int main(int argc, char **argv)
 	printf("    max_obj_size:         %u\n", stash_capa.max_obj_size);
 	printf("    max_cache_size:       %u\n", stash_capa.max_cache_size);
 
-	printf("\n");
-	printf("  TIMER (ODP_CLOCK_DEFAULT)\n");
-	printf("    max_pools_combined:   %u\n", timer_capa.max_pools_combined);
-	printf("    max_pools:            %u\n", timer_capa.max_pools);
-	printf("    max_timers:           %u\n", timer_capa.max_timers);
-	printf("    queue_type_sched:     %i\n", timer_capa.queue_type_sched);
-	printf("    queue_type_plain:     %i\n", timer_capa.queue_type_plain);
-	printf("    highest_res_ns:       %" PRIu64 " nsec\n", timer_capa.highest_res_ns);
-	printf("    maximum resolution\n");
-	printf("      res_ns:             %" PRIu64 " nsec\n", timer_capa.max_res.res_ns);
-	printf("      res_hz:             %" PRIu64 " hz\n", timer_capa.max_res.res_hz);
-	printf("      min_tmo:            %" PRIu64 " nsec\n", timer_capa.max_res.min_tmo);
-	printf("      max_tmo:            %" PRIu64 " nsec\n", timer_capa.max_res.max_tmo);
-	printf("    maximum timeout\n");
-	printf("      res_ns:             %" PRIu64 " nsec\n", timer_capa.max_tmo.res_ns);
-	printf("      res_hz:             %" PRIu64 " hz\n", timer_capa.max_tmo.res_hz);
-	printf("      min_tmo:            %" PRIu64 " nsec\n", timer_capa.max_tmo.min_tmo);
-	printf("      max_tmo:            %" PRIu64 " nsec\n", timer_capa.max_tmo.max_tmo);
-	printf("\n");
+	print_timer_capa(&appl_args);
 
 	if (crypto_ret == 0) {
+		printf("\n");
 		printf("  CRYPTO\n");
 		printf("    max sessions:         %u\n", crypto_capa.max_sessions);
 		printf("    sync mode support:    %s\n", support_level(crypto_capa.sync_mode));
@@ -957,10 +1000,10 @@ int main(int argc, char **argv)
 		foreach_auth(crypto_capa.auths, print_auth);
 		printf("\n");
 		foreach_auth(crypto_capa.auths, print_auth_capa);
-		printf("\n");
 	}
 
 	if (ipsec_ret == 0) {
+		printf("\n");
 		printf("  IPSEC\n");
 		printf("    max SAs:                      %u\n", ipsec_capa.max_num_sa);
 		printf("    sync mode support:            %s\n",
@@ -1003,9 +1046,10 @@ int main(int argc, char **argv)
 		printf("\n");
 		printf("    auth algorithms:              ");
 		foreach_auth(ipsec_capa.auths, print_auth);
-		printf("\n\n");
+		printf("\n");
 	}
 
+	printf("\n");
 	printf("  SHM MEMORY BLOCKS:\n");
 	odp_shm_print_all();
 
