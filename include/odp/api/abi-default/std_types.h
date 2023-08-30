@@ -1,7 +1,5 @@
-/* Copyright (c) 2013-2018, Linaro Limited
- * All rights reserved.
- *
- * SPDX-License-Identifier:     BSD-3-Clause
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2013-2018 Linaro Limited
  */
 
 #ifndef ODP_ABI_STD_TYPES_H_
