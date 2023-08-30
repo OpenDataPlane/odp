@@ -1,5 +1,5 @@
 /* Copyright (c) 2018, Linaro Limited
- * Copyright (c) 2022, Nokia
+ * Copyright (c) 2022-2023, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -370,6 +370,7 @@ int main(void)
 	odp_system_info_t sysinfo;
 	odp_shm_capability_t shm_capa;
 	odp_pool_capability_t pool_capa;
+	odp_pool_ext_capability_t pool_ext_capa;
 	odp_cls_capability_t cls_capa;
 	odp_comp_capability_t comp_capa;
 	odp_dma_capability_t dma_capa;
@@ -441,6 +442,11 @@ int main(void)
 
 	if (odp_pool_capability(&pool_capa)) {
 		printf("pool capability failed\n");
+		return -1;
+	}
+
+	if (odp_pool_ext_capability(ODP_POOL_PACKET, &pool_ext_capa)) {
+		printf("external packet pool capability failed\n");
 		return -1;
 	}
 
@@ -568,6 +574,28 @@ int main(void)
 	printf("    vector.max_size:      %u\n", pool_capa.vector.max_size);
 	printf("    vector.min_cache_size:%u\n", pool_capa.vector.min_cache_size);
 	printf("    vector.max_cache_size:%u\n", pool_capa.vector.max_cache_size);
+
+	printf("\n");
+	printf("  POOL EXT (pkt)\n");
+	printf("    max_pools:             %u\n", pool_ext_capa.max_pools);
+	if (pool_ext_capa.max_pools) {
+		printf("    min_cache_size:        %u\n", pool_ext_capa.min_cache_size);
+		printf("    max_cache_size:        %u\n", pool_ext_capa.max_cache_size);
+		printf("    stats:                 0x%" PRIx64 "\n", pool_ext_capa.stats.all);
+		printf("    pkt.max_num_buf:       %u\n", pool_ext_capa.pkt.max_num_buf);
+		printf("    pkt.max_buf_size:      %u B\n", pool_ext_capa.pkt.max_buf_size);
+		printf("    pkt.odp_header_size:   %u B\n", pool_ext_capa.pkt.odp_header_size);
+		printf("    pkt.odp_trailer_size:  %u B\n", pool_ext_capa.pkt.odp_trailer_size);
+		printf("    pkt.min_mem_align:     %u B\n", pool_ext_capa.pkt.min_mem_align);
+		printf("    pkt.min_buf_align:     %u B\n", pool_ext_capa.pkt.min_buf_align);
+		printf("    pkt.min_head_align:    %u B\n", pool_ext_capa.pkt.min_head_align);
+		printf("    pkt.buf_size_aligned:  %u\n", pool_ext_capa.pkt.buf_size_aligned);
+		printf("    pkt.max_headroom:      %u B\n", pool_ext_capa.pkt.max_headroom);
+		printf("    pkt.max_headroom_size: %u B\n", pool_ext_capa.pkt.max_headroom_size);
+		printf("    pkt.max_segs_per_pkt:  %u\n", pool_ext_capa.pkt.max_segs_per_pkt);
+		printf("    pkt.max_uarea_size:    %u B\n", pool_ext_capa.pkt.max_uarea_size);
+		printf("    pkt.uarea_persistence: %i\n", pool_ext_capa.pkt.uarea_persistence);
+	}
 
 	printf("\n");
 	printf("  CLASSIFIER\n");
