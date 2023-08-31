@@ -5,16 +5,36 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+
+#include <getopt.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
 #include <inttypes.h>
 
 #include <odp_api.h>
+#include <odp/helper/odph_api.h>
 
 #define KB              1024
 #define MB              (1024 * 1024)
 #define MAX_HUGE_PAGES  32
+#define MAX_IFACES      32
+#define MAX_NAME_LEN    128
+
+#define PROG_NAME "odp_sysinfo"
+
+typedef struct {
+	char name[MAX_NAME_LEN];
+	odp_pktio_capability_t capa;
+} pktio_t;
+
+typedef struct {
+	int num_pktio;
+	pktio_t pktio[MAX_IFACES];
+} appl_args_t;
 
 /* Check that prints can use %u instead of %PRIu32 */
 ODP_STATIC_ASSERT(sizeof(unsigned int) >= sizeof(uint32_t), "unsigned int smaller than uint32_t");
@@ -361,7 +381,211 @@ static void print_auth(odp_auth_alg_t alg)
 	printf("%s ", auth_alg_name(alg));
 }
 
-int main(void)
+static int pktio_capability(appl_args_t *appl_args)
+{
+	odp_pool_param_t pool_param;
+	odp_pool_t pool;
+	int ret = 0;
+
+	odp_pool_param_init(&pool_param);
+
+	pool_param.type = ODP_POOL_PACKET;
+	pool_param.pkt.num = 128;
+
+	pool = odp_pool_create("pktio_pool", &pool_param);
+	if (pool == ODP_POOL_INVALID) {
+		ODPH_ERR("Creating packet pool failed\n");
+		return -1;
+	}
+
+	for (int i = 0; i < appl_args->num_pktio; i++) {
+		odp_pktio_param_t param;
+		odp_pktio_t pktio;
+
+		odp_pktio_param_init(&param);
+
+		param.in_mode = ODP_PKTIN_MODE_SCHED;
+		param.out_mode = ODP_PKTOUT_MODE_DIRECT;
+
+		pktio = odp_pktio_open(appl_args->pktio[i].name, pool, &param);
+		if (pktio == ODP_PKTIO_INVALID) {
+			ODPH_ERR("Opening pktio %s failed\n", appl_args->pktio[i].name);
+			ret = -1;
+			break;
+		}
+
+		if (odp_pktio_capability(pktio, &appl_args->pktio[i].capa)) {
+			ODPH_ERR("Reading pktio %s capa failed\n", appl_args->pktio[i].name);
+			ret = -1;
+		}
+
+		if (odp_pktio_close(pktio)) {
+			ODPH_ERR("Closing pktio %s failed\n", appl_args->pktio[i].name);
+			ret = -1;
+		}
+
+		if (ret)
+			break;
+	}
+
+	if (odp_pool_destroy(pool)) {
+		ODPH_ERR("Destroying pktio pool failed\n");
+		return -1;
+	}
+	return ret;
+}
+
+static void print_pktio_capa(appl_args_t *appl_args)
+{
+	for (int i = 0; i < appl_args->num_pktio; i++) {
+		odp_pktio_capability_t *capa = &appl_args->pktio[i].capa;
+
+		printf("\n");
+		printf("  PKTIO (%s)\n", appl_args->pktio[i].name);
+		printf("    (in_mode:                      ODP_PKTIN_MODE_SCHED)\n");
+		printf("    (out_mode:                     ODP_PKTOUT_MODE_DIRECT)\n");
+		printf("    max_input_queues:              %u\n", capa->max_input_queues);
+		printf("    min_input_queue_size:          %u\n", capa->min_input_queue_size);
+		printf("    max_input_queue_size:          %u\n", capa->max_input_queue_size);
+		printf("    max_output_queues:             %u\n", capa->max_output_queues);
+		printf("    min_output_queue_size:         %u\n", capa->min_output_queue_size);
+		printf("    max_output_queue_size:         %u\n", capa->max_output_queue_size);
+		printf("    config.pktin:                  0x%" PRIx64 "\n",
+		       capa->config.pktin.all_bits);
+		printf("    config.pktout:                 0x%" PRIx64 "\n",
+		       capa->config.pktout.all_bits);
+		printf("    set_op:                        0x%" PRIx32 "\n", capa->set_op.all_bits);
+		printf("    vector.supported:              %s\n",
+		       support_level(capa->vector.supported));
+		printf("    vector.max_size:               %u\n", capa->vector.max_size);
+		printf("    vector.min_size:               %u\n", capa->vector.min_size);
+		printf("    vector.max_tmo_ns:             %" PRIu64 " ns\n",
+		       capa->vector.max_tmo_ns);
+		printf("    vector.min_tmo_ns:             %" PRIu64 " ns\n",
+		       capa->vector.min_tmo_ns);
+		printf("    lso.max_profiles:              %u\n", capa->lso.max_profiles);
+		printf("    lso.max_profiles_per_pktio:    %u\n", capa->lso.max_profiles_per_pktio);
+		printf("    lso.max_packet_segments:       %u\n", capa->lso.max_packet_segments);
+		printf("    lso.max_segments:              %u\n", capa->lso.max_segments);
+		printf("    lso.max_payload_len:           %u B\n", capa->lso.max_payload_len);
+		printf("    lso.max_payload_offset:        %u B\n", capa->lso.max_payload_offset);
+		printf("    lso.mod_op.add_segment_num:    %u\n", capa->lso.mod_op.add_segment_num);
+		printf("    lso.mod_op.add_payload_len:    %u\n", capa->lso.mod_op.add_payload_len);
+		printf("    lso.mod_op.add_payload_offset: %u\n",
+		       capa->lso.mod_op.add_payload_offset);
+		printf("    lso.max_num_custom:            %u\n", capa->lso.max_num_custom);
+		printf("    lso.proto.custom:              %u\n", capa->lso.proto.custom);
+		printf("    lso.proto.ipv4:                %u\n", capa->lso.proto.ipv4);
+		printf("    lso.proto.ipv6:                %u\n", capa->lso.proto.ipv6);
+		printf("    lso.proto.tcp_ipv4:            %u\n", capa->lso.proto.tcp_ipv4);
+		printf("    lso.proto.tcp_ipv6:            %u\n", capa->lso.proto.tcp_ipv6);
+		printf("    lso.proto.sctp_ipv4:           %u\n", capa->lso.proto.sctp_ipv4);
+		printf("    lso.proto.sctp_ipv6:           %u\n", capa->lso.proto.sctp_ipv6);
+		printf("    maxlen.equal:                  %i\n", capa->maxlen.equal);
+		printf("    maxlen.min_input:              %u B\n", capa->maxlen.min_input);
+		printf("    maxlen.max_input:              %u B\n", capa->maxlen.max_input);
+		printf("    maxlen.min_output:             %u B\n", capa->maxlen.min_output);
+		printf("    maxlen.max_output:             %u B\n", capa->maxlen.max_output);
+		printf("    max_tx_aging_tmo_ns:           %" PRIu64 " ns\n",
+		       capa->max_tx_aging_tmo_ns);
+		printf("    tx_compl.queue_type_sched:     %i\n", capa->tx_compl.queue_type_sched);
+		printf("    tx_compl.queue_type_plain:     %i\n", capa->tx_compl.queue_type_plain);
+		printf("    tx_compl.mode_event:           %u\n", capa->tx_compl.mode_event);
+		printf("    tx_compl.mode_poll:            %u\n", capa->tx_compl.mode_poll);
+		printf("    tx_compl.max_compl_id:         %u\n", capa->tx_compl.max_compl_id);
+		printf("    free_ctrl.dont_free:           %u\n", capa->free_ctrl.dont_free);
+		printf("    reassembly.ip:                 %i\n", capa->reassembly.ip);
+		printf("    reassembly.ipv4:               %i\n", capa->reassembly.ipv4);
+		printf("    reassembly.ipv6:               %i\n", capa->reassembly.ipv6);
+		printf("    reassembly.max_wait_time:      %" PRIu64 " ns\n",
+		       capa->reassembly.max_wait_time);
+		printf("    reassembly.max_num_frags:      %u\n", capa->reassembly.max_num_frags);
+		printf("    stats.pktio:                   0x%" PRIx64 "\n",
+		       capa->stats.pktio.all_counters);
+		printf("    stats.pktin_queue:             0x%" PRIx64 "\n",
+		       capa->stats.pktin_queue.all_counters);
+		printf("    stats.pktout_queue:            0x%" PRIx64 "\n",
+		       capa->stats.pktout_queue.all_counters);
+		printf("    flow_control.pause_rx:         %u\n", capa->flow_control.pause_rx);
+		printf("    flow_control.pfc_rx:           %u\n", capa->flow_control.pfc_rx);
+		printf("    flow_control.pause_tx:         %u\n", capa->flow_control.pause_tx);
+		printf("    flow_control.pfc_tx:           %u\n", capa->flow_control.pfc_tx);
+	}
+}
+
+static void usage(void)
+{
+	printf("\n"
+	       "System Information\n"
+	       "\n"
+	       "Usage: %s OPTIONS\n"
+	       "  E.g. %s -i eth0\n"
+	       "\n"
+	       "Optional OPTIONS:\n"
+	       "  -i, --interfaces   Ethernet interfaces for packet I/O, comma-separated, no\n"
+	       "                     spaces.\n"
+	       "  -h, --help         Display help and exit.\n"
+	       "\n", PROG_NAME, PROG_NAME);
+}
+
+static void parse_interfaces(appl_args_t *config, const char *optarg)
+{
+	char *tmp_str = strdup(optarg), *tmp;
+
+	if (tmp_str == NULL)
+		return;
+
+	tmp = strtok(tmp_str, ",");
+
+	while (tmp && config->num_pktio < MAX_IFACES) {
+		if (strlen(tmp) + 1 > MAX_NAME_LEN) {
+			ODPH_ERR("Unable to store interface name (MAX_NAME_LEN=%d)\n",
+				 MAX_NAME_LEN);
+			exit(EXIT_FAILURE);
+		}
+		strncpy(config->pktio[config->num_pktio].name, tmp, MAX_NAME_LEN);
+
+		config->num_pktio++;
+
+		tmp = strtok(NULL, ",");
+	}
+
+	free(tmp_str);
+}
+
+static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
+{
+	int opt;
+	int long_index;
+	static const struct option longopts[] = {
+		{"interfaces", required_argument, NULL, 'i'},
+		{"help", no_argument, NULL, 'h'},
+		{NULL, 0, NULL, 0}
+	};
+	static const char *shortopts =  "i:h";
+
+	while (1) {
+		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
+
+		if (opt == -1)
+			break;	/* No more options */
+
+		switch (opt) {
+		case 'i':
+			parse_interfaces(appl_args, optarg);
+			break;
+		case 'h':
+			usage();
+			exit(EXIT_SUCCESS);
+		case '?':
+		default:
+			usage();
+			exit(EXIT_FAILURE);
+		}
+	}
+}
+
+int main(int argc, char **argv)
 {
 	odp_instance_t inst;
 	int i, num_hp, num_hp_print;
@@ -380,6 +604,7 @@ int main(void)
 	odp_ipsec_capability_t ipsec_capa;
 	odp_schedule_capability_t schedule_capa;
 	odp_stash_capability_t stash_capa;
+	appl_args_t appl_args;
 	uint64_t huge_page[MAX_HUGE_PAGES];
 	char ava_mask_str[ODP_CPUMASK_STR_SIZE];
 	char work_mask_str[ODP_CPUMASK_STR_SIZE];
@@ -387,10 +612,14 @@ int main(void)
 	int crypto_ret;
 	int ipsec_ret;
 
+	memset(&appl_args, 0, sizeof(appl_args_t));
+
 	printf("\n");
 	printf("ODP system info example\n");
 	printf("***********************************************************\n");
 	printf("\n");
+
+	parse_args(argc, argv, &appl_args);
 
 	if (odp_init_global(&inst, NULL, NULL)) {
 		printf("Global init failed.\n");
@@ -447,6 +676,11 @@ int main(void)
 
 	if (odp_pool_ext_capability(ODP_POOL_PACKET, &pool_ext_capa)) {
 		printf("external packet pool capability failed\n");
+		return -1;
+	}
+
+	if (pktio_capability(&appl_args)) {
+		printf("pktio capability failed\n");
 		return -1;
 	}
 
@@ -596,6 +830,8 @@ int main(void)
 		printf("    pkt.max_uarea_size:    %u B\n", pool_ext_capa.pkt.max_uarea_size);
 		printf("    pkt.uarea_persistence: %i\n", pool_ext_capa.pkt.uarea_persistence);
 	}
+
+	print_pktio_capa(&appl_args);
 
 	printf("\n");
 	printf("  CLASSIFIER\n");
