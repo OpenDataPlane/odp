@@ -29,6 +29,7 @@
 typedef struct {
 	char name[MAX_NAME_LEN];
 	odp_pktio_capability_t capa;
+	odp_proto_stats_capability_t proto_stats_capa;
 } pktio_t;
 
 typedef struct {
@@ -419,6 +420,12 @@ static int pktio_capability(appl_args_t *appl_args)
 			ret = -1;
 		}
 
+		if (odp_proto_stats_capability(pktio, &appl_args->pktio[i].proto_stats_capa)) {
+			ODPH_ERR("Reading pktio %s proto stats capa failed\n",
+				 appl_args->pktio[i].name);
+			ret = -1;
+		}
+
 		if (odp_pktio_close(pktio)) {
 			ODPH_ERR("Closing pktio %s failed\n", appl_args->pktio[i].name);
 			ret = -1;
@@ -510,6 +517,19 @@ static void print_pktio_capa(appl_args_t *appl_args)
 		printf("    flow_control.pfc_rx:           %u\n", capa->flow_control.pfc_rx);
 		printf("    flow_control.pause_tx:         %u\n", capa->flow_control.pause_tx);
 		printf("    flow_control.pfc_tx:           %u\n", capa->flow_control.pfc_tx);
+	}
+}
+
+static void print_proto_stats_capa(appl_args_t *appl_args)
+{
+	for (int i = 0; i < appl_args->num_pktio; i++) {
+		odp_proto_stats_capability_t *capa = &appl_args->pktio[i].proto_stats_capa;
+
+		printf("\n");
+		printf("  PROTO STATS (%s)\n", appl_args->pktio[i].name);
+		printf("    tx.counters:          0x%" PRIx64 "\n", capa->tx.counters.all_bits);
+		printf("    tx.oct_count0_adj:    %i\n", capa->tx.oct_count0_adj);
+		printf("    tx.oct_count1_adj:    %i\n", capa->tx.oct_count1_adj);
 	}
 }
 
@@ -832,6 +852,8 @@ int main(int argc, char **argv)
 	}
 
 	print_pktio_capa(&appl_args);
+
+	print_proto_stats_capa(&appl_args);
 
 	printf("\n");
 	printf("  CLASSIFIER\n");
