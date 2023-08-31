@@ -2775,7 +2775,8 @@ static void timer_test_periodic_capa(void)
 	}
 }
 
-static void timer_test_periodic(odp_queue_type_t queue_type, int use_first, int rounds)
+static void timer_test_periodic(odp_queue_type_t queue_type, int use_first, int rounds,
+				int reuse_event)
 {
 	odp_timer_capability_t timer_capa;
 	odp_timer_periodic_capability_t periodic_capa;
@@ -2787,7 +2788,7 @@ static void timer_test_periodic(odp_queue_type_t queue_type, int use_first, int 
 	odp_timer_periodic_start_t start_param;
 	odp_queue_t queue;
 	odp_timeout_t tmo;
-	odp_event_t ev;
+	odp_event_t ev = ODP_EVENT_INVALID;
 	odp_timer_t timer;
 	odp_time_t t1, t2;
 	uint64_t tick, cur_tick, period_ns, duration_ns, diff_ns, offset_ns;
@@ -2918,10 +2919,12 @@ static void timer_test_periodic(odp_queue_type_t queue_type, int use_first, int 
 		num_tmo = 0;
 		done = 0;
 
-		tmo = odp_timeout_alloc(pool);
-		ev  = odp_timeout_to_event(tmo);
-		CU_ASSERT_FATAL(ev != ODP_EVENT_INVALID);
+		if (!reuse_event || round == 0) {
+			tmo = odp_timeout_alloc(pool);
+			ev  = odp_timeout_to_event(tmo);
+		}
 
+		CU_ASSERT_FATAL(ev != ODP_EVENT_INVALID);
 		cur_tick = odp_timer_current_tick(timer_pool);
 		tick = cur_tick + odp_timer_ns_to_tick(timer_pool, offset_ns);
 
@@ -3023,8 +3026,10 @@ static void timer_test_periodic(odp_queue_type_t queue_type, int use_first, int 
 			CU_ASSERT(ret == 1 || ret == 2);
 
 			if (ret == 2) {
-				odp_event_free(ev);
 				done = 1;
+				if (reuse_event && round < rounds - 1)
+					break;
+				odp_event_free(ev);
 			}
 		}
 
@@ -3041,27 +3046,32 @@ static void timer_test_periodic(odp_queue_type_t queue_type, int use_first, int 
 
 static void timer_test_periodic_sched(void)
 {
-	timer_test_periodic(ODP_QUEUE_TYPE_SCHED, 0, 1);
+	timer_test_periodic(ODP_QUEUE_TYPE_SCHED, 0, 1, 0);
 }
 
 static void timer_test_periodic_plain(void)
 {
-	timer_test_periodic(ODP_QUEUE_TYPE_PLAIN, 0, 1);
+	timer_test_periodic(ODP_QUEUE_TYPE_PLAIN, 0, 1, 0);
 }
 
 static void timer_test_periodic_sched_first(void)
 {
-	timer_test_periodic(ODP_QUEUE_TYPE_SCHED, FIRST_TICK, 1);
+	timer_test_periodic(ODP_QUEUE_TYPE_SCHED, FIRST_TICK, 1, 0);
 }
 
 static void timer_test_periodic_plain_first(void)
 {
-	timer_test_periodic(ODP_QUEUE_TYPE_PLAIN, FIRST_TICK, 1);
+	timer_test_periodic(ODP_QUEUE_TYPE_PLAIN, FIRST_TICK, 1, 0);
 }
 
 static void timer_test_periodic_reuse(void)
 {
-	timer_test_periodic(ODP_QUEUE_TYPE_SCHED, 0, 2);
+	timer_test_periodic(ODP_QUEUE_TYPE_SCHED, 0, 2, 0);
+}
+
+static void timer_test_periodic_event_reuse(void)
+{
+	timer_test_periodic(ODP_QUEUE_TYPE_SCHED, 0, 2, 1);
 }
 
 odp_testinfo_t timer_suite[] = {
@@ -3157,6 +3167,8 @@ odp_testinfo_t timer_suite[] = {
 	ODP_TEST_INFO_CONDITIONAL(timer_test_periodic_plain_first,
 				  check_periodic_plain_support),
 	ODP_TEST_INFO_CONDITIONAL(timer_test_periodic_reuse,
+				  check_periodic_sched_support),
+	ODP_TEST_INFO_CONDITIONAL(timer_test_periodic_event_reuse,
 				  check_periodic_sched_support),
 	ODP_TEST_INFO_NULL,
 };
