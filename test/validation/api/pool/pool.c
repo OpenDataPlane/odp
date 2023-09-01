@@ -1698,7 +1698,19 @@ static void pool_ext_init_packet_pool_param(odp_pool_ext_param_t *param)
 static void test_packet_pool_ext_capa(void)
 {
 	odp_pool_ext_capability_t capa;
-	odp_pool_type_t type = ODP_POOL_PACKET;
+	odp_pool_type_t type;
+	const odp_pool_type_t unsupported_types[] = {ODP_POOL_BUFFER, ODP_POOL_TIMEOUT,
+						     ODP_POOL_VECTOR, ODP_POOL_DMA_COMPL};
+	const int num_types = sizeof(unsupported_types) / sizeof(unsupported_types[0]);
+
+	/* Verify operation for unsupported pool types */
+	for (int i = 0; i < num_types; i++) {
+		type = unsupported_types[i];
+		CU_ASSERT_FATAL(odp_pool_ext_capability(type, &capa) == 0);
+		CU_ASSERT(capa.max_pools == 0);
+	}
+
+	type = ODP_POOL_PACKET;
 
 	CU_ASSERT_FATAL(odp_pool_ext_capability(type, &capa) == 0);
 
