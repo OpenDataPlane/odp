@@ -702,12 +702,12 @@ int main(int argc, char **argv)
 	parse_args(argc, argv, &appl_args);
 
 	if (odp_init_global(&inst, NULL, NULL)) {
-		printf("Global init failed.\n");
+		ODPH_ERR("Global init failed.\n");
 		return -1;
 	}
 
 	if (odp_init_local(inst, ODP_THREAD_CONTROL)) {
-		printf("Local init failed.\n");
+		ODPH_ERR("Local init failed.\n");
 		return -1;
 	}
 
@@ -722,7 +722,7 @@ int main(int argc, char **argv)
 	odp_sys_config_print();
 
 	if (odp_system_info(&sysinfo)) {
-		printf("system info call failed\n");
+		ODPH_ERR("system info call failed\n");
 		return -1;
 	}
 
@@ -745,67 +745,67 @@ int main(int argc, char **argv)
 		num_hp_print = MAX_HUGE_PAGES;
 
 	if (odp_shm_capability(&shm_capa)) {
-		printf("shm capability failed\n");
+		ODPH_ERR("shm capability failed\n");
 		return -1;
 	}
 
 	if (odp_pool_capability(&pool_capa)) {
-		printf("pool capability failed\n");
+		ODPH_ERR("pool capability failed\n");
 		return -1;
 	}
 
 	if (odp_pool_ext_capability(ODP_POOL_PACKET, &pool_ext_capa)) {
-		printf("external packet pool capability failed\n");
+		ODPH_ERR("external packet pool capability failed\n");
 		return -1;
 	}
 
 	if (pktio_capability(&appl_args)) {
-		printf("pktio capability failed\n");
+		ODPH_ERR("pktio capability failed\n");
 		return -1;
 	}
 
 	if (odp_cls_capability(&cls_capa)) {
-		printf("classifier capability failed\n");
+		ODPH_ERR("classifier capability failed\n");
 		return -1;
 	}
 
 	if (odp_comp_capability(&comp_capa)) {
-		printf("compression capability failed\n");
+		ODPH_ERR("compression capability failed\n");
 		return -1;
 	}
 
 	if (odp_dma_capability(&dma_capa)) {
-		printf("dma capability failed\n");
+		ODPH_ERR("dma capability failed\n");
 		return -1;
 	}
 
 	if (odp_queue_capability(&queue_capa)) {
-		printf("queue capability failed\n");
+		ODPH_ERR("queue capability failed\n");
 		return -1;
 	}
 
 	if (odp_schedule_capability(&schedule_capa)) {
-		printf("schedule capability failed\n");
+		ODPH_ERR("schedule capability failed\n");
 		return -1;
 	}
 
 	if (odp_stash_capability(&stash_capa, ODP_STASH_TYPE_DEFAULT)) {
-		printf("stash capability failed\n");
+		ODPH_ERR("stash capability failed\n");
 		return -1;
 	}
 
 	if (timer_capability(&appl_args)) {
-		printf("timer capability failed\n");
+		ODPH_ERR("timer capability failed\n");
 		return -1;
 	}
 
 	crypto_ret = odp_crypto_capability(&crypto_capa);
 	if (crypto_ret < 0)
-		printf("crypto capability failed\n");
+		ODPH_ERR("crypto capability failed\n");
 
 	ipsec_ret = odp_ipsec_capability(&ipsec_capa);
 	if (ipsec_ret < 0)
-		printf("IPsec capability failed\n");
+		ODPH_ERR("IPsec capability failed\n");
 
 	printf("\n");
 	printf("S Y S T E M    I N F O R M A T I O N\n");
@@ -1058,12 +1058,12 @@ int main(int argc, char **argv)
 	printf("\n");
 
 	if (odp_term_local()) {
-		printf("Local term failed.\n");
+		ODPH_ERR("Local term failed.\n");
 		return -1;
 	}
 
 	if (odp_term_global(inst)) {
-		printf("Global term failed.\n");
+		ODPH_ERR("Global term failed.\n");
 		return -1;
 	}
 
