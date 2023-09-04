@@ -861,33 +861,47 @@ int main(int argc, char **argv)
 
 	printf("\n");
 	printf("  POOL\n");
-	printf("    max_pools:            %u\n", pool_capa.max_pools);
-	printf("    buf.max_pools:        %u\n", pool_capa.buf.max_pools);
-	printf("    buf.max_align:        %u B\n", pool_capa.buf.max_align);
-	printf("    buf.max_size:         %u kB\n", pool_capa.buf.max_size / KB);
-	printf("    buf.max_num:          %u\n", pool_capa.buf.max_num);
-	printf("    buf.min_cache_size:   %u\n", pool_capa.buf.min_cache_size);
-	printf("    buf.max_cache_size:   %u\n", pool_capa.buf.max_cache_size);
-	printf("    pkt.max_pools:        %u\n", pool_capa.pkt.max_pools);
-	printf("    pkt.max_len:          %u kB\n", pool_capa.pkt.max_len / KB);
-	printf("    pkt.max_num:          %u\n", pool_capa.pkt.max_num);
-	printf("    pkt.max_align:        %u\n", pool_capa.pkt.max_align);
-	printf("    pkt.max_headroom:     %u\n", pool_capa.pkt.max_headroom);
-	printf("    pkt.max_segs_per_pkt: %u\n", pool_capa.pkt.max_segs_per_pkt);
-	printf("    pkt.max_seg_len:      %u B\n", pool_capa.pkt.max_seg_len);
-	printf("    pkt.max_uarea_size:   %u B\n", pool_capa.pkt.max_uarea_size);
-	printf("    pkt.max_num_subparam: %u\n", pool_capa.pkt.max_num_subparam);
-	printf("    pkt.min_cache_size:   %u\n", pool_capa.pkt.min_cache_size);
-	printf("    pkt.max_cache_size:   %u\n", pool_capa.pkt.max_cache_size);
-	printf("    tmo.max_pools:        %u\n", pool_capa.tmo.max_pools);
-	printf("    tmo.max_num:          %u\n", pool_capa.tmo.max_num);
-	printf("    tmo.min_cache_size:   %u\n", pool_capa.tmo.min_cache_size);
-	printf("    tmo.max_cache_size:   %u\n", pool_capa.tmo.max_cache_size);
-	printf("    vector.max_pools:     %u\n", pool_capa.vector.max_pools);
-	printf("    vector.max_num:       %u\n", pool_capa.vector.max_num);
-	printf("    vector.max_size:      %u\n", pool_capa.vector.max_size);
-	printf("    vector.min_cache_size:%u\n", pool_capa.vector.min_cache_size);
-	printf("    vector.max_cache_size:%u\n", pool_capa.vector.max_cache_size);
+	printf("    max_pools:                %u\n", pool_capa.max_pools);
+	printf("    buf.max_pools:            %u\n", pool_capa.buf.max_pools);
+	printf("    buf.max_align:            %u B\n", pool_capa.buf.max_align);
+	printf("    buf.max_size:             %u kB\n", pool_capa.buf.max_size / KB);
+	printf("    buf.max_num:              %u\n", pool_capa.buf.max_num);
+	printf("    buf.max_uarea_size:       %u B\n", pool_capa.buf.max_uarea_size);
+	printf("    buf.uarea_persistence:    %i\n", pool_capa.buf.uarea_persistence);
+	printf("    buf.min_cache_size:       %u\n", pool_capa.buf.min_cache_size);
+	printf("    buf.max_cache_size:       %u\n", pool_capa.buf.max_cache_size);
+	printf("    buf.stats:                0x%" PRIx64 "\n", pool_capa.buf.stats.all);
+	printf("    pkt.max_pools:            %u\n", pool_capa.pkt.max_pools);
+	printf("    pkt.max_len:              %u kB\n", pool_capa.pkt.max_len / KB);
+	printf("    pkt.max_num:              %u\n", pool_capa.pkt.max_num);
+	printf("    pkt.max_align:            %u B\n", pool_capa.pkt.max_align);
+	printf("    pkt.min_headroom:         %u B\n", pool_capa.pkt.min_headroom);
+	printf("    pkt.max_headroom:         %u B\n", pool_capa.pkt.max_headroom);
+	printf("    pkt.min_tailroom:         %u B\n", pool_capa.pkt.min_tailroom);
+	printf("    pkt.max_segs_per_pkt:     %u\n", pool_capa.pkt.max_segs_per_pkt);
+	printf("    pkt.min_seg_len:          %u B\n", pool_capa.pkt.min_seg_len);
+	printf("    pkt.max_seg_len:          %u B\n", pool_capa.pkt.max_seg_len);
+	printf("    pkt.max_uarea_size:       %u B\n", pool_capa.pkt.max_uarea_size);
+	printf("    pkt.uarea_persistence:    %i\n", pool_capa.pkt.uarea_persistence);
+	printf("    pkt.max_num_subparam:     %u\n", pool_capa.pkt.max_num_subparam);
+	printf("    pkt.min_cache_size:       %u\n", pool_capa.pkt.min_cache_size);
+	printf("    pkt.max_cache_size:       %u\n", pool_capa.pkt.max_cache_size);
+	printf("    pkt.stats:                0x%" PRIx64 "\n", pool_capa.pkt.stats.all);
+	printf("    tmo.max_pools:            %u\n", pool_capa.tmo.max_pools);
+	printf("    tmo.max_num:              %u\n", pool_capa.tmo.max_num);
+	printf("    tmo.max_uarea_size:       %u B\n", pool_capa.tmo.max_uarea_size);
+	printf("    tmo.uarea_persistence:    %i\n", pool_capa.tmo.uarea_persistence);
+	printf("    tmo.min_cache_size:       %u\n", pool_capa.tmo.min_cache_size);
+	printf("    tmo.max_cache_size:       %u\n", pool_capa.tmo.max_cache_size);
+	printf("    tmo.stats:                0x%" PRIx64 "\n", pool_capa.tmo.stats.all);
+	printf("    vector.max_pools:         %u\n", pool_capa.vector.max_pools);
+	printf("    vector.max_num:           %u\n", pool_capa.vector.max_num);
+	printf("    vector.max_size:          %u\n", pool_capa.vector.max_size);
+	printf("    vector.max_uarea_size:    %u B\n", pool_capa.vector.max_uarea_size);
+	printf("    vector.uarea_persistence: %i\n", pool_capa.vector.uarea_persistence);
+	printf("    vector.min_cache_size:    %u\n", pool_capa.vector.min_cache_size);
+	printf("    vector.max_cache_size:    %u\n", pool_capa.vector.max_cache_size);
+	printf("    vector.stats:             0x%" PRIx64 "\n", pool_capa.vector.stats.all);
 
 	printf("\n");
 	printf("  POOL EXT (pkt)\n");
@@ -917,15 +931,19 @@ int main(int argc, char **argv)
 
 	printf("\n");
 	printf("  CLASSIFIER\n");
-	printf("    supported_terms:      0x%" PRIx64 "\n", cls_capa.supported_terms.all_bits);
-	printf("    max_pmr_terms:        %u\n", cls_capa.max_pmr_terms);
-	printf("    available_pmr_terms:  %u\n", cls_capa.available_pmr_terms);
-	printf("    max_cos:              %u\n", cls_capa.max_cos);
-	printf("    max_hash_queues:      %u\n", cls_capa.max_hash_queues);
-	printf("    hash_protocols:       0x%x\n", cls_capa.hash_protocols.all_bits);
-	printf("    pmr_range_supported:  %i\n", cls_capa.pmr_range_supported);
-	printf("    max_mark:             %" PRIu64 "\n", cls_capa.max_mark);
-	printf("    stats.queue:          0x%" PRIx64 "\n", cls_capa.stats.queue.all_counters);
+	printf("    supported_terms:        0x%" PRIx64 "\n", cls_capa.supported_terms.all_bits);
+	printf("    max_pmr_terms:          %u\n", cls_capa.max_pmr_terms);
+	printf("    available_pmr_terms:    %u\n", cls_capa.available_pmr_terms);
+	printf("    max_cos:                %u\n", cls_capa.max_cos);
+	printf("    max_hash_queues:        %u\n", cls_capa.max_hash_queues);
+	printf("    hash_protocols:         0x%x\n", cls_capa.hash_protocols.all_bits);
+	printf("    pmr_range_supported:    %i\n", cls_capa.pmr_range_supported);
+	printf("    random_early_detection: %s\n", support_level(cls_capa.random_early_detection));
+	printf("    threshold_red:          0x%" PRIx8 "\n", cls_capa.threshold_red.all_bits);
+	printf("    back_pressure:          %s\n", support_level(cls_capa.back_pressure));
+	printf("    threshold_bp:           0x%" PRIx8 "\n", cls_capa.threshold_bp.all_bits);
+	printf("    max_mark:               %" PRIu64 "\n", cls_capa.max_mark);
+	printf("    stats.queue:            0x%" PRIx64 "\n", cls_capa.stats.queue.all_counters);
 
 	printf("\n");
 	printf("  COMPRESSION\n");
@@ -937,19 +955,21 @@ int main(int argc, char **argv)
 
 	printf("\n");
 	printf("  DMA\n");
-	printf("    max_sessions:         %u\n", dma_capa.max_sessions);
-	printf("    max_transfers:        %u\n", dma_capa.max_transfers);
-	printf("    max_src_segs:         %u\n", dma_capa.max_src_segs);
-	printf("    max_dst_segs:         %u\n", dma_capa.max_dst_segs);
-	printf("    max_segs:             %u\n", dma_capa.max_segs);
-	printf("    max_seg_len:          %u\n", dma_capa.max_seg_len);
-	printf("    compl_mode_mask:      0x%x\n", dma_capa.compl_mode_mask);
-	printf("    queue_type_sched:     %i\n", dma_capa.queue_type_sched);
-	printf("    queue_type_plain:     %i\n", dma_capa.queue_type_plain);
-	printf("    pool.max_pools:       %u\n", dma_capa.pool.max_pools);
-	printf("    pool.max_num:         %u\n", dma_capa.pool.max_num);
-	printf("    pool.min_cache_size:  %u\n", dma_capa.pool.min_cache_size);
-	printf("    pool.max_cache_size:  %u\n", dma_capa.pool.max_cache_size);
+	printf("    max_sessions:           %u\n", dma_capa.max_sessions);
+	printf("    max_transfers:          %u\n", dma_capa.max_transfers);
+	printf("    max_src_segs:           %u\n", dma_capa.max_src_segs);
+	printf("    max_dst_segs:           %u\n", dma_capa.max_dst_segs);
+	printf("    max_segs:               %u\n", dma_capa.max_segs);
+	printf("    max_seg_len:            %u B\n", dma_capa.max_seg_len);
+	printf("    compl_mode_mask:        0x%x\n", dma_capa.compl_mode_mask);
+	printf("    queue_type_sched:       %i\n", dma_capa.queue_type_sched);
+	printf("    queue_type_plain:       %i\n", dma_capa.queue_type_plain);
+	printf("    pool.max_pools:         %u\n", dma_capa.pool.max_pools);
+	printf("    pool.max_num:           %u\n", dma_capa.pool.max_num);
+	printf("    pool.max_uarea_size:    %u B\n", dma_capa.pool.max_uarea_size);
+	printf("    pool.uarea_persistence: %u\n", dma_capa.pool.uarea_persistence);
+	printf("    pool.min_cache_size:    %u\n", dma_capa.pool.min_cache_size);
+	printf("    pool.max_cache_size:    %u\n", dma_capa.pool.max_cache_size);
 
 	printf("\n");
 	printf("  QUEUE\n");
@@ -969,37 +989,53 @@ int main(int argc, char **argv)
 	printf("    max_queues:           %u\n", schedule_capa.max_queues);
 	printf("    max_queue_size:       %u\n", schedule_capa.max_queue_size);
 	printf("    max_flow_id:          %u\n", schedule_capa.max_flow_id);
-	printf("    lockfree_queues:      %ssupported\n",
-	       schedule_capa.lockfree_queues ? "" : "not ");
-	printf("    waitfree_queues:      %ssupported\n",
-	       schedule_capa.waitfree_queues ? "" : "not ");
+	printf("    lockfree_queues:      %s\n", support_level(schedule_capa.lockfree_queues));
+	printf("    waitfree_queues:      %s\n", support_level(schedule_capa.waitfree_queues));
+	printf("    order_wait:           %s\n", support_level(schedule_capa.order_wait));
 
 	printf("\n");
 	printf("  STASH\n");
 	printf("    max_stashes_any_type: %u\n", stash_capa.max_stashes_any_type);
 	printf("    max_stashes:          %u\n", stash_capa.max_stashes);
 	printf("    max_num_obj:          %" PRIu64 "\n", stash_capa.max_num_obj);
-	printf("    max_obj_size:         %u\n", stash_capa.max_obj_size);
+	printf("    max_num.u8:           %" PRIu64 "\n", stash_capa.max_num.u8);
+	printf("    max_num.u16:          %" PRIu64 "\n", stash_capa.max_num.u16);
+	printf("    max_num.u32:          %" PRIu64 "\n", stash_capa.max_num.u32);
+	printf("    max_num.u64:          %" PRIu64 "\n", stash_capa.max_num.u64);
+	printf("    max_num.u128:         %" PRIu64 "\n", stash_capa.max_num.u128);
+	printf("    max_num.max_obj_size: %" PRIu64 "\n", stash_capa.max_num.max_obj_size);
+	printf("    max_obj_size:         %u B\n", stash_capa.max_obj_size);
 	printf("    max_cache_size:       %u\n", stash_capa.max_cache_size);
+	printf("    max_get_batch:        %u\n", stash_capa.max_get_batch);
+	printf("    max_put_batch:        %u\n", stash_capa.max_put_batch);
+	printf("    stats:                0x%" PRIx64 "\n", stash_capa.stats.all);
 
 	print_timer_capa(&appl_args);
 
 	if (crypto_ret == 0) {
 		printf("\n");
 		printf("  CRYPTO\n");
-		printf("    max sessions:         %u\n", crypto_capa.max_sessions);
-		printf("    sync mode support:    %s\n", support_level(crypto_capa.sync_mode));
-		printf("    async mode support:   %s\n", support_level(crypto_capa.async_mode));
-		printf("    queue_type_sched:     %i\n", crypto_capa.queue_type_sched);
-		printf("    queue_type_plain:     %i\n", crypto_capa.queue_type_plain);
-		printf("    cipher algorithms:    ");
+		printf("    max sessions:           %u\n", crypto_capa.max_sessions);
+		printf("    sync mode support:      %s\n", support_level(crypto_capa.sync_mode));
+		printf("    async mode support:     %s\n", support_level(crypto_capa.async_mode));
+		printf("    queue_type_sched:       %i\n", crypto_capa.queue_type_sched);
+		printf("    queue_type_plain:       %i\n", crypto_capa.queue_type_plain);
+		printf("    cipher algorithms:      ");
 		foreach_cipher(crypto_capa.ciphers, print_cipher);
 		printf("\n");
 		foreach_cipher(crypto_capa.ciphers, print_cipher_capa);
-		printf("    auth algorithms:      ");
+		printf("    cipher algorithms (HW): ");
+		foreach_cipher(crypto_capa.hw_ciphers, print_cipher);
+		printf("\n");
+		foreach_cipher(crypto_capa.hw_ciphers, print_cipher_capa);
+		printf("    auth algorithms:        ");
 		foreach_auth(crypto_capa.auths, print_auth);
 		printf("\n");
 		foreach_auth(crypto_capa.auths, print_auth_capa);
+		printf("    auth algorithms (HW):   ");
+		foreach_auth(crypto_capa.hw_auths, print_auth);
+		printf("\n");
+		foreach_auth(crypto_capa.hw_auths, print_auth_capa);
 	}
 
 	if (ipsec_ret == 0) {
@@ -1037,10 +1073,33 @@ int main(int argc, char **argv)
 		printf("    max destination queues:       %u\n", ipsec_capa.max_queues);
 		printf("    queue_type_sched:             %i\n", ipsec_capa.queue_type_sched);
 		printf("    queue_type_plain:             %i\n", ipsec_capa.queue_type_plain);
+		printf("    vector support:               %s\n",
+		       support_level(ipsec_capa.vector.supported));
+		printf("      min_size:                   %u\n", ipsec_capa.vector.min_size);
+		printf("      max_size:                   %u\n", ipsec_capa.vector.max_size);
+		printf("      min_tmo_ns:                 %" PRIu64 " ns\n",
+		       ipsec_capa.vector.min_tmo_ns);
+		printf("      max_tmo_ns:                 %" PRIu64 " ns\n",
+		       ipsec_capa.vector.max_tmo_ns);
 		printf("    max anti-replay window size:  %u\n",
 		       ipsec_capa.max_antireplay_ws);
 		printf("    inline TM pipelining:         %s\n",
 		       support_level(ipsec_capa.inline_ipsec_tm));
+		printf("    testing capabilities:\n");
+		printf("      sa_operations.seq_num:      %i\n",
+		       ipsec_capa.test.sa_operations.seq_num);
+		printf("      sa_operations.antireplay_window_top: %i\n",
+		       ipsec_capa.test.sa_operations.antireplay_window_top);
+		printf("    post-IPsec reassembly support:\n");
+		printf("      ip:                         %i\n", ipsec_capa.reassembly.ip);
+		printf("      ipv4:                       %i\n", ipsec_capa.reassembly.ipv4);
+		printf("      ipv6:                       %i\n", ipsec_capa.reassembly.ipv6);
+		printf("      max_wait_time:              %" PRIu64 "\n",
+		       ipsec_capa.reassembly.max_wait_time);
+		printf("      max_num_frags:              %" PRIu16 "\n",
+		       ipsec_capa.reassembly.max_num_frags);
+		printf("    reass_async:                  %i\n", ipsec_capa.reass_async);
+		printf("    reass_inline:                 %i\n", ipsec_capa.reass_inline);
 		printf("    cipher algorithms:            ");
 		foreach_cipher(ipsec_capa.ciphers, print_cipher);
 		printf("\n");
