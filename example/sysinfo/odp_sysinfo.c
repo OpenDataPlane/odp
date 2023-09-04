@@ -703,12 +703,12 @@ int main(int argc, char **argv)
 
 	if (odp_init_global(&inst, NULL, NULL)) {
 		ODPH_ERR("Global init failed.\n");
-		return -1;
+		exit(EXIT_FAILURE);
 	}
 
 	if (odp_init_local(inst, ODP_THREAD_CONTROL)) {
 		ODPH_ERR("Local init failed.\n");
-		return -1;
+		exit(EXIT_FAILURE);
 	}
 
 	printf("\n");
@@ -723,7 +723,7 @@ int main(int argc, char **argv)
 
 	if (odp_system_info(&sysinfo)) {
 		ODPH_ERR("system info call failed\n");
-		return -1;
+		exit(EXIT_FAILURE);
 	}
 
 	memset(ava_mask_str, 0, ODP_CPUMASK_STR_SIZE);
@@ -746,57 +746,57 @@ int main(int argc, char **argv)
 
 	if (odp_shm_capability(&shm_capa)) {
 		ODPH_ERR("shm capability failed\n");
-		return -1;
+		exit(EXIT_FAILURE);
 	}
 
 	if (odp_pool_capability(&pool_capa)) {
 		ODPH_ERR("pool capability failed\n");
-		return -1;
+		exit(EXIT_FAILURE);
 	}
 
 	if (odp_pool_ext_capability(ODP_POOL_PACKET, &pool_ext_capa)) {
 		ODPH_ERR("external packet pool capability failed\n");
-		return -1;
+		exit(EXIT_FAILURE);
 	}
 
 	if (pktio_capability(&appl_args)) {
 		ODPH_ERR("pktio capability failed\n");
-		return -1;
+		exit(EXIT_FAILURE);
 	}
 
 	if (odp_cls_capability(&cls_capa)) {
 		ODPH_ERR("classifier capability failed\n");
-		return -1;
+		exit(EXIT_FAILURE);
 	}
 
 	if (odp_comp_capability(&comp_capa)) {
 		ODPH_ERR("compression capability failed\n");
-		return -1;
+		exit(EXIT_FAILURE);
 	}
 
 	if (odp_dma_capability(&dma_capa)) {
 		ODPH_ERR("dma capability failed\n");
-		return -1;
+		exit(EXIT_FAILURE);
 	}
 
 	if (odp_queue_capability(&queue_capa)) {
 		ODPH_ERR("queue capability failed\n");
-		return -1;
+		exit(EXIT_FAILURE);
 	}
 
 	if (odp_schedule_capability(&schedule_capa)) {
 		ODPH_ERR("schedule capability failed\n");
-		return -1;
+		exit(EXIT_FAILURE);
 	}
 
 	if (odp_stash_capability(&stash_capa, ODP_STASH_TYPE_DEFAULT)) {
 		ODPH_ERR("stash capability failed\n");
-		return -1;
+		exit(EXIT_FAILURE);
 	}
 
 	if (timer_capability(&appl_args)) {
 		ODPH_ERR("timer capability failed\n");
-		return -1;
+		exit(EXIT_FAILURE);
 	}
 
 	crypto_ret = odp_crypto_capability(&crypto_capa);
@@ -1059,13 +1059,13 @@ int main(int argc, char **argv)
 
 	if (odp_term_local()) {
 		ODPH_ERR("Local term failed.\n");
-		return -1;
+		exit(EXIT_FAILURE);
 	}
 
 	if (odp_term_global(inst)) {
 		ODPH_ERR("Global term failed.\n");
-		return -1;
+		exit(EXIT_FAILURE);
 	}
 
-	return 0;
+	return EXIT_SUCCESS;
 }
