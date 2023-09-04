@@ -18,6 +18,8 @@
 
 #define MAX_FILENAME 128
 
+#define ABS(v) ((v) < 0 ? -(v) : (v))
+
 enum mode_e {
 	MODE_ONESHOT = 0,
 	MODE_RESTART_ABS,
@@ -31,6 +33,10 @@ typedef struct timer_ctx_t {
 	uint64_t    nsec;
 	uint64_t    count;
 	uint64_t    first_period;
+	int         tmo_tick;
+	int64_t     first_tmo_diff;
+	int64_t     nsec_final;
+
 } timer_ctx_t;
 
 typedef struct {
@@ -45,10 +51,6 @@ typedef struct {
 	uint64_t nsec_after_min_idx;
 	uint64_t nsec_after_max;
 	uint64_t nsec_after_max_idx;
-
-	int tmo_tick;
-	int64_t first_tmo_diff;
-	int64_t nsec_final;
 
 	uint64_t num_before;
 	uint64_t num_exact;
@@ -747,10 +749,10 @@ static int destroy_timers(test_global_t *test_global)
 	return ret;
 }
 
-static void print_nsec_error(const char *str, uint64_t nsec, double res_ns,
+static void print_nsec_error(const char *str, int64_t nsec, double res_ns,
 			     uint64_t idx)
 {
-	printf("         %s: %12" PRIu64 "  /  %.3fx resolution",
+	printf("         %s: %12" PRIi64 "  /  %.3fx resolution",
 	       str, nsec, (double)nsec / res_ns);
 	if (idx != UINT64_MAX)
 		printf(", event %" PRIu64, idx);
@@ -763,17 +765,17 @@ static void print_stat(test_global_t *test_global)
 	uint64_t tot_timers = test_global->tot_timers;
 	test_stat_t *stat = &test_global->stat;
 	test_log_t *log = test_global->log;
-	double ave_after = 0.0;
-	double ave_before = 0.0;
 	double res_ns = test_global->res_ns;
+	uint64_t ave_after = 0;
+	uint64_t ave_before = 0;
 
 	if (stat->num_after)
-		ave_after = (double)stat->nsec_after_sum / stat->num_after;
+		ave_after = stat->nsec_after_sum / stat->num_after;
 	else
 		stat->nsec_after_min = 0;
 
 	if (stat->num_before)
-		ave_before = (double)stat->nsec_before_sum / stat->num_before;
+		ave_before = stat->nsec_before_sum / stat->num_before;
 	else
 		stat->nsec_before_min = 0;
 
@@ -811,15 +813,37 @@ static void print_stat(test_global_t *test_global)
 	print_nsec_error("ave", ave_before, res_ns, UINT64_MAX);
 
 	if (test_global->opt.mode == MODE_PERIODIC && !test_global->opt.offset_ns) {
-		printf("  first timeout difference to one period (nsec):\n");
-		printf("              %12" PRIi64 "  /  %.3fx resolution, based on %s\n",
-		       stat->first_tmo_diff, (double)stat->first_tmo_diff / res_ns,
-		       stat->tmo_tick ? "timeout tick" : "time");
+		int idx = 0;
+		int64_t max = 0;
+
+		for (int i = 0; i < (int)test_global->alloc_timers; i++) {
+			timer_ctx_t *t = &test_global->timer_ctx[i];
+			int64_t v = t->first_tmo_diff;
+
+			if (ABS(v) > ABS(max)) {
+				max = v;
+				idx = i;
+			}
+		}
+
+		printf("  first timeout difference to one period, based on %s (nsec):\n",
+		       test_global->timer_ctx[idx].tmo_tick ? "timeout tick" : "time");
+		print_nsec_error("max", max, res_ns, UINT64_MAX);
+	}
+
+	int64_t max = 0;
+
+	for (int i = 0; i < (int)test_global->alloc_timers; i++) {
+		timer_ctx_t *t = &test_global->timer_ctx[i];
+		int64_t v = t->nsec_final;
+
+		if (ABS(v) > ABS(max))
+			max = v;
 	}
 
 	printf("  final timeout error (nsec):\n");
-	printf("              %12" PRIi64 "  /  %.3fx resolution\n",
-	       stat->nsec_final, (double)stat->nsec_final / res_ns);
+	print_nsec_error("max", max, res_ns, UINT64_MAX);
+
 	printf("\n");
 }
 
@@ -904,17 +928,17 @@ static void run_test(test_global_t *test_global)
 					 * Adjust by the difference between one period after start
 					 * time and the timeout tick.
 					 */
-					stat->tmo_tick = 1;
-					stat->first_tmo_diff =
+					ctx->tmo_tick = 1;
+					ctx->first_tmo_diff =
 					    (int64_t)odp_timer_tick_to_ns(tp, tmo_tick) -
 					    (int64_t)odp_timer_tick_to_ns(tp, ctx->first_period);
-					tmo_ns += stat->first_tmo_diff;
+					tmo_ns += ctx->first_tmo_diff;
 				} else {
 					/*
 					 * Timeout tick is not provided, so the best we can do is
 					 * to just take the current time as a baseline.
 					 */
-					stat->first_tmo_diff = (int64_t)time_ns - (int64_t)tmo_ns;
+					ctx->first_tmo_diff = (int64_t)time_ns - (int64_t)tmo_ns;
 					tmo_ns = ctx->nsec = time_ns;
 				}
 
@@ -927,17 +951,12 @@ static void run_test(test_global_t *test_global)
 		}
 
 		if (i == test_global->warmup_timers) {
-			int tmo_tick = stat->tmo_tick;
-			int64_t first_tmo_diff = stat->first_tmo_diff;
-
 			memset(stat, 0, sizeof(*stat));
 			stat->nsec_before_min = UINT64_MAX;
 			stat->nsec_after_min = UINT64_MAX;
-			stat->tmo_tick = tmo_tick;
-			stat->first_tmo_diff = first_tmo_diff;
 		}
 
-		stat->nsec_final = (int64_t)time_ns - (int64_t)tmo_ns;
+		ctx->nsec_final = (int64_t)time_ns - (int64_t)tmo_ns;
 
 		if (log)
 			log[i].tmo_ns = tmo_ns;
