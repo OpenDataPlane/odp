@@ -45,6 +45,7 @@ typedef struct test_opt_t {
 	unsigned long long multiplier;
 	enum mode_e mode;
 	int clk_src;
+	odp_queue_type_t queue_type;
 	int init;
 	int output;
 	int early_retry;
@@ -152,6 +153,10 @@ static void print_usage(void)
 	       "  -s, --clk_src           Clock source select (default 0):\n"
 	       "                            0: ODP_CLOCK_DEFAULT\n"
 	       "                            1: ODP_CLOCK_SRC_1, ...\n"
+	       "  -t, --queue_type        Queue sync type. Default is 0 (PARALLEL).\n"
+	       "                            0: PARALLEL\n"
+	       "                            1: ATOMIC\n"
+	       "                            2: ORDERED\n"
 	       "  -i, --init              Set global init parameters. Default: init params not set.\n"
 	       "  -h, --help              Display help and exit.\n\n");
 }
@@ -176,11 +181,12 @@ static int parse_options(int argc, char *argv[], test_opt_t *test_opt)
 		{"output",       required_argument, NULL, 'o'},
 		{"early_retry",  required_argument, NULL, 'e'},
 		{"clk_src",      required_argument, NULL, 's'},
+		{"queue_type",   required_argument, NULL, 't'},
 		{"init",         no_argument,       NULL, 'i'},
 		{"help",         no_argument,       NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
-	const char *shortopts =  "+c:p:r:R:f:x:n:w:b:g:m:P:M:o:e:s:ih";
+	const char *shortopts =  "+c:p:r:R:f:x:n:w:b:g:m:P:M:o:e:s:t:ih";
 	int ret = 0;
 
 	memset(test_opt, 0, sizeof(*test_opt));
@@ -201,6 +207,7 @@ static int parse_options(int argc, char *argv[], test_opt_t *test_opt)
 	test_opt->max_multiplier = 1;
 	test_opt->multiplier = 1;
 	test_opt->clk_src   = ODP_CLOCK_DEFAULT;
+	test_opt->queue_type = ODP_SCHED_SYNC_PARALLEL;
 	test_opt->init      = 0;
 	test_opt->output    = 0;
 	test_opt->early_retry = 0;
@@ -263,6 +270,19 @@ static int parse_options(int argc, char *argv[], test_opt_t *test_opt)
 			break;
 		case 's':
 			test_opt->clk_src = atoi(optarg);
+			break;
+		case 't':
+			switch (atoi(optarg)) {
+			case 1:
+				test_opt->queue_type = ODP_SCHED_SYNC_ATOMIC;
+				break;
+			case 2:
+				test_opt->queue_type = ODP_SCHED_SYNC_ORDERED;
+				break;
+			default:
+				test_opt->queue_type = ODP_SCHED_SYNC_PARALLEL;
+				break;
+			}
 			break;
 		case 'i':
 			test_opt->init = 1;
@@ -513,7 +533,7 @@ static int create_timers(test_global_t *test_global)
 	odp_queue_param_init(&queue_param);
 	queue_param.type        = ODP_QUEUE_TYPE_SCHED;
 	queue_param.sched.prio  = odp_schedule_default_prio();
-	queue_param.sched.sync  = ODP_SCHED_SYNC_PARALLEL;
+	queue_param.sched.sync  = test_global->opt.queue_type;
 	queue_param.sched.group = ODP_SCHED_GROUP_ALL;
 
 	queue = odp_queue_create("timeout_queue", &queue_param);
@@ -564,6 +584,7 @@ static int create_timers(test_global_t *test_global)
 	printf("  clock source:    %i\n", clk_src);
 	printf("  max timers capa: %" PRIu32 "\n", max_timers);
 	printf("  mode:            %i\n", mode);
+	printf("  queue type:      %i\n", test_global->opt.queue_type);
 
 	odp_timer_pool_param_init(&timer_param);
 
