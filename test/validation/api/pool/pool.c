@@ -2023,6 +2023,7 @@ static void test_packet_pool_ext_uarea_init(void)
 	odp_pool_ext_capability_t capa;
 	odp_pool_ext_param_t param;
 	uint32_t num = ELEM_NUM, i;
+	uint32_t max_payload;
 	odp_pool_t pool;
 	uarea_init_t data;
 	odp_shm_t shm;
@@ -2049,10 +2050,14 @@ static void test_packet_pool_ext_uarea_init(void)
 	CU_ASSERT_FATAL(shm != ODP_SHM_INVALID);
 	CU_ASSERT(data.count == num);
 
+	max_payload = param.pkt.buf_size;
+	max_payload -= capa.pkt.odp_header_size + param.pkt.app_header_size;
+	max_payload -= capa.pkt.max_headroom_size;
+	max_payload -= capa.pkt.odp_trailer_size;
 	for (i = 0; i < num; i++) {
 		CU_ASSERT(data.mark[i] == 1);
 
-		pkts[i] = odp_packet_alloc(pool, (param.pkt.buf_size - param.pkt.headroom) / 2);
+		pkts[i] = odp_packet_alloc(pool, max_payload);
 
 		CU_ASSERT(pkts[i] != ODP_PACKET_INVALID);
 
