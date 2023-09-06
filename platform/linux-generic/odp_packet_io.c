@@ -825,55 +825,19 @@ static inline int pktin_recv_buf(pktio_entry_t *entry, int pktin_index,
 	return 1;
 }
 
-static inline int packet_vector_send(odp_pktout_queue_t pktout_queue, odp_event_t event)
-{
-	odp_packet_vector_t pktv = odp_packet_vector_from_event(event);
-	odp_packet_t *pkt_tbl;
-	int num, sent;
-
-	num = odp_packet_vector_tbl(pktv, &pkt_tbl);
-	_ODP_ASSERT(num > 0);
-	sent = odp_pktout_send(pktout_queue, pkt_tbl, num);
-
-	/* Return success if any packets were sent. Free the possible remaining
-	   packets in the vector and increase out_discards count accordingly. */
-	if (odp_unlikely(sent <= 0)) {
-		return -1;
-	} else if (odp_unlikely(sent != num)) {
-		pktio_entry_t *entry = get_pktio_entry(pktout_queue.pktio);
-		int discards = num - sent;
-
-		_ODP_ASSERT(entry != NULL);
-
-		odp_atomic_add_u64(&entry->stats_extra.out_discards, discards);
-
-		if (odp_unlikely(_odp_pktio_tx_compl_enabled(entry)))
-			_odp_pktio_allocate_and_send_tx_compl_events(entry, &pkt_tbl[sent],
-								     discards);
-
-		odp_packet_free_multi(&pkt_tbl[sent], discards);
-	}
-
-	odp_packet_vector_free(pktv);
-
-	return 0;
-}
-
 static int pktout_enqueue(odp_queue_t queue, _odp_event_hdr_t *event_hdr)
 {
-	odp_event_t event = _odp_event_from_hdr(event_hdr);
 	odp_packet_t pkt = packet_from_event_hdr(event_hdr);
 	odp_pktout_queue_t pktout_queue;
 	int len = 1;
 	int nbr;
 
+	_ODP_ASSERT(odp_event_type(_odp_event_from_hdr(event_hdr)) == ODP_EVENT_PACKET);
+
 	if (_odp_sched_fn->ord_enq_multi(queue, (void **)event_hdr, len, &nbr))
 		return (nbr == len ? 0 : -1);
 
 	pktout_queue = _odp_queue_fn->get_pktout(queue);
-
-	if (odp_event_type(event) == ODP_EVENT_PACKET_VECTOR)
-		return packet_vector_send(pktout_queue, event);
 
 	nbr = odp_pktout_send(pktout_queue, &pkt, len);
 	return (nbr == len ? 0 : -1);
@@ -882,47 +846,26 @@ static int pktout_enqueue(odp_queue_t queue, _odp_event_hdr_t *event_hdr)
 static int pktout_enq_multi(odp_queue_t queue, _odp_event_hdr_t *event_hdr[],
 			    int num)
 {
-	odp_event_t event;
 	odp_packet_t pkt_tbl[QUEUE_MULTI_MAX];
 	odp_pktout_queue_t pktout_queue;
-	int have_pktv = 0;
 	int nbr;
 	int i;
+
+	if (ODP_DEBUG) {
+		for (int i = 0; i < num; i++)
+			_ODP_ASSERT(odp_event_type(_odp_event_from_hdr(event_hdr[i])) ==
+				    ODP_EVENT_PACKET);
+	}
 
 	if (_odp_sched_fn->ord_enq_multi(queue, (void **)event_hdr, num, &nbr))
 		return nbr;
 
-	for (i = 0; i < num; ++i) {
-		event = _odp_event_from_hdr(event_hdr[i]);
-
-		if (odp_event_type(event) == ODP_EVENT_PACKET_VECTOR) {
-			have_pktv = 1;
-			break;
-		}
-
+	for (i = 0; i < num; ++i)
 		pkt_tbl[i] = packet_from_event_hdr(event_hdr[i]);
-	}
 
 	pktout_queue = _odp_queue_fn->get_pktout(queue);
 
-	if (!have_pktv)
-		return odp_pktout_send(pktout_queue, pkt_tbl, num);
-
-	for (i = 0; i < num; ++i) {
-		event = _odp_event_from_hdr(event_hdr[i]);
-
-		if (odp_event_type(event) == ODP_EVENT_PACKET_VECTOR) {
-			if (odp_unlikely(packet_vector_send(pktout_queue, event)))
-				break;
-		} else {
-			odp_packet_t pkt = packet_from_event_hdr(event_hdr[i]);
-
-			nbr = odp_pktout_send(pktout_queue, &pkt, 1);
-			if (odp_unlikely(nbr != 1))
-				break;
-		}
-	}
-	return i;
+	return odp_pktout_send(pktout_queue, pkt_tbl, num);
 }
 
 static _odp_event_hdr_t *pktin_dequeue(odp_queue_t queue)
