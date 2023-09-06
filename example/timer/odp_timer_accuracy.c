@@ -18,6 +18,7 @@
 #include <odp/helper/odph_api.h>
 
 #define MAX_WORKERS (ODP_THREAD_COUNT_MAX - 1)
+#define MAX_QUEUES 1024
 #define MAX_FILENAME 128
 
 #define ABS(v) ((v) < 0 ? -(v) : (v))
@@ -46,6 +47,7 @@ typedef struct test_opt_t {
 	enum mode_e mode;
 	int clk_src;
 	odp_queue_type_t queue_type;
+	int num_queue;
 	int init;
 	int output;
 	int early_retry;
@@ -100,7 +102,7 @@ typedef struct test_global_t {
 
 	test_stat_t stat[MAX_WORKERS];
 
-	odp_queue_t      queue;
+	odp_queue_t      queue[MAX_QUEUES];
 	odp_timer_pool_t timer_pool;
 	odp_pool_t       timeout_pool;
 	timer_ctx_t     *timer_ctx;
@@ -157,6 +159,7 @@ static void print_usage(void)
 	       "                            0: PARALLEL\n"
 	       "                            1: ATOMIC\n"
 	       "                            2: ORDERED\n"
+	       "  -q, --num_queue         Number of queues. Default is 1.\n"
 	       "  -i, --init              Set global init parameters. Default: init params not set.\n"
 	       "  -h, --help              Display help and exit.\n\n");
 }
@@ -182,11 +185,12 @@ static int parse_options(int argc, char *argv[], test_opt_t *test_opt)
 		{"early_retry",  required_argument, NULL, 'e'},
 		{"clk_src",      required_argument, NULL, 's'},
 		{"queue_type",   required_argument, NULL, 't'},
+		{"num_queue",    required_argument, NULL, 'q'},
 		{"init",         no_argument,       NULL, 'i'},
 		{"help",         no_argument,       NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
-	const char *shortopts =  "+c:p:r:R:f:x:n:w:b:g:m:P:M:o:e:s:t:ih";
+	const char *shortopts =  "+c:p:r:R:f:x:n:w:b:g:m:P:M:o:e:s:t:q:ih";
 	int ret = 0;
 
 	memset(test_opt, 0, sizeof(*test_opt));
@@ -208,6 +212,7 @@ static int parse_options(int argc, char *argv[], test_opt_t *test_opt)
 	test_opt->multiplier = 1;
 	test_opt->clk_src   = ODP_CLOCK_DEFAULT;
 	test_opt->queue_type = ODP_SCHED_SYNC_PARALLEL;
+	test_opt->num_queue = 1;
 	test_opt->init      = 0;
 	test_opt->output    = 0;
 	test_opt->early_retry = 0;
@@ -283,6 +288,9 @@ static int parse_options(int argc, char *argv[], test_opt_t *test_opt)
 				test_opt->queue_type = ODP_SCHED_SYNC_PARALLEL;
 				break;
 			}
+			break;
+		case 'q':
+			test_opt->num_queue = atoi(optarg);
 			break;
 		case 'i':
 			test_opt->init = 1;
@@ -499,7 +507,7 @@ static int create_timers(test_global_t *test_global)
 	odp_timer_pool_param_t timer_param;
 	odp_timer_capability_t timer_capa;
 	odp_timer_t timer;
-	odp_queue_t queue;
+	odp_queue_t *queue;
 	odp_queue_param_t queue_param;
 	uint64_t offset_ns;
 	uint32_t max_timers;
@@ -519,9 +527,9 @@ static int create_timers(test_global_t *test_global)
 	burst = test_global->opt.burst;
 	burst_gap = test_global->opt.burst_gap;
 	offset_ns = test_global->opt.offset_ns;
+	queue = test_global->queue;
 
 	/* Always init globals for destroy calls */
-	test_global->queue = ODP_QUEUE_INVALID;
 	test_global->timer_pool = ODP_TIMER_POOL_INVALID;
 	test_global->timeout_pool = ODP_POOL_INVALID;
 
@@ -536,13 +544,13 @@ static int create_timers(test_global_t *test_global)
 	queue_param.sched.sync  = test_global->opt.queue_type;
 	queue_param.sched.group = ODP_SCHED_GROUP_ALL;
 
-	queue = odp_queue_create("timeout_queue", &queue_param);
-	if (queue == ODP_QUEUE_INVALID) {
-		printf("Queue create failed.\n");
-		return -1;
+	for (i = 0; i < (uint64_t)test_global->opt.num_queue; i++) {
+		queue[i] = odp_queue_create(NULL, &queue_param);
+		if (queue[i] == ODP_QUEUE_INVALID) {
+			printf("Queue create failed.\n");
+			return -1;
+		}
 	}
-
-	test_global->queue = queue;
 
 	odp_pool_param_init(&pool_param);
 	pool_param.type    = ODP_POOL_TIMEOUT;
@@ -585,6 +593,7 @@ static int create_timers(test_global_t *test_global)
 	printf("  max timers capa: %" PRIu32 "\n", max_timers);
 	printf("  mode:            %i\n", mode);
 	printf("  queue type:      %i\n", test_global->opt.queue_type);
+	printf("  num queue:       %i\n", test_global->opt.num_queue);
 
 	odp_timer_pool_param_init(&timer_param);
 
@@ -643,7 +652,7 @@ static int create_timers(test_global_t *test_global)
 	for (i = 0; i < alloc_timers; i++) {
 		timer_ctx_t *ctx = &test_global->timer_ctx[i];
 
-		timer = odp_timer_alloc(timer_pool, queue, ctx);
+		timer = odp_timer_alloc(timer_pool, queue[i % test_global->opt.num_queue], ctx);
 
 		if (timer == ODP_TIMER_INVALID) {
 			printf("Timer alloc failed.\n");
@@ -794,8 +803,8 @@ static int destroy_timers(test_global_t *test_global)
 		}
 	}
 
-	if (test_global->queue != ODP_QUEUE_INVALID) {
-		if (odp_queue_destroy(test_global->queue)) {
+	for (i = 0; i < (uint64_t)test_global->opt.num_queue; i++) {
+		if (odp_queue_destroy(test_global->queue[i])) {
 			printf("Queue destroy failed.\n");
 			ret = -1;
 		}
