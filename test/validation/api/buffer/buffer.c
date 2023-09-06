@@ -537,7 +537,7 @@ static void buffer_test_user_area(void)
 
 	for (i = 0; i < num; i++) {
 		odp_event_t ev;
-		int flag;
+		int flag = 0;
 
 		buffer[i] = odp_buffer_alloc(pool);
 

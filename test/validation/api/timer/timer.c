@@ -562,7 +562,7 @@ static void timer_test_timeout_user_area(void)
 
 	for (i = 0; i < num; i++) {
 		odp_event_t ev;
-		int flag;
+		int flag = 0;
 
 		tmo[i] = odp_timeout_alloc(pool);
 

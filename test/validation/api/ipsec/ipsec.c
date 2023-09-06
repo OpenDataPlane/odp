@@ -447,7 +447,7 @@ static void ipsec_status_event_handle(odp_event_t ev_status,
 				      odp_ipsec_sa_t sa,
 				      enum ipsec_test_sa_expiry sa_expiry)
 {
-	int flag;
+	int flag = 0;
 	odp_ipsec_status_t status = {
 		.id = 0,
 		.sa = ODP_IPSEC_SA_INVALID,
