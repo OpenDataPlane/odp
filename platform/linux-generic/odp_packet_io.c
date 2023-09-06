@@ -828,28 +828,21 @@ static inline int pktin_recv_buf(pktio_entry_t *entry, int pktin_index,
 static int pktout_enqueue(odp_queue_t queue, _odp_event_hdr_t *event_hdr)
 {
 	odp_packet_t pkt = packet_from_event_hdr(event_hdr);
-	odp_pktout_queue_t pktout_queue;
-	int len = 1;
 	int nbr;
 
 	_ODP_ASSERT(odp_event_type(_odp_event_from_hdr(event_hdr)) == ODP_EVENT_PACKET);
 
-	if (_odp_sched_fn->ord_enq_multi(queue, (void **)event_hdr, len, &nbr))
-		return (nbr == len ? 0 : -1);
+	if (_odp_sched_fn->ord_enq_multi(queue, (void **)event_hdr, 1, &nbr))
+		return (nbr == 1 ? 0 : -1);
 
-	pktout_queue = _odp_queue_fn->get_pktout(queue);
-
-	nbr = odp_pktout_send(pktout_queue, &pkt, len);
-	return (nbr == len ? 0 : -1);
+	nbr = odp_pktout_send(_odp_queue_fn->get_pktout(queue), &pkt, 1);
+	return (nbr == 1 ? 0 : -1);
 }
 
 static int pktout_enq_multi(odp_queue_t queue, _odp_event_hdr_t *event_hdr[],
 			    int num)
 {
-	odp_packet_t pkt_tbl[QUEUE_MULTI_MAX];
-	odp_pktout_queue_t pktout_queue;
 	int nbr;
-	int i;
 
 	if (ODP_DEBUG) {
 		for (int i = 0; i < num; i++)
@@ -860,12 +853,7 @@ static int pktout_enq_multi(odp_queue_t queue, _odp_event_hdr_t *event_hdr[],
 	if (_odp_sched_fn->ord_enq_multi(queue, (void **)event_hdr, num, &nbr))
 		return nbr;
 
-	for (i = 0; i < num; ++i)
-		pkt_tbl[i] = packet_from_event_hdr(event_hdr[i]);
-
-	pktout_queue = _odp_queue_fn->get_pktout(queue);
-
-	return odp_pktout_send(pktout_queue, pkt_tbl, num);
+	return odp_pktout_send(_odp_queue_fn->get_pktout(queue), (odp_packet_t *)event_hdr, num);
 }
 
 static _odp_event_hdr_t *pktin_dequeue(odp_queue_t queue)
