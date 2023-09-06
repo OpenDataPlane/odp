@@ -48,6 +48,7 @@ typedef struct test_opt_t {
 	int clk_src;
 	odp_queue_type_t queue_type;
 	int num_queue;
+	int groups;
 	int init;
 	int output;
 	int early_retry;
@@ -103,6 +104,7 @@ typedef struct test_global_t {
 	test_stat_t stat[MAX_WORKERS];
 
 	odp_queue_t      queue[MAX_QUEUES];
+	odp_schedule_group_t group[MAX_WORKERS];
 	odp_timer_pool_t timer_pool;
 	odp_pool_t       timeout_pool;
 	timer_ctx_t     *timer_ctx;
@@ -160,6 +162,7 @@ static void print_usage(void)
 	       "                            1: ATOMIC\n"
 	       "                            2: ORDERED\n"
 	       "  -q, --num_queue         Number of queues. Default is 1.\n"
+	       "  -G, --sched_groups      Use dedicated schedule group for each worker.\n"
 	       "  -i, --init              Set global init parameters. Default: init params not set.\n"
 	       "  -h, --help              Display help and exit.\n\n");
 }
@@ -186,11 +189,12 @@ static int parse_options(int argc, char *argv[], test_opt_t *test_opt)
 		{"clk_src",      required_argument, NULL, 's'},
 		{"queue_type",   required_argument, NULL, 't'},
 		{"num_queue",    required_argument, NULL, 'q'},
+		{"sched_groups", no_argument,       NULL, 'G'},
 		{"init",         no_argument,       NULL, 'i'},
 		{"help",         no_argument,       NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
-	const char *shortopts =  "+c:p:r:R:f:x:n:w:b:g:m:P:M:o:e:s:t:q:ih";
+	const char *shortopts =  "+c:p:r:R:f:x:n:w:b:g:m:P:M:o:e:s:t:q:Gih";
 	int ret = 0;
 
 	memset(test_opt, 0, sizeof(*test_opt));
@@ -212,6 +216,7 @@ static int parse_options(int argc, char *argv[], test_opt_t *test_opt)
 	test_opt->multiplier = 1;
 	test_opt->clk_src   = ODP_CLOCK_DEFAULT;
 	test_opt->queue_type = ODP_SCHED_SYNC_PARALLEL;
+	test_opt->groups    = 0;
 	test_opt->num_queue = 1;
 	test_opt->init      = 0;
 	test_opt->output    = 0;
@@ -291,6 +296,9 @@ static int parse_options(int argc, char *argv[], test_opt_t *test_opt)
 			break;
 		case 'q':
 			test_opt->num_queue = atoi(optarg);
+			break;
+		case 'G':
+			test_opt->groups = 1;
 			break;
 		case 'i':
 			test_opt->init = 1;
@@ -508,6 +516,7 @@ static int create_timers(test_global_t *test_global)
 	odp_timer_capability_t timer_capa;
 	odp_timer_t timer;
 	odp_queue_t *queue;
+	odp_schedule_group_t *group;
 	odp_queue_param_t queue_param;
 	uint64_t offset_ns;
 	uint32_t max_timers;
@@ -528,6 +537,7 @@ static int create_timers(test_global_t *test_global)
 	burst_gap = test_global->opt.burst_gap;
 	offset_ns = test_global->opt.offset_ns;
 	queue = test_global->queue;
+	group = test_global->group;
 
 	/* Always init globals for destroy calls */
 	test_global->timer_pool = ODP_TIMER_POOL_INVALID;
@@ -538,6 +548,23 @@ static int create_timers(test_global_t *test_global)
 		test_global->timer_ctx[i].event = ODP_EVENT_INVALID;
 	}
 
+	if (test_global->opt.groups) {
+		/* Create groups */
+
+		odp_thrmask_t zero;
+
+		odp_thrmask_zero(&zero);
+
+		for (i = 0; i < (uint64_t)test_global->opt.cpu_count; i++) {
+			group[i] = odp_schedule_group_create(NULL, &zero);
+
+			if (group[i] == ODP_SCHED_GROUP_INVALID) {
+				printf("Group create failed.\n");
+				return -1;
+			}
+		}
+	}
+
 	odp_queue_param_init(&queue_param);
 	queue_param.type        = ODP_QUEUE_TYPE_SCHED;
 	queue_param.sched.prio  = odp_schedule_default_prio();
@@ -545,6 +572,9 @@ static int create_timers(test_global_t *test_global)
 	queue_param.sched.group = ODP_SCHED_GROUP_ALL;
 
 	for (i = 0; i < (uint64_t)test_global->opt.num_queue; i++) {
+		if (test_global->opt.groups)
+			queue_param.sched.group = group[i % test_global->opt.cpu_count];
+
 		queue[i] = odp_queue_create(NULL, &queue_param);
 		if (queue[i] == ODP_QUEUE_INVALID) {
 			printf("Queue create failed.\n");
@@ -594,6 +624,7 @@ static int create_timers(test_global_t *test_global)
 	printf("  mode:            %i\n", mode);
 	printf("  queue type:      %i\n", test_global->opt.queue_type);
 	printf("  num queue:       %i\n", test_global->opt.num_queue);
+	printf("  sched groups:    %s\n", test_global->opt.groups ? "yes" : "no");
 
 	odp_timer_pool_param_init(&timer_param);
 
@@ -810,6 +841,15 @@ static int destroy_timers(test_global_t *test_global)
 		}
 	}
 
+	if (test_global->opt.groups) {
+		for (i = 0; i < (uint64_t)test_global->opt.cpu_count; i++) {
+			if (odp_schedule_group_destroy(test_global->group[i])) {
+				printf("Group destroy failed.\n");
+				ret = -1;
+			}
+		}
+	}
+
 	return ret;
 }
 
@@ -987,6 +1027,8 @@ static int run_test(void *arg)
 	odp_timeout_t tmo;
 	uint64_t tmo_ns;
 	timer_ctx_t *ctx;
+	odp_thrmask_t mask;
+	odp_schedule_group_t group = ODP_SCHED_GROUP_INVALID;
 	test_log_t *log = test_global->log;
 	enum mode_e mode = test_global->opt.mode;
 	uint64_t tot_timers = test_global->opt.tot_timers;
@@ -1005,6 +1047,17 @@ static int run_test(void *arg)
 	memset(stat, 0, sizeof(*stat));
 	stat->nsec_before_min = UINT64_MAX;
 	stat->nsec_after_min = UINT64_MAX;
+
+	if (test_global->opt.groups) {
+		odp_thrmask_zero(&mask);
+		odp_thrmask_set(&mask, tid);
+		group = test_global->group[tid - 1];
+
+		if (odp_schedule_group_join(group, &mask)) {
+			printf("odp_schedule_group_join() failed\n");
+			return 0;
+		}
+	}
 
 	odp_barrier_wait(&test_global->barrier);
 
@@ -1177,6 +1230,11 @@ static int run_test(void *arg)
 		} else {
 			odp_event_free(ev);
 		}
+	}
+
+	if (test_global->opt.groups) {
+		if (odp_schedule_group_leave(group, &mask))
+			printf("odp_schedule_group_leave() failed\n");
 	}
 
 	return 0;
