@@ -441,7 +441,7 @@ static void test_dma_compl_user_area(void)
 
 	for (i = 0; i < num; i++) {
 		odp_event_t ev;
-		int flag;
+		int flag = 0;
 
 		compl_evs[i] = odp_dma_compl_alloc(pool);
 
