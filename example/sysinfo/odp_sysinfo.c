@@ -35,8 +35,11 @@ typedef struct {
 typedef struct {
 	int num_pktio;
 	pktio_t pktio[MAX_IFACES];
-	int num_timer;
-	odp_timer_capability_t timer[ODP_CLOCK_NUM_SRC];
+	struct {
+		odp_timer_capability_t capa[ODP_CLOCK_NUM_SRC];
+		odp_timer_pool_info_t pool_info[ODP_CLOCK_NUM_SRC];
+		int num;
+	} timer;
 } appl_args_t;
 
 /* Check that prints can use %u instead of %PRIu32 */
@@ -538,8 +541,13 @@ static void print_proto_stats_capa(appl_args_t *appl_args)
 static int timer_capability(appl_args_t *appl_args)
 {
 	for (int i = 0; i < ODP_CLOCK_NUM_SRC; i++) {
-		int ret  = odp_timer_capability(i, &appl_args->timer[appl_args->num_timer]);
+		int ret;
+		odp_timer_pool_t pool;
+		odp_timer_pool_param_t params;
+		odp_timer_capability_t *capa = &appl_args->timer.capa[appl_args->timer.num];
+		odp_timer_pool_info_t *info = &appl_args->timer.pool_info[appl_args->timer.num];
 
+		ret  = odp_timer_capability(i, capa);
 		if (ret && i == ODP_CLOCK_DEFAULT) {
 			ODPH_ERR("odp_timer_capability() failed for default clock source: %d\n",
 				 ret);
@@ -551,15 +559,38 @@ static int timer_capability(appl_args_t *appl_args)
 			ODPH_ERR("odp_timer_capability() failed: %d\n", ret);
 			return -1;
 		}
-		appl_args->num_timer++;
+
+		odp_timer_pool_param_init(&params);
+		params.clk_src    = i;
+		params.res_ns     = capa->max_res.res_ns;
+		params.min_tmo    = capa->max_res.min_tmo;
+		params.max_tmo    = capa->max_res.max_tmo;
+		params.num_timers = 1;
+
+		pool = odp_timer_pool_create("timer_pool", &params);
+		if (pool == ODP_TIMER_POOL_INVALID) {
+			ODPH_ERR("odp_timer_pool_create() failed for clock source: %d\n", i);
+			return -1;
+		}
+
+		ret = odp_timer_pool_info(pool, info);
+		if (ret) {
+			ODPH_ERR("odp_timer_pool_info() failed: %d\n", ret);
+			return -1;
+		}
+
+		odp_timer_pool_destroy(pool);
+
+		appl_args->timer.num++;
 	}
 	return 0;
 }
 
 static void print_timer_capa(appl_args_t *appl_args)
 {
-	for (int i = 0; i < appl_args->num_timer; i++) {
-		odp_timer_capability_t *capa = &appl_args->timer[i];
+	for (int i = 0; i < appl_args->timer.num; i++) {
+		odp_timer_capability_t *capa = &appl_args->timer.capa[i];
+		odp_timer_pool_info_t *info = &appl_args->timer.pool_info[i];
 
 		printf("\n");
 		printf("  TIMER (SRC %d)\n", i);
@@ -591,6 +622,19 @@ static void print_timer_capa(appl_args_t *appl_args)
 		       capa->periodic.max_base_freq_hz.integer,
 		       capa->periodic.max_base_freq_hz.numer,
 		       capa->periodic.max_base_freq_hz.denom);
+		printf("    timer pool tick info (max_res)\n");
+		printf("      freq:               %" PRIu64 " %" PRIu64 "/%" PRIu64 " Hz\n",
+		       info->tick_info.freq.integer,
+		       info->tick_info.freq.numer,
+		       info->tick_info.freq.denom);
+		printf("      nsec:               %" PRIu64 " %" PRIu64 "/%" PRIu64 " ns\n",
+		       info->tick_info.nsec.integer,
+		       info->tick_info.nsec.numer,
+		       info->tick_info.nsec.denom);
+		printf("      clk_cycle:          %" PRIu64 " %" PRIu64 "/%" PRIu64 " cycles\n",
+		       info->tick_info.clk_cycle.integer,
+		       info->tick_info.clk_cycle.numer,
+		       info->tick_info.clk_cycle.denom);
 	}
 }
 
