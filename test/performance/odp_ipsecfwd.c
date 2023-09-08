@@ -249,7 +249,7 @@ static void parse_interfaces(prog_config_t *config, const char *optarg)
 static void print_supported_algos(const odp_ipsec_capability_t *ipsec_capa)
 {
 	int c_cnt, a_cnt;
-	const size_t len = sizeof(exposed_algs) / sizeof(exposed_algs[0]);
+	const size_t len = ODPH_ARRAY_SIZE(exposed_algs);
 
 	printf("                          Cipher algorithms:\n");
 

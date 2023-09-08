@@ -146,7 +146,7 @@ static int run_benchmarks(void *arg)
 	int i;
 	args_t *args = arg;
 	bench_suite_t *suite = &args->suite;
-	int num_sizes = sizeof(test_packet_len) / sizeof(test_packet_len[0]);
+	int num_sizes = ODPH_ARRAY_SIZE(test_packet_len);
 	double results[num_sizes][suite->num_bench];
 
 	memset(results, 0, sizeof(results));
@@ -1613,7 +1613,7 @@ int main(int argc, char *argv[])
 
 	bench_suite_init(&gbl_args->suite);
 	gbl_args->suite.bench = test_suite;
-	gbl_args->suite.num_bench = sizeof(test_suite) / sizeof(test_suite[0]);
+	gbl_args->suite.num_bench = ODPH_ARRAY_SIZE(test_suite);
 	gbl_args->suite.indef_idx = gbl_args->appl.bench_idx;
 	gbl_args->suite.rounds = gbl_args->appl.rounds;
 	gbl_args->suite.repeat_count = TEST_REPEAT_COUNT;

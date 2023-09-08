@@ -356,7 +356,7 @@ static int parse_args(int argc, char *argv[])
 	}
 
 	if (gbl_args->opt.bench_idx < 0 ||
-	    gbl_args->opt.bench_idx > (int)(sizeof(test_suite) / sizeof(test_suite[0]))) {
+	    gbl_args->opt.bench_idx > (int)ODPH_ARRAY_SIZE(test_suite)) {
 		ODPH_ERR("Bad bench index %i\n", gbl_args->opt.bench_idx);
 		return -1;
 	}
@@ -645,7 +645,7 @@ int main(int argc, char *argv[])
 
 	bench_suite_init(&gbl_args->suite);
 	gbl_args->suite.bench = test_suite;
-	gbl_args->suite.num_bench = sizeof(test_suite) / sizeof(test_suite[0]);
+	gbl_args->suite.num_bench = ODPH_ARRAY_SIZE(test_suite);
 	gbl_args->suite.measure_time = !!gbl_args->opt.time;
 	gbl_args->suite.indef_idx = gbl_args->opt.bench_idx;
 	gbl_args->suite.rounds = gbl_args->opt.rounds;
