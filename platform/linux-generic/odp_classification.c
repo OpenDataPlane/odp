@@ -1,5 +1,5 @@
 /* Copyright (c) 2014-2018, Linaro Limited
- * Copyright (c) 2019-2022, Nokia
+ * Copyright (c) 2019-2023, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -7,17 +7,20 @@
 
 #include <odp/api/classification.h>
 #include <odp/api/align.h>
-#include <odp/api/queue.h>
 #include <odp/api/debug.h>
+#include <odp/api/hints.h>
+#include <odp/api/packet_io.h>
 #include <odp/api/pool.h>
+#include <odp/api/queue.h>
+#include <odp/api/shared_memory.h>
+#include <odp/api/spinlock.h>
+
 #include <odp_init_internal.h>
 #include <odp_debug_internal.h>
 #include <odp_packet_internal.h>
-#include <odp/api/packet_io.h>
 #include <odp_packet_io_internal.h>
 #include <odp_classification_datamodel.h>
 #include <odp_classification_internal.h>
-#include <odp/api/shared_memory.h>
 #include <protocols/eth.h>
 #include <protocols/ip.h>
 #include <protocols/ipsec.h>
@@ -28,7 +31,6 @@
 #include <errno.h>
 #include <stdbool.h>
 #include <inttypes.h>
-#include <odp/api/spinlock.h>
 
 /* Debug level for per packet classification operations */
 #define CLS_DBG  3
@@ -853,6 +855,27 @@ odp_pmr_t odp_cls_pmr_create_opt(const odp_pmr_create_opt_t *opt,
 	}
 
 	return cls_pmr_create(opt->terms, opt->num_terms, opt->mark, src_cos, dst_cos);
+}
+
+int odp_cls_pmr_create_multi(const odp_pmr_create_opt_t opt[], odp_cos_t src_cos[],
+			     odp_cos_t dst_cos[], odp_pmr_t pmr[], int num)
+{
+	int i;
+
+	_ODP_ASSERT(opt != NULL);
+	_ODP_ASSERT(src_cos != NULL);
+	_ODP_ASSERT(dst_cos != NULL);
+	_ODP_ASSERT(pmr != NULL);
+
+	for (i = 0; i < num; i++) {
+		odp_pmr_t new_pmr = odp_cls_pmr_create_opt(&opt[i], src_cos[i], dst_cos[i]);
+
+		if (odp_unlikely(new_pmr == ODP_PMR_INVALID))
+			return (i == 0) ? -1 : i;
+
+		pmr[i] = new_pmr;
+	}
+	return i;
 }
 
 int odp_cls_cos_pool_set(odp_cos_t cos_id, odp_pool_t pool)
