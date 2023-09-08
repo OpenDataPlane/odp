@@ -12,6 +12,8 @@ int main(void)
 {
 	int a, b;
 	int ret = 0;
+	int arr_1[1];
+	int arr_10[10];
 
 	printf("Running helper macro tests\n");
 
@@ -35,6 +37,12 @@ int main(void)
 	a = 0;
 	b = 10;
 	if (ODPH_MAX(++a, ++b) != 11)
+		ret++;
+
+	if (ODPH_ARRAY_SIZE(arr_1) != 1)
+		ret++;
+
+	if (ODPH_ARRAY_SIZE(arr_10) != 10)
 		ret++;
 
 	if (!ret)
