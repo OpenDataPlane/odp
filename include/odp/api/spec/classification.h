@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2014-2018 Linaro Limited
- * Copyright (c) 2021-2022 Nokia
+ * Copyright (c) 2021-2023 Nokia
  */
 
 /**
@@ -988,6 +988,30 @@ odp_pmr_t odp_cls_pmr_create(const odp_pmr_param_t *terms, int num_terms,
  */
 odp_pmr_t odp_cls_pmr_create_opt(const odp_pmr_create_opt_t *opt,
 				 odp_cos_t src_cos, odp_cos_t dst_cos);
+
+/**
+ * Create multiple packet matching rules
+ *
+ * Otherwise like odp_cls_pmr_create_opt(), but creates multiple rules with a
+ * single call. The output PMR handles are written in the same order as input
+ * parameters. A single odp_cls_pmr_create_multi() call is equivalent to calling
+ * odp_cls_pmr_create_opt() 'num' times in row.
+ *
+ * Each parameter array must contain 'num' elements.
+ *
+ * @param      opt      Array of PMR create options
+ * @param      src_cos  Array of source CoS handles
+ * @param      dst_cos  Array of destination CoS handles
+ * @param[out] pmr      Array of PMR handles for output
+ * @param      num      Number of packet matching rules to create
+ *
+ * @return Number of PMRs actually created (0 ... num)
+ * @retval <0 on failure
+ */
+int odp_cls_pmr_create_multi(const odp_pmr_create_opt_t opt[],
+			     odp_cos_t src_cos[], odp_cos_t dst_cos[],
+			     odp_pmr_t pmr[], int num);
+
 /**
  * Function to destroy a packet match rule
  *
