@@ -111,8 +111,6 @@
 
 #define TM_PERCENT(percent) ((uint32_t)(100 * percent))
 
-#define ARRAY_SIZE(a) (sizeof((a)) / sizeof((a)[0]))
-
 typedef enum {
 	SHAPER_PROFILE, SCHED_PROFILE, THRESHOLD_PROFILE, WRED_PROFILE
 } profile_kind_t;
@@ -3542,7 +3540,7 @@ static wred_pkt_cnts_t *search_expected_pkt_rcv_tbl(odp_tm_percent_t confidence,
 	uint32_t         idx, table_size;
 
 	/* Search the EXPECTED_PKT_RCVD table to find a matching entry */
-	table_size = sizeof(EXPECTED_PKT_RCVD) / sizeof(wred_pkt_cnts_t);
+	table_size = ODPH_ARRAY_SIZE(EXPECTED_PKT_RCVD);
 	for (idx = 0; idx < table_size; idx++) {
 		wred_pkt_cnts = &EXPECTED_PKT_RCVD[idx];
 		if ((wred_pkt_cnts->confidence_percent == confidence) &&
@@ -5036,7 +5034,7 @@ int main(int argc, char *argv[])
 		ret = odp_cunit_run();
 
 	/* Exit with 77 in order to indicate that test is skipped completely */
-	if (!ret && suite_inactive == (ARRAY_SIZE(traffic_mngr_suites) - 1))
+	if (!ret && suite_inactive == (ODPH_ARRAY_SIZE(traffic_mngr_suites) - 1))
 		return 77;
 	return ret;
 }

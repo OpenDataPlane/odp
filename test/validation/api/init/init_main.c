@@ -284,7 +284,7 @@ odp_suiteinfo_t init_suites[] = {
 
 static int fill_testinfo(odp_testinfo_t *info, unsigned int test_case)
 {
-	if (test_case >= (sizeof(testinfo) / sizeof(odp_testinfo_t))) {
+	if (test_case >= ODPH_ARRAY_SIZE(testinfo)) {
 		ODPH_ERR("Bad test case number %u\n", test_case);
 		return -1;
 	}

@@ -12,8 +12,6 @@
 #include <odp_api.h>
 #include <odp_cunit_common.h>
 
-#define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
-
 struct suite_context_s {
 	odp_crypto_op_mode_t op_mode;
 	odp_pool_t pool;

@@ -16,8 +16,6 @@
 					      ((c) << 8) | \
 					      ((d) << 0))
 
-#define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
-
 /* test arrays: */
 extern odp_testinfo_t ipsec_in_suite[];
 extern odp_testinfo_t ipsec_out_suite[];

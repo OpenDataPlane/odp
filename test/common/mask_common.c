@@ -5,6 +5,7 @@
  */
 
 #include <odp_api.h>
+#include <odp/helper/odph_api.h>
 
 #include "odp_cunit_common.h"
 #include "mask_common.h"
@@ -457,7 +458,7 @@ MASK_TESTFUNC(next)
 
 	_odp_mask_from_str(&mask1, TEST_MASK_1_3);
 
-	for (i = 0; i < sizeof(expected) / sizeof(int); i++)
+	for (i = 0; i < ODPH_ARRAY_SIZE(expected); i++)
 		CU_ASSERT(_odp_mask_next(&mask1, i) == expected[i]);
 }
 

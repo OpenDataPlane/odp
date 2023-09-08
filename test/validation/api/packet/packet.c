@@ -3531,7 +3531,7 @@ static int packet_parse_suite_init(void)
 		return -1;
 	}
 
-	num_test_pkt = sizeof(parse_test_pkt_len) / sizeof(uint32_t);
+	num_test_pkt = ODPH_ARRAY_SIZE(parse_test_pkt_len);
 	max_len = 0;
 
 	for (i = 0; i < num_test_pkt; i++) {

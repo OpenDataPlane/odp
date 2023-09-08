@@ -715,11 +715,11 @@ static void test_esp_out_in_all(const ipsec_test_flags *flags_in)
 
 	flags.ah = false;
 
-	for (c = 0; c < ARRAY_SIZE(ciphers); c++)
-		for (a = 0; a < ARRAY_SIZE(auths); a++)
+	for (c = 0; c < ODPH_ARRAY_SIZE(ciphers); c++)
+		for (a = 0; a < ODPH_ARRAY_SIZE(auths); a++)
 			test_esp_out_in(&ciphers[c], &auths[a], &flags);
 
-	for (c = 0; c < ARRAY_SIZE(cipher_auth_comb); c++)
+	for (c = 0; c < ODPH_ARRAY_SIZE(cipher_auth_comb); c++)
 		test_esp_out_in(&cipher_auth_comb[c].cipher,
 				&cipher_auth_comb[c].auth,
 				&flags);
@@ -777,9 +777,9 @@ static void test_ah_out_in_all(const ipsec_test_flags *flags)
 {
 	uint32_t a;
 
-	for (a = 0; a < ARRAY_SIZE(auths); a++)
+	for (a = 0; a < ODPH_ARRAY_SIZE(auths); a++)
 		test_ah_out_in(&auths[a], flags);
-	for (a = 0; a < ARRAY_SIZE(ah_auths); a++)
+	for (a = 0; a < ODPH_ARRAY_SIZE(ah_auths); a++)
 		test_ah_out_in(&ah_auths[a], flags);
 }
 

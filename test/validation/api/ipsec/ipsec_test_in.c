@@ -1847,7 +1847,7 @@ static void test_in_ipv4_esp_reass_success_two_frags(odp_ipsec_sa_t out_sa,
 	ipsec_test_packet *result_packet = &pkt_ipv4_udp_p1;
 
 	test_multi_out_in(out_sa, in_sa, ODPH_IPV4,
-			  ARRAY_SIZE(input_packets),
+			  ODPH_ARRAY_SIZE(input_packets),
 			  input_packets,
 			  result_packet,
 			  ODP_PACKET_REASS_COMPLETE);
@@ -1865,7 +1865,7 @@ static void test_in_ipv4_esp_reass_success_four_frags(odp_ipsec_sa_t out_sa,
 	ipsec_test_packet *result_packet = &pkt_ipv4_udp_p2;
 
 	test_multi_out_in(out_sa, in_sa, ODPH_IPV4,
-			  ARRAY_SIZE(input_packets),
+			  ODPH_ARRAY_SIZE(input_packets),
 			  input_packets,
 			  result_packet,
 			  ODP_PACKET_REASS_COMPLETE);
@@ -1881,7 +1881,7 @@ static void test_in_ipv4_esp_reass_success_two_frags_ooo(odp_ipsec_sa_t out_sa,
 	ipsec_test_packet *result_packet = &pkt_ipv4_udp_p1;
 
 	test_multi_out_in(out_sa, in_sa, ODPH_IPV4,
-			  ARRAY_SIZE(input_packets),
+			  ODPH_ARRAY_SIZE(input_packets),
 			  input_packets,
 			  result_packet,
 			  ODP_PACKET_REASS_COMPLETE);
@@ -1899,7 +1899,7 @@ static void test_in_ipv4_esp_reass_success_four_frags_ooo(odp_ipsec_sa_t out_sa,
 	ipsec_test_packet *result_packet = &pkt_ipv4_udp_p2;
 
 	test_multi_out_in(out_sa, in_sa, ODPH_IPV4,
-			  ARRAY_SIZE(input_packets),
+			  ODPH_ARRAY_SIZE(input_packets),
 			  input_packets,
 			  result_packet,
 			  ODP_PACKET_REASS_COMPLETE);
@@ -1914,7 +1914,7 @@ static void test_in_ipv4_esp_reass_incomp_missing(odp_ipsec_sa_t out_sa,
 	ipsec_test_packet *result_packet = &pkt_ipv4_udp_p1_f1;
 
 	test_multi_out_in(out_sa, in_sa, ODPH_IPV4,
-			  ARRAY_SIZE(input_packets),
+			  ODPH_ARRAY_SIZE(input_packets),
 			  input_packets,
 			  result_packet,
 			  ODP_PACKET_REASS_INCOMPLETE);
@@ -2031,7 +2031,7 @@ static void test_in_ipv6_esp_reass_success_two_frags(odp_ipsec_sa_t out_sa,
 	ipsec_test_packet *result_packet = &pkt_ipv6_udp_p1;
 
 	test_multi_out_in(out_sa, in_sa, ODPH_IPV6,
-			  ARRAY_SIZE(input_packets),
+			  ODPH_ARRAY_SIZE(input_packets),
 			  input_packets,
 			  result_packet,
 			  ODP_PACKET_REASS_COMPLETE);
@@ -2049,7 +2049,7 @@ static void test_in_ipv6_esp_reass_success_four_frags(odp_ipsec_sa_t out_sa,
 	ipsec_test_packet *result_packet = &pkt_ipv6_udp_p2;
 
 	test_multi_out_in(out_sa, in_sa, ODPH_IPV6,
-			  ARRAY_SIZE(input_packets),
+			  ODPH_ARRAY_SIZE(input_packets),
 			  input_packets,
 			  result_packet,
 			  ODP_PACKET_REASS_COMPLETE);
@@ -2065,7 +2065,7 @@ static void test_in_ipv6_esp_reass_success_two_frags_ooo(odp_ipsec_sa_t out_sa,
 	ipsec_test_packet *result_packet = &pkt_ipv6_udp_p1;
 
 	test_multi_out_in(out_sa, in_sa, ODPH_IPV6,
-			  ARRAY_SIZE(input_packets),
+			  ODPH_ARRAY_SIZE(input_packets),
 			  input_packets,
 			  result_packet,
 			  ODP_PACKET_REASS_COMPLETE);
@@ -2083,7 +2083,7 @@ static void test_in_ipv6_esp_reass_success_four_frags_ooo(odp_ipsec_sa_t out_sa,
 	ipsec_test_packet *result_packet = &pkt_ipv6_udp_p2;
 
 	test_multi_out_in(out_sa, in_sa, ODPH_IPV6,
-			  ARRAY_SIZE(input_packets),
+			  ODPH_ARRAY_SIZE(input_packets),
 			  input_packets,
 			  result_packet,
 			  ODP_PACKET_REASS_COMPLETE);
@@ -2098,7 +2098,7 @@ static void test_in_ipv6_esp_reass_incomp_missing(odp_ipsec_sa_t out_sa,
 	ipsec_test_packet *result_packet = &pkt_ipv6_udp_p1_f1;
 
 	test_multi_out_in(out_sa, in_sa, ODPH_IPV6,
-			  ARRAY_SIZE(input_packets),
+			  ODPH_ARRAY_SIZE(input_packets),
 			  input_packets,
 			  result_packet,
 			  ODP_PACKET_REASS_INCOMPLETE);

@@ -6,6 +6,8 @@
  */
 
 #include <odp_api.h>
+#include <odp/helper/odph_api.h>
+
 #include <odp_cunit_common.h>
 #include <test_packet_ipv4_with_crc.h>
 
@@ -216,7 +218,7 @@ static void hash_test_crc32c(void)
 {
 	uint32_t ret, result;
 	int i;
-	int num = sizeof(crc32c_test_vector) / sizeof(hash_test_vector_t);
+	int num = ODPH_ARRAY_SIZE(crc32c_test_vector);
 
 	for (i = 0; i < num; i++) {
 		ret = odp_hash_crc32c(crc32c_test_vector[i].data,
@@ -232,7 +234,7 @@ static void hash_test_crc32(void)
 {
 	uint32_t ret, result;
 	int i;
-	int num = sizeof(crc32_test_vector) / sizeof(hash_test_vector_t);
+	int num = ODPH_ARRAY_SIZE(crc32_test_vector);
 
 	for (i = 0; i < num; i++) {
 		ret = odp_hash_crc32(crc32_test_vector[i].data,
@@ -341,7 +343,7 @@ static void hash_test_crc32_generic(void)
 	crc_param.poly        = 0x04c11db7;
 	crc_param.reflect_in  = 1;
 	crc_param.reflect_out = 1;
-	num = sizeof(crc32_test_vector) / sizeof(hash_test_vector_t);
+	num = ODPH_ARRAY_SIZE(crc32_test_vector);
 
 	for (i = 0; i < num; i++) {
 		if (odp_hash_crc_gen64(crc32_test_vector[i].data,
@@ -360,7 +362,7 @@ static void hash_test_crc32_generic(void)
 	crc_param.poly        = 0x1edc6f41;
 	crc_param.reflect_in  = 1;
 	crc_param.reflect_out = 1;
-	num = sizeof(crc32c_test_vector) / sizeof(hash_test_vector_t);
+	num = ODPH_ARRAY_SIZE(crc32c_test_vector);
 
 	for (i = 0; i < num; i++) {
 		if (odp_hash_crc_gen64(crc32c_test_vector[i].data,

@@ -1699,7 +1699,7 @@ static void test_packet_pool_ext_capa(void)
 	odp_pool_type_t type;
 	const odp_pool_type_t unsupported_types[] = {ODP_POOL_BUFFER, ODP_POOL_TIMEOUT,
 						     ODP_POOL_VECTOR, ODP_POOL_DMA_COMPL};
-	const int num_types = sizeof(unsupported_types) / sizeof(unsupported_types[0]);
+	const int num_types = ODPH_ARRAY_SIZE(unsupported_types);
 
 	/* Verify operation for unsupported pool types */
 	for (int i = 0; i < num_types; i++) {
