@@ -740,6 +740,30 @@ odp_cos_t odp_cls_cos_create(const char *name,
 			     const odp_cls_cos_param_t *param);
 
 /**
+ * Create multiple class-of-services
+ *
+ * Otherwise like odp_cls_cos_create(), but creates multiple CoSes with a
+ * single call. The output CoS handles are written in the same order as input
+ * parameters. A single odp_cls_cos_create_multi() call is equivalent to calling
+ * odp_cls_cos_create() 'num' times in row.
+ *
+ * Each parameter array must contain 'num' elements with the exception that
+ * 'name' array may also be NULL.
+ *
+ * @param      name     Array of CoS name pointers or NULL. NULL is also valid
+ *                      CoS name pointer value.
+ * @param      param    Array of CoS parameters
+ * @param[out] cos      Array of CoS handles for output
+ * @param      num      Number of CoSes to create
+ *
+ * @return Number of CoSes actually created (0 ... num)
+ * @retval <0 on failure
+ */
+int odp_cls_cos_create_multi(const char *name[],
+			     const odp_cls_cos_param_t param[],
+			     odp_cos_t cos[], int num);
+
+/**
  * Queue hash result
  * Returns the queue within a CoS in which a particular packet will be enqueued
  * based on the packet parameters and hash protocol field configured with the
