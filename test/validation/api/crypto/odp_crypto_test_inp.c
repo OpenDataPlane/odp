@@ -129,7 +129,7 @@ static void alg_test_op2(crypto_op_test_param_t *param)
 {
 	int32_t oop_shifts[] = {0, 3, 130, -10};
 
-	for (uint32_t n = 0; n < ARRAY_SIZE(oop_shifts); n++) {
+	for (uint32_t n = 0; n < ODPH_ARRAY_SIZE(oop_shifts); n++) {
 		if (oop_shifts[n] != 0 &&
 		    param->op_type != ODP_CRYPTO_OP_TYPE_OOP)
 			continue;
@@ -388,7 +388,7 @@ static void alg_test_op_types(odp_crypto_op_t op,
 		ODP_CRYPTO_OP_TYPE_BASIC_AND_OOP,
 	};
 
-	for (unsigned int n = 0; n < ARRAY_SIZE(op_types); n++) {
+	for (unsigned int n = 0; n < ODPH_ARRAY_SIZE(op_types); n++) {
 		for (unsigned int null_crypto = 0 ; null_crypto <= 1; null_crypto++)
 			alg_test_ses(op,
 				     op_types[n],
@@ -807,7 +807,7 @@ static odp_auth_alg_t auth_algs[] = {
 
 static void test_auth_hashes_in_auth_range(void)
 {
-	for (size_t n = 0; n < ARRAY_SIZE(auth_algs); n++) {
+	for (size_t n = 0; n < ODPH_ARRAY_SIZE(auth_algs); n++) {
 		odp_auth_alg_t auth = auth_algs[n];
 		odp_crypto_cipher_capability_t c_capa;
 		int num;
@@ -1359,8 +1359,8 @@ static void test_all_combinations(void)
 	}
 
 	printf("\n");
-	for (size_t n = 0; n < ARRAY_SIZE(cipher_algs); n++)
-		for (size_t i = 0; i < ARRAY_SIZE(auth_algs); i++)
+	for (size_t n = 0; n < ODPH_ARRAY_SIZE(cipher_algs); n++)
+		for (size_t i = 0; i < ODPH_ARRAY_SIZE(auth_algs); i++)
 			test_combo_variants(cipher_algs[n], auth_algs[i]);
 }
 
@@ -1373,14 +1373,14 @@ static void crypto_test_enc_alg_null(void)
 {
 	check_alg(ODP_CRYPTO_OP_ENCODE,
 		  null_reference,
-		  ARRAY_SIZE(null_reference));
+		  ODPH_ARRAY_SIZE(null_reference));
 }
 
 static void crypto_test_dec_alg_null(void)
 {
 	check_alg(ODP_CRYPTO_OP_DECODE,
 		  null_reference,
-		  ARRAY_SIZE(null_reference));
+		  ODPH_ARRAY_SIZE(null_reference));
 }
 
 static int check_alg_3des_cbc(void)
@@ -1392,14 +1392,14 @@ static void crypto_test_enc_alg_3des_cbc(void)
 {
 	check_alg(ODP_CRYPTO_OP_ENCODE,
 		  tdes_cbc_reference,
-		  ARRAY_SIZE(tdes_cbc_reference));
+		  ODPH_ARRAY_SIZE(tdes_cbc_reference));
 }
 
 static void crypto_test_dec_alg_3des_cbc(void)
 {
 	check_alg(ODP_CRYPTO_OP_DECODE,
 		  tdes_cbc_reference,
-		  ARRAY_SIZE(tdes_cbc_reference));
+		  ODPH_ARRAY_SIZE(tdes_cbc_reference));
 }
 
 static int check_alg_3des_ecb(void)
@@ -1411,14 +1411,14 @@ static void crypto_test_enc_alg_3des_ecb(void)
 {
 	check_alg(ODP_CRYPTO_OP_ENCODE,
 		  tdes_ecb_reference,
-		  ARRAY_SIZE(tdes_ecb_reference));
+		  ODPH_ARRAY_SIZE(tdes_ecb_reference));
 }
 
 static void crypto_test_dec_alg_3des_ecb(void)
 {
 	check_alg(ODP_CRYPTO_OP_DECODE,
 		  tdes_ecb_reference,
-		  ARRAY_SIZE(tdes_ecb_reference));
+		  ODPH_ARRAY_SIZE(tdes_ecb_reference));
 }
 
 static int check_alg_chacha20_poly1305(void)
@@ -1431,14 +1431,14 @@ static void crypto_test_enc_alg_chacha20_poly1305(void)
 {
 	check_alg(ODP_CRYPTO_OP_ENCODE,
 		  chacha20_poly1305_reference,
-		  ARRAY_SIZE(chacha20_poly1305_reference));
+		  ODPH_ARRAY_SIZE(chacha20_poly1305_reference));
 }
 
 static void crypto_test_dec_alg_chacha20_poly1305(void)
 {
 	check_alg(ODP_CRYPTO_OP_DECODE,
 		  chacha20_poly1305_reference,
-		  ARRAY_SIZE(chacha20_poly1305_reference));
+		  ODPH_ARRAY_SIZE(chacha20_poly1305_reference));
 }
 
 static int check_alg_aes_gcm(void)
@@ -1450,14 +1450,14 @@ static void crypto_test_enc_alg_aes_gcm(void)
 {
 	check_alg(ODP_CRYPTO_OP_ENCODE,
 		  aes_gcm_reference,
-		  ARRAY_SIZE(aes_gcm_reference));
+		  ODPH_ARRAY_SIZE(aes_gcm_reference));
 }
 
 static void crypto_test_dec_alg_aes_gcm(void)
 {
 	check_alg(ODP_CRYPTO_OP_DECODE,
 		  aes_gcm_reference,
-		  ARRAY_SIZE(aes_gcm_reference));
+		  ODPH_ARRAY_SIZE(aes_gcm_reference));
 }
 
 static int check_alg_aes_ccm(void)
@@ -1469,14 +1469,14 @@ static void crypto_test_enc_alg_aes_ccm(void)
 {
 	check_alg(ODP_CRYPTO_OP_ENCODE,
 		  aes_ccm_reference,
-		  ARRAY_SIZE(aes_ccm_reference));
+		  ODPH_ARRAY_SIZE(aes_ccm_reference));
 }
 
 static void crypto_test_dec_alg_aes_ccm(void)
 {
 	check_alg(ODP_CRYPTO_OP_DECODE,
 		  aes_ccm_reference,
-		  ARRAY_SIZE(aes_ccm_reference));
+		  ODPH_ARRAY_SIZE(aes_ccm_reference));
 }
 
 static int check_alg_aes_cbc(void)
@@ -1488,14 +1488,14 @@ static void crypto_test_enc_alg_aes_cbc(void)
 {
 	check_alg(ODP_CRYPTO_OP_ENCODE,
 		  aes_cbc_reference,
-		  ARRAY_SIZE(aes_cbc_reference));
+		  ODPH_ARRAY_SIZE(aes_cbc_reference));
 }
 
 static void crypto_test_dec_alg_aes_cbc(void)
 {
 	check_alg(ODP_CRYPTO_OP_DECODE,
 		  aes_cbc_reference,
-		  ARRAY_SIZE(aes_cbc_reference));
+		  ODPH_ARRAY_SIZE(aes_cbc_reference));
 }
 
 static int check_alg_aes_ctr(void)
@@ -1507,14 +1507,14 @@ static void crypto_test_enc_alg_aes_ctr(void)
 {
 	check_alg(ODP_CRYPTO_OP_ENCODE,
 		  aes_ctr_reference,
-		  ARRAY_SIZE(aes_ctr_reference));
+		  ODPH_ARRAY_SIZE(aes_ctr_reference));
 }
 
 static void crypto_test_dec_alg_aes_ctr(void)
 {
 	check_alg(ODP_CRYPTO_OP_DECODE,
 		  aes_ctr_reference,
-		  ARRAY_SIZE(aes_ctr_reference));
+		  ODPH_ARRAY_SIZE(aes_ctr_reference));
 }
 
 static int check_alg_aes_ecb(void)
@@ -1526,14 +1526,14 @@ static void crypto_test_enc_alg_aes_ecb(void)
 {
 	check_alg(ODP_CRYPTO_OP_ENCODE,
 		  aes_ecb_reference,
-		  ARRAY_SIZE(aes_ecb_reference));
+		  ODPH_ARRAY_SIZE(aes_ecb_reference));
 }
 
 static void crypto_test_dec_alg_aes_ecb(void)
 {
 	check_alg(ODP_CRYPTO_OP_DECODE,
 		  aes_ecb_reference,
-		  ARRAY_SIZE(aes_ecb_reference));
+		  ODPH_ARRAY_SIZE(aes_ecb_reference));
 }
 
 static int check_alg_aes_cfb128(void)
@@ -1545,14 +1545,14 @@ static void crypto_test_enc_alg_aes_cfb128(void)
 {
 	check_alg(ODP_CRYPTO_OP_ENCODE,
 		  aes_cfb128_reference,
-		  ARRAY_SIZE(aes_cfb128_reference));
+		  ODPH_ARRAY_SIZE(aes_cfb128_reference));
 }
 
 static void crypto_test_dec_alg_aes_cfb128(void)
 {
 	check_alg(ODP_CRYPTO_OP_DECODE,
 		  aes_cfb128_reference,
-		  ARRAY_SIZE(aes_cfb128_reference));
+		  ODPH_ARRAY_SIZE(aes_cfb128_reference));
 }
 
 static int check_alg_aes_xts(void)
@@ -1564,14 +1564,14 @@ static void crypto_test_enc_alg_aes_xts(void)
 {
 	check_alg(ODP_CRYPTO_OP_ENCODE,
 		  aes_xts_reference,
-		  ARRAY_SIZE(aes_xts_reference));
+		  ODPH_ARRAY_SIZE(aes_xts_reference));
 }
 
 static void crypto_test_dec_alg_aes_xts(void)
 {
 	check_alg(ODP_CRYPTO_OP_DECODE,
 		  aes_xts_reference,
-		  ARRAY_SIZE(aes_xts_reference));
+		  ODPH_ARRAY_SIZE(aes_xts_reference));
 }
 
 static int check_alg_kasumi_f8(void)
@@ -1583,14 +1583,14 @@ static void crypto_test_enc_alg_kasumi_f8(void)
 {
 	check_alg(ODP_CRYPTO_OP_ENCODE,
 		  kasumi_f8_reference,
-		  ARRAY_SIZE(kasumi_f8_reference));
+		  ODPH_ARRAY_SIZE(kasumi_f8_reference));
 }
 
 static void crypto_test_dec_alg_kasumi_f8(void)
 {
 	check_alg(ODP_CRYPTO_OP_DECODE,
 		  kasumi_f8_reference,
-		  ARRAY_SIZE(kasumi_f8_reference));
+		  ODPH_ARRAY_SIZE(kasumi_f8_reference));
 }
 
 static int check_alg_snow3g_uea2(void)
@@ -1602,14 +1602,14 @@ static void crypto_test_enc_alg_snow3g_uea2(void)
 {
 	check_alg(ODP_CRYPTO_OP_ENCODE,
 		  snow3g_uea2_reference,
-		  ARRAY_SIZE(snow3g_uea2_reference));
+		  ODPH_ARRAY_SIZE(snow3g_uea2_reference));
 }
 
 static void crypto_test_dec_alg_snow3g_uea2(void)
 {
 	check_alg(ODP_CRYPTO_OP_DECODE,
 		  snow3g_uea2_reference,
-		  ARRAY_SIZE(snow3g_uea2_reference));
+		  ODPH_ARRAY_SIZE(snow3g_uea2_reference));
 }
 
 static int check_alg_aes_eea2(void)
@@ -1622,14 +1622,14 @@ static void crypto_test_enc_alg_aes_eea2(void)
 {
 	check_alg(ODP_CRYPTO_OP_ENCODE,
 		  aes_eea2_reference,
-		  ARRAY_SIZE(aes_eea2_reference));
+		  ODPH_ARRAY_SIZE(aes_eea2_reference));
 }
 
 static void crypto_test_dec_alg_aes_eea2(void)
 {
 	check_alg(ODP_CRYPTO_OP_DECODE,
 		  aes_eea2_reference,
-		  ARRAY_SIZE(aes_eea2_reference));
+		  ODPH_ARRAY_SIZE(aes_eea2_reference));
 }
 
 static int check_alg_zuc_eea3(void)
@@ -1641,14 +1641,14 @@ static void crypto_test_enc_alg_zuc_eea3(void)
 {
 	check_alg(ODP_CRYPTO_OP_ENCODE,
 		  zuc_eea3_reference,
-		  ARRAY_SIZE(zuc_eea3_reference));
+		  ODPH_ARRAY_SIZE(zuc_eea3_reference));
 }
 
 static void crypto_test_dec_alg_zuc_eea3(void)
 {
 	check_alg(ODP_CRYPTO_OP_DECODE,
 		  zuc_eea3_reference,
-		  ARRAY_SIZE(zuc_eea3_reference));
+		  ODPH_ARRAY_SIZE(zuc_eea3_reference));
 }
 
 static int check_alg_hmac_md5(void)
@@ -1660,14 +1660,14 @@ static void crypto_test_gen_alg_hmac_md5(void)
 {
 	check_alg(ODP_CRYPTO_OP_ENCODE,
 		  hmac_md5_reference,
-		  ARRAY_SIZE(hmac_md5_reference));
+		  ODPH_ARRAY_SIZE(hmac_md5_reference));
 }
 
 static void crypto_test_check_alg_hmac_md5(void)
 {
 	check_alg(ODP_CRYPTO_OP_DECODE,
 		  hmac_md5_reference,
-		  ARRAY_SIZE(hmac_md5_reference));
+		  ODPH_ARRAY_SIZE(hmac_md5_reference));
 }
 
 static int check_alg_hmac_sha1(void)
@@ -1679,14 +1679,14 @@ static void crypto_test_gen_alg_hmac_sha1(void)
 {
 	check_alg(ODP_CRYPTO_OP_ENCODE,
 		  hmac_sha1_reference,
-		  ARRAY_SIZE(hmac_sha1_reference));
+		  ODPH_ARRAY_SIZE(hmac_sha1_reference));
 }
 
 static void crypto_test_check_alg_hmac_sha1(void)
 {
 	check_alg(ODP_CRYPTO_OP_DECODE,
 		  hmac_sha1_reference,
-		  ARRAY_SIZE(hmac_sha1_reference));
+		  ODPH_ARRAY_SIZE(hmac_sha1_reference));
 }
 
 static int check_alg_hmac_sha224(void)
@@ -1698,14 +1698,14 @@ static void crypto_test_gen_alg_hmac_sha224(void)
 {
 	check_alg(ODP_CRYPTO_OP_ENCODE,
 		  hmac_sha224_reference,
-		  ARRAY_SIZE(hmac_sha224_reference));
+		  ODPH_ARRAY_SIZE(hmac_sha224_reference));
 }
 
 static void crypto_test_check_alg_hmac_sha224(void)
 {
 	check_alg(ODP_CRYPTO_OP_DECODE,
 		  hmac_sha224_reference,
-		  ARRAY_SIZE(hmac_sha224_reference));
+		  ODPH_ARRAY_SIZE(hmac_sha224_reference));
 }
 
 static int check_alg_hmac_sha256(void)
@@ -1717,14 +1717,14 @@ static void crypto_test_gen_alg_hmac_sha256(void)
 {
 	check_alg(ODP_CRYPTO_OP_ENCODE,
 		  hmac_sha256_reference,
-		  ARRAY_SIZE(hmac_sha256_reference));
+		  ODPH_ARRAY_SIZE(hmac_sha256_reference));
 }
 
 static void crypto_test_check_alg_hmac_sha256(void)
 {
 	check_alg(ODP_CRYPTO_OP_DECODE,
 		  hmac_sha256_reference,
-		  ARRAY_SIZE(hmac_sha256_reference));
+		  ODPH_ARRAY_SIZE(hmac_sha256_reference));
 }
 
 static int check_alg_hmac_sha384(void)
@@ -1736,14 +1736,14 @@ static void crypto_test_gen_alg_hmac_sha384(void)
 {
 	check_alg(ODP_CRYPTO_OP_ENCODE,
 		  hmac_sha384_reference,
-		  ARRAY_SIZE(hmac_sha384_reference));
+		  ODPH_ARRAY_SIZE(hmac_sha384_reference));
 }
 
 static void crypto_test_check_alg_hmac_sha384(void)
 {
 	check_alg(ODP_CRYPTO_OP_DECODE,
 		  hmac_sha384_reference,
-		  ARRAY_SIZE(hmac_sha384_reference));
+		  ODPH_ARRAY_SIZE(hmac_sha384_reference));
 }
 
 static int check_alg_hmac_sha512(void)
@@ -1755,14 +1755,14 @@ static void crypto_test_gen_alg_hmac_sha512(void)
 {
 	check_alg(ODP_CRYPTO_OP_ENCODE,
 		  hmac_sha512_reference,
-		  ARRAY_SIZE(hmac_sha512_reference));
+		  ODPH_ARRAY_SIZE(hmac_sha512_reference));
 }
 
 static void crypto_test_check_alg_hmac_sha512(void)
 {
 	check_alg(ODP_CRYPTO_OP_DECODE,
 		  hmac_sha512_reference,
-		  ARRAY_SIZE(hmac_sha512_reference));
+		  ODPH_ARRAY_SIZE(hmac_sha512_reference));
 }
 
 static int check_alg_aes_xcbc(void)
@@ -1775,14 +1775,14 @@ static void crypto_test_gen_alg_aes_xcbc(void)
 {
 	check_alg(ODP_CRYPTO_OP_ENCODE,
 		  aes_xcbc_reference,
-		  ARRAY_SIZE(aes_xcbc_reference));
+		  ODPH_ARRAY_SIZE(aes_xcbc_reference));
 }
 
 static void crypto_test_check_alg_aes_xcbc(void)
 {
 	check_alg(ODP_CRYPTO_OP_DECODE,
 		  aes_xcbc_reference,
-		  ARRAY_SIZE(aes_xcbc_reference));
+		  ODPH_ARRAY_SIZE(aes_xcbc_reference));
 }
 
 static int check_alg_aes_gmac(void)
@@ -1794,14 +1794,14 @@ static void crypto_test_gen_alg_aes_gmac(void)
 {
 	check_alg(ODP_CRYPTO_OP_ENCODE,
 		  aes_gmac_reference,
-		  ARRAY_SIZE(aes_gmac_reference));
+		  ODPH_ARRAY_SIZE(aes_gmac_reference));
 }
 
 static void crypto_test_check_alg_aes_gmac(void)
 {
 	check_alg(ODP_CRYPTO_OP_DECODE,
 		  aes_gmac_reference,
-		  ARRAY_SIZE(aes_gmac_reference));
+		  ODPH_ARRAY_SIZE(aes_gmac_reference));
 }
 
 static int check_alg_aes_cmac(void)
@@ -1813,14 +1813,14 @@ static void crypto_test_gen_alg_aes_cmac(void)
 {
 	check_alg(ODP_CRYPTO_OP_ENCODE,
 		  aes_cmac_reference,
-		  ARRAY_SIZE(aes_cmac_reference));
+		  ODPH_ARRAY_SIZE(aes_cmac_reference));
 }
 
 static void crypto_test_check_alg_aes_cmac(void)
 {
 	check_alg(ODP_CRYPTO_OP_DECODE,
 		  aes_cmac_reference,
-		  ARRAY_SIZE(aes_cmac_reference));
+		  ODPH_ARRAY_SIZE(aes_cmac_reference));
 }
 
 static int check_alg_kasumi_f9(void)
@@ -1832,14 +1832,14 @@ static void crypto_test_gen_alg_kasumi_f9(void)
 {
 	check_alg(ODP_CRYPTO_OP_ENCODE,
 		  kasumi_f9_reference,
-		  ARRAY_SIZE(kasumi_f9_reference));
+		  ODPH_ARRAY_SIZE(kasumi_f9_reference));
 }
 
 static void crypto_test_check_alg_kasumi_f9(void)
 {
 	check_alg(ODP_CRYPTO_OP_DECODE,
 		  kasumi_f9_reference,
-		  ARRAY_SIZE(kasumi_f9_reference));
+		  ODPH_ARRAY_SIZE(kasumi_f9_reference));
 }
 
 static int check_alg_snow3g_uia2(void)
@@ -1851,14 +1851,14 @@ static void crypto_test_gen_alg_snow3g_uia2(void)
 {
 	check_alg(ODP_CRYPTO_OP_ENCODE,
 		  snow3g_uia2_reference,
-		  ARRAY_SIZE(snow3g_uia2_reference));
+		  ODPH_ARRAY_SIZE(snow3g_uia2_reference));
 }
 
 static void crypto_test_check_alg_snow3g_uia2(void)
 {
 	check_alg(ODP_CRYPTO_OP_DECODE,
 		  snow3g_uia2_reference,
-		  ARRAY_SIZE(snow3g_uia2_reference));
+		  ODPH_ARRAY_SIZE(snow3g_uia2_reference));
 }
 
 static int check_alg_aes_eia2(void)
@@ -1871,14 +1871,14 @@ static void crypto_test_gen_alg_aes_eia2(void)
 {
 	check_alg(ODP_CRYPTO_OP_ENCODE,
 		  aes_eia2_reference,
-		  ARRAY_SIZE(aes_eia2_reference));
+		  ODPH_ARRAY_SIZE(aes_eia2_reference));
 }
 
 static void crypto_test_check_alg_aes_eia2(void)
 {
 	check_alg(ODP_CRYPTO_OP_DECODE,
 		  aes_eia2_reference,
-		  ARRAY_SIZE(aes_eia2_reference));
+		  ODPH_ARRAY_SIZE(aes_eia2_reference));
 }
 
 static int check_alg_zuc_eia3(void)
@@ -1890,14 +1890,14 @@ static void crypto_test_gen_alg_zuc_eia3(void)
 {
 	check_alg(ODP_CRYPTO_OP_ENCODE,
 		  zuc_eia3_reference,
-		  ARRAY_SIZE(zuc_eia3_reference));
+		  ODPH_ARRAY_SIZE(zuc_eia3_reference));
 }
 
 static void crypto_test_check_alg_zuc_eia3(void)
 {
 	check_alg(ODP_CRYPTO_OP_DECODE,
 		  zuc_eia3_reference,
-		  ARRAY_SIZE(zuc_eia3_reference));
+		  ODPH_ARRAY_SIZE(zuc_eia3_reference));
 }
 
 static int check_alg_md5(void)
@@ -1909,14 +1909,14 @@ static void crypto_test_gen_alg_md5(void)
 {
 	check_alg(ODP_CRYPTO_OP_ENCODE,
 		  md5_reference,
-		  ARRAY_SIZE(md5_reference));
+		  ODPH_ARRAY_SIZE(md5_reference));
 }
 
 static void crypto_test_check_alg_md5(void)
 {
 	check_alg(ODP_CRYPTO_OP_DECODE,
 		  md5_reference,
-		  ARRAY_SIZE(md5_reference));
+		  ODPH_ARRAY_SIZE(md5_reference));
 }
 
 static int check_alg_sha1(void)
@@ -1928,14 +1928,14 @@ static void crypto_test_gen_alg_sha1(void)
 {
 	check_alg(ODP_CRYPTO_OP_ENCODE,
 		  sha1_reference,
-		  ARRAY_SIZE(sha1_reference));
+		  ODPH_ARRAY_SIZE(sha1_reference));
 }
 
 static void crypto_test_check_alg_sha1(void)
 {
 	check_alg(ODP_CRYPTO_OP_DECODE,
 		  sha1_reference,
-		  ARRAY_SIZE(sha1_reference));
+		  ODPH_ARRAY_SIZE(sha1_reference));
 }
 
 static int check_alg_sha224(void)
@@ -1947,14 +1947,14 @@ static void crypto_test_gen_alg_sha224(void)
 {
 	check_alg(ODP_CRYPTO_OP_ENCODE,
 		  sha224_reference,
-		  ARRAY_SIZE(sha224_reference));
+		  ODPH_ARRAY_SIZE(sha224_reference));
 }
 
 static void crypto_test_check_alg_sha224(void)
 {
 	check_alg(ODP_CRYPTO_OP_DECODE,
 		  sha224_reference,
-		  ARRAY_SIZE(sha224_reference));
+		  ODPH_ARRAY_SIZE(sha224_reference));
 }
 
 static int check_alg_sha256(void)
@@ -1966,14 +1966,14 @@ static void crypto_test_gen_alg_sha256(void)
 {
 	check_alg(ODP_CRYPTO_OP_ENCODE,
 		  sha256_reference,
-		  ARRAY_SIZE(sha256_reference));
+		  ODPH_ARRAY_SIZE(sha256_reference));
 }
 
 static void crypto_test_check_alg_sha256(void)
 {
 	check_alg(ODP_CRYPTO_OP_DECODE,
 		  sha256_reference,
-		  ARRAY_SIZE(sha256_reference));
+		  ODPH_ARRAY_SIZE(sha256_reference));
 }
 
 static int check_alg_sha384(void)
@@ -1985,14 +1985,14 @@ static void crypto_test_gen_alg_sha384(void)
 {
 	check_alg(ODP_CRYPTO_OP_ENCODE,
 		  sha384_reference,
-		  ARRAY_SIZE(sha384_reference));
+		  ODPH_ARRAY_SIZE(sha384_reference));
 }
 
 static void crypto_test_check_alg_sha384(void)
 {
 	check_alg(ODP_CRYPTO_OP_DECODE,
 		  sha384_reference,
-		  ARRAY_SIZE(sha384_reference));
+		  ODPH_ARRAY_SIZE(sha384_reference));
 }
 
 static int check_alg_sha512(void)
@@ -2004,14 +2004,14 @@ static void crypto_test_gen_alg_sha512(void)
 {
 	check_alg(ODP_CRYPTO_OP_ENCODE,
 		  sha512_reference,
-		  ARRAY_SIZE(sha512_reference));
+		  ODPH_ARRAY_SIZE(sha512_reference));
 }
 
 static void crypto_test_check_alg_sha512(void)
 {
 	check_alg(ODP_CRYPTO_OP_DECODE,
 		  sha512_reference,
-		  ARRAY_SIZE(sha512_reference));
+		  ODPH_ARRAY_SIZE(sha512_reference));
 }
 
 static odp_queue_t sched_compl_queue_create(void)
