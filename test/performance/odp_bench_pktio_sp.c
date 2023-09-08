@@ -914,7 +914,7 @@ static int check_args(appl_args_t *appl_args)
 		return -1;
 	}
 
-	if (gbl_args->opt.case_idx > sizeof(test_suite) / sizeof(test_suite[0])) {
+	if (gbl_args->opt.case_idx > ODPH_ARRAY_SIZE(test_suite)) {
 		ODPH_ERR("Invalid test case index: %u\n", gbl_args->opt.case_idx);
 		return -1;
 	}
@@ -1069,7 +1069,7 @@ int main(int argc, char *argv[])
 
 	bench_tm_suite_init(&gbl_args->suite);
 	gbl_args->suite.bench = test_suite;
-	gbl_args->suite.num_bench = sizeof(test_suite) / sizeof(test_suite[0]);
+	gbl_args->suite.num_bench = ODPH_ARRAY_SIZE(test_suite);
 	gbl_args->suite.rounds = gbl_args->opt.rounds;
 	gbl_args->suite.bench_idx = gbl_args->opt.case_idx;
 

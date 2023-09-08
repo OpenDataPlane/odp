@@ -413,8 +413,7 @@ find_config_by_name(const char *name)
 	unsigned int i;
 	ipsec_alg_config_t *ret = NULL;
 
-	for (i = 0; i < (sizeof(algs_config) / sizeof(ipsec_alg_config_t));
-	     i++) {
+	for (i = 0; i < ODPH_ARRAY_SIZE(algs_config); i++) {
 		if (strcmp(algs_config[i].name, name) == 0) {
 			ret = algs_config + i;
 			break;
@@ -432,10 +431,8 @@ print_config_names(const char *prefix)
 {
 	unsigned int i;
 
-	for (i = 0; i < (sizeof(algs_config) / sizeof(ipsec_alg_config_t));
-	     i++) {
+	for (i = 0; i < ODPH_ARRAY_SIZE(algs_config); i++)
 		printf("%s %s\n", prefix, algs_config[i].name);
-	}
 }
 
 /**
@@ -1223,7 +1220,7 @@ int main(int argc, char *argv[])
 
 	max_seg_len = capa.pkt.max_seg_len;
 
-	for (i = 0; i < sizeof(global_payloads) / sizeof(unsigned int); i++) {
+	for (i = 0; i < ODPH_ARRAY_SIZE(global_payloads); i++) {
 		if (global_payloads[i] > max_seg_len)
 			break;
 	}
@@ -1380,9 +1377,7 @@ int main(int argc, char *argv[])
 	} else {
 		unsigned int i;
 
-		for (i = 0;
-		     i < (sizeof(algs_config) / sizeof(ipsec_alg_config_t));
-		     i++) {
+		for (i = 0; i < ODPH_ARRAY_SIZE(algs_config); i++) {
 			if (cargs.ah &&
 			    algs_config[i].crypto.cipher_alg !=
 			    ODP_CIPHER_ALG_NULL)

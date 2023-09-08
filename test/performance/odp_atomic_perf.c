@@ -1354,7 +1354,7 @@ int main(int argc, char **argv)
 	print_info(&test_global->test_options);
 
 	/* Loop all test cases */
-	num_tests = sizeof(test_suite) / sizeof(test_suite[0]);
+	num_tests = ODPH_ARRAY_SIZE(test_suite);
 
 	for (i = 0; i < num_tests; i++) {
 		/* Initialize test variables */

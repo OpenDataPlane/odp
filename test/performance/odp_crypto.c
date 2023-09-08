@@ -505,8 +505,7 @@ find_config_by_name(const char *name) {
 	unsigned int i;
 	crypto_alg_config_t *ret = NULL;
 
-	for (i = 0; i < (sizeof(algs_config) / sizeof(crypto_alg_config_t));
-	     i++) {
+	for (i = 0; i < ODPH_ARRAY_SIZE(algs_config); i++) {
 		if (strcmp(algs_config[i].name, name) == 0) {
 			ret = algs_config + i;
 			break;
@@ -523,10 +522,8 @@ static void
 print_config_names(const char *prefix) {
 	unsigned int i;
 
-	for (i = 0; i < (sizeof(algs_config) / sizeof(crypto_alg_config_t));
-	     i++) {
+	for (i = 0; i < ODPH_ARRAY_SIZE(algs_config); i++)
 		printf("%s %s\n", prefix, algs_config[i].name);
-	}
 }
 
 /**
@@ -1287,7 +1284,7 @@ int main(int argc, char *argv[])
 
 	max_seg_len = pool_capa.pkt.max_seg_len;
 
-	for (i = 0; i < sizeof(payloads) / sizeof(unsigned int); i++) {
+	for (i = 0; i < ODPH_ARRAY_SIZE(payloads); i++) {
 		if (payloads[i] + MAX_AUTH_DIGEST_LEN > max_seg_len)
 			break;
 	}
@@ -1371,9 +1368,7 @@ int main(int argc, char *argv[])
 	} else {
 		unsigned int i;
 
-		for (i = 0;
-		     i < (sizeof(algs_config) / sizeof(crypto_alg_config_t));
-		     i++) {
+		for (i = 0; i < ODPH_ARRAY_SIZE(algs_config); i++) {
 			test_run_arg.crypto_alg_config = algs_config + i;
 			run_measure_one_config(&test_run_arg);
 		}
