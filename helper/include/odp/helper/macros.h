@@ -23,6 +23,11 @@ extern "C" {
  */
 
 /**
+ * Return number of elements in array
+ */
+#define ODPH_ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
+
+/**
  * Return minimum of two numbers
  */
 #define ODPH_MIN(a, b)				\
