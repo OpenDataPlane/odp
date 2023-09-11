@@ -1821,6 +1821,7 @@ static int dpdk_init_capability(pktio_entry_t *pktio_entry,
 		capa->tx_compl.mode_all = 1;
 		capa->tx_compl.mode_event = 1;
 		capa->tx_compl.mode_poll = 1;
+		capa->free_ctrl.dont_free = 1;
 	}
 
 	/* Copy for fast path access */
@@ -2258,13 +2259,36 @@ static int dpdk_send(pktio_entry_t *pktio_entry, int index,
 			}
 		}
 	} else {
+		int i;
+		int first = tx_pkts;
+
 		if (odp_unlikely(tx_pkts < mbufs)) {
-			for (uint16_t i = tx_pkts; i < mbufs; i++)
+			for (i = tx_pkts; i < mbufs; i++)
 				rte_pktmbuf_free(tx_mbufs[i]);
 		}
 
-		if (odp_likely(tx_pkts))
-			odp_packet_free_multi(pkt_table, tx_pkts);
+		if (odp_unlikely(tx_pkts == 0))
+			return 0;
+
+		/* Find the first packet with (possible) don't free flag */
+		for (i = 0; i < tx_pkts; i++) {
+			if (odp_packet_free_ctrl(pkt_table[i]) == ODP_PACKET_FREE_CTRL_DONT_FREE) {
+				first = i;
+				break;
+			}
+		}
+
+		/* Free first N packets that don't have the flag */
+		if (odp_likely(first > 0))
+			odp_packet_free_multi(pkt_table, first);
+
+		/* Free rest of the packets (according to the flag) */
+		for (i = first; i < tx_pkts; i++) {
+			if (odp_packet_free_ctrl(pkt_table[i]) == ODP_PACKET_FREE_CTRL_DONT_FREE)
+				continue;
+
+			odp_packet_free(pkt_table[i]);
+		}
 	}
 
 	return tx_pkts;
