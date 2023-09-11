@@ -51,6 +51,8 @@ ODP_STATIC_ASSERT(MAX_WORKERS >= 2, "Too few threads");
 /* Maximum pktio index table size */
 #define MAX_PKTIO_INDEXES 1024
 
+/* Used don't free */
+#define TX_MODE_DF        0
 /* Use static references */
 #define TX_MODE_REF       1
 
@@ -88,7 +90,7 @@ typedef struct test_options_t {
 	uint32_t wait_sec;
 	uint32_t wait_start_sec;
 	uint32_t mtu;
-	odp_bool_t use_refs;
+	int tx_mode;
 	odp_bool_t promisc_mode;
 	odp_bool_t calc_latency;
 	odp_bool_t calc_cs;
@@ -231,10 +233,11 @@ static void print_usage(void)
 	       "  -D, --direct_rx           Direct input mode (default: 0)\n"
 	       "                              0: Use scheduler for packet input\n"
 	       "                              1: Poll packet input in direct mode\n", MAX_BINS);
-	printf("  -R, --no_pkt_refs         Do not use packet references. Always allocate a\n"
-	       "                            fresh set of packets for a transmit burst. Some\n"
-	       "                            features may be available only with references\n"
-	       "                            disabled.\n"
+	printf("  -m, --tx_mode             Transmit mode (default 1):\n"
+	       "                              0: Re-send packets with don't free option\n"
+	       "                              1: Send static packet references. Some features may\n"
+	       "                                 not be available with references.\n"
+	       "                              2: Send copies of packets\n"
 	       "  -M, --mtu <len>           Interface MTU in bytes.\n"
 	       "  -b, --burst_size          Transmit burst size. Default: 8\n"
 	       "  -x, --bursts              Number of bursts per one transmit round. Default: 1\n"
@@ -246,8 +249,8 @@ static void print_usage(void)
 	       "  -o, --udp_src             UDP source port. Default: 10000\n"
 	       "  -p, --udp_dst             UDP destination port. Default: 20000\n"
 	       "  -P, --promisc_mode        Enable promiscuous mode.\n"
-	       "  -a, --latency             Calculate latency. Disables packet references (see\n"
-	       "                            \"--no_pkt_refs\").\n"
+	       "  -a, --latency             Calculate latency. Cannot be used with packet\n"
+	       "                            references (see \"--tx_mode\").\n"
 	       "  -c, --c_mode <counts>     Counter mode for incrementing UDP port numbers.\n"
 	       "                            Specify the number of port numbers used starting from\n"
 	       "                            udp_src/udp_dst. Comma-separated (no spaces) list of\n"
@@ -362,7 +365,7 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 		{"len",         required_argument, NULL, 'l'},
 		{"len_range",   required_argument, NULL, 'L'},
 		{"direct_rx",   required_argument, NULL, 'D'},
-		{"no_pkt_refs", no_argument,       NULL, 'R'},
+		{"tx_mode",     required_argument, NULL, 'm'},
 		{"burst_size",  required_argument, NULL, 'b'},
 		{"bursts",      required_argument, NULL, 'x'},
 		{"gap",         required_argument, NULL, 'g'},
@@ -385,7 +388,7 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+i:e:r:t:n:l:L:D:RM:b:x:g:v:s:d:o:p:c:CAq:u:w:W:Pah";
+	static const char *shortopts = "+i:e:r:t:n:l:L:D:m:M:b:x:g:v:s:d:o:p:c:CAq:u:w:W:Pah";
 
 	test_options->num_pktio  = 0;
 	test_options->num_rx     = 1;
@@ -394,7 +397,7 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 	test_options->pkt_len    = 512;
 	test_options->use_rand_pkt_len = 0;
 	test_options->direct_rx  = 0;
-	test_options->use_refs   = 1;
+	test_options->tx_mode    = TX_MODE_REF;
 	test_options->burst_size = 8;
 	test_options->bursts     = 1;
 	test_options->gap_nsec   = 1000000;
@@ -544,8 +547,8 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 		case 'D':
 			test_options->direct_rx = atoi(optarg);
 			break;
-		case 'R':
-			test_options->use_refs = 0;
+		case 'm':
+			test_options->tx_mode = atoi(optarg);
 			break;
 		case 'M':
 			test_options->mtu = atoi(optarg);
@@ -671,8 +674,10 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 		return -1;
 	}
 
-	if (test_options->calc_latency)
-		test_options->use_refs = 0;
+	if (test_options->calc_latency && test_options->tx_mode == TX_MODE_REF) {
+		ODPH_ERR("Error: Latency test is not supported with packet references (--tx_mode 1)\n");
+		return -1;
+	}
 
 	if (test_options->gap_nsec) {
 		double gap_hz = 1000000000.0 / test_options->gap_nsec;
@@ -796,7 +801,7 @@ static int open_pktios(test_global_t *global)
 		printf("interface default\n");
 	printf("  packet input mode:  %s\n", test_options->direct_rx ? "direct" : "scheduler");
 	printf("  promisc mode:       %s\n", test_options->promisc_mode ? "enabled" : "disabled");
-	printf("  packet references:  %s\n", test_options->use_refs ? "enabled" : "disabled");
+	printf("  transmit mode:      %i\n", test_options->tx_mode);
 	printf("  measure latency:    %s\n", test_options->calc_latency ? "enabled" : "disabled");
 	printf("  UDP checksum:       %s\n", test_options->calc_cs ? "enabled" : "disabled");
 	printf("  payload filling:    %s\n", test_options->fill_pl ? "enabled" : "disabled");
@@ -971,6 +976,11 @@ static int open_pktios(test_global_t *global)
 				ODPH_ERR("Error (%s): setting MTU failed\n", name);
 				return -1;
 			}
+		}
+
+		if (test_options->tx_mode == TX_MODE_DF && pktio_capa.free_ctrl.dont_free == 0) {
+			ODPH_ERR("Error (%s): Don't free mode not supported\n", name);
+			return -1;
 		}
 
 		odp_pktio_config_init(&pktio_config);
@@ -1589,7 +1599,9 @@ static inline uint32_t form_burst(odp_packet_t out_pkt[], uint32_t burst_size, u
 			idx++;
 		}
 
-		if (tx_mode == TX_MODE_REF) {
+		if (tx_mode == TX_MODE_DF) {
+			out_pkt[i] = pkt;
+		} else if (tx_mode == TX_MODE_REF) {
 			out_pkt[i] = odp_packet_ref_static(pkt);
 
 			if (odp_unlikely(out_pkt[i] == ODP_PACKET_INVALID))
@@ -1613,7 +1625,7 @@ static inline uint32_t form_burst(odp_packet_t out_pkt[], uint32_t burst_size, u
 }
 
 static inline uint32_t send_burst(odp_pktout_queue_t pktout, odp_packet_t pkt[],
-				  uint32_t num, uint64_t *drop_bytes)
+				  uint32_t num, int tx_mode, uint64_t *drop_bytes)
 {
 	int ret;
 	uint32_t sent;
@@ -1632,7 +1644,8 @@ static inline uint32_t send_burst(odp_pktout_queue_t pktout, odp_packet_t pkt[],
 		for (i = sent; i < num; i++)
 			bytes += odp_packet_len(pkt[i]);
 
-		odp_packet_free_multi(&pkt[sent], num_drop);
+		if (tx_mode != TX_MODE_DF)
+			odp_packet_free_multi(&pkt[sent], num_drop);
 	}
 
 	*drop_bytes = bytes;
@@ -1643,7 +1656,7 @@ static inline uint32_t send_burst(odp_pktout_queue_t pktout, odp_packet_t pkt[],
 static int tx_thread(void *arg)
 {
 	int i, thr, tx_thr;
-	uint32_t exit_test, num_alloc;
+	uint32_t exit_test, num_alloc, j;
 	odp_time_t t1, t2, next_tmo;
 	uint64_t diff_ns, t1_nsec;
 	odp_packet_t *pkt_tbl;
@@ -1662,7 +1675,7 @@ static int tx_thread(void *arg)
 	const uint32_t burst_size = test_options->burst_size;
 	const uint32_t bursts = test_options->bursts;
 	const uint32_t num_tx = test_options->num_tx;
-	const int tx_mode = test_options->use_refs ? TX_MODE_REF : 0;
+	const int tx_mode = test_options->tx_mode;
 	odp_bool_t calc_cs = test_options->calc_cs;
 	int num_pktio = test_options->num_pktio;
 	odp_pktout_queue_t pktout[num_pktio];
@@ -1694,6 +1707,12 @@ static int tx_thread(void *arg)
 			ret = -1;
 			break;
 		}
+
+		if (tx_mode == TX_MODE_DF) {
+			for (j = 0; j < num_alloc; j++)
+				odp_packet_free_ctrl_set(pkt_tbl[j],
+							 ODP_PACKET_FREE_CTRL_DONT_FREE);
+		}
 	}
 
 	/* Start all workers at the same time */
@@ -1724,7 +1743,7 @@ static int tx_thread(void *arg)
 
 		/* Send bursts to each pktio */
 		for (i = 0; i < num_pktio; i++) {
-			uint32_t num, sent, j;
+			uint32_t num, sent;
 			uint64_t total_bytes, drop_bytes;
 			odp_packet_t pkt[burst_size];
 
@@ -1740,7 +1759,7 @@ static int tx_thread(void *arg)
 					break;
 				}
 
-				sent = send_burst(pktout[i], pkt, num, &drop_bytes);
+				sent = send_burst(pktout[i], pkt, num, tx_mode, &drop_bytes);
 
 				if (odp_unlikely(sent == 0)) {
 					ret = -1;
