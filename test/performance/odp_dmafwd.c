@@ -45,7 +45,8 @@ enum {
 #define MAX_WORKERS (ODP_THREAD_COUNT_MAX - 1)
 #define MAX_PKTIO_INDEXES 1024U
 
-#define MIN(a, b)  (((a) <= (b)) ? (a) : (b))
+#define MIN(a, b) (((a) <= (b)) ? (a) : (b))
+#define MAX(a, b) (((a) >= (b)) ? (a) : (b))
 #define DIV_IF(a, b) ((b) > 0U ? ((a) / (b)) : 0U)
 
 ODP_STATIC_ASSERT(MAX_IFS < UINT8_MAX, "Too large maximum interface count");
@@ -122,6 +123,8 @@ typedef struct prog_config_s {
 	uint32_t num_pkts;
 	uint32_t pkt_len;
 	uint32_t cache_size;
+	uint32_t trs_cache_size;
+	uint32_t compl_cache_size;
 	uint32_t time_sec;
 	int num_thrs;
 	uint8_t num_ifs;
@@ -224,7 +227,7 @@ static void print_usage(dynamic_defs_t *dyn_defs)
 	       "  -l, --pkt_len      Maximum size of packet buffers in packet I/O pool. %u by\n"
 	       "                     default.\n"
 	       "  -c, --worker_count Amount of workers. %u by default.\n"
-	       "  -C, --cache_size   Packet pool cache size. %u by default.\n"
+	       "  -C, --cache_size   Maximum cache size for pools. %u by default.\n"
 	       "  -T, --time_sec     Time in seconds to run. 0 means infinite. %u by default.\n"
 	       "  -h, --help         This help.\n"
 	       "\n", DEF_CPY_TYPE, dyn_defs->burst_size, dyn_defs->num_pkts, dyn_defs->pkt_len,
@@ -344,6 +347,11 @@ static parse_result_t check_options(prog_config_t *config)
 			 pool_capa.pkt.min_cache_size, pool_capa.pkt.max_cache_size);
 		return PRS_NOK;
 	}
+
+	config->trs_cache_size = MIN(MAX(config->cache_size, pool_capa.buf.min_cache_size),
+				     pool_capa.buf.max_cache_size);
+	config->compl_cache_size = MIN(MAX(config->cache_size, dma_capa.pool.min_cache_size),
+				       dma_capa.pool.max_cache_size);
 
 	return PRS_OK;
 }
@@ -637,6 +645,7 @@ static odp_bool_t setup_copy(prog_config_t *config)
 
 	pool_param.buf.num = config->num_pkts;
 	pool_param.buf.size = sizeof(transfer_t);
+	pool_param.buf.cache_size = config->trs_cache_size;
 	pool_param.type = ODP_POOL_BUFFER;
 	config->trs_pool = odp_pool_create(PROG_NAME "_dma_trs", &pool_param);
 
@@ -656,6 +665,7 @@ static odp_bool_t setup_copy(prog_config_t *config)
 
 		odp_dma_pool_param_init(&compl_pool_param);
 		compl_pool_param.num = config->num_pkts;
+		compl_pool_param.cache_size = config->compl_cache_size;
 		thr->compl_pool = odp_dma_pool_create(PROG_NAME "_dma_compl", &compl_pool_param);
 
 		if (thr->compl_pool == ODP_POOL_INVALID) {
@@ -998,7 +1008,7 @@ static void print_stats(const prog_config_t *config)
 	       "    copy mode:       %s\n"
 	       "    burst size:      %u\n"
 	       "    packet length:   %u\n"
-	       "    pool cache size: %u\n", config->copy_type == SW_COPY ? "SW" : "DMA",
+	       "    max cache size:  %u\n", config->copy_type == SW_COPY ? "SW" : "DMA",
 	       config->burst_size, config->pkt_len, config->cache_size);
 
 	for (int i = 0; i < config->num_thrs; ++i) {
