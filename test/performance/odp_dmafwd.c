@@ -290,7 +290,7 @@ static parse_result_t check_options(prog_config_t *config)
 	}
 
 	if ((uint32_t)config->num_thrs > dma_capa.max_sessions) {
-		ODPH_ERR("Not enough DMA sessions supported: %d (max: %u)\n", config->num_thrs,
+		ODPH_ERR("Unsupported DMA session count: %d (max: %u)\n", config->num_thrs,
 			 dma_capa.max_sessions);
 		return PRS_NOT_SUP;
 	}
@@ -299,13 +299,13 @@ static parse_result_t check_options(prog_config_t *config)
 	burst_size = MIN(burst_size, MAX_BURST);
 
 	if (config->burst_size == 0U || config->burst_size > burst_size) {
-		ODPH_ERR("Unsupported segment count for DMA: %u (min: 1, max: %u)\n",
+		ODPH_ERR("Invalid segment count for DMA: %u (min: 1, max: %u)\n",
 			 config->burst_size, burst_size);
 		return PRS_NOK;
 	}
 
 	if (config->pkt_len > dma_capa.max_seg_len) {
-		ODPH_ERR("Unsupported packet length for DMA: %u (max: %u)\n", config->pkt_len,
+		ODPH_ERR("Invalid packet length for DMA: %u (max: %u)\n", config->pkt_len,
 			 dma_capa.max_seg_len);
 		return PRS_NOK;
 	}
@@ -317,7 +317,7 @@ static parse_result_t check_options(prog_config_t *config)
 	}
 
 	if ((uint32_t)config->num_thrs > dma_capa.pool.max_pools) {
-		ODPH_ERR("Unsupported amount of completion pools: %d (max: %u)\n",
+		ODPH_ERR("Invalid amount of completion pools: %d (max: %u)\n",
 			 config->num_thrs, dma_capa.pool.max_pools);
 		return PRS_NOK;
 	}
