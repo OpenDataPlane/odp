@@ -116,26 +116,6 @@ static int setup_sig_handler(void)
 	return 0;
 }
 
-/* Run given benchmark indefinitely */
-static void run_indef(gbl_args_t *args, int idx)
-{
-	const char *desc;
-	const bench_info_t *bench = &args->bench[idx];
-
-	desc = bench->desc != NULL ? bench->desc : bench->name;
-
-	printf("Running odp_%s test indefinitely\n", desc);
-
-	while (!odp_atomic_load_u32(&gbl_args->exit_thread)) {
-		int ret;
-
-		ret = bench->run();
-
-		if (!ret)
-			ODPH_ABORT("Benchmark %s failed\n", desc);
-	}
-}
-
 static int run_benchmarks(void *arg)
 {
 	int i, j;
@@ -167,8 +147,7 @@ static int run_benchmarks(void *arg)
 					j++;
 					continue;
 				}
-
-				run_indef(args, j);
+				bench_run_indef(&args->bench[j], &gbl_args->exit_thread);
 				return 0;
 			}
 

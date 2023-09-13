@@ -63,6 +63,11 @@ typedef struct {
 
 } bench_info_t;
 
+/**
+ * Run selected test indefinitely
+ */
+void bench_run_indef(bench_info_t *info, odp_atomic_u32_t *exit_thread);
+
 #ifdef __cplusplus
 }
 #endif
