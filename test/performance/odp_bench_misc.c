@@ -11,6 +11,8 @@
 #include <odp_api.h>
 #include <odp/helper/odph_api.h>
 
+#include "bench_common.h"
+
 #include <getopt.h>
 #include <inttypes.h>
 #include <signal.h>
@@ -23,8 +25,8 @@
 /* Default number of rounds per test case */
 #define ROUNDS 1000u
 
-#define BENCH_INFO(run, init, max, name) \
-	{#run, run, init, max, name}
+#define BENCH_INFO(run_fn, init_fn, max, alt_name) \
+	{.name = #run_fn, .run = run_fn, .init = init_fn, .max_rounds = max, .desc = alt_name}
 
 typedef struct {
 	/* Measure time vs CPU cycles */
@@ -37,31 +39,6 @@ typedef struct {
 	uint32_t rounds;
 
 } appl_args_t;
-
-/* Initialize benchmark resources */
-typedef void (*bench_init_fn_t)(void);
-
-/* Run benchmark, returns >0 on success */
-typedef int (*bench_run_fn_t)(void);
-
-/* Benchmark data */
-typedef struct {
-	/* Default test name */
-	const char *name;
-
-	/* Test function to run */
-	bench_run_fn_t run;
-
-	/* Test init function */
-	bench_init_fn_t init;
-
-	/* Test specific limit for rounds (tuning for slow implementation) */
-	uint32_t max_rounds;
-
-	/* Override default test name */
-	const char *desc;
-
-} bench_info_t;
 
 /* Global data */
 typedef struct {

@@ -8,6 +8,8 @@
 #include <odp_api.h>
 #include <odp/helper/odph_api.h>
 
+#include "bench_common.h"
+
 #include <getopt.h>
 #include <inttypes.h>
 #include <signal.h>
@@ -36,11 +38,12 @@
 #define NO_PATH(file_name) (strrchr((file_name), '/') ? \
 			    strrchr((file_name), '/') + 1 : (file_name))
 
-#define BENCH_INFO(run, init, term, name) \
-	{#run, run, init, term, name, NULL}
+#define BENCH_INFO(run_fn, init_fn, term_fn, alt_name) \
+	{.name = #run_fn, .run = run_fn, .init = init_fn, .term = term_fn, .desc = alt_name}
 
-#define BENCH_INFO_COND(run, init, term, name, cond) \
-	{#run, run, init, term, name, cond}
+#define BENCH_INFO_COND(run_fn, init_fn, term_fn, alt_name, cond_fn) \
+	{.name = #run_fn, .run = run_fn, .init = init_fn, .term = term_fn, .desc = alt_name, \
+	 .cond = cond_fn}
 
 /**
  * Parsed command line arguments
@@ -51,42 +54,6 @@ typedef struct {
 	int cache_size;  /** Pool cache size */
 	int test_cycles; /** Test cycles per tested function */
 } appl_args_t;
-
-/**
- * Initialize benchmark resources
- */
-typedef void (*bench_init_fn_t)(void);
-
-/**
- * Run benchmark
- *
- * @retval >0 on success
- * */
-typedef int (*bench_run_fn_t)(void);
-
-/**
- * Release benchmark resources
- */
-typedef void (*bench_term_fn_t)(void);
-
-/**
- * Check benchmark preconditions
- *
- * @retval !0 test enabled
- * */
-typedef int (*bench_cond_fn_t)(void);
-
-/**
- * Benchmark data
- */
-typedef struct {
-	const char *name;
-	bench_run_fn_t run;
-	bench_init_fn_t init;
-	bench_term_fn_t term;
-	const char *desc;
-	bench_cond_fn_t cond;
-} bench_info_t;
 
 /**
  * Grouping of all global data

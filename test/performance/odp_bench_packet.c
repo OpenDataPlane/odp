@@ -24,6 +24,8 @@
 #include <odp_api.h>
 #include <odp/helper/odph_api.h>
 
+#include "bench_common.h"
+
 /** Minimum number of packet data bytes in the first segment */
 #define PKT_POOL_SEG_LEN 128
 
@@ -66,8 +68,8 @@
 #define NO_PATH(file_name) (strrchr((file_name), '/') ? \
 			    strrchr((file_name), '/') + 1 : (file_name))
 
-#define BENCH_INFO(run, init, term, name) \
-	{#run, run, init, term, name}
+#define BENCH_INFO(run_fn, init_fn, term_fn, alt_name) \
+	{.name = #run_fn, .run = run_fn, .init = init_fn, .term = term_fn, .desc = alt_name}
 
 ODP_STATIC_ASSERT((TEST_ALIGN_OFFSET + TEST_ALIGN_LEN) <= TEST_MIN_PKT_SIZE,
 		  "Invalid_alignment");
@@ -87,34 +89,6 @@ typedef struct {
 	int burst_size;  /** Burst size for *_multi operations */
 	int cache_size;  /** Pool cache size */
 } appl_args_t;
-
-/**
- * Initialize benchmark resources
- */
-typedef void (*bench_init_fn_t)(void);
-
-/**
- * Run benchmark
- *
- * @retval >0 on success
- * */
-typedef int (*bench_run_fn_t)(void);
-
-/**
- * Release benchmark resources
- */
-typedef void (*bench_term_fn_t)(void);
-
-/**
- * Benchmark data
- */
-typedef struct {
-	const char *name;
-	bench_run_fn_t run;
-	bench_init_fn_t init;
-	bench_term_fn_t term;
-	const char *desc;
-} bench_info_t;
 
 /**
  * Grouping of all global data
