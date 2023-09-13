@@ -30,7 +30,8 @@
 
 enum {
 	SW_COPY = 0U,
-	DMA_COPY
+	DMA_COPY_EV,
+	DMA_COPY_POLL
 };
 
 #define DEF_CPY_TYPE SW_COPY
@@ -219,7 +220,8 @@ static void print_usage(dynamic_defs_t *dyn_defs)
 	       "\n"
 	       "  -t, --copy_type    Type of copy. %u by default.\n"
 	       "                         0: SW\n"
-	       "                         1: DMA\n"
+	       "                         1: DMA with event completion\n"
+	       "                         2: DMA with poll completion\n"
 	       "  -b, --burst_size   Copy burst size. This many packets are accumulated before\n"
 	       "                     copy. %u by default.\n"
 	       "  -n, --num_pkts     Number of packet buffers allocated for packet I/O pool.\n"
@@ -273,7 +275,8 @@ static parse_result_t check_options(prog_config_t *config)
 			 MAX_PKTIO_INDEXES);
 	}
 
-	if (config->copy_type != SW_COPY && config->copy_type != DMA_COPY) {
+	if (config->copy_type != SW_COPY && config->copy_type != DMA_COPY_EV &&
+	    config->copy_type != DMA_COPY_POLL) {
 		ODPH_ERR("Invalid copy type: %u\n", config->copy_type);
 		return PRS_NOK;
 	}
@@ -310,16 +313,26 @@ static parse_result_t check_options(prog_config_t *config)
 		return PRS_NOK;
 	}
 
-	if ((dma_capa.compl_mode_mask & ODP_DMA_COMPL_EVENT) == 0U || !dma_capa.queue_type_sched) {
-		ODPH_ERR("Unsupported completion mode (mode support: %x, scheduled queue "
-			 "support: %u\n", dma_capa.compl_mode_mask, dma_capa.queue_type_sched);
-		return PRS_NOT_SUP;
-	}
+	if (config->copy_type == DMA_COPY_EV) {
+		if ((dma_capa.compl_mode_mask & ODP_DMA_COMPL_EVENT) == 0U ||
+		    !dma_capa.queue_type_sched) {
+			ODPH_ERR("Unsupported DMA completion mode: event (mode support: %x, "
+				 "scheduled queue support: %u)\n", dma_capa.compl_mode_mask,
+				 dma_capa.queue_type_sched);
+			return PRS_NOT_SUP;
+		}
 
-	if ((uint32_t)config->num_thrs > dma_capa.pool.max_pools) {
-		ODPH_ERR("Invalid amount of completion pools: %d (max: %u)\n",
-			 config->num_thrs, dma_capa.pool.max_pools);
-		return PRS_NOK;
+		if ((uint32_t)config->num_thrs > dma_capa.pool.max_pools) {
+			ODPH_ERR("Invalid amount of DMA completion pools: %d (max: %u)\n",
+				 config->num_thrs, dma_capa.pool.max_pools);
+			return PRS_NOK;
+		}
+	} else if (config->copy_type == DMA_COPY_POLL) {
+		if ((dma_capa.compl_mode_mask & ODP_DMA_COMPL_POLL) == 0U) {
+			ODPH_ERR("Unsupported DMA completion mode: poll (mode support: %x)\n",
+				 dma_capa.compl_mode_mask);
+			return PRS_NOT_SUP;
+		}
 	}
 
 	if (odp_pool_capability(&pool_capa) < 0) {
@@ -655,34 +668,40 @@ static odp_bool_t setup_copy(prog_config_t *config)
 	}
 
 	for (int i = 0; i < config->num_thrs; ++i) {
-		thr = &config->thread_config[i];
-		thr->dma_handle = odp_dma_create(PROG_NAME "_dma", &dma_params);
+		if (config->copy_type == DMA_COPY_EV) {
+			thr = &config->thread_config[i];
+			thr->dma_handle = odp_dma_create(PROG_NAME "_dma", &dma_params);
 
-		if (thr->dma_handle == ODP_DMA_INVALID) {
-			ODPH_ERR("Error creating DMA session\n");
-			return false;
-		}
+			if (thr->dma_handle == ODP_DMA_INVALID) {
+				ODPH_ERR("Error creating DMA session\n");
+				return false;
+			}
 
-		odp_dma_pool_param_init(&compl_pool_param);
-		compl_pool_param.num = config->num_pkts;
-		compl_pool_param.cache_size = config->compl_cache_size;
-		thr->compl_pool = odp_dma_pool_create(PROG_NAME "_dma_compl", &compl_pool_param);
+			odp_dma_pool_param_init(&compl_pool_param);
+			compl_pool_param.num = config->num_pkts;
+			compl_pool_param.cache_size = config->compl_cache_size;
+			thr->compl_pool = odp_dma_pool_create(PROG_NAME "_dma_compl",
+							      &compl_pool_param);
 
-		if (thr->compl_pool == ODP_POOL_INVALID) {
-			ODPH_ERR("Error creating DMA event completion pool\n");
-			return false;
-		}
+			if (thr->compl_pool == ODP_POOL_INVALID) {
+				ODPH_ERR("Error creating DMA event completion pool\n");
+				return false;
+			}
 
-		thr->copy_pool = config->copy_pool;
-		thr->trs_pool = config->trs_pool;
-		odp_queue_param_init(&queue_param);
-		queue_param.type = ODP_QUEUE_TYPE_SCHED;
-		queue_param.sched.sync = ODP_SCHED_SYNC_PARALLEL;
-		queue_param.sched.prio = odp_schedule_max_prio();
-		thr->compl_q = odp_queue_create(PROG_NAME "_dma_compl", &queue_param);
+			thr->copy_pool = config->copy_pool;
+			thr->trs_pool = config->trs_pool;
+			odp_queue_param_init(&queue_param);
+			queue_param.type = ODP_QUEUE_TYPE_SCHED;
+			queue_param.sched.sync = ODP_SCHED_SYNC_PARALLEL;
+			queue_param.sched.prio = odp_schedule_max_prio();
+			thr->compl_q = odp_queue_create(PROG_NAME "_dma_compl", &queue_param);
 
-		if (thr->compl_q == ODP_QUEUE_INVALID) {
-			ODPH_ERR("Error creating DMA completion queue\n");
+			if (thr->compl_q == ODP_QUEUE_INVALID) {
+				ODPH_ERR("Error creating DMA completion queue\n");
+				return false;
+			}
+		} else {
+			ODPH_ERR("DMA poll completion support not yet implemented\n");
 			return false;
 		}
 	}
@@ -1001,14 +1020,18 @@ static void teardown(prog_config_t *config)
 static void print_stats(const prog_config_t *config)
 {
 	const stats_t *stats;
-	const char *align = config->copy_type == SW_COPY ? "  " : "                  ";
+	const char *align1 = config->copy_type == DMA_COPY_EV ? " " : "";
+	const char *align2 = config->copy_type == SW_COPY ? "  " :
+				config->copy_type == DMA_COPY_EV ? "                  " :
+					"                 ";
 
 	printf("\n==================\n\n"
 	       "DMA forwarder done\n\n"
 	       "    copy mode:       %s\n"
 	       "    burst size:      %u\n"
 	       "    packet length:   %u\n"
-	       "    max cache size:  %u\n", config->copy_type == SW_COPY ? "SW" : "DMA",
+	       "    max cache size:  %u\n", config->copy_type == SW_COPY ? "SW" :
+	       config->copy_type == DMA_COPY_EV ? "DMA-event" : "DMA-poll",
 	       config->burst_size, config->pkt_len, config->cache_size);
 
 	for (int i = 0; i < config->num_thrs; ++i) {
@@ -1020,15 +1043,21 @@ static void print_stats(const prog_config_t *config)
 			printf("        packet copy errors: %" PRIu64 "\n",
 			       stats->copy_errs);
 		} else {
-			printf("        successful DMA transfers:           %" PRIu64 "\n"
-			       "        DMA transfer start errors:          %" PRIu64 "\n"
-			       "        DMA transfer errors:                %" PRIu64 "\n"
-			       "        transfer buffer allocation errors:  %" PRIu64 "\n"
-			       "        completion event allocation errors: %" PRIu64 "\n"
-			       "        copy packet allocation errors:      %" PRIu64 "\n",
-			       stats->trs, stats->start_errs, stats->trs_errs,
-			       stats->buf_alloc_errs, stats->compl_alloc_errs,
+			printf("        successful DMA transfers:          %s%" PRIu64 "\n"
+			       "        DMA transfer start errors:         %s%" PRIu64 "\n"
+			       "        DMA transfer errors:               %s%" PRIu64 "\n"
+			       "        transfer buffer allocation errors: %s%" PRIu64 "\n"
+			       "        copy packet allocation errors:     %s%" PRIu64 "\n",
+			       align1, stats->trs, align1, stats->start_errs, align1,
+			       stats->trs_errs, align1, stats->buf_alloc_errs, align1,
 			       stats->pkt_alloc_errs);
+
+			if (config->copy_type == DMA_COPY_EV)
+				printf("        completion event allocation errors: %" PRIu64 "\n",
+				       stats->compl_alloc_errs);
+			else
+				printf("        transfer ID allocation errors:     %" PRIu64 "\n",
+				       stats->compl_alloc_errs);
 		}
 
 		printf("        packets forwarded:%s%" PRIu64 "\n"
@@ -1036,7 +1065,7 @@ static void print_stats(const prog_config_t *config)
 		       "        call cycles per schedule round:\n"
 		       "            total:    %" PRIu64 "\n"
 		       "            schedule: %" PRIu64 "\n"
-		       "            rounds:   %" PRIu64 "\n", align, stats->fwd_pkts, align,
+		       "            rounds:   %" PRIu64 "\n", align2, stats->fwd_pkts, align2,
 		       stats->discards, DIV_IF(stats->tot_cc, stats->sched_rounds),
 		       DIV_IF(stats->sched_cc, stats->sched_rounds), stats->sched_rounds);
 	}
