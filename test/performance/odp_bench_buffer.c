@@ -1,5 +1,5 @@
 /* Copyright (c) 2017-2018, Linaro Limited
- * Copyright (c) 2022, Nokia
+ * Copyright (c) 2022-2023, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -61,20 +61,16 @@ typedef struct {
 typedef struct {
 	/** Application (parsed) arguments */
 	appl_args_t appl;
+	/** Common benchmark suite data */
+	bench_suite_t suite;
 	/** Buffer pool */
 	odp_pool_t pool;
-	/** Benchmark functions */
-	bench_info_t *bench;
-	/** Number of benchmark functions */
-	int num_bench;
 	/** Buffer size */
 	uint32_t buf_size;
 	/** Buffer user area size */
 	uint32_t uarea_size;
 	/** Max flow id */
 	uint32_t max_flow_id;
-	/** Break worker loop if set to 1 */
-	odp_atomic_u32_t exit_thread;
 	/** Array for storing test buffers */
 	odp_buffer_t buf_tbl[TEST_REPEAT_COUNT * TEST_MAX_BURST];
 	/** Array for storing test event */
@@ -87,8 +83,6 @@ typedef struct {
 	odp_event_type_t event_type_tbl[TEST_REPEAT_COUNT];
 	/** Array for storing test event subtypes */
 	odp_event_subtype_t event_subtype_tbl[TEST_REPEAT_COUNT];
-	/** Benchmark run failed */
-	uint8_t bench_failed;
 	/** CPU mask as string */
 	char cpumask_str[ODP_CPUMASK_STR_SIZE];
 } args_t;
@@ -100,89 +94,7 @@ static void sig_handler(int signo ODP_UNUSED)
 {
 	if (gbl_args == NULL)
 		return;
-	odp_atomic_store_u32(&gbl_args->exit_thread, 1);
-}
-
-static int run_benchmarks(void *arg)
-{
-	int i, j, k;
-	args_t *args = arg;
-
-	printf("\nAverage CPU cycles per function call\n"
-	       "---------------------------------------------\n");
-
-	/* Run each test twice. Results from the first warm-up round are ignored. */
-	for (i = 0; i < 2; i++) {
-		uint64_t tot_cycles = 0;
-
-		for (j = 0, k = 1; j < gbl_args->num_bench; k++) {
-			int ret;
-			uint64_t c1, c2;
-			const char *desc;
-
-			/* Run selected test indefinitely */
-			if (args->appl.bench_idx &&
-			    (j + 1) != args->appl.bench_idx) {
-				j++;
-				continue;
-			} else if (args->appl.bench_idx &&
-				   (j + 1) == args->appl.bench_idx) {
-				bench_run_indef(&args->bench[j], &gbl_args->exit_thread);
-				return 0;
-			}
-
-			desc = args->bench[j].desc != NULL ?
-					args->bench[j].desc :
-					args->bench[j].name;
-
-			/* Skip unsupported tests */
-			if (args->bench[j].cond != NULL && !args->bench[j].cond()) {
-				j++;
-				k = 1;
-				if (i > 0)
-					printf("[%02d] odp_%-26s:      n/a\n", j, desc);
-				continue;
-			}
-
-			if (args->bench[j].init != NULL)
-				args->bench[j].init();
-
-			c1 = odp_cpu_cycles();
-			ret = args->bench[j].run();
-			c2 = odp_cpu_cycles();
-
-			if (args->bench[j].term != NULL)
-				args->bench[j].term();
-
-			if (!ret) {
-				ODPH_ERR("Benchmark odp_%s failed\n", desc);
-				args->bench_failed = 1;
-				return -1;
-			}
-
-			tot_cycles += odp_cpu_cycles_diff(c2, c1);
-
-			if (k >= args->appl.test_cycles) {
-				double cycles;
-
-				/** Each benchmark runs internally TEST_REPEAT_COUNT times. */
-				cycles = ((double)tot_cycles) /
-					 (args->appl.test_cycles *
-					  TEST_REPEAT_COUNT);
-
-				/* No print from warm-up round */
-				if (i > 0)
-					printf("[%02d] odp_%-26s: %8.1f\n", j + 1, desc, cycles);
-
-				j++;
-				k = 1;
-				tot_cycles = 0;
-			}
-		}
-	}
-	printf("\n");
-
-	return 0;
+	odp_atomic_store_u32(&gbl_args->suite.exit_worker, 1);
 }
 
 static void allocate_test_buffers(odp_buffer_t buf[], int num)
@@ -732,13 +644,16 @@ int main(int argc, char *argv[])
 	}
 
 	memset(gbl_args, 0, sizeof(args_t));
-	odp_atomic_init_u32(&gbl_args->exit_thread, 0);
-
-	gbl_args->bench = test_suite;
-	gbl_args->num_bench = sizeof(test_suite) / sizeof(test_suite[0]);
 
 	/* Parse and store the application arguments */
 	parse_args(argc, argv, &gbl_args->appl);
+
+	bench_suite_init(&gbl_args->suite);
+	gbl_args->suite.bench = test_suite;
+	gbl_args->suite.num_bench = sizeof(test_suite) / sizeof(test_suite[0]);
+	gbl_args->suite.indef_idx = gbl_args->appl.bench_idx;
+	gbl_args->suite.rounds = gbl_args->appl.test_cycles;
+	gbl_args->suite.repeat_count = TEST_REPEAT_COUNT;
 
 	/* Get default worker cpumask */
 	if (odp_cpumask_default_worker(&default_mask, 1) != 1) {
@@ -825,15 +740,15 @@ int main(int argc, char *argv[])
 	thr_common.share_param = 1;
 
 	odph_thread_param_init(&thr_param);
-	thr_param.start = run_benchmarks;
-	thr_param.arg = gbl_args;
+	thr_param.start = bench_run;
+	thr_param.arg = &gbl_args->suite;
 	thr_param.thr_type = ODP_THREAD_WORKER;
 
 	odph_thread_create(&worker_thread, &thr_common, &thr_param, 1);
 
 	odph_thread_join(&worker_thread, 1);
 
-	ret = gbl_args->bench_failed;
+	ret = gbl_args->suite.retval;
 
 	if (odp_pool_destroy(gbl_args->pool)) {
 		ODPH_ERR("Error: pool destroy\n");
