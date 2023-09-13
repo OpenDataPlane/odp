@@ -63,10 +63,54 @@ typedef struct {
 
 } bench_info_t;
 
+/* Benchmark suite data */
+typedef struct {
+	/* Array of benchmark functions */
+	bench_info_t *bench;
+
+	/* Number of benchmark functions */
+	int num_bench;
+
+	/* Optional benchmark index to run indefinitely (1...num_bench) */
+	int indef_idx;
+
+	/* Suite exit value output */
+	int retval;
+
+	/* Measure time vs. CPU cycles */
+	odp_bool_t measure_time;
+
+	/* Break worker loop if set to 1 */
+	odp_atomic_u32_t exit_worker;
+
+	/* Number of API function calls per test case */
+	uint64_t repeat_count;
+
+	/* Number of rounds per test case */
+	uint64_t rounds;
+
+	/* Dummy test result output */
+	uint64_t dummy;
+
+	/* Optional test result output array */
+	double *result;
+
+} bench_suite_t;
+
+/**
+ * Initialize benchmark suite parameters
+ */
+void bench_suite_init(bench_suite_t *suite);
+
 /**
  * Run selected test indefinitely
  */
 void bench_run_indef(bench_info_t *info, odp_atomic_u32_t *exit_thread);
+
+/**
+ * Run tests suite and print results
+ */
+int bench_run(void *arg);
 
 #ifdef __cplusplus
 }
