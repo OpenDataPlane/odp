@@ -1,5 +1,5 @@
 /* Copyright (c) 2014-2018, Linaro Limited
- * Copyright (c) 2020-2022, Nokia
+ * Copyright (c) 2020-2023, Nokia
  * Copyright (c) 2020, Marvell
  * All rights reserved.
  *
@@ -3891,6 +3891,102 @@ static void pktio_test_pktout_compl_event_sched_queue(void)
 	pktio_test_pktout_compl_event(false);
 }
 
+static void pktio_test_pktout_dont_free(void)
+{
+	odp_pktio_t pktio[MAX_NUM_IFACES] = {ODP_PKTIO_INVALID};
+	odp_packet_t pkt, rx_pkt;
+	odp_pktio_capability_t pktio_capa;
+	odp_pktout_queue_t pktout_queue;
+	odp_pktio_t pktio_tx, pktio_rx;
+	pktio_info_t pktio_rx_info;
+	uint32_t pkt_seq;
+	int ret, i;
+	const int num_pkt = 1;
+	int transmits = 5;
+	int num_rx = 0;
+
+	CU_ASSERT_FATAL(num_ifaces >= 1);
+
+	/* Open and configure interfaces */
+	for (i = 0; i < num_ifaces; ++i) {
+		pktio[i] = create_pktio(i, ODP_PKTIN_MODE_DIRECT, ODP_PKTOUT_MODE_DIRECT);
+		CU_ASSERT_FATAL(pktio[i] != ODP_PKTIO_INVALID);
+
+		CU_ASSERT_FATAL(odp_pktio_start(pktio[i]) == 0);
+	}
+
+	pktio_tx = pktio[0];
+	pktio_rx = (num_ifaces > 1) ? pktio[1] : pktio_tx;
+
+	/* Check TX interface capa */
+	CU_ASSERT_FATAL(odp_pktio_capability(pktio_tx, &pktio_capa) == 0);
+	CU_ASSERT_FATAL(pktio_capa.free_ctrl.dont_free == 1);
+
+	for (i = 0; i < num_ifaces; i++)
+		_pktio_wait_linkup(pktio[i]);
+
+	pktio_rx_info.id   = pktio_rx;
+	pktio_rx_info.inq  = ODP_QUEUE_INVALID;
+	pktio_rx_info.in_mode = ODP_PKTIN_MODE_DIRECT;
+
+	ret = create_packets(&pkt, &pkt_seq, num_pkt, pktio_tx, pktio_rx);
+	CU_ASSERT_FATAL(ret == num_pkt);
+
+	ret = odp_pktout_queue(pktio_tx, &pktout_queue, 1);
+	CU_ASSERT_FATAL(ret > 0);
+
+	/* Set don't free flag */
+	CU_ASSERT(odp_packet_free_ctrl(pkt) == ODP_PACKET_FREE_CTRL_DISABLED);
+	odp_packet_free_ctrl_set(pkt, ODP_PACKET_FREE_CTRL_DONT_FREE);
+	CU_ASSERT_FATAL(odp_packet_free_ctrl(pkt) == ODP_PACKET_FREE_CTRL_DONT_FREE);
+
+	while (transmits--) {
+		/* Retransmit the same packet after it has been received from the RX interface */
+		CU_ASSERT_FATAL(odp_pktout_send(pktout_queue, &pkt, num_pkt) == num_pkt);
+
+		num_rx = wait_for_packets(&pktio_rx_info, &rx_pkt, &pkt_seq, num_pkt,
+					  TXRX_MODE_SINGLE, ODP_TIME_SEC_IN_NS, false);
+		CU_ASSERT(num_rx == num_pkt);
+
+		if (num_rx != num_pkt)
+			break;
+
+		CU_ASSERT(odp_packet_len(pkt) == odp_packet_len(rx_pkt));
+		odp_packet_free(rx_pkt);
+	}
+
+	odp_packet_free(pkt);
+
+	for (i = 0; i < num_ifaces; i++) {
+		CU_ASSERT_FATAL(odp_pktio_stop(pktio[i]) == 0);
+		CU_ASSERT_FATAL(odp_pktio_close(pktio[i]) == 0);
+	}
+}
+
+static int pktio_check_pktout_dont_free(void)
+{
+	odp_pktio_param_t pktio_param;
+	odp_pktio_capability_t capa;
+	odp_pktio_t pktio;
+	int ret;
+
+	odp_pktio_param_init(&pktio_param);
+	pktio_param.in_mode = ODP_PKTIN_MODE_DIRECT;
+	pktio_param.out_mode = ODP_PKTOUT_MODE_DIRECT;
+
+	pktio = odp_pktio_open(iface_name[0], pool[0], &pktio_param);
+	if (pktio == ODP_PKTIO_INVALID)
+		return ODP_TEST_INACTIVE;
+
+	ret = odp_pktio_capability(pktio, &capa);
+	(void)odp_pktio_close(pktio);
+
+	if (ret == 0 && capa.free_ctrl.dont_free == 1)
+		return ODP_TEST_ACTIVE;
+
+	return ODP_TEST_INACTIVE;
+}
+
 static void pktio_test_chksum(void (*config_fn)(odp_pktio_t, odp_pktio_t),
 			      void (*prep_fn)(odp_packet_t pkt),
 			      void (*test_fn)(odp_packet_t pkt))
@@ -5332,6 +5428,7 @@ odp_testinfo_t pktio_suite_unsegmented[] = {
 	ODP_TEST_INFO_CONDITIONAL(pktio_test_pktout_compl_event_sched_queue,
 				  pktio_check_pktout_compl_event_sched_queue),
 	ODP_TEST_INFO_CONDITIONAL(pktio_test_pktout_compl_poll, pktio_check_pktout_compl_poll),
+	ODP_TEST_INFO_CONDITIONAL(pktio_test_pktout_dont_free, pktio_check_pktout_dont_free),
 	ODP_TEST_INFO_CONDITIONAL(pktio_test_enable_pause_rx, pktio_check_pause_rx),
 	ODP_TEST_INFO_CONDITIONAL(pktio_test_enable_pause_tx, pktio_check_pause_tx),
 	ODP_TEST_INFO_CONDITIONAL(pktio_test_enable_pause_both, pktio_check_pause_both),
