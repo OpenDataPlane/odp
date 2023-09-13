@@ -61,10 +61,10 @@ endif
 bin_PROGRAMS = $(EXECUTABLES) $(COMPILE_ONLY)
 
 odp_atomic_perf_SOURCES = odp_atomic_perf.c
-odp_bench_buffer_SOURCES = odp_bench_buffer.c bench_common.h
-odp_bench_misc_SOURCES = odp_bench_misc.c bench_common.h
-odp_bench_packet_SOURCES = odp_bench_packet.c bench_common.h
-odp_bench_timer_SOURCES = odp_bench_timer.c bench_common.h
+odp_bench_buffer_SOURCES = odp_bench_buffer.c bench_common.c bench_common.h
+odp_bench_misc_SOURCES = odp_bench_misc.c bench_common.c bench_common.h
+odp_bench_packet_SOURCES = odp_bench_packet.c bench_common.c bench_common.h
+odp_bench_timer_SOURCES = odp_bench_timer.c bench_common.c bench_common.h
 odp_cpu_bench_SOURCES = odp_cpu_bench.c
 odp_crc_SOURCES = odp_crc.c
 odp_crypto_SOURCES = odp_crypto.c

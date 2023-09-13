@@ -149,34 +149,6 @@ static void sig_handler(int signo ODP_UNUSED)
 }
 
 /**
- * Run given benchmark indefinitely
- */
-static void run_indef(args_t *args, int idx)
-{
-	const char *desc;
-
-	desc = args->bench[idx].desc != NULL ?
-			args->bench[idx].desc : args->bench[idx].name;
-
-	printf("Running odp_%s test indefinitely\n", desc);
-
-	while (!odp_atomic_load_u32(&gbl_args->exit_thread)) {
-		int ret;
-
-		if (args->bench[idx].init != NULL)
-			args->bench[idx].init();
-
-		ret = args->bench[idx].run();
-
-		if (args->bench[idx].term != NULL)
-			args->bench[idx].term();
-
-		if (!ret)
-			ODPH_ABORT("Benchmark %s failed\n", desc);
-	}
-}
-
-/**
  * Master function for running the microbenchmarks
  */
 static int run_benchmarks(void *arg)
@@ -210,7 +182,7 @@ static int run_benchmarks(void *arg)
 				continue;
 			} else if (args->appl.bench_idx &&
 				   (j + 1) == args->appl.bench_idx) {
-				run_indef(args, j);
+				bench_run_indef(&args->bench[j], &gbl_args->exit_thread);
 				return 0;
 			}
 
