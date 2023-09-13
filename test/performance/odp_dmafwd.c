@@ -102,8 +102,25 @@ typedef struct pktio_s {
 	uint8_t num_out_qs;
 } pktio_t;
 
-typedef void (*ev_fn_t)(odp_dma_compl_t compl_ev, thread_config_t *config);
-typedef void (*pkt_fn_t)(odp_packet_t pkts[], int num, pktio_t *pktio, thread_config_t *config);
+typedef struct {
+	odp_packet_t src_pkts[MAX_BURST];
+	odp_packet_t dst_pkts[MAX_BURST];
+	pktio_t *pktio;
+	int num;
+} transfer_t;
+
+/* Function for initializing transfer structures */
+typedef transfer_t *(*init_fn_t)(odp_dma_transfer_param_t *trs_param,
+				 odp_dma_compl_param_t *compl_param, odp_dma_seg_t *src_segs,
+				 odp_dma_seg_t *dst_segs, pktio_t *pktio, thread_config_t *config);
+/* Function for starting transfers */
+typedef odp_bool_t (*start_fn_t)(odp_dma_transfer_param_t *trs_param,
+				 odp_dma_compl_param_t *compl_param, thread_config_t *config);
+/* Function for setting up packets for copy */
+typedef void (*pkt_fn_t)(odp_packet_t pkts[], int num, pktio_t *pktio, init_fn_t init_fn,
+			 start_fn_t start_fn, thread_config_t *config);
+/* Function for draining and tearing down inflight operations */
+typedef void (*drain_fn_t)(void);
 
 typedef struct prog_config_s {
 	uint8_t pktio_idx_map[MAX_PKTIO_INDEXES];
@@ -118,8 +135,14 @@ typedef struct prog_config_s {
 	odp_pool_t pktio_pool;
 	odp_pool_t copy_pool;
 	odp_pool_t trs_pool;
-	ev_fn_t ev_fn;
-	pkt_fn_t pkt_fn;
+
+	struct {
+		init_fn_t init_fn;
+		start_fn_t start_fn;
+		pkt_fn_t pkt_fn;
+		drain_fn_t drain_fn;
+	};
+
 	uint32_t burst_size;
 	uint32_t num_pkts;
 	uint32_t pkt_len;
@@ -137,13 +160,6 @@ typedef struct {
 	pktio_t *pktio;
 	int num;
 } pkt_vec_t;
-
-typedef struct {
-	odp_packet_t src_pkts[MAX_BURST];
-	odp_packet_t dst_pkts[MAX_BURST];
-	pktio_t *pktio;
-	int num;
-} transfer_t;
 
 static prog_config_t *prog_conf;
 
@@ -462,6 +478,7 @@ static inline int send_packets(odp_pktout_queue_t queue, odp_packet_t pkts[], in
 }
 
 static void sw_copy_and_send_packets(odp_packet_t pkts[], int num, pktio_t *pktio,
+				     init_fn_t init_fn ODP_UNUSED, start_fn_t start_fn ODP_UNUSED,
 				     thread_config_t *config)
 {
 	odp_packet_t old_pkt, new_pkt;
@@ -490,41 +507,10 @@ static void sw_copy_and_send_packets(odp_packet_t pkts[], int num, pktio_t *pkti
 	}
 }
 
-static inline void send_dma_trs_packets(odp_dma_compl_t compl_ev, thread_config_t *config)
-{
-	odp_dma_result_t res;
-	odp_buffer_t buf;
-	transfer_t *trs;
-	pktio_t *pktio;
-	int num_sent;
-	stats_t *stats = &config->stats;
-
-	memset(&res, 0, sizeof(res));
-	odp_dma_compl_result(compl_ev, &res);
-	buf = (odp_buffer_t)res.user_ptr;
-	trs = (transfer_t *)odp_buffer_addr(buf);
-	pktio = trs->pktio;
-
-	if (res.success) {
-		num_sent = send_packets(pktio->out_qs[config->thr_idx % pktio->num_out_qs],
-					trs->dst_pkts, trs->num);
-		++stats->trs;
-		stats->fwd_pkts += num_sent;
-		stats->discards += trs->num - num_sent;
-	} else {
-		odp_packet_free_multi(trs->dst_pkts, trs->num);
-		++stats->trs_errs;
-	}
-
-	odp_packet_free_multi(trs->src_pkts, trs->num);
-	odp_buffer_free(buf);
-	odp_dma_compl_free(compl_ev);
-}
-
-static inline transfer_t *init_dma_trs(odp_dma_transfer_param_t *trs_param,
-				       odp_dma_compl_param_t *compl_param, odp_dma_seg_t *src_segs,
-				       odp_dma_seg_t *dst_segs, pktio_t *pktio,
-				       thread_config_t *config)
+static transfer_t *init_dma_ev_trs(odp_dma_transfer_param_t *trs_param,
+				   odp_dma_compl_param_t *compl_param, odp_dma_seg_t *src_segs,
+				   odp_dma_seg_t *dst_segs, pktio_t *pktio,
+				   thread_config_t *config)
 {
 	odp_buffer_t buf;
 	stats_t *stats = &config->stats;
@@ -565,7 +551,22 @@ static inline transfer_t *init_dma_trs(odp_dma_transfer_param_t *trs_param,
 	return trs;
 }
 
-static void dma_copy(odp_packet_t pkts[], int num, pktio_t *pktio, thread_config_t *config)
+static odp_bool_t start_dma_ev_trs(odp_dma_transfer_param_t *trs_param,
+				   odp_dma_compl_param_t *compl_param, thread_config_t *config)
+{
+	const int ret = odp_dma_transfer_start(config->dma_handle, trs_param, compl_param);
+
+	if (odp_unlikely(ret <= 0)) {
+		odp_buffer_free(compl_param->user_ptr);
+		odp_event_free(compl_param->event);
+		return false;
+	}
+
+	return true;
+}
+
+static void dma_copy(odp_packet_t pkts[], int num, pktio_t *pktio, init_fn_t init_fn,
+		     start_fn_t start_fn, thread_config_t *config)
 {
 	odp_dma_transfer_param_t trs_param;
 	odp_dma_compl_param_t compl_param;
@@ -583,8 +584,7 @@ static void dma_copy(odp_packet_t pkts[], int num, pktio_t *pktio, thread_config
 		pkt = pkts[i];
 
 		if (odp_unlikely(trs == NULL)) {
-			trs = init_dma_trs(&trs_param, &compl_param, src_segs, dst_segs, pktio,
-					   config);
+			trs = init_fn(&trs_param, &compl_param, src_segs, dst_segs, pktio, config);
 
 			if (trs == NULL) {
 				odp_packet_free(pkt);
@@ -613,11 +613,41 @@ static void dma_copy(odp_packet_t pkts[], int num, pktio_t *pktio, thread_config
 	}
 
 	if (num_segs > 0U)
-		if (odp_dma_transfer_start(config->dma_handle, &trs_param, &compl_param) <= 0) {
+		if (odp_unlikely(!start_fn(&trs_param, &compl_param, config))) {
 			odp_packet_free_multi(trs->src_pkts, trs->num);
 			odp_packet_free_multi(trs->dst_pkts, trs->num);
 			++stats->start_errs;
 		}
+}
+
+static void drain_events(void)
+{
+	odp_event_t ev;
+	odp_event_type_t type;
+	odp_dma_result_t res;
+	odp_buffer_t buf;
+	transfer_t *trs;
+
+	while (true) {
+		ev = odp_schedule(NULL, odp_schedule_wait_time(ODP_TIME_SEC_IN_NS * 2U));
+
+		if (ev == ODP_EVENT_INVALID)
+			break;
+
+		type = odp_event_type(ev);
+
+		if (type == ODP_EVENT_DMA_COMPL) {
+			memset(&res, 0, sizeof(res));
+			odp_dma_compl_result(odp_dma_compl_from_event(ev), &res);
+			buf = (odp_buffer_t)res.user_ptr;
+			trs = (transfer_t *)odp_buffer_addr(buf);
+			odp_packet_free_multi(trs->src_pkts, trs->num);
+			odp_packet_free_multi(trs->dst_pkts, trs->num);
+			odp_buffer_free(buf);
+		}
+
+		odp_event_free(ev);
+	}
 }
 
 static odp_bool_t setup_copy(prog_config_t *config)
@@ -647,7 +677,6 @@ static odp_bool_t setup_copy(prog_config_t *config)
 	}
 
 	if (config->copy_type == SW_COPY) {
-		config->ev_fn = NULL;
 		config->pkt_fn = sw_copy_and_send_packets;
 
 		for (int i = 0; i < config->num_thrs; ++i)
@@ -706,8 +735,10 @@ static odp_bool_t setup_copy(prog_config_t *config)
 		}
 	}
 
-	config->ev_fn = send_dma_trs_packets;
+	config->init_fn = init_dma_ev_trs;
+	config->start_fn = start_dma_ev_trs;
 	config->pkt_fn = dma_copy;
+	config->drain_fn = drain_events;
 
 	return true;
 }
@@ -800,6 +831,37 @@ static odp_bool_t setup_pktios(prog_config_t *config)
 	return true;
 }
 
+static inline void send_dma_trs_packets(odp_dma_compl_t compl_ev, thread_config_t *config)
+{
+	odp_dma_result_t res;
+	odp_buffer_t buf;
+	transfer_t *trs;
+	pktio_t *pktio;
+	int num_sent;
+	stats_t *stats = &config->stats;
+
+	memset(&res, 0, sizeof(res));
+	odp_dma_compl_result(compl_ev, &res);
+	buf = (odp_buffer_t)res.user_ptr;
+	trs = (transfer_t *)odp_buffer_addr(buf);
+
+	if (res.success) {
+		pktio = trs->pktio;
+		num_sent = send_packets(pktio->out_qs[config->thr_idx % pktio->num_out_qs],
+					trs->dst_pkts, trs->num);
+		++stats->trs;
+		stats->fwd_pkts += num_sent;
+		stats->discards += trs->num - num_sent;
+	} else {
+		odp_packet_free_multi(trs->dst_pkts, trs->num);
+		++stats->trs_errs;
+	}
+
+	odp_packet_free_multi(trs->src_pkts, trs->num);
+	odp_buffer_free(buf);
+	odp_dma_compl_free(compl_ev);
+}
+
 static inline void push_packet(odp_packet_t pkt, pkt_vec_t pkt_vecs[], uint8_t *pktio_idx_map)
 {
 	uint8_t idx = pktio_idx_map[odp_packet_input_index(pkt)];
@@ -822,36 +884,6 @@ static void free_pending_packets(pkt_vec_t pkt_vecs[], uint32_t num_ifs)
 		odp_packet_free_multi(pkt_vecs[i].pkts, pkt_vecs[i].num);
 }
 
-static void drain(void)
-{
-	odp_event_t ev;
-	odp_event_type_t type;
-	odp_dma_result_t res;
-	odp_buffer_t buf;
-	transfer_t *trs;
-
-	while (true) {
-		ev = odp_schedule(NULL, odp_schedule_wait_time(ODP_TIME_SEC_IN_NS * 2U));
-
-		if (ev == ODP_EVENT_INVALID)
-			break;
-
-		type = odp_event_type(ev);
-
-		if (type == ODP_EVENT_DMA_COMPL) {
-			memset(&res, 0, sizeof(res));
-			odp_dma_compl_result(odp_dma_compl_from_event(ev), &res);
-			buf = (odp_buffer_t)res.user_ptr;
-			trs = (transfer_t *)odp_buffer_addr(buf);
-			odp_packet_free_multi(trs->src_pkts, trs->num);
-			odp_packet_free_multi(trs->dst_pkts, trs->num);
-			odp_buffer_free(buf);
-		}
-
-		odp_event_free(ev);
-	}
-}
-
 static int process_packets(void *args)
 {
 	thread_config_t *config = args;
@@ -864,9 +896,10 @@ static int process_packets(void *args)
 	int num_evs;
 	odp_event_t ev;
 	odp_event_type_t type;
-	ev_fn_t ev_fn = config->prog_config->ev_fn;
 	uint8_t *pktio_map = config->prog_config->pktio_idx_map;
 	stats_t *stats = &config->stats;
+	init_fn_t init_fn = config->prog_config->init_fn;
+	start_fn_t start_fn = config->prog_config->start_fn;
 	pkt_fn_t pkt_fn = config->prog_config->pkt_fn;
 
 	for (uint32_t i = 0U; i < num_ifs; ++i) {
@@ -893,8 +926,7 @@ static int process_packets(void *args)
 			type = odp_event_type(ev);
 
 			if (type == ODP_EVENT_DMA_COMPL) {
-				if (ev_fn)
-					ev_fn(odp_dma_compl_from_event(ev), config);
+				send_dma_trs_packets(odp_dma_compl_from_event(ev), config);
 			} else if (type == ODP_EVENT_PACKET) {
 				push_packet(odp_packet_from_event(ev), pkt_vecs, pktio_map);
 			} else {
@@ -907,7 +939,8 @@ static int process_packets(void *args)
 			pkt_vec = &pkt_vecs[i];
 
 			if (pkt_vec->num >= burst_size) {
-				pkt_fn(pkt_vec->pkts, burst_size, pkt_vec->pktio, config);
+				pkt_fn(pkt_vec->pkts, burst_size, pkt_vec->pktio, init_fn,
+				       start_fn, config);
 				pop_packets(pkt_vec, burst_size);
 			}
 		}
@@ -919,7 +952,9 @@ static int process_packets(void *args)
 	stats->sched_rounds = rounds;
 	free_pending_packets(pkt_vecs, num_ifs);
 	odp_barrier_wait(&config->prog_config->term_barrier);
-	drain();
+
+	if (config->prog_config->drain_fn)
+		config->prog_config->drain_fn();
 
 	return 0;
 }
