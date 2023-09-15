@@ -77,6 +77,8 @@ typedef struct {
 	uint64_t buf_alloc_errs;
 	uint64_t compl_alloc_errs;
 	uint64_t pkt_alloc_errs;
+	uint64_t trs_poll_errs;
+	uint64_t trs_polled;
 	uint64_t fwd_pkts;
 	uint64_t discards;
 	uint64_t sched_cc;
@@ -91,6 +93,7 @@ typedef struct ODP_ALIGNED_CACHE {
 	odp_pool_t copy_pool;
 	odp_pool_t trs_pool;
 	odp_queue_t compl_q;
+	odp_stash_t inflight_stash;
 	stats_t stats;
 	int thr_idx;
 } thread_config_t;
@@ -120,7 +123,7 @@ typedef odp_bool_t (*start_fn_t)(odp_dma_transfer_param_t *trs_param,
 typedef void (*pkt_fn_t)(odp_packet_t pkts[], int num, pktio_t *pktio, init_fn_t init_fn,
 			 start_fn_t start_fn, thread_config_t *config);
 /* Function for draining and tearing down inflight operations */
-typedef void (*drain_fn_t)(void);
+typedef void (*drain_fn_t)(thread_config_t *config);
 
 typedef struct prog_config_s {
 	uint8_t pktio_idx_map[MAX_PKTIO_INDEXES];
@@ -143,13 +146,17 @@ typedef struct prog_config_s {
 		drain_fn_t drain_fn;
 	};
 
+	uint64_t inflight_obj_size;
 	uint32_t burst_size;
 	uint32_t num_pkts;
 	uint32_t pkt_len;
 	uint32_t cache_size;
+	uint32_t num_inflight;
 	uint32_t trs_cache_size;
 	uint32_t compl_cache_size;
+	uint32_t stash_cache_size;
 	uint32_t time_sec;
+	odp_stash_type_t stash_type;
 	int num_thrs;
 	uint8_t num_ifs;
 	uint8_t copy_type;
@@ -209,6 +216,7 @@ static void init_config(prog_config_t *config)
 		thr->dma_handle = ODP_DMA_INVALID;
 		thr->compl_pool = ODP_POOL_INVALID;
 		thr->compl_q = ODP_QUEUE_INVALID;
+		thr->inflight_stash = ODP_STASH_INVALID;
 	}
 
 	for (uint32_t i = 0U; i < MAX_IFS; ++i)
@@ -273,11 +281,29 @@ static void parse_interfaces(prog_config_t *config, const char *optarg)
 	free(tmp_str);
 }
 
+static odp_bool_t get_stash_capa(odp_stash_capability_t *stash_capa, odp_stash_type_t *stash_type)
+{
+	if (odp_stash_capability(stash_capa, ODP_STASH_TYPE_FIFO) == 0) {
+		*stash_type = ODP_STASH_TYPE_FIFO;
+		return true;
+	}
+
+	if (odp_stash_capability(stash_capa, ODP_STASH_TYPE_DEFAULT) == 0) {
+		*stash_type = ODP_STASH_TYPE_DEFAULT;
+		return true;
+	}
+
+	return false;
+}
+
 static parse_result_t check_options(prog_config_t *config)
 {
-	unsigned int idx = odp_pktio_max_index();
+	const unsigned int idx = odp_pktio_max_index();
 	odp_dma_capability_t dma_capa;
 	uint32_t burst_size;
+	odp_stash_capability_t stash_capa;
+	const uint64_t obj_size = sizeof(odp_dma_transfer_id_t);
+	uint64_t max_num;
 	odp_pool_capability_t pool_capa;
 
 	if (config->num_ifs == 0U) {
@@ -329,6 +355,8 @@ static parse_result_t check_options(prog_config_t *config)
 		return PRS_NOK;
 	}
 
+	config->num_inflight = dma_capa.max_transfers;
+
 	if (config->copy_type == DMA_COPY_EV) {
 		if ((dma_capa.compl_mode_mask & ODP_DMA_COMPL_EVENT) == 0U ||
 		    !dma_capa.queue_type_sched) {
@@ -349,6 +377,40 @@ static parse_result_t check_options(prog_config_t *config)
 				 dma_capa.compl_mode_mask);
 			return PRS_NOT_SUP;
 		}
+
+		if (!get_stash_capa(&stash_capa, &config->stash_type)) {
+			ODPH_ERR("Error querying stash capabilities\n");
+			return PRS_NOK;
+		}
+
+		if ((uint32_t)config->num_thrs > stash_capa.max_stashes) {
+			ODPH_ERR("Invalid amount of stashes: %d (max: %u)\n", config->num_thrs,
+				 stash_capa.max_stashes);
+			return PRS_NOK;
+		}
+
+		if (obj_size == sizeof(uint8_t)) {
+			max_num = stash_capa.max_num.u8;
+		} else if (obj_size == sizeof(uint16_t)) {
+			max_num = stash_capa.max_num.u16;
+		} else if (obj_size <= sizeof(uint32_t)) {
+			max_num = stash_capa.max_num.u32;
+		} else if (obj_size <= sizeof(uint64_t)) {
+			max_num = stash_capa.max_num.u64;
+		} else if (obj_size <= sizeof(odp_u128_t)) {
+			max_num = stash_capa.max_num.u128;
+		} else {
+			ODPH_ERR("Invalid stash object size: %" PRIu64 "\n", obj_size);
+			return PRS_NOK;
+		}
+
+		if (config->num_inflight > max_num) {
+			ODPH_ERR("Invalid stash size: %u (max: %" PRIu64 ")\n",
+				 config->num_inflight, max_num);
+			return PRS_NOK;
+		}
+
+		config->inflight_obj_size = obj_size;
 	}
 
 	if (odp_pool_capability(&pool_capa) < 0) {
@@ -381,6 +443,7 @@ static parse_result_t check_options(prog_config_t *config)
 				     pool_capa.buf.max_cache_size);
 	config->compl_cache_size = MIN(MAX(config->cache_size, dma_capa.pool.min_cache_size),
 				       dma_capa.pool.max_cache_size);
+	config->stash_cache_size = MIN(config->cache_size, stash_capa.max_cache_size);
 
 	return PRS_OK;
 }
@@ -551,6 +614,47 @@ static transfer_t *init_dma_ev_trs(odp_dma_transfer_param_t *trs_param,
 	return trs;
 }
 
+static transfer_t *init_dma_poll_trs(odp_dma_transfer_param_t *trs_param,
+				     odp_dma_compl_param_t *compl_param, odp_dma_seg_t *src_segs,
+				     odp_dma_seg_t *dst_segs, pktio_t *pktio,
+				     thread_config_t *config)
+{
+	odp_buffer_t buf;
+	stats_t *stats = &config->stats;
+	transfer_t *trs;
+
+	buf = odp_buffer_alloc(config->trs_pool);
+
+	if (odp_unlikely(buf == ODP_BUFFER_INVALID)) {
+		++stats->buf_alloc_errs;
+		return NULL;
+	}
+
+	trs = (transfer_t *)odp_buffer_addr(buf);
+	trs->num = 0;
+	trs->pktio = pktio;
+	trs_param->src_format = ODP_DMA_FORMAT_PACKET;
+	trs_param->dst_format = ODP_DMA_FORMAT_PACKET;
+	trs_param->num_src = 0U;
+	trs_param->num_dst = 0U;
+	trs_param->src_seg = src_segs;
+	trs_param->dst_seg = dst_segs;
+	compl_param->compl_mode = ODP_DMA_COMPL_POLL;
+	compl_param->transfer_id = odp_dma_transfer_id_alloc(config->dma_handle);
+
+	if (odp_unlikely(compl_param->transfer_id == ODP_DMA_TRANSFER_ID_INVALID)) {
+		odp_buffer_free(buf);
+		++stats->compl_alloc_errs;
+		return NULL;
+	}
+
+	compl_param->user_ptr = buf;
+	memset(src_segs, 0, sizeof(*src_segs) * MAX_BURST);
+	memset(dst_segs, 0, sizeof(*dst_segs) * MAX_BURST);
+
+	return trs;
+}
+
 static odp_bool_t start_dma_ev_trs(odp_dma_transfer_param_t *trs_param,
 				   odp_dma_compl_param_t *compl_param, thread_config_t *config)
 {
@@ -561,6 +665,24 @@ static odp_bool_t start_dma_ev_trs(odp_dma_transfer_param_t *trs_param,
 		odp_event_free(compl_param->event);
 		return false;
 	}
+
+	return true;
+}
+
+static odp_bool_t start_dma_poll_trs(odp_dma_transfer_param_t *trs_param,
+				     odp_dma_compl_param_t *compl_param, thread_config_t *config)
+{
+	const int ret = odp_dma_transfer_start(config->dma_handle, trs_param, compl_param);
+
+	if (odp_unlikely(ret <= 0)) {
+		odp_buffer_free(compl_param->user_ptr);
+		odp_dma_transfer_id_free(config->dma_handle, compl_param->transfer_id);
+		return false;
+	}
+
+	if (odp_unlikely(odp_stash_put(config->inflight_stash, &compl_param->transfer_id, 1) != 1))
+		/* Should not happen, but make it visible if it somehow does */
+		ODPH_ABORT("DMA inflight transfer stash overflow, aborting");
 
 	return true;
 }
@@ -620,7 +742,7 @@ static void dma_copy(odp_packet_t pkts[], int num, pktio_t *pktio, init_fn_t ini
 		}
 }
 
-static void drain_events(void)
+static void drain_events(thread_config_t *config ODP_UNUSED)
 {
 	odp_event_t ev;
 	odp_event_type_t type;
@@ -650,18 +772,50 @@ static void drain_events(void)
 	}
 }
 
+static void drain_polled(thread_config_t *config)
+{
+	odp_dma_transfer_id_t id;
+	odp_dma_result_t res;
+	int ret;
+	odp_buffer_t buf;
+	transfer_t *trs;
+
+	while (true) {
+		if (odp_stash_get(config->inflight_stash, &id, 1) != 1)
+			break;
+
+		memset(&res, 0, sizeof(res));
+
+		do {
+			ret = odp_dma_transfer_done(config->dma_handle, id, &res);
+		} while (ret == 0);
+
+		odp_dma_transfer_id_free(config->dma_handle, id);
+
+		if (ret < 0)
+			continue;
+
+		buf = (odp_buffer_t)res.user_ptr;
+		trs = (transfer_t *)odp_buffer_addr(buf);
+		odp_packet_free_multi(trs->src_pkts, trs->num);
+		odp_packet_free_multi(trs->dst_pkts, trs->num);
+		odp_buffer_free(buf);
+	}
+}
+
 static odp_bool_t setup_copy(prog_config_t *config)
 {
 	odp_pool_param_t pool_param;
 	thread_config_t *thr;
-	const odp_dma_param_t dma_params = {
+	const odp_dma_param_t dma_param = {
 		.direction = ODP_DMA_MAIN_TO_MAIN,
 		.type = ODP_DMA_TYPE_COPY,
-		.compl_mode_mask = ODP_DMA_COMPL_EVENT,
+		.compl_mode_mask = ODP_DMA_COMPL_EVENT | ODP_DMA_COMPL_POLL,
 		.mt_mode = ODP_DMA_MT_SERIAL,
 		.order = ODP_DMA_ORDER_NONE };
 	odp_dma_pool_param_t compl_pool_param;
 	odp_queue_param_t queue_param;
+	odp_stash_param_t stash_param;
 
 	odp_pool_param_init(&pool_param);
 	pool_param.pkt.seg_len = config->pkt_len;
@@ -697,15 +851,17 @@ static odp_bool_t setup_copy(prog_config_t *config)
 	}
 
 	for (int i = 0; i < config->num_thrs; ++i) {
+		thr = &config->thread_config[i];
+		thr->copy_pool = config->copy_pool;
+		thr->trs_pool = config->trs_pool;
+		thr->dma_handle = odp_dma_create(PROG_NAME "_dma", &dma_param);
+
+		if (thr->dma_handle == ODP_DMA_INVALID) {
+			ODPH_ERR("Error creating DMA session\n");
+			return false;
+		}
+
 		if (config->copy_type == DMA_COPY_EV) {
-			thr = &config->thread_config[i];
-			thr->dma_handle = odp_dma_create(PROG_NAME "_dma", &dma_params);
-
-			if (thr->dma_handle == ODP_DMA_INVALID) {
-				ODPH_ERR("Error creating DMA session\n");
-				return false;
-			}
-
 			odp_dma_pool_param_init(&compl_pool_param);
 			compl_pool_param.num = config->num_pkts;
 			compl_pool_param.cache_size = config->compl_cache_size;
@@ -717,8 +873,6 @@ static odp_bool_t setup_copy(prog_config_t *config)
 				return false;
 			}
 
-			thr->copy_pool = config->copy_pool;
-			thr->trs_pool = config->trs_pool;
 			odp_queue_param_init(&queue_param);
 			queue_param.type = ODP_QUEUE_TYPE_SCHED;
 			queue_param.sched.sync = ODP_SCHED_SYNC_PARALLEL;
@@ -729,16 +883,32 @@ static odp_bool_t setup_copy(prog_config_t *config)
 				ODPH_ERR("Error creating DMA completion queue\n");
 				return false;
 			}
+
+			config->init_fn = init_dma_ev_trs;
+			config->start_fn = start_dma_ev_trs;
+			config->drain_fn = drain_events;
 		} else {
-			ODPH_ERR("DMA poll completion support not yet implemented\n");
-			return false;
+			odp_stash_param_init(&stash_param);
+			stash_param.type = config->stash_type;
+			stash_param.put_mode = ODP_STASH_OP_LOCAL;
+			stash_param.get_mode = ODP_STASH_OP_LOCAL;
+			stash_param.num_obj = config->num_inflight;
+			stash_param.obj_size = config->inflight_obj_size;
+			stash_param.cache_size = config->stash_cache_size;
+			thr->inflight_stash = odp_stash_create("_dma_inflight", &stash_param);
+
+			if (thr->inflight_stash == ODP_STASH_INVALID) {
+				ODPH_ERR("Error creating DMA inflight transfer stash\n");
+				return false;
+			}
+
+			config->init_fn = init_dma_poll_trs;
+			config->start_fn = start_dma_poll_trs;
+			config->drain_fn = drain_polled;
 		}
 	}
 
-	config->init_fn = init_dma_ev_trs;
-	config->start_fn = start_dma_ev_trs;
 	config->pkt_fn = dma_copy;
-	config->drain_fn = drain_events;
 
 	return true;
 }
@@ -831,7 +1001,71 @@ static odp_bool_t setup_pktios(prog_config_t *config)
 	return true;
 }
 
-static inline void send_dma_trs_packets(odp_dma_compl_t compl_ev, thread_config_t *config)
+static inline void send_dma_poll_trs_pkts(int burst_size, thread_config_t *config)
+{
+	odp_stash_t stash_handle = config->inflight_stash;
+	odp_dma_transfer_id_t ids[burst_size], id;
+	int32_t num;
+	odp_dma_t dma_handle = config->dma_handle;
+	odp_dma_result_t res;
+	int ret;
+	odp_buffer_t buf;
+	transfer_t *trs;
+	pktio_t *pktio;
+	int num_sent;
+	stats_t *stats = &config->stats;
+
+	while (true) {
+		num = odp_stash_get(stash_handle, &ids, burst_size);
+
+		if (num <= 0)
+			break;
+
+		for (int32_t i = 0; i < num; ++i) {
+			id = ids[i];
+			ret = odp_dma_transfer_done(dma_handle, id, &res);
+
+			if (ret == 0) {
+				if (odp_unlikely(odp_stash_put(stash_handle, &id, 1) != 1))
+					/* Should not happen, but make it visible if it somehow
+					 * does */
+					ODPH_ABORT("DMA inflight transfer stash overflow,"
+						   " aborting");
+
+				++stats->trs_polled;
+				continue;
+			}
+
+			odp_dma_transfer_id_free(dma_handle, id);
+
+			if (ret < 0) {
+				++stats->trs_poll_errs;
+				continue;
+			}
+
+			buf = (odp_buffer_t)res.user_ptr;
+			trs = (transfer_t *)odp_buffer_addr(buf);
+
+			if (res.success) {
+				pktio = trs->pktio;
+				num_sent = send_packets(pktio->out_qs[config->thr_idx %
+									pktio->num_out_qs],
+							trs->dst_pkts, trs->num);
+				++stats->trs;
+				stats->fwd_pkts += num_sent;
+				stats->discards += trs->num - num_sent;
+			} else {
+				odp_packet_free_multi(trs->dst_pkts, trs->num);
+				++stats->trs_errs;
+			}
+
+			odp_packet_free_multi(trs->src_pkts, trs->num);
+			odp_buffer_free(buf);
+		}
+	}
+}
+
+static inline void send_dma_ev_trs_pkts(odp_dma_compl_t compl_ev, thread_config_t *config)
 {
 	odp_dma_result_t res;
 	odp_buffer_t buf;
@@ -891,6 +1125,7 @@ static int process_packets(void *args)
 	pkt_vec_t pkt_vecs[num_ifs], *pkt_vec;
 	odp_atomic_u32_t *is_running = &config->prog_config->is_running;
 	uint64_t c1, c2, c3, c4, cdiff = 0U, rounds = 0U;
+	const uint8_t copy_type = config->prog_config->copy_type;
 	const int burst_size = config->prog_config->burst_size;
 	odp_event_t evs[burst_size];
 	int num_evs;
@@ -918,6 +1153,9 @@ static int process_packets(void *args)
 		cdiff += odp_cpu_cycles_diff(c4, c3);
 		++rounds;
 
+		if (copy_type == DMA_COPY_POLL)
+			send_dma_poll_trs_pkts(burst_size, config);
+
 		if (num_evs == 0)
 			continue;
 
@@ -926,7 +1164,7 @@ static int process_packets(void *args)
 			type = odp_event_type(ev);
 
 			if (type == ODP_EVENT_DMA_COMPL) {
-				send_dma_trs_packets(odp_dma_compl_from_event(ev), config);
+				send_dma_ev_trs_pkts(odp_dma_compl_from_event(ev), config);
 			} else if (type == ODP_EVENT_PACKET) {
 				push_packet(odp_packet_from_event(ev), pkt_vecs, pktio_map);
 			} else {
@@ -954,7 +1192,7 @@ static int process_packets(void *args)
 	odp_barrier_wait(&config->prog_config->term_barrier);
 
 	if (config->prog_config->drain_fn)
-		config->prog_config->drain_fn();
+		config->prog_config->drain_fn(config);
 
 	return 0;
 }
@@ -1035,6 +1273,9 @@ static void teardown(prog_config_t *config)
 	for (int i = 0; i < config->num_thrs; ++i) {
 		thr = &config->thread_config[i];
 
+		if (thr->inflight_stash != ODP_STASH_INVALID)
+			(void)odp_stash_destroy(thr->inflight_stash);
+
 		if (thr->compl_q != ODP_QUEUE_INVALID)
 			(void)odp_queue_destroy(thr->compl_q);
 
@@ -1091,8 +1332,11 @@ static void print_stats(const prog_config_t *config)
 				printf("        completion event allocation errors: %" PRIu64 "\n",
 				       stats->compl_alloc_errs);
 			else
-				printf("        transfer ID allocation errors:     %" PRIu64 "\n",
-				       stats->compl_alloc_errs);
+				printf("        transfer ID allocation errors:     %" PRIu64 "\n"
+				       "        transfer poll errors:              %" PRIu64 "\n"
+				       "        transfers polled:                  %" PRIu64 "\n",
+				       stats->compl_alloc_errs, stats->trs_poll_errs,
+				       stats->trs_polled);
 		}
 
 		printf("        packets forwarded:%s%" PRIu64 "\n"
