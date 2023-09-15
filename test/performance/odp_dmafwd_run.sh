@@ -60,9 +60,13 @@ echo "${BIN_NAME}: SW copy"
 echo "==================="
 ./${BIN_NAME}${EXEEXT} -i ${IF0} -b ${BATCH} -T ${TIME} -t 0
 check_result $?
-echo "${BIN_NAME}: DMA copy"
+echo "${BIN_NAME}: DMA copy event"
 echo "===================="
 ./${BIN_NAME}${EXEEXT} -i ${IF0} -b ${BATCH} -T ${TIME} -t 1
+check_result $?
+echo "${BIN_NAME}: DMA copy poll"
+echo "===================="
+./${BIN_NAME}${EXEEXT} -i ${IF0} -b ${BATCH} -T ${TIME} -t 2
 check_result $?
 cleanup_interfaces
 check_exit
