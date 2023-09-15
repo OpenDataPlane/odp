@@ -1064,12 +1064,12 @@ int main(int argc, char **argv)
 	init_param.mem_model = odph_opts.mem_model;
 
 	if (odp_init_global(&odp_instance, NULL, NULL)) {
-		ODPH_ERR("ODP global init failed, exiting.\n");
+		ODPH_ERR("ODP global init failed, exiting\n");
 		exit(EXIT_FAILURE);
 	}
 
 	if (odp_init_local(odp_instance, ODP_THREAD_CONTROL)) {
-		ODPH_ERR("ODP local init failed, exiting.\n");
+		ODPH_ERR("ODP local init failed, exiting\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -1140,12 +1140,12 @@ out:
 		(void)odp_shm_free(shm_cfg);
 
 	if (odp_term_local()) {
-		ODPH_ERR("ODP local terminate failed, exiting.\n");
+		ODPH_ERR("ODP local terminate failed, exiting\n");
 		exit(EXIT_FAILURE);
 	}
 
 	if (odp_term_global(odp_instance)) {
-		ODPH_ERR("ODP global terminate failed, exiting.\n");
+		ODPH_ERR("ODP global terminate failed, exiting\n");
 		exit(EXIT_FAILURE);
 	}
 
