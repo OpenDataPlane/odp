@@ -371,6 +371,12 @@ static parse_result_t check_options(prog_config_t *config)
 				 config->num_thrs, dma_capa.pool.max_pools);
 			return PRS_NOK;
 		}
+
+		if (config->num_inflight > dma_capa.pool.max_num) {
+			ODPH_ERR("Invalid amount of DMA completion events: %u (max: %u)\n",
+				 config->num_inflight, dma_capa.pool.max_num);
+			return PRS_NOK;
+		}
 	} else if (config->copy_type == DMA_COPY_POLL) {
 		if ((dma_capa.compl_mode_mask & ODP_DMA_COMPL_POLL) == 0U) {
 			ODPH_ERR("Unsupported DMA completion mode: poll (mode support: %x)\n",
@@ -436,6 +442,12 @@ static parse_result_t check_options(prog_config_t *config)
 	    config->cache_size > pool_capa.pkt.max_cache_size) {
 		ODPH_ERR("Invalid pool cache size: %u (min: %u, max: %u)\n", config->cache_size,
 			 pool_capa.pkt.min_cache_size, pool_capa.pkt.max_cache_size);
+		return PRS_NOK;
+	}
+
+	if (config->num_inflight > pool_capa.buf.max_num) {
+		ODPH_ERR("Invalid pool buffer count: %u (max: %u)\n", config->num_inflight,
+			 pool_capa.buf.max_num);
 		return PRS_NOK;
 	}
 
@@ -839,7 +851,7 @@ static odp_bool_t setup_copy(prog_config_t *config)
 		return true;
 	}
 
-	pool_param.buf.num = config->num_pkts;
+	pool_param.buf.num = config->num_inflight;
 	pool_param.buf.size = sizeof(transfer_t);
 	pool_param.buf.cache_size = config->trs_cache_size;
 	pool_param.type = ODP_POOL_BUFFER;
@@ -863,7 +875,7 @@ static odp_bool_t setup_copy(prog_config_t *config)
 
 		if (config->copy_type == DMA_COPY_EV) {
 			odp_dma_pool_param_init(&compl_pool_param);
-			compl_pool_param.num = config->num_pkts;
+			compl_pool_param.num = config->num_inflight;
 			compl_pool_param.cache_size = config->compl_cache_size;
 			thr->compl_pool = odp_dma_pool_create(PROG_NAME "_dma_compl",
 							      &compl_pool_param);
