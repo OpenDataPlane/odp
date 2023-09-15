@@ -38,11 +38,11 @@
 /** Maximum test packet size */
 #define TEST_MAX_PKT_SIZE 2048
 
-/** Number of test runs per individual benchmark */
+/** Number of API function calls per test case */
 #define TEST_REPEAT_COUNT 1000
 
-/** Number of times to run tests for each packet size */
-#define TEST_SIZE_RUN_COUNT 10
+/** Number of rounds per test case */
+#define TEST_ROUNDS 10u
 
 /** Maximum burst size for *_multi operations */
 #define TEST_MAX_BURST 64
@@ -85,6 +85,7 @@ typedef struct {
 	int bench_idx;   /** Benchmark index to run indefinitely */
 	int burst_size;  /** Burst size for *_multi operations */
 	int cache_size;  /** Pool cache size */
+	uint32_t rounds; /** Rounds per test case */
 } appl_args_t;
 
 /**
@@ -1359,8 +1360,9 @@ static void usage(char *progname)
 	       "  -b, --burst <num>       Test packet burst size.\n"
 	       "  -c, --cache_size <num>  Pool cache size.\n"
 	       "  -i, --index <idx>       Benchmark index to run indefinitely.\n"
+	       "  -r, --rounds <num>      Run each test case 'num' times (default %u).\n"
 	       "  -h, --help              Display help and exit.\n\n"
-	       "\n", NO_PATH(progname), NO_PATH(progname));
+	       "\n", NO_PATH(progname), NO_PATH(progname), TEST_ROUNDS);
 }
 
 /**
@@ -1377,16 +1379,18 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	static const struct option longopts[] = {
 		{"burst", required_argument, NULL, 'b'},
 		{"cache_size", required_argument, NULL, 'c'},
-		{"help", no_argument, NULL, 'h'},
 		{"index", required_argument, NULL, 'i'},
+		{"rounds", required_argument, NULL, 'r'},
+		{"help", no_argument, NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts =  "c:b:i:h";
+	static const char *shortopts =  "c:b:i:r:h";
 
 	appl_args->bench_idx = 0; /* Run all benchmarks */
 	appl_args->burst_size = TEST_DEF_BURST;
 	appl_args->cache_size = -1;
+	appl_args->rounds = TEST_ROUNDS;
 
 	while (1) {
 		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
@@ -1401,21 +1405,30 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		case 'b':
 			appl_args->burst_size = atoi(optarg);
 			break;
+		case 'i':
+			appl_args->bench_idx = atoi(optarg);
+			break;
+		case 'r':
+			appl_args->rounds = atoi(optarg);
+			break;
 		case 'h':
 			usage(argv[0]);
 			exit(EXIT_SUCCESS);
 			break;
-		case 'i':
-			appl_args->bench_idx = atoi(optarg);
-			break;
 		default:
-			break;
+			usage(argv[0]);
+			exit(EXIT_FAILURE);
 		}
 	}
 
 	if (appl_args->burst_size < 1 ||
 	    appl_args->burst_size > TEST_MAX_BURST) {
 		printf("Invalid burst size (max %d)\n", TEST_MAX_BURST);
+		exit(EXIT_FAILURE);
+	}
+
+	if (appl_args->rounds < 1) {
+		printf("Invalid number test rounds: %d\n", appl_args->rounds);
 		exit(EXIT_FAILURE);
 	}
 
@@ -1598,7 +1611,7 @@ int main(int argc, char *argv[])
 	gbl_args->suite.bench = test_suite;
 	gbl_args->suite.num_bench = sizeof(test_suite) / sizeof(test_suite[0]);
 	gbl_args->suite.indef_idx = gbl_args->appl.bench_idx;
-	gbl_args->suite.rounds = TEST_SIZE_RUN_COUNT;
+	gbl_args->suite.rounds = gbl_args->appl.rounds;
 	gbl_args->suite.repeat_count = TEST_REPEAT_COUNT;
 
 	/* Print both system and application information */
@@ -1670,6 +1683,7 @@ int main(int argc, char *argv[])
 	printf("CPU mask:        %s\n", cpumaskstr);
 	printf("Burst size:      %d\n", gbl_args->appl.burst_size);
 	printf("Bench repeat:    %d\n", TEST_REPEAT_COUNT);
+	printf("Test rounds:     %u\n", gbl_args->appl.rounds);
 	if (gbl_args->appl.cache_size < 0)
 		printf("Pool cache size: default\n");
 	else
