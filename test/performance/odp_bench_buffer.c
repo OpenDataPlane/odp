@@ -22,11 +22,11 @@
 /** Default pool user area size in bytes */
 #define TEST_UAREA_SIZE 8
 
-/** Number of function calls per test cycle */
+/** Number of API function calls per test case */
 #define TEST_REPEAT_COUNT 1000
 
-/** Default number of test cycles */
-#define TEST_CYCLES 1000
+/** Default number of rounds per test case */
+#define TEST_ROUNDS 1000u
 
 /** Maximum burst size for *_multi operations */
 #define TEST_MAX_BURST 64
@@ -52,7 +52,7 @@ typedef struct {
 	int bench_idx;   /** Benchmark index to run indefinitely */
 	int burst_size;  /** Burst size for *_multi operations */
 	int cache_size;  /** Pool cache size */
-	int test_cycles; /** Test cycles per tested function */
+	uint32_t rounds; /** Rounds per test case */
 } appl_args_t;
 
 /**
@@ -463,9 +463,9 @@ static void usage(char *progname)
 	       "  -b, --burst <num>       Test burst size.\n"
 	       "  -c, --cache_size <num>  Pool cache size.\n"
 	       "  -i, --index <idx>       Benchmark index to run indefinitely.\n"
-	       "  -t, --test_cycles <num> Run each test 'num' times (default %d).\n"
+	       "  -r, --rounds <num>      Run each test case 'num' times (default %u).\n"
 	       "  -h, --help              Display help and exit.\n\n"
-	       "\n", NO_PATH(progname), NO_PATH(progname), TEST_CYCLES);
+	       "\n", NO_PATH(progname), NO_PATH(progname), TEST_ROUNDS);
 }
 
 /**
@@ -483,17 +483,17 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{"burst", required_argument, NULL, 'b'},
 		{"cache_size", required_argument, NULL, 'c'},
 		{"index", required_argument, NULL, 'i'},
-		{"test_cycles", required_argument, NULL, 't'},
+		{"rounds", required_argument, NULL, 'r'},
 		{"help", no_argument, NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts =  "c:b:i:t:h";
+	static const char *shortopts =  "c:b:i:r:h";
 
 	appl_args->bench_idx = 0; /* Run all benchmarks */
 	appl_args->burst_size = TEST_DEF_BURST;
 	appl_args->cache_size = -1;
-	appl_args->test_cycles = TEST_CYCLES;
+	appl_args->rounds = TEST_ROUNDS;
 
 	while (1) {
 		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
@@ -515,8 +515,8 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		case 'i':
 			appl_args->bench_idx = atoi(optarg);
 			break;
-		case 't':
-			appl_args->test_cycles = atoi(optarg);
+		case 'r':
+			appl_args->rounds = atoi(optarg);
 			break;
 		default:
 			break;
@@ -529,8 +529,8 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		exit(EXIT_FAILURE);
 	}
 
-	if (appl_args->test_cycles < 1) {
-		printf("Invalid test cycle repeat count: %d\n", appl_args->test_cycles);
+	if (appl_args->rounds < 1) {
+		printf("Invalid number test rounds: %d\n", appl_args->rounds);
 		exit(EXIT_FAILURE);
 	}
 
@@ -555,7 +555,7 @@ static void print_info(void)
 		printf("Pool cache size: default\n");
 	else
 		printf("Pool cache size: %d\n", gbl_args->appl.cache_size);
-	printf("Test cycles:     %d\n", gbl_args->appl.test_cycles);
+	printf("Test rounds:     %u\n", gbl_args->appl.rounds);
 	printf("\n");
 }
 
@@ -652,7 +652,7 @@ int main(int argc, char *argv[])
 	gbl_args->suite.bench = test_suite;
 	gbl_args->suite.num_bench = sizeof(test_suite) / sizeof(test_suite[0]);
 	gbl_args->suite.indef_idx = gbl_args->appl.bench_idx;
-	gbl_args->suite.rounds = gbl_args->appl.test_cycles;
+	gbl_args->suite.rounds = gbl_args->appl.rounds;
 	gbl_args->suite.repeat_count = TEST_REPEAT_COUNT;
 
 	/* Get default worker cpumask */
