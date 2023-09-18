@@ -364,6 +364,26 @@ odp_cos_t odp_cls_cos_create(const char *name, const odp_cls_cos_param_t *param_
 	return ODP_COS_INVALID;
 }
 
+int odp_cls_cos_create_multi(const char *name[], const odp_cls_cos_param_t param[],
+			     odp_cos_t cos[], int num)
+{
+	int i;
+
+	_ODP_ASSERT(param != NULL);
+	_ODP_ASSERT(cos != NULL);
+
+	for (i = 0; i < num; i++) {
+		const char *cur_name = name != NULL ? name[i] : NULL;
+		odp_cos_t new_cos = odp_cls_cos_create(cur_name, &param[i]);
+
+		if (odp_unlikely(new_cos == ODP_COS_INVALID))
+			return (i == 0) ? -1 : i;
+
+		cos[i] = new_cos;
+	}
+	return i;
+}
+
 /*
  * Allocate an odp_pmr_t Handle
  */
