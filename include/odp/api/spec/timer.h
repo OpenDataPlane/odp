@@ -579,6 +579,20 @@ void *odp_timeout_user_area(odp_timeout_t tmo);
 odp_timeout_t odp_timeout_alloc(odp_pool_t pool);
 
 /**
+ * Allocate multiple timeouts
+ *
+ * Otherwise like odp_timeout_alloc(), but allocates multiple timeouts from a pool.
+ *
+ * @param      pool   Pool handle
+ * @param[out] tmo    Array of timeout handles for output
+ * @param      num    Number of timeouts to allocate
+ *
+ * @return Number of timeouts actually allocated (0 ... num)
+ * @retval <0 on failure
+ */
+int odp_timeout_alloc_multi(odp_pool_t pool, odp_timeout_t tmo[], int num);
+
+/**
  * Timeout free
  *
  * Frees the timeout back to the pool it was allocated from.
