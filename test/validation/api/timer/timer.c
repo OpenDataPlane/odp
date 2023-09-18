@@ -366,9 +366,17 @@ static void timer_test_capa(void)
 #endif
 
 	for (i = 0; i < ODP_CLOCK_NUM_SRC; i++) {
+		odp_timer_capability_t capa;
+		int ret;
+
 		clk_src = ODP_CLOCK_SRC_0 + i;
+
+		ret = odp_timer_capability(clk_src, &capa);
+		CU_ASSERT(ret == 0 || ret == -1);
+
 		if (global_mem->clk_supported[i]) {
 			ODPH_DBG("\nTesting clock source: %i\n", clk_src);
+			CU_ASSERT(ret == 0);
 			timer_test_capa_run(clk_src);
 		}
 	}
