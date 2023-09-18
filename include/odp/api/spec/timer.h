@@ -602,6 +602,16 @@ int odp_timeout_alloc_multi(odp_pool_t pool, odp_timeout_t tmo[], int num);
 void odp_timeout_free(odp_timeout_t tmo);
 
 /**
+ * Free multiple timeouts
+ *
+ * Otherwise like odp_timeout_free(), but frees multiple timeouts to their originating pools.
+ *
+ * @param tmo         Array of timeout handles
+ * @param num         Number of timeouts to free
+ */
+void odp_timeout_free_multi(odp_timeout_t tmo[], int num);
+
+/**
  * Print timer pool debug information
  *
  * Prints implementation specific debug information about
