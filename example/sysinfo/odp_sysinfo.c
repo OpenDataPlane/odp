@@ -556,7 +556,7 @@ static int timer_capability(appl_args_t *appl_args)
 		if (ret == -1)
 			continue;
 		if (ret < -1) {
-			ODPH_ERR("odp_timer_capability() failed: %d\n", ret);
+			ODPH_ERR("odp_timer_capability() for clock source %d failed: %d\n", i, ret);
 			return -1;
 		}
 
@@ -573,9 +573,11 @@ static int timer_capability(appl_args_t *appl_args)
 			return -1;
 		}
 
+		odp_timer_pool_start();
+
 		ret = odp_timer_pool_info(pool, info);
 		if (ret) {
-			ODPH_ERR("odp_timer_pool_info() failed: %d\n", ret);
+			ODPH_ERR("odp_timer_pool_info() for clock source %d failed: %d\n", i, ret);
 			return -1;
 		}
 
