@@ -236,7 +236,7 @@ int odp_crypto_result(odp_crypto_packet_result_t *result,
  * segmentation) of the output packet may differ from that of the input
  * packet.
  *
- * The value of pktout[n] is ignored as pktout[n] is used purely as an
+ * The value of pkt_out[n] is ignored as pkt_out[n] is used purely as an
  * output parameter that returns the handle of the newly allocated packet.
  *
  * ODP_CRYPTO_OP_TYPE_OOP:
@@ -263,6 +263,12 @@ int odp_crypto_result(odp_crypto_packet_result_t *result,
  * contain the shifted crypto range, auth range and, in encode sessions,
  * the MAC/digest result. pkt_out[n] must not be the same as any input
  * packet or any other output packet.
+ *
+ * OOP_CRYPTO_OP_TYPE_BASIC_AND_OOP:
+ *
+ * Behaves as the ODP_CRYPTO_OP_TYPE_BASIC operation type if pkt_out[n] is
+ * ODP_PACKET_INVALID. Otherwise behaves as the ODP_CRYPTO_OP_TYPE_OOP
+ * operation type.
  *
  * @param         pkt_in   Packets to be processed
  * @param[in,out] pkt_out  Packet handle array for resulting packets

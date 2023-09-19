@@ -534,6 +534,21 @@ typedef enum odp_crypto_op_type_t {
 	 * MAC/digest (in encode sessions) of the input packet.
 	 */
 	ODP_CRYPTO_OP_TYPE_OOP,
+
+	/**
+	 * Basic or out-of-place crypto operation depending on op params.
+	 *
+	 * If the output packet specified in a crypto operation (i.e.
+	 * pkt_out[i] is ODP_PACKET_INVALID) then the packet is processed
+	 * the same way as in the ODP_CRYPTO_OP_TYPE_BASIC operation type.
+	 * Otherwise the packet is processed as in the ODP_CRYPTO_OP_TYPE_OOP
+	 * operation type.
+	 *
+	 * Sessions of this operation type may have lower performance than
+	 * the more specific operation types.
+	 */
+	ODP_CRYPTO_OP_TYPE_BASIC_AND_OOP,
+
 } odp_crypto_op_type_t;
 
 /**
