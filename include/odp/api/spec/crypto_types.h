@@ -611,6 +611,20 @@ typedef struct odp_crypto_session_param_t {
 	 */
 	odp_bool_t hash_result_in_auth_range;
 
+	/** Enable skipping crypto on per-packet basis
+	 *
+	 *  When this flag is true, the null_crypto flag of crypto operation
+	 *  parameters can be set to request skipping of ciphering and
+	 *  authentication of a packet regardless of session configuration.
+	 *  This may be useful for preserving packet order between packets
+	 *  that require crypto processing and packets that do not.
+	 *
+	 *  This flag must be set false when op_mode is ODP_CRYPTO_SYNC.
+	 *
+	 *  The default value is false.
+	 */
+	odp_bool_t null_crypto_enable;
+
 	/** Operation mode when using packet interface: sync or async
 	 *
 	 *  The default value is ODP_CRYPTO_SYNC.
@@ -800,6 +814,14 @@ typedef struct odp_crypto_packet_op_param_t {
 	 *  ODP_CRYPTO_OP_TYPE_OOP.
 	 */
 	int32_t dst_offset_shift;
+
+	/** Use null crypto algorithms
+	 *
+	 * Process packet using the null cipher and null auth algorithm
+	 * instead of the algoithms configured in the session. This flag is
+	 * ignored if the null_crypto_enable session parameter is not set.
+	 */
+	uint8_t null_crypto :1;
 
 } odp_crypto_packet_op_param_t;
 
