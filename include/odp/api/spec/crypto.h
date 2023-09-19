@@ -296,6 +296,17 @@ int odp_crypto_op(const odp_packet_t pkt_in[],
  * All arrays should be of num_pkt size, except that pkt_out parameter
  * is ignored when the crypto operation type is ODP_CRYPTO_OP_TYPE_BASIC.
  *
+ * From packet ordering perspective this function behaves as if each input
+ * packet was enqueued to a crypto session specific ODP queue in the order
+ * the packets appear in the parameter array. The conceptual session input
+ * queue has the same order type (ODP_QUEUE_ORDER_KEEP or
+ * ODP_QUEUE_ORDER_IGNORE) as the completion queue of the session.
+ * The order of output events of a crypto session in a completion queue is
+ * the same as the order of the corresponding input packets in the conceptual
+ * session input queue. The order of output events of different crypto
+ * sessions is not defined even when they go through the same crypto
+ * completion queue.
+ *
  * @param pkt_in   Packets to be processed
  * @param pkt_out  Packet handle array for resulting packets
  * @param param    Operation parameters array
