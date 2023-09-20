@@ -1899,6 +1899,14 @@ void odp_timeout_free(odp_timeout_t tmo)
 	_odp_event_free(odp_timeout_to_event(tmo));
 }
 
+void odp_timeout_free_multi(odp_timeout_t tmo[], int num)
+{
+	_ODP_ASSERT(tmo != NULL);
+	_ODP_ASSERT(num > 0);
+
+	_odp_event_free_multi((_odp_event_hdr_t **)(uintptr_t)tmo, num);
+}
+
 void odp_timer_pool_print(odp_timer_pool_t timer_pool)
 {
 	timer_pool_t *tp;
