@@ -1873,6 +1873,27 @@ odp_timeout_t odp_timeout_alloc(odp_pool_t pool_hdl)
 	return odp_timeout_from_event(event);
 }
 
+int odp_timeout_alloc_multi(odp_pool_t pool_hdl, odp_timeout_t tmo[], int num)
+{
+	pool_t *pool;
+	int ret;
+
+	_ODP_ASSERT(pool_hdl != ODP_POOL_INVALID);
+	_ODP_ASSERT(tmo != NULL);
+	_ODP_ASSERT(num > 0);
+
+	pool = _odp_pool_entry(pool_hdl);
+
+	_ODP_ASSERT(pool->type == ODP_POOL_TIMEOUT);
+
+	ret = _odp_event_alloc_multi(pool, (_odp_event_hdr_t **)tmo, num);
+
+	for (int i = 0; i < ret; i++)
+		timeout_hdr(tmo[i])->timer = ODP_TIMER_INVALID;
+
+	return ret;
+}
+
 void odp_timeout_free(odp_timeout_t tmo)
 {
 	_odp_event_free(odp_timeout_to_event(tmo));
