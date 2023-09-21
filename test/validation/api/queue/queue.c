@@ -1,5 +1,5 @@
 /* Copyright (c) 2014-2018, Linaro Limited
- * Copyright (c) 2021-2022, Nokia
+ * Copyright (c) 2021-2023, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -206,6 +206,83 @@ static void queue_test_max_plain(void)
 
 	for (i = 0; i < num_queues; i++)
 		CU_ASSERT(odp_queue_destroy(queue[i]) == 0);
+}
+
+static int queue_create_multi(const char *name[], const odp_queue_param_t param[],
+			      odp_bool_t share_param, odp_queue_t queue[], uint32_t num)
+{
+	const uint32_t max_retries = 100;
+	uint32_t num_created = 0;
+	uint32_t num_retries = 0;
+
+	do {
+		const char **cur_name = name != NULL ? &name[num_created] : NULL;
+		const odp_queue_param_t *cur_param = share_param ? &param[0] : &param[num_created];
+		int ret =  odp_queue_create_multi(cur_name, cur_param, share_param,
+						  &queue[num_created], num - num_created);
+		if (ret < 0) {
+			CU_FAIL("Queue create multi failed");
+			break;
+		}
+		CU_ASSERT_FATAL((uint32_t)ret <= num - num_created);
+
+		num_retries = ret == 0 ? num_retries + 1 : 0;
+		num_created += ret;
+	} while (num_created < num && num_retries < max_retries);
+
+	return num_created;
+}
+
+static void queue_destroy_multi(odp_queue_t queue[], uint32_t num)
+{
+	uint32_t num_left = num;
+	uint32_t num_freed = 0;
+
+	while (num_left) {
+		int ret = odp_queue_destroy_multi(&queue[num_freed], num_left);
+
+		CU_ASSERT_FATAL(ret > 0 && (uint32_t)ret <= num_left);
+
+		num_left -= ret;
+		num_freed += ret;
+	}
+	CU_ASSERT_FATAL(num_freed == num);
+}
+
+static void queue_test_create_destroy_multi(void)
+{
+	odp_queue_capability_t capa;
+	odp_queue_param_t param_single;
+	odp_queue_param_t param[MAX_QUEUES];
+	odp_queue_t queue[MAX_QUEUES];
+	const char *name[MAX_QUEUES] = {NULL, "aaa", NULL, "bbb", "ccc", NULL, "ddd"};
+	uint32_t num_queues, num_created;
+
+	CU_ASSERT_FATAL(odp_queue_capability(&capa) == 0);
+	CU_ASSERT_FATAL(capa.plain.max_num != 0);
+
+	num_queues = capa.plain.max_num < MAX_QUEUES ? capa.plain.max_num : MAX_QUEUES;
+	for (uint32_t i = 0; i < num_queues; i++)
+		odp_queue_param_init(&param[i]);
+	odp_queue_param_init(&param_single);
+
+	/* Create queues using shared parameters */
+	num_created = queue_create_multi(name, &param_single, true, queue, num_queues);
+	CU_ASSERT(num_created == num_queues);
+	queue_destroy_multi(queue, num_created);
+
+	num_created = queue_create_multi(NULL, &param_single, true, queue, num_queues);
+	CU_ASSERT(num_created == num_queues);
+	queue_destroy_multi(queue, num_created);
+
+	/* Use separate parameters for each queue */
+	num_created = queue_create_multi(name, param, false, queue, num_queues);
+	CU_ASSERT(num_created == num_queues);
+	queue_destroy_multi(queue, num_created);
+
+	num_created = queue_create_multi(NULL, param, false, queue, num_queues);
+	CU_ASSERT(num_created == num_queues);
+	queue_destroy_multi(queue, num_created);
 }
 
 static void queue_test_mode(void)
@@ -1051,6 +1128,7 @@ odp_testinfo_t queue_suite[] = {
 	ODP_TEST_INFO(queue_test_param_init),
 	ODP_TEST_INFO(queue_test_mode),
 	ODP_TEST_INFO(queue_test_max_plain),
+	ODP_TEST_INFO(queue_test_create_destroy_multi),
 	ODP_TEST_INFO(queue_test_burst),
 	ODP_TEST_INFO(queue_test_burst_spmc),
 	ODP_TEST_INFO(queue_test_burst_mpsc),
