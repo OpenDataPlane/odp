@@ -1,5 +1,5 @@
 /* Copyright (c) 2015-2018, Linaro Limited
- * Copyright (c) 2021-2022, Nokia
+ * Copyright (c) 2021-2023, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:	BSD-3-Clause
@@ -10,6 +10,9 @@
 #include "classification.h"
 
 #define PMR_SET_NUM	5
+
+/* Limit handle array allocation from stack to about 256kB */
+#define MAX_HANDLES     (32 * 1024)
 
 static void test_defaults(uint8_t fill)
 {
@@ -66,13 +69,15 @@ static void cls_create_cos(void)
 
 static void cls_create_cos_max_common(odp_bool_t stats)
 {
-	uint32_t i;
+	uint32_t i, num;
 	odp_cls_cos_param_t cls_param;
 	odp_cls_capability_t capa;
 
 	CU_ASSERT_FATAL(odp_cls_capability(&capa) == 0);
 
-	uint32_t num = capa.max_cos;
+	num = capa.max_cos;
+	if (num > MAX_HANDLES)
+		num = MAX_HANDLES;
 
 	if (stats && capa.max_cos_stats < num)
 		num = capa.max_cos_stats;
@@ -212,6 +217,140 @@ static void cls_create_pmr_match(void)
 	odp_queue_destroy(default_queue);
 	odp_pool_destroy(default_pool);
 	odp_pktio_close(pktio);
+}
+
+/* Create maximum number of PMRs into the default CoS */
+static void cls_max_pmr_from_default_action(int drop)
+{
+	odp_cls_cos_param_t cos_param;
+	odp_queue_param_t queue_param;
+	odp_cls_capability_t capa;
+	odp_schedule_capability_t sched_capa;
+	odp_pmr_param_t pmr_param;
+	odp_pool_t pool;
+	odp_pktio_t pktio;
+	odp_cos_t default_cos;
+	uint32_t i, num_cos, num_pmr;
+	int ret;
+	uint32_t cos_created = 0;
+	uint32_t queue_created = 0;
+	uint32_t pmr_created = 0;
+	uint16_t val = 1024;
+	uint16_t mask = 0xffff;
+
+	CU_ASSERT_FATAL(odp_cls_capability(&capa) == 0);
+
+	CU_ASSERT_FATAL(odp_schedule_capability(&sched_capa) == 0);
+
+	pool = pool_create("pkt_pool");
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+
+	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED, pool, true);
+	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
+
+	num_cos = capa.max_cos;
+
+	if (num_cos > sched_capa.max_queues)
+		num_cos = sched_capa.max_queues;
+
+	if (num_cos > MAX_HANDLES)
+		num_cos = MAX_HANDLES;
+
+	CU_ASSERT_FATAL(num_cos > 1);
+
+	num_pmr = num_cos - 1;
+
+	odp_cos_t cos[num_cos];
+	odp_queue_t queue[num_cos];
+	odp_pmr_t pmr[num_pmr];
+
+	odp_queue_param_init(&queue_param);
+	queue_param.type = ODP_QUEUE_TYPE_SCHED;
+
+	odp_cls_cos_param_init(&cos_param);
+	if (drop)
+		cos_param.action = ODP_COS_ACTION_DROP;
+
+	for (i = 0; i < num_cos; i++) {
+		if (!drop) {
+			queue[i] = odp_queue_create(NULL, &queue_param);
+
+			if (queue[i] == ODP_QUEUE_INVALID) {
+				ODPH_ERR("odp_queue_create() failed %u / %u\n", i + 1, num_cos);
+				break;
+			}
+
+			cos_param.queue = queue[i];
+			queue_created++;
+		}
+
+		cos[i] = odp_cls_cos_create(NULL, &cos_param);
+
+		if (cos[i] == ODP_COS_INVALID) {
+			ODPH_ERR("odp_cls_cos_create() failed %u / %u\n", i + 1, num_cos);
+			break;
+		}
+
+		cos_created++;
+	}
+
+	if (!drop)
+		CU_ASSERT(queue_created == num_cos);
+
+	CU_ASSERT(cos_created == num_cos);
+
+	if (cos_created != num_cos)
+		goto destroy_cos;
+
+	default_cos = cos[0];
+
+	ret = odp_pktio_default_cos_set(pktio, default_cos);
+	CU_ASSERT_FATAL(ret == 0);
+
+	odp_cls_pmr_param_init(&pmr_param);
+	pmr_param.term = find_first_supported_l3_pmr();
+	pmr_param.match.value = &val;
+	pmr_param.match.mask = &mask;
+	pmr_param.val_sz = sizeof(val);
+
+	for (i = 0; i < num_pmr; i++) {
+		pmr[i] = odp_cls_pmr_create(&pmr_param, 1, default_cos, cos[i + 1]);
+
+		if (pmr[i] == ODP_PMR_INVALID)
+			break;
+
+		val++;
+		pmr_created++;
+	}
+
+	printf("\n    Number of CoS created: %u\n    Number of PMR created: %u\n", cos_created,
+	       pmr_created);
+
+	for (i = 0; i < pmr_created; i++)
+		CU_ASSERT(odp_cls_pmr_destroy(pmr[i]) == 0);
+
+	ret = odp_pktio_default_cos_set(pktio, ODP_COS_INVALID);
+	CU_ASSERT_FATAL(ret == 0);
+
+destroy_cos:
+	for (i = 0; i < cos_created; i++)
+		CU_ASSERT(odp_cos_destroy(cos[i]) == 0);
+
+	for (i = 0; i < queue_created; i++)
+		CU_ASSERT(odp_queue_destroy(queue[i]) == 0);
+
+	CU_ASSERT(odp_pktio_close(pktio) == 0);
+	CU_ASSERT(odp_pool_destroy(pool) == 0);
+}
+
+static void cls_max_pmr_from_default_drop(void)
+{
+	cls_max_pmr_from_default_action(1);
+}
+
+static void cls_max_pmr_from_default_enqueue(void)
+{
+	cls_max_pmr_from_default_action(0);
 }
 
 static void cls_cos_set_queue(void)
@@ -463,6 +602,8 @@ odp_testinfo_t classification_suite_basic[] = {
 	ODP_TEST_INFO(cls_create_cos_max_stats),
 	ODP_TEST_INFO(cls_destroy_cos),
 	ODP_TEST_INFO(cls_create_pmr_match),
+	ODP_TEST_INFO(cls_max_pmr_from_default_drop),
+	ODP_TEST_INFO(cls_max_pmr_from_default_enqueue),
 	ODP_TEST_INFO(cls_cos_set_queue),
 #if ODP_DEPRECATED_API
 	ODP_TEST_INFO(cls_cos_set_drop),
