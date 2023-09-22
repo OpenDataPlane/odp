@@ -1,5 +1,5 @@
 /* Copyright (c) 2015-2018, Linaro Limited
- * Copyright (c) 2020-2021, Nokia
+ * Copyright (c) 2020-2023, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:	BSD-3-Clause
@@ -531,7 +531,7 @@ void test_pktio_drop_cos(odp_bool_t enable_pktv)
 		CU_ASSERT((stop.errors - start.errors) == 0);
 }
 
-static int classification_check_queue_stats(void)
+static int check_queue_stats(void)
 {
 	odp_cls_capability_t capa;
 
@@ -544,7 +544,7 @@ static int classification_check_queue_stats(void)
 	return ODP_TEST_INACTIVE;
 }
 
-static void classification_test_queue_stats(odp_bool_t enable_pktv)
+static void cls_queue_stats(odp_bool_t enable_pktv)
 {
 	odp_cls_capability_t capa;
 	odp_cls_queue_stats_t stats_start;
@@ -595,14 +595,14 @@ static void classification_test_queue_stats(odp_bool_t enable_pktv)
 		CU_ASSERT(stats_stop.packets == 0);
 }
 
-static void classification_test_queue_stats_pkt(void)
+static void cls_queue_stats_pkt(void)
 {
-	classification_test_queue_stats(false);
+	cls_queue_stats(false);
 }
 
-static void classification_test_queue_stats_pktv(void)
+static void cls_queue_stats_pktv(void)
 {
-	classification_test_queue_stats(true);
+	cls_queue_stats(true);
 }
 
 void configure_pktio_error_cos(odp_bool_t enable_pktv)
@@ -678,7 +678,7 @@ void test_pktio_error_cos(odp_bool_t enable_pktv)
 	odp_packet_free(pkt);
 }
 
-static void classification_test_pktio_set_skip(void)
+static void cls_pktio_set_skip(void)
 {
 	int retval;
 	size_t offset = 5;
@@ -696,7 +696,7 @@ static void classification_test_pktio_set_skip(void)
 	CU_ASSERT(retval == 0);
 }
 
-static void classification_test_pktio_set_headroom(void)
+static void cls_pktio_set_headroom(void)
 {
 	size_t headroom;
 	int retval;
@@ -1000,7 +1000,7 @@ void test_pktio_pmr_composite_cos(odp_bool_t enable_pktv)
 	odp_packet_free(pkt);
 }
 
-static void classification_test_pktio_configure_common(odp_bool_t enable_pktv)
+static void cls_pktio_configure_common(odp_bool_t enable_pktv)
 {
 	odp_cls_capability_t capa;
 	int num_cos;
@@ -1049,17 +1049,17 @@ static void classification_test_pktio_configure_common(odp_bool_t enable_pktv)
 
 }
 
-static void classification_test_pktio_configure(void)
+static void cls_pktio_configure(void)
 {
-	classification_test_pktio_configure_common(false);
+	cls_pktio_configure_common(false);
 }
 
-static void classification_test_pktio_configure_pktv(void)
+static void cls_pktio_configure_pktv(void)
 {
-	classification_test_pktio_configure_common(true);
+	cls_pktio_configure_common(true);
 }
 
-static void classification_test_pktio_test_common(odp_bool_t enable_pktv)
+static void cls_pktio_test_common(odp_bool_t enable_pktv)
 {
 	/* Test Different CoS on the pktio interface */
 	if (tc.default_cos && TEST_DEFAULT)
@@ -1080,17 +1080,17 @@ static void classification_test_pktio_test_common(odp_bool_t enable_pktv)
 		test_pktio_pmr_composite_cos(enable_pktv);
 }
 
-static void classification_test_pktio_test(void)
+static void cls_pktio_test(void)
 {
-	classification_test_pktio_test_common(false);
+	cls_pktio_test_common(false);
 }
 
-static void classification_test_pktio_test_pktv(void)
+static void cls_pktio_test_pktv(void)
 {
-	classification_test_pktio_test_common(true);
+	cls_pktio_test_common(true);
 }
 
-static int classification_check_pktv(void)
+static int check_pktv(void)
 {
 	return pktv_config.enable ? ODP_TEST_ACTIVE : ODP_TEST_INACTIVE;
 }
@@ -1101,22 +1101,17 @@ static int check_capa_skip_offset(void)
 }
 
 odp_testinfo_t classification_suite[] = {
-	ODP_TEST_INFO_CONDITIONAL(classification_test_pktio_set_skip,
-				  check_capa_skip_offset),
-	ODP_TEST_INFO(classification_test_pktio_set_headroom),
-	ODP_TEST_INFO(classification_test_pktio_configure),
-	ODP_TEST_INFO(classification_test_pktio_test),
-	ODP_TEST_INFO_CONDITIONAL(classification_test_queue_stats_pkt,
-				  classification_check_queue_stats),
+	ODP_TEST_INFO_CONDITIONAL(cls_pktio_set_skip, check_capa_skip_offset),
+	ODP_TEST_INFO(cls_pktio_set_headroom),
+	ODP_TEST_INFO(cls_pktio_configure),
+	ODP_TEST_INFO(cls_pktio_test),
+	ODP_TEST_INFO_CONDITIONAL(cls_queue_stats_pkt, check_queue_stats),
 	ODP_TEST_INFO_NULL,
 };
 
 odp_testinfo_t classification_suite_pktv[] = {
-	ODP_TEST_INFO_CONDITIONAL(classification_test_pktio_configure_pktv,
-				  classification_check_pktv),
-	ODP_TEST_INFO_CONDITIONAL(classification_test_pktio_test_pktv,
-				  classification_check_pktv),
-	ODP_TEST_INFO_CONDITIONAL(classification_test_queue_stats_pktv,
-				  classification_check_queue_stats),
+	ODP_TEST_INFO_CONDITIONAL(cls_pktio_configure_pktv, check_pktv),
+	ODP_TEST_INFO_CONDITIONAL(cls_pktio_test_pktv, check_pktv),
+	ODP_TEST_INFO_CONDITIONAL(cls_queue_stats_pktv, check_queue_stats),
 	ODP_TEST_INFO_NULL,
 };
