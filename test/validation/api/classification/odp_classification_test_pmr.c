@@ -1,5 +1,5 @@
 /* Copyright (c) 2015-2018, Linaro Limited
- * Copyright (c) 2019, Nokia
+ * Copyright (c) 2019-2023, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:	BSD-3-Clause
@@ -107,7 +107,7 @@ int classification_suite_pmr_term(void)
 	return ret;
 }
 
-static void classification_test_pktin_classifier_flag(void)
+static void cls_pktin_classifier_flag(void)
 {
 	odp_packet_t pkt;
 	odph_tcphdr_t *tcp;
@@ -206,7 +206,7 @@ static void classification_test_pktin_classifier_flag(void)
 	odp_pktio_close(pktio);
 }
 
-static void _classification_test_pmr_term_tcp_dport(int num_pkt)
+static void cls_pmr_term_tcp_dport_n(int num_pkt)
 {
 	odp_packet_t pkt;
 	odph_tcphdr_t *tcp;
@@ -471,7 +471,7 @@ static void test_pmr(const odp_pmr_param_t *pmr_param, odp_packet_t pkt,
 	odp_pktio_close(pktio);
 }
 
-static void classification_test_pmr_term_tcp_sport(void)
+static void cls_pmr_term_tcp_sport(void)
 {
 	odp_packet_t pkt;
 	odph_tcphdr_t *tcp;
@@ -503,7 +503,7 @@ static void classification_test_pmr_term_tcp_sport(void)
 	test_pmr(&pmr_param, pkt, NO_MATCH);
 }
 
-static void classification_test_pmr_term_udp_dport(void)
+static void cls_pmr_term_udp_dport(void)
 {
 	odp_packet_t pkt;
 	odph_udphdr_t *udp;
@@ -538,7 +538,7 @@ static void classification_test_pmr_term_udp_dport(void)
 	test_pmr(&pmr_param, pkt, NO_MATCH);
 }
 
-static void classification_test_pmr_term_udp_sport(void)
+static void cls_pmr_term_udp_sport(void)
 {
 	odp_packet_t pkt;
 	odph_udphdr_t *udp;
@@ -573,7 +573,7 @@ static void classification_test_pmr_term_udp_sport(void)
 	test_pmr(&pmr_param, pkt, NO_MATCH);
 }
 
-static void classification_test_pmr_term_proto(odp_bool_t ipv6)
+static void cls_pmr_term_proto_ip(odp_bool_t ipv6)
 {
 	odp_packet_t pkt;
 	uint8_t val;
@@ -605,17 +605,17 @@ static void classification_test_pmr_term_proto(odp_bool_t ipv6)
 	test_pmr(&pmr_param, pkt, NO_MATCH);
 }
 
-static void classification_test_pmr_term_ipv4_proto(void)
+static void cls_pmr_term_ipv4_proto(void)
 {
-	classification_test_pmr_term_proto(TEST_IPV4);
+	cls_pmr_term_proto_ip(TEST_IPV4);
 }
 
-static void classification_test_pmr_term_ipv6_proto(void)
+static void cls_pmr_term_ipv6_proto(void)
 {
-	classification_test_pmr_term_proto(TEST_IPV6);
+	cls_pmr_term_proto_ip(TEST_IPV6);
 }
 
-static void classification_test_pmr_term_dscp(odp_bool_t ipv6)
+static void cls_pmr_term_dscp_ip(odp_bool_t ipv6)
 {
 	odp_packet_t pkt;
 	uint8_t val;
@@ -648,17 +648,17 @@ static void classification_test_pmr_term_dscp(odp_bool_t ipv6)
 	test_pmr(&pmr_param, pkt, NO_MATCH);
 }
 
-static void classification_test_pmr_term_ipv4_dscp(void)
+static void cls_pmr_term_ipv4_dscp(void)
 {
-	classification_test_pmr_term_dscp(TEST_IPV4);
+	cls_pmr_term_dscp_ip(TEST_IPV4);
 }
 
-static void classification_test_pmr_term_ipv6_dscp(void)
+static void cls_pmr_term_ipv6_dscp(void)
 {
-	classification_test_pmr_term_dscp(TEST_IPV6);
+	cls_pmr_term_dscp_ip(TEST_IPV6);
 }
 
-static void classification_test_pmr_term_dmac(void)
+static void cls_pmr_term_dmac(void)
 {
 	odp_packet_t pkt;
 	uint32_t seqno;
@@ -763,7 +763,7 @@ static void classification_test_pmr_term_dmac(void)
 	odp_pktio_close(pktio);
 }
 
-static void classification_test_pmr_term_packet_len(void)
+static void cls_pmr_term_packet_len(void)
 {
 	odp_packet_t pkt;
 	uint32_t val;
@@ -796,7 +796,7 @@ static void classification_test_pmr_term_packet_len(void)
 	test_pmr(&pmr_param, pkt, NO_MATCH);
 }
 
-static void classification_test_pmr_term_vlan_id_0(void)
+static void cls_pmr_term_vlan_id_0(void)
 {
 	odp_packet_t pkt;
 	uint16_t val;
@@ -831,7 +831,7 @@ static void classification_test_pmr_term_vlan_id_0(void)
 	test_pmr(&pmr_param, pkt, NO_MATCH);
 }
 
-static void classification_test_pmr_term_vlan_id_x(void)
+static void cls_pmr_term_vlan_id_x(void)
 {
 	odp_packet_t pkt;
 	uint16_t val;
@@ -879,7 +879,7 @@ static void classification_test_pmr_term_vlan_id_x(void)
 	test_pmr(&pmr_param, pkt, NO_MATCH);
 }
 
-static void classification_test_pmr_term_vlan_pcp_0(void)
+static void cls_pmr_term_vlan_pcp_0(void)
 {
 	odp_packet_t pkt;
 	uint8_t val;
@@ -917,7 +917,7 @@ static void classification_test_pmr_term_vlan_pcp_0(void)
 	test_pmr(&pmr_param, pkt, NO_MATCH);
 }
 
-static void classification_test_pmr_term_eth_type_0(void)
+static void cls_pmr_term_eth_type_0(void)
 {
 	odp_packet_t pkt;
 	uint16_t val;
@@ -947,7 +947,7 @@ static void classification_test_pmr_term_eth_type_0(void)
 	test_pmr(&pmr_param, pkt, NO_MATCH);
 }
 
-static void classification_test_pmr_term_eth_type_x(void)
+static void cls_pmr_term_eth_type_x(void)
 {
 	odp_packet_t pkt;
 	uint16_t val;
@@ -995,7 +995,7 @@ static void classification_test_pmr_term_eth_type_x(void)
 	test_pmr(&pmr_param, pkt, NO_MATCH);
 }
 
-static void classification_test_pmr_pool_set(void)
+static void cls_pmr_pool_set(void)
 {
 	odp_packet_t pkt;
 	uint32_t seqno;
@@ -1097,7 +1097,7 @@ static void classification_test_pmr_pool_set(void)
 	odp_pktio_close(pktio);
 }
 
-static void classification_test_pmr_queue_set(void)
+static void cls_pmr_queue_set(void)
 {
 	odp_packet_t pkt;
 	uint32_t seqno;
@@ -1244,17 +1244,17 @@ static void test_pmr_term_ipv4_addr(int dst)
 	test_pmr(&pmr_param, pkt, NO_MATCH);
 }
 
-static void classification_test_pmr_term_ipv4_saddr(void)
+static void cls_pmr_term_ipv4_saddr(void)
 {
 	test_pmr_term_ipv4_addr(0);
 }
 
-static void classification_test_pmr_term_ipv4_daddr(void)
+static void cls_pmr_term_ipv4_daddr(void)
 {
 	test_pmr_term_ipv4_addr(1);
 }
 
-static void classification_test_pmr_term_ipv6daddr(void)
+static void cls_pmr_term_ipv6daddr(void)
 {
 	odp_packet_t pkt;
 	odp_pmr_param_t pmr_param;
@@ -1290,7 +1290,7 @@ static void classification_test_pmr_term_ipv6daddr(void)
 	test_pmr(&pmr_param, pkt, NO_MATCH);
 }
 
-static void classification_test_pmr_term_ipv6saddr(void)
+static void cls_pmr_term_ipv6saddr(void)
 {
 	odp_packet_t pkt;
 	odp_pmr_param_t pmr_param;
@@ -1325,14 +1325,14 @@ static void classification_test_pmr_term_ipv6saddr(void)
 	test_pmr(&pmr_param, pkt, NO_MATCH);
 }
 
-static void classification_test_pmr_term_tcp_dport(void)
+static void cls_pmr_term_tcp_dport(void)
 {
-	_classification_test_pmr_term_tcp_dport(2);
+	cls_pmr_term_tcp_dport_n(2);
 }
 
-static void classification_test_pmr_term_tcp_dport_multi(void)
+static void cls_pmr_term_tcp_dport_multi(void)
 {
-	_classification_test_pmr_term_tcp_dport(SHM_PKT_NUM_BUFS / 4);
+	cls_pmr_term_tcp_dport_n(SHM_PKT_NUM_BUFS / 4);
 }
 
 static void test_pmr_term_custom(int custom_l3)
@@ -1631,7 +1631,7 @@ static void test_pmr_series(const int num_udp, int marking)
 	odp_pktio_close(pktio);
 }
 
-static void classification_test_pmr_term_sctp(bool is_dport)
+static void cls_pmr_term_sctp_port(bool is_dport)
 {
 	odp_packet_t pkt;
 	odph_sctphdr_t *sctp;
@@ -1680,17 +1680,17 @@ static void classification_test_pmr_term_sctp(bool is_dport)
 	test_pmr(&pmr_param, pkt, NO_MATCH);
 }
 
-static void classification_test_pmr_term_sctp_sport(void)
+static void cls_pmr_term_sctp_sport(void)
 {
-	classification_test_pmr_term_sctp(0);
+	cls_pmr_term_sctp_port(0);
 }
 
-static void classification_test_pmr_term_sctp_dport(void)
+static void cls_pmr_term_sctp_dport(void)
 {
-	classification_test_pmr_term_sctp(1);
+	cls_pmr_term_sctp_port(1);
 }
 
-static void classification_test_pmr_term_icmp_type(void)
+static void cls_pmr_term_icmp_type(void)
 {
 	odp_packet_t pkt;
 	odph_icmphdr_t *icmp;
@@ -1725,7 +1725,7 @@ static void classification_test_pmr_term_icmp_type(void)
 	test_pmr(&pmr_param, pkt, NO_MATCH);
 }
 
-static void classification_test_pmr_term_icmp_code(void)
+static void cls_pmr_term_icmp_code(void)
 {
 	odp_packet_t pkt;
 	odph_icmphdr_t *icmp;
@@ -1760,7 +1760,7 @@ static void classification_test_pmr_term_icmp_code(void)
 	test_pmr(&pmr_param, pkt, NO_MATCH);
 }
 
-static void classification_test_pmr_term_icmp_id(void)
+static void cls_pmr_term_icmp_id(void)
 {
 	odp_packet_t pkt;
 	odph_icmphdr_t *icmp;
@@ -1795,7 +1795,7 @@ static void classification_test_pmr_term_icmp_id(void)
 	test_pmr(&pmr_param, pkt, NO_MATCH);
 }
 
-static void classification_test_pmr_term_gtpu_teid(void)
+static void cls_pmr_term_gtpu_teid(void)
 {
 	odp_packet_t pkt;
 	odph_gtphdr_t *gtpu;
@@ -1857,7 +1857,7 @@ static void classification_test_pmr_term_gtpu_teid(void)
 	test_pmr(&pmr_param, pkt, NO_MATCH);
 }
 
-static void classification_test_pmr_term_igmp_grpaddr(void)
+static void cls_pmr_term_igmp_grpaddr(void)
 {
 	odp_packet_t pkt;
 	odph_igmphdr_t *igmp;
@@ -1893,27 +1893,27 @@ static void classification_test_pmr_term_igmp_grpaddr(void)
 	test_pmr(&pmr_param, pkt, NO_MATCH);
 }
 
-static void classification_test_pmr_serial(void)
+static void cls_pmr_serial(void)
 {
 	test_pmr_series(1, 0);
 }
 
-static void classification_test_pmr_parallel(void)
+static void cls_pmr_parallel(void)
 {
 	test_pmr_series(MAX_NUM_UDP, 0);
 }
 
-static void classification_test_pmr_marking(void)
+static void cls_pmr_marking(void)
 {
 	test_pmr_series(MAX_NUM_UDP, 1);
 }
 
-static void classification_test_pmr_term_custom_frame(void)
+static void cls_pmr_term_custom_frame(void)
 {
 	test_pmr_term_custom(0);
 }
 
-static void classification_test_pmr_term_custom_l3(void)
+static void cls_pmr_term_custom_l3(void)
 {
 	test_pmr_term_custom(1);
 }
@@ -1954,7 +1954,7 @@ static void test_pmr_term_ipsec_spi_ah(odp_bool_t is_ipv6)
 	test_pmr(&pmr_param, pkt, NO_MATCH);
 }
 
-static void classification_test_pmr_term_ipsec_spi_ah_ipv4(void)
+static void cls_pmr_term_ipsec_spi_ah_ipv4(void)
 {
 	test_pmr_term_ipsec_spi_ah(TEST_IPV4);
 }
@@ -1995,17 +1995,17 @@ static void test_pmr_term_ipsec_spi_esp(odp_bool_t is_ipv6)
 	test_pmr(&pmr_param, pkt, NO_MATCH);
 }
 
-static void classification_test_pmr_term_ipsec_spi_esp_ipv4(void)
+static void cls_pmr_term_ipsec_spi_esp_ipv4(void)
 {
 	test_pmr_term_ipsec_spi_esp(TEST_IPV4);
 }
 
-static void classification_test_pmr_term_ipsec_spi_ah_ipv6(void)
+static void cls_pmr_term_ipsec_spi_ah_ipv6(void)
 {
 	test_pmr_term_ipsec_spi_ah(TEST_IPV6);
 }
 
-static void classification_test_pmr_term_ipsec_spi_esp_ipv6(void)
+static void cls_pmr_term_ipsec_spi_esp_ipv6(void)
 {
 	test_pmr_term_ipsec_spi_esp(TEST_IPV6);
 }
@@ -2170,81 +2170,44 @@ static int check_capa_igmp_grpaddr(void)
 }
 
 odp_testinfo_t classification_suite_pmr[] = {
-	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_term_tcp_dport,
-				  check_capa_tcp_dport),
-	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_term_tcp_sport,
-				  check_capa_tcp_sport),
-	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_term_udp_dport,
-				  check_capa_udp_dport),
-	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_term_udp_sport,
-				  check_capa_udp_sport),
-	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_term_gtpu_teid,
-				  check_capa_gtpu_teid),
-	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_term_igmp_grpaddr,
-				  check_capa_igmp_grpaddr),
-	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_term_sctp_sport,
-				  check_capa_sctp_sport),
-	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_term_sctp_dport,
-				  check_capa_sctp_dport),
-	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_term_icmp_type,
-				  check_capa_icmp_type),
-	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_term_icmp_code,
-				  check_capa_icmp_code),
-	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_term_icmp_id,
-				  check_capa_icmp_id),
-	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_term_ipv4_proto,
-				  check_capa_ip_proto),
-	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_term_ipv6_proto,
-				  check_capa_ip_proto),
-	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_term_ipv4_dscp,
-				  check_capa_ip_dscp),
-	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_term_ipv6_dscp,
-				  check_capa_ip_dscp),
-	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_term_dmac,
-				  check_capa_dmac),
-	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_pool_set,
-				  check_capa_ip_proto),
-	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_queue_set,
-				  check_capa_ip_proto),
-	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_term_ipv4_saddr,
-				  check_capa_ipv4_saddr),
-	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_term_ipv4_daddr,
-				  check_capa_ipv4_daddr),
-	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_term_ipv6saddr,
-				  check_capa_ipv6_saddr),
-	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_term_ipv6daddr,
-				  check_capa_ipv6_daddr),
-	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_term_packet_len,
-				  check_capa_packet_len),
-	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_term_vlan_id_0,
-				  check_capa_vlan_id_0),
-	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_term_vlan_id_x,
-				  check_capa_vlan_id_x),
-	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_term_vlan_pcp_0,
-				  check_capa_vlan_pcp_0),
-	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_term_eth_type_0,
-				  check_capa_ethtype_0),
-	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_term_eth_type_x,
-				  check_capa_ethtype_x),
-	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_term_custom_frame,
-				  check_capa_custom_frame),
-	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_term_custom_l3,
-				  check_capa_custom_l3),
-	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_term_ipsec_spi_ah_ipv4,
-				  check_capa_ipsec_spi),
-	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_term_ipsec_spi_esp_ipv4,
-				  check_capa_ipsec_spi),
-	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_term_ipsec_spi_ah_ipv6,
-				  check_capa_ipsec_spi),
-	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_term_ipsec_spi_esp_ipv6,
-				  check_capa_ipsec_spi),
-	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_serial,
-				  check_capa_pmr_series),
-	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_parallel,
-				  check_capa_pmr_series),
-	ODP_TEST_INFO(classification_test_pktin_classifier_flag),
-	ODP_TEST_INFO(classification_test_pmr_term_tcp_dport_multi),
-	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_marking,
-				  check_capa_pmr_marking),
+	ODP_TEST_INFO_CONDITIONAL(cls_pmr_term_tcp_dport, check_capa_tcp_dport),
+	ODP_TEST_INFO_CONDITIONAL(cls_pmr_term_tcp_sport, check_capa_tcp_sport),
+	ODP_TEST_INFO_CONDITIONAL(cls_pmr_term_udp_dport, check_capa_udp_dport),
+	ODP_TEST_INFO_CONDITIONAL(cls_pmr_term_udp_sport, check_capa_udp_sport),
+	ODP_TEST_INFO_CONDITIONAL(cls_pmr_term_gtpu_teid, check_capa_gtpu_teid),
+	ODP_TEST_INFO_CONDITIONAL(cls_pmr_term_igmp_grpaddr, check_capa_igmp_grpaddr),
+	ODP_TEST_INFO_CONDITIONAL(cls_pmr_term_sctp_sport, check_capa_sctp_sport),
+	ODP_TEST_INFO_CONDITIONAL(cls_pmr_term_sctp_dport, check_capa_sctp_dport),
+	ODP_TEST_INFO_CONDITIONAL(cls_pmr_term_icmp_type, check_capa_icmp_type),
+	ODP_TEST_INFO_CONDITIONAL(cls_pmr_term_icmp_code, check_capa_icmp_code),
+	ODP_TEST_INFO_CONDITIONAL(cls_pmr_term_icmp_id, check_capa_icmp_id),
+	ODP_TEST_INFO_CONDITIONAL(cls_pmr_term_ipv4_proto, check_capa_ip_proto),
+	ODP_TEST_INFO_CONDITIONAL(cls_pmr_term_ipv6_proto, check_capa_ip_proto),
+	ODP_TEST_INFO_CONDITIONAL(cls_pmr_term_ipv4_dscp, check_capa_ip_dscp),
+	ODP_TEST_INFO_CONDITIONAL(cls_pmr_term_ipv6_dscp, check_capa_ip_dscp),
+	ODP_TEST_INFO_CONDITIONAL(cls_pmr_term_dmac, check_capa_dmac),
+	ODP_TEST_INFO_CONDITIONAL(cls_pmr_pool_set, check_capa_ip_proto),
+	ODP_TEST_INFO_CONDITIONAL(cls_pmr_queue_set, check_capa_ip_proto),
+	ODP_TEST_INFO_CONDITIONAL(cls_pmr_term_ipv4_saddr, check_capa_ipv4_saddr),
+	ODP_TEST_INFO_CONDITIONAL(cls_pmr_term_ipv4_daddr, check_capa_ipv4_daddr),
+	ODP_TEST_INFO_CONDITIONAL(cls_pmr_term_ipv6saddr, check_capa_ipv6_saddr),
+	ODP_TEST_INFO_CONDITIONAL(cls_pmr_term_ipv6daddr, check_capa_ipv6_daddr),
+	ODP_TEST_INFO_CONDITIONAL(cls_pmr_term_packet_len, check_capa_packet_len),
+	ODP_TEST_INFO_CONDITIONAL(cls_pmr_term_vlan_id_0, check_capa_vlan_id_0),
+	ODP_TEST_INFO_CONDITIONAL(cls_pmr_term_vlan_id_x, check_capa_vlan_id_x),
+	ODP_TEST_INFO_CONDITIONAL(cls_pmr_term_vlan_pcp_0, check_capa_vlan_pcp_0),
+	ODP_TEST_INFO_CONDITIONAL(cls_pmr_term_eth_type_0, check_capa_ethtype_0),
+	ODP_TEST_INFO_CONDITIONAL(cls_pmr_term_eth_type_x, check_capa_ethtype_x),
+	ODP_TEST_INFO_CONDITIONAL(cls_pmr_term_custom_frame, check_capa_custom_frame),
+	ODP_TEST_INFO_CONDITIONAL(cls_pmr_term_custom_l3, check_capa_custom_l3),
+	ODP_TEST_INFO_CONDITIONAL(cls_pmr_term_ipsec_spi_ah_ipv4, check_capa_ipsec_spi),
+	ODP_TEST_INFO_CONDITIONAL(cls_pmr_term_ipsec_spi_esp_ipv4, check_capa_ipsec_spi),
+	ODP_TEST_INFO_CONDITIONAL(cls_pmr_term_ipsec_spi_ah_ipv6, check_capa_ipsec_spi),
+	ODP_TEST_INFO_CONDITIONAL(cls_pmr_term_ipsec_spi_esp_ipv6, check_capa_ipsec_spi),
+	ODP_TEST_INFO_CONDITIONAL(cls_pmr_serial, check_capa_pmr_series),
+	ODP_TEST_INFO_CONDITIONAL(cls_pmr_parallel, check_capa_pmr_series),
+	ODP_TEST_INFO(cls_pktin_classifier_flag),
+	ODP_TEST_INFO(cls_pmr_term_tcp_dport_multi),
+	ODP_TEST_INFO_CONDITIONAL(cls_pmr_marking, check_capa_pmr_marking),
 	ODP_TEST_INFO_NULL,
 };

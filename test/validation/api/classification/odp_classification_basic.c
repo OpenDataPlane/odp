@@ -31,13 +31,13 @@ static void test_defaults(uint8_t fill)
 	CU_ASSERT_EQUAL(pmr_param.range_term, false);
 }
 
-static void classification_test_default_values(void)
+static void cls_default_values(void)
 {
 	test_defaults(0);
 	test_defaults(0xff);
 }
 
-static void classification_test_create_cos(void)
+static void cls_create_cos(void)
 {
 	odp_cos_t cos;
 	odp_cls_cos_param_t cls_param;
@@ -64,7 +64,7 @@ static void classification_test_create_cos(void)
 	odp_queue_destroy(queue);
 }
 
-static void classification_test_create_cos_max_common(odp_bool_t stats)
+static void cls_create_cos_max_common(odp_bool_t stats)
 {
 	uint32_t i;
 	odp_cls_cos_param_t cls_param;
@@ -97,17 +97,17 @@ static void classification_test_create_cos_max_common(odp_bool_t stats)
 		CU_ASSERT(!odp_cos_destroy(cos[j]));
 }
 
-static void classification_test_create_cos_max(void)
+static void cls_create_cos_max(void)
 {
-	classification_test_create_cos_max_common(false);
+	cls_create_cos_max_common(false);
 }
 
-static void classification_test_create_cos_max_stats(void)
+static void cls_create_cos_max_stats(void)
 {
-	classification_test_create_cos_max_common(true);
+	cls_create_cos_max_common(true);
 }
 
-static void classification_test_destroy_cos(void)
+static void cls_destroy_cos(void)
 {
 	odp_cos_t cos;
 	char name[ODP_COS_NAME_LEN];
@@ -141,7 +141,7 @@ static void classification_test_destroy_cos(void)
 	odp_queue_destroy(queue);
 }
 
-static void classification_test_create_pmr_match(void)
+static void cls_create_pmr_match(void)
 {
 	odp_pmr_t pmr;
 	uint16_t val;
@@ -214,7 +214,7 @@ static void classification_test_create_pmr_match(void)
 	odp_pktio_close(pktio);
 }
 
-static void classification_test_cos_set_queue(void)
+static void cls_cos_set_queue(void)
 {
 	int retval;
 	char cosname[ODP_COS_NAME_LEN];
@@ -259,7 +259,7 @@ static void classification_test_cos_set_queue(void)
 	odp_pool_destroy(pool);
 }
 
-static void classification_test_cos_set_pool(void)
+static void cls_cos_set_pool(void)
 {
 	int retval;
 	char cosname[ODP_COS_NAME_LEN];
@@ -302,7 +302,7 @@ static void classification_test_cos_set_pool(void)
 
 #if ODP_DEPRECATED_API
 
-static void classification_test_cos_set_drop(void)
+static void cls_cos_set_drop(void)
 {
 	int retval;
 	char cosname[ODP_COS_NAME_LEN];
@@ -339,7 +339,7 @@ static void classification_test_cos_set_drop(void)
 
 #endif
 
-static void classification_test_pmr_composite_create(void)
+static void cls_pmr_composite_create(void)
 {
 	odp_pmr_t pmr_composite;
 	int retval;
@@ -413,7 +413,7 @@ static void classification_test_pmr_composite_create(void)
 	odp_pktio_close(pktio);
 }
 
-static void classification_test_create_cos_with_hash_queues(void)
+static void cls_create_cos_with_hash_queues(void)
 {
 	odp_pool_t pool;
 	odp_cls_capability_t capa;
@@ -457,19 +457,18 @@ static int check_capa_cos_hashing(void)
 }
 
 odp_testinfo_t classification_suite_basic[] = {
-	ODP_TEST_INFO(classification_test_default_values),
-	ODP_TEST_INFO(classification_test_create_cos),
-	ODP_TEST_INFO(classification_test_create_cos_max),
-	ODP_TEST_INFO(classification_test_create_cos_max_stats),
-	ODP_TEST_INFO(classification_test_destroy_cos),
-	ODP_TEST_INFO(classification_test_create_pmr_match),
-	ODP_TEST_INFO(classification_test_cos_set_queue),
+	ODP_TEST_INFO(cls_default_values),
+	ODP_TEST_INFO(cls_create_cos),
+	ODP_TEST_INFO(cls_create_cos_max),
+	ODP_TEST_INFO(cls_create_cos_max_stats),
+	ODP_TEST_INFO(cls_destroy_cos),
+	ODP_TEST_INFO(cls_create_pmr_match),
+	ODP_TEST_INFO(cls_cos_set_queue),
 #if ODP_DEPRECATED_API
-	ODP_TEST_INFO(classification_test_cos_set_drop),
+	ODP_TEST_INFO(cls_cos_set_drop),
 #endif
-	ODP_TEST_INFO(classification_test_cos_set_pool),
-	ODP_TEST_INFO(classification_test_pmr_composite_create),
-	ODP_TEST_INFO_CONDITIONAL(classification_test_create_cos_with_hash_queues,
-				  check_capa_cos_hashing),
+	ODP_TEST_INFO(cls_cos_set_pool),
+	ODP_TEST_INFO(cls_pmr_composite_create),
+	ODP_TEST_INFO_CONDITIONAL(cls_create_cos_with_hash_queues, check_capa_cos_hashing),
 	ODP_TEST_INFO_NULL,
 };
