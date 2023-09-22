@@ -468,6 +468,66 @@ static void timer_test_timeout_pool_alloc(void)
 	CU_ASSERT(odp_pool_destroy(pool) == 0);
 }
 
+static void timer_test_timeout_pool_alloc_multi(void)
+{
+	odp_pool_capability_t capa;
+	odp_pool_t pool;
+	odp_pool_param_t params;
+	uint32_t num_timeouts = 1000;
+	uint32_t num_allocated = 0;
+	uint32_t num_freed = 0;
+	uint32_t num_retries = 0;
+
+	CU_ASSERT_FATAL(!odp_pool_capability(&capa));
+
+	if (capa.tmo.max_num && capa.tmo.max_num < num_timeouts)
+		num_timeouts = capa.tmo.max_num;
+
+	odp_pool_param_init(&params);
+	params.type    = ODP_POOL_TIMEOUT;
+	params.tmo.num = num_timeouts;
+
+	pool = odp_pool_create("timeout_pool_alloc_multi", &params);
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+
+	odp_timeout_t tmo[num_timeouts];
+
+	do {
+		int ret;
+		int num = (num_timeouts - num_allocated) / 2;
+
+		if (num < 1)
+			num = 1;
+
+		ret = odp_timeout_alloc_multi(pool, &tmo[num_allocated], num);
+		if (ret < 0) {
+			CU_FAIL("Timeout alloc multi failed");
+			break;
+		}
+		CU_ASSERT_FATAL(ret <=  num);
+
+		num_retries = (ret == 0) ? num_retries + 1 : 0;
+		num_allocated += ret;
+	} while (num_allocated < num_timeouts && num_retries < 100);
+	CU_ASSERT(num_allocated == num_timeouts)
+
+	if (num_allocated) {
+		do {
+			int num = num_allocated / 2;
+
+			if (num < 1)
+				num = 1;
+
+			odp_timeout_free_multi(&tmo[num_freed], num);
+
+			num_freed += num;
+			num_allocated -= num;
+		} while (num_allocated);
+	}
+
+	CU_ASSERT(odp_pool_destroy(pool) == 0);
+}
+
 static void timer_test_timeout_from_event(void)
 {
 	odp_pool_t pool;
@@ -3105,6 +3165,7 @@ odp_testinfo_t timer_suite[] = {
 	ODP_TEST_INFO(timer_test_capa),
 	ODP_TEST_INFO(timer_test_param_init),
 	ODP_TEST_INFO(timer_test_timeout_pool_alloc),
+	ODP_TEST_INFO(timer_test_timeout_pool_alloc_multi),
 	ODP_TEST_INFO(timer_test_timeout_from_event),
 	ODP_TEST_INFO(timer_test_timeout_pool_free),
 	ODP_TEST_INFO(timer_test_timeout_user_area),
