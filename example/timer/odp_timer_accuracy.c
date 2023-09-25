@@ -304,7 +304,7 @@ static int single_shot_params(test_global_t *test_global, odp_timer_pool_param_t
 	uint64_t res_ns, res_hz;
 	uint64_t max_res_ns, max_res_hz;
 	uint64_t period_ns = test_global->opt.period_ns;
-	uint64_t num_tmo = test_global->opt.num;
+	uint64_t num_tmo = test_global->opt.num + test_global->opt.num_warmup;
 	uint64_t offset_ns = test_global->opt.offset_ns;
 	enum mode_e mode = test_global->opt.mode;
 
@@ -482,8 +482,8 @@ static int start_timers(test_global_t *test_global)
 	mode = test_global->opt.mode;
 	alloc_timers = test_global->alloc_timers;
 	tot_timers = test_global->tot_timers;
-	num_tmo = test_global->opt.num;
 	num_warmup = test_global->opt.num_warmup;
+	num_tmo = num_warmup + test_global->opt.num;
 	burst = test_global->opt.burst;
 	burst_gap = test_global->opt.burst_gap;
 	period_ns = test_global->opt.period_ns;
@@ -762,7 +762,7 @@ static void print_nsec_error(const char *str, int64_t nsec, double res_ns,
 static void print_stat(test_global_t *test_global)
 {
 	uint64_t i;
-	uint64_t tot_timers = test_global->tot_timers;
+	uint64_t tot_timers = test_global->tot_timers - test_global->warmup_timers;
 	test_stat_t *stat = &test_global->stat;
 	test_log_t *log = test_global->log;
 	double res_ns = test_global->res_ns;
@@ -784,15 +784,13 @@ static void print_stat(test_global_t *test_global)
 
 		fprintf(file, "   Timer      tmo(ns)   diff(ns)\n");
 
-		for (i = test_global->warmup_timers; i < tot_timers; i++) {
+		for (i = 0; i < tot_timers; i++) {
 			fprintf(file, "%8" PRIu64 " %12" PRIu64 " %10"
 				PRIi64 "\n", i, log[i].tmo_ns, log[i].diff_ns);
 		}
 
 		fprintf(file, "\n");
 	}
-
-	tot_timers -= test_global->warmup_timers;
 
 	printf("\nTest results:\n");
 	printf("  num after:  %12" PRIu64 "  /  %.2f%%\n",
@@ -898,9 +896,13 @@ static void run_test(test_global_t *test_global)
 	double period_dbl = test_global->period_dbl;
 	odp_timer_pool_t tp = test_global->timer_pool;
 
+	memset(stat, 0, sizeof(*stat));
+	stat->nsec_before_min = UINT64_MAX;
+	stat->nsec_after_min = UINT64_MAX;
+
 	num      = 0;
 	next_tmo = 1;
-	num_tmo  = test_global->opt.num;
+	num_tmo  = test_global->opt.num_warmup + test_global->opt.num;
 	burst    = test_global->opt.burst;
 	tot_timers = test_global->tot_timers;
 
@@ -950,48 +952,44 @@ static void run_test(test_global_t *test_global)
 			ctx->count++;
 		}
 
-		if (i == test_global->warmup_timers) {
-			memset(stat, 0, sizeof(*stat));
-			stat->nsec_before_min = UINT64_MAX;
-			stat->nsec_after_min = UINT64_MAX;
-		}
+		if (i >= test_global->warmup_timers) {
+			ctx->nsec_final = (int64_t)time_ns - (int64_t)tmo_ns;
 
-		ctx->nsec_final = (int64_t)time_ns - (int64_t)tmo_ns;
-
-		if (log)
-			log[i].tmo_ns = tmo_ns;
-
-		if (time_ns > tmo_ns) {
-			diff_ns = time_ns - tmo_ns;
-			stat->num_after++;
-			stat->nsec_after_sum += diff_ns;
-			if (diff_ns < stat->nsec_after_min) {
-				stat->nsec_after_min = diff_ns;
-				stat->nsec_after_min_idx = i;
-			}
-			if (diff_ns > stat->nsec_after_max) {
-				stat->nsec_after_max = diff_ns;
-				stat->nsec_after_max_idx = i;
-			}
 			if (log)
-				log[i].diff_ns = diff_ns;
+				log[i].tmo_ns = tmo_ns;
 
-		} else if (time_ns < tmo_ns) {
-			diff_ns = tmo_ns - time_ns;
-			stat->num_before++;
-			stat->nsec_before_sum += diff_ns;
-			if (diff_ns < stat->nsec_before_min) {
-				stat->nsec_before_min = diff_ns;
-				stat->nsec_before_min_idx = i;
+			if (time_ns > tmo_ns) {
+				diff_ns = time_ns - tmo_ns;
+				stat->num_after++;
+				stat->nsec_after_sum += diff_ns;
+				if (diff_ns < stat->nsec_after_min) {
+					stat->nsec_after_min = diff_ns;
+					stat->nsec_after_min_idx = i;
+				}
+				if (diff_ns > stat->nsec_after_max) {
+					stat->nsec_after_max = diff_ns;
+					stat->nsec_after_max_idx = i;
+				}
+				if (log)
+					log[i].diff_ns = diff_ns;
+
+			} else if (time_ns < tmo_ns) {
+				diff_ns = tmo_ns - time_ns;
+				stat->num_before++;
+				stat->nsec_before_sum += diff_ns;
+				if (diff_ns < stat->nsec_before_min) {
+					stat->nsec_before_min = diff_ns;
+					stat->nsec_before_min_idx = i;
+				}
+				if (diff_ns > stat->nsec_before_max) {
+					stat->nsec_before_max = diff_ns;
+					stat->nsec_before_max_idx = i;
+				}
+				if (log)
+					log[i].diff_ns = -diff_ns;
+			} else {
+				stat->num_exact++;
 			}
-			if (diff_ns > stat->nsec_before_max) {
-				stat->nsec_before_max = diff_ns;
-				stat->nsec_before_max_idx = i;
-			}
-			if (log)
-				log[i].diff_ns = -diff_ns;
-		} else {
-			stat->num_exact++;
 		}
 
 		if ((mode == MODE_RESTART_ABS || mode == MODE_RESTART_REL) &&
@@ -1031,10 +1029,12 @@ static void run_test(test_global_t *test_global)
 				start_param.tick = tick;
 
 				ret = odp_timer_start(tim, &start_param);
-				if (ret == ODP_TIMER_TOO_NEAR)
-					stat->num_too_near++;
-				else
+				if (ret == ODP_TIMER_TOO_NEAR) {
+					if (i >= test_global->warmup_timers)
+						stat->num_too_near++;
+				} else {
 					break;
+				}
 			}
 
 			if (ret != ODP_TIMER_SUCCESS) {
