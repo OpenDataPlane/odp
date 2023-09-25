@@ -28,12 +28,11 @@ extern "C" {
 /**
  * Queue create
  *
- * Create a queue according to the queue parameters. Queue type is specified by
- * queue parameter 'type'. Use odp_queue_param_init() to initialize parameters
- * into their default values. Default values are also used when 'param' pointer
- * is NULL. The default queue type is ODP_QUEUE_TYPE_PLAIN. The use of queue
- * name is optional. Unique names are not required. However, odp_queue_lookup()
- * returns only a single matching queue.
+ * Create a queue according to the queue parameters. The use of queue name is
+ * optional. Unique names are not required. However, odp_queue_lookup() returns
+ * only a single matching queue. Use odp_queue_param_init() to initialize
+ * parameters into their default values. Default values are also used when
+ * 'param' pointer is NULL.
  *
  * @param name    Name of the queue or NULL. Maximum string length is
  *                ODP_QUEUE_NAME_LEN.

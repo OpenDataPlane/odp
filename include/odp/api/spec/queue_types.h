@@ -225,7 +225,7 @@ typedef struct odp_queue_param_t {
 	/** Queue type
 	  *
 	  * Valid values for other parameters in this structure depend on
-	  * the queue type. */
+	  * the queue type. The default value is ODP_QUEUE_TYPE_PLAIN. */
 	odp_queue_type_t type;
 
 	/** Enqueue mode
@@ -288,7 +288,7 @@ typedef struct odp_queue_param_t {
 	  * The queue must be able to store at minimum this many events
 	  * simultaneously. The value must not exceed 'max_size' queue
 	  * capability. The value of zero means implementation specific
-	  * default size. */
+	  * default size. The default value is 0. */
 	uint32_t size;
 
 } odp_queue_param_t;
