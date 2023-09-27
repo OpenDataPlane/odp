@@ -49,6 +49,11 @@ int odp_queue_destroy(odp_queue_t queue)
 	return _odp_queue_api->queue_destroy(queue);
 }
 
+int odp_queue_destroy_multi(odp_queue_t queue[], int num)
+{
+	return _odp_queue_api->queue_destroy_multi(queue, num);
+}
+
 odp_queue_t odp_queue_lookup(const char *name)
 {
 	return _odp_queue_api->queue_lookup(name);
