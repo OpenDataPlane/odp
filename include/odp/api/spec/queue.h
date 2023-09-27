@@ -88,6 +88,20 @@ int odp_queue_create_multi(const char *name[], const odp_queue_param_t param[],
 int odp_queue_destroy(odp_queue_t queue);
 
 /**
+ * Destroy multiple queues
+ *
+ * Otherwise like odp_queue_destroy(), but destroys multiple queues with a
+ * single call.
+ *
+ * @param queue    Array of queue handles
+ * @param num      Number of queues to destroy
+ *
+ * @retval Number of queues actually destroyed (1 ... num)
+ * @retval <0 on failure
+ */
+int odp_queue_destroy_multi(odp_queue_t queue[], int num);
+
+/**
  * Find a queue by name
  *
  * @param name    Queue name
