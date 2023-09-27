@@ -38,6 +38,7 @@ typedef struct {
 				  odp_bool_t share_param, odp_queue_t queue[],
 				  int num);
 	int (*queue_destroy)(odp_queue_t queue);
+	int (*queue_destroy_multi)(odp_queue_t queue[], int num);
 	odp_queue_t (*queue_lookup)(const char *name);
 	int (*queue_capability)(odp_queue_capability_t *capa);
 	int (*queue_context_set)(odp_queue_t queue, void *context,

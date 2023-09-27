@@ -463,6 +463,23 @@ static int queue_destroy(odp_queue_t handle)
 	return 0;
 }
 
+static int queue_destroy_multi(odp_queue_t handle[], int num)
+{
+	int i;
+
+	_ODP_ASSERT(handle != NULL);
+	_ODP_ASSERT(num > 0);
+
+	for (i = 0; i < num; i++) {
+		int ret = queue_destroy(handle[i]);
+
+		if (ret)
+			return (i == 0) ? ret : i;
+	}
+
+	return i;
+}
+
 static int queue_context_set(odp_queue_t handle, void *context,
 			     uint32_t len ODP_UNUSED)
 {
@@ -1246,6 +1263,7 @@ _odp_queue_api_fn_t _odp_queue_basic_api = {
 	.queue_create = queue_create,
 	.queue_create_multi = queue_create_multi,
 	.queue_destroy = queue_destroy,
+	.queue_destroy_multi = queue_destroy_multi,
 	.queue_lookup = queue_lookup,
 	.queue_capability = queue_capability,
 	.queue_context_set = queue_context_set,
