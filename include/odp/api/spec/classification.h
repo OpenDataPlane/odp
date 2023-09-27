@@ -1070,6 +1070,20 @@ int odp_cls_pmr_create_multi(const odp_pmr_create_opt_t opt[],
 int odp_cls_pmr_destroy(odp_pmr_t pmr);
 
 /**
+ * Destroy multiple packet matching rules
+ *
+ * Otherwise like odp_cls_pmr_destroy(), but destroys multiple PMRs with a
+ * single call.
+ *
+ * @param pmr       Array of PMR handles
+ * @param num       Number of PMRs to destroy
+ *
+ * @retval Number of PMRs actually destroyed (1 ... num)
+ * @retval <0 on failure
+ */
+int odp_cls_pmr_destroy_multi(odp_pmr_t pmr[], int num);
+
+/**
 * Assigns a packet pool for a specific class of service
 *
 * All the packets belonging to the given class of service will
