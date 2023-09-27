@@ -795,6 +795,20 @@ odp_queue_t odp_cls_hash_result(odp_cos_t cos, odp_packet_t packet);
 int odp_cos_destroy(odp_cos_t cos);
 
 /**
+ * Destroy multiple class-of-services
+ *
+ * Otherwise like odp_cos_destroy(), but destroys multiple CoSes with a single
+ * call.
+ *
+ * @param cos          Array of CoS handles
+ * @param num          Number of CoSes to destroy
+ *
+ * @retval Number of CoSes actually destroyed (1 ... num)
+ * @retval <0 on failure
+ */
+int odp_cos_destroy_multi(odp_cos_t cos[], int num);
+
+/**
  * Assign a queue for a class-of-service
  *
  * Action of the given CoS may not be ODP_COS_ACTION_DROP.
