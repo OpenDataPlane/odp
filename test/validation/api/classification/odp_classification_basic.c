@@ -102,6 +102,78 @@ static void cls_create_cos_max_common(odp_bool_t stats)
 		CU_ASSERT(!odp_cos_destroy(cos[j]));
 }
 
+static int cos_create_multi(const char *name[], const odp_cls_cos_param_t param[], odp_cos_t cos[],
+			    uint32_t num)
+{
+	const uint32_t max_retries = 100;
+	uint32_t num_created = 0;
+	uint32_t num_retries = 0;
+
+	do {
+		const char **cur_name = (name != NULL) ? &name[num_created] : NULL;
+		int ret =  odp_cls_cos_create_multi(cur_name, &param[num_created],
+						    &cos[num_created], num - num_created);
+		if (ret < 0) {
+			CU_FAIL("CoS create multi failed");
+			break;
+		}
+		num_retries = (ret == 0) ? num_retries + 1 : 0;
+		num_created += ret;
+	} while (num_created < num && num_retries < max_retries);
+
+	return num_created;
+}
+
+static void cos_destroy_multi(odp_cos_t cos[], uint32_t num)
+{
+	uint32_t num_left = num;
+	uint32_t num_freed = 0;
+
+	while (num_left) {
+		int ret = odp_cos_destroy_multi(&cos[num_freed], num_left);
+
+		CU_ASSERT_FATAL(ret > 0 && (uint32_t)ret <= num_left);
+
+		num_left -= ret;
+		num_freed += ret;
+	}
+	CU_ASSERT_FATAL(num_freed == num);
+}
+
+static void cls_create_cos_multi(void)
+{
+	odp_cls_cos_param_t param_single;
+	odp_cls_cos_param_t param[MAX_HANDLES];
+	odp_cls_capability_t capa;
+	odp_cos_t cos[MAX_HANDLES];
+	const char *name[MAX_HANDLES] = {NULL, "aaa", NULL, "bbb", "ccc", NULL, "ddd"};
+	uint32_t num, num_created;
+
+	CU_ASSERT_FATAL(odp_cls_capability(&capa) == 0);
+	CU_ASSERT_FATAL(capa.max_cos);
+
+	num = capa.max_cos < MAX_HANDLES ? capa.max_cos : MAX_HANDLES;
+
+	for (uint32_t i = 0; i < num; i++) {
+		odp_cls_cos_param_init(&param[i]);
+		param[i].action = ODP_COS_ACTION_DROP;
+	}
+	odp_cls_cos_param_init(&param_single);
+	param_single.action = ODP_COS_ACTION_DROP;
+
+	num_created = cos_create_multi(NULL, &param_single, cos, 1);
+	CU_ASSERT(num_created == 1)
+	cos_destroy_multi(cos, num_created);
+
+	num_created = cos_create_multi(name, param, cos, num);
+	CU_ASSERT(num_created == num)
+	cos_destroy_multi(cos, num_created);
+
+	num_created = cos_create_multi(NULL, param, cos, num);
+	CU_ASSERT(num_created == num)
+	cos_destroy_multi(cos, num_created);
+}
+
 static void cls_create_cos_max(void)
 {
 	cls_create_cos_max_common(false);
@@ -598,6 +670,7 @@ static int check_capa_cos_hashing(void)
 odp_testinfo_t classification_suite_basic[] = {
 	ODP_TEST_INFO(cls_default_values),
 	ODP_TEST_INFO(cls_create_cos),
+	ODP_TEST_INFO(cls_create_cos_multi),
 	ODP_TEST_INFO(cls_create_cos_max),
 	ODP_TEST_INFO(cls_create_cos_max_stats),
 	ODP_TEST_INFO(cls_destroy_cos),
