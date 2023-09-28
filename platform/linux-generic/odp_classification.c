@@ -824,6 +824,23 @@ no_rule:
 	return 0;
 }
 
+int odp_cls_pmr_destroy_multi(odp_pmr_t pmr[], int num)
+{
+	int i;
+
+	_ODP_ASSERT(pmr != NULL);
+	_ODP_ASSERT(num > 0);
+
+	for (i = 0; i < num; i++) {
+		int ret = odp_cls_pmr_destroy(pmr[i]);
+
+		if (ret)
+			return (i == 0) ? ret : i;
+	}
+
+	return i;
+}
+
 static odp_pmr_t cls_pmr_create(const odp_pmr_param_t *terms, int num_terms, uint16_t mark,
 				odp_cos_t src_cos, odp_cos_t dst_cos)
 {
