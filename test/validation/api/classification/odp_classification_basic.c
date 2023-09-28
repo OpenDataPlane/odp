@@ -425,6 +425,120 @@ static void cls_max_pmr_from_default_enqueue(void)
 	cls_max_pmr_from_default_action(0);
 }
 
+static void cls_create_pmr_multi(void)
+{
+	odp_cls_cos_param_t cos_param;
+	odp_cls_capability_t capa;
+	odp_pool_t pool;
+	odp_pktio_t pktio;
+	uint32_t i, num_cos, num_pmr, num_left;
+	int ret;
+	const uint32_t max_retries = 100;
+	uint32_t num_retries = 0;
+	uint32_t num_freed = 0;
+	uint32_t cos_created = 0;
+	uint32_t pmr_created = 0;
+	uint16_t mask = 0xffff;
+
+	CU_ASSERT_FATAL(odp_cls_capability(&capa) == 0);
+
+	pool = pool_create("pkt_pool");
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+
+	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED, pool, true);
+	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
+
+	num_cos = capa.max_cos;
+	if (num_cos > MAX_HANDLES)
+		num_cos = MAX_HANDLES;
+
+	CU_ASSERT_FATAL(num_cos > 1);
+
+	num_pmr = num_cos - 1;
+
+	odp_cos_t src_cos[num_cos];
+	odp_cos_t cos[num_cos];
+	odp_pmr_t pmr[num_pmr];
+	odp_pmr_create_opt_t pmr_opt[num_pmr];
+	odp_pmr_param_t pmr_param[num_pmr];
+	uint16_t val[num_pmr];
+
+	odp_cls_cos_param_init(&cos_param);
+	cos_param.action = ODP_COS_ACTION_DROP;
+
+	for (i = 0; i < num_cos; i++) {
+		cos[i] = odp_cls_cos_create(NULL, &cos_param);
+
+		if (cos[i] == ODP_COS_INVALID) {
+			ODPH_ERR("odp_cls_cos_create() failed %u / %u\n", i + 1, num_cos);
+			break;
+		}
+		/* Same source CoS used for all PMRs */
+		src_cos[i] = cos[0];
+
+		cos_created++;
+	}
+
+	CU_ASSERT(cos_created == num_cos);
+
+	if (cos_created != num_cos)
+		goto destroy_cos;
+
+	ret = odp_pktio_default_cos_set(pktio, cos[0]);
+	CU_ASSERT_FATAL(ret == 0);
+
+	for (i = 0; i < num_pmr; i++) {
+		val[i] = 1024 + i;
+
+		odp_cls_pmr_param_init(&pmr_param[i]);
+		pmr_param[i].term = find_first_supported_l3_pmr();
+		pmr_param[i].match.value = &val[i];
+		pmr_param[i].match.mask = &mask;
+		pmr_param[i].val_sz = sizeof(val[i]);
+
+		odp_cls_pmr_create_opt_init(&pmr_opt[i]);
+		pmr_opt[i].terms = &pmr_param[i];
+		pmr_opt[i].num_terms = 1;
+	}
+
+	do {
+		ret = odp_cls_pmr_create_multi(&pmr_opt[pmr_created],
+					       &src_cos[pmr_created],
+					       &cos[pmr_created + 1],
+					       &pmr[pmr_created],
+					       num_pmr - pmr_created);
+		CU_ASSERT_FATAL(ret <= (int)(num_pmr - pmr_created));
+
+		if (ret < 0)
+			break;
+
+		num_retries = (ret == 0) ? num_retries + 1 : 0;
+		pmr_created += ret;
+	} while (pmr_created < num_pmr && num_retries < max_retries);
+
+	CU_ASSERT(pmr_created > 0);
+
+	num_left = pmr_created;
+	while (num_left) {
+		ret = odp_cls_pmr_destroy_multi(&pmr[num_freed], num_left);
+
+		CU_ASSERT_FATAL(ret > 0 && (uint32_t)ret <= num_left);
+
+		num_left -= ret;
+		num_freed += ret;
+	}
+
+	ret = odp_pktio_default_cos_set(pktio, ODP_COS_INVALID);
+	CU_ASSERT_FATAL(ret == 0);
+
+destroy_cos:
+	for (i = 0; i < cos_created; i++)
+		CU_ASSERT(odp_cos_destroy(cos[i]) == 0);
+
+	CU_ASSERT(odp_pktio_close(pktio) == 0);
+	CU_ASSERT(odp_pool_destroy(pool) == 0);
+}
+
 static void cls_cos_set_queue(void)
 {
 	int retval;
@@ -675,6 +789,7 @@ odp_testinfo_t classification_suite_basic[] = {
 	ODP_TEST_INFO(cls_create_cos_max_stats),
 	ODP_TEST_INFO(cls_destroy_cos),
 	ODP_TEST_INFO(cls_create_pmr_match),
+	ODP_TEST_INFO(cls_create_pmr_multi),
 	ODP_TEST_INFO(cls_max_pmr_from_default_drop),
 	ODP_TEST_INFO(cls_max_pmr_from_default_enqueue),
 	ODP_TEST_INFO(cls_cos_set_queue),
