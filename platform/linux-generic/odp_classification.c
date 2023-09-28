@@ -448,6 +448,23 @@ int odp_cos_destroy(odp_cos_t cos_id)
 	return 0;
 }
 
+int odp_cos_destroy_multi(odp_cos_t cos[], int num)
+{
+	int i;
+
+	_ODP_ASSERT(cos != NULL);
+	_ODP_ASSERT(num > 0);
+
+	for (i = 0; i < num; i++) {
+		int ret = odp_cos_destroy(cos[i]);
+
+		if (ret)
+			return (i == 0) ? ret : i;
+	}
+
+	return i;
+}
+
 int odp_cos_queue_set(odp_cos_t cos_id, odp_queue_t queue_id)
 {
 	cos_t *cos = get_cos_entry(cos_id);
