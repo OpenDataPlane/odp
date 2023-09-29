@@ -357,6 +357,22 @@ static parse_result_t check_options(prog_config_t *config)
 
 	config->num_inflight = dma_capa.max_transfers;
 
+	if (odp_pool_capability(&pool_capa) < 0) {
+		ODPH_ERR("Error querying pool capabilities\n");
+		return PRS_NOK;
+	}
+
+	if (config->cache_size < pool_capa.pkt.min_cache_size ||
+	    config->cache_size > pool_capa.pkt.max_cache_size) {
+		ODPH_ERR("Invalid pool cache size: %u (min: %u, max: %u)\n", config->cache_size,
+			 pool_capa.pkt.min_cache_size, pool_capa.pkt.max_cache_size);
+		return PRS_NOK;
+	}
+
+	if (config->copy_type != SW_COPY)
+		config->trs_cache_size = MIN(MAX(config->cache_size, pool_capa.buf.min_cache_size),
+					     pool_capa.buf.max_cache_size);
+
 	if (config->copy_type == DMA_COPY_EV) {
 		if ((dma_capa.compl_mode_mask & ODP_DMA_COMPL_EVENT) == 0U ||
 		    !dma_capa.queue_type_sched) {
@@ -377,6 +393,10 @@ static parse_result_t check_options(prog_config_t *config)
 				 config->num_inflight, dma_capa.pool.max_num);
 			return PRS_NOK;
 		}
+
+		config->compl_cache_size = MIN(MAX(config->cache_size,
+						   dma_capa.pool.min_cache_size),
+					       dma_capa.pool.max_cache_size);
 	} else if (config->copy_type == DMA_COPY_POLL) {
 		if ((dma_capa.compl_mode_mask & ODP_DMA_COMPL_POLL) == 0U) {
 			ODPH_ERR("Unsupported DMA completion mode: poll (mode support: %x)\n",
@@ -417,11 +437,7 @@ static parse_result_t check_options(prog_config_t *config)
 		}
 
 		config->inflight_obj_size = obj_size;
-	}
-
-	if (odp_pool_capability(&pool_capa) < 0) {
-		ODPH_ERR("Error querying pool capabilities\n");
-		return PRS_NOK;
+		config->stash_cache_size = MIN(config->cache_size, stash_capa.max_cache_size);
 	}
 
 	if (config->num_pkts == 0U ||
@@ -438,24 +454,11 @@ static parse_result_t check_options(prog_config_t *config)
 		return PRS_NOK;
 	}
 
-	if (config->cache_size < pool_capa.pkt.min_cache_size ||
-	    config->cache_size > pool_capa.pkt.max_cache_size) {
-		ODPH_ERR("Invalid pool cache size: %u (min: %u, max: %u)\n", config->cache_size,
-			 pool_capa.pkt.min_cache_size, pool_capa.pkt.max_cache_size);
-		return PRS_NOK;
-	}
-
 	if (config->num_inflight > pool_capa.buf.max_num) {
 		ODPH_ERR("Invalid pool buffer count: %u (max: %u)\n", config->num_inflight,
 			 pool_capa.buf.max_num);
 		return PRS_NOK;
 	}
-
-	config->trs_cache_size = MIN(MAX(config->cache_size, pool_capa.buf.min_cache_size),
-				     pool_capa.buf.max_cache_size);
-	config->compl_cache_size = MIN(MAX(config->cache_size, dma_capa.pool.min_cache_size),
-				       dma_capa.pool.max_cache_size);
-	config->stash_cache_size = MIN(config->cache_size, stash_capa.max_cache_size);
 
 	return PRS_OK;
 }
