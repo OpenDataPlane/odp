@@ -252,8 +252,10 @@ odp_dma_t odp_dma_create(const char *name, const odp_dma_param_t *param)
 	if (param->compl_mode_mask & ODP_DMA_COMPL_POLL) {
 		session->stash = create_stash();
 
-		if (session->stash == ODP_STASH_INVALID)
+		if (session->stash == ODP_STASH_INVALID) {
+			session->active = 0;
 			return ODP_DMA_INVALID;
+		}
 	}
 
 	session->name[0] = 0;
