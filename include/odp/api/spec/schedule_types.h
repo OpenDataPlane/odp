@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2015-2018 Linaro Limited
+ * Copyright (c) 2023 Nokia
  */
 
 /**
@@ -85,31 +86,53 @@ extern "C" {
  * enables the user to achieve high single flow throughput by avoiding
  * SW synchronization for ordering between threads.
  *
- * The source queue (dequeue) ordering is maintained when
- * events are enqueued to their destination queue(s) within the same ordered
- * queue synchronization context. A thread holds the context until it
- * requests another event from the scheduler, which implicitly releases the
- * context. User may allow the scheduler to release the context earlier than
- * that by calling odp_schedule_release_ordered(). However, this call is just
- * a hint to the implementation and the context may be held until the next
- * schedule call.
+ * When odp_schedule() returns an event, the calling thread is associated
+ * with an ordered scheduling synchronization context. The contexts arising
+ * from the same ordered queue have the same mutual ordering as the
+ * corresponding events had in the queue.
  *
- * Events from the same (source) queue appear in their original order
- * when dequeued from a destination queue. The destination queue can have any
- * queue type and synchronization method. Event ordering is based on the
- * received event(s), but also other (newly allocated or stored) events are
- * ordered when enqueued within the same ordered context. Events not enqueued
- * (e.g. freed or stored) within the context are considered missing from
- * reordering and are skipped at this time (but can be ordered again within
- * another context).
+ * When odp_schedule_multi() returns more than one event from an ordered
+ * queue, the events returned were consecutive in the queue and the calling
+ * thread is associated with single ordered scheduling synchronization
+ * context that is ordered with respect to other contexts as if just the
+ * first event was returned.
+ *
+ * When threads holding ordered scheduling synchronization contexts, which
+ * arise from the same ordered queue, enqueue events to destination queues,
+ * the order of events in each destination queue will be as follows:
+ *
+ * - Events enqueued by one thread have the order in which the enqueue
+ *   calls were made.
+ *
+ * - Two events enqueued by different threads have the same mutual order
+ *   as the scheduling synchronization contexts of the enqueuing threads.
+ *
+ * The ordering rules above apply to all events, not just those that were
+ * scheduled from the ordered queue. For instance, newly allocated events
+ * and previously stored events are ordered in the destination queue based
+ * on the scheduling synchronization context. The ordering rules apply
+ * regarless of the type (scheduled or plain) or schedule type (atomic,
+ * ordered, or parallel) of the destination queue. If the order type of
+ * the destination queue is ODP_QUEUE_ORDER_IGNORE, then the order between
+ * events enqueued by different threads is not guaranteed.
+ *
+ * An ordered scheduling synchronization context is implicitly released when
+ * the thread holding the context requests a new event from the scheduler.
+ * User may allow the scheduler to release the context earlier than that by
+ * calling odp_schedule_release_ordered(). However, this call is just a hint
+ * to the implementation and the context may be held until the next schedule
+ * call.
+ *
+ * Enqueue calls by different threads may return in a different order than
+ * the final order of the enqueued events in the destination queue.
  *
  * Unnecessary event re-ordering may be avoided for those destination queues
- * that do not need to maintain the original event order by setting 'order'
+ * that do not need to maintain the specified event order by setting 'order'
  * queue parameter to ODP_QUEUE_ORDER_IGNORE.
  *
  * When scheduler is enabled as flow-aware, the event flow id value affects
- * scheduling of the event and synchronization is maintained per flow within
- * each queue.
+ * scheduling of the event and synchronization is maintained and order is
+ * defined per flow within each queue.
  */
 
 /**
