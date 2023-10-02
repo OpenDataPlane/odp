@@ -15,7 +15,9 @@
 #include <getopt.h>
 
 #include <odp_api.h>
+#include <odp/helper/odph_api.h>
 
+#define MAX_WORKERS (ODP_THREAD_COUNT_MAX - 1)
 #define MAX_FILENAME 128
 
 #define ABS(v) ((v) < 0 ? -(v) : (v))
@@ -28,6 +30,7 @@ enum mode_e {
 };
 
 typedef struct test_opt_t {
+	int cpu_count;
 	unsigned long long period_ns;
 	long long res_ns;
 	unsigned long long res_hz;
@@ -87,13 +90,14 @@ typedef struct {
 typedef struct test_log_t {
 	uint64_t tmo_ns;
 	int64_t  diff_ns;
+	int      tid;
 
 } test_log_t;
 
 typedef struct test_global_t {
 	test_opt_t opt;
 
-	test_stat_t stat;
+	test_stat_t stat[MAX_WORKERS];
 
 	odp_queue_t      queue;
 	odp_timer_pool_t timer_pool;
@@ -105,9 +109,11 @@ typedef struct test_global_t {
 	uint64_t         period_tick;
 	double           period_dbl;
 	odp_fract_u64_t  base_freq;
-	odp_shm_t        log_shm;
 	test_log_t	*log;
 	FILE            *file;
+	odp_barrier_t    barrier;
+	odp_atomic_u64_t events;
+	odp_atomic_u64_t last_events;
 
 } test_global_t;
 
@@ -117,6 +123,7 @@ static void print_usage(void)
 	       "Timer accuracy test application.\n"
 	       "\n"
 	       "OPTIONS:\n"
+	       "  -c, --count <num>       CPU count, 0=all available, default=1\n"
 	       "  -p, --period <nsec>     Timeout period in nsec. Not used in periodic mode. Default: 200 msec\n"
 	       "  -r, --res_ns <nsec>     Timeout resolution in nsec. Default value is 0. Special values:\n"
 	       "                          0:  Use period / 10 as the resolution\n"
@@ -153,6 +160,7 @@ static int parse_options(int argc, char *argv[], test_opt_t *test_opt)
 {
 	int opt, long_index;
 	const struct option longopts[] = {
+		{"count",        required_argument, NULL, 'c'},
 		{"period",       required_argument, NULL, 'p'},
 		{"res_ns",       required_argument, NULL, 'r'},
 		{"res_hz",       required_argument, NULL, 'R'},
@@ -172,7 +180,7 @@ static int parse_options(int argc, char *argv[], test_opt_t *test_opt)
 		{"help",         no_argument,       NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
-	const char *shortopts =  "+p:r:R:f:x:n:w:b:g:m:P:M:o:e:s:ih";
+	const char *shortopts =  "+c:p:r:R:f:x:n:w:b:g:m:P:M:o:e:s:ih";
 	int ret = 0;
 
 	memset(test_opt, 0, sizeof(*test_opt));
@@ -204,6 +212,9 @@ static int parse_options(int argc, char *argv[], test_opt_t *test_opt)
 			break;	/* No more options */
 
 		switch (opt) {
+		case 'c':
+			test_opt->cpu_count = atoi(optarg);
+			break;
 		case 'p':
 			test_opt->period_ns = strtoull(optarg, NULL, 0);
 			break;
@@ -274,7 +285,8 @@ static int parse_options(int argc, char *argv[], test_opt_t *test_opt)
 			return -1;
 		}
 
-		test_opt->period_ns = 0;
+		test_opt->period_ns =
+			ODP_TIME_SEC_IN_NS / odp_fract_u64_to_dbl(&test_opt->freq);
 
 		if (test_opt->offset_ns == UINT64_MAX)
 			test_opt->offset_ns = 0;
@@ -459,7 +471,7 @@ static int periodic_params(test_global_t *test_global, odp_timer_pool_param_t *t
 	return 0;
 }
 
-static int start_timers(test_global_t *test_global)
+static int create_timers(test_global_t *test_global)
 {
 	odp_pool_t pool;
 	odp_pool_param_t pool_param;
@@ -469,13 +481,11 @@ static int start_timers(test_global_t *test_global)
 	odp_timer_t timer;
 	odp_queue_t queue;
 	odp_queue_param_t queue_param;
-	uint64_t start_tick;
-	uint64_t period_ns, start_ns, nsec, offset_ns;
+	uint64_t offset_ns;
 	uint32_t max_timers;
 	odp_event_t event;
 	odp_timeout_t timeout;
-	odp_time_t time;
-	uint64_t i, j, idx, num_tmo, num_warmup, burst, burst_gap;
+	uint64_t i, num_tmo, num_warmup, burst, burst_gap;
 	uint64_t tot_timers, alloc_timers;
 	enum mode_e mode;
 	odp_timer_clk_src_t clk_src;
@@ -488,7 +498,6 @@ static int start_timers(test_global_t *test_global)
 	num_tmo = num_warmup + test_global->opt.num;
 	burst = test_global->opt.burst;
 	burst_gap = test_global->opt.burst_gap;
-	period_ns = test_global->opt.period_ns;
 	offset_ns = test_global->opt.offset_ns;
 
 	/* Always init globals for destroy calls */
@@ -504,7 +513,7 @@ static int start_timers(test_global_t *test_global)
 	odp_queue_param_init(&queue_param);
 	queue_param.type        = ODP_QUEUE_TYPE_SCHED;
 	queue_param.sched.prio  = odp_schedule_default_prio();
-	queue_param.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
+	queue_param.sched.sync  = ODP_SCHED_SYNC_PARALLEL;
 	queue_param.sched.group = ODP_SCHED_GROUP_ALL;
 
 	queue = odp_queue_create("timeout_queue", &queue_param);
@@ -603,6 +612,7 @@ static int start_timers(test_global_t *test_global)
 	}
 
 	odp_timer_pool_start();
+	odp_timer_pool_print(timer_pool);
 
 	/* Spend some time so that current tick would not be zero */
 	odp_time_wait_ns(100 * ODP_TIME_MSEC_IN_NS);
@@ -641,13 +651,33 @@ static int start_timers(test_global_t *test_global)
 		}
 	}
 
+	return 0;
+}
+
+static int start_timers(test_global_t *test_global)
+{
+	odp_timer_pool_t timer_pool;
+	uint64_t start_tick;
+	uint64_t period_ns, start_ns, nsec, offset_ns;
+	odp_time_t time;
+	uint64_t i, j, idx, num_tmo, num_warmup, burst, burst_gap;
+	enum mode_e mode;
+
+	mode = test_global->opt.mode;
+	num_warmup = test_global->opt.num_warmup;
+	num_tmo = num_warmup + test_global->opt.num;
+	burst = test_global->opt.burst;
+	burst_gap = test_global->opt.burst_gap;
+	period_ns = test_global->opt.period_ns;
+	offset_ns = test_global->opt.offset_ns;
+	timer_pool = test_global->timer_pool;
 	idx = 0;
 
 	/* Record test start time and tick. Memory barriers forbid compiler and out-of-order
 	 * CPU to move samples apart. */
 	odp_mb_full();
 	start_tick = odp_timer_current_tick(timer_pool);
-	time       = odp_time_local();
+	time       = odp_time_global();
 	odp_mb_full();
 
 	start_ns = odp_time_to_ns(time);
@@ -707,6 +737,8 @@ static int start_timers(test_global_t *test_global)
 		}
 	}
 
+	printf("\nStarting timers took %" PRIu64 " nsec\n", odp_time_global_ns() - start_ns);
+
 	return 0;
 }
 
@@ -752,24 +784,69 @@ static int destroy_timers(test_global_t *test_global)
 }
 
 static void print_nsec_error(const char *str, int64_t nsec, double res_ns,
-			     uint64_t idx)
+			     int tid, int idx)
 {
 	printf("         %s: %12" PRIi64 "  /  %.3fx resolution",
 	       str, nsec, (double)nsec / res_ns);
-	if (idx != UINT64_MAX)
-		printf(", event %" PRIu64, idx);
+	if (tid >= 0)
+		printf(", thread %d", tid);
+	if (idx >= 0)
+		printf(", event %d", idx);
 	printf("\n");
 }
 
 static void print_stat(test_global_t *test_global)
 {
 	uint64_t i;
-	uint64_t tot_timers = test_global->opt.tot_timers - test_global->opt.warmup_timers;
-	test_stat_t *stat = &test_global->stat;
+	test_stat_t test_stat;
+	test_stat_t *stat = &test_stat;
+	uint64_t tot_timers;
+	test_stat_t *s = test_global->stat;
 	test_log_t *log = test_global->log;
 	double res_ns = test_global->res_ns;
 	uint64_t ave_after = 0;
 	uint64_t ave_before = 0;
+	uint64_t nsec_before_min_tid = 0;
+	uint64_t nsec_before_max_tid = 0;
+	uint64_t nsec_after_min_tid = 0;
+	uint64_t nsec_after_max_tid = 0;
+
+	memset(stat, 0, sizeof(*stat));
+	stat->nsec_before_min = UINT64_MAX;
+	stat->nsec_after_min = UINT64_MAX;
+
+	for (int i = 1; i < test_global->opt.cpu_count + 1; i++) {
+		stat->nsec_before_sum += s[i].nsec_before_sum;
+		stat->nsec_after_sum += s[i].nsec_after_sum;
+		stat->num_before += s[i].num_before;
+		stat->num_exact += s[i].num_exact;
+		stat->num_after += s[i].num_after;
+		stat->num_too_near += s[i].num_too_near;
+
+		if (s[i].nsec_before_min < stat->nsec_before_min) {
+			stat->nsec_before_min = s[i].nsec_before_min;
+			stat->nsec_before_min_idx = s[i].nsec_before_min_idx;
+			nsec_before_min_tid = i;
+		}
+
+		if (s[i].nsec_after_min < stat->nsec_after_min) {
+			stat->nsec_after_min = s[i].nsec_after_min;
+			stat->nsec_after_min_idx = s[i].nsec_after_min_idx;
+			nsec_after_min_tid = i;
+		}
+
+		if (s[i].nsec_before_max > stat->nsec_before_max) {
+			stat->nsec_before_max = s[i].nsec_before_max;
+			stat->nsec_before_max_idx = s[i].nsec_before_max_idx;
+			nsec_before_max_tid = i;
+		}
+
+		if (s[i].nsec_after_max > stat->nsec_after_max) {
+			stat->nsec_after_max = s[i].nsec_after_max;
+			stat->nsec_after_max_idx = s[i].nsec_after_max_idx;
+			nsec_after_max_tid = i;
+		}
+	}
 
 	if (stat->num_after)
 		ave_after = stat->nsec_after_sum / stat->num_after;
@@ -781,14 +858,16 @@ static void print_stat(test_global_t *test_global)
 	else
 		stat->nsec_before_min = 0;
 
+	tot_timers = stat->num_before + stat->num_after + stat->num_exact;
+
 	if (log) {
 		FILE *file = test_global->file;
 
-		fprintf(file, "   Timer      tmo(ns)   diff(ns)\n");
+		fprintf(file, "   Timer  thread      tmo(ns)   diff(ns)\n");
 
 		for (i = 0; i < tot_timers; i++) {
-			fprintf(file, "%8" PRIu64 " %12" PRIu64 " %10"
-				PRIi64 "\n", i, log[i].tmo_ns, log[i].diff_ns);
+			fprintf(file, "%8" PRIu64 " %7u %12" PRIu64 " %10"
+				PRIi64 "\n", i, log[i].tid, log[i].tmo_ns, log[i].diff_ns);
 		}
 
 		fprintf(file, "\n");
@@ -804,13 +883,17 @@ static void print_stat(test_global_t *test_global)
 	printf("  num retry:  %12" PRIu64 "  /  %.2f%%\n",
 	       stat->num_too_near, 100.0 * stat->num_too_near / tot_timers);
 	printf("  error after (nsec):\n");
-	print_nsec_error("min", stat->nsec_after_min, res_ns, stat->nsec_after_min_idx);
-	print_nsec_error("max", stat->nsec_after_max, res_ns, stat->nsec_after_max_idx);
-	print_nsec_error("ave", ave_after, res_ns, UINT64_MAX);
+	print_nsec_error("min", stat->nsec_after_min, res_ns, nsec_after_min_tid,
+			 stat->nsec_after_min_idx);
+	print_nsec_error("max", stat->nsec_after_max, res_ns, nsec_after_max_tid,
+			 stat->nsec_after_max_idx);
+	print_nsec_error("ave", ave_after, res_ns, -1, -1);
 	printf("  error before (nsec):\n");
-	print_nsec_error("min", stat->nsec_before_min, res_ns, stat->nsec_before_min_idx);
-	print_nsec_error("max", stat->nsec_before_max, res_ns, stat->nsec_before_max_idx);
-	print_nsec_error("ave", ave_before, res_ns, UINT64_MAX);
+	print_nsec_error("min", stat->nsec_before_min, res_ns, nsec_before_min_tid,
+			 stat->nsec_before_min_idx);
+	print_nsec_error("max", stat->nsec_before_max, res_ns, nsec_before_max_tid,
+			 stat->nsec_before_max_idx);
+	print_nsec_error("ave", ave_before, res_ns, -1, -1);
 
 	if (test_global->opt.mode == MODE_PERIODIC && !test_global->opt.offset_ns) {
 		int idx = 0;
@@ -828,7 +911,7 @@ static void print_stat(test_global_t *test_global)
 
 		printf("  first timeout difference to one period, based on %s (nsec):\n",
 		       test_global->timer_ctx[idx].tmo_tick ? "timeout tick" : "time");
-		print_nsec_error("max", max, res_ns, UINT64_MAX);
+		print_nsec_error("max", max, res_ns, -1, -1);
 	}
 
 	int64_t max = 0;
@@ -842,7 +925,7 @@ static void print_stat(test_global_t *test_global)
 	}
 
 	printf("  final timeout error (nsec):\n");
-	print_nsec_error("max", max, res_ns, UINT64_MAX);
+	print_nsec_error("max", max, res_ns, -1, -1);
 
 	printf("\n");
 }
@@ -851,10 +934,6 @@ static void cancel_periodic_timers(test_global_t *test_global)
 {
 	uint64_t i, alloc_timers;
 	odp_timer_t timer;
-	odp_event_t ev;
-
-	if (test_global->opt.mode != MODE_PERIODIC)
-		return;
 
 	alloc_timers = test_global->opt.alloc_timers;
 
@@ -867,51 +946,55 @@ static void cancel_periodic_timers(test_global_t *test_global)
 		if (odp_timer_periodic_cancel(timer))
 			printf("Failed to cancel periodic timer.\n");
 	}
-
-	while (alloc_timers) {
-		odp_timeout_t tmo;
-		timer_ctx_t *ctx;
-
-		ev = odp_schedule(NULL, ODP_SCHED_WAIT);
-		tmo = odp_timeout_from_event(ev);
-		ctx = odp_timeout_user_ptr(tmo);
-		if (odp_timer_periodic_ack(ctx->timer, ev) != 2)
-			continue;
-		odp_event_free(ev);
-		alloc_timers--;
-	}
 }
 
-static void run_test(test_global_t *test_global)
+static int run_test(void *arg)
 {
-	uint64_t burst, num, num_tmo, next_tmo;
-	uint64_t i, tot_timers;
+	test_global_t *test_global = (test_global_t *)arg;
 	odp_event_t ev;
 	odp_time_t time;
 	uint64_t time_ns, diff_ns;
 	odp_timeout_t tmo;
 	uint64_t tmo_ns;
 	timer_ctx_t *ctx;
-	test_stat_t *stat = &test_global->stat;
 	test_log_t *log = test_global->log;
 	enum mode_e mode = test_global->opt.mode;
+	uint64_t tot_timers = test_global->opt.tot_timers;
 	double period_dbl = test_global->period_dbl;
 	odp_timer_pool_t tp = test_global->timer_pool;
+	int tid = odp_thread_id();
+
+	if (tid > test_global->opt.cpu_count) {
+		printf("Error: tid %d is larger than cpu_count %d.\n", tid,
+		       test_global->opt.cpu_count);
+		return 0;
+	}
+
+	test_stat_t *stat = &test_global->stat[tid];
 
 	memset(stat, 0, sizeof(*stat));
 	stat->nsec_before_min = UINT64_MAX;
 	stat->nsec_after_min = UINT64_MAX;
 
-	num      = 0;
-	next_tmo = 1;
-	num_tmo  = test_global->opt.num_warmup + test_global->opt.num;
-	burst    = test_global->opt.burst;
-	tot_timers = test_global->opt.tot_timers;
+	odp_barrier_wait(&test_global->barrier);
 
-	for (i = 0; i < tot_timers; i++) {
-		ev = odp_schedule(NULL, ODP_SCHED_WAIT);
+	while (1) {
+		ev = odp_schedule(NULL, 10 * ODP_TIME_MSEC_IN_NS);
+		time = odp_time_global_strict();
 
-		time = odp_time_local();
+		if (ev == ODP_EVENT_INVALID) {
+			if (mode == MODE_PERIODIC) {
+				if (odp_atomic_load_u64(&test_global->last_events) >=
+				    test_global->opt.alloc_timers)
+					break;
+
+			} else if (odp_atomic_load_u64(&test_global->events) >= tot_timers) {
+				break;
+			}
+
+			continue;
+		}
+
 		time_ns = odp_time_to_ns(time);
 		tmo = odp_timeout_from_event(ev);
 		ctx = odp_timeout_user_ptr(tmo);
@@ -954,11 +1037,17 @@ static void run_test(test_global_t *test_global)
 			ctx->count++;
 		}
 
-		if (i >= test_global->opt.warmup_timers) {
+		uint64_t events = odp_atomic_fetch_inc_u64(&test_global->events);
+
+		if (events >= test_global->opt.warmup_timers && events < tot_timers) {
+			uint64_t i = events - test_global->opt.warmup_timers;
+
 			ctx->nsec_final = (int64_t)time_ns - (int64_t)tmo_ns;
 
-			if (log)
+			if (log) {
 				log[i].tmo_ns = tmo_ns;
+				log[i].tid = tid;
+			}
 
 			if (time_ns > tmo_ns) {
 				diff_ns = time_ns - tmo_ns;
@@ -995,7 +1084,7 @@ static void run_test(test_global_t *test_global)
 		}
 
 		if ((mode == MODE_RESTART_ABS || mode == MODE_RESTART_REL) &&
-		    next_tmo < num_tmo) {
+		    events < tot_timers - 1) {
 			/* Reset timer for next period */
 			odp_timer_t tim;
 			uint64_t nsec, tick;
@@ -1032,7 +1121,7 @@ static void run_test(test_global_t *test_global)
 
 				ret = odp_timer_start(tim, &start_param);
 				if (ret == ODP_TIMER_TOO_NEAR) {
-					if (i >= test_global->opt.warmup_timers)
+					if (events >= test_global->opt.warmup_timers)
 						stat->num_too_near++;
 				} else {
 					break;
@@ -1042,32 +1131,25 @@ static void run_test(test_global_t *test_global)
 			if (ret != ODP_TIMER_SUCCESS) {
 				printf("Timer set failed: %i. Timeout nsec "
 				       "%" PRIu64 "\n", ret, ctx->nsec);
-				return;
+				return 0;
 			}
 		} else if (mode == MODE_PERIODIC) {
-			if (odp_timer_periodic_ack(ctx->timer, ev))
+			int ret = odp_timer_periodic_ack(ctx->timer, ev);
+
+			if (ret < 0)
 				printf("Failed to ack a periodic timer.\n");
+
+			if (ret == 2)
+				odp_atomic_inc_u64(&test_global->last_events);
+
+			if (ret == 2 || ret < 0)
+				odp_event_free(ev);
 		} else {
 			odp_event_free(ev);
 		}
-
-		num++;
-
-		if (num == burst) {
-			next_tmo++;
-			num = 0;
-		}
-
 	}
 
-	cancel_periodic_timers(test_global);
-
-	/* Free current scheduler context. There should be no more events. */
-	while ((ev = odp_schedule(NULL, ODP_SCHED_NO_WAIT))
-	       != ODP_EVENT_INVALID) {
-		printf("Dropping extra event\n");
-		odp_event_free(ev);
-	}
+	return 0;
 }
 
 int main(int argc, char *argv[])
@@ -1076,8 +1158,16 @@ int main(int argc, char *argv[])
 	odp_init_t init;
 	test_opt_t test_opt;
 	test_global_t *test_global;
+	odph_helper_options_t helper_options;
 	odp_init_t *init_ptr = NULL;
 	int ret = 0;
+
+	/* Let helper collect its own arguments (e.g. --odph_proc) */
+	argc = odph_parse_options(argc, argv);
+	if (odph_options(&helper_options)) {
+		ODPH_ERR("Reading ODP helper options failed.\n");
+		exit(EXIT_FAILURE);
+	}
 
 	if (parse_options(argc, argv, &test_opt))
 		return -1;
@@ -1090,6 +1180,8 @@ int main(int argc, char *argv[])
 	init.not_used.feat.ipsec    = 1;
 	init.not_used.feat.tm       = 1;
 
+	init.mem_model = helper_options.mem_model;
+
 	if (test_opt.init)
 		init_ptr = &init;
 
@@ -1100,7 +1192,7 @@ int main(int argc, char *argv[])
 	}
 
 	/* Init this thread */
-	if (odp_init_local(instance, ODP_THREAD_WORKER)) {
+	if (odp_init_local(instance, ODP_THREAD_CONTROL)) {
 		printf("Local init failed.\n");
 		return -1;
 	}
@@ -1162,12 +1254,59 @@ int main(int argc, char *argv[])
 		memset(test_global->log, 0, size);
 	}
 
+	odph_thread_t thread_tbl[MAX_WORKERS];
+	int num_workers;
+	odp_cpumask_t cpumask;
+	char cpumaskstr[ODP_CPUMASK_STR_SIZE];
+	odph_thread_common_param_t thr_common;
+	odph_thread_param_t thr_param;
+
+	memset(thread_tbl, 0, sizeof(thread_tbl));
+
+	num_workers = MAX_WORKERS;
+	if (test_global->opt.cpu_count && test_global->opt.cpu_count < MAX_WORKERS)
+		num_workers = test_global->opt.cpu_count;
+	num_workers = odp_cpumask_default_worker(&cpumask, num_workers);
+	test_global->opt.cpu_count = num_workers;
+	odp_cpumask_to_str(&cpumask, cpumaskstr, sizeof(cpumaskstr));
+
+	printf("num worker threads: %i\n", num_workers);
+	printf("first CPU:          %i\n", odp_cpumask_first(&cpumask));
+	printf("cpu mask:           %s\n", cpumaskstr);
+
+	ret = create_timers(test_global);
+	if (ret)
+		goto quit;
+
+	odp_barrier_init(&test_global->barrier, num_workers + 1);
+	odp_atomic_init_u64(&test_global->events, 0);
+	odp_atomic_init_u64(&test_global->last_events, 0);
+
+	odph_thread_param_init(&thr_param);
+	thr_param.start = run_test;
+	thr_param.arg = (void *)test_global;
+	thr_param.thr_type = ODP_THREAD_WORKER;
+
+	odph_thread_common_param_init(&thr_common);
+	thr_common.instance = instance;
+	thr_common.cpumask = &cpumask;
+	thr_common.share_param = 1;
+
+	odph_thread_create(thread_tbl, &thr_common, &thr_param, num_workers);
+	odp_barrier_wait(&test_global->barrier);
+
 	ret = start_timers(test_global);
 	if (ret)
 		goto quit;
 
-	run_test(test_global);
+	if (test_global->opt.mode == MODE_PERIODIC) {
+		while (odp_atomic_load_u64(&test_global->events) < test_global->opt.tot_timers)
+			odp_time_wait_ns(10 * ODP_TIME_MSEC_IN_NS);
 
+		cancel_periodic_timers(test_global);
+	}
+
+	odph_thread_join(thread_tbl, num_workers);
 	print_stat(test_global);
 
 quit:
