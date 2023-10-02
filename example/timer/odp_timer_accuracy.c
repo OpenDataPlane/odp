@@ -27,6 +27,30 @@ enum mode_e {
 	MODE_PERIODIC,
 };
 
+typedef struct test_opt_t {
+	unsigned long long period_ns;
+	long long res_ns;
+	unsigned long long res_hz;
+	unsigned long long offset_ns;
+	unsigned long long max_tmo_ns;
+	unsigned long long num;
+	unsigned long long num_warmup;
+	unsigned long long burst;
+	unsigned long long burst_gap;
+	odp_fract_u64_t freq;
+	unsigned long long max_multiplier;
+	unsigned long long multiplier;
+	enum mode_e mode;
+	int clk_src;
+	int init;
+	int output;
+	int early_retry;
+	uint64_t warmup_timers;
+	uint64_t tot_timers;
+	uint64_t alloc_timers;
+	char filename[MAX_FILENAME + 1];
+} test_opt_t;
+
 typedef struct timer_ctx_t {
 	odp_timer_t timer;
 	odp_event_t event;
@@ -67,25 +91,7 @@ typedef struct test_log_t {
 } test_log_t;
 
 typedef struct test_global_t {
-	struct {
-		unsigned long long period_ns;
-		long long res_ns;
-		unsigned long long res_hz;
-		unsigned long long offset_ns;
-		unsigned long long max_tmo_ns;
-		unsigned long long num;
-		unsigned long long num_warmup;
-		unsigned long long burst;
-		unsigned long long burst_gap;
-		odp_fract_u64_t freq;
-		unsigned long long max_multiplier;
-		unsigned long long multiplier;
-		enum mode_e mode;
-		int clk_src;
-		int init;
-		int output;
-		int early_retry;
-	} opt;
+	test_opt_t opt;
 
 	test_stat_t stat;
 
@@ -94,9 +100,6 @@ typedef struct test_global_t {
 	odp_pool_t       timeout_pool;
 	timer_ctx_t     *timer_ctx;
 	double           res_ns;
-	uint64_t         warmup_timers;
-	uint64_t         tot_timers;
-	uint64_t         alloc_timers;
 	uint64_t         start_tick;
 	uint64_t         start_ns;
 	uint64_t         period_tick;
@@ -105,7 +108,6 @@ typedef struct test_global_t {
 	odp_shm_t        log_shm;
 	test_log_t	*log;
 	FILE            *file;
-	char		 filename[MAX_FILENAME + 1];
 
 } test_global_t;
 
@@ -147,7 +149,7 @@ static void print_usage(void)
 	       "  -h, --help              Display help and exit.\n\n");
 }
 
-static int parse_options(int argc, char *argv[], test_global_t *test_global)
+static int parse_options(int argc, char *argv[], test_opt_t *test_opt)
 {
 	int opt, long_index;
 	const struct option longopts[] = {
@@ -173,25 +175,27 @@ static int parse_options(int argc, char *argv[], test_global_t *test_global)
 	const char *shortopts =  "+p:r:R:f:x:n:w:b:g:m:P:M:o:e:s:ih";
 	int ret = 0;
 
-	test_global->opt.period_ns = 200 * ODP_TIME_MSEC_IN_NS;
-	test_global->opt.res_ns    = 0;
-	test_global->opt.res_hz    = 0;
-	test_global->opt.offset_ns = UINT64_MAX;
-	test_global->opt.max_tmo_ns = 0;
-	test_global->opt.num       = 50;
-	test_global->opt.num_warmup = 0;
-	test_global->opt.burst     = 1;
-	test_global->opt.burst_gap = 0;
-	test_global->opt.mode      = MODE_ONESHOT;
-	test_global->opt.freq.integer = ODP_TIME_SEC_IN_NS / test_global->opt.period_ns;
-	test_global->opt.freq.numer = 0;
-	test_global->opt.freq.denom = 0;
-	test_global->opt.max_multiplier = 1;
-	test_global->opt.multiplier = 1;
-	test_global->opt.clk_src   = ODP_CLOCK_DEFAULT;
-	test_global->opt.init      = 0;
-	test_global->opt.output    = 0;
-	test_global->opt.early_retry = 0;
+	memset(test_opt, 0, sizeof(*test_opt));
+
+	test_opt->period_ns = 200 * ODP_TIME_MSEC_IN_NS;
+	test_opt->res_ns    = 0;
+	test_opt->res_hz    = 0;
+	test_opt->offset_ns = UINT64_MAX;
+	test_opt->max_tmo_ns = 0;
+	test_opt->num       = 50;
+	test_opt->num_warmup = 0;
+	test_opt->burst     = 1;
+	test_opt->burst_gap = 0;
+	test_opt->mode      = MODE_ONESHOT;
+	test_opt->freq.integer = ODP_TIME_SEC_IN_NS / test_opt->period_ns;
+	test_opt->freq.numer = 0;
+	test_opt->freq.denom = 0;
+	test_opt->max_multiplier = 1;
+	test_opt->multiplier = 1;
+	test_opt->clk_src   = ODP_CLOCK_DEFAULT;
+	test_opt->init      = 0;
+	test_opt->output    = 0;
+	test_opt->early_retry = 0;
 
 	while (1) {
 		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
@@ -201,58 +205,56 @@ static int parse_options(int argc, char *argv[], test_global_t *test_global)
 
 		switch (opt) {
 		case 'p':
-			test_global->opt.period_ns = strtoull(optarg, NULL, 0);
+			test_opt->period_ns = strtoull(optarg, NULL, 0);
 			break;
 		case 'r':
-			test_global->opt.res_ns = strtoll(optarg, NULL, 0);
+			test_opt->res_ns = strtoll(optarg, NULL, 0);
 			break;
 		case 'R':
-			test_global->opt.res_hz = strtoull(optarg, NULL, 0);
+			test_opt->res_hz = strtoull(optarg, NULL, 0);
 			break;
 		case 'f':
-			test_global->opt.offset_ns = strtoull(optarg, NULL, 0);
+			test_opt->offset_ns = strtoull(optarg, NULL, 0);
 			break;
 		case 'x':
-			test_global->opt.max_tmo_ns = strtoull(optarg, NULL, 0);
+			test_opt->max_tmo_ns = strtoull(optarg, NULL, 0);
 			break;
 		case 'n':
-			test_global->opt.num = strtoull(optarg, NULL, 0);
+			test_opt->num = strtoull(optarg, NULL, 0);
 			break;
 		case 'w':
-			test_global->opt.num_warmup = strtoull(optarg, NULL, 0);
+			test_opt->num_warmup = strtoull(optarg, NULL, 0);
 			break;
 		case 'b':
-			test_global->opt.burst = strtoull(optarg, NULL, 0);
+			test_opt->burst = strtoull(optarg, NULL, 0);
 			break;
 		case 'g':
-			test_global->opt.burst_gap = strtoull(optarg, NULL, 0);
+			test_opt->burst_gap = strtoull(optarg, NULL, 0);
 			break;
 		case 'm':
-			test_global->opt.mode = atoi(optarg);
+			test_opt->mode = atoi(optarg);
 			break;
 		case 'P':
 			sscanf(optarg, "%" SCNu64 ":%" SCNu64 ":%" SCNu64 ":%llu",
-			       &test_global->opt.freq.integer,
-			       &test_global->opt.freq.numer,
-			       &test_global->opt.freq.denom,
-			       &test_global->opt.max_multiplier);
+			       &test_opt->freq.integer, &test_opt->freq.numer,
+			       &test_opt->freq.denom, &test_opt->max_multiplier);
 			break;
 		case 'M':
-			test_global->opt.multiplier = strtoull(optarg, NULL, 0);
+			test_opt->multiplier = strtoull(optarg, NULL, 0);
 			break;
 		case 'o':
-			test_global->opt.output = 1;
+			test_opt->output = 1;
 			/* filename is NULL terminated in anycase */
-			strncpy(test_global->filename, optarg, MAX_FILENAME);
+			strncpy(test_opt->filename, optarg, MAX_FILENAME);
 			break;
 		case 'e':
-			test_global->opt.early_retry = atoi(optarg);
+			test_opt->early_retry = atoi(optarg);
 			break;
 		case 's':
-			test_global->opt.clk_src = atoi(optarg);
+			test_opt->clk_src = atoi(optarg);
 			break;
 		case 'i':
-			test_global->opt.init = 1;
+			test_opt->init = 1;
 			break;
 		case 'h':
 			print_usage();
@@ -265,35 +267,35 @@ static int parse_options(int argc, char *argv[], test_global_t *test_global)
 		}
 	}
 
-	if (test_global->opt.mode == MODE_PERIODIC) {
-		if ((test_global->opt.freq.integer == 0 && test_global->opt.freq.numer == 0) ||
-		    (test_global->opt.freq.numer != 0 && test_global->opt.freq.denom == 0)) {
+	if (test_opt->mode == MODE_PERIODIC) {
+		if ((test_opt->freq.integer == 0 && test_opt->freq.numer == 0) ||
+		    (test_opt->freq.numer != 0 && test_opt->freq.denom == 0)) {
 			printf("Bad frequency\n");
 			return -1;
 		}
 
-		test_global->opt.period_ns = 0;
+		test_opt->period_ns = 0;
 
-		if (test_global->opt.offset_ns == UINT64_MAX)
-			test_global->opt.offset_ns = 0;
+		if (test_opt->offset_ns == UINT64_MAX)
+			test_opt->offset_ns = 0;
 	} else {
-		if (test_global->opt.res_ns < 0) {
+		if (test_opt->res_ns < 0) {
 			printf("Resolution (res_ns) must be >= 0 with single shot timer\n");
 			return -1;
 		}
 
-		if (test_global->opt.offset_ns == UINT64_MAX)
-			test_global->opt.offset_ns = 300 * ODP_TIME_MSEC_IN_NS;
+		if (test_opt->offset_ns == UINT64_MAX)
+			test_opt->offset_ns = 300 * ODP_TIME_MSEC_IN_NS;
 	}
 
-	test_global->warmup_timers = test_global->opt.num_warmup * test_global->opt.burst;
-	test_global->tot_timers =
-		test_global->warmup_timers + test_global->opt.num * test_global->opt.burst;
+	test_opt->warmup_timers = test_opt->num_warmup * test_opt->burst;
+	test_opt->tot_timers =
+		test_opt->warmup_timers + test_opt->num * test_opt->burst;
 
-	if (test_global->opt.mode == MODE_ONESHOT)
-		test_global->alloc_timers = test_global->tot_timers;
+	if (test_opt->mode == MODE_ONESHOT)
+		test_opt->alloc_timers = test_opt->tot_timers;
 	else
-		test_global->alloc_timers = test_global->opt.burst;
+		test_opt->alloc_timers = test_opt->burst;
 
 	return ret;
 }
@@ -480,8 +482,8 @@ static int start_timers(test_global_t *test_global)
 	int ret;
 
 	mode = test_global->opt.mode;
-	alloc_timers = test_global->alloc_timers;
-	tot_timers = test_global->tot_timers;
+	alloc_timers = test_global->opt.alloc_timers;
+	tot_timers = test_global->opt.tot_timers;
 	num_warmup = test_global->opt.num_warmup;
 	num_tmo = num_warmup + test_global->opt.num;
 	burst = test_global->opt.burst;
@@ -542,10 +544,10 @@ static int start_timers(test_global_t *test_global)
 		max_timers = timer_capa.periodic.max_timers;
 	}
 
-	if (max_timers && test_global->alloc_timers > max_timers) {
+	if (max_timers && test_global->opt.alloc_timers > max_timers) {
 		printf("Error: Too many timers: %" PRIu64 ".\n"
 		       "       Max timers: %u\n",
-		       test_global->alloc_timers, max_timers);
+		       test_global->opt.alloc_timers, max_timers);
 		return -1;
 	}
 
@@ -577,7 +579,7 @@ static int start_timers(test_global_t *test_global)
 
 	printf("  restart retries: %i\n", test_global->opt.early_retry);
 	if (test_global->opt.output)
-		printf("  log file:        %s\n", test_global->filename);
+		printf("  log file:        %s\n", test_global->opt.filename);
 	printf("  start offset:    %" PRIu64 " nsec\n", offset_ns);
 	printf("  min timeout:     %" PRIu64 " nsec\n", timer_param.min_tmo);
 	printf("  max timeout:     %" PRIu64 " nsec\n", timer_param.max_tmo);
@@ -586,7 +588,7 @@ static int start_timers(test_global_t *test_global)
 	printf("  burst size:      %" PRIu64 "\n", burst);
 	printf("  burst gap:       %" PRIu64 "\n", burst_gap);
 	printf("  total timers:    %" PRIu64 "\n", tot_timers);
-	printf("  warmup timers:   %" PRIu64 "\n", test_global->warmup_timers);
+	printf("  warmup timers:   %" PRIu64 "\n", test_global->opt.warmup_timers);
 	printf("  alloc timers:    %" PRIu64 "\n", alloc_timers);
 	printf("  warmup time:     %.2f sec\n",
 	       (offset_ns + (num_warmup * test_global->period_dbl)) / 1000000000.0);
@@ -715,7 +717,7 @@ static int destroy_timers(test_global_t *test_global)
 	odp_event_t ev;
 	int ret = 0;
 
-	alloc_timers = test_global->alloc_timers;
+	alloc_timers = test_global->opt.alloc_timers;
 
 	for (i = 0; i < alloc_timers; i++) {
 		timer = test_global->timer_ctx[i].timer;
@@ -762,7 +764,7 @@ static void print_nsec_error(const char *str, int64_t nsec, double res_ns,
 static void print_stat(test_global_t *test_global)
 {
 	uint64_t i;
-	uint64_t tot_timers = test_global->tot_timers - test_global->warmup_timers;
+	uint64_t tot_timers = test_global->opt.tot_timers - test_global->opt.warmup_timers;
 	test_stat_t *stat = &test_global->stat;
 	test_log_t *log = test_global->log;
 	double res_ns = test_global->res_ns;
@@ -814,7 +816,7 @@ static void print_stat(test_global_t *test_global)
 		int idx = 0;
 		int64_t max = 0;
 
-		for (int i = 0; i < (int)test_global->alloc_timers; i++) {
+		for (int i = 0; i < (int)test_global->opt.alloc_timers; i++) {
 			timer_ctx_t *t = &test_global->timer_ctx[i];
 			int64_t v = t->first_tmo_diff;
 
@@ -831,7 +833,7 @@ static void print_stat(test_global_t *test_global)
 
 	int64_t max = 0;
 
-	for (int i = 0; i < (int)test_global->alloc_timers; i++) {
+	for (int i = 0; i < (int)test_global->opt.alloc_timers; i++) {
 		timer_ctx_t *t = &test_global->timer_ctx[i];
 		int64_t v = t->nsec_final;
 
@@ -854,7 +856,7 @@ static void cancel_periodic_timers(test_global_t *test_global)
 	if (test_global->opt.mode != MODE_PERIODIC)
 		return;
 
-	alloc_timers = test_global->alloc_timers;
+	alloc_timers = test_global->opt.alloc_timers;
 
 	for (i = 0; i < alloc_timers; i++) {
 		timer = test_global->timer_ctx[i].timer;
@@ -904,7 +906,7 @@ static void run_test(test_global_t *test_global)
 	next_tmo = 1;
 	num_tmo  = test_global->opt.num_warmup + test_global->opt.num;
 	burst    = test_global->opt.burst;
-	tot_timers = test_global->tot_timers;
+	tot_timers = test_global->opt.tot_timers;
 
 	for (i = 0; i < tot_timers; i++) {
 		ev = odp_schedule(NULL, ODP_SCHED_WAIT);
@@ -952,7 +954,7 @@ static void run_test(test_global_t *test_global)
 			ctx->count++;
 		}
 
-		if (i >= test_global->warmup_timers) {
+		if (i >= test_global->opt.warmup_timers) {
 			ctx->nsec_final = (int64_t)time_ns - (int64_t)tmo_ns;
 
 			if (log)
@@ -1030,7 +1032,7 @@ static void run_test(test_global_t *test_global)
 
 				ret = odp_timer_start(tim, &start_param);
 				if (ret == ODP_TIMER_TOO_NEAR) {
-					if (i >= test_global->warmup_timers)
+					if (i >= test_global->opt.warmup_timers)
 						stat->num_too_near++;
 				} else {
 					break;
@@ -1072,15 +1074,12 @@ int main(int argc, char *argv[])
 {
 	odp_instance_t instance;
 	odp_init_t init;
-	test_global_t test_global;
+	test_opt_t test_opt;
+	test_global_t *test_global;
 	odp_init_t *init_ptr = NULL;
 	int ret = 0;
 
-	memset(&test_global, 0, sizeof(test_global_t));
-	test_global.stat.nsec_before_min = UINT64_MAX;
-	test_global.stat.nsec_after_min  = UINT64_MAX;
-
-	if (parse_options(argc, argv, &test_global))
+	if (parse_options(argc, argv, &test_opt))
 		return -1;
 
 	/* List features not to be used (may optimize performance) */
@@ -1091,7 +1090,7 @@ int main(int argc, char *argv[])
 	init.not_used.feat.ipsec    = 1;
 	init.not_used.feat.tm       = 1;
 
-	if (test_global.opt.init)
+	if (test_opt.init)
 		init_ptr = &init;
 
 	/* Init ODP before calling anything else */
@@ -1111,63 +1110,81 @@ int main(int argc, char *argv[])
 	/* Configure scheduler */
 	odp_schedule_config(NULL);
 
-	test_global.timer_ctx = calloc(test_global.alloc_timers,
-				       sizeof(timer_ctx_t));
+	odp_shm_t shm = ODP_SHM_INVALID, shm_ctx = ODP_SHM_INVALID, shm_log = ODP_SHM_INVALID;
+	uint64_t size = sizeof(test_global_t);
 
-	if (test_global.timer_ctx == NULL) {
-		printf("Timer context table calloc failed.\n");
+	shm = odp_shm_reserve("timer_accuracy", size,
+			      ODP_CACHE_LINE_SIZE, ODP_SHM_SINGLE_VA);
+
+	if (shm == ODP_SHM_INVALID) {
+		printf("Shm alloc failed.\n");
+		return -1;
+	}
+
+	test_global = odp_shm_addr(shm);
+	memset(test_global, 0, size);
+	memcpy(&test_global->opt, &test_opt, sizeof(test_opt_t));
+
+	size = test_global->opt.alloc_timers * sizeof(timer_ctx_t);
+	shm_ctx = odp_shm_reserve("timer_accuracy_ctx", size,
+				  ODP_CACHE_LINE_SIZE, ODP_SHM_SINGLE_VA);
+
+	if (shm_ctx == ODP_SHM_INVALID) {
+		printf("Timer context alloc failed.\n");
 		ret = -1;
 		goto quit;
 	}
 
-	if (test_global.opt.output) {
-		odp_shm_t shm;
-		void *addr;
-		uint64_t size = test_global.tot_timers * sizeof(test_log_t);
+	test_global->timer_ctx = odp_shm_addr(shm_ctx);
+	memset(test_global->timer_ctx, 0, size);
 
-		test_global.file = fopen(test_global.filename, "w");
-		if (test_global.file == NULL) {
+	if (test_global->opt.output) {
+		test_global->file = fopen(test_global->opt.filename, "w");
+		if (test_global->file == NULL) {
 			printf("Failed to open output file %s: %s\n",
-			       test_global.filename, strerror(errno));
+			       test_global->opt.filename, strerror(errno));
 			ret = -1;
 			goto quit;
 		}
 
-		shm = odp_shm_reserve("timer_accuracy_log", size,
-				      sizeof(test_log_t), 0);
+		size = (test_global->opt.tot_timers - test_global->opt.warmup_timers) *
+		       sizeof(test_log_t);
+		shm_log = odp_shm_reserve("timer_accuracy_log", size, sizeof(test_log_t),
+					  ODP_SHM_SINGLE_VA);
 
-		if (shm == ODP_SHM_INVALID) {
+		if (shm_log == ODP_SHM_INVALID) {
 			printf("Test log alloc failed.\n");
 			ret = -1;
 			goto quit;
 		}
 
-		addr = odp_shm_addr(shm);
-		memset(addr, 0, size);
-		test_global.log = addr;
-		test_global.log_shm = shm;
+		test_global->log = odp_shm_addr(shm_log);
+		memset(test_global->log, 0, size);
 	}
 
-	ret = start_timers(&test_global);
+	ret = start_timers(test_global);
 	if (ret)
 		goto quit;
 
-	run_test(&test_global);
+	run_test(test_global);
 
-	print_stat(&test_global);
+	print_stat(test_global);
 
 quit:
-	if (test_global.file)
-		fclose(test_global.file);
+	if (test_global->file)
+		fclose(test_global->file);
 
-	if (test_global.timer_ctx && destroy_timers(&test_global))
+	if (destroy_timers(test_global))
 		ret = -1;
 
-	if (test_global.timer_ctx)
-		free(test_global.timer_ctx);
+	if (shm_log != ODP_SHM_INVALID && odp_shm_free(shm_log))
+		ret = -1;
 
-	if (test_global.log)
-		odp_shm_free(test_global.log_shm);
+	if (shm_ctx != ODP_SHM_INVALID && odp_shm_free(shm_ctx))
+		ret = -1;
+
+	if (odp_shm_free(shm))
+		ret = -1;
 
 	if (odp_term_local()) {
 		printf("Term local failed.\n");
