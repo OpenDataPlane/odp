@@ -136,3 +136,110 @@ int bench_run(void *arg)
 
 	return 0;
 }
+
+void bench_tm_suite_init(bench_tm_suite_t *suite)
+{
+	memset(suite, 0, sizeof(bench_suite_t));
+
+	odp_atomic_init_u32(&suite->exit_worker, 0);
+}
+
+uint8_t bench_tm_func_register(bench_tm_result_t *res, const char *func_name)
+{
+	uint8_t num_func = res->num;
+
+	if (num_func >= BENCH_TM_MAX_FUNC)
+		ODPH_ABORT("Too many test functions (max %d)\n", BENCH_TM_MAX_FUNC);
+
+	res->func[num_func].name = func_name;
+	res->num++;
+
+	return num_func;
+}
+
+void bench_tm_func_record(odp_time_t t2, odp_time_t t1, bench_tm_result_t *res, uint8_t id)
+{
+	odp_time_t diff = odp_time_diff(t2, t1);
+
+	ODPH_ASSERT(id < BENCH_TM_MAX_FUNC);
+
+	res->func[id].tot = odp_time_sum(res->func[id].tot, diff);
+
+	if (odp_time_cmp(diff, res->func[id].min) < 0)
+		res->func[id].min = diff;
+
+	if (odp_time_cmp(diff, res->func[id].max) > 0)
+		res->func[id].max = diff;
+}
+
+static void init_result(bench_tm_result_t *res)
+{
+	memset(res, 0, sizeof(bench_tm_result_t));
+
+	for (int i = 0; i < BENCH_TM_MAX_FUNC; i++) {
+		res->func[i].tot = ODP_TIME_NULL;
+		res->func[i].min = odp_time_local_from_ns(ODP_TIME_HOUR_IN_NS);
+		res->func[i].max = ODP_TIME_NULL;
+	}
+}
+
+static void print_results(bench_tm_result_t *res, uint64_t repeat_count)
+{
+	for (uint8_t i = 0; i < res->num; i++) {
+		printf("     %-38s    %-12" PRIu64 " %-12" PRIu64 " %-12" PRIu64 "\n",
+		       res->func[i].name,
+		       odp_time_to_ns(res->func[i].min),
+		       odp_time_to_ns(res->func[i].tot) / repeat_count,
+		       odp_time_to_ns(res->func[i].max));
+	}
+}
+
+int bench_tm_run(void *arg)
+{
+	bench_tm_suite_t *suite = arg;
+
+	printf("\nLatency (nsec) per function call               min          avg          max\n");
+	printf("------------------------------------------------------------------------------\n");
+
+	/* Run each test twice. Results from the first warm-up round are ignored. */
+	for (uint32_t i = 0; i < 2; i++) {
+		for (uint32_t j = 0; j < suite->num_bench; j++) {
+			const bench_tm_info_t *bench = &suite->bench[j];
+			uint64_t rounds = suite->rounds;
+			bench_tm_result_t res;
+
+			if (odp_atomic_load_u32(&suite->exit_worker))
+				return 0;
+
+			/* Run only selected test case */
+			if (suite->bench_idx && (j + 1) != suite->bench_idx)
+				continue;
+
+			if (bench->max_rounds &&  bench->max_rounds < rounds)
+				rounds = bench->max_rounds;
+
+			init_result(&res);
+
+			if (bench->init != NULL)
+				bench->init();
+
+			if (bench->run(&res, rounds)) {
+				ODPH_ERR("Benchmark %s failed\n", bench->name);
+				suite->retval = -1;
+				return -1;
+			}
+
+			if (bench->term != NULL)
+				bench->term();
+
+			/* No print or results from warm-up round */
+			if (i > 0) {
+				printf("[%02d] %-26s\n", j + 1, bench->name);
+				print_results(&res, rounds);
+			}
+		}
+	}
+	printf("\n");
+
+	return 0;
+}
