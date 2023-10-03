@@ -6,6 +6,7 @@ EXECUTABLES = odp_atomic_perf \
 	      odp_bench_buffer \
 	      odp_bench_misc \
 	      odp_bench_packet \
+	      odp_bench_pktio_sp \
 	      odp_bench_timer \
 	      odp_crc \
 	      odp_lock_perf \
@@ -64,6 +65,7 @@ odp_atomic_perf_SOURCES = odp_atomic_perf.c
 odp_bench_buffer_SOURCES = odp_bench_buffer.c bench_common.c bench_common.h
 odp_bench_misc_SOURCES = odp_bench_misc.c bench_common.c bench_common.h
 odp_bench_packet_SOURCES = odp_bench_packet.c bench_common.c bench_common.h
+odp_bench_pktio_sp_SOURCES = odp_bench_pktio_sp.c bench_common.c bench_common.h
 odp_bench_timer_SOURCES = odp_bench_timer.c bench_common.c bench_common.h
 odp_cpu_bench_SOURCES = odp_cpu_bench.c
 odp_crc_SOURCES = odp_crc.c
