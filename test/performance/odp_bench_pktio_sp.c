@@ -23,8 +23,8 @@
 /* Maximum interface name length */
 #define MAX_NAME_LEN 128
 
-#define BENCH_INFO(run_fn, init_fn, term_fn, rounds) \
-	{.name = #run_fn, .run = run_fn, .init = init_fn, .term = term_fn, \
+#define BENCH_INFO(run_fn, init_fn, term_fn, cond_fn, rounds) \
+	{.name = #run_fn, .run = run_fn, .init = init_fn, .term = term_fn, .cond = cond_fn,\
 	 .max_rounds = rounds}
 
 typedef struct {
@@ -50,6 +50,9 @@ typedef struct {
 
 		/* Number of packet output queues */
 		uint32_t num_output_queues;
+
+		/* Number of PMRs */
+		uint32_t num_pmr;
 	} opt;
 
 	/* Packet IO device */
@@ -69,6 +72,16 @@ typedef struct {
 
 	/* Output queue statistics */
 	odp_pktout_queue_stats_t pktout_queue_stats;
+
+	/* Data for cls_pmr_create() test */
+	struct {
+		/* Term used to create PMRs */
+		odp_cls_pmr_term_t term;
+
+		/* Is test enabled */
+		odp_bool_t enabled;
+
+	} cls_pmr_create;
 
 	/* Common benchmark suite data */
 	bench_tm_suite_t suite;
@@ -105,11 +118,8 @@ static int setup_sig_handler(void)
 	return 0;
 }
 
-static void clean_pending_events(appl_args_t *appl_args)
+static void clean_pending_events(void)
 {
-	if (appl_args->opt.in_mode != ODP_PKTIN_MODE_SCHED)
-		return;
-
 	while (1) {
 		odp_event_t event = odp_schedule(NULL, odp_schedule_wait_time(ODP_TIME_MSEC_IN_NS));
 
@@ -148,7 +158,7 @@ static odp_pool_t create_packet_pool(void)
 	return pool;
 }
 
-static void pktio_setup(void)
+static void pktio_setup_param(odp_pktin_mode_t in_mode, odp_pktout_mode_t out_mode, odp_bool_t cls)
 {
 	appl_args_t *appl_args = gbl_args;
 	odp_pktio_param_t param;
@@ -161,8 +171,8 @@ static void pktio_setup(void)
 	pool = create_packet_pool();
 
 	odp_pktio_param_init(&param);
-	param.in_mode = appl_args->opt.in_mode;
-	param.out_mode = appl_args->opt.out_mode;
+	param.in_mode = in_mode;
+	param.out_mode = out_mode;
 
 	pktio = odp_pktio_open(appl_args->opt.name, pool, &param);
 	if (pktio == ODP_PKTIO_INVALID)
@@ -170,9 +180,14 @@ static void pktio_setup(void)
 
 	odp_pktin_queue_param_init(&pktin_param);
 	pktin_param.num_queues = appl_args->opt.num_input_queues;
-	if (pktin_param.num_queues > 1) {
-		pktin_param.hash_enable = true;
-		pktin_param.hash_proto.proto.ipv4_udp = 1;
+
+	if (cls) {
+		pktin_param.classifier_enable = true;
+	} else {
+		if (pktin_param.num_queues > 1) {
+			pktin_param.hash_enable = true;
+			pktin_param.hash_proto.proto.ipv4_udp = 1;
+		}
 	}
 
 	odp_pktout_queue_param_init(&pktout_param);
@@ -194,47 +209,37 @@ static void pktio_setup(void)
 	appl_args->pktio = pktio;
 }
 
+static void pktio_setup(void)
+{
+	pktio_setup_param(gbl_args->opt.in_mode, gbl_args->opt.out_mode, false);
+}
+
 static void pktio_setup_direct_rx(void)
 {
-	appl_args_t *appl_args = gbl_args;
-	odp_pktin_mode_t mode_orig = appl_args->opt.in_mode;
-
-	appl_args->opt.in_mode = ODP_PKTIN_MODE_DIRECT;
-	pktio_setup();
-	appl_args->opt.in_mode = mode_orig;
+	pktio_setup_param(ODP_PKTIN_MODE_DIRECT, gbl_args->opt.out_mode, false);
 }
 
 static void pktio_setup_sched_rx(void)
 {
-	appl_args_t *appl_args = gbl_args;
-	odp_pktin_mode_t mode_orig = appl_args->opt.in_mode;
+	pktio_setup_param(ODP_PKTIN_MODE_SCHED, gbl_args->opt.out_mode, false);
+}
 
-	appl_args->opt.in_mode = ODP_PKTIN_MODE_SCHED;
-	pktio_setup();
-	appl_args->opt.in_mode = mode_orig;
+static void pktio_setup_cls(void)
+{
+	pktio_setup_param(ODP_PKTIN_MODE_SCHED, gbl_args->opt.out_mode, true);
 }
 
 static void pktio_setup_direct_tx(void)
 {
-	appl_args_t *appl_args = gbl_args;
-	odp_pktout_mode_t mode_orig = appl_args->opt.out_mode;
-
-	appl_args->opt.out_mode = ODP_PKTOUT_MODE_DIRECT;
-	pktio_setup();
-	appl_args->opt.out_mode = mode_orig;
+	pktio_setup_param(gbl_args->opt.in_mode, ODP_PKTOUT_MODE_DIRECT, false);
 }
 
 static void pktio_setup_queue_tx(void)
 {
-	appl_args_t *appl_args = gbl_args;
-	odp_pktout_mode_t mode_orig = appl_args->opt.out_mode;
-
-	appl_args->opt.out_mode = ODP_PKTOUT_MODE_QUEUE;
-	pktio_setup();
-	appl_args->opt.out_mode = mode_orig;
+	pktio_setup_param(gbl_args->opt.in_mode, ODP_PKTOUT_MODE_QUEUE, false);
 }
 
-static void pktio_clean(void)
+static void pktio_clean_param(odp_pktin_mode_t in_mode)
 {
 	appl_args_t *appl_args = gbl_args;
 	int ret;
@@ -244,7 +249,8 @@ static void pktio_clean(void)
 		ODPH_ABORT("Stopping pktio failed: %d\n", ret);
 
 	/* Clean possible pre-scheduled packets */
-	clean_pending_events(appl_args);
+	if (in_mode == ODP_PKTIN_MODE_SCHED)
+		clean_pending_events();
 
 	ret = odp_pktio_close(appl_args->pktio);
 	if (ret)
@@ -255,44 +261,19 @@ static void pktio_clean(void)
 		ODPH_ABORT("Destroying pktio pool failed: %d\n", ret);
 }
 
+static void pktio_clean(void)
+{
+	pktio_clean_param(gbl_args->opt.in_mode);
+}
+
 static void pktio_clean_direct_rx(void)
 {
-	appl_args_t *appl_args = gbl_args;
-	odp_pktin_mode_t mode_orig = appl_args->opt.in_mode;
-
-	appl_args->opt.in_mode = ODP_PKTIN_MODE_DIRECT;
-	pktio_clean();
-	appl_args->opt.in_mode = mode_orig;
+	pktio_clean_param(ODP_PKTIN_MODE_DIRECT);
 }
 
 static void pktio_clean_sched_rx(void)
 {
-	appl_args_t *appl_args = gbl_args;
-	odp_pktin_mode_t mode_orig = appl_args->opt.in_mode;
-
-	appl_args->opt.in_mode = ODP_PKTIN_MODE_SCHED;
-	pktio_clean();
-	appl_args->opt.in_mode = mode_orig;
-}
-
-static void pktio_clean_direct_tx(void)
-{
-	appl_args_t *appl_args = gbl_args;
-	odp_pktout_mode_t mode_orig = appl_args->opt.out_mode;
-
-	appl_args->opt.out_mode = ODP_PKTOUT_MODE_DIRECT;
-	pktio_clean();
-	appl_args->opt.out_mode = mode_orig;
-}
-
-static void pktio_clean_queue_tx(void)
-{
-	appl_args_t *appl_args = gbl_args;
-	odp_pktout_mode_t mode_orig = appl_args->opt.out_mode;
-
-	appl_args->opt.out_mode = ODP_PKTOUT_MODE_QUEUE;
-	pktio_clean();
-	appl_args->opt.out_mode = mode_orig;
+	pktio_clean_param(ODP_PKTIN_MODE_SCHED);
 }
 
 static int pktio_capability(bench_tm_result_t *res, int repeat_count)
@@ -418,7 +399,8 @@ static int pktio_open_start_stop_close(bench_tm_result_t *res, int repeat_count)
 		}
 
 		/* Clean possible pre-scheduled packets */
-		clean_pending_events(appl_args);
+		if (appl_args->opt.in_mode == ODP_PKTIN_MODE_SCHED)
+			clean_pending_events();
 
 		t7 = odp_time_local_strict();
 		ret = odp_pktio_close(pktio);
@@ -615,16 +597,193 @@ static int pktout_event_queue_stats(bench_tm_result_t *res, int repeat_count)
 	return 0;
 }
 
+static int find_first_supported_l3_pmr(const odp_cls_capability_t *capa, odp_cls_pmr_term_t *term)
+{
+	*term = ODP_PMR_TCP_DPORT;
+
+	if (capa->supported_terms.bit.udp_sport)
+		*term = ODP_PMR_UDP_SPORT;
+	else if (capa->supported_terms.bit.udp_dport)
+		*term = ODP_PMR_UDP_DPORT;
+	else if (capa->supported_terms.bit.tcp_sport)
+		*term = ODP_PMR_TCP_SPORT;
+	else if (capa->supported_terms.bit.tcp_dport)
+		*term = ODP_PMR_TCP_DPORT;
+	else
+		return 0;
+
+	return 1;
+}
+
+/* Capabilities required for cls_pmr_create() test */
+static int check_cls_capa(void)
+{
+	appl_args_t *appl_args = gbl_args;
+	odp_cls_capability_t cls_capa;
+	odp_schedule_capability_t sched_capa;
+	int ret;
+
+	ret = odp_cls_capability(&cls_capa);
+	if (ret) {
+		ODPH_ERR("Reading classifier capa failed: %d\n", ret);
+		return -1;
+	}
+
+	ret = odp_schedule_capability(&sched_capa);
+	if (ret) {
+		ODPH_ERR("Reading scheduler capa failed: %d\n", ret);
+		return -1;
+	}
+
+	if (!find_first_supported_l3_pmr(&cls_capa, &appl_args->cls_pmr_create.term)) {
+		ODPH_ERR("Implementations doesn't support any TCP/UDP PMRs\n");
+		return 0;
+	}
+
+	/* One extra CoS and queue required for the default CoS */
+	if (appl_args->opt.num_pmr + 1 > cls_capa.max_cos) {
+		ODPH_ERR("Not enough CoSes supported for PMR test: %u/%u\n",
+			 appl_args->opt.num_pmr + 1, cls_capa.max_cos);
+		return 0;
+	}
+
+	if (appl_args->opt.num_pmr + 1 > sched_capa.max_queues) {
+		ODPH_ERR("Not enough queues supported for PMR test: %u/%u\n",
+			 appl_args->opt.num_pmr + 1, sched_capa.max_queues);
+		return 0;
+	}
+
+	appl_args->cls_pmr_create.enabled = true;
+
+	return 1;
+}
+
+static int check_cls_cond(void)
+{
+	return gbl_args->cls_pmr_create.enabled;
+}
+
+static int cls_pmr_create(bench_tm_result_t *res, int repeat_count)
+{
+	appl_args_t *appl_args = gbl_args;
+	odp_pktio_t pktio = appl_args->pktio;
+	odp_cls_cos_param_t cos_param;
+	odp_queue_param_t queue_param;
+	odp_pmr_param_t pmr_param;
+	odp_cos_t default_cos;
+	uint32_t num_cos = appl_args->opt.num_pmr + 1;
+	uint32_t num_pmr = num_cos - 1;
+	uint32_t cos_created = 0;
+	uint32_t queue_created = 0;
+	uint16_t val = 1024;
+	uint16_t mask = 0xffff;
+	int ret = 0;
+	odp_time_t t1, t2;
+	odp_cos_t cos[num_cos];
+	odp_queue_t queue[num_cos];
+	odp_pmr_t pmr[num_pmr];
+	uint8_t id1 = bench_tm_func_register(res, "odp_cls_pmr_create()");
+	uint8_t id2 = bench_tm_func_register(res, "odp_cls_pmr_destroy()");
+
+	odp_queue_param_init(&queue_param);
+	queue_param.type = ODP_QUEUE_TYPE_SCHED;
+
+	odp_cls_cos_param_init(&cos_param);
+
+	for (uint32_t i = 0; i < num_cos; i++) {
+		queue[i] = odp_queue_create(NULL, &queue_param);
+		if (queue[i] == ODP_QUEUE_INVALID) {
+			ODPH_ERR("odp_queue_create() failed %u / %u\n", i + 1, num_cos);
+			break;
+		}
+
+		cos_param.queue = queue[i];
+		queue_created++;
+
+		cos[i] = odp_cls_cos_create(NULL, &cos_param);
+		if (cos[i] == ODP_COS_INVALID) {
+			ODPH_ERR("odp_cls_cos_create() failed %u / %u\n", i + 1, num_cos);
+			break;
+		}
+		cos_created++;
+	}
+
+	if (queue_created != num_cos)
+		ODPH_ERR("Unable to create all queues: %u/%u\n", queue_created, num_cos);
+
+	if (cos_created != num_cos) {
+		ODPH_ERR("Unable to create all CoSes: %u/%u\n", cos_created, num_cos);
+		goto destroy_cos;
+	}
+
+	default_cos = cos[0];
+
+	ret = odp_pktio_default_cos_set(pktio, default_cos);
+	if (ret) {
+		ODPH_ERR("Setting default CoS failed: %d\n", ret);
+		goto destroy_cos;
+	}
+
+	odp_cls_pmr_param_init(&pmr_param);
+	pmr_param.term = appl_args->cls_pmr_create.term;
+	pmr_param.match.value = &val;
+	pmr_param.match.mask = &mask;
+	pmr_param.val_sz = sizeof(val);
+
+	for (uint32_t i = 0; i < (uint32_t)repeat_count; i++) {
+		uint32_t pmr_created = 0;
+
+		for (uint32_t j = 0; j < num_pmr; j++) {
+			t1 = odp_time_local_strict();
+			pmr[j] = odp_cls_pmr_create(&pmr_param, 1, default_cos, cos[j + 1]);
+			t2 = odp_time_local_strict();
+
+			if (pmr[j] == ODP_PMR_INVALID)
+				break;
+			bench_tm_func_record(t2, t1, res, id1);
+
+			val++;
+			pmr_created++;
+		}
+
+		for (uint32_t j = 0; j < pmr_created; j++) {
+			t1 = odp_time_local_strict();
+			ret = odp_cls_pmr_destroy(pmr[j]);
+			t2 = odp_time_local_strict();
+
+			if (ret)
+				ODPH_ABORT("Destroying PMR failed: %d\n", ret);
+
+			bench_tm_func_record(t2, t1, res, id2);
+		}
+
+		if (i == 0)
+			ODPH_DBG("Created %u PMRs\n", pmr_created);
+	}
+
+	ret = odp_pktio_default_cos_set(pktio, ODP_COS_INVALID);
+
+destroy_cos:
+	for (uint32_t i = 0; i < cos_created; i++)
+		ret = odp_cos_destroy(cos[i]);
+
+	for (uint32_t i = 0; i < queue_created; i++)
+		ret = odp_queue_destroy(queue[i]);
+
+	return ret;
+}
+
 bench_tm_info_t test_suite[] = {
-	BENCH_INFO(pktio_capability, pktio_setup, pktio_clean, 0),
-	BENCH_INFO(pktio_lookup, pktio_setup, pktio_clean, 0),
-	BENCH_INFO(pktio_open_start_stop_close, NULL, NULL, 0),
-	BENCH_INFO(pktio_stats, pktio_setup, pktio_clean, 0),
-	BENCH_INFO(pktin_queue_stats, pktio_setup_direct_rx, pktio_clean_direct_rx, 0),
-	BENCH_INFO(pktin_event_queue_stats, pktio_setup_sched_rx, pktio_clean_sched_rx, 0),
-	BENCH_INFO(pktout_queue_stats, pktio_setup_direct_tx, pktio_clean_direct_tx, 0),
-	BENCH_INFO(pktout_event_queue_stats, pktio_setup_queue_tx, pktio_clean_queue_tx, 0),
-	BENCH_INFO(pktio_stats_reset, pktio_setup, pktio_clean, 0)
+	BENCH_INFO(pktio_capability, pktio_setup, pktio_clean, NULL, 0),
+	BENCH_INFO(pktio_lookup, pktio_setup, pktio_clean, NULL, 0),
+	BENCH_INFO(pktio_open_start_stop_close, NULL, NULL, NULL, 0),
+	BENCH_INFO(pktio_stats, pktio_setup, pktio_clean, NULL, 0),
+	BENCH_INFO(pktin_queue_stats, pktio_setup_direct_rx, pktio_clean_direct_rx, NULL, 0),
+	BENCH_INFO(pktin_event_queue_stats, pktio_setup_sched_rx, pktio_clean_sched_rx, NULL, 0),
+	BENCH_INFO(pktout_queue_stats, pktio_setup_direct_tx, pktio_clean, NULL, 0),
+	BENCH_INFO(pktout_event_queue_stats, pktio_setup_queue_tx, pktio_clean, NULL, 0),
+	BENCH_INFO(pktio_stats_reset, pktio_setup, pktio_clean, NULL, 0),
+	BENCH_INFO(cls_pmr_create, pktio_setup_cls, pktio_clean_sched_rx, check_cls_cond, 0)
 };
 
 /* Print usage information */
@@ -642,6 +801,7 @@ static void usage(void)
 	       "  -o, --out_mode <arg>    Packet output mode\n"
 	       "                          0: Direct mode: PKTOUT_MODE_DIRECT (default)\n"
 	       "                          1: Queue mode:  PKTOUT_MODE_QUEUE\n"
+	       "  -p, --pmr <num>         Number of PMRs to create/destroy per round (default 1)\n"
 	       "  -q, --rx_queues <num>   Number of packet input queues (default 1)\n"
 	       "  -t, --tx_queues <num>   Number of packet output queues (default 1)\n"
 	       "  -r, --rounds <num>      Run each test case 'num' times (default %u).\n"
@@ -670,6 +830,7 @@ static int parse_args(int argc, char *argv[])
 		{"interface", required_argument, NULL, 'i'},
 		{"in_mode", required_argument, NULL, 'm'},
 		{"out_mode", required_argument, NULL, 'o'},
+		{"pmr", required_argument, NULL, 'p'},
 		{"rx_queues", required_argument, NULL, 'q'},
 		{"tx_queues", required_argument, NULL, 't'},
 		{"rounds", required_argument, NULL, 'r'},
@@ -678,7 +839,7 @@ static int parse_args(int argc, char *argv[])
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts =  "i:m:o:q:r:s:t:h";
+	static const char *shortopts =  "i:m:o:p:q:r:s:t:h";
 
 	strncpy(gbl_args->opt.name, "loop", MAX_NAME_LEN);
 	gbl_args->opt.rounds = ROUNDS;
@@ -686,6 +847,7 @@ static int parse_args(int argc, char *argv[])
 	gbl_args->opt.out_mode = ODP_PKTOUT_MODE_DIRECT;
 	gbl_args->opt.num_input_queues = 1;
 	gbl_args->opt.num_output_queues = 1;
+	gbl_args->opt.num_pmr = 1;
 
 	while (1) {
 		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
@@ -711,6 +873,9 @@ static int parse_args(int argc, char *argv[])
 				gbl_args->opt.out_mode = ODP_PKTOUT_MODE_QUEUE;
 			else
 				gbl_args->opt.out_mode = ODP_PKTOUT_MODE_DIRECT;
+			break;
+		case 'p':
+			gbl_args->opt.num_pmr = atoi(optarg);
 			break;
 		case 'q':
 			gbl_args->opt.num_input_queues = atoi(optarg);
@@ -768,7 +933,7 @@ static int check_args(appl_args_t *appl_args)
 
 	ret = odp_pktio_capability(pktio, &capa);
 	if (ret) {
-		ODPH_ERR("Reading pktio capa failed\n");
+		ODPH_ERR("Reading pktio capa failed: %d\n", ret);
 		return -1;
 	}
 
@@ -795,6 +960,9 @@ static int check_args(appl_args_t *appl_args)
 		ODPH_ERR("Destroying pktio pool failed: %d\n", ret);
 		return -1;
 	}
+
+	if (check_cls_capa() < 0)
+		return -1;
 
 	return 0;
 }
@@ -825,6 +993,7 @@ static void print_info(appl_args_t *appl_args)
 
 	printf("Input queues:      %u\n", gbl_args->opt.num_input_queues);
 	printf("Output queues:     %u\n", gbl_args->opt.num_output_queues);
+	printf("PMRs:              %u\n", gbl_args->opt.num_pmr);
 	printf("Test rounds:       %d\n", gbl_args->opt.rounds);
 	printf("\n");
 }

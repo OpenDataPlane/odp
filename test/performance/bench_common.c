@@ -170,6 +170,8 @@ void bench_tm_func_record(odp_time_t t2, odp_time_t t1, bench_tm_result_t *res, 
 
 	if (odp_time_cmp(diff, res->func[id].max) > 0)
 		res->func[id].max = diff;
+
+	res->func[id].num++;
 }
 
 static void init_result(bench_tm_result_t *res)
@@ -183,13 +185,15 @@ static void init_result(bench_tm_result_t *res)
 	}
 }
 
-static void print_results(bench_tm_result_t *res, uint64_t repeat_count)
+static void print_results(bench_tm_result_t *res)
 {
 	for (uint8_t i = 0; i < res->num; i++) {
+		uint64_t num = res->func[i].num ? res->func[i].num : 1;
+
 		printf("     %-38s    %-12" PRIu64 " %-12" PRIu64 " %-12" PRIu64 "\n",
 		       res->func[i].name,
 		       odp_time_to_ns(res->func[i].min),
-		       odp_time_to_ns(res->func[i].tot) / repeat_count,
+		       odp_time_to_ns(res->func[i].tot) / num,
 		       odp_time_to_ns(res->func[i].max));
 	}
 }
@@ -218,6 +222,13 @@ int bench_tm_run(void *arg)
 			if (bench->max_rounds &&  bench->max_rounds < rounds)
 				rounds = bench->max_rounds;
 
+			if (bench->cond != NULL && !bench->cond()) {
+				if (i > 0)
+					printf("[%02d] %-41s n/a          n/a          n/a\n",
+					       j + 1, bench->name);
+				continue;
+			}
+
 			init_result(&res);
 
 			if (bench->init != NULL)
@@ -235,7 +246,7 @@ int bench_tm_run(void *arg)
 			/* No print or results from warm-up round */
 			if (i > 0) {
 				printf("[%02d] %-26s\n", j + 1, bench->name);
-				print_results(&res, rounds);
+				print_results(&res);
 			}
 		}
 	}

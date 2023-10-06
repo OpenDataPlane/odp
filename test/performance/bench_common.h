@@ -140,6 +140,9 @@ typedef struct bench_tm_results_s {
 		/* Maximum duration */
 		odp_time_t max;
 
+		/* Number of measurements */
+		uint64_t num;
+
 	} func[BENCH_TM_MAX_FUNC];
 
 	/* Number of registered test functions */
@@ -158,6 +161,9 @@ typedef int (*bench_tm_run_fn_t)(bench_tm_result_t *res, int repeat_count);
 typedef struct {
 	/* Test case name */
 	const char *name;
+
+	/* Optional precondition to run test */
+	bench_cond_fn_t cond;
 
 	/* Optional test initializer function */
 	bench_init_fn_t init;
