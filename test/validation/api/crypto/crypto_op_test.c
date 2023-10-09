@@ -199,6 +199,8 @@ static int prepare_input_packet(const crypto_op_test_param_t *param,
 	pkt_len = param->header_len + reflength + param->trailer_len;
 	if (param->digest_offset == param->header_len + reflength)
 		pkt_len += ref->digest_length;
+	if (pkt_len == 0)
+		pkt_len = 1;
 
 	pkt = odp_packet_alloc(suite_context.pool, pkt_len);
 
@@ -482,7 +484,7 @@ static int is_digest_in_cipher_range(const crypto_op_test_param_t *param,
 		d_offset < op_params->cipher_range.offset + op_params->cipher_range.length;
 }
 
-void test_crypto_op(const crypto_op_test_param_t *param)
+static void do_test_crypto_op(const crypto_op_test_param_t *param)
 {
 	odp_bool_t ok = false;
 	odp_packet_t pkt;
@@ -497,6 +499,7 @@ void test_crypto_op(const crypto_op_test_param_t *param)
 		.hash_result_offset = param->digest_offset,
 		.aad_ptr = param->ref->aad,
 		.dst_offset_shift = param->oop_shift,
+		.null_crypto = param->null_crypto,
 	};
 	odp_bool_t failure_allowed = false;
 
@@ -588,4 +591,22 @@ void test_crypto_op(const crypto_op_test_param_t *param)
 	check_output_packet_data(pkt_out, &expected);
 out:
 	odp_packet_free(pkt_out);
+}
+
+void test_crypto_op(const crypto_op_test_param_t *param)
+{
+	crypto_op_test_param_t null_param = *param;
+	crypto_test_reference_t ref = *param->ref;
+
+	if (param->session.null_crypto_enable && param->null_crypto) {
+		null_param = *param;
+		null_param.ref = &ref;
+		ref = *param->ref;
+		ref.cipher = ODP_CIPHER_ALG_NULL;
+		ref.auth = ODP_AUTH_ALG_NULL;
+		ref.digest_length = 0;
+		memcpy(ref.ciphertext, ref.plaintext, sizeof(ref.ciphertext));
+		param = &null_param;
+	}
+	do_test_crypto_op(param);
 }

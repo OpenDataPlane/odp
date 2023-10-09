@@ -18,6 +18,7 @@ typedef struct crypto_session_t {
 	odp_crypto_op_type_t op_type;
 	odp_bool_t cipher_range_in_bits;
 	odp_bool_t auth_range_in_bits;
+	odp_bool_t null_crypto_enable;
 } crypto_session_t;
 
 typedef struct crypto_op_test_param_t {
@@ -27,6 +28,7 @@ typedef struct crypto_op_test_param_t {
 	odp_packet_data_range_t cipher_range;
 	odp_packet_data_range_t auth_range;
 	uint32_t digest_offset;
+	odp_bool_t null_crypto;
 	odp_bool_t adjust_segmentation;
 	odp_bool_t wrong_digest;
 	uint32_t first_seg_len;

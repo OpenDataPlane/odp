@@ -39,6 +39,7 @@ static void test_defaults(uint8_t fill)
 	CU_ASSERT_EQUAL(param.cipher_range_in_bits, false);
 	CU_ASSERT_EQUAL(param.auth_range_in_bits, false);
 	CU_ASSERT_EQUAL(param.auth_cipher_text, false);
+	CU_ASSERT_EQUAL(param.null_crypto_enable, false);
 	CU_ASSERT_EQUAL(param.op_mode, ODP_CRYPTO_SYNC);
 	CU_ASSERT_EQUAL(param.cipher_alg, ODP_CIPHER_ALG_NULL);
 	CU_ASSERT_EQUAL(param.cipher_iv_len, 0);
@@ -92,6 +93,10 @@ static void print_alg_test_param(const crypto_op_test_param_t *p)
 		printf("segmentation adjusted, first_seg_len: %d\n", p->first_seg_len);
 	if (p->session.op_type == ODP_CRYPTO_OP_TYPE_OOP)
 		printf("oop_shift: %d\n", p->oop_shift);
+	if (p->session.null_crypto_enable)
+		printf("null crypto enabled in session\n");
+	if (p->null_crypto)
+		printf("null crypto requested\n");
 }
 
 static void alg_test_execute_and_print(crypto_op_test_param_t *param)
@@ -127,8 +132,17 @@ static void alg_test_op(crypto_op_test_param_t *param)
 
 		param->wrong_digest = false;
 		alg_test_execute_and_print(param);
+
+		param->null_crypto = true;
+		alg_test_execute_and_print(param);
+		param->null_crypto = false;
+
 		if (full_test)
 			alg_test_execute_and_print(param); /* rerun with the same parameters */
+
+		if (!full_test && param->session.null_crypto_enable)
+			break;
+
 		param->wrong_digest = true;
 		alg_test_execute_and_print(param);
 	}
@@ -177,6 +191,7 @@ static int session_create(crypto_session_t *session,
 	ses_params.cipher_range_in_bits = session->cipher_range_in_bits;
 	ses_params.auth_range_in_bits = session->auth_range_in_bits;
 	ses_params.auth_cipher_text = (order == AUTH_CIPHERTEXT);
+	ses_params.null_crypto_enable = session->null_crypto_enable;
 	ses_params.op_mode = suite_context.op_mode;
 	ses_params.cipher_alg = ref->cipher;
 	ses_params.auth_alg = ref->auth;
@@ -258,6 +273,7 @@ static void alg_test_ses(odp_crypto_op_t op,
 			 uint32_t digest_offset,
 			 odp_bool_t cipher_range_in_bits,
 			 odp_bool_t auth_range_in_bits,
+			 odp_bool_t null_crypto_enable,
 			 odp_bool_t session_creation_must_fail)
 {
 	unsigned int initial_num_failures = CU_get_number_of_failures();
@@ -269,6 +285,9 @@ static void alg_test_ses(odp_crypto_op_t op,
 	uint32_t max_shift;
 	crypto_op_test_param_t test_param;
 
+	if (null_crypto_enable && suite_context.op_mode == ODP_CRYPTO_SYNC)
+		return;
+
 	if (digest_offset * auth_scale >= auth_range.offset &&
 	    digest_offset * auth_scale < auth_range.offset + auth_range.length)
 		hash_mode = HASH_OVERLAP;
@@ -278,6 +297,7 @@ static void alg_test_ses(odp_crypto_op_t op,
 	test_param.session.op_type = op_type;
 	test_param.session.cipher_range_in_bits = cipher_range_in_bits;
 	test_param.session.auth_range_in_bits = auth_range_in_bits;
+	test_param.session.null_crypto_enable = null_crypto_enable;
 	if (session_create(&test_param.session, order, ref, hash_mode, session_creation_must_fail))
 		return;
 	test_param.ref = ref;
@@ -290,13 +310,14 @@ static void alg_test_ses(odp_crypto_op_t op,
 	max_shift = reflength + ref->digest_length;
 	seg_len = 0;
 
-	if (!full_test &&
-	    ref->cipher != ODP_CIPHER_ALG_NULL &&
-	    ref->auth != ODP_AUTH_ALG_NULL) {
-		/* run the loop body just once */
-		seg_len = max_shift / 2;
-		max_shift = seg_len;
-	}
+	if (!full_test)
+		if ((ref->cipher != ODP_CIPHER_ALG_NULL &&
+		     ref->auth != ODP_AUTH_ALG_NULL) ||
+		    test_param.session.null_crypto_enable) {
+			/* run the loop body just once */
+			seg_len = max_shift / 2;
+			max_shift = seg_len;
+		}
 
 	/*
 	 * Test with segmented packets with all possible segment boundaries
@@ -345,16 +366,18 @@ static void alg_test_op_types(odp_crypto_op_t op,
 	};
 
 	for (unsigned int n = 0; n < ARRAY_SIZE(op_types); n++) {
-		alg_test_ses(op,
-			     op_types[n],
-			     order,
-			     ref,
-			     cipher_range,
-			     auth_range,
-			     digest_offset,
-			     cipher_range_in_bits,
-			     auth_range_in_bits,
-			     session_creation_must_fail);
+		for (unsigned int null_crypto = 0 ; null_crypto <= 1; null_crypto++)
+			alg_test_ses(op,
+				     op_types[n],
+				     order,
+				     ref,
+				     cipher_range,
+				     auth_range,
+				     digest_offset,
+				     cipher_range_in_bits,
+				     auth_range_in_bits,
+				     null_crypto,
+				     session_creation_must_fail);
 	}
 }
 
@@ -603,6 +626,7 @@ static int create_hash_test_reference(odp_auth_alg_t auth,
 	session.op_type = ODP_CRYPTO_OP_TYPE_BASIC;
 	session.cipher_range_in_bits = false;
 	session.auth_range_in_bits = false;
+	session.null_crypto_enable = false;
 	if (session_create(&session, AUTH_PLAINTEXT, ref, HASH_NO_OVERLAP, false))
 		return -1;
 
@@ -810,6 +834,7 @@ static int crypto_encode_ref(crypto_test_reference_t *ref,
 	session.op_type = ODP_CRYPTO_OP_TYPE_BASIC;
 	session.cipher_range_in_bits = false;
 	session.auth_range_in_bits = false;
+	session.null_crypto_enable = false;
 	if (session_create(&session, AUTH_PLAINTEXT, ref, HASH_OVERLAP, false)) {
 		odp_packet_free(pkt);
 		return 1;
