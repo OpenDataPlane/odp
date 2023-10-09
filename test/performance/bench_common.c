@@ -139,7 +139,7 @@ int bench_run(void *arg)
 
 void bench_tm_suite_init(bench_tm_suite_t *suite)
 {
-	memset(suite, 0, sizeof(bench_suite_t));
+	memset(suite, 0, sizeof(bench_tm_suite_t));
 
 	odp_atomic_init_u32(&suite->exit_worker, 0);
 }
