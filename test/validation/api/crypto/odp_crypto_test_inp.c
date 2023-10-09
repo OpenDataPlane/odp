@@ -69,6 +69,10 @@ static void print_alg_test_param(const crypto_op_test_param_t *p)
 	case ODP_CRYPTO_OP_TYPE_OOP:
 		printf("out-of-place ");
 		break;
+	case ODP_CRYPTO_OP_TYPE_BASIC_AND_OOP:
+		printf("basic-and-out-of-place (%s)",
+		       p->op_type == ODP_CRYPTO_OP_TYPE_BASIC ? "basic" : "oop");
+		break;
 	default:
 		printf("unknown (internal error) ");
 		break;
@@ -94,7 +98,7 @@ static void print_alg_test_param(const crypto_op_test_param_t *p)
 	printf("header length: %d, trailer length: %d\n", p->header_len, p->trailer_len);
 	if (p->adjust_segmentation)
 		printf("segmentation adjusted, first_seg_len: %d\n", p->first_seg_len);
-	if (p->session.op_type == ODP_CRYPTO_OP_TYPE_OOP)
+	if (p->op_type == ODP_CRYPTO_OP_TYPE_OOP)
 		printf("oop_shift: %d\n", p->oop_shift);
 	if (p->session.null_crypto_enable)
 		printf("null crypto enabled in session\n");
@@ -121,13 +125,13 @@ static void alg_test_execute_and_print(crypto_op_test_param_t *param)
 	}
 }
 
-static void alg_test_op(crypto_op_test_param_t *param)
+static void alg_test_op2(crypto_op_test_param_t *param)
 {
 	int32_t oop_shifts[] = {0, 3, 130, -10};
 
 	for (uint32_t n = 0; n < ARRAY_SIZE(oop_shifts); n++) {
 		if (oop_shifts[n] != 0 &&
-		    param->session.op_type != ODP_CRYPTO_OP_TYPE_OOP)
+		    param->op_type != ODP_CRYPTO_OP_TYPE_OOP)
 			continue;
 		if ((int32_t)param->header_len + oop_shifts[n] < 0)
 			continue;
@@ -145,10 +149,23 @@ static void alg_test_op(crypto_op_test_param_t *param)
 
 		if (!full_test && param->session.null_crypto_enable)
 			break;
+		if (!full_test && param->session.op_type == ODP_CRYPTO_OP_TYPE_BASIC_AND_OOP)
+			break;
 
 		param->wrong_digest = true;
 		alg_test_execute_and_print(param);
 	}
+}
+
+static void alg_test_op(crypto_op_test_param_t *param)
+{
+	param->op_type = param->session.op_type;
+	if (param->op_type == ODP_CRYPTO_OP_TYPE_BASIC_AND_OOP) {
+		param->op_type = ODP_CRYPTO_OP_TYPE_BASIC;
+		alg_test_op2(param);
+		param->op_type = ODP_CRYPTO_OP_TYPE_OOP;
+	}
+	alg_test_op2(param);
 }
 
 static int combo_warning_shown;
@@ -244,9 +261,10 @@ static int session_create(crypto_session_t *session,
 
 	/* For now, allow out-of-place sessions not to be supported. */
 	if (rc < 0 && status == ODP_CRYPTO_SES_ERR_PARAMS &&
-	    ses_params.op_type == ODP_CRYPTO_OP_TYPE_OOP) {
+	    (ses_params.op_type == ODP_CRYPTO_OP_TYPE_OOP ||
+	     ses_params.op_type == ODP_CRYPTO_OP_TYPE_BASIC_AND_OOP)) {
 		if (!oop_warning_shown)
-			printf("\n    Skipping ODP_CRYPTO_OP_TYPE_OOP tests\n");
+			printf("\n    Skipping out-of-place tests\n");
 		oop_warning_shown = 1;
 		return -1;
 	}
@@ -316,7 +334,8 @@ static void alg_test_ses(odp_crypto_op_t op,
 	if (!full_test)
 		if ((ref->cipher != ODP_CIPHER_ALG_NULL &&
 		     ref->auth != ODP_AUTH_ALG_NULL) ||
-		    test_param.session.null_crypto_enable) {
+		    test_param.session.null_crypto_enable ||
+		    test_param.session.op_type == ODP_CRYPTO_OP_TYPE_BASIC_AND_OOP) {
 			/* run the loop body just once */
 			seg_len = max_shift / 2;
 			max_shift = seg_len;
@@ -366,6 +385,7 @@ static void alg_test_op_types(odp_crypto_op_t op,
 		ODP_CRYPTO_OP_TYPE_LEGACY,
 		ODP_CRYPTO_OP_TYPE_BASIC,
 		ODP_CRYPTO_OP_TYPE_OOP,
+		ODP_CRYPTO_OP_TYPE_BASIC_AND_OOP,
 	};
 
 	for (unsigned int n = 0; n < ARRAY_SIZE(op_types); n++) {
@@ -643,7 +663,8 @@ static int create_hash_test_reference(odp_auth_alg_t auth,
 		.auth_range = { .offset = 0, .length = auth_bytes },
 		.dst_offset_shift = 0,
 	};
-	rc = crypto_op(pkt, &pkt, &ok, &op_params, ODP_CRYPTO_OP_TYPE_BASIC);
+	rc = crypto_op(pkt, &pkt, &ok, &op_params,
+		       ODP_CRYPTO_OP_TYPE_BASIC, ODP_CRYPTO_OP_TYPE_BASIC);
 
 	CU_ASSERT(rc == 0);
 	if (rc) {
@@ -862,7 +883,8 @@ static int crypto_encode_ref(crypto_test_reference_t *ref,
 		.auth_range = auth_range,
 		.dst_offset_shift = 0,
 	};
-	rc = crypto_op(pkt, &pkt, &ok, &op_params, ODP_CRYPTO_OP_TYPE_BASIC);
+	rc = crypto_op(pkt, &pkt, &ok, &op_params,
+		       ODP_CRYPTO_OP_TYPE_BASIC, ODP_CRYPTO_OP_TYPE_BASIC);
 	CU_ASSERT(rc == 0);
 	if (rc) {
 		(void)odp_crypto_session_destroy(session.session);
