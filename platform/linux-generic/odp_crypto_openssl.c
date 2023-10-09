@@ -2592,6 +2592,9 @@ int crypto_int(odp_packet_t pkt_in,
 
 	if (odp_likely(session->p.op_type == ODP_CRYPTO_OP_TYPE_BASIC)) {
 		out_pkt = pkt_in;
+	} else if (session->p.op_type == ODP_CRYPTO_OP_TYPE_BASIC_AND_OOP &&
+		   *pkt_out == ODP_PACKET_INVALID) {
+		out_pkt = pkt_in;
 	} else {
 		out_pkt = get_output_packet(session, pkt_in, *pkt_out);
 		if (odp_unlikely(out_pkt == ODP_PACKET_INVALID))
@@ -2762,10 +2765,19 @@ int odp_crypto_op(const odp_packet_t pkt_in[],
 		session = (odp_crypto_generic_session_t *)(intptr_t)param[i].session;
 		_ODP_ASSERT(ODP_CRYPTO_SYNC == session->p.op_mode);
 
-		if (odp_unlikely(session->p.op_type == ODP_CRYPTO_OP_TYPE_OOP))
-			rc = crypto_int_oop(pkt_in[i], &pkt_out[i], &param[i]);
-		else
+		if (odp_likely(session->p.op_type == ODP_CRYPTO_OP_TYPE_BASIC)) {
 			rc = crypto_int(pkt_in[i], &pkt_out[i], &param[i]);
+		} else if (session->p.op_type == ODP_CRYPTO_OP_TYPE_OOP) {
+			rc = crypto_int_oop(pkt_in[i], &pkt_out[i], &param[i]);
+		} else if (session->p.op_type == ODP_CRYPTO_OP_TYPE_BASIC_AND_OOP) {
+			if (pkt_out[i] == ODP_PACKET_INVALID) /* basic */
+				rc = crypto_int(pkt_in[i], &pkt_out[i], &param[i]);
+			else                                  /* oop */
+				rc = crypto_int_oop(pkt_in[i], &pkt_out[i], &param[i]);
+		} else {
+			_ODP_ASSERT(session->p.op_type == ODP_CRYPTO_OP_TYPE_LEGACY);
+			rc = crypto_int(pkt_in[i], &pkt_out[i], &param[i]);
+		}
 		if (rc < 0)
 			break;
 	}
@@ -2788,13 +2800,22 @@ int odp_crypto_op_enq(const odp_packet_t pkt_in[],
 		_ODP_ASSERT(ODP_CRYPTO_ASYNC == session->p.op_mode);
 		_ODP_ASSERT(ODP_QUEUE_INVALID != session->p.compl_queue);
 
-		if (session->p.op_type != ODP_CRYPTO_OP_TYPE_BASIC)
-			pkt = pkt_out[i];
-
-		if (odp_unlikely(session->p.op_type == ODP_CRYPTO_OP_TYPE_OOP))
-			rc = crypto_int_oop(pkt_in[i], &pkt, &param[i]);
-		else
+		if (odp_likely(session->p.op_type == ODP_CRYPTO_OP_TYPE_BASIC)) {
 			rc = crypto_int(pkt_in[i], &pkt, &param[i]);
+		} else if (session->p.op_type == ODP_CRYPTO_OP_TYPE_OOP) {
+			pkt = pkt_out[i];
+			rc = crypto_int_oop(pkt_in[i], &pkt, &param[i]);
+		} else if (session->p.op_type == ODP_CRYPTO_OP_TYPE_BASIC_AND_OOP) {
+			pkt = pkt_out[i];
+			if (pkt_out[i] == ODP_PACKET_INVALID) /* basic */
+				rc = crypto_int(pkt_in[i], &pkt, &param[i]);
+			else                                  /* oop */
+				rc = crypto_int_oop(pkt_in[i], &pkt, &param[i]);
+		} else {
+			_ODP_ASSERT(session->p.op_type == ODP_CRYPTO_OP_TYPE_LEGACY);
+			pkt = pkt_out[i];
+			rc = crypto_int(pkt_in[i], &pkt, &param[i]);
+		}
 		if (rc < 0)
 			break;
 
