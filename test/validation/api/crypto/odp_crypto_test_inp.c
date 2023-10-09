@@ -69,6 +69,9 @@ static void print_alg_test_param(const crypto_op_test_param_t *p)
 	case ODP_CRYPTO_OP_TYPE_OOP:
 		printf("out-of-place ");
 		break;
+	default:
+		printf("unknown (internal error) ");
+		break;
 	}
 	printf("%s\n", p->session.op == ODP_CRYPTO_OP_ENCODE ? "encode" : "decode");
 
