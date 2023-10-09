@@ -217,6 +217,7 @@ struct odp_crypto_generic_session_t {
 	uint8_t cipher_range_in_bits : 1;
 	uint8_t auth_range_in_bits : 1;
 	uint8_t auth_range_used : 1;
+	uint8_t null_crypto_enable : 1;
 
 	struct {
 		uint8_t key_data[EVP_MAX_KEY_LENGTH];
@@ -2058,6 +2059,12 @@ odp_crypto_session_create(const odp_crypto_session_param_t *param,
 	session->cipher_range_in_bits = !!param->cipher_range_in_bits;
 	session->auth_range_in_bits = !!param->auth_range_in_bits;
 	session->auth_range_used = 1;
+	session->null_crypto_enable = !!param->null_crypto_enable;
+
+	if (session->null_crypto_enable && param->op_mode == ODP_CRYPTO_SYNC) {
+		*status = ODP_CRYPTO_SES_ERR_CIPHER;
+		goto err;
+	}
 
 	if (session->p.cipher_iv_len > EVP_MAX_IV_LENGTH) {
 		_ODP_DBG("Maximum IV length exceeded\n");
@@ -2590,6 +2597,9 @@ int crypto_int(odp_packet_t pkt_in,
 		if (odp_unlikely(out_pkt == ODP_PACKET_INVALID))
 			return -1;
 	}
+
+	if (odp_unlikely(session->null_crypto_enable && param->null_crypto))
+		goto out;
 
 	if (ODP_DEBUG) {
 		if (session->p.auth_alg != ODP_AUTH_ALG_NULL &&

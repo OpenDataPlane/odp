@@ -826,9 +826,14 @@ int crypto_int(odp_packet_t pkt_in,
 			return -1;
 	}
 
+	if (odp_unlikely(session->p.null_crypto_enable &&
+			 param->null_crypto))
+		goto out;
+
 	/* Invoke the crypto function */
 	session->func(out_pkt, param, session);
 
+out:
 	packet_subtype_set(out_pkt, ODP_EVENT_PACKET_CRYPTO);
 
 	/* Synchronous, simply return results */
