@@ -26,9 +26,6 @@
 
 #include "bench_common.h"
 
-/** Minimum number of packet data bytes in the first segment */
-#define PKT_POOL_SEG_LEN 128
-
 /** Packet user area size in bytes */
 #define PKT_POOL_UAREA_SIZE 8
 
@@ -1561,7 +1558,7 @@ int main(int argc, char *argv[])
 	odp_pool_param_t params;
 	odp_instance_t instance;
 	odp_init_t init_param;
-	uint32_t pkt_num;
+	uint32_t pkt_num, seg_len;
 	uint8_t ret;
 
 	/* Let helper collect its own arguments (e.g. --odph_proc) */
@@ -1644,10 +1641,6 @@ int main(int argc, char *argv[])
 		   capa.pkt.max_len < 2 * TEST_MAX_PKT_SIZE) {
 		ODPH_ERR("Error: packet length not supported.\n");
 		exit(EXIT_FAILURE);
-	} else if (capa.pkt.max_seg_len &&
-		   capa.pkt.max_seg_len < PKT_POOL_SEG_LEN) {
-		ODPH_ERR("Error: segment length not supported.\n");
-		exit(EXIT_FAILURE);
 	} else if (capa.pkt.max_uarea_size &&
 		   capa.pkt.max_uarea_size < PKT_POOL_UAREA_SIZE) {
 		ODPH_ERR("Error: user area size not supported.\n");
@@ -1658,9 +1651,16 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
+	seg_len = TEST_MAX_PKT_SIZE;
+	if (capa.pkt.max_seg_len && capa.pkt.max_seg_len < seg_len) {
+		seg_len = capa.pkt.max_seg_len;
+		printf("\nWarn: allocated packets may be segmented (min seg_len=%" PRIu32 ")\n\n",
+		       seg_len);
+	}
+
 	/* Create packet pool */
 	odp_pool_param_init(&params);
-	params.pkt.seg_len = PKT_POOL_SEG_LEN;
+	params.pkt.seg_len = seg_len;
 	/* Using packet length as twice the TEST_MAX_PKT_SIZE as some
 	 * test cases (packet_ref_pkt) might allocate a bigger
 	 * packet than TEST_MAX_PKT_SIZE.
