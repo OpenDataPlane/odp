@@ -82,6 +82,7 @@ typedef struct {
 	int bench_idx;   /** Benchmark index to run indefinitely */
 	int burst_size;  /** Burst size for *_multi operations */
 	int cache_size;  /** Pool cache size */
+	int time;        /** Measure time vs. CPU cycles */
 	uint32_t rounds; /** Rounds per test case */
 } appl_args_t;
 
@@ -1358,6 +1359,7 @@ static void usage(char *progname)
 	       "  -c, --cache_size <num>  Pool cache size.\n"
 	       "  -i, --index <idx>       Benchmark index to run indefinitely.\n"
 	       "  -r, --rounds <num>      Run each test case 'num' times (default %u).\n"
+	       "  -t, --time <opt>        Time measurement. 0: measure CPU cycles (default), 1: measure time\n"
 	       "  -h, --help              Display help and exit.\n\n"
 	       "\n", NO_PATH(progname), NO_PATH(progname), TEST_ROUNDS);
 }
@@ -1378,16 +1380,18 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{"cache_size", required_argument, NULL, 'c'},
 		{"index", required_argument, NULL, 'i'},
 		{"rounds", required_argument, NULL, 'r'},
+		{"time", required_argument, NULL, 't'},
 		{"help", no_argument, NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts =  "c:b:i:r:h";
+	static const char *shortopts =  "c:b:i:r:t:h";
 
 	appl_args->bench_idx = 0; /* Run all benchmarks */
 	appl_args->burst_size = TEST_DEF_BURST;
 	appl_args->cache_size = -1;
 	appl_args->rounds = TEST_ROUNDS;
+	appl_args->time = 0;
 
 	while (1) {
 		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
@@ -1407,6 +1411,9 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 			break;
 		case 'r':
 			appl_args->rounds = atoi(optarg);
+			break;
+		case 't':
+			appl_args->time = atoi(optarg);
 			break;
 		case 'h':
 			usage(argv[0]);
@@ -1610,6 +1617,7 @@ int main(int argc, char *argv[])
 	gbl_args->suite.indef_idx = gbl_args->appl.bench_idx;
 	gbl_args->suite.rounds = gbl_args->appl.rounds;
 	gbl_args->suite.repeat_count = TEST_REPEAT_COUNT;
+	gbl_args->suite.measure_time = !!gbl_args->appl.time;
 
 	/* Print both system and application information */
 	print_info(NO_PATH(argv[0]), &gbl_args->appl);
@@ -1679,15 +1687,16 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
-	printf("CPU:             %i\n", odp_cpumask_first(&cpumask));
-	printf("CPU mask:        %s\n", cpumaskstr);
-	printf("Burst size:      %d\n", gbl_args->appl.burst_size);
-	printf("Bench repeat:    %d\n", TEST_REPEAT_COUNT);
-	printf("Test rounds:     %u\n", gbl_args->appl.rounds);
+	printf("CPU:               %i\n", odp_cpumask_first(&cpumask));
+	printf("CPU mask:          %s\n", cpumaskstr);
+	printf("Burst size:        %d\n", gbl_args->appl.burst_size);
+	printf("Bench repeat:      %d\n", TEST_REPEAT_COUNT);
+	printf("Measurement unit:  %s\n", gbl_args->appl.time ? "nsec" : "CPU cycles");
+	printf("Test rounds:       %u\n", gbl_args->appl.rounds);
 	if (gbl_args->appl.cache_size < 0)
-		printf("Pool cache size: default\n");
+		printf("Pool cache size:   default\n");
 	else
-		printf("Pool cache size: %d\n", gbl_args->appl.cache_size);
+		printf("Pool cache size:   %d\n", gbl_args->appl.cache_size);
 
 	odp_pool_print(gbl_args->pool);
 
