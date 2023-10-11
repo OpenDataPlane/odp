@@ -21,8 +21,6 @@
 #define MAX_QUEUES 1024
 #define MAX_FILENAME 128
 
-#define ABS(v) ((v) < 0 ? -(v) : (v))
-
 enum mode_e {
 	MODE_ONESHOT = 0,
 	MODE_RESTART_ABS,
@@ -973,7 +971,7 @@ static void print_stat(test_global_t *test_global)
 			timer_ctx_t *t = &test_global->timer_ctx[i];
 			int64_t v = t->first_tmo_diff;
 
-			if (ABS(v) > ABS(max)) {
+			if (ODPH_ABS(v) > ODPH_ABS(max)) {
 				max = v;
 				idx = i;
 			}
@@ -990,7 +988,7 @@ static void print_stat(test_global_t *test_global)
 		timer_ctx_t *t = &test_global->timer_ctx[i];
 		int64_t v = t->nsec_final;
 
-		if (ABS(v) > ABS(max))
+		if (ODPH_ABS(v) > ODPH_ABS(max))
 			max = v;
 	}
 
