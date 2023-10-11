@@ -154,8 +154,8 @@ static inline uint32_t _RING_MPMC_DEQ_MULTI(_ring_mpmc_gen_t *ring,
 	 * and thus r_head value is always behind or equal to w_tail value.
 	 * When CAS operation succeeds, this thread owns data between old
 	 * and new r_head. */
+	old_head = odp_atomic_load_acq_u32(&ring->r.r_head);
 	do {
-		old_head = odp_atomic_load_acq_u32(&ring->r.r_head);
 		odp_prefetch(&ring_data[(old_head + 1) & ring_mask]);
 		w_tail   = odp_atomic_load_acq_u32(&ring->r.w_tail);
 		num_data = w_tail - old_head;
@@ -200,8 +200,8 @@ static inline uint32_t _RING_MPMC_DEQ_BATCH(_ring_mpmc_gen_t *ring,
 	 * and thus r_head value is always behind or equal to w_tail value.
 	 * When CAS operation succeeds, this thread owns data between old
 	 * and new r_head. */
+	old_head = odp_atomic_load_acq_u32(&ring->r.r_head);
 	do {
-		old_head = odp_atomic_load_acq_u32(&ring->r.r_head);
 		odp_prefetch(&ring_data[(old_head + 1) & ring_mask]);
 		w_tail   = odp_atomic_load_acq_u32(&ring->r.w_tail);
 		num_data = w_tail - old_head;
@@ -247,8 +247,8 @@ static inline uint32_t _RING_MPMC_ENQ_MULTI(_ring_mpmc_gen_t *ring,
 	 *
 	 * When CAS operation succeeds, this thread owns data between old and
 	 * new w_head. */
+	old_head = odp_atomic_load_acq_u32(&ring->r.w_head);
 	do {
-		old_head = odp_atomic_load_acq_u32(&ring->r.w_head);
 		r_tail   = odp_atomic_load_acq_u32(&ring->r.r_tail);
 
 		num_free = size - (old_head - r_tail);
@@ -298,8 +298,8 @@ static inline uint32_t _RING_MPMC_ENQ_BATCH(_ring_mpmc_gen_t *ring,
 	 *
 	 * When CAS operation succeeds, this thread owns data between old and
 	 * new w_head. */
+	old_head = odp_atomic_load_acq_u32(&ring->r.w_head);
 	do {
-		old_head = odp_atomic_load_acq_u32(&ring->r.w_head);
 		r_tail   = odp_atomic_load_acq_u32(&ring->r.r_tail);
 
 		num_free = size - (old_head - r_tail);
