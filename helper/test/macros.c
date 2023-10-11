@@ -45,6 +45,23 @@ int main(void)
 	if (ODPH_ARRAY_SIZE(arr_10) != 10)
 		ret++;
 
+	if (ODPH_ABS(-1) != 1)
+		ret++;
+
+	if (ODPH_ABS(1) != 1)
+		ret++;
+
+	if (ODPH_ABS(0) != 0)
+		ret++;
+
+	a = -1;
+	if (ODPH_ABS(a++) != 1)
+		ret++;
+
+	a = -1;
+	if (ODPH_ABS(--a) != 2)
+		ret++;
+
 	if (!ret)
 		printf("All tests passed\n");
 	else
