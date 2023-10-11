@@ -639,7 +639,7 @@ int odp_cunit_run(void)
 
 	CU_cleanup_registry();
 
-	/* call test executable terminason hook, if any */
+	/* call test executable termination hook, if any */
 	if (global_init_term.global_term_ptr &&
 	    ((*global_init_term.global_term_ptr)(instance) != 0))
 		return -1;
@@ -704,7 +704,7 @@ int odp_cunit_register(odp_suiteinfo_t testsuites[])
 }
 
 /*
- * Parse command line options to extract options affectiong cunit_common.
+ * Parse command line options to extract options affecting cunit_common.
  * (hence also helpers options as cunit_common uses the helpers)
  * Options private to the test calling cunit_common are not parsed here.
  */
