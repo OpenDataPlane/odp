@@ -48,6 +48,15 @@ extern "C" {
 	})
 
 /**
+ * Return absolute value of signed variable
+ */
+#define ODPH_ABS(v)				\
+	__extension__ ({			\
+		__typeof__(v) tmp_v = (v);	\
+		tmp_v < 0 ? -tmp_v : tmp_v;	\
+	})
+
+/**
  * @}
  */
 
