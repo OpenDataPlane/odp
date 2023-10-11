@@ -663,9 +663,6 @@ static int do_transfer_async(odp_dma_t dma, odp_dma_transfer_param_t *trs_param,
 			CU_ASSERT(user_data == USER_DATA);
 
 			odp_dma_transfer_id_free(dma, compl_param[i].transfer_id);
-
-			return done;
-
 		} else if (compl_mode == ODP_DMA_COMPL_EVENT) {
 			odp_queue_t from = ODP_QUEUE_INVALID;
 
