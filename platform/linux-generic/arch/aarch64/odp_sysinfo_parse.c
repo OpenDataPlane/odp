@@ -138,12 +138,20 @@ static void aarch64_part_info(char *str, int maxlen, odp_cpu_arch_arm_t *cpu_isa
 			snprintf(str, maxlen, "Cortex-A78AE");
 			*cpu_isa = ODP_CPU_ARCH_ARMV8_2;
 			return;
+		case 0xd44:
+			snprintf(str, maxlen, "Cortex-X1");
+			*cpu_isa = ODP_CPU_ARCH_ARMV8_2;
+			return;
 		case 0xd46:
 			snprintf(str, maxlen, "Cortex-A510");
 			*cpu_isa = ODP_CPU_ARCH_ARMV9_0;
 			return;
 		case 0xd47:
 			snprintf(str, maxlen, "Cortex-A710");
+			*cpu_isa = ODP_CPU_ARCH_ARMV9_0;
+			return;
+		case 0xd48:
+			snprintf(str, maxlen, "Cortex-X2");
 			*cpu_isa = ODP_CPU_ARCH_ARMV9_0;
 			return;
 		case 0xd49:
@@ -157,6 +165,18 @@ static void aarch64_part_info(char *str, int maxlen, odp_cpu_arch_arm_t *cpu_isa
 		case 0xd4b:
 			snprintf(str, maxlen, "Cortex-A78C");
 			*cpu_isa = ODP_CPU_ARCH_ARMV8_2;
+			return;
+		case 0xd4d:
+			snprintf(str, maxlen, "Cortex-A715");
+			*cpu_isa = ODP_CPU_ARCH_ARMV9_0;
+			return;
+		case 0xd80:
+			snprintf(str, maxlen, "Cortex-A520");
+			*cpu_isa = ODP_CPU_ARCH_ARMV9_2;
+			return;
+		case 0xd81:
+			snprintf(str, maxlen, "Cortex-A720");
+			*cpu_isa = ODP_CPU_ARCH_ARMV9_2;
 			return;
 		default:
 			break;
