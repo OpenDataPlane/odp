@@ -1303,6 +1303,11 @@ static void test_combo_variants(odp_cipher_alg_t cipher, odp_auth_alg_t auth)
 
 static void test_all_combinations(void)
 {
+	if (suite_context.partial_test) {
+		printf("skipped ");
+		return;
+	}
+
 	printf("\n");
 	for (size_t n = 0; n < ARRAY_SIZE(cipher_algs); n++)
 		for (size_t i = 0; i < ARRAY_SIZE(auth_algs); i++)
@@ -1987,6 +1992,24 @@ static odp_event_t plain_compl_queue_deq(void)
 	return odp_queue_deq(suite_context.queue);
 }
 
+static int partial_test_only(odp_crypto_op_mode_t op_mode, odp_queue_type_t q_type)
+{
+	odp_crypto_capability_t capa;
+
+	if (full_test || odp_crypto_capability(&capa))
+		return 0;
+
+	if (!capa.async_mode)
+		return 0;
+
+	if (op_mode == ODP_CRYPTO_SYNC)
+		return 1;
+	else if (q_type == ODP_QUEUE_TYPE_PLAIN && capa.queue_type_sched)
+		return 1;
+
+	return 0;
+}
+
 static int crypto_suite_packet_sync_init(void)
 {
 	suite_context.op_mode = ODP_CRYPTO_SYNC;
@@ -1996,6 +2019,8 @@ static int crypto_suite_packet_sync_init(void)
 		return -1;
 
 	suite_context.queue = ODP_QUEUE_INVALID;
+	suite_context.partial_test = partial_test_only(suite_context.op_mode,
+						       ODP_QUEUE_TYPE_PLAIN);
 	return 0;
 }
 
@@ -2017,6 +2042,8 @@ static int crypto_suite_packet_async_plain_init(void)
 	suite_context.queue = out_queue;
 	suite_context.q_type = ODP_QUEUE_TYPE_PLAIN;
 	suite_context.compl_queue_deq = plain_compl_queue_deq;
+	suite_context.partial_test = partial_test_only(suite_context.op_mode,
+						       suite_context.q_type);
 
 	return 0;
 }
@@ -2039,6 +2066,8 @@ static int crypto_suite_packet_async_sched_init(void)
 	suite_context.queue = out_queue;
 	suite_context.q_type = ODP_QUEUE_TYPE_SCHED;
 	suite_context.compl_queue_deq = sched_compl_queue_deq;
+	suite_context.partial_test = partial_test_only(suite_context.op_mode,
+						       suite_context.q_type);
 
 	return 0;
 }

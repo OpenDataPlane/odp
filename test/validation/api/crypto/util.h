@@ -20,6 +20,7 @@ struct suite_context_s {
 	odp_queue_t queue;
 	odp_queue_type_t q_type;
 	odp_event_t (*compl_queue_deq)(void);
+	int partial_test;
 };
 
 extern struct suite_context_s suite_context;
