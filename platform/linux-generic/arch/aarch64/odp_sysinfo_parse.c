@@ -32,6 +32,9 @@ static void aarch64_impl_str(char *str, int maxlen, int implementer)
 	case 0x44:
 		snprintf(str, maxlen, "Digital Equipment Corporation");
 		return;
+	case 0x46:
+		snprintf(str, maxlen, "Fujitsu Ltd.");
+		return;
 	case 0x49:
 		snprintf(str, maxlen, "Infineon Technologies AG");
 		return;
@@ -52,6 +55,9 @@ static void aarch64_impl_str(char *str, int maxlen, int implementer)
 		return;
 	case 0x69:
 		snprintf(str, maxlen, "Intel Corporation");
+		return;
+	case 0xc0:
+		snprintf(str, maxlen, "Ampere Computing");
 		return;
 	default:
 		break;
