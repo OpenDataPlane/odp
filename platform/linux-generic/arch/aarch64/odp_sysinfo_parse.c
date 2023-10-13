@@ -233,6 +233,11 @@ static odp_cpu_arch_arm_t arm_isa_version(void)
 	#endif
 	}
 
+	if (__ARM_ARCH == 9) {
+		/* v9.0 or higher */
+		return ODP_CPU_ARCH_ARMV9_0;
+	}
+
 	if (__ARM_ARCH >= 800) {
 		/* ACLE 2018 defines that from v8.1 onwards the value includes
 		 * the minor version number: __ARM_ARCH = X * 100 + Y
