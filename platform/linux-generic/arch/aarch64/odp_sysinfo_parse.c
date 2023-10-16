@@ -263,6 +263,10 @@ static odp_cpu_arch_arm_t arm_isa_version(void)
 				return ODP_CPU_ARCH_ARMV8_6;
 			case 7:
 				return ODP_CPU_ARCH_ARMV8_7;
+			case 8:
+				return ODP_CPU_ARCH_ARMV8_8;
+			case 9:
+				return ODP_CPU_ARCH_ARMV8_9;
 			default:
 				return ODP_CPU_ARCH_ARM_UNKNOWN;
 			}
@@ -274,6 +278,8 @@ static odp_cpu_arch_arm_t arm_isa_version(void)
 				return ODP_CPU_ARCH_ARMV9_1;
 			case 2:
 				return ODP_CPU_ARCH_ARMV9_2;
+			case 3:
+				return ODP_CPU_ARCH_ARMV9_3;
 			default:
 				return ODP_CPU_ARCH_ARM_UNKNOWN;
 			}
