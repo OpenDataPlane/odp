@@ -1,6 +1,6 @@
 name: CI x86_64
 
-on: [push, pull_request]
+on: [push, pull_request, merge_group]
 env:
   ARCH: x86_64
   CC: gcc
