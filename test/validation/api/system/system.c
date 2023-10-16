@@ -534,12 +534,18 @@ static void system_test_info(void)
 			printf("        ODP_CPU_ARCH_ARMV8_6\n");
 		else if (info.cpu_isa_sw.arm == ODP_CPU_ARCH_ARMV8_7)
 			printf("        ODP_CPU_ARCH_ARMV8_7\n");
+		else if (info.cpu_isa_sw.arm == ODP_CPU_ARCH_ARMV8_8)
+			printf("        ODP_CPU_ARCH_ARMV8_8\n");
+		else if (info.cpu_isa_sw.arm == ODP_CPU_ARCH_ARMV8_9)
+			printf("        ODP_CPU_ARCH_ARMV8_9\n");
 		else if (info.cpu_isa_sw.arm == ODP_CPU_ARCH_ARMV9_0)
 			printf("        ODP_CPU_ARCH_ARMV9_0\n");
 		else if (info.cpu_isa_sw.arm == ODP_CPU_ARCH_ARMV9_1)
 			printf("        ODP_CPU_ARCH_ARMV9_1\n");
 		else if (info.cpu_isa_sw.arm == ODP_CPU_ARCH_ARMV9_2)
 			printf("        ODP_CPU_ARCH_ARMV9_2\n");
+		else if (info.cpu_isa_sw.arm == ODP_CPU_ARCH_ARMV9_3)
+			printf("        ODP_CPU_ARCH_ARMV9_3\n");
 		else
 			CU_FAIL("Unknown CPU ISA SW ARCH found!");
 
@@ -566,12 +572,18 @@ static void system_test_info(void)
 			printf("        ODP_CPU_ARCH_ARMV8_6\n");
 		else if (info.cpu_isa_hw.arm == ODP_CPU_ARCH_ARMV8_7)
 			printf("        ODP_CPU_ARCH_ARMV8_7\n");
+		else if (info.cpu_isa_hw.arm == ODP_CPU_ARCH_ARMV8_8)
+			printf("        ODP_CPU_ARCH_ARMV8_8\n");
+		else if (info.cpu_isa_hw.arm == ODP_CPU_ARCH_ARMV8_9)
+			printf("        ODP_CPU_ARCH_ARMV8_9\n");
 		else if (info.cpu_isa_hw.arm == ODP_CPU_ARCH_ARMV9_0)
 			printf("        ODP_CPU_ARCH_ARMV9_0\n");
 		else if (info.cpu_isa_hw.arm == ODP_CPU_ARCH_ARMV9_1)
 			printf("        ODP_CPU_ARCH_ARMV9_1\n");
 		else if (info.cpu_isa_hw.arm == ODP_CPU_ARCH_ARMV9_2)
 			printf("        ODP_CPU_ARCH_ARMV9_2\n");
+		else if (info.cpu_isa_hw.arm == ODP_CPU_ARCH_ARMV9_3)
+			printf("        ODP_CPU_ARCH_ARMV9_3\n");
 		else if (info.cpu_isa_hw.arm == ODP_CPU_ARCH_ARM_UNKNOWN)
 			printf("        ODP_CPU_ARCH_ARM_UNKNOWN\n");
 		else
