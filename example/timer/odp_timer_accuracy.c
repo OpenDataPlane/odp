@@ -1028,6 +1028,7 @@ static int run_test(void *arg)
 	uint64_t tmo_ns;
 	timer_ctx_t *ctx;
 	odp_thrmask_t mask;
+	uint64_t wait = odp_schedule_wait_time(10 * ODP_TIME_MSEC_IN_NS);
 	odp_schedule_group_t group = ODP_SCHED_GROUP_INVALID;
 	test_log_t *log = test_global->log;
 	enum mode_e mode = test_global->opt.mode;
@@ -1062,7 +1063,7 @@ static int run_test(void *arg)
 	odp_barrier_wait(&test_global->barrier);
 
 	while (1) {
-		ev = odp_schedule(NULL, 10 * ODP_TIME_MSEC_IN_NS);
+		ev = odp_schedule(NULL, wait);
 		time = odp_time_global_strict();
 
 		if (ev == ODP_EVENT_INVALID) {
