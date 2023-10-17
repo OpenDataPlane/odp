@@ -600,7 +600,7 @@ static int create_hash_test_reference(odp_auth_alg_t auth,
 	CU_ASSERT(rc == 0);
 
 	session.op = ODP_CRYPTO_OP_ENCODE;
-	session.op_type = ODP_CRYPTO_OP_TYPE_LEGACY;
+	session.op_type = ODP_CRYPTO_OP_TYPE_BASIC;
 	session.cipher_range_in_bits = false;
 	session.auth_range_in_bits = false;
 	if (session_create(&session, AUTH_PLAINTEXT, ref, HASH_NO_OVERLAP, false))
@@ -616,7 +616,7 @@ static int create_hash_test_reference(odp_auth_alg_t auth,
 		.auth_range = { .offset = 0, .length = auth_bytes },
 		.dst_offset_shift = 0,
 	};
-	rc = crypto_op(pkt, &pkt, &ok, &op_params, ODP_CRYPTO_OP_TYPE_LEGACY);
+	rc = crypto_op(pkt, &pkt, &ok, &op_params, ODP_CRYPTO_OP_TYPE_BASIC);
 
 	CU_ASSERT(rc == 0);
 	if (rc) {
@@ -807,7 +807,7 @@ static int crypto_encode_ref(crypto_test_reference_t *ref,
 	CU_ASSERT(rc == 0);
 
 	session.op = ODP_CRYPTO_OP_ENCODE;
-	session.op_type = ODP_CRYPTO_OP_TYPE_LEGACY;
+	session.op_type = ODP_CRYPTO_OP_TYPE_BASIC;
 	session.cipher_range_in_bits = false;
 	session.auth_range_in_bits = false;
 	if (session_create(&session, AUTH_PLAINTEXT, ref, HASH_OVERLAP, false)) {
@@ -834,7 +834,7 @@ static int crypto_encode_ref(crypto_test_reference_t *ref,
 		.auth_range = auth_range,
 		.dst_offset_shift = 0,
 	};
-	rc = crypto_op(pkt, &pkt, &ok, &op_params, ODP_CRYPTO_OP_TYPE_LEGACY);
+	rc = crypto_op(pkt, &pkt, &ok, &op_params, ODP_CRYPTO_OP_TYPE_BASIC);
 	CU_ASSERT(rc == 0);
 	if (rc) {
 		(void)odp_crypto_session_destroy(session.session);
