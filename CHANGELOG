@@ -1,3 +1,105 @@
+== OpenDataPlane (1.42.1.0)
+
+=== Backward compatible API changes
+==== Classifier
+* Add new `odp_cls_pmr_create_multi()` function for creating multiple packet
+matching rules with a single call.
+* Add new `odp_cls_pmr_destroy_multi()` function for destroying multiple PMRs
+with a single call.
+* Add new `odp_cls_cos_create_multi()` function for creating multiple class-of-
+services with a single call.
+* Add new `odp_cos_destroy_multi()` function for destroying multiple CoSes with
+a single call.
+
+==== Crypto
+* Clarify packet ordering of async crypto ops (`odp_crypto_op_enq()`).
+* Add `odp_crypto_packet_op_param_t.null_crypto` parameter that tells that a
+packet should be processed as if the configured algorithms were null cipher and
+null auth algorithm.
+* Add `ODP_CRYPTO_OP_TYPE_BASIC_AND_OOP` crypto operation type that allows both
+basic and out-of-place operations in the same session.
+
+==== Packet IO
+* Add new API define `ODP_PKTIO_MAX_INDEX` for maximum packet IO interface
+index.
+
+==== Queue
+* Add new `odp_queue_create_multi()` function for creating multiple queues with
+a single call.
+* Add new `odp_queue_destroy_multi()` function for destroying multiple queues
+with a single call.
+* Clarify `odp_queue_param_t` default value specification.
+
+==== System
+* Add enumerations for ARM ISA versions ARMv8.8-A, ARMv8.9-A, and ARMv9.3-A.
+
+==== Timer
+* Change `odp_timer_pool_param_t.num_timers` description to allow applications
+to attempt to allocate more timers than there are in a timer pool.
+* Add new `odp_timeout_alloc_multi()` function for allocating multiple timeouts
+with a single call.
+* Add new `odp_timeout_free_multi()` function for freeing multiple timeouts with
+a single call.
+
+=== Helper (1.4.0)
+==== Backward incompatible changes
+===== Protocols
+* Rename `ODP_GTP_HLEN` define to `ODPH_GTP_HLEN`.
+* Rename `ODP_IGMP_HLEN` define to `ODPH_IGMP_HLEN`.
+* Remove unused ICMP defines and add missing `ODPH_` prefix to the remaining
+ones.
+
+==== Backward compatible changes
+===== Macros
+* Add new `ODPH_MIN()` and `ODPH_MAX()` helper macros for comparison operations.
+* Add new `ODPH_ARRAY_SIZE()` helper macro for calculating array size.
+* Add new `ODPH_ABS()` helper macro for calculating the absolute value of a
+signed variable.
+
+=== Implementation
+==== CPU
+* Optimize `odp_cpu_cycles()` performance on aarch64 by implementing the
+function using `cntvct_el0` virtual counter register.
+
+==== Packet IO
+* Transmitting packet vectors is not supported by the current API, so remove
+the code from the implementation. This may improve performance when transmitting
+packets through event queues.
+* Add support for packet transmit completion check through polling
+(`ODP_PACKET_TX_COMPL_POLL`).
+
+=== Example Applications
+==== sysinfo
+* Add prints for various missing capabilities (e.g. pool, packet IO, timer).
+
+==== timer_accuracy
+* Add new (`-c, --count`) option to set the CPU count.
+* Add new (`-t, --queue_type`) option to set the queue sync type.
+* Add new (`-q, --num_queue`) option to set the number of queues.
+* Add new (`-G, --sched_groups`) option to use a dedicated schedule group for
+each queue.
+
+=== Performance Tests
+==== bench_pktio_sp
+* Add new `odp_bench_pktio_sp` application for measuring delays of ODP packet IO
+slow path functions.
+
+==== dmafwd
+* Add new `odp_dmafwd` application for comparing packet forwarding throughput
+when received packets are first copied either with software memory copy
+or with DMA offload and then echoed back to sender(s).
+
+==== packet_gen
+* Add new (`-m, --tx_mode`) option for selecting how packets are transmitted.
+
+==== stash_perf
+* Add new `odp_stash_perf` application for measuring ODP stash fast path API
+performance.
+
+==== timer_perf
+* Add new mode (`-m 2`) for measuring `odp_schedule()` overhead while
+continuously restarting expiring timers.
+
 == OpenDataPlane (1.42.0.0)
 
 === Backward incompatible API changes
