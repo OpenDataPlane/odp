@@ -69,6 +69,12 @@ typedef struct {
 	/* Clock source support flags */
 	uint8_t clk_supported[ODP_CLOCK_NUM_SRC];
 
+	/* Periodic timer support per clock source*/
+	uint8_t periodic_support[ODP_CLOCK_NUM_SRC];
+
+	/* Periodic timers not supported with any clock source */
+	int no_periodic;
+
 	/* Default resolution / timeout parameters */
 	struct {
 		uint64_t res_ns;
@@ -97,9 +103,6 @@ typedef struct {
 	/* Number of timers allocated per thread */
 	uint32_t timers_per_thread;
 
-	/* Periodic timers supported */
-	int periodic;
-
 	/* Queue type to be tested */
 	odp_queue_type_t test_queue_type;
 
@@ -117,6 +120,7 @@ static int timer_global_init(odp_instance_t *inst)
 	uint64_t res_ns, min_tmo, max_tmo;
 	unsigned int range;
 	int i;
+	int num_periodic = 0;
 
 	if (odph_options(&helper_options)) {
 		ODPH_ERR("odph_options() failed\n");
@@ -184,23 +188,26 @@ static int timer_global_init(odp_instance_t *inst)
 		return -1;
 	}
 
-	/* Default parameters for test cases */
-	global_mem->clk_supported[0] = 1;
+	/* Default parameters for test cases using the default clock source */
 	global_mem->param.res_ns  = res_ns;
 	global_mem->param.min_tmo = min_tmo;
 	global_mem->param.max_tmo = max_tmo;
 	global_mem->param.queue_type_plain = capa.queue_type_plain;
 	global_mem->param.queue_type_sched = capa.queue_type_sched;
 
-	/* Check which other source clocks are supported */
-	for (i = 1; i < ODP_CLOCK_NUM_SRC; i++) {
-		if (odp_timer_capability(ODP_CLOCK_SRC_0 + i, &capa) == 0)
+	/* Check which clock sources are supported */
+	for (i = 0; i < ODP_CLOCK_NUM_SRC; i++) {
+		if (odp_timer_capability(ODP_CLOCK_SRC_0 + i, &capa) == 0) {
 			global_mem->clk_supported[i] = 1;
+
+			if (capa.periodic.max_pools) {
+				global_mem->periodic_support[i] = 1;
+				num_periodic++;
+			}
+		}
 	}
 
-	/* Check if periodic timers are supported */
-	if (capa.periodic.max_pools > 0)
-		global_mem->periodic = 1;
+	global_mem->no_periodic = !num_periodic;
 
 	return 0;
 }
@@ -248,7 +255,7 @@ check_plain_queue_support(void)
 
 static int check_periodic_support(void)
 {
-	if (global_mem->periodic)
+	if (global_mem->periodic_support[0])
 		return ODP_TEST_ACTIVE;
 
 	return ODP_TEST_INACTIVE;
@@ -256,7 +263,7 @@ static int check_periodic_support(void)
 
 static int check_periodic_sched_support(void)
 {
-	if (global_mem->periodic && global_mem->param.queue_type_sched)
+	if (global_mem->periodic_support[0] && global_mem->param.queue_type_sched)
 		return ODP_TEST_ACTIVE;
 
 	return ODP_TEST_INACTIVE;
@@ -264,7 +271,7 @@ static int check_periodic_sched_support(void)
 
 static int check_periodic_plain_support(void)
 {
-	if (global_mem->periodic && global_mem->param.queue_type_plain)
+	if (global_mem->periodic_support[0] && global_mem->param.queue_type_plain)
 		return ODP_TEST_ACTIVE;
 
 	return ODP_TEST_INACTIVE;
