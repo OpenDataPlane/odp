@@ -255,10 +255,10 @@ check_plain_queue_support(void)
 
 static int check_periodic_support(void)
 {
-	if (global_mem->periodic_support[0])
-		return ODP_TEST_ACTIVE;
+	if (global_mem->no_periodic)
+		return ODP_TEST_INACTIVE;
 
-	return ODP_TEST_INACTIVE;
+	return ODP_TEST_ACTIVE;
 }
 
 static int check_periodic_sched_support(void)
@@ -2645,7 +2645,7 @@ static void timer_test_sched_all(void)
 	timer_test_all(ODP_QUEUE_TYPE_SCHED);
 }
 
-static void timer_test_periodic_capa(void)
+static void timer_test_periodic_capa_run(odp_timer_clk_src_t clk_src)
 {
 	odp_timer_capability_t timer_capa;
 	odp_timer_periodic_capability_t capa;
@@ -2657,7 +2657,7 @@ static void timer_test_periodic_capa(void)
 	uint32_t num = 100;
 
 	memset(&timer_capa, 0, sizeof(odp_timer_capability_t));
-	CU_ASSERT_FATAL(odp_timer_capability(ODP_CLOCK_DEFAULT, &timer_capa) == 0);
+	CU_ASSERT_FATAL(odp_timer_capability(clk_src, &timer_capa) == 0);
 	CU_ASSERT(timer_capa.periodic.max_pools);
 	CU_ASSERT(timer_capa.periodic.max_timers);
 
@@ -2688,7 +2688,7 @@ static void timer_test_periodic_capa(void)
 	capa.max_multiplier = 1;
 	capa.res_ns         = 0;
 
-	CU_ASSERT(odp_timer_periodic_capability(ODP_CLOCK_DEFAULT, &capa) == 1);
+	CU_ASSERT(odp_timer_periodic_capability(clk_src, &capa) == 1);
 	CU_ASSERT(capa.base_freq_hz.integer == min_fract.integer);
 	CU_ASSERT(capa.base_freq_hz.numer   == min_fract.numer);
 	CU_ASSERT(capa.base_freq_hz.denom   == min_fract.denom);
@@ -2700,7 +2700,7 @@ static void timer_test_periodic_capa(void)
 	capa.max_multiplier = 1;
 	capa.res_ns         = 0;
 
-	CU_ASSERT(odp_timer_periodic_capability(ODP_CLOCK_DEFAULT, &capa) == 1);
+	CU_ASSERT(odp_timer_periodic_capability(clk_src, &capa) == 1);
 	CU_ASSERT(capa.base_freq_hz.integer == max_fract.integer);
 	CU_ASSERT(capa.base_freq_hz.numer   == max_fract.numer);
 	CU_ASSERT(capa.base_freq_hz.denom   == max_fract.denom);
@@ -2750,7 +2750,7 @@ static void timer_test_periodic_capa(void)
 			ODPH_DBG("freq %" PRIu64 ",  multip %" PRIu64 ", res %" PRIu64 ",\n",
 				 base_freq.integer, max_multiplier, res_ns);
 
-			ret = odp_timer_periodic_capability(ODP_CLOCK_DEFAULT, &capa);
+			ret = odp_timer_periodic_capability(clk_src, &capa);
 
 			if (ret == 1) {
 				CU_ASSERT(capa.base_freq_hz.integer == base_freq.integer);
@@ -2781,6 +2781,20 @@ static void timer_test_periodic_capa(void)
 					CU_ASSERT(capa.res_ns > 0);
 				}
 			}
+		}
+	}
+}
+
+static void timer_test_periodic_capa(void)
+{
+	odp_timer_clk_src_t clk_src;
+	int i;
+
+	for (i = 0; i < ODP_CLOCK_NUM_SRC; i++) {
+		clk_src = ODP_CLOCK_SRC_0 + i;
+		if (global_mem->periodic_support[i]) {
+			ODPH_DBG("\nTesting clock source: %i\n", clk_src);
+			timer_test_periodic_capa_run(clk_src);
 		}
 	}
 }
