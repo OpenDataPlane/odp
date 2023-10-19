@@ -2437,7 +2437,14 @@ int main(int argc, char *argv[])
 	}
 
 	for (i = 0; i < if_count; ++i) {
-		if (odp_pktio_close(gbl_args->pktios[i].pktio)) {
+		odp_pktio_t pktio = gbl_args->pktios[i].pktio;
+
+		if (gbl_args->appl.verbose && odp_pktio_extra_stat_info(pktio, NULL, 0) > 0) {
+			printf("Pktio %s extra statistics:\n", gbl_args->appl.if_names[i]);
+			odp_pktio_extra_stats_print(pktio);
+		}
+
+		if (odp_pktio_close(pktio)) {
 			ODPH_ERR("Pktio close failed: %s\n", gbl_args->appl.if_names[i]);
 			exit(EXIT_FAILURE);
 		}
