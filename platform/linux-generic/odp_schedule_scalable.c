@@ -67,7 +67,7 @@ typedef struct {
 	odp_spinlock_t init_lock;
 	/** Per thread state */
 	sched_scalable_thread_state_t thread_state[MAXTHREADS];
-	uint16_t poll_count[ODP_CONFIG_PKTIO_ENTRIES];
+	uint16_t poll_count[CONFIG_PKTIO_ENTRIES];
 	/* Scheduler interface config options (not used in fast path) */
 	schedule_config_t config_if;
 } sched_global_t;
@@ -713,7 +713,7 @@ static void pktio_start(int pktio_idx,
 	queue_entry_t *qentry;
 	sched_elem_t *elem;
 
-	_ODP_ASSERT(pktio_idx < ODP_CONFIG_PKTIO_ENTRIES);
+	_ODP_ASSERT(pktio_idx < CONFIG_PKTIO_ENTRIES);
 	for (i = 0; i < num_in_queue; i++) {
 		rxq = in_queue_idx[i];
 		_ODP_ASSERT(rxq < ODP_PKTIN_MAX_QUEUES);

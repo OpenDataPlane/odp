@@ -176,7 +176,7 @@ typedef struct ODP_ALIGNED_CACHE odp_packet_hdr_t {
  * grow over 256 bytes. */
 ODP_STATIC_ASSERT(sizeof(odp_packet_hdr_t) <= 256, "PACKET_HDR_SIZE_ERROR");
 
-ODP_STATIC_ASSERT(ODP_CONFIG_PKTIO_ENTRIES < UINT8_MAX, "MS_PKTIO_IDX_SIZE_ERROR");
+ODP_STATIC_ASSERT(CONFIG_PKTIO_ENTRIES < UINT8_MAX, "MS_PKTIO_IDX_SIZE_ERROR");
 
 /**
  * Return the packet header

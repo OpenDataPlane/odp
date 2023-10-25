@@ -99,7 +99,7 @@ typedef struct ODP_ALIGNED_CACHE {
 	int inotify_watch_fd;
 	int inotify_is_running;
 	odp_spinlock_t lock;
-	pcapng_entry_t entry[ODP_CONFIG_PKTIO_ENTRIES];
+	pcapng_entry_t entry[CONFIG_PKTIO_ENTRIES];
 } pcapng_global_t;
 
 static pcapng_global_t *pcapng_gbl;
@@ -230,7 +230,7 @@ static pktio_entry_t *pktio_from_event(struct inotify_event *event)
 
 	odp_spinlock_lock(&pcapng_gbl->lock);
 
-	for (i = 0; i < ODP_CONFIG_PKTIO_ENTRIES; i++) {
+	for (i = 0; i < CONFIG_PKTIO_ENTRIES; i++) {
 		pktio_entry_t *entry = pcapng_gbl->entry[i].pktio_entry;
 
 		if (entry == NULL)
