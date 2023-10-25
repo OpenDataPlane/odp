@@ -74,7 +74,7 @@ typedef struct {
 static pktio_global_t *pktio_global;
 
 /* pktio pointer entries ( for inlines) */
-void *_odp_pktio_entry_ptr[ODP_CONFIG_PKTIO_ENTRIES];
+void *_odp_pktio_entry_ptr[CONFIG_PKTIO_ENTRIES];
 
 static inline pktio_entry_t *pktio_entry_by_index(int index)
 {
@@ -145,7 +145,7 @@ int _odp_pktio_init_global(void)
 		return -1;
 	}
 
-	for (i = 0; i < ODP_CONFIG_PKTIO_ENTRIES; ++i) {
+	for (i = 0; i < CONFIG_PKTIO_ENTRIES; ++i) {
 		pktio_entry = &pktio_global->entries[i];
 
 		pktio_entry->handle = _odp_cast_scalar(odp_pktio_t, i + 1);
@@ -311,7 +311,7 @@ static odp_pktio_t setup_pktio_entry(const char *name, odp_pool_t pool,
 
 	if_name = strip_pktio_type(name, pktio_type);
 
-	for (i = 0; i < ODP_CONFIG_PKTIO_ENTRIES; ++i) {
+	for (i = 0; i < CONFIG_PKTIO_ENTRIES; ++i) {
 		pktio_entry = &pktio_global->entries[i];
 		if (is_free(pktio_entry)) {
 			lock_entry(pktio_entry);
@@ -322,7 +322,7 @@ static odp_pktio_t setup_pktio_entry(const char *name, odp_pool_t pool,
 		}
 	}
 
-	if (i == ODP_CONFIG_PKTIO_ENTRIES) {
+	if (i == CONFIG_PKTIO_ENTRIES) {
 		_ODP_ERR("All pktios used already\n");
 		return ODP_PKTIO_INVALID;
 	}
@@ -809,7 +809,7 @@ odp_pktio_t odp_pktio_lookup(const char *name)
 
 	odp_spinlock_lock(&pktio_global->lock);
 
-	for (i = 0; i < ODP_CONFIG_PKTIO_ENTRIES; ++i) {
+	for (i = 0; i < CONFIG_PKTIO_ENTRIES; ++i) {
 		entry = pktio_entry_by_index(i);
 		if (!entry || is_free(entry))
 			continue;
@@ -1509,7 +1509,7 @@ int _odp_pktio_term_global(void)
 	if (pktio_global == NULL)
 		return 0;
 
-	for (i = 0; i < ODP_CONFIG_PKTIO_ENTRIES; ++i) {
+	for (i = 0; i < CONFIG_PKTIO_ENTRIES; ++i) {
 		pktio_entry_t *pktio_entry;
 
 		pktio_entry = &pktio_global->entries[i];
@@ -1626,12 +1626,12 @@ int odp_pktio_capability(odp_pktio_t pktio, odp_pktio_capability_t *capa)
 	return 0;
 }
 
-ODP_STATIC_ASSERT(ODP_CONFIG_PKTIO_ENTRIES - 1 <= ODP_PKTIO_MAX_INDEX,
-		  "ODP_CONFIG_PKTIO_ENTRIES larger than ODP_PKTIO_MAX_INDEX");
+ODP_STATIC_ASSERT(CONFIG_PKTIO_ENTRIES - 1 <= ODP_PKTIO_MAX_INDEX,
+		  "CONFIG_PKTIO_ENTRIES larger than ODP_PKTIO_MAX_INDEX");
 
 unsigned int odp_pktio_max_index(void)
 {
-	return ODP_CONFIG_PKTIO_ENTRIES - 1;
+	return CONFIG_PKTIO_ENTRIES - 1;
 }
 
 int odp_pktio_stats(odp_pktio_t pktio,

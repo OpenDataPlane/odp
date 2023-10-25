@@ -184,7 +184,7 @@ typedef struct {
 		uint32_t tx_compl_pool_size;
 	} config;
 
-	pktio_entry_t entries[ODP_CONFIG_PKTIO_ENTRIES];
+	pktio_entry_t entries[CONFIG_PKTIO_ENTRIES];
 
 	lso_profile_t lso_profile[PKTIO_LSO_PROFILES];
 	int num_lso_profiles;
@@ -257,9 +257,9 @@ static inline pktio_entry_t *get_pktio_entry(odp_pktio_t pktio)
 	if (odp_unlikely(pktio == ODP_PKTIO_INVALID))
 		return NULL;
 
-	if (odp_unlikely(_odp_typeval(pktio) > ODP_CONFIG_PKTIO_ENTRIES)) {
+	if (odp_unlikely(_odp_typeval(pktio) > CONFIG_PKTIO_ENTRIES)) {
 		_ODP_DBG("pktio limit %" PRIuPTR "/%d exceed\n",
-			 _odp_typeval(pktio), ODP_CONFIG_PKTIO_ENTRIES);
+			 _odp_typeval(pktio), CONFIG_PKTIO_ENTRIES);
 		return NULL;
 	}
 

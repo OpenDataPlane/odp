@@ -96,7 +96,7 @@ ODP_STATIC_ASSERT((QUEUE_LOAD * CONFIG_MAX_SCHED_QUEUES) < UINT32_MAX, "Load_val
 #define RANDOM_TBL_SIZE 128
 
 /* Maximum number of packet IO interfaces */
-#define NUM_PKTIO ODP_CONFIG_PKTIO_ENTRIES
+#define NUM_PKTIO CONFIG_PKTIO_ENTRIES
 
 /* Maximum pktin index. Needs to fit into 8 bits. */
 #define MAX_PKTIN_INDEX 255

@@ -116,7 +116,7 @@ typedef struct pool_t {
 } pool_t;
 
 typedef struct pool_global_t {
-	pool_t    pool[ODP_CONFIG_POOLS];
+	pool_t    pool[CONFIG_POOLS];
 	odp_shm_t shm;
 
 	struct {

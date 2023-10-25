@@ -716,7 +716,7 @@ reference implementation in the file
 /*
  * Maximum number of pools
  */
-#define ODP_CONFIG_POOLS 64
+#define CONFIG_POOLS 64
 -----
 
 Here two fundamental limits, the number of CPUs supported and the maximum

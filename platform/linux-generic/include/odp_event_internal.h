@@ -35,7 +35,7 @@ typedef union _odp_event_index_t {
 } _odp_event_index_t;
 
 /* Check that pool index fit into bit field */
-ODP_STATIC_ASSERT(ODP_CONFIG_POOLS    <= (0xFF + 1), "TOO_MANY_POOLS");
+ODP_STATIC_ASSERT(CONFIG_POOLS    <= (0xFF + 1), "TOO_MANY_POOLS");
 
 /* Check that buffer index fit into bit field */
 ODP_STATIC_ASSERT(CONFIG_POOL_MAX_NUM <= (0xFFFFFF + 1), "TOO_LARGE_POOL");

@@ -63,7 +63,7 @@ ODP_STATIC_ASSERT(CONFIG_PACKET_SEG_SIZE < 0xffff,
 
 /* Thread local variables */
 typedef struct pool_local_t {
-	pool_cache_t *cache[ODP_CONFIG_POOLS];
+	pool_cache_t *cache[CONFIG_POOLS];
 	int thr_id;
 
 } pool_local_t;
@@ -328,7 +328,7 @@ int _odp_pool_init_global(void)
 		return -1;
 	}
 
-	for (i = 0; i < ODP_CONFIG_POOLS; i++) {
+	for (i = 0; i < CONFIG_POOLS; i++) {
 		pool_t *pool = _odp_pool_entry_from_idx(i);
 
 		LOCK_INIT(&pool->lock);
@@ -357,7 +357,7 @@ int _odp_pool_term_global(void)
 	if (_odp_pool_glb == NULL)
 		return 0;
 
-	for (i = 0; i < ODP_CONFIG_POOLS; i++) {
+	for (i = 0; i < CONFIG_POOLS; i++) {
 		pool = _odp_pool_entry_from_idx(i);
 
 		LOCK(&pool->lock);
@@ -385,7 +385,7 @@ int _odp_pool_init_local(void)
 
 	memset(&local, 0, sizeof(pool_local_t));
 
-	for (i = 0; i < ODP_CONFIG_POOLS; i++) {
+	for (i = 0; i < CONFIG_POOLS; i++) {
 		pool           = _odp_pool_entry_from_idx(i);
 		local.cache[i] = &pool->local_cache[thr_id];
 		cache_init(local.cache[i]);
@@ -399,7 +399,7 @@ int _odp_pool_term_local(void)
 {
 	int i;
 
-	for (i = 0; i < ODP_CONFIG_POOLS; i++) {
+	for (i = 0; i < CONFIG_POOLS; i++) {
 		pool_t *pool = _odp_pool_entry_from_idx(i);
 
 		cache_flush(local.cache[i], pool);
@@ -416,7 +416,7 @@ static pool_t *reserve_pool(uint32_t shmflags, uint8_t pool_ext, uint32_t num)
 	pool_t *pool;
 	char ring_name[ODP_POOL_NAME_LEN];
 
-	for (i = 0; i < ODP_CONFIG_POOLS; i++) {
+	for (i = 0; i < CONFIG_POOLS; i++) {
 		pool = _odp_pool_entry_from_idx(i);
 
 		LOCK(&pool->lock);
@@ -756,7 +756,7 @@ odp_pool_t _odp_pool_create(const char *name, const odp_pool_param_t *params,
 	}
 
 	/* Validate requested buffer alignment */
-	if (align > ODP_CONFIG_BUFFER_ALIGN_MAX ||
+	if (align > CONFIG_BUFFER_ALIGN_MAX ||
 	    align != _ODP_ROUNDDOWN_POWER2(align, align)) {
 		_ODP_ERR("Bad align requirement\n");
 		return ODP_POOL_INVALID;
@@ -1205,7 +1205,7 @@ odp_pool_t odp_pool_lookup(const char *name)
 	uint32_t i;
 	pool_t *pool;
 
-	for (i = 0; i < ODP_CONFIG_POOLS; i++) {
+	for (i = 0; i < CONFIG_POOLS; i++) {
 		pool = _odp_pool_entry_from_idx(i);
 
 		LOCK(&pool->lock);
@@ -1464,7 +1464,7 @@ int odp_pool_capability(odp_pool_capability_t *capa)
 	odp_pool_stats_opt_t supported_stats;
 	uint32_t max_seg_len = CONFIG_PACKET_MAX_SEG_LEN;
 	/* Reserve one for internal usage */
-	int max_pools = ODP_CONFIG_POOLS - 1;
+	int max_pools = CONFIG_POOLS - 1;
 
 	memset(capa, 0, sizeof(odp_pool_capability_t));
 
@@ -1483,7 +1483,7 @@ int odp_pool_capability(odp_pool_capability_t *capa)
 
 	/* Buffer pools */
 	capa->buf.max_pools = max_pools;
-	capa->buf.max_align = ODP_CONFIG_BUFFER_ALIGN_MAX;
+	capa->buf.max_align = CONFIG_BUFFER_ALIGN_MAX;
 	capa->buf.max_size  = MAX_SIZE;
 	capa->buf.max_num   = CONFIG_POOL_MAX_NUM;
 	capa->buf.max_uarea_size = MAX_UAREA_SIZE;
@@ -1614,7 +1614,7 @@ void odp_pool_print_all(void)
 	_ODP_PRINT("-----------------\n");
 	_ODP_PRINT(" idx %-*s type   free    tot  cache  buf_len  ext\n", col_width, "name");
 
-	for (i = 0; i < ODP_CONFIG_POOLS; i++) {
+	for (i = 0; i < CONFIG_POOLS; i++) {
 		pool_t *pool = _odp_pool_entry_from_idx(i);
 
 		LOCK(&pool->lock);
@@ -1666,7 +1666,7 @@ uint64_t odp_pool_to_u64(odp_pool_t hdl)
 
 unsigned int odp_pool_max_index(void)
 {
-	return ODP_CONFIG_POOLS - 1;
+	return CONFIG_POOLS - 1;
 }
 
 int odp_pool_stats(odp_pool_t pool_hdl, odp_pool_stats_t *stats)
@@ -1800,7 +1800,7 @@ static pool_t *find_pool(_odp_event_hdr_t *event_hdr)
 	int i;
 	uint8_t *ptr = (uint8_t *)event_hdr;
 
-	for (i = 0; i < ODP_CONFIG_POOLS; i++) {
+	for (i = 0; i < CONFIG_POOLS; i++) {
 		pool_t *pool = _odp_pool_entry_from_idx(i);
 
 		if (pool->reserved == 0)
@@ -1877,7 +1877,7 @@ int odp_pool_ext_capability(odp_pool_type_t type, odp_pool_ext_capability_t *cap
 	memset(capa, 0, sizeof(odp_pool_ext_capability_t));
 
 	capa->type           = type;
-	capa->max_pools      = ODP_CONFIG_POOLS - 1;
+	capa->max_pools      = CONFIG_POOLS - 1;
 	capa->min_cache_size = 0;
 	capa->max_cache_size = CONFIG_POOL_CACHE_MAX_SIZE;
 	capa->stats.all      = supported_stats.all;
