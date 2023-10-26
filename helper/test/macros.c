@@ -8,7 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-int main(void)
+int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 {
 	int a, b;
 	int ret = 0;

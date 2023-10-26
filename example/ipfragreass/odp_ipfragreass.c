@@ -228,7 +228,7 @@ static int run_worker(void *arg ODP_UNUSED)
 /**
  * ODP fragmentation and reassembly example main function
  */
-int main(void)
+int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 {
 	odp_instance_t instance;
 	odp_pool_t fragment_pool;

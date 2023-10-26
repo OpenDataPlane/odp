@@ -8,7 +8,7 @@
 #include <odp_api.h>
 #include <odp/helper/odph_api.h>
 
-int main(void)
+int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 {
 	odp_instance_t inst;
 

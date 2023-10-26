@@ -342,7 +342,7 @@ static int test_ipv4(void)
 	return 0;
 }
 
-int main(void)
+int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 {
 	int ret = 0;
 
