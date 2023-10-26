@@ -1108,7 +1108,7 @@ static void test_dma_pkt_segs_to_addr_sync(void)
 	uint8_t *dst;
 	odp_packet_t pkt;
 	uint32_t i, len, num_segs;
-	uint32_t pkt_len = global.pkt_len;
+	uint32_t pkt_len = ODPH_MIN(global.pkt_len, global.len);
 
 	memset(global.dst_addr, 0, global.data_size);
 
@@ -1128,9 +1128,6 @@ static void test_dma_pkt_segs_to_addr_sync(void)
 	CU_ASSERT_FATAL(odp_packet_copy_from_mem(pkt, 0, pkt_len, global.src_addr) == 0);
 
 	len = pkt_len - OFFSET - TRAILER;
-	if (len > global.len)
-		len = global.len;
-
 	dst = global.dst_addr + OFFSET;
 
 	memset(&src_seg, 0, sizeof(odp_dma_seg_t));
