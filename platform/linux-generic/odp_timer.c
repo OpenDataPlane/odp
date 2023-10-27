@@ -184,7 +184,12 @@ typedef struct timer_pool_s {
 	odp_timer_pool_param_t param;
 	char name[ODP_TIMER_POOL_NAME_LEN];
 	timer_t timerid;
-	int notify_overrun;
+	/*
+	 * Timer pool overrun notification (debug print). Initialize to 0
+	 * (don't notify). When value is 0 and a timer is started, set to 1
+	 * (notify). When notification is done, set to 2 (don't notify).
+	 */
+	odp_atomic_u32_t notify_overrun;
 	int owner;
 	pthread_t thr_pthread; /* pthread_t of timer thread */
 	pid_t thr_pid; /* gettid() for timer thread */
@@ -828,14 +833,15 @@ static inline void timer_pool_scan_inline(int num, odp_time_t now)
 			continue;
 
 		if (odp_atomic_cas_u64(&tp->cur_tick, &old_tick, new_tick)) {
-			if (tp->notify_overrun && diff > 1) {
+			if (ODP_DEBUG_PRINT && odp_atomic_load_u32(&tp->notify_overrun) == 1 &&
+			    diff > 1) {
 				if (old_tick == 0) {
 					_ODP_DBG("Timer pool (%s) missed %" PRIi64 " scans in start up\n",
 						 tp->name, diff - 1);
 				} else {
 					_ODP_DBG("Timer pool (%s) resolution too high: %" PRIi64 " scans missed\n",
 						 tp->name, diff - 1);
-					tp->notify_overrun = 0;
+					odp_atomic_store_u32(&tp->notify_overrun, 2);
 				}
 			}
 			timer_pool_scan(tp, nsec);
@@ -896,12 +902,12 @@ static inline void timer_run_posix(timer_pool_t *tp)
 	uint64_t nsec;
 	int overrun;
 
-	if (tp->notify_overrun) {
+	if (ODP_DEBUG_PRINT && odp_atomic_load_u32(&tp->notify_overrun) == 1) {
 		overrun = timer_getoverrun(tp->timerid);
 		if (overrun) {
 			_ODP_DBG("\n\t%d ticks overrun on timer pool \"%s\", timer resolution too high\n",
 				 overrun, tp->name);
-			tp->notify_overrun = 0;
+			odp_atomic_store_u32(&tp->notify_overrun, 2);
 		}
 	}
 
@@ -1089,6 +1095,12 @@ static void posix_timer_start(timer_pool_t *tp)
 	 * processed. Warm up helps avoiding overrun on the first timeout. */
 	while (odp_atomic_load_acq_u32(&tp->thr_ready) == 0)
 		sched_yield();
+
+	if (ODP_DEBUG_PRINT) {
+		uint32_t old_val = 0;
+
+		odp_atomic_cas_u32(&tp->notify_overrun, &old_val, 1);
+	}
 }
 
 static odp_timer_pool_t timer_pool_new(const char *name, const odp_timer_pool_param_t *param)
@@ -1234,8 +1246,8 @@ static odp_timer_pool_t timer_pool_new(const char *name, const odp_timer_pool_pa
 	}
 	tp->num_alloc = 0;
 	odp_atomic_init_u32(&tp->high_wm, 0);
+	odp_atomic_init_u32(&tp->notify_overrun, 0);
 	tp->first_free = 0;
-	tp->notify_overrun = 1;
 	tp->owner = -1;
 
 	if (param->priv)
@@ -1618,6 +1630,12 @@ int odp_timer_start(odp_timer_t timer, const odp_timer_start_t *start_param)
 	if (odp_unlikely(tmo_ev != ODP_EVENT_INVALID)) {
 		_ODP_ERR("Timer was active already\n");
 		odp_event_free(tmo_ev);
+	}
+
+	if (ODP_DEBUG_PRINT) {
+		uint32_t old_val = 0;
+
+		odp_atomic_cas_u32(&tp->notify_overrun, &old_val, 1);
 	}
 
 	return ODP_TIMER_SUCCESS;
