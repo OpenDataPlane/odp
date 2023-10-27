@@ -90,6 +90,7 @@ odpapiabiarchinclude_HEADERS += \
 		  include-abi/odp/api/abi/init.h \
 		  include-abi/odp/api/abi/ipsec.h \
 		  include-abi/odp/api/abi/ipsec_types.h \
+		  include-abi/odp/api/abi/ml_types.h \
 		  include-abi/odp/api/abi/packet.h \
 		  include-abi/odp/api/abi/packet_types.h \
 		  include-abi/odp/api/abi/packet_flags.h \

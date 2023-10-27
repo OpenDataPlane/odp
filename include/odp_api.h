@@ -55,6 +55,8 @@ extern "C" {
 #include <odp/api/errno.h>
 #include <odp/api/thrmask.h>
 #include <odp/api/traffic_mngr.h>
+#include <odp/api/ml.h>
+#include <odp/api/ml_quantize.h>
 #include <odp/api/spinlock_recursive.h>
 #include <odp/api/rwlock_recursive.h>
 #include <odp/api/std.h>
