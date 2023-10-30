@@ -928,6 +928,7 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx, odp_po
 	odp_pktio_op_mode_t mode_tx;
 	pktin_mode_t in_mode = gbl_args->appl.in_mode;
 	odp_pktio_info_t info;
+	uint8_t *addr;
 
 	odp_pktio_param_init(&pktio_param);
 
@@ -950,9 +951,6 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx, odp_po
 		return -1;
 	}
 
-	printf("created pktio %" PRIu64 ", dev: %s, drv: %s\n",
-	       odp_pktio_to_u64(pktio), dev, info.drv_name);
-
 	if (gbl_args->appl.verbose)
 		odp_pktio_print(pktio);
 
@@ -968,7 +966,6 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx, odp_po
 		config.parser.layer = ODP_PROTO_LAYER_ALL;
 
 	if (gbl_args->appl.chksum) {
-		printf("Checksum offload enabled\n");
 		config.pktout.bit.ipv4_chksum_ena = 1;
 		config.pktout.bit.udp_chksum_ena  = 1;
 		config.pktout.bit.tcp_chksum_ena  = 1;
@@ -1057,16 +1054,16 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx, odp_po
 	if (num_rx > (int)pktio_capa.max_input_queues) {
 		num_rx  = pktio_capa.max_input_queues;
 		mode_rx = ODP_PKTIO_OP_MT;
-		printf("Maximum number of input queues: %i\n", num_rx);
+		printf("Warning: %s: maximum number of input queues: %i\n", dev, num_rx);
 	}
 
 	if (num_rx < gbl_args->appl.num_workers)
-		printf("Sharing %i input queues between %i workers\n",
-		       num_rx, gbl_args->appl.num_workers);
+		printf("Warning: %s: sharing %i input queues between %i workers\n",
+		       dev, num_rx, gbl_args->appl.num_workers);
 
 	if (num_tx > (int)pktio_capa.max_output_queues) {
-		printf("Sharing %i output queues between %i workers\n",
-		       pktio_capa.max_output_queues, num_tx);
+		printf("Warning: %s: sharing %i output queues between %i workers\n",
+		       dev, pktio_capa.max_output_queues, num_tx);
 		num_tx  = pktio_capa.max_output_queues;
 		mode_tx = ODP_PKTIO_OP_MT;
 	}
@@ -1122,8 +1119,16 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx, odp_po
 		}
 	}
 
-	printf("created %i input and %i output queues on (%s)\n",
-	       num_rx, num_tx, dev);
+	if (odp_pktio_mac_addr(pktio, gbl_args->port_eth_addr[idx].addr,
+			       ODPH_ETHADDR_LEN) != ODPH_ETHADDR_LEN) {
+		ODPH_ERR("Reading interface Ethernet address failed: %s\n", dev);
+		return -1;
+	}
+	addr = gbl_args->port_eth_addr[idx].addr;
+
+	printf("  dev: %s, drv: %s, rx_queues: %i, tx_queues: %i, mac: "
+	       "%02x:%02x:%02x:%02x:%02x:%02x\n", dev, info.drv_name, num_rx, num_tx,
+	       addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
 
 	gbl_args->pktios[idx].num_rx_queue = num_rx;
 	gbl_args->pktios[idx].num_tx_queue = num_tx;
@@ -2094,6 +2099,9 @@ int main(int argc, char *argv[])
 
 	gbl_args->appl.num_workers = num_workers;
 
+	/* Print application information */
+	print_info();
+
 	for (i = 0; i < num_workers; i++)
 		gbl_args->thread_args[i].thr_idx = i;
 
@@ -2260,6 +2268,8 @@ int main(int argc, char *argv[])
 	pool = pool_tbl[0];
 	vec_pool = vec_pool_tbl[0];
 
+	printf("\nInterfaces\n----------\n");
+
 	for (i = 0; i < if_count; ++i) {
 		const char *dev = gbl_args->appl.if_names[i];
 		int num_rx, num_tx;
@@ -2286,14 +2296,6 @@ int main(int argc, char *argv[])
 		if (create_pktio(dev, i, num_rx, num_tx, pool, vec_pool, grp))
 			exit(EXIT_FAILURE);
 
-		/* Save interface ethernet address */
-		if (odp_pktio_mac_addr(gbl_args->pktios[i].pktio,
-				       gbl_args->port_eth_addr[i].addr,
-				       ODPH_ETHADDR_LEN) != ODPH_ETHADDR_LEN) {
-			ODPH_ERR("Interface ethernet address unknown\n");
-			exit(EXIT_FAILURE);
-		}
-
 		/* Save destination eth address */
 		if (gbl_args->appl.dst_change) {
 			/* 02:00:00:00:00:XX */
@@ -2310,9 +2312,6 @@ int main(int argc, char *argv[])
 	}
 
 	gbl_args->pktios[i].pktio = ODP_PKTIO_INVALID;
-
-	/* Print application information */
-	print_info();
 
 	bind_queues();
 
