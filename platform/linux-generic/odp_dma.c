@@ -31,6 +31,8 @@
 #define MAX_SEGS      16
 #define MAX_SEG_LEN   (128 * 1024)
 
+ODP_STATIC_ASSERT(MAX_TRANSFERS < UINT32_MAX, "Too many inflight transfers");
+
 typedef struct segment_t {
 	void     *addr;
 	uint32_t  len;
@@ -597,6 +599,7 @@ int odp_dma_transfer_start(odp_dma_t dma, const odp_dma_transfer_param_t *transf
 {
 	int ret;
 	dma_session_t *session = dma_session_from_handle(dma);
+	const uint32_t transfer_id = compl->transfer_id;
 
 	if (odp_unlikely(dma == ODP_DMA_INVALID)) {
 		_ODP_ERR("Bad DMA handle\n");
@@ -608,9 +611,8 @@ int odp_dma_transfer_start(odp_dma_t dma, const odp_dma_transfer_param_t *transf
 	case ODP_DMA_COMPL_NONE:
 		break;
 	case ODP_DMA_COMPL_POLL:
-		if (compl->transfer_id == ODP_DMA_TRANSFER_ID_INVALID ||
-		    compl->transfer_id > MAX_TRANSFERS) {
-			_ODP_ERR("Bad transfer ID: %u\n", compl->transfer_id);
+		if (transfer_id == ODP_DMA_TRANSFER_ID_INVALID || transfer_id > MAX_TRANSFERS) {
+			_ODP_ERR("Bad transfer ID: %u\n", transfer_id);
 			return -1;
 		}
 		break;
@@ -632,7 +634,7 @@ int odp_dma_transfer_start(odp_dma_t dma, const odp_dma_transfer_param_t *transf
 		return ret;
 
 	if (compl->compl_mode == ODP_DMA_COMPL_POLL) {
-		uint32_t index = index_from_transfer_id(compl->transfer_id);
+		uint32_t index = index_from_transfer_id(transfer_id);
 
 		session->result[index].user_ptr = compl->user_ptr;
 
@@ -687,20 +689,20 @@ int odp_dma_transfer_done(odp_dma_t dma, odp_dma_transfer_id_t transfer_id,
 			  odp_dma_result_t *result)
 {
 	dma_session_t *session = dma_session_from_handle(dma);
+	const uint32_t id = transfer_id;
 
 	if (odp_unlikely(dma == ODP_DMA_INVALID)) {
 		_ODP_ERR("Bad DMA handle\n");
 		return -1;
 	}
 
-	if (odp_unlikely(transfer_id == ODP_DMA_TRANSFER_ID_INVALID ||
-			 transfer_id > MAX_TRANSFERS)) {
-		_ODP_ERR("Bad transfer ID: %u\n", transfer_id);
+	if (odp_unlikely(id == ODP_DMA_TRANSFER_ID_INVALID || id > MAX_TRANSFERS)) {
+		_ODP_ERR("Bad transfer ID: %u\n", id);
 		return -1;
 	}
 
 	if (result) {
-		uint32_t index = index_from_transfer_id(transfer_id);
+		uint32_t index = index_from_transfer_id(id);
 
 		result->success  = 1;
 		result->user_ptr = session->result[index].user_ptr;
