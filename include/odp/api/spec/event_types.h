@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2015-2018 Linaro Limited
- * Copyright (c) 2022 Nokia
+ * Copyright (c) 2022-2023 Nokia
  */
 
 /**
@@ -59,6 +59,8 @@ extern "C" {
  *       completion.
  * - ODP_EVENT_DMA_COMPL
  *     - DMA completion event (odp_dma_compl_t) indicates that a DMA transfer has finished
+ * - ODP_EVENT_ML_COMPL
+ *     - ML completion event (odp_ml_compl_t) indicates that an ML operation has finished
  */
 
 /**
@@ -92,6 +94,12 @@ extern "C" {
  *       packet metadata.
  * - ODP_EVENT_NO_SUBTYPE
  *     - An event type does not have any subtypes defined
+ * - ODP_EVENT_ML_COMPL_LOAD
+ *     - ML completion event (odp_ml_compl_t) that contains results from a completed model load or
+ *       unload operation.
+ * - ODP_EVENT_ML_COMPL_RUN
+ *     - ML completion event (odp_ml_compl_t) that contains results from a completed model run
+ *       operation.
  */
 
 /**
