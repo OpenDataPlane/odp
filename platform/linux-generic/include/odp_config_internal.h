@@ -20,9 +20,20 @@ extern "C" {
 #define CONFIG_NUM_CPU_IDS 256
 
 /*
+ * Maximum number of packet IO resources
+ */
+#define CONFIG_PKTIO_ENTRIES 64
+
+/*
+ * Pools reserved for internal usage, 1 for IPsec status events and one per packet
+ * I/O for TX completion
+ */
+#define CONFIG_INTERNAL_POOLS (1 + CONFIG_PKTIO_ENTRIES)
+
+/*
  * Maximum number of pools.
  */
-#define CONFIG_POOLS 32
+#define CONFIG_POOLS 128
 
 /*
  * Queues reserved for ODP internal use
@@ -67,11 +78,6 @@ extern "C" {
  * Maximum number of stashes
  */
 #define CONFIG_MAX_STASHES 2048
-
-/*
- * Maximum number of packet IO resources
- */
-#define CONFIG_PKTIO_ENTRIES 64
 
 /*
  * Maximum buffer alignment

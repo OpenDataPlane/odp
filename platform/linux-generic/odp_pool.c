@@ -61,6 +61,9 @@ ODP_STATIC_ASSERT(CONFIG_PACKET_SEG_LEN_MIN >= 256,
 ODP_STATIC_ASSERT(CONFIG_PACKET_SEG_SIZE < 0xffff,
 		  "Segment size must be less than 64k (16 bit offsets)");
 
+ODP_STATIC_ASSERT(CONFIG_INTERNAL_POOLS < CONFIG_POOLS,
+		  "Internal pool count needs to be less than total configured pool count");
+
 /* Thread local variables */
 typedef struct pool_local_t {
 	pool_cache_t *cache[CONFIG_POOLS];
@@ -1463,8 +1466,8 @@ int odp_pool_capability(odp_pool_capability_t *capa)
 {
 	odp_pool_stats_opt_t supported_stats;
 	uint32_t max_seg_len = CONFIG_PACKET_MAX_SEG_LEN;
-	/* Reserve one for internal usage */
-	int max_pools = CONFIG_POOLS - 1;
+	/* Reserve pools for internal usage */
+	unsigned int max_pools = CONFIG_POOLS - CONFIG_INTERNAL_POOLS;
 
 	memset(capa, 0, sizeof(odp_pool_capability_t));
 
@@ -1877,7 +1880,7 @@ int odp_pool_ext_capability(odp_pool_type_t type, odp_pool_ext_capability_t *cap
 	memset(capa, 0, sizeof(odp_pool_ext_capability_t));
 
 	capa->type           = type;
-	capa->max_pools      = CONFIG_POOLS - 1;
+	capa->max_pools      = CONFIG_POOLS - CONFIG_INTERNAL_POOLS;
 	capa->min_cache_size = 0;
 	capa->max_cache_size = CONFIG_POOL_CACHE_MAX_SIZE;
 	capa->stats.all      = supported_stats.all;
