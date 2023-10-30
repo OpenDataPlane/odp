@@ -29,7 +29,7 @@ typedef _odp_abi_dma_t *odp_dma_compl_t;
 
 #define ODP_DMA_COMPL_INVALID  ((odp_dma_compl_t)0)
 
-typedef uint32_t odp_dma_transfer_id_t;
+typedef uint64_t odp_dma_transfer_id_t;
 
 #define ODP_DMA_TRANSFER_ID_INVALID ((odp_dma_transfer_id_t)0)
 
