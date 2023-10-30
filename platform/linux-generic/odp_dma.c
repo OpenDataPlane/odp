@@ -16,6 +16,7 @@
 #include <odp/api/queue.h>
 
 #include <odp/api/plat/std_inlines.h>
+#include <odp/api/plat/strong_types.h>
 
 #include <odp_global_data.h>
 #include <odp_debug_internal.h>
@@ -758,12 +759,12 @@ odp_pool_t odp_dma_pool_create(const char *name, const odp_dma_pool_param_t *dma
 
 uint64_t odp_dma_to_u64(odp_dma_t dma)
 {
-	return (uint64_t)(uintptr_t)dma;
+	return _odp_pri(dma);
 }
 
 uint64_t odp_dma_compl_to_u64(odp_dma_compl_t dma_compl)
 {
-	return (uint64_t)(uintptr_t)dma_compl;
+	return _odp_pri(dma_compl);
 }
 
 void odp_dma_print(odp_dma_t dma)
@@ -796,12 +797,11 @@ void odp_dma_compl_print(odp_dma_compl_t dma_compl)
 
 	_ODP_PRINT("\nDMA completion\n");
 	_ODP_PRINT("--------------\n");
-	_ODP_PRINT("  Compl event handle: 0x%" PRIx64 "\n", (uint64_t)(uintptr_t)dma_compl);
+	_ODP_PRINT("  Compl event handle: 0x%" PRIx64 "\n", _odp_pri(dma_compl));
 
 	if (ret == 0) {
 		_ODP_PRINT("  Result:             %s\n", result.success ? "success" : "fail");
-		_ODP_PRINT("  User pointer:       0x%" PRIx64 "\n",
-			   (uint64_t)(uintptr_t)result.user_ptr);
+		_ODP_PRINT("  User pointer:       0x%" PRIx64 "\n", _odp_pri(result.user_ptr));
 	} else {
 		_ODP_PRINT("  No result metadata\n");
 	}
