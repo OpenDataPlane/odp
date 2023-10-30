@@ -18,6 +18,7 @@ extern "C" {
 
 #include <odp/api/std_types.h>
 #include <odp/api/dma_types.h>
+#include <odp/api/ml_types.h>
 
 /** @defgroup odp_pool ODP POOL
  *  @{
@@ -417,7 +418,10 @@ typedef enum odp_pool_type_t {
 	ODP_POOL_VECTOR,
 
 	/** DMA completion event pool */
-	ODP_POOL_DMA_COMPL
+	ODP_POOL_DMA_COMPL,
+
+	/** ML completion event pool */
+	ODP_POOL_ML_COMPL
 
 } odp_pool_type_t;
 
@@ -891,6 +895,9 @@ typedef struct odp_pool_info_t {
 
 		/** Copy of pool parameters when pool type is ODP_POOL_DMA_COMPL. */
 		odp_dma_pool_param_t dma_pool_param;
+
+		/** Copy of pool parameters when pool type is ODP_POOL_ML_COMPL. */
+		odp_ml_compl_pool_param_t ml_pool_param;
 	};
 
 	/** Additional info for packet pools */
