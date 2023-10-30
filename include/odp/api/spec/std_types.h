@@ -138,6 +138,9 @@ typedef union odp_feature_t {
 		/** IPsec APIs, e.g., odp_ipsec_xxx() */
 		uint32_t ipsec:1;
 
+		/** Machine Learning APIs, e.g., odp_ml_xxx() */
+		uint32_t ml:1;
+
 		/** Scheduler APIs, e.g., odp_schedule_xxx() */
 		uint32_t schedule:1;
 
