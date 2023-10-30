@@ -37,6 +37,7 @@
  */
 
 #include <odp_posix_extensions.h>
+#include <odp_config_internal.h>
 #include <odp_global_data.h>
 #include <odp_init_internal.h>
 #include <odp_debug_internal.h>
@@ -72,7 +73,7 @@
 #define FD_DBG  3
 
 /* define the tables of file descriptors handled by this server: */
-#define FDSERVER_MAX_ENTRIES 256
+#define FDSERVER_MAX_ENTRIES (CONFIG_SHM_BLOCKS + CONFIG_INTERNAL_SHM_BLOCKS)
 typedef struct fdentry_s {
 	fd_server_context_e context;
 	uint64_t key;
