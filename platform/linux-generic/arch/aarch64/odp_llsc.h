@@ -150,15 +150,15 @@ static inline uint32_t scd(_odp_u128_t *var, _odp_u128_t neu, int mm)
 	if (mm == __ATOMIC_RELEASE)
 		__asm__ volatile("stlxp %w0, %1, %2, [%3]"
 				 : "=&r" (ret)
-				 : "r" (((union i128)neu).i64[0]),
-				   "r" (((union i128)neu).i64[1]),
+				 : "r" (((*(union i128 *)&neu)).i64[0]),
+				   "r" (((*(union i128 *)&neu)).i64[1]),
 				   "r" (var)
 				 : "memory");
 	else if (mm == __ATOMIC_RELAXED)
 		__asm__ volatile("stxp %w0, %1, %2, [%3]"
 				 : "=&r" (ret)
-				 : "r" (((union i128)neu).i64[0]),
-				   "r" (((union i128)neu).i64[1]),
+				 : "r" (((*(union i128 *)&neu)).i64[0]),
+				   "r" (((*(union i128 *)&neu)).i64[1]),
 				   "r" (var)
 				 : );
 	else
