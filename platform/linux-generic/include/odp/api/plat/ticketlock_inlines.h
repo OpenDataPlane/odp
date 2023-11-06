@@ -11,7 +11,7 @@
 #include <odp/api/cpu.h>
 
 #include <odp/api/abi/ticketlock.h>
-
+#include <odp/api/abi/wait_until.h>
 /** @cond _ODP_HIDE_FROM_DOXYGEN_ */
 
 #ifndef _ODP_NO_INLINE
@@ -47,8 +47,7 @@ _ODP_INLINE void odp_ticketlock_lock(odp_ticketlock_t *ticketlock)
 
 	/* Spin waiting for our turn. Use load-acquire so that we acquire
 	 * all stores from the previous lock owner */
-	while (ticket != odp_atomic_load_acq_u32(&ticketlock->cur_ticket))
-		odp_cpu_pause();
+	_odp_wait_until_equal_acq_u32(&ticketlock->cur_ticket, ticket);
 }
 
 _ODP_INLINE int odp_ticketlock_trylock(odp_ticketlock_t *tklock)
