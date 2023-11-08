@@ -11,6 +11,7 @@
 #include <odp/api/buffer_types.h>
 #include <odp/api/event_types.h>
 #include <odp/api/packet_types.h>
+#include <odp/api/pool_types.h>
 #include <odp/api/timer_types.h>
 
 #include <odp/api/plat/buffer_inline_types.h>
@@ -27,6 +28,7 @@
 	#define _ODP_INLINE static inline
 	#define odp_event_type __odp_event_type
 	#define odp_event_type_multi __odp_event_type_multi
+	#define odp_event_pool __odp_event_pool
 	#define odp_event_user_area __odp_event_user_area
 	#define odp_event_user_area_and_flag __odp_event_user_area_and_flag
 	#define odp_event_subtype __odp_event_subtype
@@ -66,6 +68,20 @@ _ODP_INLINE int odp_event_type_multi(const odp_event_t event[], int num,
 	*type_out = type;
 
 	return i;
+}
+
+_ODP_INLINE odp_pool_t odp_event_pool(odp_event_t event)
+{
+	const odp_event_type_t type = __odp_event_type_get(event);
+
+	switch (type) {
+	case ODP_EVENT_BUFFER:
+	case ODP_EVENT_PACKET:
+	case ODP_EVENT_PACKET_VECTOR:
+		return _odp_event_hdr_field(event, odp_pool_t, pool);
+	default:
+		return ODP_POOL_INVALID;
+	}
 }
 
 _ODP_INLINE void *odp_event_user_area(odp_event_t event)
