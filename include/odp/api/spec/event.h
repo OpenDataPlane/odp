@@ -19,6 +19,7 @@ extern "C" {
 
 #include <odp/api/event_types.h>
 #include <odp/api/packet_types.h>
+#include <odp/api/pool_types.h>
 
 /** @defgroup odp_event ODP EVENT
  *  Generic event metadata and operations.
@@ -92,6 +93,19 @@ void odp_event_types_multi(const odp_event_t event[], odp_event_type_t type[],
  */
 int odp_event_type_multi(const odp_event_t event[], int num,
 			 odp_event_type_t *type);
+
+/**
+ * Event pool
+ *
+ * Returns handle to the pool where the event was allocated from. If the
+ * underlying event type does not have an API for returning pool handle
+ * (e.g. ODP_EVENT_IPSEC_STATUS), ODP_POOL_INVALID is returned.
+ *
+ * @param      event    Event handle
+ *
+ * @return Pool handle or ODP_POOL_INVALID depending on event type
+ */
+odp_pool_t odp_event_pool(odp_event_t event);
 
 /**
  * Event user area
