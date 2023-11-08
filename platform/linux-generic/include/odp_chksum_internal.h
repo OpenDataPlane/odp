@@ -1,4 +1,4 @@
-/* Copyright (c) 2020, Nokia
+/* Copyright (c) 2020, 2023, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:	BSD-3-Clause
@@ -62,8 +62,23 @@ static inline uint16_t chksum_finalize(uint64_t sum)
 static uint64_t chksum_partial(const void *addr, uint32_t len, uint32_t offset)
 {
 	const uint8_t *b;
-	const uint16_t *w;
-	const uint32_t *d;
+#if _ODP_UNALIGNED
+	/*
+	 * _ODP_UNALIGNED does not guarantee that all possible ways of
+	 * accessing memory can be unaligned. Make the compiler aware
+	 * of the possible unalignment so that it does not generate
+	 * instructions (such as LDM of AArch32) that require higher
+	 * alignment than one byte.
+	 */
+	typedef uint32_t x_uint32_t ODP_ALIGNED(1);
+	typedef uint16_t x_uint16_t ODP_ALIGNED(1);
+#else
+	/* In this case we can use normal types as we align manually. */
+	typedef uint32_t x_uint32_t;
+	typedef uint16_t x_uint16_t;
+#endif
+	const x_uint16_t *w;
+	const x_uint32_t *d;
 	uint64_t sum = 0;
 
 	/*
@@ -77,7 +92,7 @@ static uint64_t chksum_partial(const void *addr, uint32_t len, uint32_t offset)
 		 * We have efficient unaligned access. Just read
 		 * dwords starting at the given address.
 		 */
-		d = (const uint32_t *)addr;
+		d = (const x_uint32_t *)addr;
 	} else {
 		/*
 		 * We must avoid unaligned access, so align to 4 bytes
@@ -102,7 +117,7 @@ static uint64_t chksum_partial(const void *addr, uint32_t len, uint32_t offset)
 		 * This cast increases alignment, but it's OK, since
 		 * we've made sure that the pointer value is aligned.
 		 */
-		w = (const uint16_t *)(uintptr_t)b;
+		w = (const x_uint16_t *)(uintptr_t)b;
 
 		if ((uintptr_t)w & 2 && len >= 2) {
 			/* Align bytes by handling an odd word. */
@@ -111,7 +126,7 @@ static uint64_t chksum_partial(const void *addr, uint32_t len, uint32_t offset)
 		}
 
 		/* Increases alignment. */
-		d = (const uint32_t *)(uintptr_t)w;
+		d = (const x_uint32_t *)(uintptr_t)w;
 	}
 
 	while (len >= 32)  {
@@ -159,7 +174,7 @@ static uint64_t chksum_partial(const void *addr, uint32_t len, uint32_t offset)
 
 	len &= 3;
 
-	w = (const uint16_t *)d;
+	w = (const x_uint16_t *)d;
 	if (len > 1)  {
 		/* Last word. */
 		sum += *w++;
