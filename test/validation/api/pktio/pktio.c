@@ -3648,10 +3648,12 @@ static void pktio_test_pktout_compl_event(bool use_plain_queue)
 			CU_ASSERT(odp_packet_tx_compl_user_ptr(tx_compl) ==
 				  (const void *)&pkt_seq[i]);
 
-			/* No user area for TX completion events */
+			/* No user area or source pool for TX completion events */
 			CU_ASSERT(odp_event_user_area(ev) == NULL);
 			CU_ASSERT(odp_event_user_area_and_flag(ev, &flag) == NULL);
 			CU_ASSERT(flag < 0);
+
+			CU_ASSERT(odp_event_pool(ev) == ODP_POOL_INVALID);
 
 			/* Alternatively call event free / compl free */
 			if (i % 2)
@@ -3688,10 +3690,12 @@ static void pktio_test_pktout_compl_event(bool use_plain_queue)
 				}
 			}
 
-			/* No user area for TX completion events */
+			/* No user area or source pool for TX completion events */
 			CU_ASSERT(odp_event_user_area(ev) == NULL);
 			CU_ASSERT(odp_event_user_area_and_flag(ev, &flag) == NULL);
 			CU_ASSERT(flag < 0);
+
+			CU_ASSERT(odp_event_pool(ev) == ODP_POOL_INVALID);
 
 			/* Check that sequence number is found */
 			CU_ASSERT(j < TX_BATCH_LEN);
