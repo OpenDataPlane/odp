@@ -94,6 +94,8 @@ static void test_pool_alloc_free(const odp_pool_param_t *param)
 		odp_buffer_from_event_multi(&buf, &ev, 1);
 		CU_ASSERT(buf == buffer[i]);
 
+		CU_ASSERT(odp_event_pool(ev) == pool);
+
 		if (odp_event_type(ev) != ODP_EVENT_BUFFER)
 			wrong_type = true;
 		if (odp_event_subtype(ev) != ODP_EVENT_NO_SUBTYPE)

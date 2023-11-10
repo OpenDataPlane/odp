@@ -330,6 +330,7 @@ static void test_dma_compl_pool(void)
 	odp_pool_t pool;
 	odp_pool_info_t pool_info;
 	odp_dma_compl_t compl[global.dma_capa.max_transfers];
+	odp_event_t ev;
 	uint64_t u64;
 	int ret;
 	uint32_t i, j;
@@ -358,6 +359,11 @@ static void test_dma_compl_pool(void)
 
 		if (compl[i] == ODP_DMA_COMPL_INVALID)
 			break;
+
+		/* No source pool for DMA completion events */
+		ev = odp_dma_compl_to_event(compl[i]);
+		CU_ASSERT_FATAL(ev != ODP_EVENT_INVALID);
+		CU_ASSERT(odp_event_pool(ev) == ODP_POOL_INVALID);
 
 		printf("\n    DMA compl handle: 0x%" PRIx64 "\n", u64);
 		odp_dma_compl_print(compl[i]);

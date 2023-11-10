@@ -402,6 +402,7 @@ static void packet_test_alloc_free(void)
 	odp_packet_t packet;
 	odp_pool_param_t params;
 	odp_event_subtype_t subtype;
+	odp_event_t ev;
 
 	odp_pool_param_init(&params);
 
@@ -418,13 +419,15 @@ static void packet_test_alloc_free(void)
 	packet = odp_packet_alloc(pool, packet_len);
 	CU_ASSERT_FATAL(packet != ODP_PACKET_INVALID);
 	CU_ASSERT(odp_packet_len(packet) == packet_len);
-	CU_ASSERT(odp_event_type(odp_packet_to_event(packet)) ==
-		  ODP_EVENT_PACKET);
-	CU_ASSERT(odp_event_subtype(odp_packet_to_event(packet)) ==
-		  ODP_EVENT_PACKET_BASIC);
-	CU_ASSERT(odp_event_types(odp_packet_to_event(packet), &subtype) ==
-		  ODP_EVENT_PACKET);
+
+	ev = odp_packet_to_event(packet);
+	CU_ASSERT_FATAL(ev != ODP_EVENT_INVALID);
+	CU_ASSERT(odp_event_type(ev) == ODP_EVENT_PACKET);
+	CU_ASSERT(odp_event_subtype(ev) == ODP_EVENT_PACKET_BASIC);
+	CU_ASSERT(odp_event_types(ev, &subtype) == ODP_EVENT_PACKET);
 	CU_ASSERT(subtype == ODP_EVENT_PACKET_BASIC);
+	CU_ASSERT(odp_event_pool(ev) == pool);
+
 	CU_ASSERT(odp_packet_subtype(packet) == ODP_EVENT_PACKET_BASIC);
 	CU_ASSERT(odp_packet_to_u64(packet) !=
 		  odp_packet_to_u64(ODP_PACKET_INVALID));
@@ -3205,6 +3208,7 @@ static void packet_vector_basic_test(void)
 	odp_pool_capability_t capa;
 	uint32_t i, num;
 	uint32_t max_size = PKT_VEC_PACKET_NUM;
+	odp_event_t ev;
 
 	CU_ASSERT_FATAL(odp_pool_capability(&capa) == 0);
 	if (capa.vector.max_size < max_size)
@@ -3215,6 +3219,9 @@ static void packet_vector_basic_test(void)
 
 	/* Making sure default vector packet is from default vector pool */
 	CU_ASSERT(odp_packet_vector_pool(pktv_default) == vector_default_pool)
+	ev = odp_packet_vector_to_event(pktv_default);
+	CU_ASSERT_FATAL(ev != ODP_EVENT_INVALID);
+	CU_ASSERT(odp_event_pool(ev) == vector_default_pool);
 
 	/* Get packet vector table */
 	num = odp_packet_vector_tbl(pktv_default, &pkt_tbl);

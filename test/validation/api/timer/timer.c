@@ -447,6 +447,9 @@ static void timer_test_timeout_pool_alloc(void)
 			wrong_type = true;
 		if (subtype != ODP_EVENT_NO_SUBTYPE)
 			wrong_subtype = true;
+
+		/* No source pool for timeout events */
+		CU_ASSERT(odp_event_pool(ev) == ODP_POOL_INVALID);
 	}
 
 	/* Check that the pool had at least num items */
