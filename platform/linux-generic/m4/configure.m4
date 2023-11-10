@@ -29,6 +29,7 @@ m4_include([platform/linux-generic/m4/odp_crypto.m4])
 m4_include([platform/linux-generic/m4/odp_ipsec_mb.m4])
 m4_include([platform/linux-generic/m4/odp_pcapng.m4])
 m4_include([platform/linux-generic/m4/odp_dpdk.m4])
+m4_include([platform/linux-generic/m4/odp_wfe.m4])
 m4_include([platform/linux-generic/m4/odp_xdp.m4])
 ODP_EVENT_VALIDATION
 ODP_SCHEDULER
@@ -42,9 +43,10 @@ AS_VAR_APPEND([PLAT_CFG_TEXT], ["
 	openssl:                ${with_openssl}
 	openssl_rand:           ${openssl_rand}
 	crypto:                 ${with_crypto}
-	pcap:			${have_pcap}
-	pcapng:			${have_pcapng}
-	default_config_path:	${default_config_path}"])
+	pcap:                   ${have_pcap}
+	pcapng:                 ${have_pcapng}
+	wfe_locks:              ${use_wfe_locks}
+	default_config_path:    ${default_config_path}"])
 
 # Ignore Clang specific errors about fields with variable sized type not at the
 # end of a struct. This style is used by e.g. odp_packet_hdr_t and
