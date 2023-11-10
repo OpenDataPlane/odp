@@ -14,4 +14,7 @@
 /* Define to 1 or 2 to enable event validation */
 #undef _ODP_EVENT_VALIDATION
 
+/* Define to 1 to enable WFE based lock implementation on aarch64 */
+#undef _ODP_WFE_LOCKS
+
 #endif
