@@ -1534,12 +1534,7 @@ static int schedule_group_destroy(odp_schedule_group_t group)
 		if (sg->xcount[p] != 0) {
 			bitset_t wanted = atom_bitset_load(&sg->thr_wanted, __ATOMIC_RELAXED);
 
-			sevl();
-			while (wfe() &&
-			       !bitset_is_eql(wanted,
-					      bitset_monitor(&sg->thr_actual[p],
-							     __ATOMIC_RELAXED)))
-				odp_cpu_pause();
+			_odp_wait_until_eq_bitset(&sg->thr_actual[p], wanted);
 		}
 		/* Else ignore because no ODP queues on this prio */
 	}

@@ -32,24 +32,12 @@ static inline uint32_t bitset_ffs(bitset_t b)
 	return __builtin_ffsl(b);
 }
 
-/* Load-exclusive with memory ordering */
-static inline bitset_t bitset_monitor(bitset_t *bs, int mo)
-{
-	return monitor32(bs, mo);
-}
-
 #elif ATOM_BITSET_SIZE <= 64
 
 /* Return first-bit-set with StdC ffs() semantics */
 static inline uint32_t bitset_ffs(bitset_t b)
 {
 	return __builtin_ffsll(b);
-}
-
-/* Load-exclusive with memory ordering */
-static inline bitset_t bitset_monitor(bitset_t *bs, int mo)
-{
-	return monitor64(bs, mo);
 }
 
 #elif ATOM_BITSET_SIZE <= 128
@@ -63,12 +51,6 @@ static inline uint32_t bitset_ffs(bitset_t b)
 		return __builtin_ffsll((uint64_t)(b >> 64)) + 64;
 	else
 		return 0;
-}
-
-/* Load-exclusive with memory ordering */
-static inline bitset_t bitset_monitor(bitset_t *bs, int mo)
-{
-	return monitor128(bs, mo);
 }
 
 #else
