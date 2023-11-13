@@ -225,13 +225,9 @@ void _odp_sched_update_enq(sched_elem_t *q, uint32_t actual)
 	if (odp_unlikely(ticket != TICKET_INVALID)) {
 		/* Wait for our turn to update schedq. */
 		if (odp_unlikely(__atomic_load_n(&q->qschst.cur_ticket,
-						 __ATOMIC_ACQUIRE) != ticket)) {
-			sevl();
-			while (wfe() &&
-			       monitor8(&q->qschst.cur_ticket,
-					__ATOMIC_ACQUIRE) != ticket)
-				odp_cpu_pause();
-		}
+						 __ATOMIC_ACQUIRE) != ticket))
+			_odp_wait_until_eq_acq_u8(&q->qschst.cur_ticket, ticket);
+
 		/* Enqueue at end of scheduler queue */
 		/* We are here because of empty-to-non-empty transition
 		 * This means queue must be pushed to schedq if possible
@@ -368,13 +364,9 @@ sched_update_deq(sched_elem_t *q,
 		_ODP_ASSERT(q->qschst_type != ODP_SCHED_SYNC_ATOMIC);
 		/* Wait for our turn to update schedq. */
 		if (odp_unlikely(__atomic_load_n(&q->qschst.cur_ticket,
-						 __ATOMIC_ACQUIRE) != ticket)) {
-			sevl();
-			while (wfe() &&
-			       monitor8(&q->qschst.cur_ticket,
-					__ATOMIC_ACQUIRE) != ticket)
-				odp_cpu_pause();
-		}
+						 __ATOMIC_ACQUIRE) != ticket))
+			_odp_wait_until_eq_acq_u8(&q->qschst.cur_ticket, ticket);
+
 		/* We are here because of non-empty-to-empty transition or
 		 * WRR budget exhausted
 		 * This means the queue must be popped from the schedq, now or
@@ -496,12 +488,9 @@ static inline void sched_update_popd(sched_elem_t *elem)
 					    1,
 					    __ATOMIC_RELAXED);
 	if (odp_unlikely(__atomic_load_n(&elem->qschst.cur_ticket,
-					 __ATOMIC_ACQUIRE) != ticket)) {
-		sevl();
-		while (wfe() && monitor8(&elem->qschst.cur_ticket,
-					 __ATOMIC_ACQUIRE) != ticket)
-			odp_cpu_pause();
-	}
+					 __ATOMIC_ACQUIRE) != ticket))
+		_odp_wait_until_eq_acq_u8(&elem->qschst.cur_ticket, ticket);
+
 	sched_update_popd_sc(elem);
 	atomic_store_release(&elem->qschst.cur_ticket, ticket + 1,
 			     /*readonly=*/false);
