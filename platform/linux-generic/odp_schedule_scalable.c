@@ -21,6 +21,8 @@
 #include <odp/api/plat/thread_inlines.h>
 #include <odp/api/plat/time_inlines.h>
 
+#include <odp_wait_until.h>
+
 #include <odp_config_internal.h>
 #include <odp_debug_internal.h>
 #include <odp_shm_internal.h>
@@ -1054,15 +1056,8 @@ restart_same:
 				continue;
 			}
 			/* Wait for our turn to dequeue */
-			if (odp_unlikely(__atomic_load_n(&rwin->turn,
-							 __ATOMIC_ACQUIRE)
-			    != sn)) {
-				sevl();
-				while (wfe() &&
-				       monitor32(&rwin->turn, __ATOMIC_ACQUIRE)
-						!= sn)
-					odp_cpu_pause();
-			}
+			if (odp_unlikely(__atomic_load_n(&rwin->turn, __ATOMIC_ACQUIRE) != sn))
+				_odp_wait_until_eq_acq_u32(&rwin->turn, sn);
 #ifdef CONFIG_QSCHST_LOCK
 			LOCK(&elem->qschlock);
 #endif
@@ -1143,13 +1138,8 @@ static void schedule_order_lock(uint32_t lock_index)
 		return;
 	}
 	if (odp_unlikely(__atomic_load_n(&rctx->rwin->olock[lock_index],
-					 __ATOMIC_ACQUIRE) != rctx->sn)) {
-		sevl();
-		while (wfe() &&
-		       monitor32(&rctx->rwin->olock[lock_index],
-				 __ATOMIC_ACQUIRE) != rctx->sn)
-			odp_cpu_pause();
-	}
+					 __ATOMIC_ACQUIRE) != rctx->sn))
+		_odp_wait_until_eq_acq_u32(&rctx->rwin->olock[lock_index], rctx->sn);
 }
 
 static void schedule_order_unlock(uint32_t lock_index)
@@ -2127,13 +2117,10 @@ static void order_lock(void)
 		_ODP_ASSERT(ts->rctx != NULL);
 		rwin = ts->rctx->rwin;
 		sn = ts->rctx->sn;
-		sevl();
 		/* Use acquire ordering to be on the safe side even if
 		 * this isn't an acquire/release situation (aka lock).
 		 */
-		while (wfe() &&
-		       monitor32(&rwin->hc.head, __ATOMIC_ACQUIRE) != sn)
-			odp_cpu_pause();
+		_odp_wait_until_eq_acq_u32(&rwin->hc.head, sn);
 	}
 }
 

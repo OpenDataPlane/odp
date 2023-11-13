@@ -16,9 +16,10 @@
 #include <odp/api/traffic_mngr.h>
 #include <odp/api/cpu.h>
 
+#include <odp_wait_until.h>
+
 #include <odp_config_internal.h>
 #include <odp_debug_internal.h>
-
 #include <odp_event_internal.h>
 #include <odp_packet_io_internal.h>
 #include <odp_pool_internal.h>
@@ -472,12 +473,8 @@ static int queue_destroy(odp_queue_t handle)
 	 */
 	while (__atomic_load_n(&q->qschst.numevts, __ATOMIC_RELAXED) != 0 ||
 	       __atomic_load_n(&q->qschst.cur_ticket, __ATOMIC_RELAXED) !=
-	       __atomic_load_n(&q->qschst.nxt_ticket, __ATOMIC_RELAXED)) {
-		sevl();
-		while (wfe() && monitor32((uint32_t *)&q->qschst.numevts,
-					  __ATOMIC_RELAXED) != 0)
-			odp_cpu_pause();
-	}
+	       __atomic_load_n(&q->qschst.nxt_ticket, __ATOMIC_RELAXED))
+		_odp_wait_until_eq_u32((uint32_t *)&q->qschst.numevts, 0);
 
 	if (q->schedq != NULL) {
 		_odp_sched_queue_rem(q->sched_grp, q->sched_prio);
@@ -596,13 +593,8 @@ static inline int _odp_queue_enq(sched_elem_t *q,
 	__builtin_prefetch(&q->node, 1, 0);
 #endif
 	/* Wait for our turn to signal consumers */
-	if (odp_unlikely(__atomic_load_n(&q->cons_write,
-					 __ATOMIC_RELAXED) != old_write)) {
-		sevl();
-		while (wfe() && monitor32(&q->cons_write,
-					  __ATOMIC_RELAXED) != old_write)
-			odp_cpu_pause();
-	}
+	if (odp_unlikely(__atomic_load_n(&q->cons_write, __ATOMIC_RELAXED) != old_write))
+		_odp_wait_until_eq_u32(&q->cons_write, old_write);
 
 	/* Signal consumers that events are available (release events)
 	 * Enable other producers to continue
@@ -824,13 +816,8 @@ int _odp_queue_deq(sched_elem_t *q, _odp_event_hdr_t *event_hdr[], int num)
 	__builtin_prefetch(&q->node, 1, 0);
 #endif
 	/* Wait for our turn to signal producers */
-	if (odp_unlikely(__atomic_load_n(&q->prod_read, __ATOMIC_RELAXED) !=
-		old_read)) {
-		sevl();
-		while (wfe() && monitor32(&q->prod_read,
-					  __ATOMIC_RELAXED) != old_read)
-			odp_cpu_pause();
-	}
+	if (odp_unlikely(__atomic_load_n(&q->prod_read, __ATOMIC_RELAXED) != old_read))
+		_odp_wait_until_eq_u32(&q->prod_read, old_read);
 
 	/* Signal producers that empty slots are available
 	 * (release ring slots)
