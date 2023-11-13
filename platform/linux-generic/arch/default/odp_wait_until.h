@@ -28,6 +28,12 @@ static inline void _odp_wait_until_eq_u32(uint32_t *val, uint32_t expected)
 		odp_cpu_pause();
 }
 
+static inline void _odp_wait_until_eq_bitset(bitset_t *val, bitset_t expected)
+{
+	while (__atomic_load_n(val, __ATOMIC_RELAXED) != expected)
+		odp_cpu_pause();
+}
+
 static inline void _odp_wait_until_eq_acq_u8(uint8_t *val, uint8_t expected)
 {
 	while (__atomic_load_n(val, __ATOMIC_ACQUIRE) != expected)
