@@ -15,7 +15,7 @@
 
 #ifndef CONFIG_WFE
 
-#include "../default/odp_cpu_idling.h"
+#include "../default/odp_wait_until.h"
 
 #else /* CONFIG_WFE */
 
