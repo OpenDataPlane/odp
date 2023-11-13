@@ -16,8 +16,6 @@
 #include <odp/api/traffic_mngr.h>
 #include <odp/api/cpu.h>
 
-#include <odp_wait_until.h>
-
 #include <odp_config_internal.h>
 #include <odp_debug_internal.h>
 #include <odp_event_internal.h>

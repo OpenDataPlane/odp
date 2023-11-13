@@ -21,8 +21,6 @@
 #include <odp/api/plat/thread_inlines.h>
 #include <odp/api/plat/time_inlines.h>
 
-#include <odp_wait_until.h>
-
 #include <odp_config_internal.h>
 #include <odp_debug_internal.h>
 #include <odp_shm_internal.h>

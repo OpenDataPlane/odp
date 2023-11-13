@@ -21,6 +21,6 @@
 	__atomic_store_n(loc, val, __ATOMIC_RELEASE)
 
 #include "odp_atomic.h"
-#include "odp_cpu_idling.h"
+#include "odp_wait_until.h"
 
 #endif
