@@ -11,7 +11,6 @@ extern "C" {
 #endif
 
 #include <stdint.h>
-#include <odp/api/deprecated.h>
 
 /** @internal Dummy type for strong typing */
 typedef struct { char dummy; /**< @internal Dummy */ } _odp_abi_event_t;
