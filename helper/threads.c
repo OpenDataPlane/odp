@@ -42,8 +42,7 @@ static void *run_thread(void *arg)
 	int status;
 	int ret;
 	odp_instance_t instance;
-	ODPH_DEPRECATE(odph_odpthread_params_t) *thr_params;
-
+	odph_thread_param_t *thr_params;
 	odph_thread_start_args_t *start_args = arg;
 
 	thr_params = &start_args->thr_params;
@@ -406,130 +405,6 @@ int odph_thread_join(odph_thread_t thread[], int num)
 	}
 
 	return i;
-}
-
-/*
- * create an odpthread set (as linux processes or linux threads or both)
- */
-int ODPH_DEPRECATE(odph_odpthreads_create)(
-	ODPH_DEPRECATE(odph_odpthread_t) *thread_tbl,
-	const odp_cpumask_t *mask,
-	const ODPH_DEPRECATE(odph_odpthread_params_t) *thr_params)
-{
-	int i;
-	int num;
-	int cpu_count;
-	int cpu;
-
-	num = odp_cpumask_count(mask);
-
-	memset(thread_tbl, 0, num * sizeof(*thread_tbl));
-
-	cpu_count = odp_cpu_count();
-
-	if (num < 1 || num > cpu_count) {
-		ODPH_ERR("Invalid number of odpthreads:%d"
-			 " (%d cores available)\n",
-			 num, cpu_count);
-		return -1;
-	}
-
-	cpu = odp_cpumask_first(mask);
-	for (i = 0; i < num; i++) {
-		odph_thread_start_args_t *start_args;
-
-		start_args = &thread_tbl[i].start_args;
-
-		/* Copy thread parameters */
-		start_args->thr_params = *thr_params;
-		start_args->instance   = thr_params->ODPH_DEPRECATE(instance);
-
-		if (helper_options.mem_model == ODP_MEM_MODEL_THREAD) {
-			if (create_pthread(&thread_tbl[i], cpu, 0))
-				break;
-		 } else {
-			if (create_process(&thread_tbl[i], cpu, 0))
-				break;
-		}
-
-		cpu = odp_cpumask_next(mask, cpu);
-	}
-	thread_tbl[num - 1].last = 1;
-
-	return i;
-}
-
-/*
- * wait for the odpthreads termination (linux processes and threads)
- */
-int ODPH_DEPRECATE(odph_odpthreads_join)(
-	ODPH_DEPRECATE(odph_odpthread_t) *thread_tbl)
-{
-	pid_t pid;
-	int i = 0;
-	int terminated = 0;
-	/* child process return code (!=0 is error) */
-	int status = 0;
-	/* "child" thread return code (!NULL is error) */
-	void *thread_ret = NULL;
-	int ret;
-	int retval = 0;
-
-	/* joins linux threads or wait for processes */
-	do {
-		if (thread_tbl[i].cpu == FAILED_CPU) {
-			ODPH_DBG("ODP thread %d not started.\n", i);
-			continue;
-		}
-		/* pthreads: */
-		if (thread_tbl[i].start_args.mem_model ==
-				ODP_MEM_MODEL_THREAD) {
-			/* Wait thread to exit */
-			ret = pthread_join(thread_tbl[i].thread.thread_id,
-					   &thread_ret);
-			if (ret != 0) {
-				ODPH_ERR("Failed to join thread from cpu #%d\n",
-					 thread_tbl[i].cpu);
-				retval = -1;
-			} else {
-				terminated++;
-				if (thread_ret != NULL) {
-					ODPH_ERR("Bad exit status cpu #%d %p\n",
-						 thread_tbl[i].cpu, thread_ret);
-					retval = -1;
-				}
-			}
-			pthread_attr_destroy(&thread_tbl[i].thread.attr);
-		} else {
-			/* processes: */
-			pid = waitpid(thread_tbl[i].proc.pid, &status, 0);
-
-			if (pid < 0) {
-				ODPH_ERR("waitpid() failed\n");
-				retval = -1;
-				break;
-			}
-
-			terminated++;
-
-			/* Examine the child process' termination status */
-			if (WIFEXITED(status) &&
-			    WEXITSTATUS(status) != EXIT_SUCCESS) {
-				ODPH_ERR("Child exit status:%d (pid:%d)\n",
-					 WEXITSTATUS(status), (int)pid);
-				retval = -1;
-			}
-			if (WIFSIGNALED(status)) {
-				int signo = WTERMSIG(status);
-
-				ODPH_ERR("Child term signo:%d - %s (pid:%d)\n",
-					 signo, strsignal(signo), (int)pid);
-				retval = -1;
-			}
-		}
-	} while (!thread_tbl[i++].last);
-
-	return (retval < 0) ? retval : terminated;
 }
 
 /* man gettid() notes:
