@@ -17,7 +17,6 @@
 #include <odp/api/atomic.h>
 #include <odp/api/cpu.h>
 #include <odp/api/debug.h>
-#include <odp/api/deprecated.h>
 #include <odp/api/event.h>
 #include <odp/api/hints.h>
 #include <odp/api/pool.h>
@@ -1535,39 +1534,6 @@ odp_event_t odp_timer_free(odp_timer_t hdl)
 	uint32_t idx = handle_to_idx(hdl, tp);
 
 	return timer_free(tp, idx);
-}
-
-int ODP_DEPRECATE(odp_timer_set_abs)(odp_timer_t hdl, uint64_t abs_tck, odp_event_t *tmo_ev)
-{
-	timer_pool_t *tp = handle_to_tp(hdl);
-	uint64_t cur_tick = odp_time_global_ns();
-	uint32_t idx = handle_to_idx(hdl, tp);
-
-	if (odp_unlikely(abs_tck < cur_tick + tp->min_rel_tck))
-		return ODP_TIMER_TOO_NEAR;
-	if (odp_unlikely(abs_tck > cur_tick + tp->max_rel_tck))
-		return ODP_TIMER_TOO_FAR;
-	if (timer_reset(idx, abs_tck, tmo_ev, tp))
-		return ODP_TIMER_SUCCESS;
-	else
-		return ODP_TIMER_FAIL;
-}
-
-int ODP_DEPRECATE(odp_timer_set_rel)(odp_timer_t hdl, uint64_t rel_tck, odp_event_t *tmo_ev)
-{
-	timer_pool_t *tp = handle_to_tp(hdl);
-	uint64_t cur_tick = odp_time_global_ns();
-	uint64_t abs_tck = cur_tick + rel_tck;
-	uint32_t idx = handle_to_idx(hdl, tp);
-
-	if (odp_unlikely(rel_tck < tp->min_rel_tck))
-		return ODP_TIMER_TOO_NEAR;
-	if (odp_unlikely(rel_tck > tp->max_rel_tck))
-		return ODP_TIMER_TOO_FAR;
-	if (timer_reset(idx, abs_tck, tmo_ev, tp))
-		return ODP_TIMER_SUCCESS;
-	else
-		return ODP_TIMER_FAIL;
 }
 
 int odp_timer_start(odp_timer_t timer, const odp_timer_start_t *start_param)
