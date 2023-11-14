@@ -21,7 +21,6 @@
 extern "C" {
 #endif
 
-#include <odp/helper/deprecated.h>
 #include <odp_api.h>
 
 #include <pthread.h>
@@ -70,13 +69,7 @@ typedef struct {
 	/** ODP thread type */
 	odp_thread_type_t thr_type;
 
-	/** @deprecated ODP instance handle for odph_odpthreads_create(). */
-	odp_instance_t ODPH_DEPRECATE(instance);
-
-	/**
-	 * Minimum stack size in bytes. 0 = use default. Ignored by
-	 * odph_odpthreads_create().
-	 */
+	/** Minimum stack size in bytes. 0 = use default. */
 	uint64_t stack_size;
 
 } odph_thread_param_t;
@@ -133,12 +126,6 @@ typedef struct {
 typedef struct {
 	odp_mem_model_t mem_model; /**< Process or thread */
 } odph_helper_options_t;
-
-/** @deprecated Legacy thread table entry */
-typedef odph_thread_t ODPH_DEPRECATE(odph_odpthread_t);
-
-/** @deprecated Legacy thread parameters */
-typedef odph_thread_param_t ODPH_DEPRECATE(odph_odpthread_params_t);
 
 /** Common parameters for odph_thread_create() call */
 typedef struct {
@@ -226,12 +213,11 @@ void odph_thread_common_param_init(odph_thread_common_param_t *param);
 /**
  * Create and pin threads (as Linux pthreads or processes)
  *
- * This is an updated version of odph_odpthreads_create() call. It may be called
- * multiple times to create threads in steps. Each call launches 'num' threads
- * and pins those to separate CPUs based on the cpumask. Use 'thread_model'
- * parameter to select if Linux pthreads or processes are used. This selection
- * may be overridden with ODP helper options. See e.g. --odph_proc under
- * odph_options() documentation.
+ * Function may be called multiple times to create threads in steps. Each call
+ * launches 'num' threads and pins those to separate CPUs based on the cpumask.
+ * Use 'thread_model' parameter to select if Linux pthreads or processes are
+ * used. This selection may be overridden with ODP helper options. See e.g.
+ * --odph_proc under odph_options() documentation.
  *
  * Thread creation may be synchronized by setting 'sync' parameter. It
  * serializes thread start up (odp_init_local() calls), which helps to
@@ -270,11 +256,10 @@ int odph_thread_create(odph_thread_t thread[],
 /**
  * Wait previously launched threads to exit
  *
- * This is an updated version of odph_odpthreads_join() call. It waits for
- * threads launched with odph_thread_create() to exit. Threads may be waited to
- * exit in a different order than those were created. A function call may be
- * used to wait any number of launched threads to exit. A particular thread
- * may be waited only once.
+ * Function waits for threads launched with odph_thread_create() to exit.
+ * Threads may be waited to exit in a different order than those were created.
+ * A function call may be used to wait any number of launched threads to exit.
+ * A particular thread may be waited only once.
  *
  * @param thread        Table of threads to exit
  * @param num           Number of threads to exit
@@ -285,39 +270,6 @@ int odph_thread_create(odph_thread_t thread[],
  * @see odph_thread_create()
  */
 int odph_thread_join(odph_thread_t thread[], int num);
-
-/**
- * Creates and launches odpthreads (as linux threads or processes)
- *
- * Creates, pins and launches threads to separate CPU's based on the cpumask.
- *
- * @param thread_tbl    Thread table
- * @param mask          CPU mask
- * @param thr_params    ODP thread parameters
- *
- * @return Number of threads created
- *
- * @deprecated Use odph_thread_create() instead.
- */
-int ODPH_DEPRECATE(odph_odpthreads_create)(
-	ODPH_DEPRECATE(odph_odpthread_t) *thread_tbl,
-	const odp_cpumask_t *mask,
-	const ODPH_DEPRECATE(odph_odpthread_params_t) *thr_params);
-
-/**
- * Waits odpthreads (as linux threads or processes) to exit.
- *
- * Returns when all odpthreads have terminated.
- *
- * @param thread_tbl    Thread table
- * @return The number of joined threads or -1 on error.
- * (error occurs if any of the start_routine return non-zero or if
- *  the thread join/process wait itself failed -e.g. as the result of a kill)
- *
- * @deprecated Use odph_thread_join() instead.
- */
-int ODPH_DEPRECATE(odph_odpthreads_join)(
-	ODPH_DEPRECATE(odph_odpthread_t) *thread_tbl);
 
 /**
  * Set CPU affinity of the current odp thread
