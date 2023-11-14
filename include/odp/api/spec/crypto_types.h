@@ -12,7 +12,6 @@
 #define ODP_API_SPEC_CRYPTO_TYPES_H_
 #include <odp/visibility_begin.h>
 
-#include <odp/api/deprecated.h>
 #include <odp/api/packet_types.h>
 #include <odp/api/pool_types.h>
 #include <odp/api/std_types.h>
@@ -880,17 +879,6 @@ typedef enum {
 	ODP_CRYPTO_SES_ERR_PARAMS,
 } odp_crypto_ses_create_err_t;
 
-#if ODP_DEPRECATED_API
-/** This synonym for backward compatibility has been deprecated */
-#define ODP_CRYPTO_SES_CREATE_ERR_NONE       ODP_CRYPTO_SES_ERR_NONE
-/** This synonym for backward compatibility has been deprecated */
-#define ODP_CRYPTO_SES_CREATE_ERR_ENOMEM     ODP_CRYPTO_SES_ERR_ENOMEM
-/** This synonym for backward compatibility has been deprecated */
-#define ODP_CRYPTO_SES_CREATE_ERR_INV_CIPHER ODP_CRYPTO_SES_ERR_CIPHER
-/** This synonym for backward compatibility has been deprecated */
-#define ODP_CRYPTO_SES_CREATE_ERR_INV_AUTH   ODP_CRYPTO_SES_ERR_AUTH
-#endif
-
 /**
  * Crypto API algorithm return code
  */
@@ -899,27 +887,11 @@ typedef enum {
 	ODP_CRYPTO_ALG_ERR_NONE,
 	/** Invalid range or packet size */
 	ODP_CRYPTO_ALG_ERR_DATA_SIZE,
-	/** Key size invalid for algorithm */
-	ODP_DEPRECATE(ODP_CRYPTO_ALG_ERR_KEY_SIZE),
 	/** Computed ICV value mismatch */
 	ODP_CRYPTO_ALG_ERR_ICV_CHECK,
-	/** IV value not specified */
-	ODP_DEPRECATE(ODP_CRYPTO_ALG_ERR_IV_INVALID),
 	/** Other error */
 	ODP_CRYPTO_ALG_ERR_OTHER,
 } odp_crypto_alg_err_t;
-
-/**
- * Crypto API hardware centric return code
- */
-typedef enum {
-	/** Operation completed successfully */
-	ODP_DEPRECATE(ODP_CRYPTO_HW_ERR_NONE),
-	/** Error detected during DMA of data */
-	ODP_DEPRECATE(ODP_CRYPTO_HW_ERR_DMA),
-	/** Operation failed due to pool depletion */
-	ODP_DEPRECATE(ODP_CRYPTO_HW_ERR_BP_DEPLETED),
-} ODP_DEPRECATE(odp_crypto_hw_err_t);
 
 /**
  * Crypto API per packet operation completion status
@@ -927,21 +899,12 @@ typedef enum {
 typedef struct odp_crypto_op_status {
 	/** Algorithm specific return code */
 	odp_crypto_alg_err_t alg_err;
-
-	/** Hardware specific return code */
-	ODP_DEPRECATE(odp_crypto_hw_err_t) ODP_DEPRECATE(hw_err);
 } odp_crypto_op_status_t;
 
 /**
  * Crypto packet API operation result
  */
 typedef struct odp_crypto_packet_result_t {
-	/** Request completed successfully.
-	 *
-	 *  @deprecated Check the return value of odp_crypto_result() instead.
-	 */
-	odp_bool_t  ODP_DEPRECATE(ok);
-
 	/** Input packet passed to odp_crypo_op_enq() when the operation
 	 *  type of the session is ODP_CRYPTO_OP_TYPE_OOP. In other cases
 	 *  this field does not have a valid value.
