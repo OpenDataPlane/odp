@@ -40,9 +40,6 @@ typedef union odp_cls_testcase {
 		uint32_t drop_cos:1;
 		uint32_t error_cos:1;
 		uint32_t pmr_chain:1;
-#ifdef ODP_DEPRECATED
-		uint32_t l2_priority:1;
-#endif
 		uint32_t pmr_cos:1;
 		uint32_t pmr_composite_cos:1;
 	};

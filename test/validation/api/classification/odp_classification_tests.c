@@ -20,10 +20,6 @@ static odp_pktio_t pktio_loop;
 static odp_pktio_capability_t pktio_capa;
 static odp_cls_testcase_u tc;
 
-#ifdef ODP_DEPRECATED
-static int global_num_l2_qos;
-#endif
-
 #define NUM_COS_PMR_CHAIN	2
 #define NUM_COS_DEFAULT	1
 #define NUM_COS_DROP	1
@@ -262,9 +258,6 @@ void configure_cls_pmr_chain(odp_bool_t enable_pktv)
 	odp_cls_cos_param_init(&cls_param);
 	cls_param.pool = pool_list[CLS_PMR_CHAIN_SRC];
 	cls_param.queue = queue_list[CLS_PMR_CHAIN_SRC];
-#if ODP_DEPRECATED_API
-	cls_param.drop_policy = ODP_COS_DROP_POOL;
-#endif
 
 	if (enable_pktv) {
 		cls_param.vector.enable = true;
@@ -294,9 +287,6 @@ void configure_cls_pmr_chain(odp_bool_t enable_pktv)
 	odp_cls_cos_param_init(&cls_param);
 	cls_param.pool = pool_list[CLS_PMR_CHAIN_DST];
 	cls_param.queue = queue_list[CLS_PMR_CHAIN_DST];
-#if ODP_DEPRECATED_API
-	cls_param.drop_policy = ODP_COS_DROP_POOL;
-#endif
 
 	if (enable_pktv) {
 		cls_param.vector.enable = true;
@@ -416,9 +406,6 @@ void configure_pktio_default_cos(odp_bool_t enable_pktv)
 	odp_cls_cos_param_init(&cls_param);
 	cls_param.pool = pool_list[CLS_DEFAULT];
 	cls_param.queue = queue_list[CLS_DEFAULT];
-#if ODP_DEPRECATED_API
-	cls_param.drop_policy = ODP_COS_DROP_POOL;
-#endif
 
 	if (enable_pktv) {
 		cls_param.vector.enable = true;
@@ -632,9 +619,6 @@ void configure_pktio_error_cos(odp_bool_t enable_pktv)
 	odp_cls_cos_param_init(&cls_param);
 	cls_param.pool = pool_list[CLS_ERROR];
 	cls_param.queue = queue_list[CLS_ERROR];
-#if ODP_DEPRECATED_API
-	cls_param.drop_policy = ODP_COS_DROP_POOL;
-#endif
 
 	if (enable_pktv) {
 		cls_param.vector.enable = true;
@@ -709,110 +693,6 @@ static void cls_pktio_set_headroom(void)
 	CU_ASSERT(retval < 0);
 }
 
-#ifdef ODP_DEPRECATED
-
-void configure_cos_with_l2_priority(odp_bool_t enable_pktv)
-{
-	uint8_t num_qos = CLS_L2_QOS_MAX;
-	odp_cos_t cos_tbl[CLS_L2_QOS_MAX];
-	odp_queue_t queue_tbl[CLS_L2_QOS_MAX];
-	odp_pool_t pool;
-	uint8_t qos_tbl[CLS_L2_QOS_MAX];
-	char cosname[ODP_COS_NAME_LEN];
-	char queuename[ODP_QUEUE_NAME_LEN];
-	char poolname[ODP_POOL_NAME_LEN];
-	int retval;
-	int i;
-	odp_queue_param_t qparam;
-	odp_cls_cos_param_t cls_param;
-
-	/** Initialize scalar variable qos_tbl **/
-	for (i = 0; i < CLS_L2_QOS_MAX; i++)
-		qos_tbl[i] = 0;
-
-	if (odp_schedule_num_prio() < num_qos)
-		num_qos = odp_schedule_num_prio();
-
-	global_num_l2_qos = num_qos;
-
-	odp_queue_param_init(&qparam);
-	qparam.type       = ODP_QUEUE_TYPE_SCHED;
-	qparam.sched.sync = ODP_SCHED_SYNC_PARALLEL;
-	qparam.sched.group = ODP_SCHED_GROUP_ALL;
-	for (i = 0; i < num_qos; i++) {
-		qparam.sched.prio = odp_schedule_min_prio() + i;
-		sprintf(queuename, "%s_%d", "L2_Queue", i);
-		queue_tbl[i] = odp_queue_create(queuename, &qparam);
-		CU_ASSERT_FATAL(queue_tbl[i] != ODP_QUEUE_INVALID);
-		queue_list[CLS_L2_QOS_0 + i] = queue_tbl[i];
-
-		sprintf(poolname, "%s_%d", "L2_Pool", i);
-		pool = pool_create(poolname);
-		CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
-		pool_list[CLS_L2_QOS_0 + i] = pool;
-
-		sprintf(cosname, "%s_%d", "L2_Cos", i);
-		odp_cls_cos_param_init(&cls_param);
-		cls_param.pool = pool;
-		cls_param.queue = queue_tbl[i];
-		cls_param.drop_policy = ODP_COS_DROP_POOL;
-
-		if (enable_pktv) {
-			cls_param.vector.enable = true;
-			cls_param.vector.pool = pktv_config.pool;
-			cls_param.vector.max_size = pktv_config.max_size;
-			cls_param.vector.max_tmo_ns = pktv_config.max_tmo_ns;
-		}
-
-		cos_tbl[i] = odp_cls_cos_create(cosname, &cls_param);
-		if (cos_tbl[i] == ODP_COS_INVALID)
-			break;
-
-		cos_list[CLS_L2_QOS_0 + i] = cos_tbl[i];
-		qos_tbl[i] = i;
-	}
-	/* count 'i' is passed instead of num_qos to handle the rare scenario
-	if the odp_cls_cos_create() failed in the middle*/
-	retval = odp_cos_with_l2_priority(pktio_loop, i, qos_tbl, cos_tbl);
-	CU_ASSERT(retval == 0);
-}
-
-void test_cos_with_l2_priority(odp_bool_t enable_pktv)
-{
-	odp_packet_t pkt;
-	odph_ethhdr_t *ethhdr;
-	odph_vlanhdr_t *vlan;
-	odp_queue_t queue;
-	odp_pool_t pool;
-	uint32_t seqno = 0;
-	cls_packet_info_t pkt_info;
-	uint8_t i;
-
-	pkt_info = default_pkt_info;
-	pkt_info.l4_type = CLS_PKT_L4_UDP;
-	pkt_info.vlan = true;
-
-	for (i = 0; i < global_num_l2_qos; i++) {
-		pkt = create_packet(pkt_info);
-		CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
-		seqno = cls_pkt_get_seq(pkt);
-		CU_ASSERT(seqno != TEST_SEQ_INVALID);
-		ethhdr = (odph_ethhdr_t *)odp_packet_l2_ptr(pkt, NULL);
-		vlan = (odph_vlanhdr_t *)(ethhdr + 1);
-		vlan->tci = odp_cpu_to_be_16(i << 13);
-		enqueue_pktio_interface(pkt, pktio_loop);
-		pkt = receive_packet(&queue, ODP_TIME_SEC_IN_NS, enable_pktv);
-		CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
-		CU_ASSERT(queue == queue_list[CLS_L2_QOS_0 + i]);
-		pool = odp_packet_pool(pkt);
-		CU_ASSERT(pool == pool_list[CLS_L2_QOS_0 + i]);
-		CU_ASSERT(seqno == cls_pkt_get_seq(pkt));
-		odp_packet_free(pkt);
-	}
-}
-
-#endif
-
 void configure_pmr_cos(odp_bool_t enable_pktv)
 {
 	uint16_t val;
@@ -842,9 +722,6 @@ void configure_pmr_cos(odp_bool_t enable_pktv)
 	odp_cls_cos_param_init(&cls_param);
 	cls_param.pool = pool_list[CLS_PMR];
 	cls_param.queue = queue_list[CLS_PMR];
-#if ODP_DEPRECATED_API
-	cls_param.drop_policy = ODP_COS_DROP_POOL;
-#endif
 
 	if (enable_pktv) {
 		cls_param.vector.enable = true;
@@ -927,9 +804,6 @@ void configure_pktio_pmr_composite(odp_bool_t enable_pktv)
 	odp_cls_cos_param_init(&cls_param);
 	cls_param.pool = pool_list[CLS_PMR_SET];
 	cls_param.queue = queue_list[CLS_PMR_SET];
-#if ODP_DEPRECATED_API
-	cls_param.drop_policy = ODP_COS_DROP_POOL;
-#endif
 
 	if (enable_pktv) {
 		cls_param.vector.enable = true;
@@ -1029,13 +903,6 @@ static void cls_pktio_configure_common(odp_bool_t enable_pktv)
 		tc.pmr_chain = 1;
 		num_cos -= NUM_COS_PMR_CHAIN;
 	}
-#ifdef ODP_DEPRECATED
-	if (num_cos >= NUM_COS_L2_PRIO && TEST_L2_QOS) {
-		configure_cos_with_l2_priority(enable_pktv);
-		tc.l2_priority = 1;
-		num_cos -= NUM_COS_L2_PRIO;
-	}
-#endif
 	if (num_cos >= NUM_COS_PMR && TEST_PMR) {
 		configure_pmr_cos(enable_pktv);
 		tc.pmr_cos = 1;
@@ -1070,10 +937,6 @@ static void cls_pktio_test_common(odp_bool_t enable_pktv)
 		test_pktio_error_cos(enable_pktv);
 	if (tc.pmr_chain && TEST_PMR_CHAIN)
 		test_cls_pmr_chain(enable_pktv);
-#ifdef ODP_DEPRECATED
-	if (tc.l2_priority && TEST_L2_QOS)
-		test_cos_with_l2_priority(enable_pktv);
-#endif
 	if (tc.pmr_cos && TEST_PMR)
 		test_pmr_cos(enable_pktv);
 	if (tc.pmr_composite_cos && TEST_PMR_SET)

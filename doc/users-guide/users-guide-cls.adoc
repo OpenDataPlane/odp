@@ -135,29 +135,13 @@ using ODP_POOL_INVALID or ODP_QUEUE_INVALID field then any packet assigned to th
 === Packet Classification
 
 For each odp_pktio port, the API allows the assignment of a class-of-service to
-a packet using one of  three methods:
-
-1. The packet may be assigned a specific class-of-service based on its Layer-2
-(802.1P/902.1Q VLAN tag) priority field. Since the standard field defines 8
-discrete priority levels, the API allows to assign an odp_cos to each of these
-priority levels with the `odp_cos_with_l2_priority()` function.
-
-2. Similarly, a class-of-service may be assigned using the Layer-3 (IP DiffServ)
-header field. The application supplies an array of odp_cos values that covers
-the entire range of the standard protocol header field, where array elements do
-not need to contain unique values. There is also a need to specify if Layer-3
-priority takes precedence over Layer-2 priority in a packet with both headers
-present.
-
-3. Additionally, the application may also program a number of pattern matching
-rules that assign a class-of-service for packets with header fields matching
-specified values. The field-matching rules take precedence over the previously
-described priority-based assignment of a class-of-service. Using these matching
-rules the application should be able for example to identify all packets
-containing VoIP traffic based on the protocol being UDP, and a specific
-destination or source port numbers, and appropriately assign these packets a
-class-of-service that maps to a higher priority queue, assuring voice packets a
-lower and bound latency.
+a packet. Application can program a number of pattern matching rules that
+assign a class-of-service for packets with header fields matching specified
+values. Using these matching rules the application should be able for example
+to identify all packets containing VoIP traffic based on the protocol being
+UDP, and a specific destination or source port numbers, and appropriately
+assign these packets a class-of-service that maps to a higher priority queue,
+assuring voice packets a lower and bound latency.
 
 === Packet meta data Elements
 
