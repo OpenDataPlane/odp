@@ -380,10 +380,8 @@ endif
 noinst_HEADERS += arch/aarch64/odp_atomic.h \
 		  arch/aarch64/odp_cpu.h \
 		  arch/aarch64/cpu_flags.h \
-		  arch/aarch64/odp_cpu_idling.h \
-		  arch/aarch64/odp_llsc.h \
 		  arch/aarch64/odp_random.h \
-		  arch/default/odp_wait_until.h
+		  arch/aarch64/odp_wait_until.h
 endif
 if ARCH_IS_DEFAULT
 __LIB__libodp_linux_la_SOURCES += arch/default/odp_atomic.c \
