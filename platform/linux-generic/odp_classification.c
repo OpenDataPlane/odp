@@ -139,9 +139,6 @@ void odp_cls_cos_param_init(odp_cls_cos_param_t *param)
 
 	param->queue = ODP_QUEUE_INVALID;
 	param->pool = ODP_POOL_INVALID;
-#if ODP_DEPRECATED_API
-	param->drop_policy = ODP_COS_DROP_NEVER;
-#endif
 	param->num_queue = 1;
 	param->vector.enable = false;
 	odp_queue_param_init(&param->queue_param);
@@ -238,9 +235,6 @@ static inline void _cls_queue_unwind(uint32_t tbl_index, uint32_t j)
 
 odp_cos_t odp_cls_cos_create(const char *name, const odp_cls_cos_param_t *param_in)
 {
-#if ODP_DEPRECATED_API
-	odp_cls_drop_t drop_policy;
-#endif
 	uint32_t i, j;
 	odp_queue_t queue;
 	cos_t *cos;
@@ -283,10 +277,6 @@ odp_cos_t odp_cls_cos_create(const char *name, const odp_cls_cos_param_t *param_
 			return ODP_COS_INVALID;
 		}
 	}
-
-#if ODP_DEPRECATED_API
-	drop_policy = param.drop_policy;
-#endif
 
 	for (i = 0; i < CLS_COS_MAX_ENTRY; i++) {
 		cos = &cos_tbl->cos_entry[i];
@@ -347,9 +337,6 @@ odp_cos_t odp_cls_cos_create(const char *name, const odp_cls_cos_param_t *param_
 			cos->pool = param.pool;
 			cos->headroom = 0;
 			cos->valid = 1;
-#if ODP_DEPRECATED_API
-			cos->drop_policy = drop_policy;
-#endif
 			odp_atomic_init_u32(&cos->num_rule, 0);
 			cos->index = i;
 			cos->vector = param.vector;
@@ -548,36 +535,6 @@ uint32_t odp_cls_cos_queues(odp_cos_t cos_id, odp_queue_t queue[],
 	return cos->num_queue;
 }
 
-#if ODP_DEPRECATED_API
-
-int odp_cos_drop_set(odp_cos_t cos_id, odp_cls_drop_t drop_policy)
-{
-	cos_t *cos = get_cos_entry(cos_id);
-
-	if (!cos) {
-		_ODP_ERR("Invalid odp_cos_t handle\n");
-		return -1;
-	}
-
-	/*Drop policy is not supported in v1.0*/
-	cos->drop_policy = drop_policy;
-	return 0;
-}
-
-odp_cls_drop_t odp_cos_drop(odp_cos_t cos_id)
-{
-	cos_t *cos = get_cos_entry(cos_id);
-
-	if (!cos) {
-		_ODP_ERR("Invalid odp_cos_t handle\n");
-		return -1;
-	}
-
-	return cos->drop_policy;
-}
-
-#endif
-
 int odp_pktio_default_cos_set(odp_pktio_t pktio_in, odp_cos_t default_cos)
 {
 	pktio_entry_t *entry;
@@ -640,62 +597,6 @@ int odp_pktio_headroom_set(odp_pktio_t pktio_in, uint32_t headroom)
 		return -1;
 	}
 	entry->cls.headroom = headroom;
-	return 0;
-}
-
-int ODP_DEPRECATE(odp_cos_with_l2_priority)(odp_pktio_t pktio_in, uint8_t num_qos,
-					    uint8_t qos_table[], odp_cos_t cos_table[])
-{
-	pmr_l2_cos_t *l2_cos;
-	uint32_t i;
-	cos_t *cos;
-	pktio_entry_t *entry = get_pktio_entry(pktio_in);
-
-	if (entry == NULL) {
-		_ODP_ERR("Invalid odp_pktio_t handle\n");
-		return -1;
-	}
-	l2_cos = &entry->cls.l2_cos_table;
-
-	LOCK(&l2_cos->lock);
-	/* Update the L2 QoS table*/
-	for (i = 0; i < num_qos; i++) {
-		cos = get_cos_entry(cos_table[i]);
-		if (cos != NULL) {
-			if (CLS_COS_MAX_L2_QOS > qos_table[i])
-				l2_cos->cos[qos_table[i]] = cos;
-		}
-	}
-	UNLOCK(&l2_cos->lock);
-	return 0;
-}
-
-int ODP_DEPRECATE(odp_cos_with_l3_qos)(odp_pktio_t pktio_in, uint32_t num_qos, uint8_t qos_table[],
-				       odp_cos_t cos_table[], odp_bool_t l3_preference)
-{
-	pmr_l3_cos_t *l3_cos;
-	uint32_t i;
-	pktio_entry_t *entry = get_pktio_entry(pktio_in);
-	cos_t *cos;
-
-	if (entry == NULL) {
-		_ODP_ERR("Invalid odp_pktio_t handle\n");
-		return -1;
-	}
-
-	entry->cls.l3_precedence = l3_preference;
-	l3_cos = &entry->cls.l3_cos_table;
-
-	LOCK(&l3_cos->lock);
-	/* Update the L3 QoS table*/
-	for (i = 0; i < num_qos; i++) {
-		cos = get_cos_entry(cos_table[i]);
-		if (cos != NULL) {
-			if (CLS_COS_MAX_L3_QOS > qos_table[i])
-				l3_cos->cos[qos_table[i]] = cos;
-		}
-	}
-	UNLOCK(&l3_cos->lock);
 	return 0;
 }
 
@@ -1714,17 +1615,11 @@ int _odp_pktio_classifier_init(pktio_entry_t *entry)
 	return 0;
 }
 
-static
-cos_t *match_qos_cos(pktio_entry_t *entry, const uint8_t *pkt_addr,
-		     odp_packet_hdr_t *hdr);
-
 /**
 Select a CoS for the given Packet based on pktio
 
 This function will call all the PMRs associated with a pktio for
 a given packet and will return the matched COS object.
-This function will check PMR, L2 and L3 QoS COS object associated
-with the PKTIO interface.
 
 Returns the default cos if the packet does not match any PMR
 Returns the error_cos if the packet has an error
@@ -1751,12 +1646,6 @@ static inline cos_t *cls_select_cos(pktio_entry_t *entry,
 		cos = match_pmr_cos(default_cos, pkt_addr, pkt_hdr);
 		if (cos && cos != default_cos)
 			return cos;
-	}
-
-	cos = match_qos_cos(entry, pkt_addr, pkt_hdr);
-	if (cos) {
-		ODP_DBG_RAW(CLS_DBG, "  QoS matched -> cos: %s(%u)\n", cos->name, cos->index);
-		goto done;
 	}
 
 	ODP_DBG_RAW(CLS_DBG, "  No match -> default cos\n");
@@ -1893,83 +1782,6 @@ static uint32_t packet_rss_hash(odp_packet_hdr_t *pkt_hdr,
 		hash = thash_softrss((uint32_t *)&tuple,
 				     tuple_len, default_rss);
 	return hash;
-}
-
-static
-cos_t *match_qos_l3_cos(pmr_l3_cos_t *l3_cos, const uint8_t *pkt_addr,
-			odp_packet_hdr_t *hdr)
-{
-	uint8_t dscp;
-	cos_t *cos = NULL;
-	const _odp_ipv4hdr_t *ipv4;
-	const _odp_ipv6hdr_t *ipv6;
-
-	if (hdr->p.input_flags.l3 && hdr->p.input_flags.ipv4) {
-		ipv4 = (const _odp_ipv4hdr_t *)(pkt_addr + hdr->p.l3_offset);
-		dscp = _ODP_IPV4HDR_DSCP(ipv4->tos);
-		cos = l3_cos->cos[dscp];
-	} else if (hdr->p.input_flags.l3 && hdr->p.input_flags.ipv6) {
-		ipv6 = (const _odp_ipv6hdr_t *)(pkt_addr + hdr->p.l3_offset);
-		dscp = _ODP_IPV6HDR_DSCP(ipv6->ver_tc_flow);
-		cos = l3_cos->cos[dscp];
-	}
-
-	return cos;
-}
-
-static
-cos_t *match_qos_l2_cos(pmr_l2_cos_t *l2_cos, const uint8_t *pkt_addr,
-			odp_packet_hdr_t *hdr)
-{
-	cos_t *cos = NULL;
-	const _odp_ethhdr_t *eth;
-	const _odp_vlanhdr_t *vlan;
-	uint16_t qos;
-
-	if (packet_hdr_has_l2(hdr) && hdr->p.input_flags.vlan &&
-	    packet_hdr_has_eth(hdr)) {
-		eth = (const _odp_ethhdr_t *)(pkt_addr + hdr->p.l2_offset);
-		vlan = (const _odp_vlanhdr_t *)(eth + 1);
-		qos = odp_be_to_cpu_16(vlan->tci);
-		qos = ((qos >> 13) & 0x07);
-		cos = l2_cos->cos[qos];
-	}
-	return cos;
-}
-
-/*
- * Select a CoS for the given Packet based on QoS values
- * This function returns the COS object matching the L2 and L3 QoS
- * based on the l3_preference value of the pktio
-*/
-static
-cos_t *match_qos_cos(pktio_entry_t *entry, const uint8_t *pkt_addr,
-		     odp_packet_hdr_t *hdr)
-{
-	classifier_t *cls = &entry->cls;
-	pmr_l2_cos_t *l2_cos;
-	pmr_l3_cos_t *l3_cos;
-	cos_t *cos;
-
-	l2_cos = &cls->l2_cos_table;
-	l3_cos = &cls->l3_cos_table;
-
-	if (cls->l3_precedence) {
-		cos =  match_qos_l3_cos(l3_cos, pkt_addr, hdr);
-		if (cos)
-			return cos;
-		cos = match_qos_l2_cos(l2_cos, pkt_addr, hdr);
-		if (cos)
-			return cos;
-	} else {
-		cos = match_qos_l2_cos(l2_cos, pkt_addr, hdr);
-		if (cos)
-			return cos;
-		cos = match_qos_l3_cos(l3_cos, pkt_addr, hdr);
-		if (cos)
-			return cos;
-	}
-	return NULL;
 }
 
 uint64_t odp_cos_to_u64(odp_cos_t hdl)

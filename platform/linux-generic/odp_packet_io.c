@@ -151,8 +151,6 @@ int _odp_pktio_init_global(void)
 		pktio_entry->handle = _odp_cast_scalar(odp_pktio_t, i + 1);
 		odp_ticketlock_init(&pktio_entry->rxl);
 		odp_ticketlock_init(&pktio_entry->txl);
-		odp_spinlock_init(&pktio_entry->cls.l2_cos_table.lock);
-		odp_spinlock_init(&pktio_entry->cls.l3_cos_table.lock);
 
 		_odp_pktio_entry_ptr[i] = pktio_entry;
 	}

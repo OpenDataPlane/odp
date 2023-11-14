@@ -21,7 +21,6 @@ extern "C" {
 #include <odp/api/pool_types.h>
 #include <odp/api/std_types.h>
 #include <odp/api/threshold.h>
-#include <odp/api/deprecated.h>
 
 /** @defgroup odp_classification ODP CLASSIFICATION
  *  Packet input classification.
@@ -578,21 +577,6 @@ typedef struct odp_cls_capability_t {
 
 } odp_cls_capability_t;
 
-#if ODP_DEPRECATED_API
-
-/**
- * class of service packet drop policies
- *
- * @deprecated Drop policy will be removed from the API.
- */
-typedef enum {
-	ODP_COS_DROP_POOL,      /**< Follow buffer pool drop policy */
-	ODP_COS_DROP_NEVER,     /**< Never drop, ignoring buffer pool policy */
-
-} odp_cls_drop_t;
-
-#endif
-
 /**
  * Enumeration of actions for CoS.
  */
@@ -681,11 +665,6 @@ typedef struct odp_cls_cos_param {
 	 * Default is ODP_POOL_INVALID.
 	 */
 	odp_pool_t pool;
-
-#if ODP_DEPRECATED_API
-	/** Drop policy associated with CoS */
-	odp_cls_drop_t drop_policy;
-#endif
 
 	/** Random Early Detection configuration */
 	odp_red_param_t red;
@@ -855,67 +834,6 @@ uint32_t odp_cls_cos_num_queue(odp_cos_t cos);
  * @retval 0 on failure
  */
 uint32_t odp_cls_cos_queues(odp_cos_t cos, odp_queue_t queue[], uint32_t num);
-
-#if ODP_DEPRECATED_API
-
-/**
- * Assign packet drop policy for specific class-of-service
- *
- * @param cos          CoS handle
- * @param drop_policy  Desired packet drop policy for this class.
- *
- * @retval  0 on success
- * @retval <0 on failure
- *
- * @note Optional.
- */
-int odp_cos_drop_set(odp_cos_t cos, odp_cls_drop_t drop_policy);
-
-/**
-* Get the drop policy configured for a specific class-of-service instance.
-*
-* @param cos           CoS handle
-*
-* @retval Drop policy configured with the given class-of-service
-*/
-odp_cls_drop_t odp_cos_drop(odp_cos_t cos);
-
-#endif
-
-/**
- * Request to override per-port class of service based on Layer-2 priority field if present.
- *
- * @deprecated Use #ODP_PMR_VLAN_PCP_0 instead.
- *
- * @param pktio_in     Ingress port identifier.
- * @param num_qos      Number of QoS levels, typically 8.
- * @param qos_table    Values of the Layer-2 QoS header field.
- * @param cos_table    Class-of-service assigned to each of the allowed
- *                     Layer-2 QOS levels.
- *
- * @retval  0 on success
- * @retval <0 on failure
- */
-int ODP_DEPRECATE(odp_cos_with_l2_priority)(odp_pktio_t pktio_in, uint8_t num_qos,
-					    uint8_t qos_table[], odp_cos_t cos_table[]);
-
-/**
- * Request to override per-port class of service based on Layer-3 priority field if present.
- *
- * @deprecated Use #ODP_PMR_IP_DSCP instead.
- *
- * @param pktio_in       Ingress port identifier.
- * @param num_qos        Number of allowed Layer-3 QoS levels.
- * @param qos_table      Values of the Layer-3 QoS header field.
- * @param cos_table      Class-of-service assigned to each of the allowed
- *                       Layer-3 QOS levels.
- * @param l3_preference	 when true, Layer-3 QoS overrides L2 QoS when present.
- *
- * @retval  0 on success
- * @retval <0 on failure
- */
-int ODP_DEPRECATE(odp_cos_with_l3_qos)(odp_pktio_t pktio_in, uint32_t num_qos, uint8_t qos_table[],
-				       odp_cos_t cos_table[], odp_bool_t l3_preference);
 
 /**
  * Get statistics for a CoS

@@ -77,9 +77,6 @@ void configure_default_cos(odp_pktio_t pktio, odp_cos_t *cos,
 	odp_cls_cos_param_init(&cls_param);
 	cls_param.pool = default_pool;
 	cls_param.queue = default_queue;
-#if ODP_DEPRECATED_API
-	cls_param.drop_policy = ODP_COS_DROP_POOL;
-#endif
 
 	default_cos = odp_cls_cos_create(cosname, &cls_param);
 	CU_ASSERT(default_cos != ODP_COS_INVALID);
@@ -153,9 +150,6 @@ static void cls_pktin_classifier_flag(void)
 	odp_cls_cos_param_init(&cls_param);
 	cls_param.pool = pool;
 	cls_param.queue = queue;
-#if ODP_DEPRECATED_API
-	cls_param.drop_policy = ODP_COS_DROP_POOL;
-#endif
 
 	cos = odp_cls_cos_create(cosname, &cls_param);
 	CU_ASSERT(cos != ODP_COS_INVALID);
@@ -250,9 +244,6 @@ static void cls_pmr_term_tcp_dport_n(int num_pkt)
 	odp_cls_cos_param_init(&cls_param);
 	cls_param.pool = pool;
 	cls_param.queue = queue;
-#if ODP_DEPRECATED_API
-	cls_param.drop_policy = ODP_COS_DROP_POOL;
-#endif
 
 	cos = odp_cls_cos_create(cosname, &cls_param);
 	CU_ASSERT(cos != ODP_COS_INVALID);
@@ -426,9 +417,6 @@ static void test_pmr(const odp_pmr_param_t *pmr_param, odp_packet_t pkt,
 	odp_cls_cos_param_init(&cls_param);
 	cls_param.pool = pool;
 	cls_param.queue = queue;
-#if ODP_DEPRECATED_API
-	cls_param.drop_policy = ODP_COS_DROP_POOL;
-#endif
 
 	cos = odp_cls_cos_create("PMR test cos", &cls_param);
 	CU_ASSERT_FATAL(cos != ODP_COS_INVALID);
@@ -700,9 +688,6 @@ static void cls_pmr_term_dmac(void)
 	odp_cls_cos_param_init(&cls_param);
 	cls_param.pool = pool;
 	cls_param.queue = queue;
-#if ODP_DEPRECATED_API
-	cls_param.drop_policy = ODP_COS_DROP_POOL;
-#endif
 
 	cos = odp_cls_cos_create(cosname, &cls_param);
 	CU_ASSERT_FATAL(cos != ODP_COS_INVALID);
@@ -1041,9 +1026,6 @@ static void cls_pmr_pool_set(void)
 	odp_cls_cos_param_init(&cls_param);
 	cls_param.pool = pool;
 	cls_param.queue = queue;
-#if ODP_DEPRECATED_API
-	cls_param.drop_policy = ODP_COS_DROP_POOL;
-#endif
 
 	cos = odp_cls_cos_create(cosname, &cls_param);
 	CU_ASSERT_FATAL(cos != ODP_COS_INVALID);
@@ -1143,9 +1125,6 @@ static void cls_pmr_queue_set(void)
 	odp_cls_cos_param_init(&cls_param);
 	cls_param.pool = pool;
 	cls_param.queue = queue;
-#if ODP_DEPRECATED_API
-	cls_param.drop_policy = ODP_COS_DROP_POOL;
-#endif
 
 	cos = odp_cls_cos_create(cosname, &cls_param);
 	CU_ASSERT_FATAL(cos != ODP_COS_INVALID);
@@ -1447,9 +1426,6 @@ static void test_pmr_series(const int num_udp, int marking)
 	odp_cls_cos_param_init(&cls_param);
 	cls_param.pool = pool;
 	cls_param.queue = queue_ip;
-#if ODP_DEPRECATED_API
-	cls_param.drop_policy = ODP_COS_DROP_POOL;
-#endif
 
 	cos_ip = odp_cls_cos_create("cos_ip", &cls_param);
 	CU_ASSERT_FATAL(cos_ip != ODP_COS_INVALID);
@@ -1491,9 +1467,6 @@ static void test_pmr_series(const int num_udp, int marking)
 		odp_cls_cos_param_init(&cls_param);
 		cls_param.pool = pool;
 		cls_param.queue = queue_udp[i];
-#if ODP_DEPRECATED_API
-		cls_param.drop_policy = ODP_COS_DROP_POOL;
-#endif
 
 		cos_udp[i] = odp_cls_cos_create(name, &cls_param);
 		CU_ASSERT_FATAL(cos_udp[i] != ODP_COS_INVALID);

@@ -40,14 +40,6 @@ extern "C" {
 #define CLS_PMRTERM_MAX			8
 /* Maximum PMRs attached in PKTIO Level */
 #define CLS_PMR_PER_COS_MAX		8
-/* L2 Priority Bits */
-#define CLS_COS_L2_QOS_BITS		3
-/* Max L2 QoS value */
-#define CLS_COS_MAX_L2_QOS		(1 << CLS_COS_L2_QOS_BITS)
-/* L2 DSCP Bits */
-#define CLS_COS_L3_QOS_BITS		6
-/* Max L3 QoS Value */
-#define CLS_COS_MAX_L3_QOS		(1 << CLS_COS_L3_QOS_BITS)
 /* Max PMR Term size */
 #define MAX_PMR_TERM_SIZE		16
 /* Max queue per Class of service */
@@ -145,9 +137,6 @@ typedef struct ODP_ALIGNED_CACHE cos_s {
 	bool queue_group;
 	odp_cls_hash_proto_t hash_proto;
 	odp_pktin_vector_config_t vector;	/* Packet vector config */
-#if ODP_DEPRECATED_API
-	odp_cls_drop_t drop_policy;	/* Associated Drop Policy */
-#endif
 	size_t headroom;		/* Headroom for this CoS */
 	odp_spinlock_t lock;		/* cos lock */
 	odp_queue_param_t queue_param;
@@ -174,28 +163,6 @@ typedef struct ODP_ALIGNED_CACHE {
 } _cls_queue_grp_tbl_t;
 
 /**
-L2 QoS and CoS Map
-
-This structure holds the mapping between L2 QoS value and
-corresponding cos_t object
-**/
-typedef struct pmr_l2_cos {
-	odp_spinlock_t lock;	/* pmr_l2_cos lock */
-	cos_t *cos[CLS_COS_MAX_L2_QOS];	/* Array of CoS objects */
-} pmr_l2_cos_t;
-
-/**
-L3 QoS and CoS Map
-
-This structure holds the mapping between L3 QoS value and
-corresponding cos_t object
-**/
-typedef struct pmr_l3_cos {
-	odp_spinlock_t lock;	/* pmr_l3_cos lock */
-	cos_t *cos[CLS_COS_MAX_L3_QOS];	/* Array of CoS objects */
-} pmr_l3_cos_t;
-
-/**
 Linux Generic Classifier
 
 This structure is stored in pktio_entry and holds all
@@ -204,9 +171,6 @@ the classifier configuration value.
 typedef struct classifier {
 	cos_t *error_cos;		/* Associated Error CoS */
 	cos_t *default_cos;		/* Associated Default CoS */
-	uint32_t l3_precedence;		/* L3 QoS precedence */
-	pmr_l2_cos_t l2_cos_table;	/* L2 QoS-CoS table map */
-	pmr_l3_cos_t l3_cos_table;	/* L3 Qos-CoS table map */
 	size_t headroom;		/* Pktio Headroom */
 	size_t skip;			/* Pktio Skip Offset */
 } classifier_t;
