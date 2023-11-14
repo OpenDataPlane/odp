@@ -55,14 +55,8 @@ _ODP_INLINE int odp_crypto_result(odp_crypto_packet_result_t *result, odp_packet
 	ok = op_result->cipher_status.alg_err == ODP_CRYPTO_ALG_ERR_NONE &&
 	     op_result->auth_status.alg_err   == ODP_CRYPTO_ALG_ERR_NONE;
 
-	if (result) {
+	if (result)
 		*result = *op_result;
-#if ODP_DEPRECATED_API
-		result->ok = ok;
-		result->cipher_status.hw_err = ODP_CRYPTO_HW_ERR_NONE;
-		result->auth_status.hw_err = ODP_CRYPTO_HW_ERR_NONE;
-#endif
-	}
 
 	return ok ? 0 : -1;
 }

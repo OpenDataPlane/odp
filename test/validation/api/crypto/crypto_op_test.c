@@ -115,10 +115,6 @@ int crypto_op(odp_packet_t pkt_in,
 
 	*ok = (rc == 0);
 
-#if ODP_DEPRECATED_API
-	CU_ASSERT(*ok == result.ok);
-#endif
-
 	return 0;
 fail:
 	odp_packet_free(pkt_in);
