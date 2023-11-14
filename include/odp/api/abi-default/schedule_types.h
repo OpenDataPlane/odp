@@ -15,7 +15,6 @@
 extern "C" {
 #endif
 
-#include <odp/api/deprecated.h>
 #include <odp/api/std_types.h>
 
 /** @addtogroup odp_scheduler
@@ -26,26 +25,6 @@ extern "C" {
 #define ODP_SCHED_NO_WAIT  0
 
 #define ODP_SCHED_GROUP_NAME_LEN 32
-
-#if ODP_DEPRECATED_API
-#define ODP_SCHED_PRIO_HIGHEST  (odp_schedule_max_prio())
-
-#define ODP_SCHED_PRIO_NORMAL   (odp_schedule_default_prio())
-
-#define ODP_SCHED_PRIO_LOWEST   (odp_schedule_min_prio())
-
-#define ODP_SCHED_PRIO_DEFAULT  (odp_schedule_default_prio())
-#else
-/* Required to prevent Doxygen warning */
-#define ODP_SCHED_PRIO_HIGHEST
-#define ODP_SCHED_PRIO_NORMAL
-#define ODP_SCHED_PRIO_LOWEST
-#define ODP_SCHED_PRIO_DEFAULT
-#undef ODP_SCHED_PRIO_HIGHEST
-#undef ODP_SCHED_PRIO_NORMAL
-#undef ODP_SCHED_PRIO_LOWEST
-#undef ODP_SCHED_PRIO_DEFAULT
-#endif
 
 typedef int odp_schedule_sync_t;
 
