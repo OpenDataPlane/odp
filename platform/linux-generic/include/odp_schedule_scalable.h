@@ -19,10 +19,10 @@
 #include <odp_llqueue.h>
 
 /*
- * ODP_SCHED_PRIO_HIGHEST/NORMAL/LOWEST/DEFAULT are compile time
- * constants, but not ODP_SCHED_PRIO_NUM. The current API for this
- * is odp_schedule_num_prio(). The other schedulers also define
- * this internally as NUM_PRIO.
+ * Define scalable scheduler internal maximum priority count
+ * ODP_SCHED_PRIO_NUM as it is not compile-time constant at API
+ * level. The current API for this is odp_schedule_num_prio().
+ * The other schedulers also define this internally as NUM_PRIO.
  *
  * One additional priority level for idle pktin queues.
  * This is only for internal use and not visible to the user.
