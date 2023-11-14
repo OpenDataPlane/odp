@@ -17,7 +17,6 @@
 extern "C" {
 #endif
 
-#include <odp/api/deprecated.h>
 #include <odp/api/timer_types.h>
 #include <odp/api/event_types.h>
 #include <odp/api/pool_types.h>
@@ -387,71 +386,6 @@ int odp_timer_periodic_ack(odp_timer_t timer, odp_event_t tmo_ev);
  * @retval <0 Timer cancel failed.
  */
 int odp_timer_periodic_cancel(odp_timer_t timer);
-
-/**
- * Set (or reset) a timer with absolute expiration time
- *
- * This function sets a timer to expire at a specific time. If the timer is
- * already running (set and not yet expired), the function updates (resets) it
- * with a new expiration time and optionally with a new event. A successful
- * reset operation with a new event outputs the old event. A failed reset
- * operation does not modify the timer.
- *
- * The user provided event can be of any event type, but only ODP_EVENT_TIMEOUT
- * type events (odp_timeout_t) carry timeout specific metadata. Furthermore,
- * timer performance may have been optimized for that event type. When the timer
- * expires, the event is enqueued to the destination queue of the timer.
- *
- * @param         timer    Timer
- * @param         abs_tick Absolute expiration time in timer ticks
- * @param[in,out] tmo_ev   Pointer to an event handle. The event is enqueued
- *                         when the timer expires. Use NULL when resetting the
- *                         timer without changing the event. When resetting the
- *                         timer with a new event, a successful operation
- *                         outputs the old event here.
- *
- * @retval ODP_TIMER_SUCCESS  Success
- * @retval ODP_TIMER_TOO_NEAR Failure. Expiration time is too near to
- *                            the current time.
- * @retval ODP_TIMER_TOO_FAR  Failure. Expiration time is too far from
- *                            the current time.
- * @retval ODP_TIMER_FAIL     Failure. Set operation: No event provided.
- *                            Reset operation: Too late to reset the timer.
- *
- * @see odp_timer_set_rel(), odp_timer_alloc(), odp_timer_cancel()
- *
- * @deprecated Use odp_timer_start() or odp_timer_restart() instead
- */
-int ODP_DEPRECATE(odp_timer_set_abs)(odp_timer_t timer, uint64_t abs_tick, odp_event_t *tmo_ev);
-
-/**
- * Set (or reset) a timer with relative expiration time
- *
- * Like odp_timer_set_abs(), but the expiration time is relative to the current
- * time: expiration tick = odp_timer_current_tick() + 'rel_tick'.
- *
- * @param         timer    Timer
- * @param         rel_tick Expiration time relative to current time of
- *                         the timer pool in timer ticks
- * @param[in,out] tmo_ev   Pointer to an event handle. The event is enqueued
- *                         when the timer expires. Use NULL when resetting the
- *                         timer without changing the event. When resetting the
- *                         timer with a new event, a successful operation
- *                         outputs the old event here.
- *
- * @retval ODP_TIMER_SUCCESS  Success
- * @retval ODP_TIMER_TOO_NEAR Failure. Expiration time is too near to
- *                            the current time.
- * @retval ODP_TIMER_TOO_FAR  Failure. Expiration time is too far from
- *                            the current time.
- * @retval ODP_TIMER_FAIL     Failure. Set operation: No event provided.
- *                            Reset operation: Too late to reset the timer.
- *
- * @see odp_timer_set_abs(), odp_timer_alloc(), odp_timer_cancel()
- *
- * @deprecated Use odp_timer_start() or odp_timer_restart() instead
- */
-int ODP_DEPRECATE(odp_timer_set_rel)(odp_timer_t timer, uint64_t rel_tick, odp_event_t *tmo_ev);
 
 /**
  * Cancel a timer

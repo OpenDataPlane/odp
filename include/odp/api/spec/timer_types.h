@@ -17,7 +17,6 @@
 extern "C" {
 #endif
 
-#include <odp/api/deprecated.h>
 #include <odp/api/event_types.h>
 #include <odp/api/std_types.h>
 
@@ -250,22 +249,6 @@ typedef enum {
 
 /** The default clock source */
 #define ODP_CLOCK_DEFAULT ODP_CLOCK_SRC_0
-
-#if ODP_DEPRECATED_API
-/**
- * For backwards compatibility, ODP_CLOCK_CPU is synonym of ODP_CLOCK_DEFAULT.
- *
- * @deprecated Use #ODP_CLOCK_DEFAULT instead.
- */
-#define ODP_CLOCK_CPU ODP_CLOCK_DEFAULT
-
-/**
- * For backwards compatibility, ODP_CLOCK_EXT is synonym of ODP_CLOCK_SRC_1.
- *
- * @deprecated Use #ODP_CLOCK_SRC_1 instead.
- */
-#define ODP_CLOCK_EXT ODP_CLOCK_SRC_1
-#endif
 
 /**
  * Timer expiration mode
@@ -554,29 +537,6 @@ typedef enum {
  * @deprecated Use odp_timer_retval_t instead.
  */
 typedef odp_timer_retval_t odp_timer_set_t;
-
-#if ODP_DEPRECATED_API
-/**
- * For backwards compatibility, ODP_TIMER_TOOEARLY is synonym of ODP_TIMER_TOO_NEAR.
- *
- * @deprecated Use #ODP_TIMER_TOO_NEAR instead.
- */
-#define ODP_TIMER_TOOEARLY ODP_TIMER_TOO_NEAR
-
-/**
- * For backwards compatibility, ODP_TIMER_TOOLATE is synonym of ODP_TIMER_TOO_FAR.
- *
- * @deprecated Use #ODP_TIMER_TOO_FAR instead.
- */
-#define ODP_TIMER_TOOLATE  ODP_TIMER_TOO_FAR
-
-/**
- * For backwards compatibility, ODP_TIMER_NOEVENT is synonym of ODP_TIMER_FAIL.
- *
- * @deprecated Use #ODP_TIMER_FAIL instead.
- */
-#define ODP_TIMER_NOEVENT ODP_TIMER_FAIL
-#endif
 
 /**
  * Timer tick information
