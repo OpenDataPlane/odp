@@ -19,7 +19,6 @@ extern "C" {
 #endif
 
 #include <odp/api/plat/strong_types.h>
-#include <odp/api/deprecated.h>
 
 /** @ingroup odp_event
  *  @{
