@@ -4,6 +4,5 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include <odp/api/abi-default/thread.h>
-
+/* Inlined API functions */
 #include <odp/api/plat/thread_inlines.h>

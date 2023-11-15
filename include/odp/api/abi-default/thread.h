@@ -2,12 +2,6 @@
  * Copyright (c) 2015-2018 Linaro Limited
  */
 
-/**
- * @file
- *
- * ODP thread
- */
-
 #ifndef ODP_ABI_THREAD_H_
 #define ODP_ABI_THREAD_H_
 
@@ -15,15 +9,7 @@
 extern "C" {
 #endif
 
-/** @addtogroup odp_thread
- *  @{
- */
-
-#define ODP_THREAD_COUNT_MAX 256
-
-/**
- * @}
- */
+/* Empty header required due to the inline functions */
 
 #ifdef __cplusplus
 }
