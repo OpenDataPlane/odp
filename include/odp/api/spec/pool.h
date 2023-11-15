@@ -154,17 +154,21 @@ unsigned int odp_pool_max_index(void);
 int odp_pool_index(odp_pool_t pool);
 
 /**
- * Get statistics for pool
+ * Read pool statistics
  *
- * Read the statistics counters enabled using odp_pool_stats_opt_t during pool creation. The
- * inactive counters are set to zero by the implementation. Depending on the implementation, there
- * may be some delay until performed pool operations are visible in the statistics.
+ * Read statistics counters that were enabled in pool creation parameters (odp_pool_param_t.stats).
+ * The function writes all disabled counters to zero, except per thread counters
+ * (thread.cache_available[]) which have undefined values.
  *
- * A single call may read statistics from one to ODP_POOL_MAX_THREAD_STATS
- * threads. Set 'stats.thread.first' and 'stats.thread.last' to select the
- * threads ('first' <= 'last'). Valid values range from 0 to odp_thread_count_max() - 1.
- * A successful call fills the output array starting always from the first element
- * 'stats.thread.cache_available[0]' (='stats.thread.first').
+ * When per thread counters are enabled, application sets 'stats.thread.first' and
+ * 'stats.thread.last' to select the threads ('first' <= 'last'). A single call may read statistics
+ * from one to #ODP_POOL_MAX_THREAD_STATS threads. Valid thread ID values range from 0 to
+ * odp_thread_count_max() - 1. A successful call fills the output array starting always from the
+ * first element 'stats.thread.cache_available[0]' (='stats.thread.first'). Unused array elements
+ * have undefined values.
+ *
+ * Depending on the implementation, there may be some delay until performed pool operations are
+ * visible in the statistics.
  *
  * @param         pool   Pool handle
  * @param[in,out] stats  Output buffer for counters
