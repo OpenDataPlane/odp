@@ -272,6 +272,16 @@ int odp_thread_count_max(void)
 	return thread_globals->num_max;
 }
 
+int odp_thread_control_count_max(void)
+{
+	return thread_globals->num_max;
+}
+
+int odp_thread_worker_count_max(void)
+{
+	return thread_globals->num_max;
+}
+
 int odp_thrmask_worker(odp_thrmask_t *mask)
 {
 	odp_thrmask_copy(mask, &thread_globals->worker);
