@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2013-2018 Linaro Limited
- * Copyright (c) 2022 Nokia
+ * Copyright (c) 2022-2023 Nokia
  */
 
 /**
@@ -54,12 +54,35 @@ int odp_thread_count(void);
 /**
  * Maximum thread count
  *
- * Returns the maximum thread count, which is a constant value and set in
- * ODP initialization phase. This may be lower than ODP_THREAD_COUNT_MAX.
+ * Returns the maximum number of threads of any type. This is a constant value
+ * and set in ODP initialization phase. The value may be lower than
+ * #ODP_THREAD_COUNT_MAX.
  *
  * @return Maximum thread count
  */
 int odp_thread_count_max(void);
+
+/**
+ * Maximum control thread count
+ *
+ * Otherwise like odp_thread_count_max(), but returns the maximum number of
+ * control threads (#ODP_THREAD_CONTROL). The returned value is always <=
+ * odp_thread_count_max().
+ *
+ * @return Maximum control thread count
+ */
+int odp_thread_control_count_max(void);
+
+/**
+ * Maximum worker thread count
+ *
+ * Otherwise like odp_thread_count_max(), but returns the maximum number of
+ * worker threads (#ODP_THREAD_WORKER). The returned value is always <=
+ * odp_thread_count_max().
+ *
+ * @return Maximum worker thread count
+ */
+int odp_thread_worker_count_max(void);
 
 /**
  * Thread type
