@@ -1324,7 +1324,7 @@ static void pool_test_pool_statistics(odp_pool_type_t pool_type)
 	odp_pool_stats_selected_t selected;
 	odp_pool_param_t param;
 	odp_pool_stats_opt_t supported;
-	uint32_t i, j, num_pool, num_obj, cache_size;
+	uint32_t i, j, num_pool, num_obj, cache_size, num_thr;
 	uint32_t max_pools = 2;
 	uint16_t first = 0;
 	uint16_t last = ODP_POOL_MAX_THREAD_STATS - 1;
@@ -1407,9 +1407,14 @@ static void pool_test_pool_statistics(odp_pool_type_t pool_type)
 		uint32_t num_events = 0;
 		uint32_t num_fails = 0;
 
+		memset(&stats, 0xff, sizeof(odp_pool_stats_t));
+		memset(&selected, 0xff, sizeof(odp_pool_stats_selected_t));
+
 		CU_ASSERT_FATAL(odp_pool_stats_reset(pool[i]) == 0);
+
 		stats.thread.first = first;
 		stats.thread.last = last;
+		num_thr = last - first + 1;
 		CU_ASSERT_FATAL(odp_pool_stats(pool[i], &stats) == 0);
 		CU_ASSERT_FATAL(odp_pool_stats_selected(pool[i], &selected, &supported) == 0);
 
@@ -1440,7 +1445,8 @@ static void pool_test_pool_statistics(odp_pool_type_t pool_type)
 
 		CU_ASSERT(stats.thread.first == first);
 		CU_ASSERT(stats.thread.last == last);
-		for (j = 0; j < ODP_POOL_MAX_THREAD_STATS; j++)
+
+		for (j = 0; j < num_thr; j++)
 			CU_ASSERT(stats.thread.cache_available[j] <= stats.cache_available);
 
 		/* Allocate the events */
@@ -1488,12 +1494,15 @@ static void pool_test_pool_statistics(odp_pool_type_t pool_type)
 				CU_ASSERT(selected.cache_available <= num_obj - num_events);
 
 			while (first_id < odp_thread_count_max()) {
+				memset(&stats, 0xff, sizeof(odp_pool_stats_t));
+
 				stats.thread.first = first_id;
 				stats.thread.last = last_id;
+				num_thr = last_id - first_id + 1;
 				CU_ASSERT_FATAL(odp_pool_stats(pool[i], &stats) == 0);
 
-				for (int i = 0; i < ODP_POOL_MAX_THREAD_STATS; i++) {
-					uint64_t cached = stats.thread.cache_available[i];
+				for (uint32_t k = 0; k < num_thr; k++) {
+					uint64_t cached = stats.thread.cache_available[k];
 
 					CU_ASSERT(cached <= num_obj - num_events);
 					total_cached += cached;
@@ -1515,8 +1524,12 @@ static void pool_test_pool_statistics(odp_pool_type_t pool_type)
 		/* Allow implementation some time to update counters */
 		odp_time_wait_ns(ODP_TIME_MSEC_IN_NS);
 
+		memset(&stats, 0xff, sizeof(odp_pool_stats_t));
+		memset(&selected, 0xff, sizeof(odp_pool_stats_selected_t));
+
 		stats.thread.first = first;
 		stats.thread.last = last;
+		num_thr = last - first + 1;
 		CU_ASSERT_FATAL(odp_pool_stats(pool[i], &stats) == 0);
 		CU_ASSERT_FATAL(odp_pool_stats_selected(pool[i], &selected, &supported) == 0);
 
@@ -1528,7 +1541,7 @@ static void pool_test_pool_statistics(odp_pool_type_t pool_type)
 		CU_ASSERT(stats.cache_available == 0);
 		if (supported.bit.cache_available)
 			CU_ASSERT(selected.cache_available == 0);
-		for (j = 0; j < ODP_POOL_MAX_THREAD_STATS; j++)
+		for (j = 0; j < num_thr; j++)
 			CU_ASSERT(stats.thread.cache_available[j] == 0);
 		if (supported.bit.alloc_ops) {
 			CU_ASSERT(stats.alloc_ops > 0 && stats.alloc_ops <= num_allocs);
