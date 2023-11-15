@@ -43,13 +43,35 @@ int odp_thread_id(void);
  * Thread count
  *
  * Returns the current ODP thread count. This is the number of active threads
- * running the ODP instance. Each odp_init_local() call increments and each
- * odp_term_local() call decrements the count. The count is always between 1 and
- * odp_thread_count_max().
+ * of any type running in the ODP instance. Each odp_init_local() call
+ * increments and each odp_term_local() call decrements the count. The count is
+ * always between 1 and odp_thread_count_max().
  *
  * @return Current thread count
  */
 int odp_thread_count(void);
+
+/**
+ * Control thread count
+ *
+ * Otherwise like odp_thread_count(), but returns the number of active threads
+ * of type #ODP_THREAD_CONTROL. The count is always between 0 and
+ * odp_thread_control_count_max().
+ *
+ * @return Current control thread count
+ */
+int odp_thread_control_count(void);
+
+/**
+ * Worker thread count
+ *
+ * Otherwise like odp_thread_count(), but returns the number of active threads
+ * of type #ODP_THREAD_WORKER. The count is always between 0 and
+ * odp_thread_worker_count_max().
+ *
+ * @return Current worker thread count
+ */
+int odp_thread_worker_count(void);
 
 /**
  * Maximum thread count
