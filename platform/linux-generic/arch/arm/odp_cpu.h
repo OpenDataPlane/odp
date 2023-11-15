@@ -31,14 +31,6 @@
  */
 #define CONFIG_DMBSTR
 
-static inline void _odp_dmb(void)
-{
-	__asm__ volatile("dmb" : : : "memory");
-}
-
-#define _odp_release_barrier(ro) \
-	__atomic_thread_fence(__ATOMIC_RELEASE)
-
 static inline uint64_t lld(uint64_t *var, int mm)
 {
 	uint64_t old;
@@ -49,7 +41,7 @@ static inline uint64_t lld(uint64_t *var, int mm)
 			 : );
 	/* Barrier after an acquiring load */
 	if (mm == __ATOMIC_ACQUIRE)
-		_odp_dmb();
+		__asm__ volatile("dmb" : : : "memory");
 	return old;
 }
 
@@ -60,7 +52,7 @@ static inline uint32_t scd(uint64_t *var, uint64_t neu, int mm)
 
 	/* Barrier before a releasing store */
 	if (mm == __ATOMIC_RELEASE)
-		_odp_dmb();
+		__asm__ volatile("dmb" : : : "memory");
 	__asm__ volatile("strexd %0, %1, %H1, [%2]"
 			 : "=&r" (ret)
 			 : "r" (neu), "r" (var)
@@ -68,7 +60,22 @@ static inline uint32_t scd(uint64_t *var, uint64_t neu, int mm)
 	return ret;
 }
 
-#include "odp_atomic.h"
+#ifdef CONFIG_DMBSTR
+
+#define atomic_store_release(loc, val, ro)		\
+do {							\
+	__atomic_thread_fence(__ATOMIC_RELEASE);	\
+	__atomic_store_n(loc, val, __ATOMIC_RELAXED);	\
+} while (0)
+
+#else
+
+#define atomic_store_release(loc, val, ro) \
+	__atomic_store_n(loc, val, __ATOMIC_RELEASE)
+
+#endif  /* CONFIG_DMBSTR */
+
+#include "../default/odp_atomic.h"
 #include "../default/odp_wait_until.h"
 
 #ifdef __ARM_FEATURE_UNALIGNED
