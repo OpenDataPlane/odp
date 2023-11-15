@@ -345,8 +345,7 @@ odpapiabiarchinclude_HEADERS += arch/default/odp/api/abi/atomic_generic.h \
 				arch/default/odp/api/abi/wait_until_generic.h \
 				arch/default/odp/api/abi/wait_until.h
 endif
-noinst_HEADERS += arch/arm/odp_atomic.h \
-		  arch/arm/odp_cpu.h \
+noinst_HEADERS += arch/arm/odp_cpu.h \
 		  arch/default/odp_atomic.h \
 		  arch/default/odp_cpu.h \
 		  arch/default/odp_random.h \
