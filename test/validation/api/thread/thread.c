@@ -104,13 +104,31 @@ static void thread_test_odp_thread_count(void)
 {
 	int count = odp_thread_count();
 
-	/* One thread running */
+	/* One control thread running */
 	CU_ASSERT(count == 1);
+	CU_ASSERT(odp_thread_control_count() == 1);
+	CU_ASSERT(odp_thread_control_count() <= odp_thread_control_count_max());
+	CU_ASSERT(odp_thread_worker_count() == 0);
 
 	CU_ASSERT(count >= 1);
 	CU_ASSERT(count <= odp_thread_count_max());
 	CU_ASSERT(count <= ODP_THREAD_COUNT_MAX);
-	CU_ASSERT(odp_thread_count_max() <= ODP_THREAD_COUNT_MAX);
+}
+
+static void thread_test_odp_thread_count_max(void)
+{
+	int max_threads = odp_thread_count_max();
+	int max_control = odp_thread_control_count_max();
+	int max_worker = odp_thread_worker_count_max();
+
+	CU_ASSERT(max_threads > 0);
+	CU_ASSERT(max_threads <= ODP_THREAD_COUNT_MAX);
+
+	CU_ASSERT(max_control >= 0);
+	CU_ASSERT(max_control <= max_threads);
+
+	CU_ASSERT(max_worker >= 0);
+	CU_ASSERT(max_worker <= max_threads);
 }
 
 static int thread_func(void *arg)
@@ -175,7 +193,9 @@ static void thread_test_odp_thrmask_worker(void)
 	ret = odp_thrmask_worker(&mask);
 	CU_ASSERT(ret == odp_thrmask_count(&mask));
 	CU_ASSERT(ret == num);
+	CU_ASSERT(ret == odp_thread_worker_count());
 	CU_ASSERT(ret <= odp_thread_count_max());
+	CU_ASSERT(ret <= odp_thread_worker_count_max());
 
 	/* allow thread(s) to exit */
 	odp_barrier_wait(&global_mem->bar_exit);
@@ -194,9 +214,10 @@ static void thread_test_odp_thrmask_control(void)
 
 	CU_ASSERT(odp_thread_type() == ODP_THREAD_CONTROL);
 
-	/* should start out with 1 worker thread */
+	/* Should start out with 1 control thread */
 	ret = odp_thrmask_control(&mask);
 	CU_ASSERT(ret == odp_thrmask_count(&mask));
+	CU_ASSERT(ret == odp_thread_control_count());
 	CU_ASSERT(ret == 1);
 }
 
@@ -204,6 +225,7 @@ odp_testinfo_t thread_suite[] = {
 	ODP_TEST_INFO(thread_test_odp_cpu_id),
 	ODP_TEST_INFO(thread_test_odp_thread_id),
 	ODP_TEST_INFO(thread_test_odp_thread_count),
+	ODP_TEST_INFO(thread_test_odp_thread_count_max),
 	ODP_TEST_INFO(thread_test_odp_thrmask_to_from_str),
 	ODP_TEST_INFO(thread_test_odp_thrmask_equal),
 	ODP_TEST_INFO(thread_test_odp_thrmask_zero),
