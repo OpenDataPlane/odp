@@ -7,13 +7,13 @@
 #ifndef ODP_PLAT_THREAD_INLINES_H_
 #define ODP_PLAT_THREAD_INLINES_H_
 
-#include <odp/api/init.h>
-
-#include <odp/api/plat/thread_inline_types.h>
-
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#include <odp/api/thread_types.h>
+
+#include <odp/api/plat/thread_inline_types.h>
 
 /** @cond _ODP_HIDE_FROM_DOXYGEN_ */
 

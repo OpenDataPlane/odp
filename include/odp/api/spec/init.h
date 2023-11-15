@@ -17,7 +17,7 @@ extern "C" {
 
 #include <odp/api/std_types.h>
 #include <odp/api/hints.h>
-#include <odp/api/spec/thread_types.h>
+#include <odp/api/thread_types.h>
 #include <odp/api/cpumask.h>
 
 /** @defgroup odp_initialization ODP INITIALIZATION

@@ -64,6 +64,7 @@ odpapiinclude_HEADERS = \
 	odp/api/sync.h \
 	odp/api/system_info.h \
 	odp/api/thread.h \
+	odp/api/thread_types.h \
 	odp/api/threshold.h \
 	odp/api/thrmask.h \
 	odp/api/ticketlock.h \
@@ -193,6 +194,7 @@ odpapiabidefaultinclude_HEADERS = \
 	odp/api/abi-default/std_types.h \
 	odp/api/abi-default/sync.h \
 	odp/api/abi-default/thread.h \
+	odp/api/abi-default/thread_types.h \
 	odp/api/abi-default/thrmask.h \
 	odp/api/abi-default/ticketlock.h \
 	odp/api/abi-default/time.h \
@@ -255,6 +257,7 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/arm32-linux/odp/api/abi/std_types.h \
 	odp/arch/arm32-linux/odp/api/abi/sync.h \
 	odp/arch/arm32-linux/odp/api/abi/thread.h \
+	odp/arch/arm32-linux/odp/api/abi/thread_types.h \
 	odp/arch/arm32-linux/odp/api/abi/thrmask.h \
 	odp/arch/arm32-linux/odp/api/abi/ticketlock.h \
 	odp/arch/arm32-linux/odp/api/abi/time.h \
@@ -313,6 +316,7 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/arm64-linux/odp/api/abi/std_types.h \
 	odp/arch/arm64-linux/odp/api/abi/sync.h \
 	odp/arch/arm64-linux/odp/api/abi/thread.h \
+	odp/arch/arm64-linux/odp/api/abi/thread_types.h \
 	odp/arch/arm64-linux/odp/api/abi/thrmask.h \
 	odp/arch/arm64-linux/odp/api/abi/ticketlock.h \
 	odp/arch/arm64-linux/odp/api/abi/time.h \
@@ -371,6 +375,7 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/default-linux/odp/api/abi/std_types.h \
 	odp/arch/default-linux/odp/api/abi/sync.h \
 	odp/arch/default-linux/odp/api/abi/thread.h \
+	odp/arch/default-linux/odp/api/abi/thread_types.h \
 	odp/arch/default-linux/odp/api/abi/thrmask.h \
 	odp/arch/default-linux/odp/api/abi/ticketlock.h \
 	odp/arch/default-linux/odp/api/abi/time.h \
@@ -429,6 +434,7 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/power64-linux/odp/api/abi/std_types.h \
 	odp/arch/power64-linux/odp/api/abi/sync.h \
 	odp/arch/power64-linux/odp/api/abi/thread.h \
+	odp/arch/power64-linux/odp/api/abi/thread_types.h \
 	odp/arch/power64-linux/odp/api/abi/thrmask.h \
 	odp/arch/power64-linux/odp/api/abi/ticketlock.h \
 	odp/arch/power64-linux/odp/api/abi/time.h \
@@ -487,6 +493,7 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/x86_32-linux/odp/api/abi/std_types.h \
 	odp/arch/x86_32-linux/odp/api/abi/sync.h \
 	odp/arch/x86_32-linux/odp/api/abi/thread.h \
+	odp/arch/x86_32-linux/odp/api/abi/thread_types.h \
 	odp/arch/x86_32-linux/odp/api/abi/thrmask.h \
 	odp/arch/x86_32-linux/odp/api/abi/ticketlock.h \
 	odp/arch/x86_32-linux/odp/api/abi/time.h \
@@ -545,6 +552,7 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/x86_64-linux/odp/api/abi/std_types.h \
 	odp/arch/x86_64-linux/odp/api/abi/sync.h \
 	odp/arch/x86_64-linux/odp/api/abi/thread.h \
+	odp/arch/x86_64-linux/odp/api/abi/thread_types.h \
 	odp/arch/x86_64-linux/odp/api/abi/thrmask.h \
 	odp/arch/x86_64-linux/odp/api/abi/ticketlock.h \
 	odp/arch/x86_64-linux/odp/api/abi/time.h \

@@ -20,6 +20,13 @@ extern "C" {
  */
 
 /**
+ * @def ODP_THREAD_COUNT_MAX
+ * Maximum number of threads supported in build time. Use odp_thread_count_max()
+ * for maximum number of threads supported in run time, which depends on system
+ * configuration and may be lower than this number.
+ */
+
+/**
  * Thread type
  */
 typedef enum odp_thread_type_e {

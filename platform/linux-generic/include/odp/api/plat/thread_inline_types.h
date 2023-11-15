@@ -9,7 +9,7 @@
 #define ODP_PLAT_THREAD_INLINE_TYPES_H_
 
 #include <odp/api/init.h>
-#include <odp/api/spec/thread_types.h>
+#include <odp/api/thread_types.h>
 
 #ifdef __cplusplus
 extern "C" {

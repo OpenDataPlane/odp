@@ -17,16 +17,11 @@
 extern "C" {
 #endif
 
+#include <odp/api/thread_types.h>
+
 /** @defgroup odp_thread ODP THREAD
  *  Thread types, masks and IDs.
  *  @{
- */
-
-/**
- * @def ODP_THREAD_COUNT_MAX
- * Maximum number of threads supported in build time. Use
- * odp_thread_count_max() for maximum number of threads supported in run time,
- * which depend on system configuration and may be lower than this number.
  */
 
 /**

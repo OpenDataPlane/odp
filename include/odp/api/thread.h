@@ -15,8 +15,6 @@
 extern "C" {
 #endif
 
-#include <odp/api/spec/thread_types.h>
-
 #include <odp/api/abi/thread.h>
 
 #include <odp/api/spec/thread.h>
