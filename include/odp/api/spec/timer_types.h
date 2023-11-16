@@ -17,6 +17,7 @@
 extern "C" {
 #endif
 
+#include <odp/api/deprecated.h>
 #include <odp/api/event_types.h>
 #include <odp/api/std_types.h>
 
@@ -536,7 +537,7 @@ typedef enum {
  *
  * @deprecated Use odp_timer_retval_t instead.
  */
-typedef odp_timer_retval_t odp_timer_set_t;
+typedef odp_timer_retval_t ODP_DEPRECATE(odp_timer_set_t);
 
 /**
  * Timer tick information
