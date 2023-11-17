@@ -2087,21 +2087,21 @@ int odp_packet_has_tx_compl_request(odp_packet_t pkt);
 /**
  * Set packet free control option
  *
- * This option enables application to control which packets are freed/not freed back into pool
- * after ODP implementation has finished processing those. The option affects only packets that
- * are transmitted directly through a packet output interface (also with LSO), i.e. packets
- * transmitted through inline IPsec or TM are not affected.
+ * This option enables application to control if a packet is freed/not freed back into a pool
+ * after an ODP offload feature has finished processing it. The option does not have an effect on
+ * odp_packet_free() or other direct free calls. It affects only packets that are sent directly
+ * through a packet output interface queue (odp_pktout_queue_t or odp_queue_t), also when packets
+ * are LSO offloaded. Packets transmitted through inline IPsec or TM are not affected.
  *
- * When the option is set to #ODP_PACKET_FREE_CTRL_DONT_FREE, packet output interface will not free
- * the packet after transmit and application may reuse the packet as soon as its transmit is
- * complete (see e.g. odp_packet_tx_compl_done()).
+ * Packet output interface frees transmitted packets by default. When the option is set to
+ * #ODP_PACKET_FREE_CTRL_DONT_FREE, packet output will not free the packet after transmit and
+ * application may reuse or free the packet as soon as its transmission is complete
+ * (see e.g. odp_packet_tx_compl_done()). Check packet IO interface capability free_ctrl.dont_free
+ * (odp_pktio_capability_t.free_ctrl) for the option support. When an interface does not support
+ * the option, it ignores the value.
  *
- * The option must not be enabled on packets that have multiple references.
- *
- * Check packet IO interface capability free_ctrl.dont_free (odp_pktio_capability_t::dont_free) for
- * the option support. When an interface does not support the option, it ignores the value.
- *
- * The default value is #ODP_PACKET_FREE_CTRL_DISABLED.
+ * The option must not be enabled on packets that have multiple references. The default value is
+ * #ODP_PACKET_FREE_CTRL_DISABLED.
  *
  * @param pkt   Packet handle
  * @param ctrl  Packet free control option value
