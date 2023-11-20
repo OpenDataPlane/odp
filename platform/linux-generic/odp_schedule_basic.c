@@ -1628,7 +1628,7 @@ static inline int schedule_run(odp_queue_t *out_queue, odp_event_t out_ev[], uin
 static inline int schedule_loop(odp_queue_t *out_queue, uint64_t wait,
 				odp_event_t out_ev[], uint32_t max_num)
 {
-	odp_time_t next, wtime;
+	odp_time_t next;
 	int first = 1;
 	int ret;
 
@@ -1647,8 +1647,7 @@ static inline int schedule_loop(odp_queue_t *out_queue, uint64_t wait,
 			break;
 
 		if (first) {
-			wtime = odp_time_local_from_ns(wait);
-			next = odp_time_sum(odp_time_local(), wtime);
+			next = odp_time_add_ns(odp_time_local(), wait);
 			first = 0;
 			continue;
 		}
@@ -1677,11 +1676,9 @@ static inline int schedule_loop_sleep(odp_queue_t *out_queue, uint64_t wait,
 
 		if (first) {
 			start = odp_time_local();
-			start_sleep =
-				odp_time_sum(start,
-					     odp_time_local_from_ns(sched->powersave.poll_time));
+			start_sleep = odp_time_add_ns(start, sched->powersave.poll_time);
 			if (wait != ODP_SCHED_WAIT)
-				end = odp_time_sum(start, odp_time_local_from_ns(wait));
+				end = odp_time_add_ns(start, wait);
 			first = 0;
 			continue;
 		}

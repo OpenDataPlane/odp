@@ -683,8 +683,7 @@ static int schedule_multi(odp_queue_t *from, uint64_t wait,
 				continue;
 
 			if (update_t1) {
-				t1 = odp_time_sum(odp_time_local(),
-						  odp_time_local_from_ns(wait));
+				t1 = odp_time_add_ns(odp_time_local(), wait);
 				update_t1 = 0;
 				continue;
 			}

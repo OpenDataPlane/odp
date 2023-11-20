@@ -2566,14 +2566,12 @@ int odp_pktin_recv_tmo(odp_pktin_queue_t queue, odp_packet_t packets[], int num,
 		/* Avoid unnecessary system calls. Record the start time
 		 * only when needed and after the first call to recv. */
 		if (odp_unlikely(!started)) {
-			odp_time_t t;
-
 			/* Avoid overflow issues for large wait times */
 			if (wait > MAX_WAIT_TIME)
 				wait = MAX_WAIT_TIME;
-			t = odp_time_local_from_ns(wait * 1000);
+
 			started = 1;
-			t1 = odp_time_sum(odp_time_local(), t);
+			t1 = odp_time_add_ns(odp_time_local(), wait * 1000);
 		}
 
 		/* Check every SLEEP_CHECK rounds if total wait time
@@ -2650,14 +2648,12 @@ int odp_pktin_recv_mq_tmo(const odp_pktin_queue_t queues[], uint32_t num_q, uint
 			return 0;
 
 		if (odp_unlikely(!started)) {
-			odp_time_t t;
-
 			/* Avoid overflow issues for large wait times */
 			if (wait > MAX_WAIT_TIME)
 				wait = MAX_WAIT_TIME;
-			t = odp_time_local_from_ns(wait * 1000);
+
 			started = 1;
-			t1 = odp_time_sum(odp_time_local(), t);
+			t1 = odp_time_add_ns(odp_time_local(), wait * 1000);
 		}
 
 		/* Check every SLEEP_CHECK rounds if total wait time
