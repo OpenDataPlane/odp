@@ -1221,7 +1221,6 @@ static int schedule_multi(odp_queue_t *from, uint64_t wait, odp_event_t ev[],
 	sched_scalable_thread_state_t *ts;
 	int n;
 	odp_time_t start;
-	odp_time_t delta;
 	odp_time_t deadline;
 
 	ts = _odp_sched_ts;
@@ -1262,8 +1261,7 @@ static int schedule_multi(odp_queue_t *from, uint64_t wait, odp_event_t ev[],
 	if (odp_likely(n > 0))
 		return n;
 
-	delta = odp_time_local_from_ns(wait);
-	deadline = odp_time_sum(start, delta);
+	deadline = odp_time_add_ns(start, wait);
 
 	while (odp_time_cmp(deadline, odp_time_local()) > 0) {
 		n = _schedule(from, ev, num);
@@ -1281,7 +1279,6 @@ static odp_event_t schedule(odp_queue_t *from, uint64_t wait)
 	sched_scalable_thread_state_t *ts;
 	int n;
 	odp_time_t start;
-	odp_time_t delta;
 	odp_time_t deadline;
 
 	ts = _odp_sched_ts;
@@ -1324,8 +1321,7 @@ static odp_event_t schedule(odp_queue_t *from, uint64_t wait)
 	if (odp_likely(n > 0))
 		return ev;
 
-	delta = odp_time_local_from_ns(wait);
-	deadline = odp_time_sum(start, delta);
+	deadline = odp_time_add_ns(start, wait);
 
 	while (odp_time_cmp(deadline, odp_time_local()) > 0) {
 		n = _schedule(from, &ev, num);

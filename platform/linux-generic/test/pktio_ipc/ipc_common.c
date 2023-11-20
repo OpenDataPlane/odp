@@ -18,14 +18,12 @@ int ipc_odp_packet_send_or_free(odp_pktio_t pktio,
 	int sent = 0;
 	odp_time_t start_time;
 	odp_time_t end_time;
-	odp_time_t wait;
 	odp_pktout_queue_t pktout;
 	int i;
 
 	memset(&pktout, 0, sizeof(pktout));
 	start_time = odp_time_local();
-	wait = odp_time_local_from_ns(ODP_TIME_SEC_IN_NS);
-	end_time = odp_time_sum(start_time, wait);
+	end_time = odp_time_add_ns(start_time, ODP_TIME_SEC_IN_NS);
 
 	if (odp_pktout_queue(pktio, &pktout, 1) != 1) {
 		ODPH_ERR("no output queue\n");
