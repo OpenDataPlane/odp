@@ -128,6 +128,19 @@ odp_time_t odp_time_diff(odp_time_t t2, odp_time_t t1);
 uint64_t odp_time_diff_ns(odp_time_t t2, odp_time_t t1);
 
 /**
+ * Add nanoseconds into time
+ *
+ * Adds 'ns' nanoseconds into the time stamp value. The resulting time may wrap around, if
+ * the sum of 'time' and 'ns' is more than 10 years from the ODP instance startup.
+ *
+ * @param time  Time stamp
+ * @param ns    Nanoseconds to be added
+ *
+ * @return Time stamp incremented by 'ns' nanoseconds
+ */
+odp_time_t odp_time_add_ns(odp_time_t time, uint64_t ns);
+
+/**
  * Time sum
  *
  * @param t1    Time stamp
