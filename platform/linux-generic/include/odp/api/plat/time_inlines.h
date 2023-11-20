@@ -35,6 +35,7 @@
 	#define odp_time_cmp        __odp_time_cmp
 	#define odp_time_diff       __odp_time_diff
 	#define odp_time_diff_ns    __odp_time_diff_ns
+	#define odp_time_add_ns     __odp_time_add_ns
 	#define odp_time_sum        __odp_time_sum
 
 	#define odp_time_local_from_ns __odp_time_local_from_ns
@@ -121,6 +122,15 @@ _ODP_INLINE uint64_t odp_time_diff_ns(odp_time_t t2, odp_time_t t1)
 	time.u64 = t2.u64 - t1.u64;
 
 	return odp_time_to_ns(time);
+}
+
+_ODP_INLINE odp_time_t odp_time_add_ns(odp_time_t time, uint64_t ns)
+{
+	odp_time_t t = _odp_time_from_ns(ns);
+
+	t.u64 += time.u64;
+
+	return t;
 }
 
 _ODP_INLINE odp_time_t odp_time_sum(odp_time_t t1, odp_time_t t2)
