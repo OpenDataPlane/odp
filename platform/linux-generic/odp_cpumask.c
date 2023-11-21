@@ -7,7 +7,6 @@
 #include <odp_posix_extensions.h>
 
 #include <sched.h>
-#include <pthread.h>
 
 #include <odp/api/cpumask.h>
 #include <odp/api/init.h>
