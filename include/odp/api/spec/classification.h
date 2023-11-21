@@ -529,11 +529,21 @@ typedef struct odp_cls_stats_capability_t {
  */
 typedef struct odp_cls_capability_t {
 	/** PMR terms supported by the classifier
-	 * A bit mask of one bit for each of odp_pmr_term_t
-	 */
+	 *
+	 * A bit mask of one bit for each of odp_pmr_term_t. */
 	odp_cls_pmr_terms_t supported_terms;
 
-	/** Maximum number of PMR terms */
+	/** Maximum number of single-term PMRs
+	 *
+	 * Depending on the implementation, using several/composite terms for a
+	 * single PMR may end up incurring more than one PMR element from this
+	 * total capacity. */
+	uint32_t max_pmr;
+
+	/** Maximum number of PMRs per CoS */
+	uint32_t max_pmr_per_cos;
+
+	/** Maximum number of terms per composite PMR */
 	uint32_t max_pmr_terms;
 
 	/** Number of PMR terms available for use now */
@@ -542,13 +552,16 @@ typedef struct odp_cls_capability_t {
 	/** Maximum number of CoS supported */
 	uint32_t max_cos;
 
-	/** Maximum number of CoSes that can have statistics enabled at the same
+	/** Maximum number of concurrent CoS stats
+	 *
+	 * Maximum number of CoSes that can have statistics enabled at the same
 	 * time. If this value is zero, then CoS level statistics are not
 	 * supported. */
 	uint32_t max_cos_stats;
 
 	/** Maximum number of queues supported per CoS
-	 * if the value is 1, then hashing is not supported*/
+	 *
+	 * If the value is 1, then hashing is not supported. */
 	uint32_t max_hash_queues;
 
 	/** Protocol header combination supported for Hashing */
@@ -906,7 +919,8 @@ void odp_cls_pmr_create_opt_init(odp_pmr_create_opt_t *opt);
  * considered to match only if a packet matches with all its terms. It is implementation specific
  * which term combinations are supported as composite PMRs. When creating a composite PMR,
  * application should check the return value and perform appropriate fallback actions if the create
- * call returns failure.
+ * call returns failure. See odp_cls_capability_t::max_pmr and odp_cls_capability_t::max_pmr_terms
+ * for related capabilities.
  *
  * Use odp_cls_pmr_param_init() to initialize parameters into their default values.
  *
