@@ -540,7 +540,7 @@ static void time_test_sum(time_cb time_cur,
 			  uint64_t res)
 {
 	odp_time_t sum, t1, t2;
-	uint64_t nssum, ns1, ns2, ns;
+	uint64_t nssum, ns1, ns2, ns, diff;
 	uint64_t upper_limit, lower_limit;
 
 	/* sum timestamp and interval */
@@ -574,6 +574,27 @@ static void time_test_sum(time_cb time_cur,
 	/* test on 0 */
 	sum = odp_time_sum(t2, ODP_TIME_NULL);
 	CU_ASSERT(odp_time_cmp(t2, sum) == 0);
+
+	/* test add nsec */
+	ns = ODP_TIME_SEC_IN_NS;
+	upper_limit = ns + 2 * res;
+	lower_limit = ns - 2 * res;
+
+	t1 = time_cur();
+	t2 = odp_time_add_ns(t1, ns);
+
+	CU_ASSERT(odp_time_cmp(t2, t1) > 0);
+
+	diff = odp_time_diff_ns(t2, t1);
+	CU_ASSERT((diff <= upper_limit) && (diff >= lower_limit));
+
+	t1 = ODP_TIME_NULL;
+	t2 = odp_time_add_ns(t1, ns);
+
+	CU_ASSERT(odp_time_cmp(t2, t1) > 0);
+
+	diff = odp_time_diff_ns(t2, t1);
+	CU_ASSERT((diff <= upper_limit) && (diff >= lower_limit));
 }
 
 static void time_test_local_sum(void)
@@ -704,7 +725,7 @@ static void time_test_accuracy(time_cb time_cur,
 	wait = odp_time_sum(t1[0], sec);
 	for (i = 0; i < 5; i++) {
 		odp_time_wait_until(wait);
-		wait = odp_time_sum(wait, sec);
+		wait = odp_time_add_ns(wait, ODP_TIME_SEC_IN_NS);
 	}
 
 	i = clock_gettime(CLOCK_MONOTONIC, &ts2);
