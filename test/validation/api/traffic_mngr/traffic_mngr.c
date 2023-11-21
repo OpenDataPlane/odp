@@ -65,7 +65,8 @@
 
 #define MAX_PKTS                 1000u
 #define PKT_BUF_SIZE             1460
-#define MAX_PAYLOAD              1400
+#define MIN_HDR_LEN              (ODPH_ETHHDR_LEN + ODPH_UDPHDR_LEN + ODPH_IPV4HDR_LEN)
+#define MAX_PAYLOAD              (PKT_BUF_SIZE - MIN_HDR_LEN)
 #define USE_IPV4                 false
 #define USE_IPV6                 true
 #define USE_UDP                  false
@@ -798,6 +799,12 @@ static odp_packet_t make_pkt(odp_pool_t  pkt_pool,
 	uint16_t        final_ether_type;
 	uint8_t        *buf, *pkt_class_ptr, next_hdr;
 	int             rc;
+
+	if (payload_len > MAX_PAYLOAD) {
+		ODPH_ERR("packet payload length of %u exceeds MAX_PAYLOAD of %u\n",
+			 payload_len, MAX_PAYLOAD);
+		return ODP_PACKET_INVALID;
+	}
 
 	l4_hdr_len   = pkt_info->use_tcp  ? ODPH_TCPHDR_LEN  : ODPH_UDPHDR_LEN;
 	l3_hdr_len   = pkt_info->use_ipv6 ? ODPH_IPV6HDR_LEN : ODPH_IPV4HDR_LEN;
