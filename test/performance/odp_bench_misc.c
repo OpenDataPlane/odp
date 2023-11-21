@@ -260,6 +260,19 @@ static int time_diff_ns(void)
 	return i;
 }
 
+static int time_add_ns(void)
+{
+	int i;
+	odp_time_t *t1 = gbl_args->t1;
+	odp_time_t *t3 = gbl_args->t3;
+	uint64_t *a1 = gbl_args->a1;
+
+	for (i = 0; i < REPEAT_COUNT; i++)
+		t3[i] = odp_time_add_ns(t1[i], a1[i]);
+
+	return i;
+}
+
 static int time_sum(void)
 {
 	int i;
@@ -718,6 +731,7 @@ bench_info_t test_suite[] = {
 	BENCH_INFO(time_diff, init_time_global, 0, "time_diff (global)"),
 	BENCH_INFO(time_diff, init_time_local, 0, "time_diff (local)"),
 	BENCH_INFO(time_diff_ns, init_time_global, 0, NULL),
+	BENCH_INFO(time_add_ns, init_time_global, 0, NULL),
 	BENCH_INFO(time_sum, init_time_global, 0, NULL),
 	BENCH_INFO(time_to_ns_short, NULL, 0, "time_to_ns (short)"),
 	BENCH_INFO(time_to_ns_long, NULL, 0, "time_to_ns (long)"),
