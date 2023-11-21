@@ -12,7 +12,6 @@
 #include <odp_debug_internal.h>
 #include <odp_global_data.h>
 
-#include <pthread.h>
 #include <sched.h>
 
 int odp_cpumask_default_worker(odp_cpumask_t *mask, int max_num)

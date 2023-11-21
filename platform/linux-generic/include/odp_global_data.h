@@ -21,7 +21,6 @@ extern "C" {
 #include <odp_config_internal.h>
 
 #include <libconfig.h>
-#include <pthread.h>
 #include <stdint.h>
 #include <sys/types.h>
 

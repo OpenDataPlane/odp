@@ -26,7 +26,6 @@
 #include <odp/api/cpu.h>
 
 #include <errno.h>
-#include <pthread.h>
 #include <string.h>
 #include <stdio.h>
 #include <inttypes.h>
