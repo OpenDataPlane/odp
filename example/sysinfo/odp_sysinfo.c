@@ -987,6 +987,8 @@ int main(int argc, char **argv)
 	printf("\n");
 	printf("  CLASSIFIER\n");
 	printf("    supported_terms:        0x%" PRIx64 "\n", cls_capa.supported_terms.all_bits);
+	printf("    max_pmr:                %u\n", cls_capa.max_pmr);
+	printf("    max_pmr_per_cos:        %u\n", cls_capa.max_pmr_per_cos);
 	printf("    max_pmr_terms:          %u\n", cls_capa.max_pmr_terms);
 	printf("    available_pmr_terms:    %u\n", cls_capa.available_pmr_terms);
 	printf("    max_cos:                %u\n", cls_capa.max_cos);
