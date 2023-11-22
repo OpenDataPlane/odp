@@ -9,8 +9,6 @@
 #include "odp_classification_testsuites.h"
 #include "classification.h"
 
-#define PMR_SET_NUM	5
-
 /* Limit handle array allocation from stack to about 256kB */
 #define MAX_HANDLES     (32 * 1024)
 
@@ -321,7 +319,7 @@ static void cls_max_pmr_from_default_action(int drop)
 
 	CU_ASSERT_FATAL(num_cos > 1);
 
-	num_pmr = num_cos - 1;
+	num_pmr = capa.max_pmr_per_cos;
 
 	odp_cos_t cos[num_cos];
 	odp_queue_t queue[num_cos];
@@ -379,8 +377,10 @@ static void cls_max_pmr_from_default_action(int drop)
 	for (i = 0; i < num_pmr; i++) {
 		pmr[i] = odp_cls_pmr_create(&pmr_param, 1, default_cos, cos[i + 1]);
 
-		if (pmr[i] == ODP_PMR_INVALID)
+		if (pmr[i] == ODP_PMR_INVALID) {
+			ODPH_ERR("odp_cls_pmr_create() failed %u / %u\n", i + 1, num_pmr);
 			break;
+		}
 
 		val++;
 		pmr_created++;
@@ -388,6 +388,8 @@ static void cls_max_pmr_from_default_action(int drop)
 
 	printf("\n    Number of CoS created: %u\n    Number of PMR created: %u\n", cos_created,
 	       pmr_created);
+
+	CU_ASSERT(pmr_created == num_pmr);
 
 	for (i = 0; i < pmr_created; i++)
 		CU_ASSERT(odp_cls_pmr_destroy(pmr[i]) == 0);
@@ -446,6 +448,8 @@ static void cls_create_pmr_multi(void)
 	CU_ASSERT_FATAL(num_cos > 1);
 
 	num_pmr = num_cos - 1;
+	if (num_pmr > capa.max_pmr)
+		num_pmr = capa.max_pmr;
 
 	odp_cos_t src_cos[num_cos];
 	odp_cos_t cos[num_cos];
@@ -614,9 +618,9 @@ static void cls_cos_set_pool(void)
 
 static void cls_pmr_composite_create(void)
 {
+	odp_cls_capability_t capa;
 	odp_pmr_t pmr_composite;
 	int retval;
-	odp_pmr_param_t pmr_terms[PMR_SET_NUM];
 	odp_cos_t default_cos;
 	odp_cos_t cos;
 	odp_queue_t default_queue;
@@ -626,9 +630,11 @@ static void cls_pmr_composite_create(void)
 	odp_pool_t pkt_pool;
 	odp_cls_cos_param_t cls_param;
 	odp_pktio_t pktio;
+	uint32_t max_pmr_terms;
 	uint16_t val = 1024;
 	uint16_t mask = 0xffff;
-	int i;
+
+	CU_ASSERT_FATAL(odp_cls_capability(&capa) == 0);
 
 	pkt_pool = pool_create("pkt_pool");
 	CU_ASSERT_FATAL(pkt_pool != ODP_POOL_INVALID);
@@ -652,7 +658,10 @@ static void cls_pmr_composite_create(void)
 	cos = odp_cls_cos_create("pmr_match", &cls_param);
 	CU_ASSERT(cos != ODP_COS_INVALID);
 
-	for (i = 0; i < PMR_SET_NUM; i++) {
+	max_pmr_terms = capa.max_pmr_terms;
+	odp_pmr_param_t pmr_terms[max_pmr_terms];
+
+	for (uint32_t i = 0; i < max_pmr_terms; i++) {
 		odp_cls_pmr_param_init(&pmr_terms[i]);
 		pmr_terms[i].term = ODP_PMR_TCP_DPORT;
 		pmr_terms[i].match.value = &val;
@@ -661,8 +670,7 @@ static void cls_pmr_composite_create(void)
 		pmr_terms[i].val_sz = sizeof(val);
 	}
 
-	pmr_composite = odp_cls_pmr_create(pmr_terms, PMR_SET_NUM,
-					   default_cos, cos);
+	pmr_composite = odp_cls_pmr_create(pmr_terms, max_pmr_terms, default_cos, cos);
 	CU_ASSERT(odp_pmr_to_u64(pmr_composite) !=
 		  odp_pmr_to_u64(ODP_PMR_INVALID));
 
