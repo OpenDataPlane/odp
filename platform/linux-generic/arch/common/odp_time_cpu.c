@@ -17,6 +17,8 @@
 #include <stdint.h>
 #include <string.h>
 
+#define YEAR_IN_SEC (365 * 24 * 3600)
+
 #include <odp/visibility_begin.h>
 
 _odp_time_global_t _odp_time_glob;
@@ -25,6 +27,8 @@ _odp_time_global_t _odp_time_glob;
 
 int _odp_time_init_global(void)
 {
+	uint64_t count, diff, years;
+	odp_time_t time;
 	_odp_time_global_t *global = &_odp_time_glob;
 
 	memset(global, 0, sizeof(_odp_time_global_t));
@@ -38,7 +42,29 @@ int _odp_time_init_global(void)
 
 	_ODP_PRINT("HW time counter freq: %" PRIu64 " hz\n\n", global->freq_hz);
 
-	global->start_time = _odp_time_cpu_global();
+	count = _odp_time_cpu_global();
+	time.count = count;
+	global->start_time = count;
+	global->start_time_ns = _odp_time_to_ns(time);
+
+	/* Make sure that counters will not wrap */
+	diff = UINT64_MAX - count;
+	years = (diff / global->freq_hz) / YEAR_IN_SEC;
+
+	if (years < 10) {
+		_ODP_ERR("Time counter would wrap in 10 years: %" PRIu64 "\n", count);
+		return -1;
+	}
+
+	diff = UINT64_MAX - global->start_time_ns;
+	years = (diff / ODP_TIME_SEC_IN_NS) / YEAR_IN_SEC;
+
+	if (years < 10) {
+		_ODP_ERR("Time in nsec would wrap in 10 years: %" PRIu64 "\n",
+			 global->start_time_ns);
+		return -1;
+	}
+
 	return 0;
 }
 

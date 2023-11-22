@@ -21,8 +21,9 @@ extern "C" {
 #define _ODP_TIME_GIGA_HZ  1000000000ULL
 
 typedef struct _odp_time_global_t {
-	uint64_t start_time;
 	uint64_t freq_hz;
+	uint64_t start_time;
+	uint64_t start_time_ns;
 
 } _odp_time_global_t;
 
@@ -32,7 +33,7 @@ static inline odp_time_t _odp_time_cur(void)
 {
 	odp_time_t time;
 
-	time.count = _odp_time_cpu_global() - _odp_time_glob.start_time;
+	time.count = _odp_time_cpu_global();
 	return time;
 }
 
@@ -40,7 +41,7 @@ static inline odp_time_t _odp_time_cur_strict(void)
 {
 	odp_time_t time;
 
-	time.count = _odp_time_cpu_global_strict() - _odp_time_glob.start_time;
+	time.count = _odp_time_cpu_global_strict();
 	return time;
 }
 
@@ -84,6 +85,12 @@ static inline odp_time_t _odp_time_from_ns(uint64_t ns)
 static inline uint64_t _odp_time_res(void)
 {
 	return _odp_time_glob.freq_hz;
+}
+
+static inline void _odp_time_startup(odp_time_startup_t *startup)
+{
+	startup->global.count = _odp_time_glob.start_time;
+	startup->global_ns    = _odp_time_glob.start_time_ns;
 }
 
 #ifdef __cplusplus
