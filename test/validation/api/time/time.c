@@ -25,6 +25,7 @@
 #define TIME_TOLERANCE_NS	1000000
 #define TIME_TOLERANCE_CI_NS	40000000
 #define GLOBAL_SHM_NAME		"GlobalTimeTest"
+#define YEAR_IN_NS              (365 * 24 * ODP_TIME_HOUR_IN_NS)
 
 static uint64_t local_res;
 static uint64_t global_res;
@@ -225,6 +226,7 @@ static void time_test_monotony(void)
 	uint64_t gs_ns1, gs_ns2, gs_ns3;
 	uint64_t ns1, ns2, ns3;
 	uint64_t s_ns1, s_ns2, s_ns3;
+	uint64_t limit;
 
 	l_t1   = odp_time_local();
 	ls_t1  = odp_time_local_strict();
@@ -276,12 +278,13 @@ static void time_test_monotony(void)
 	s_ns2 = odp_time_to_ns(ls_t2);
 	s_ns3 = odp_time_to_ns(ls_t3);
 
-	/* Time counting starts from zero. Assuming that the ODP instance has run
-	 * less than 10 minutes before running this test case. */
-	CU_ASSERT(ns1    < 10 * ODP_TIME_MIN_IN_NS);
-	CU_ASSERT(s_ns1  < 10 * ODP_TIME_MIN_IN_NS);
-	CU_ASSERT(l_ns1  < 10 * ODP_TIME_MIN_IN_NS);
-	CU_ASSERT(ls_ns1 < 10 * ODP_TIME_MIN_IN_NS);
+	/* Time should not wrap in at least 10 years from ODP start. Ignoring delay from start up
+	 * and other test cases, which should be few seconds. */
+	limit = 10 * YEAR_IN_NS;
+	CU_ASSERT(UINT64_MAX - ns1    > limit);
+	CU_ASSERT(UINT64_MAX - s_ns1  > limit);
+	CU_ASSERT(UINT64_MAX - l_ns1  > limit);
+	CU_ASSERT(UINT64_MAX - ls_ns1 > limit);
 
 	/* Time stamp */
 	CU_ASSERT(ns2 > ns1);
@@ -321,12 +324,13 @@ static void time_test_monotony(void)
 	s_ns2 = odp_time_to_ns(gs_t2);
 	s_ns3 = odp_time_to_ns(gs_t3);
 
-	/* Time counting starts from zero. Assuming that the ODP instance has run
-	 * less than 10 minutes before running this test case. */
-	CU_ASSERT(ns1    < 10 * ODP_TIME_MIN_IN_NS);
-	CU_ASSERT(s_ns1  < 10 * ODP_TIME_MIN_IN_NS);
-	CU_ASSERT(g_ns1  < 10 * ODP_TIME_MIN_IN_NS);
-	CU_ASSERT(gs_ns1 < 10 * ODP_TIME_MIN_IN_NS);
+	/* Time should not wrap in at least 10 years from ODP start. Ignoring delay from start up
+	 * and other test cases, which should be few seconds. */
+	limit = 10 * YEAR_IN_NS;
+	CU_ASSERT(UINT64_MAX - ns1    > limit);
+	CU_ASSERT(UINT64_MAX - s_ns1  > limit);
+	CU_ASSERT(UINT64_MAX - g_ns1  > limit);
+	CU_ASSERT(UINT64_MAX - gs_ns1 > limit);
 
 	/* Time stamp */
 	CU_ASSERT(ns2 > ns1);
