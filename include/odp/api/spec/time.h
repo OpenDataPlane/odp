@@ -150,6 +150,10 @@ odp_time_t odp_time_add_ns(odp_time_t time, uint64_t ns);
 /**
  * Time sum
  *
+ * Returns the sum of time stamp values. Time stamps must be from the same time source (global or
+ * local). The resulting time may wrap around, if the sum exceeds 10 years from the ODP instance
+ * startup.
+ *
  * @param t1    Time stamp
  * @param t2    Time stamp
  *
