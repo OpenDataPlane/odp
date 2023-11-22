@@ -146,6 +146,35 @@ static void time_test_constants(void)
 	CU_ASSERT(ns == ODP_TIME_USEC_IN_NS);
 }
 
+static void time_test_startup_time(void)
+{
+	odp_time_startup_t startup;
+	uint64_t ns1, ns2, ns3;
+	odp_time_t time;
+
+	memset(&startup, 0, sizeof(odp_time_startup_t));
+
+	odp_time_startup(&startup);
+	ns1 = startup.global_ns;
+	ns2 = odp_time_to_ns(startup.global);
+
+	CU_ASSERT(UINT64_MAX - ns1 >= 10 * YEAR_IN_NS);
+	CU_ASSERT(UINT64_MAX - ns2 >= 10 * YEAR_IN_NS);
+
+	time = odp_time_global();
+	ns3  = odp_time_to_ns(time);
+	CU_ASSERT(odp_time_cmp(time, startup.global) > 0);
+
+	time = odp_time_global_from_ns(10 * YEAR_IN_NS);
+	time = odp_time_sum(startup.global, time);
+	CU_ASSERT(odp_time_cmp(time, startup.global) > 0);
+
+	printf("\n");
+	printf("    Startup time in nsec: %" PRIu64 "\n", ns1);
+	printf("    Startup time to nsec: %" PRIu64 "\n", ns2);
+	printf("    Nsec since startup:   %" PRIu64 "\n\n", ns3 - startup.global_ns);
+}
+
 static void time_test_res(time_res_cb time_res, uint64_t *res)
 {
 	uint64_t rate;
@@ -939,6 +968,7 @@ static void time_test_global_sync_control(void)
 
 odp_testinfo_t time_suite_time[] = {
 	ODP_TEST_INFO(time_test_constants),
+	ODP_TEST_INFO(time_test_startup_time),
 	ODP_TEST_INFO(time_test_local_res),
 	ODP_TEST_INFO(time_test_local_conversion),
 	ODP_TEST_INFO(time_test_local_cmp),
