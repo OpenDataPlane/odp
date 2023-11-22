@@ -50,6 +50,18 @@ extern "C" {
  */
 
 /**
+ * Time stamp values at ODP startup
+ */
+typedef struct odp_time_startup_t {
+	/** Global time at ODP startup */
+	odp_time_t global;
+
+	/** Global time in nanoseconds at ODP startup */
+	uint64_t global_ns;
+
+} odp_time_startup_t;
+
+/**
  * @}
  */
 

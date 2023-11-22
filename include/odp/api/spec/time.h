@@ -229,6 +229,16 @@ void odp_time_wait_until(odp_time_t time);
 void odp_time_wait_ns(uint64_t ns);
 
 /**
+ * Get ODP instance startup time
+ *
+ * Outputs time stamp values captured at ODP instance startup. Application may use those
+ * to calculate time stamp values relative to ODP startup time.
+ *
+ * @param[out] startup  Startup time structure for output
+ */
+void odp_time_startup(odp_time_startup_t *startup);
+
+/**
  * @}
  */
 
