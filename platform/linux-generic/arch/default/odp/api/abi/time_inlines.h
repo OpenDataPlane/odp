@@ -18,6 +18,7 @@ extern "C" {
 
 odp_time_t _odp_time_cur(void);
 uint64_t _odp_time_res(void);
+void _odp_time_startup(odp_time_startup_t *startup);
 
 static inline odp_time_t _odp_time_cur_strict(void)
 {

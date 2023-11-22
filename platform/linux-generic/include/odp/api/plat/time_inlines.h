@@ -46,6 +46,7 @@
 
 	#define odp_time_wait_ns __odp_time_wait_ns
 	#define odp_time_wait_until __odp_time_wait_until
+	#define odp_time_startup __odp_time_startup
 #else
 	#define _ODP_INLINE
 #endif
@@ -178,6 +179,11 @@ _ODP_INLINE void odp_time_wait_ns(uint64_t ns)
 	odp_time_t end_time = odp_time_sum(cur, wait);
 
 	odp_time_wait_until(end_time);
+}
+
+_ODP_INLINE void odp_time_startup(odp_time_startup_t *startup)
+{
+	_odp_time_startup(startup);
 }
 
 /** @endcond */
