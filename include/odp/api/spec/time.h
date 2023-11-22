@@ -21,20 +21,24 @@ extern "C" {
 #include <odp/api/time_types.h>
 
 /** @defgroup odp_time ODP TIME
- *  Chip and CPU level wall clock time.
+ *  SoC global and CPU local wall clock time
+ *
  *  @{
  */
 
 /**
  * Current local time
  *
- * Returns current local time stamp value. The local time source provides high
- * resolution time, it is initialized to zero during ODP startup and will not
- * wrap around in at least 10 years.
- * Local time stamps are local to the calling thread and must not be shared
- * with other threads.
+ * Returns current CPU local time stamp value. The used time source is specific to the calling
+ * thread and the CPU it is running on during the call. Time stamp values from different
+ * time sources cannot be compared or otherwise mixed.
  *
- * @return Local time stamp.
+ * Local time stamp value advances with a constant rate defined by odp_time_local_res(). The rate
+ * remains constant even during dynamic CPU frequency scaling. Local time stamp and related
+ * nanosecond values may not start from zero, but are guaranteed not to wrap around in at least
+ * 10 years from the ODP instance startup.
+ *
+ * @return CPU local time stamp value
  */
 odp_time_t odp_time_local(void);
 
@@ -70,12 +74,15 @@ uint64_t odp_time_local_strict_ns(void);
 /**
  * Current global time
  *
- * Returns current global time stamp value. The global time source provides high
- * resolution time, it is initialized to zero during ODP startup and will not
- * wrap around in at least 10 years.
- * Global time stamps can be shared between threads.
+ * Returns current SoC global time stamp value. Global time stamp values read by different threads
+ * (or CPUs) may be compared or otherwise mixed as those come from the same time source.
  *
- * @return Global time stamp.
+ * Global time stamp value advances with a constant rate defined by odp_time_global_res(). The rate
+ * remains constant even during dynamic CPU frequency scaling. Global time stamp and related
+ * nanosecond values may not start from zero, but are guaranteed not to wrap around in at least
+ * 10 years from the ODP instance startup.
+ *
+ * @return SoC global time stamp value
  */
 odp_time_t odp_time_global(void);
 
