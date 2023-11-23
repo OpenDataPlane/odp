@@ -49,6 +49,15 @@ static inline odp_event_type_t __odp_event_type_get(odp_event_t event)
 	return (odp_event_type_t)type;
 }
 
+static inline odp_event_subtype_t __odp_event_subtype_get(odp_event_t event)
+{
+	int8_t type;
+
+	type = _odp_event_hdr_field(event, int8_t, subtype);
+
+	return (odp_event_subtype_t)type;
+}
+
 _ODP_INLINE odp_event_type_t odp_event_type(odp_event_t event)
 {
 	return __odp_event_type_get(event);
@@ -148,7 +157,7 @@ _ODP_INLINE odp_event_subtype_t odp_event_subtype(odp_event_t event)
 	if (__odp_event_type_get(event) != ODP_EVENT_PACKET)
 		return ODP_EVENT_NO_SUBTYPE;
 
-	return (odp_event_subtype_t)_odp_pkt_get((odp_packet_t)event, int8_t, subtype);
+	return __odp_event_subtype_get(event);
 }
 
 _ODP_INLINE odp_event_type_t odp_event_types(odp_event_t event,
@@ -157,8 +166,7 @@ _ODP_INLINE odp_event_type_t odp_event_types(odp_event_t event,
 	odp_event_type_t event_type = __odp_event_type_get(event);
 
 	*subtype = event_type == ODP_EVENT_PACKET ?
-			(odp_event_subtype_t)_odp_pkt_get((odp_packet_t)event, int8_t, subtype) :
-			ODP_EVENT_NO_SUBTYPE;
+			__odp_event_subtype_get(event) : ODP_EVENT_NO_SUBTYPE;
 
 	return event_type;
 }
@@ -174,8 +182,7 @@ _ODP_INLINE void odp_event_types_multi(const odp_event_t event[], odp_event_type
 
 	for (int i = 0; i < num; i++) {
 		subtype[i] = (type[i] == ODP_EVENT_PACKET) ?
-				(odp_event_subtype_t)_odp_pkt_get((odp_packet_t)event[i], int8_t,
-								  subtype) : ODP_EVENT_NO_SUBTYPE;
+				__odp_event_subtype_get(event[i]) : ODP_EVENT_NO_SUBTYPE;
 	}
 }
 

@@ -24,6 +24,7 @@
 #include <odp/api/plat/packet_io_inlines.h>
 #include <odp/api/plat/packet_inline_types.h>
 #include <odp/api/plat/pool_inline_types.h>
+#include <odp/api/plat/event_inline_types.h>
 
 #include <stdint.h>
 #include <string.h>
@@ -571,7 +572,8 @@ _ODP_INLINE void odp_packet_to_event_multi(const odp_packet_t pkt[],
 
 _ODP_INLINE odp_event_subtype_t odp_packet_subtype(odp_packet_t pkt)
 {
-	return (odp_event_subtype_t)_odp_pkt_get(pkt, int8_t, subtype);
+	return (odp_event_subtype_t)_odp_event_hdr_field((odp_event_t)(uintptr_t)pkt,
+							 int8_t, subtype);
 }
 
 _ODP_INLINE odp_packet_tx_compl_t odp_packet_tx_compl_from_event(odp_event_t ev)
