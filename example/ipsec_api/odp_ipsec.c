@@ -45,6 +45,7 @@
 #include <odp_ipsec_stream.h>
 #else
 static void init_stream_db(void) {}
+static void deinit_stream_db(void) {}
 static void resolve_stream_db(void) {}
 static int create_stream_db_inputs(void)
 {
@@ -1154,9 +1155,9 @@ main(int argc, char *argv[])
 	shm = odp_shm_lookup("shm_sp_db");
 	if (odp_shm_free(shm) != 0)
 		ODPH_ERR("Error: shm free shm_sp_db failed\n");
-	shm = odp_shm_lookup("stream_db");
-	if (odp_shm_free(shm) != 0)
-		ODPH_ERR("Error: shm free stream_db failed\n");
+
+	deinit_stream_db();
+
 	if (odp_shm_free(global->shm)) {
 		ODPH_ERR("Error: shm free global data failed\n");
 		exit(EXIT_FAILURE);

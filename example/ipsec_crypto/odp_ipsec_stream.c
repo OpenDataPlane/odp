@@ -40,13 +40,14 @@ typedef struct ODP_PACKED stream_pkt_hdr_s {
 	uint8_t    data[];  /**< Incrementing data stream */
 } stream_pkt_hdr_t;
 
+static const char *shm_name = "stream_db";
 stream_db_t *stream_db;
 
 void init_stream_db(void)
 {
 	odp_shm_t shm;
 
-	shm = odp_shm_reserve("stream_db",
+	shm = odp_shm_reserve(shm_name,
 			      sizeof(stream_db_t),
 			      ODP_CACHE_LINE_SIZE,
 			      0);
@@ -63,6 +64,28 @@ void init_stream_db(void)
 		exit(EXIT_FAILURE);
 	}
 	memset(stream_db, 0, sizeof(*stream_db));
+}
+
+void deinit_stream_db(void)
+{
+	stream_db_entry_t *stream = NULL;
+
+	for (stream = stream_db->list; NULL != stream; stream = stream->next) {
+		free(stream->input.intf);
+		free(stream->output.intf);
+	}
+
+	odp_shm_t shm = odp_shm_lookup(shm_name);
+
+	if (shm == ODP_SHM_INVALID) {
+		ODPH_ERR("Error: shared mem not found.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	if (odp_shm_free(shm)) {
+		ODPH_ERR("Error: shared mem free failed.\n");
+		exit(EXIT_FAILURE);
+	}
 }
 
 int create_stream_db_entry(char *input)

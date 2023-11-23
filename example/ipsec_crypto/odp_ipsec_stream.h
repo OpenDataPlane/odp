@@ -31,14 +31,14 @@ typedef struct stream_db_entry_s {
 	uint32_t         verified;      /**< Number successfully verified */
 	const EVP_MD    *evp_md;        /**< Digest method */
 	struct {
-		const char *intf;	/**< Input interface name */
+		char *intf;             /**< Input interface name */
 		odp_pktio_t pktio;	/**< Input PktI/O interface */
 		uint32_t ah_seq;        /**< AH sequence number if present */
 		uint32_t esp_seq;       /**< ESP sequence number if present */
 		ipsec_cache_entry_t *entry;  /**< IPsec to apply on input */
 	} input;
 	struct {
-		const char *intf;	/**< Output interface name */
+		char *intf;             /**< Output interface name */
 		odp_pktio_t pktio;	/**< Output PktI/O interface */
 		ipsec_cache_entry_t *entry;  /**t IPsec to verify on output */
 	} output;
@@ -57,6 +57,9 @@ extern stream_db_t *stream_db;
 
 /** Initialize stream database global control structure */
 void init_stream_db(void);
+
+/** Deinitialize stream database global control structure */
+void deinit_stream_db(void);
 
 /**
  * Create an stream DB entry
