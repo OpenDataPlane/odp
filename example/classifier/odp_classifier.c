@@ -784,6 +784,8 @@ int main(int argc, char *argv[])
 		ODPH_ERR("err: odp_pool_destroy error\n");
 
 args_error:
+	if (args->if_name)
+		free(args->if_name);
 	odp_shm_free(shm);
 
 	ret = odp_term_local();
