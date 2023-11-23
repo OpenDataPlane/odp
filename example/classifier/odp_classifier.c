@@ -783,6 +783,8 @@ int main(int argc, char *argv[])
 	if (odp_pool_destroy(pool))
 		ODPH_ERR("err: odp_pool_destroy error\n");
 
+	free(args->if_name);
+
 args_error:
 	odp_shm_free(shm);
 
@@ -1281,9 +1283,7 @@ static int parse_args(int argc, char *argv[], appl_args_t *appl_args)
 
 	if (ret) {
 		usage();
-
-		if (appl_args->if_name)
-			free(appl_args->if_name);
+		free(appl_args->if_name);
 	}
 
 	/* reset optind from the getopt lib */
