@@ -375,6 +375,20 @@ static int time_global_res(void)
 	return i;
 }
 
+static int time_startup(void)
+{
+	int i;
+	uint64_t *a1 = gbl_args->a1;
+	odp_time_startup_t startup;
+
+	for (i = 0; i < REPEAT_COUNT; i++) {
+		odp_time_startup(&startup);
+		a1[i] = startup.global_ns;
+	}
+
+	return i;
+}
+
 static int cpu_id(void)
 {
 	int i;
@@ -740,6 +754,7 @@ bench_info_t test_suite[] = {
 	BENCH_INFO(time_cmp, init_time_global, 0, NULL),
 	BENCH_INFO(time_local_res, NULL, 0, NULL),
 	BENCH_INFO(time_global_res, NULL, 0, NULL),
+	BENCH_INFO(time_startup, NULL, 0, NULL),
 	BENCH_INFO(cpu_id, NULL, 0, NULL),
 	BENCH_INFO(cpu_count, NULL, 0, NULL),
 	BENCH_INFO(cpu_hz, NULL, 1, NULL),
