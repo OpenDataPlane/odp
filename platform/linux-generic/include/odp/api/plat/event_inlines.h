@@ -154,9 +154,6 @@ _ODP_INLINE void *odp_event_user_area_and_flag(odp_event_t event, int *flag)
 
 _ODP_INLINE odp_event_subtype_t odp_event_subtype(odp_event_t event)
 {
-	if (__odp_event_type_get(event) != ODP_EVENT_PACKET)
-		return ODP_EVENT_NO_SUBTYPE;
-
 	return __odp_event_subtype_get(event);
 }
 
@@ -165,8 +162,7 @@ _ODP_INLINE odp_event_type_t odp_event_types(odp_event_t event,
 {
 	odp_event_type_t event_type = __odp_event_type_get(event);
 
-	*subtype = event_type == ODP_EVENT_PACKET ?
-			__odp_event_subtype_get(event) : ODP_EVENT_NO_SUBTYPE;
+	*subtype = __odp_event_subtype_get(event);
 
 	return event_type;
 }
@@ -180,10 +176,8 @@ _ODP_INLINE void odp_event_types_multi(const odp_event_t event[], odp_event_type
 	if (subtype == NULL)
 		return;
 
-	for (int i = 0; i < num; i++) {
-		subtype[i] = (type[i] == ODP_EVENT_PACKET) ?
-				__odp_event_subtype_get(event[i]) : ODP_EVENT_NO_SUBTYPE;
-	}
+	for (int i = 0; i < num; i++)
+		subtype[i] = __odp_event_subtype_get(event[i]);
 }
 
 _ODP_INLINE uint32_t odp_event_flow_id(odp_event_t event)

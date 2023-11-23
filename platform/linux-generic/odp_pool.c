@@ -495,6 +495,7 @@ static void init_event_hdr(pool_t *pool, _odp_event_hdr_t *event_hdr, uint32_t e
 	event_hdr->index.event  = event_index;
 	event_hdr->type         = type;
 	event_hdr->event_type   = type;
+	event_hdr->subtype      = ODP_EVENT_NO_SUBTYPE;
 	event_hdr->pool         = _odp_pool_handle(pool);
 
 	/* Store base values for fast init */
