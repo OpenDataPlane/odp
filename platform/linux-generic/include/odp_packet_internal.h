@@ -107,9 +107,6 @@ typedef struct ODP_ALIGNED_CACHE odp_packet_hdr_t {
 
 	uint16_t tailroom;
 
-	/* Event subtype */
-	int8_t   subtype;
-
 	/* Used as classifier destination queue, in IPsec inline input processing and as Tx
 	 * completion event queue. */
 	odp_queue_t dst_queue;
@@ -214,9 +211,11 @@ static inline odp_packet_hdr_t *packet_last_seg(odp_packet_hdr_t *hdr)
 	return hdr;
 }
 
-static inline void packet_subtype_set(odp_packet_t pkt, int ev)
+static inline void packet_subtype_set(odp_packet_t pkt, int subtype)
 {
-	packet_hdr(pkt)->subtype = ev;
+	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
+
+	pkt_hdr->event_hdr.subtype = subtype;
 }
 
 /**
@@ -258,8 +257,8 @@ static inline void packet_init(odp_packet_hdr_t *pkt_hdr, uint32_t len)
 	pkt_hdr->headroom  = pool->headroom;
 	pkt_hdr->tailroom  = pool->seg_len - seg_len + pool->tailroom;
 
-	if (odp_unlikely(pkt_hdr->subtype != ODP_EVENT_PACKET_BASIC))
-		pkt_hdr->subtype = ODP_EVENT_PACKET_BASIC;
+	if (odp_unlikely(pkt_hdr->event_hdr.subtype != ODP_EVENT_PACKET_BASIC))
+		pkt_hdr->event_hdr.subtype = ODP_EVENT_PACKET_BASIC;
 
 	pkt_hdr->input = ODP_PKTIO_INVALID;
 }
@@ -304,7 +303,7 @@ static inline void _odp_packet_copy_md(odp_packet_hdr_t *dst_hdr,
 				       odp_packet_hdr_t *src_hdr,
 				       odp_bool_t uarea_copy)
 {
-	int8_t subtype = src_hdr->subtype;
+	int8_t subtype = src_hdr->event_hdr.subtype;
 
 	/* Lengths and segmentation data are not copied:
 	 *   .frame_len
@@ -316,7 +315,7 @@ static inline void _odp_packet_copy_md(odp_packet_hdr_t *dst_hdr,
 	 *   .seg_count
 	 */
 	dst_hdr->input = src_hdr->input;
-	dst_hdr->subtype = subtype;
+	dst_hdr->event_hdr.subtype = subtype;
 	dst_hdr->dst_queue = src_hdr->dst_queue;
 	dst_hdr->cos = src_hdr->cos;
 	dst_hdr->cls_mark = src_hdr->cls_mark;

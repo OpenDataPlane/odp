@@ -66,7 +66,6 @@ const _odp_packet_inline_offset_t _odp_packet_inline ODP_ALIGNED_CACHE = {
 	.timestamp      = offsetof(odp_packet_hdr_t, timestamp),
 	.input_flags    = offsetof(odp_packet_hdr_t, p.input_flags),
 	.flags          = offsetof(odp_packet_hdr_t, p.flags),
-	.subtype        = offsetof(odp_packet_hdr_t, subtype),
 	.cls_mark       = offsetof(odp_packet_hdr_t, cls_mark),
 	.ipsec_ctx      = offsetof(odp_packet_hdr_t, ipsec_ctx),
 	.crypto_op      = offsetof(odp_packet_hdr_t, crypto_op_result),
@@ -1454,7 +1453,7 @@ void odp_packet_print(odp_packet_t pkt)
 	len += _odp_snprint(&str[len], n - len, "  pool index     %u\n", hdr->event_hdr.index.pool);
 	len += _odp_snprint(&str[len], n - len, "  buf index      %u\n",
 			    hdr->event_hdr.index.event);
-	len += _odp_snprint(&str[len], n - len, "  ev subtype     %i\n", hdr->subtype);
+	len += _odp_snprint(&str[len], n - len, "  ev subtype     %i\n", hdr->event_hdr.subtype);
 	len += _odp_snprint(&str[len], n - len, "  input_flags    0x%" PRIx64 "\n",
 			    hdr->p.input_flags.all);
 	if (hdr->p.input_flags.all) {
@@ -2401,7 +2400,7 @@ odp_packet_t odp_packet_reassemble(odp_pool_t pool_hdl, odp_packet_buf_t pkt_buf
 	pkt_hdr->tailroom  = tailroom;
 
 	/* Reset metadata */
-	pkt_hdr->subtype = ODP_EVENT_PACKET_BASIC;
+	pkt_hdr->event_hdr.subtype = ODP_EVENT_PACKET_BASIC;
 	pkt_hdr->input   = ODP_PKTIO_INVALID;
 	packet_parse_reset(pkt_hdr, 1);
 
