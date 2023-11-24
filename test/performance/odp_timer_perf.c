@@ -514,7 +514,6 @@ static int destroy_timer_pool(test_global_t *global)
 	odp_pool_t pool;
 	odp_queue_t queue;
 	odp_timer_t timer;
-	odp_event_t ev;
 	uint32_t i, j;
 	test_options_t *test_options = &global->test_options;
 	uint32_t num_timer = test_options->num_timer;
@@ -527,13 +526,8 @@ static int destroy_timer_pool(test_global_t *global)
 			if (timer == ODP_TIMER_INVALID)
 				break;
 
-			ev = odp_timer_free(timer);
-
-			if (ev != ODP_EVENT_INVALID) {
-				if (test_options->mode == MODE_SCHED_OVERH)
-					printf("Event from timer free %i/%i\n", i, j);
-				odp_event_free(ev);
-			}
+			if (odp_timer_free(timer))
+				printf("Timer free failed: %i/%i\n", i, j);
 		}
 
 		queue = global->queue[i];
@@ -649,15 +643,17 @@ static int sched_mode_worker(void *arg)
 	return ret;
 }
 
-static void cancel_timers(test_global_t *global, uint32_t worker_idx)
+static int cancel_timers(test_global_t *global, uint32_t worker_idx)
 {
 	uint32_t i, j;
+	int r;
 	odp_timer_t timer;
 	odp_event_t ev;
 	test_options_t *test_options = &global->test_options;
 	uint32_t num_tp = test_options->num_tp;
 	uint32_t num_timer = test_options->num_timer;
 	uint32_t num_worker = test_options->num_cpu;
+	int ret = 0;
 
 	for (i = 0; i < num_tp; i++) {
 		for (j = 0; j < num_timer; j++) {
@@ -668,10 +664,20 @@ static void cancel_timers(test_global_t *global, uint32_t worker_idx)
 			if (timer == ODP_TIMER_INVALID)
 				continue;
 
-			if (odp_timer_cancel(timer, &ev) == ODP_TIMER_SUCCESS)
+			r = odp_timer_cancel(timer, &ev);
+
+			if (r == ODP_TIMER_SUCCESS) {
 				odp_event_free(ev);
+			} else if (r == ODP_TIMER_TOO_NEAR) {
+				ret = 1;
+			} else {
+				ret = -1;
+				break;
+			}
 		}
 	}
+
+	return ret;
 }
 
 static int set_cancel_mode_worker(void *arg)
@@ -815,7 +821,8 @@ static int set_cancel_mode_worker(void *arg)
 	diff = odp_cpu_cycles_diff(c2, c1);
 
 	/* Cancel all timers that belong to this thread */
-	cancel_timers(global, worker_idx);
+	if (cancel_timers(global, worker_idx))
+		ODPH_ERR("Timer cancel failed\n");
 
 	/* Update stats */
 	global->stat[thr].events = num_tmo;
@@ -835,7 +842,7 @@ static int set_expire_mode_worker(void *arg)
 	uint32_t i, j, exit_test;
 	odp_event_t ev;
 	odp_timeout_t tmo;
-	uint64_t c2, c3, c4, diff, nsec, time_ns, target_ns, period_tick;
+	uint64_t c2, c3, c4, diff, nsec, time_ns, target_ns, period_tick, wait;
 	odp_timer_t timer;
 	odp_timer_start_t start_param;
 	odp_time_t t1, t2;
@@ -937,11 +944,15 @@ static int set_expire_mode_worker(void *arg)
 	nsec = odp_time_diff_ns(t2, t1);
 
 	/* Cancel all timers that belong to this thread */
-	cancel_timers(global, thread_arg->worker_idx);
+	status = cancel_timers(global, thread_arg->worker_idx);
 
-	/* Free already scheduled events */
+	wait = ODP_SCHED_NO_WAIT;
+	if (status > 0)
+		wait = odp_schedule_wait_time(opt->period_ns);
+
+	/* Wait and free remaining events */
 	while (1) {
-		ev = odp_schedule(NULL, ODP_SCHED_NO_WAIT);
+		ev = odp_schedule(NULL, wait);
 		if (ev == ODP_EVENT_INVALID)
 			break;
 		odp_event_free(ev);

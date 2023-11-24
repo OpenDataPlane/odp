@@ -61,6 +61,7 @@ typedef struct test_global_t {
 	test_stat_t stat[ODP_THREAD_COUNT_MAX];
 	thread_arg_t thread_arg[ODP_THREAD_COUNT_MAX];
 	test_stat_sum_t stat_sum;
+	odp_atomic_u64_t tot_rounds;
 
 } test_global_t;
 
@@ -219,19 +220,21 @@ static int worker_thread(void *arg)
 	test_global_t *global = thread_arg->global;
 	test_options_t *test_options = &global->test_options;
 	int mode = test_options->mode;
+	int group_mode = test_options->group_mode;
 	uint64_t mem_size = test_options->mem_size;
 	uint64_t copy_size = mem_size / 2;
 	uint64_t rounds = 0;
 	int ret = 0;
 	uint32_t done = 0;
 	uint64_t wait = ODP_SCHED_WAIT;
+	uint64_t tot_rounds = test_options->rounds * test_options->num_cpu;
 
 	thr = odp_thread_id();
 	max_nsec = 2 * test_options->rounds * test_options->period_ns;
 	max_time = odp_time_local_from_ns(max_nsec);
 	printf("Thread %i starting on CPU %i\n", thr, odp_cpu_id());
 
-	if (test_options->group_mode == 0) {
+	if (group_mode == 0) {
 		/* Timeout events are load balanced. Using this
 		 * period to poll exit status. */
 		wait = odp_schedule_wait_time(100 * ODP_TIME_MSEC_IN_NS);
@@ -280,7 +283,15 @@ static int worker_thread(void *arg)
 
 		rounds++;
 
-		if (rounds < test_options->rounds) {
+		if (group_mode) {
+			if (rounds >= test_options->rounds)
+				done = 1;
+		} else {
+			if (odp_atomic_fetch_inc_u64(&global->tot_rounds) >= (tot_rounds - 1))
+				done = 1;
+		}
+
+		if (done == 0) {
 			tmo = odp_timeout_from_event(ev);
 			timer = odp_timeout_timer(tmo);
 			start_param.tmo_ev = ev;
@@ -291,8 +302,6 @@ static int worker_thread(void *arg)
 				ODPH_ERR("Timer start failed (%" PRIu64 ")\n", rounds);
 				done = 1;
 			}
-		} else {
-			done = 1;
 		}
 
 		/* Do work */
@@ -530,7 +539,6 @@ static int start_timers(test_global_t *global)
 static void destroy_timers(test_global_t *global)
 {
 	uint32_t i;
-	odp_event_t ev;
 	test_options_t *test_options = &global->test_options;
 	uint32_t num_cpu = test_options->num_cpu;
 
@@ -540,9 +548,8 @@ static void destroy_timers(test_global_t *global)
 		if (timer == ODP_TIMER_INVALID)
 			continue;
 
-		ev = odp_timer_free(timer);
-		if (ev != ODP_EVENT_INVALID)
-			odp_event_free(ev);
+		if (odp_timer_free(timer))
+			ODPH_ERR("Timer free failed (%u)\n", i);
 	}
 
 	if (global->timer_pool != ODP_TIMER_POOL_INVALID)
@@ -744,6 +751,7 @@ int main(int argc, char **argv)
 
 	memset(global, 0, sizeof(test_global_t));
 	odp_atomic_init_u32(&global->exit_test, 0);
+	odp_atomic_init_u64(&global->tot_rounds, 0);
 
 	global->timer_pool = ODP_TIMER_POOL_INVALID;
 	global->tmo_pool   = ODP_POOL_INVALID;

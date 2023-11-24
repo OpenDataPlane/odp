@@ -246,19 +246,21 @@ odp_timer_t odp_timer_alloc(odp_timer_pool_t timer_pool, odp_queue_t queue, cons
 /**
  * Free a timer
  *
- * Free (destroy) a timer, reclaiming associated resources.
- * The timeout event for an active timer will be returned.
- * The timeout event for an expired timer will not be returned. It is the
- * responsibility of the application to handle this timeout when it is received.
+ * Frees a previously allocated timer. The timer must be inactive when calling this function.
+ * In other words, the application must cancel an active single shot timer (odp_timer_cancel())
+ * successfully or wait it to expire before freeing it. Similarly for an active periodic timer, the
+ * application must cancel it (odp_timer_periodic_cancel()) and receive the last event from
+ * the timer (odp_timer_periodic_ack()) before freeing it.
  *
- * A periodic timer must be cancelled successfully before freeing it.
+ * The call returns failure only on non-recoverable errors. Application must not use the timer
+ * handle anymore after the call, regardless of the return value.
  *
- * @param timer      Timer
+ * @param timer       Timer
  *
- * @return Event handle of timeout event
- * @retval ODP_EVENT_INVALID on failure
+ * @retval 0 on success
+ * @retval <0 on failure
  */
-odp_event_t odp_timer_free(odp_timer_t timer);
+int odp_timer_free(odp_timer_t timer);
 
 /**
  * Start a timer
