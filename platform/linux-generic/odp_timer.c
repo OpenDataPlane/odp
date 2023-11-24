@@ -579,14 +579,20 @@ static odp_event_t timer_set_unused(timer_pool_t *tp, uint32_t idx)
 	return old_event;
 }
 
-static inline odp_event_t timer_free(timer_pool_t *tp, uint32_t idx)
+int odp_timer_free(odp_timer_t hdl)
 {
+	timer_pool_t *tp = handle_to_tp(hdl);
+	uint32_t idx = handle_to_idx(hdl, tp);
 	_odp_timer_t *tim = &tp->timers[idx];
 	tick_buf_t *tb = &tp->tick_buf[idx];
 
 	/* Free the timer by setting timer state to unused and
 	 * grab any timeout event */
 	odp_event_t old_event = timer_set_unused(tp, idx);
+	if (old_event != ODP_EVENT_INVALID) {
+		_ODP_ERR("Timer is active\n");
+		return -1;
+	}
 
 	/* Remove timer from queue */
 	_odp_queue_fn->timer_rem(tim->queue);
@@ -605,7 +611,7 @@ static inline odp_event_t timer_free(timer_pool_t *tp, uint32_t idx)
 	tp->num_alloc--;
 	odp_spinlock_unlock(&tp->lock);
 
-	return old_event;
+	return 0;
 }
 
 static odp_event_t timer_cancel(timer_pool_t *tp, uint32_t idx)
@@ -1526,14 +1532,6 @@ odp_timer_t odp_timer_alloc(odp_timer_pool_t tpid, odp_queue_t queue, const void
 	/* We don't care about the validity of user_ptr because we will not
 	 * attempt to dereference it */
 	return timer_alloc(tp, queue, user_ptr);
-}
-
-odp_event_t odp_timer_free(odp_timer_t hdl)
-{
-	timer_pool_t *tp = handle_to_tp(hdl);
-	uint32_t idx = handle_to_idx(hdl, tp);
-
-	return timer_free(tp, idx);
 }
 
 int odp_timer_start(odp_timer_t timer, const odp_timer_start_t *start_param)

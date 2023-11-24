@@ -806,7 +806,6 @@ static int destroy_timers(test_global_t *test_global)
 {
 	uint64_t i, alloc_timers;
 	odp_timer_t timer;
-	odp_event_t ev;
 	int ret = 0;
 
 	alloc_timers = test_global->opt.alloc_timers;
@@ -817,10 +816,10 @@ static int destroy_timers(test_global_t *test_global)
 		if (timer == ODP_TIMER_INVALID)
 			break;
 
-		ev = odp_timer_free(timer);
-
-		if (ev != ODP_EVENT_INVALID)
-			odp_event_free(ev);
+		if (odp_timer_free(timer)) {
+			printf("Timer free failed: %" PRIu64 "\n", i);
+			ret = -1;
+		}
 	}
 
 	if (test_global->timer_pool != ODP_TIMER_POOL_INVALID)

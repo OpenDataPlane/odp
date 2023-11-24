@@ -707,7 +707,7 @@ static void timer_pool_create_destroy(void)
 
 	tim = odp_timer_alloc(tp[0], queue, USER_PTR);
 	CU_ASSERT(tim != ODP_TIMER_INVALID);
-	CU_ASSERT(odp_timer_free(tim) == ODP_EVENT_INVALID);
+	CU_ASSERT(odp_timer_free(tim) == 0);
 
 	odp_timer_pool_destroy(tp[0]);
 
@@ -731,7 +731,7 @@ static void timer_pool_create_destroy(void)
 
 	tim = odp_timer_alloc(tp[1], queue, USER_PTR);
 	CU_ASSERT(tim != ODP_TIMER_INVALID);
-	CU_ASSERT(odp_timer_free(tim) == ODP_EVENT_INVALID);
+	CU_ASSERT(odp_timer_free(tim) == 0);
 
 	odp_timer_pool_destroy(tp[1]);
 
@@ -741,7 +741,7 @@ static void timer_pool_create_destroy(void)
 
 	tim = odp_timer_alloc(tp[0], queue, USER_PTR);
 	CU_ASSERT(tim != ODP_TIMER_INVALID);
-	CU_ASSERT(odp_timer_free(tim) == ODP_EVENT_INVALID);
+	CU_ASSERT(odp_timer_free(tim) == 0);
 
 	odp_timer_pool_destroy(tp[0]);
 
@@ -816,7 +816,7 @@ static void timer_pool_create_max(void)
 	}
 
 	for (i = 0; i < num; i++)
-		CU_ASSERT(odp_timer_free(timer[i]) == ODP_EVENT_INVALID);
+		CU_ASSERT(odp_timer_free(timer[i]) == 0);
 
 	for (i = 0; i < num; i++)
 		odp_timer_pool_destroy(tp[i]);
@@ -912,7 +912,7 @@ static void timer_pool_max_res(void)
 			odp_event_free(ev);
 		}
 
-		CU_ASSERT(odp_timer_free(timer) == ODP_EVENT_INVALID);
+		CU_ASSERT(odp_timer_free(timer) == 0);
 		odp_timer_pool_destroy(tp);
 	}
 
@@ -1122,7 +1122,7 @@ static void timer_single_shot(odp_queue_type_t queue_type, odp_timer_tick_type_t
 
 	free_schedule_context(queue_type);
 
-	CU_ASSERT(odp_timer_free(timer) == ODP_EVENT_INVALID);
+	CU_ASSERT(odp_timer_free(timer) == 0);
 	odp_timer_pool_destroy(tp);
 
 	CU_ASSERT(odp_queue_destroy(queue) == 0);
@@ -1585,7 +1585,7 @@ static void timer_test_event_type(odp_queue_type_t queue_type,
 	}
 
 	for (i = 0; i < num; i++)
-		CU_ASSERT(odp_timer_free(timer[i]) == ODP_EVENT_INVALID);
+		CU_ASSERT(odp_timer_free(timer[i]) == 0);
 
 	odp_timer_pool_destroy(timer_pool);
 	CU_ASSERT(odp_queue_destroy(queue) == 0);
@@ -1791,7 +1791,7 @@ static void timer_test_queue_type(odp_queue_type_t queue_type, int priv, int exp
 				 tick, nsec, target, (int64_t)(nsec - target));
 
 			odp_timeout_free(tmo);
-			CU_ASSERT(odp_timer_free(tim) == ODP_EVENT_INVALID);
+			CU_ASSERT(odp_timer_free(tim) == 0);
 
 			num_tmo++;
 		}
@@ -1947,9 +1947,7 @@ static void timer_test_cancel(void)
 
 	odp_timeout_free(tmo);
 
-	ev = odp_timer_free(tim);
-	if (ev != ODP_EVENT_INVALID)
-		CU_FAIL_FATAL("Free returned event");
+	CU_ASSERT_FATAL(odp_timer_free(tim) == 0);
 
 	odp_timer_pool_destroy(tp);
 
@@ -2135,7 +2133,7 @@ static void timer_test_tmo_limit(odp_queue_type_t queue_type,
 		CU_ASSERT(num_tmo == num);
 
 	for (i = 0; i < num; i++)
-		CU_ASSERT(odp_timer_free(timer[i]) == ODP_EVENT_INVALID);
+		CU_ASSERT(odp_timer_free(timer[i]) == 0);
 
 	odp_timer_pool_destroy(timer_pool);
 	CU_ASSERT(odp_queue_destroy(queue) == 0);
@@ -2507,7 +2505,7 @@ sleep:
 	}
 
 	for (i = 0; i < allocated; i++) {
-		if (odp_timer_free(tt[i].tim) != ODP_EVENT_INVALID)
+		if (odp_timer_free(tt[i].tim))
 			CU_FAIL("odp_timer_free");
 	}
 
@@ -3108,7 +3106,7 @@ static void timer_test_periodic(odp_queue_type_t queue_type, int use_first, int 
 		CU_ASSERT(ret == 2);
 	}
 
-	CU_ASSERT(odp_timer_free(timer) == ODP_EVENT_INVALID);
+	CU_ASSERT(odp_timer_free(timer) == 0);
 	odp_timer_pool_destroy(timer_pool);
 	CU_ASSERT(odp_queue_destroy(queue) == 0);
 	CU_ASSERT(odp_pool_destroy(pool) == 0);
