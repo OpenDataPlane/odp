@@ -36,7 +36,7 @@ typedef struct odph_hash_node {
 	 * Its length is key_size + value_size,
 	 * suppose key_size = m; value_size = n;
 	 * its structure is like:
-	 * k_byte1 k_byte2...k_byten v_byte1...v_bytem
+	 * k_byte1 k_byte2...k_bytem v_byte1...v_byten
 	 */
 	char content[];
 } odph_hash_node;

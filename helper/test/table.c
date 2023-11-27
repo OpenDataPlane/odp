@@ -5,22 +5,6 @@
 #include <odp_api.h>
 #include <odp/helper/odph_api.h>
 
-/**
- * Address Resolution Protocol (ARP)
- * Description: Once a route has been identified for an IP packet (so the
- * output interface and the IP address of the next hop station are known),
- * the MAC address of the next hop station is needed in order to send this
- * packet onto the next leg of the journey towards its destination
- * (as identified by its destination IP address). The MAC address of the next
- * hop station becomes the destination MAC address of the outgoing
- * Ethernet frame.
- * Hash table name: ARP table
- * Number of keys: Thousands
- * Key format: The pair of (Output interface, Next Hop IP address),
- *        which is typically 5 bytes for IPv4 and 17 bytes for IPv6.
- * value (data): MAC address of the next hop station (6 bytes).
- */
-
 int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 {
 	odp_instance_t instance;
@@ -32,10 +16,10 @@ int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 	char ip_addr1[] = "12345678";
 	char ip_addr2[] = "11223344";
 	char ip_addr3[] = "55667788";
-	char mac_addr1[] = "0A1122334401";
-	char mac_addr2[] = "0A1122334402";
-	char mac_addr3[] = "0B4433221101";
-	char mac_addr4[] = "0B4433221102";
+	char value1[] = "0A1122334401";
+	char value2[] = "0A1122334402";
+	char value3[] = "0B4433221101";
+	char value4[] = "0B4433221102";
 
 	ret = odp_init_global(&instance, NULL, NULL);
 	if (ret != 0) {
@@ -51,16 +35,16 @@ int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 	printf("test hash table:\n");
 	test_ops = &odph_hash_table_ops;
 
-	table = test_ops->f_create("test", 2, 4, 16);
+	table = test_ops->f_create("test", 2, 4, sizeof(value1));
 	if (table == NULL) {
 		printf("table create fail\n");
 		return -1;
 	}
-	ret += test_ops->f_put(table, &ip_addr1, mac_addr1);
+	ret += test_ops->f_put(table, &ip_addr1, value1);
 
-	ret += test_ops->f_put(table, &ip_addr2, mac_addr2);
+	ret += test_ops->f_put(table, &ip_addr2, value2);
 
-	ret += test_ops->f_put(table, &ip_addr3, mac_addr3);
+	ret += test_ops->f_put(table, &ip_addr3, value3);
 
 	if (ret != 0) {
 		printf("put value fail\n");
@@ -74,14 +58,14 @@ int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 	}
 	printf("\t1  get '123' tmp = %s,\n", tmp);
 
-	ret = test_ops->f_put(table, &ip_addr1, mac_addr4);
+	ret = test_ops->f_put(table, &ip_addr1, value4);
 	if (ret != 0) {
 		printf("repeat put value fail\n");
 		return -1;
 	}
 
 	ret = test_ops->f_get(table, &ip_addr1, &tmp, 32);
-	if (ret != 0 || strcmp(tmp, mac_addr4) != 0) {
+	if (ret != 0 || memcmp(tmp, value4, sizeof(value4)) != 0) {
 		printf("get value fail\n");
 		return -1;
 	}
