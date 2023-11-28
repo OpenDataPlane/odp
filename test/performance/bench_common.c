@@ -51,36 +51,35 @@ int bench_run(void *arg)
 	bench_suite_t *suite = arg;
 	const uint64_t repeat_count = suite->repeat_count;
 	const odp_bool_t meas_time = suite->measure_time;
+	double result;
 
 	printf("\nAverage %s per function call\n", meas_time ? "time (nsec)" : "CPU cycles");
 	printf("-------------------------------------------------\n");
 
-	/* Run each test twice. Results from the first warm-up round are ignored. */
-	for (int i = 0; i < 2; i++) {
+	for (int j = 0; j < suite->num_bench; j++) {
+		int ret;
+		const char *desc;
+		const bench_info_t *bench = &suite->bench[j];
+		uint64_t max_rounds = suite->rounds;
 		uint64_t total = 0;
-		uint64_t round = 1;
 
-		for (int j = 0; j < suite->num_bench; round++) {
-			int ret;
-			const char *desc;
-			const bench_info_t *bench = &suite->bench[j];
-			uint64_t max_rounds = suite->rounds;
+		if (bench->max_rounds &&  bench->max_rounds < max_rounds)
+			max_rounds = bench->max_rounds;
 
-			if (bench->max_rounds &&  bench->max_rounds < max_rounds)
-				max_rounds = bench->max_rounds;
-
-			/* Run selected test indefinitely */
-			if (suite->indef_idx) {
-				if ((j + 1) != suite->indef_idx) {
-					j++;
-					continue;
-				}
-				bench_run_indef(&suite->bench[j], &suite->exit_worker);
-				return 0;
+		/* Run selected test indefinitely */
+		if (suite->indef_idx) {
+			if ((j + 1) != suite->indef_idx) {
+				j++;
+				continue;
 			}
+			bench_run_indef(&suite->bench[j], &suite->exit_worker);
+			return 0;
+		}
 
-			desc = bench->desc != NULL ? bench->desc : bench->name;
+		desc = bench->desc != NULL ? bench->desc : bench->name;
 
+		/* The zeroeth round is a warmup round that will be ignored */
+		for (uint64_t round = 0; round <= max_rounds; round++)  {
 			if (bench->init != NULL)
 				bench->init();
 
@@ -105,29 +104,20 @@ int bench_run(void *arg)
 				return -1;
 			}
 
+			if (odp_unlikely(round == 0))
+				continue;
 			if (meas_time)
 				total += odp_time_diff_ns(t2, t1);
 			else
 				total += odp_cpu_cycles_diff(c2, c1);
-
-			if (round >= max_rounds) {
-				double result;
-
-				/* Each benchmark runs internally 'repeat_count' times. */
-				result = ((double)total) / (max_rounds * repeat_count);
-
-				/* No print or results from warm-up round */
-				if (i > 0) {
-					printf("[%02d] odp_%-26s: %12.2f\n", j + 1, desc, result);
-
-					if (suite->result)
-						suite->result[j] = result;
-				}
-				j++;
-				total = 0;
-				round = 1;
-			}
 		}
+
+		/* Each benchmark runs internally 'repeat_count' times. */
+		result = ((double)total) / (max_rounds * repeat_count);
+
+		printf("[%02d] odp_%-26s: %12.2f\n", j + 1, desc, result);
+		if (suite->result)
+			suite->result[j] = result;
 	}
 	printf("\n");
 	/* Print dummy result to prevent compiler to optimize it away*/
@@ -205,29 +195,31 @@ int bench_tm_run(void *arg)
 	printf("\nLatency (nsec) per function call               min          avg          max\n");
 	printf("------------------------------------------------------------------------------\n");
 
-	/* Run each test twice. Results from the first warm-up round are ignored. */
-	for (uint32_t i = 0; i < 2; i++) {
-		for (uint32_t j = 0; j < suite->num_bench; j++) {
-			const bench_tm_info_t *bench = &suite->bench[j];
-			uint64_t rounds = suite->rounds;
-			bench_tm_result_t res;
+	for (uint32_t j = 0; j < suite->num_bench; j++) {
+		const bench_tm_info_t *bench = &suite->bench[j];
+		uint64_t rounds = suite->rounds;
+		bench_tm_result_t res;
 
+		/* Run only selected test case */
+		if (suite->bench_idx && (j + 1) != suite->bench_idx)
+			continue;
+
+		if (bench->cond != NULL && !bench->cond()) {
+			printf("[%02d] %-41s n/a          n/a          n/a\n",
+			       j + 1, bench->name);
+			continue;
+		}
+
+		if (bench->max_rounds && bench->max_rounds < rounds)
+			rounds = bench->max_rounds;
+
+		/*
+		 * Run each test twice.
+		 * Results from the first warm-up round are ignored.
+		 */
+		for (uint32_t i = 0; i < 2; i++) {
 			if (odp_atomic_load_u32(&suite->exit_worker))
 				return 0;
-
-			/* Run only selected test case */
-			if (suite->bench_idx && (j + 1) != suite->bench_idx)
-				continue;
-
-			if (bench->max_rounds &&  bench->max_rounds < rounds)
-				rounds = bench->max_rounds;
-
-			if (bench->cond != NULL && !bench->cond()) {
-				if (i > 0)
-					printf("[%02d] %-41s n/a          n/a          n/a\n",
-					       j + 1, bench->name);
-				continue;
-			}
 
 			init_result(&res);
 
@@ -243,12 +235,9 @@ int bench_tm_run(void *arg)
 			if (bench->term != NULL)
 				bench->term();
 
-			/* No print or results from warm-up round */
-			if (i > 0) {
-				printf("[%02d] %-26s\n", j + 1, bench->name);
-				print_results(&res);
-			}
 		}
+		printf("[%02d] %-26s\n", j + 1, bench->name);
+		print_results(&res);
 	}
 	printf("\n");
 
