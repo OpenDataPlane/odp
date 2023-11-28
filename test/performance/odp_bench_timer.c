@@ -170,18 +170,6 @@ static int timeout_from_event(void)
 	return i;
 }
 
-static int timeout_fresh(void)
-{
-	int i;
-	odp_timeout_t timeout = gbl_args->timeout;
-	uint64_t *a1 = gbl_args->a1;
-
-	for (i = 0; i < REPEAT_COUNT; i++)
-		a1[i] = odp_timeout_fresh(timeout);
-
-	return i;
-}
-
 static int timeout_timer(void)
 {
 	int i;
@@ -274,7 +262,6 @@ bench_info_t test_suite[] = {
 	BENCH_INFO(timer_ns_to_tick, 0, NULL),
 	BENCH_INFO(timeout_to_event, 0, NULL),
 	BENCH_INFO(timeout_from_event, 0, NULL),
-	BENCH_INFO(timeout_fresh, 0, NULL),
 	BENCH_INFO(timeout_timer, 0, NULL),
 	BENCH_INFO(timeout_tick, 0, NULL),
 	BENCH_INFO(timeout_user_ptr, 0, NULL),

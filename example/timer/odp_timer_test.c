@@ -165,13 +165,7 @@ static void test_abs_timeouts(int thr, test_globals_t *gbls)
 		tick = odp_timeout_tick(tmo);
 		ttp = odp_timeout_user_ptr(tmo);
 		ttp->ev = ev;
-		if (!odp_timeout_fresh(tmo)) {
-			/* Not the expected expiration tick, timer has
-			 * been reset or cancelled or freed */
-			ODPH_ABORT("Unexpected timeout received (timer "
-				   "%" PRIu64 ", tick %" PRIu64 ")\n",
-				   odp_timer_to_u64(ttp->tim), tick);
-		}
+
 		ODPH_DBG("  [%i] timeout, tick %" PRIu64 "\n", thr, tick);
 
 		uint32_t rx_num = odp_atomic_fetch_dec_u32(&gbls->remain);

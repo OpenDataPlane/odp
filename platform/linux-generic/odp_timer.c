@@ -1799,7 +1799,7 @@ uint64_t odp_timeout_to_u64(odp_timeout_t tmo)
 	return _odp_pri(tmo);
 }
 
-int odp_timeout_fresh(odp_timeout_t tmo)
+int ODP_DEPRECATE(odp_timeout_fresh)(odp_timeout_t tmo)
 {
 	const odp_timeout_hdr_t *hdr = timeout_hdr(tmo);
 	odp_timer_t hdl = hdr->timer;

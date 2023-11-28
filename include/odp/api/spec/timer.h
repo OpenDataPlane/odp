@@ -474,8 +474,10 @@ odp_event_t odp_timeout_to_event(odp_timeout_t tmo);
  * @param tmo Timeout handle
  * @retval 1 Timeout is fresh
  * @retval 0 Timeout is stale
+ *
+ * @deprecated The function will be removed in a future API version.
  */
-int odp_timeout_fresh(odp_timeout_t tmo);
+int ODP_DEPRECATE(odp_timeout_fresh)(odp_timeout_t tmo);
 
 /**
  * Return timer handle for the timeout
