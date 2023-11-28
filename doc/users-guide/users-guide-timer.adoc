@@ -113,11 +113,6 @@ while (1) {
 		void *userptr = odp_timeout_user_ptr(timeout);
 		uint64_t expiration = odp_timeout_tick(timeout);
 
-		if (!odp_timeout_fresh(timeout)) {
-			odp_timeout_free(timeout);
-			continue;
-		}
-
 		...process the timeout event
 		break;
 
@@ -125,16 +120,3 @@ while (1) {
 	}
 }
 -----
-When a worker thread receives a timeout event via `odp_schedule()`, it needs
-to determine whether the event is still relevant. A timeout event that is still
-relevant is said to be _fresh_ while one that is no longer relevant is said to
-be _stale_. Timeouts may be stale for any number of reasons, most of which are
-known only to the application itself. However, there are a few cases where the
-ODP implementation may be able to assist in this determination and for those
-cases the `odp_timeout_fresh()` API is provided.
-
-ODP defines a fresh timeout simply as one that has not been reset or
-canceled since it expired. So if `odp_timeout_fresh()` returns 0 then it is
-likely that the application should ignore this event, however if it returns 1
-then it remains an application responsibility to handle the event appropriate
-to its needs.
