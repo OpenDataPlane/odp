@@ -197,6 +197,7 @@ static int parse_options(int argc, char *argv[], test_opt_t *test_opt)
 
 	memset(test_opt, 0, sizeof(*test_opt));
 
+	test_opt->cpu_count = 1;
 	test_opt->period_ns = 200 * ODP_TIME_MSEC_IN_NS;
 	test_opt->res_ns    = 0;
 	test_opt->res_hz    = 0;
