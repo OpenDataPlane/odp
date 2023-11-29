@@ -675,7 +675,7 @@ static odp_bool_t setup_packet_segments(sd_t *sd)
 	return configure_packets(sd) && allocate_packets(sd);
 }
 
-static void configure_packet_dma_transfer(sd_t *sd)
+static void configure_packet_transfer(sd_t *sd)
 {
 	odp_dma_seg_t *start_src_seg, *start_dst_seg, *seg;
 	uint32_t k = 0U, z = 0U, len;
@@ -758,7 +758,7 @@ static odp_bool_t setup_memory_segments(sd_t *sd)
 	return allocate_memory(sd);
 }
 
-static void configure_address_dma_transfer(sd_t *sd)
+static void configure_address_transfer(sd_t *sd)
 {
 	odp_dma_seg_t *start_src_seg, *start_dst_seg, *seg;
 	uint32_t k = 0U, z = 0U, len;
@@ -1156,11 +1156,11 @@ static void setup_api(prog_config_t *config)
 {
 	if (config->seg_type == PACKET) {
 		config->api.setup_fn = setup_packet_segments;
-		config->api.trs_fn = configure_packet_dma_transfer;
+		config->api.trs_fn = configure_packet_transfer;
 		config->api.free_fn = free_packets;
 	} else {
 		config->api.setup_fn = setup_memory_segments;
-		config->api.trs_fn = configure_address_dma_transfer;
+		config->api.trs_fn = configure_address_transfer;
 		config->api.free_fn = free_memory;
 	}
 
