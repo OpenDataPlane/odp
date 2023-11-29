@@ -315,11 +315,6 @@ static parse_result_t check_options(prog_config_t *config)
 		return PRS_NOK;
 	}
 
-	if (config->trs_type == SW_COPY) {
-		ODPH_ERR("SW memory copy transfer type not yet implemented\n");
-		return PRS_NOT_SUP;
-	}
-
 	if (config->seg_type != PACKET && config->seg_type != MEMORY) {
 		ODPH_ERR("Invalid segment type: %u\n", config->seg_type);
 		return PRS_NOK;
