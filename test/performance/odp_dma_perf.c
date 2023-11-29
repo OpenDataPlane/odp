@@ -28,8 +28,9 @@
 #define PROG_NAME "odp_dma_perf"
 
 enum {
-	SYNC = 0U,
-	ASYNC
+	SYNC_DMA = 0U,
+	ASYNC_DMA,
+	SW_COPY
 };
 
 enum {
@@ -47,7 +48,7 @@ enum {
 	MANY
 };
 
-#define DEF_TRS_TYPE SYNC
+#define DEF_TRS_TYPE SYNC_DMA
 #define DEF_SEG_CNT 1U
 #define DEF_LEN 1024U
 #define DEF_SEG_TYPE PACKET
@@ -264,8 +265,9 @@ static void print_usage(void)
 	       "\n"
 	       "  -t, --trs_type      Transfer type for test data. %u by default.\n"
 	       "                      Types:\n"
-	       "                          0: synchronous\n"
-	       "                          1: asynchronous\n"
+	       "                          0: synchronous DMA\n"
+	       "                          1: asynchronous DMA\n"
+	       "                          2: SW memory copy\n"
 	       "  -i, --num_in_seg    Number of input segments to transfer. 0 means the maximum\n"
 	       "                      count supported by the implementation. %u by default.\n"
 	       "  -o, --num_out_seg   Number of output segments to transfer to. 0 means the\n"
@@ -307,9 +309,15 @@ static parse_result_t check_options(prog_config_t *config)
 	odp_shm_capability_t shm_capa;
 	uint64_t shm_size = 0U;
 
-	if (config->trs_type != SYNC && config->trs_type != ASYNC) {
+	if (config->trs_type != SYNC_DMA && config->trs_type != ASYNC_DMA &&
+	    config->trs_type != SW_COPY) {
 		ODPH_ERR("Invalid transfer type: %u\n", config->trs_type);
 		return PRS_NOK;
+	}
+
+	if (config->trs_type == SW_COPY) {
+		ODPH_ERR("SW memory copy transfer type not yet implemented\n");
+		return PRS_NOT_SUP;
 	}
 
 	if (config->seg_type != PACKET && config->seg_type != MEMORY) {
@@ -375,7 +383,7 @@ static parse_result_t check_options(prog_config_t *config)
 		return PRS_NOT_SUP;
 	}
 
-	if (config->trs_type == ASYNC) {
+	if (config->trs_type == ASYNC_DMA) {
 		if (config->compl_mode != POLL && config->compl_mode != EVENT) {
 			ODPH_ERR("Invalid completion mode: %u\n", config->compl_mode);
 			return PRS_NOK;
@@ -1156,8 +1164,10 @@ static void setup_api(prog_config_t *config)
 		config->api.free_fn = free_memory;
 	}
 
-	if (config->trs_type == SYNC) {
+	if (config->trs_type == SYNC_DMA) {
+		config->api.session_cfg_fn = NULL;
 		config->api.compl_fn = NULL;
+		config->api.bootstrap_fn = NULL;
 		config->api.wait_fn = config->num_workers == 1 || config->policy == MANY ?
 					run_transfers_mt_unsafe : run_transfers_mt_safe;
 		config->api.drain_fn = NULL;
@@ -1407,7 +1417,7 @@ static void print_stats(const prog_config_t *config)
 	       "    segment type:         %s\n"
 	       "    inflight count:       %u\n"
 	       "    session policy:       %s\n\n",
-	       config->trs_type == SYNC ? "synchronous" : config->compl_mode == POLL ?
+	       config->trs_type == SYNC_DMA ? "synchronous" : config->compl_mode == POLL ?
 			"asynchronous-poll" : "asynchronous-event", config->num_in_segs,
 	       config->num_out_segs, config->src_seg_len,
 	       config->seg_type == PACKET ? "packet" : "memory", config->num_inflight,
@@ -1430,7 +1440,7 @@ static void print_stats(const prog_config_t *config)
 		       "        start errors:         %" PRIu64 "\n",
 		       stats->completed, stats->start_errs);
 
-		if (config->trs_type == ASYNC) {
+		if (config->trs_type == ASYNC_DMA) {
 			if (config->compl_mode == POLL)
 				printf("        poll errors:          %" PRIu64 "\n",
 				       stats->poll_errs);
@@ -1466,7 +1476,7 @@ static void print_stats(const prog_config_t *config)
 		avg_start_cc = stats->start_cnt > 0U ? stats->start_cc / stats->start_cnt : 0U;
 		printf("        average cycles breakdown:\n");
 
-		if (config->trs_type == SYNC) {
+		if (config->trs_type == SYNC_DMA) {
 			printf("            odp_dma_transfer(): %" PRIu64 " "
 			       "(min: %" PRIu64 ", max: %" PRIu64 ")\n", avg_start_cc,
 			       avg_start_cc > 0U ? stats->min_start_cc : 0U,
