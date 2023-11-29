@@ -1513,8 +1513,11 @@ static void print_stats(const prog_config_t *config)
 	       "    segment type:         %s\n"
 	       "    inflight count:       %u\n"
 	       "    session policy:       %s\n\n",
-	       config->trs_type == SYNC_DMA ? "synchronous" : config->compl_mode == POLL ?
-			"asynchronous-poll" : "asynchronous-event", config->num_in_segs,
+	       config->trs_type == SYNC_DMA ? "DMA synchronous" :
+		config->trs_type == ASYNC_DMA && config->compl_mode == POLL ?
+			"DMA asynchronous-poll" :
+				config->trs_type == ASYNC_DMA && config->compl_mode == EVENT ?
+					"DMA asynchronous-event" : "SW", config->num_in_segs,
 	       config->num_out_segs, config->src_seg_len,
 	       config->seg_type == PACKET ? "packet" : "memory", config->num_inflight,
 	       config->policy == SINGLE ? "shared" : "per-worker");
@@ -1550,7 +1553,7 @@ static void print_stats(const prog_config_t *config)
 		       stats->transfer_errs, stats->tot_tm);
 
 		if (config->policy == MANY) {
-			printf("        DMA session:\n"
+			printf("        session:\n"
 			       "            average time per transfer:   %" PRIu64 " "
 			       "(min: %" PRIu64 ", max: %" PRIu64 ") ns\n"
 			       "            average cycles per transfer: %" PRIu64 " "
@@ -1577,6 +1580,11 @@ static void print_stats(const prog_config_t *config)
 			       "(min: %" PRIu64 ", max: %" PRIu64 ")\n", avg_start_cc,
 			       avg_start_cc > 0U ? stats->min_start_cc : 0U,
 			       avg_start_cc > 0U ? stats->max_start_cc : 0U);
+		} else if (config->trs_type == SW_COPY) {
+			printf("            memcpy(): %" PRIu64 " "
+			       "(min: %" PRIu64 ", max: %" PRIu64 ")\n", avg_start_cc,
+			       avg_start_cc > 0U ? stats->min_start_cc : 0U,
+			       avg_start_cc > 0U ? stats->max_start_cc : 0U);
 		} else {
 			printf("            odp_dma_transfer_start(): %" PRIu64 " "
 			       "(min: %" PRIu64 ", max: %" PRIu64 ")\n", avg_start_cc,
@@ -1587,7 +1595,7 @@ static void print_stats(const prog_config_t *config)
 
 			if (config->compl_mode == POLL) {
 				printf("            odp_dma_transfer_done():  %" PRIu64 ""
-				       " (min: %" PRIu64 ", max: %" PRIu64 ", x %" PRIu64 ""
+				       " (min: %" PRIu64 ", max: %" PRIu64 ", x%" PRIu64 ""
 				       " per transfer)\n", avg_wait_cc,
 				       avg_wait_cc > 0U ? stats->min_wait_cc : 0U,
 				       avg_wait_cc > 0U ? stats->max_wait_cc : 0U,
