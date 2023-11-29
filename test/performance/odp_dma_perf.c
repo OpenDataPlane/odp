@@ -1,8 +1,14 @@
-/* Copyright (c) 2021-2023, Nokia
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2021-2023 Nokia
+ */
+
+/**
+ * DMA performance tester
  *
- * All rights reserved.
- *
- * SPDX-License-Identifier:     BSD-3-Clause
+ * This tester application can be used to profile the performance of an ODP DMA implementation.
+ * Tester workflow is simple and consists of issuing as many back-to-back DMA transfers as the
+ * implementation allows and then recording key performance statistics (such as function overhead,
+ * latencies etc.).
  */
 
 #ifndef _GNU_SOURCE
