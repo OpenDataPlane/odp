@@ -977,6 +977,25 @@ static void poll_transfers_mt_safe(sd_t *sd, stats_t *stats)
 	}
 }
 
+static void drain_poll_transfers(sd_t *sd)
+{
+	const uint32_t count = sd->dma.num_inflight;
+	trs_info_t *infos = sd->dma.infos, *info;
+	odp_dma_t handle = sd->dma.handle;
+	int rc;
+
+	for (uint32_t i = 0U; i < count; ++i) {
+		info = &infos[i];
+
+		if (info->is_running) {
+			do {
+				rc = odp_dma_transfer_done(handle, info->compl_param.transfer_id,
+							   NULL);
+			} while (rc == 0);
+		}
+	}
+}
+
 static odp_bool_t configure_event_compl_session(sd_t *sd)
 {
 	odp_thrmask_t zero;
@@ -1133,21 +1152,91 @@ static void drain_compl_events(ODP_UNUSED sd_t *sd)
 	}
 }
 
-static void drain_poll_transfers(sd_t *sd)
+static void run_memcpy(trs_info_t *info, stats_t *stats)
+{
+	uint64_t start_tm, end_tm, start_cc, end_cc, trs_tm, trs_cc, start_cc_diff;
+	const odp_dma_transfer_param_t *param = &info->trs_param;
+	uint32_t tot_len, src_len, dst_len, min_len, len, i = 0U, j = 0U, src_off = 0U,
+	dst_off = 0U, src_rem, dst_rem;
+	const odp_bool_t is_addr = param->src_format == ODP_DMA_FORMAT_ADDR;
+	uint8_t *src_data, *dst_data;
+
+	/* Test data is configured so that total source and total destination sizes always match,
+	 * all source and all destination segments have the same size and in case of packets,
+	 * there's always just a single segment. */
+	tot_len = param->num_src * param->src_seg->len;
+	src_len = param->src_seg->len;
+	dst_len = param->dst_seg->len;
+	min_len = ODPH_MIN(src_len, dst_len);
+	len = min_len;
+	start_tm = odp_time_local_strict_ns();
+	start_cc = odp_cpu_cycles();
+
+	while (tot_len > 0U) {
+		if (is_addr) {
+			src_data = param->src_seg[i].addr;
+			dst_data = param->dst_seg[j].addr;
+		} else {
+			src_data = odp_packet_data(param->src_seg[i].packet);
+			dst_data = odp_packet_data(param->dst_seg[j].packet);
+		}
+
+		memcpy(dst_data + dst_off, src_data + src_off, len);
+		dst_off += len;
+		src_off += len;
+		src_rem = src_len - src_off;
+		dst_rem = dst_len - dst_off;
+		tot_len -= len;
+		len = ODPH_MIN(ODPH_MAX(src_rem, dst_rem), min_len);
+
+		if (dst_rem > 0U) {
+			++i;
+			src_off = 0U;
+		} else {
+			++j;
+			dst_off = 0U;
+		}
+	}
+
+	end_cc = odp_cpu_cycles();
+	end_tm = odp_time_local_strict_ns();
+	trs_tm = end_tm - start_tm;
+	stats->max_trs_tm = ODPH_MAX(trs_tm, stats->max_trs_tm);
+	stats->min_trs_tm = ODPH_MIN(trs_tm, stats->min_trs_tm);
+	stats->trs_tm += trs_tm;
+	trs_cc = odp_cpu_cycles_diff(end_cc, start_cc);
+	stats->max_trs_cc = ODPH_MAX(trs_cc, stats->max_trs_cc);
+	stats->min_trs_cc = ODPH_MIN(trs_cc, stats->min_trs_cc);
+	stats->trs_cc += trs_cc;
+	++stats->trs_cnt;
+	start_cc_diff = odp_cpu_cycles_diff(end_cc, start_cc);
+	stats->max_start_cc = ODPH_MAX(start_cc_diff, stats->max_start_cc);
+	stats->min_start_cc = ODPH_MIN(start_cc_diff, stats->min_start_cc);
+	stats->start_cc += start_cc_diff;
+	++stats->start_cnt;
+	++stats->completed;
+}
+
+static void run_memcpy_mt_unsafe(sd_t *sd, stats_t *stats)
+{
+	const uint32_t count = sd->dma.num_inflight;
+	trs_info_t *infos = sd->dma.infos;
+
+	for (uint32_t i = 0U; i < count; ++i)
+		run_memcpy(&infos[i], stats);
+}
+
+static void run_memcpy_mt_safe(sd_t *sd, stats_t *stats)
 {
 	const uint32_t count = sd->dma.num_inflight;
 	trs_info_t *infos = sd->dma.infos, *info;
-	odp_dma_t handle = sd->dma.handle;
-	int rc;
 
 	for (uint32_t i = 0U; i < count; ++i) {
 		info = &infos[i];
 
-		if (info->is_running) {
-			do {
-				rc = odp_dma_transfer_done(handle, info->compl_param.transfer_id,
-							   NULL);
-			} while (rc == 0);
+		if (odp_ticketlock_trylock(&info->lock)) {
+			run_memcpy(info, stats);
+			odp_ticketlock_unlock(&info->lock);
 		}
 	}
 }
@@ -1171,7 +1260,7 @@ static void setup_api(prog_config_t *config)
 		config->api.wait_fn = config->num_workers == 1 || config->policy == MANY ?
 					run_transfers_mt_unsafe : run_transfers_mt_safe;
 		config->api.drain_fn = NULL;
-	} else {
+	} else if (config->trs_type == ASYNC_DMA) {
 		if (config->compl_mode == POLL) {
 			config->api.session_cfg_fn = NULL;
 			config->api.compl_fn = configure_poll_compl;
@@ -1186,6 +1275,13 @@ static void setup_api(prog_config_t *config)
 			config->api.wait_fn = wait_compl_event;
 			config->api.drain_fn = drain_compl_events;
 		}
+	} else {
+		config->api.session_cfg_fn = NULL;
+		config->api.compl_fn = NULL;
+		config->api.bootstrap_fn = NULL;
+		config->api.wait_fn = config->num_workers == 1 || config->policy == MANY ?
+					run_memcpy_mt_unsafe : run_memcpy_mt_safe;
+		config->api.drain_fn = NULL;
 	}
 }
 
