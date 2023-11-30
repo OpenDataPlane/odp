@@ -19,7 +19,8 @@ jobs:
       matrix:
         cc: [gcc, clang]
         conf: ['', 'CFLAGS=-O3', 'CFLAGS=-O1', 'CFLAGS=-O0 --enable-debug=full', 'CFLAGS=-Os', 'CFLAGS=-pedantic',
-               '--enable-lto', '--enable-lto --enable-abi-compat', '--enable-pcapng-support']
+               '--enable-lto', '--enable-lto --enable-abi-compat', '--enable-pcapng-support',
+               '--with-crypto=armv8crypto', '--with-crypto=ipsecmb']
         exclude:
           - cc: clang
             conf: '--enable-lto'
@@ -141,7 +142,7 @@ jobs:
                '--enable-dpdk-zero-copy --disable-static-applications',
                '--disable-host-optimization --enable-event-validation=warn',
                '--disable-host-optimization --enable-abi-compat',
-               '--without-openssl --without-pcap', '--with-crypto=armv8crypto', '--with-crypto=ipsecmb']
+               '--without-openssl --without-pcap']
     steps:
       - uses: OpenDataPlane/action-clean-up@main
       - uses: actions/checkout@v3
@@ -165,6 +166,21 @@ jobs:
       - uses: actions/checkout@v3
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}" -e ARCH="${ARCH}"
                -e CXX=g++-10 -e CFLAGS="${{matrix.cflags}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-native /odp/scripts/ci/check.sh
+      - if: ${{ failure() }}
+        uses: ./.github/actions/run-failure-log
+
+  Run_crypto:
+    if: ${{ github.repository == 'OpenDataPlane/odp' }}
+    runs-on: [self-hosted, ARM64]
+    strategy:
+      fail-fast: false
+      matrix:
+        conf: ['--with-crypto=armv8crypto', '--with-crypto=ipsecmb']
+    steps:
+      - uses: OpenDataPlane/action-clean-up@main
+      - uses: actions/checkout@v3
+      - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}" -e ARCH="${ARCH}"
+               -e CONF="${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-native /odp/scripts/ci/check.sh
       - if: ${{ failure() }}
         uses: ./.github/actions/run-failure-log
 
