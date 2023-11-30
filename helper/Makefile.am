@@ -82,7 +82,7 @@ __LIB__libodphelper_la_LIBADD += $(LIBCLI_LIBS)
 
 lib_LTLIBRARIES = $(LIB)/libodphelper.la
 
-CHECK_GLOBALS_REGEX = " (odph_|_deprecated_odph_)"
+CHECK_GLOBALS_REGEX = " (odph_|_deprecated_odph_|__odr_asan)"
 
 TESTS_ENVIRONMENT = \
 	LIBTOOL="$(LIBTOOL)" \
