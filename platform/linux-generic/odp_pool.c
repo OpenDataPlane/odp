@@ -149,10 +149,11 @@ static inline int cache_available(pool_t *pool, odp_pool_stats_t *stats)
 	const uint16_t first = stats->thread.first;
 	const uint16_t last = stats->thread.last;
 	const odp_bool_t per_thread = pool->params.stats.bit.thread_cache_available;
+	const int max_threads = odp_thread_count_max();
 	uint16_t out_idx = 0;
 
 	if (per_thread) {
-		if (first > last || last >= odp_thread_count_max()) {
+		if (first > last || last >= max_threads) {
 			_ODP_ERR("Bad thread ids: first=%" PRIu16 " last=%" PRIu16 "\n",
 				 first, last);
 			return -1;
@@ -164,7 +165,7 @@ static inline int cache_available(pool_t *pool, odp_pool_stats_t *stats)
 		}
 	}
 
-	for (int i = 0; i < ODP_THREAD_COUNT_MAX; i++) {
+	for (int i = 0; i < max_threads; i++) {
 		uint32_t cur = odp_atomic_load_u32(&pool->local_cache[i].cache_num);
 
 		if (per_thread && i >= first && i <= last)
@@ -182,8 +183,9 @@ static inline int cache_available(pool_t *pool, odp_pool_stats_t *stats)
 static inline uint64_t cache_total_available(pool_t *pool)
 {
 	uint64_t cached = 0;
+	const int max_threads = odp_thread_count_max();
 
-	for (int i = 0; i < ODP_THREAD_COUNT_MAX; i++)
+	for (int i = 0; i < max_threads; i++)
 		cached += odp_atomic_load_u32(&pool->local_cache[i].cache_num);
 
 	return cached;
@@ -1169,6 +1171,7 @@ odp_pool_t odp_pool_create(const char *name, const odp_pool_param_t *params)
 int odp_pool_destroy(odp_pool_t pool_hdl)
 {
 	pool_t *pool = _odp_pool_entry(pool_hdl);
+	const int max_threads = odp_thread_count_max();
 	int i;
 
 	if (pool == NULL)
@@ -1186,7 +1189,7 @@ int odp_pool_destroy(odp_pool_t pool_hdl)
 		pool->mem_src_ops->unbind(pool->mem_src_data);
 
 	/* Make sure local caches are empty */
-	for (i = 0; i < ODP_THREAD_COUNT_MAX; i++)
+	for (i = 0; i < max_threads; i++)
 		cache_flush(&pool->local_cache[i], pool);
 
 	if (pool->pool_ext == 0)
