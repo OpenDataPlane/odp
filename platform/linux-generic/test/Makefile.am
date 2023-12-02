@@ -21,6 +21,11 @@ SUBDIRS += validation/api/pktio \
 	   example \
 	   performance
 
+if WITH_ML
+TESTS += validation/api/ml/ml_linux$(EXEEXT)
+SUBDIRS += validation/api/ml
+endif
+
 if ODP_PKTIO_PCAP
 TESTS += validation/api/pktio/pktio_run_pcap.sh
 endif
