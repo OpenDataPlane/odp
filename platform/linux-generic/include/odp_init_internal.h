@@ -105,6 +105,9 @@ int _odp_stash_term_global(void);
 int _odp_dma_init_global(void);
 int _odp_dma_term_global(void);
 
+int _odp_ml_init_global(void);
+int _odp_ml_term_global(void);
+
 #ifdef __cplusplus
 }
 #endif

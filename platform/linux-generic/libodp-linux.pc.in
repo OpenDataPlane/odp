@@ -8,5 +8,5 @@ Description: The ODP packet processing engine
 Version: @PKGCONFIG_VERSION@
 Requires.private: libconfig@AARCH64CRYPTO_PKG@
 Libs: -L${libdir} -l@ODP_LIB_NAME@ @ATOMIC_LIBS_NON_ABI_COMPAT@
-Libs.private: @OPENSSL_STATIC_LIBS@ @DPDK_LIBS@ @PCAP_LIBS@ @PTHREAD_LIBS@ @TIMER_LIBS@ @LIBXDP_LIBS@ -lpthread @ATOMIC_LIBS_ABI_COMPAT@ @IPSEC_MB_LIBS@
+Libs.private: @OPENSSL_STATIC_LIBS@ @DPDK_LIBS@ @PCAP_LIBS@ @PTHREAD_LIBS@ @TIMER_LIBS@ @LIBXDP_LIBS@ -lpthread @ATOMIC_LIBS_ABI_COMPAT@ @IPSEC_MB_LIBS@ @ORT_LIBS@
 Cflags: -I${includedir}

@@ -12,6 +12,7 @@
 #include <odp/api/packet.h>
 #include <odp/api/timer.h>
 #include <odp/api/pool.h>
+#include <odp/api/ml.h>
 
 #include <odp_buffer_internal.h>
 #include <odp_ipsec_internal.h>
@@ -69,6 +70,9 @@ static inline void event_free(odp_event_t event, _odp_ev_id_t id)
 	case ODP_EVENT_DMA_COMPL:
 		odp_dma_compl_free(odp_dma_compl_from_event(event));
 		break;
+	case ODP_EVENT_ML_COMPL:
+		odp_ml_compl_free(odp_ml_compl_from_event(event));
+		break;
 	default:
 		_ODP_ABORT("Invalid event type: %d\n", odp_event_type(event));
 	}
@@ -116,6 +120,8 @@ int odp_event_is_valid(odp_event_t event)
 	case ODP_EVENT_PACKET_VECTOR:
 		/* Fall through */
 	case ODP_EVENT_DMA_COMPL:
+		/* Fall through */
+	case ODP_EVENT_ML_COMPL:
 		/* Fall through */
 	case ODP_EVENT_PACKET_TX_COMPL:
 		break;

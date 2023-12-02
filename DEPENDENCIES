@@ -305,6 +305,35 @@ Prerequisites for building the OpenDataPlane (ODP) API
    which would be the first actual queue in case 5 regular combined queues
    were configured (zero-indexing).
 
+3.7 Machine Learning API support (optional)
+   Use ML API for model inferencing. ML implementation uses ONNX Runtime library
+   (https://github.com/microsoft/onnxruntime). ODP has been tested with ONNX
+   Runtime version 1.16.3.
+
+3.7.1 Prebuilt onnxruntime download
+   Download a default CPU version onnxruntime-linux-x64-*.tgz and unzip it to
+   any folder.
+
+   $ wget -P ~ https://github.com/microsoft/onnxruntime/releases/download/v<version>/onnxruntime-linux-x64-<version>.tgz
+   $ mkdir <onnxruntime path>
+   $ cd <onnxruntime path>/
+   $ tar --strip=1 -zxvf ~/onnxruntime-linux-x64-<version>.tgz
+
+3.7.1 Build onnxruntime from source
+   $ git clone --recursive https://github.com/Microsoft/onnxruntime.git
+   $ cd onnxruntime
+
+   # Configure
+   $ ./build.sh --config RelWithDebInfo --build_shared_lib --parallel
+   $ tools/ci_build/github/linux/copy_strip_binary.sh -r build/Linux/ -a onnxruntime -l libonnxruntime.so.1.14.0 -c RelWithDebInfo -s . -t <commit id>
+   $ cp -r build/Linux/onnxruntime/ <onnxruntime path>
+
+3.7.2 Build ODP with ML support
+   After installing onnxruntime and example dependencies, ODP can be configured to be
+   built with ML support by giving onnxruntime path with --with-ort-path.
+
+   $ ../configure --with-ort-path=<onnxruntime path>
+
 4.0 Packages needed to build API tests
 
    CUnit test framework version 2.1-3 is required

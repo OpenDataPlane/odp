@@ -199,6 +199,15 @@ extern "C" {
 /* Enable timer scan performance benchmark. This works with inline enabled. */
 #define CONFIG_TIMER_PROFILE_INLINE 0
 
+/* Maximum number of ML models that can be created or loaded. */
+#define CONFIG_ML_MAX_MODELS 4
+
+/* Maximum number of inputs for a ML model. */
+#define CONFIG_ML_MAX_INPUTS 4
+
+/* Maximum number of outputs for a ML model. */
+#define CONFIG_ML_MAX_OUTPUTS 4
+
 #ifdef __cplusplus
 }
 #endif
