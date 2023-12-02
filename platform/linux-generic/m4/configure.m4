@@ -77,6 +77,7 @@ AC_CONFIG_FILES([platform/linux-generic/Makefile
 		 platform/linux-generic/test/example/switch/Makefile
 		 platform/linux-generic/test/validation/api/shmem/Makefile
 		 platform/linux-generic/test/validation/api/pktio/Makefile
+		 platform/linux-generic/test/validation/api/ml/Makefile
 		 platform/linux-generic/test/performance/Makefile
 		 platform/linux-generic/test/performance/dmafwd/Makefile
 		 platform/linux-generic/test/pktio_ipc/Makefile])
