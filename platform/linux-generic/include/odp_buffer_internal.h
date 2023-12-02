@@ -53,6 +53,13 @@ static inline odp_buffer_hdr_t *_odp_buf_hdr(odp_buffer_t buf)
 	return (odp_buffer_hdr_t *)(uintptr_t)buf;
 }
 
+static inline void _odp_buffer_subtype_set(odp_buffer_t buffer, int subtype)
+{
+	odp_buffer_hdr_t *buf_hdr = _odp_buf_hdr(buffer);
+
+	buf_hdr->event_hdr.subtype = subtype;
+}
+
 #ifdef __cplusplus
 }
 #endif
