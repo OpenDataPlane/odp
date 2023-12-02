@@ -16,6 +16,7 @@ ODP_MODULES = align \
 	      init \
 	      ipsec \
 	      lock \
+	      ml \
 	      queue \
 	      packet \
 	      pktio \
@@ -66,6 +67,7 @@ TESTS = \
 	ipsec/ipsec_inline_in.sh \
 	ipsec/ipsec_inline_out.sh \
 	lock/lock_main$(EXEEXT) \
+	ml/ml_main$(EXEEXT) \
 	packet/packet_main$(EXEEXT) \
 	pktio/pktio_main$(EXEEXT) \
 	pool/pool_main$(EXEEXT) \

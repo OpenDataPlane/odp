@@ -36,6 +36,7 @@ AC_CONFIG_FILES([test/common/Makefile
 		 test/validation/api/ipsec/Makefile
 		 test/validation/api/lock/Makefile
 		 test/validation/api/Makefile
+		 test/validation/api/ml/Makefile
 		 test/validation/api/packet/Makefile
 		 test/validation/api/pktio/Makefile
 		 test/validation/api/pool/Makefile
