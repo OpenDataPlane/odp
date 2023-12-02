@@ -13,6 +13,7 @@ AM_CPPFLAGS +=  -I$(top_srcdir)/platform/$(with_platform)/arch/default
 AM_CPPFLAGS +=  -I$(top_srcdir)/platform/$(with_platform)/arch/common
 
 AM_CPPFLAGS +=  $(OPENSSL_CPPFLAGS)
+AM_CPPFLAGS +=  $(ORT_CPPFLAGS)
 
 AM_CFLAGS +=  $(AARCH64CRYPTO_CFLAGS)
 AM_CFLAGS +=  $(DPDK_CFLAGS)
@@ -141,6 +142,7 @@ noinst_HEADERS = \
 		  include/odp_event_validation_internal.h \
 		  include/odp_fdserver_internal.h \
 		  include/odp_forward_typedefs_internal.h \
+		  include/odp_ml_fp16.h \
 		  include/odp_global_data.h \
 		  include/odp_init_internal.h \
 		  include/odp_ipsec_internal.h \
@@ -229,6 +231,8 @@ __LIB__libodp_linux_la_SOURCES = \
 			   odp_ishmphy.c \
 			   odp_ishmpool.c \
 			   odp_libconfig.c \
+			   odp_ml_fp16.c \
+			   odp_ml_quantize.c \
 			   odp_name_table.c \
 			   odp_packet.c \
 			   odp_packet_vector.c \
@@ -298,6 +302,15 @@ __LIB__libodp_linux_la_SOURCES += \
 endif
 endif
 endif
+
+if WITH_ML
+__LIB__libodp_linux_la_SOURCES += \
+			   odp_ml.c
+else
+__LIB__libodp_linux_la_SOURCES += \
+			   odp_ml_null.c
+endif
+
 if ODP_ABI_COMPAT
 __LIB__libodp_linux_la_SOURCES += \
 			   odp_atomic_api.c \
@@ -473,6 +486,7 @@ __LIB__libodp_linux_la_LIBADD += $(PTHREAD_LIBS)
 __LIB__libodp_linux_la_LIBADD += $(TIMER_LIBS)
 __LIB__libodp_linux_la_LIBADD += $(LIBXDP_LIBS)
 __LIB__libodp_linux_la_LIBADD += $(IPSEC_MB_LIBS)
+__LIB__libodp_linux_la_LIBADD += $(ORT_LIBS)
 
 if ODP_PKTIO_PCAP
 __LIB__libodp_linux_la_LIBADD += $(PCAP_LIBS)

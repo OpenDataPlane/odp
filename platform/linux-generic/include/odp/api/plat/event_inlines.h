@@ -99,6 +99,7 @@ _ODP_INLINE void *odp_event_user_area(odp_event_t event)
 
 	switch (type) {
 	case ODP_EVENT_BUFFER:
+	case ODP_EVENT_ML_COMPL:
 	case ODP_EVENT_DMA_COMPL:
 		return _odp_buffer_get((odp_buffer_t)event, void *, uarea_addr);
 	case ODP_EVENT_PACKET:
@@ -121,6 +122,7 @@ _ODP_INLINE void *odp_event_user_area_and_flag(odp_event_t event, int *flag)
 	switch (type) {
 	case ODP_EVENT_BUFFER:
 	case ODP_EVENT_DMA_COMPL:
+	case ODP_EVENT_ML_COMPL:
 		*flag = -1;
 		return _odp_buffer_get((odp_buffer_t)event, void *, uarea_addr);
 	case ODP_EVENT_PACKET:
