@@ -5855,6 +5855,9 @@ sub process {
 			    $var !~ /\bSCN[diux]16/ &&
 			    $var !~ /\bSCN[diux]32/ &&
 			    $var !~ /\bSCN[diux]64/ &&
+#Ignore onnxruntime CamelCase usage
+			    $var !~ /\bOrt*/ &&
+			    $var !~ /\bort_api->*/ &&
 #Ignore ETHTOOL_LINK_MODE_<foo> variants
 			    $var !~ /^ETHTOOL_LINK_MODE_/ &&
 #Ignore SI style variants like nS, mV and dB
