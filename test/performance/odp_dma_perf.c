@@ -34,8 +34,10 @@ enum {
 };
 
 enum {
-	PACKET = 0U,
-	MEMORY
+	DENSE_PACKET = 0U,
+	SPARSE_PACKET,
+	DENSE_MEMORY,
+	SPARSE_MEMORY
 };
 
 enum {
@@ -51,7 +53,7 @@ enum {
 #define DEF_TRS_TYPE SYNC_DMA
 #define DEF_SEG_CNT 1U
 #define DEF_LEN 1024U
-#define DEF_SEG_TYPE PACKET
+#define DEF_SEG_TYPE DENSE_PACKET
 #define DEF_MODE POLL
 #define DEF_INFLIGHT 1U
 #define DEF_TIME 10U
@@ -258,8 +260,9 @@ static void print_usage(void)
 	       "\n"
 	       "  E.g. " PROG_NAME "\n"
 	       "       " PROG_NAME " -s 10240\n"
-	       "       " PROG_NAME " -t 0 -i 1 -o 1 -s 51200 -S 1 -f 64 -T 10\n"
+	       "       " PROG_NAME " -t 0 -i 1 -o 1 -s 51200 -S 2 -f 64 -T 10\n"
 	       "       " PROG_NAME " -t 1 -i 10 -o 10 -s 4096 -S 0 -m 1 -f 10 -c 4 -p 1\n"
+	       "       " PROG_NAME " -t 2 -i 10 -o 1 -s 1024 -S 3 -m 1 -f 10 -c 4 -p 1\n"
 	       "\n"
 	       "Optional OPTIONS:\n"
 	       "\n"
@@ -277,10 +280,16 @@ static void print_usage(void)
 	       "                      segment length supported by the implementation. The actual\n"
 	       "                      maximum might be limited by what type of data is\n"
 	       "                      transferred (packet/memory). %u by default.\n"
-	       "  -S, --in_seg_type   Input segment data type. %u by default.\n"
+	       "  -S, --in_seg_type   Input segment data type. Dense types can load the DMA\n"
+	       "                      subsystem more heavily as transfer resources are\n"
+	       "                      pre-configured. Sparse types might on the other hand\n"
+	       "                      reflect application usage more precisely as transfer\n"
+	       "                      resources are configured in runtime. %u by default.\n"
 	       "                      Types:\n"
-	       "                          0: packet\n"
-	       "                          1: memory\n"
+	       "                          0: dense packet\n"
+	       "                          1: sparse packet\n"
+	       "                          2: dense memory\n"
+	       "                          3: sparse memory\n"
 	       "  -m, --compl_mode    Completion mode for transfers. %u by default.\n"
 	       "                      Modes:\n"
 	       "                          0: poll\n"
@@ -315,9 +324,15 @@ static parse_result_t check_options(prog_config_t *config)
 		return PRS_NOK;
 	}
 
-	if (config->seg_type != PACKET && config->seg_type != MEMORY) {
+	if (config->seg_type != DENSE_PACKET && config->seg_type != SPARSE_PACKET &&
+	    config->seg_type != DENSE_MEMORY && config->seg_type != SPARSE_MEMORY) {
 		ODPH_ERR("Invalid segment type: %u\n", config->seg_type);
 		return PRS_NOK;
+	}
+
+	if (config->seg_type == SPARSE_PACKET || config->seg_type == SPARSE_MEMORY) {
+		ODPH_ERR("Sparse segment types not yet implemented\n");
+		return PRS_NOT_SUP;
 	}
 
 	max_workers = ODPH_MIN(odp_thread_count_max() - 1, MAX_WORKERS);
@@ -449,7 +464,7 @@ static parse_result_t check_options(prog_config_t *config)
 		return PRS_NOT_SUP;
 	}
 
-	if (config->seg_type == PACKET) {
+	if (config->seg_type == DENSE_PACKET) {
 		if (odp_pool_capability(&pool_capa) < 0) {
 			ODPH_ERR("Error querying pool capabilities\n");
 			return PRS_NOK;
@@ -1238,7 +1253,7 @@ static void run_memcpy_mt_safe(sd_t *sd, stats_t *stats)
 
 static void setup_api(prog_config_t *config)
 {
-	if (config->seg_type == PACKET) {
+	if (config->seg_type == DENSE_PACKET) {
 		config->api.setup_fn = setup_packet_segments;
 		config->api.trs_fn = configure_packet_transfer;
 		config->api.free_fn = free_packets;
@@ -1514,7 +1529,7 @@ static void print_stats(const prog_config_t *config)
 				config->trs_type == ASYNC_DMA && config->compl_mode == EVENT ?
 					"DMA asynchronous-event" : "SW", config->num_in_segs,
 	       config->num_out_segs, config->src_seg_len,
-	       config->seg_type == PACKET ? "packet" : "memory", config->num_inflight,
+	       config->seg_type == DENSE_PACKET ? "packet" : "memory", config->num_inflight,
 	       config->policy == SINGLE ? "shared" : "per-worker");
 
 	for (int i = 0; i < config->num_workers; ++i) {
