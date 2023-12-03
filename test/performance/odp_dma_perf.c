@@ -135,6 +135,7 @@ typedef struct ODP_ALIGNED_CACHE {
 		odp_shm_t dst_shm;
 		void *src;
 		void *dst;
+		uint64_t shm_size;
 	} seg;
 
 	odp_schedule_group_t grp;
@@ -179,6 +180,7 @@ typedef struct prog_config_s {
 	odp_dma_compl_mode_t compl_mode_mask;
 	odp_pool_t src_pool;
 	odp_pool_t dst_pool;
+	uint64_t shm_size;
 	uint32_t num_in_segs;
 	uint32_t num_out_segs;
 	uint32_t src_seg_len;
@@ -512,6 +514,8 @@ static parse_result_t check_options(prog_config_t *config)
 				 " (max: %" PRIu64 ")\n", shm_size, shm_capa.max_size);
 			return PRS_NOT_SUP;
 		}
+
+		config->shm_size = shm_size;
 	}
 
 	return PRS_OK;
@@ -741,11 +745,10 @@ static void free_packets(const sd_t *sd)
 
 static odp_bool_t allocate_memory(sd_t *sd)
 {
-	const uint64_t shm_size = (uint64_t)sd->dma.dst_seg_len * sd->dma.num_out_segs *
-				  sd->dma.num_inflight;
-
-	sd->seg.src_shm = odp_shm_reserve(PROG_NAME "_src_shm", shm_size, ODP_CACHE_LINE_SIZE, 0U);
-	sd->seg.dst_shm = odp_shm_reserve(PROG_NAME "_dst_shm", shm_size, ODP_CACHE_LINE_SIZE, 0U);
+	sd->seg.src_shm = odp_shm_reserve(PROG_NAME "_src_shm", sd->seg.shm_size,
+					  ODP_CACHE_LINE_SIZE, 0U);
+	sd->seg.dst_shm = odp_shm_reserve(PROG_NAME "_dst_shm", sd->seg.shm_size,
+					  ODP_CACHE_LINE_SIZE, 0U);
 
 	if (sd->seg.src_shm == ODP_SHM_INVALID || sd->seg.dst_shm == ODP_SHM_INVALID) {
 		ODPH_ERR("Error allocating SHM block\n");
@@ -1327,6 +1330,8 @@ static odp_bool_t setup_session_descriptors(prog_config_t *config)
 
 		if (config->api.session_cfg_fn != NULL && !config->api.session_cfg_fn(sd))
 			return false;
+
+		sd->seg.shm_size = config->shm_size;
 	}
 
 	return true;
