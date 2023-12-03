@@ -717,12 +717,11 @@ static void free_packets(const sd_t *sd)
 
 static odp_bool_t allocate_memory(sd_t *sd)
 {
-	const uint64_t num_segs = (uint64_t)sd->dma.num_in_segs * sd->dma.num_inflight;
+	const uint64_t shm_size = (uint64_t)sd->dma.dst_seg_len * sd->dma.num_out_segs *
+				  sd->dma.num_inflight;
 
-	sd->seg.src_shm = odp_shm_reserve(PROG_NAME "_src_shm", sd->dma.src_seg_len * num_segs,
-					  ODP_CACHE_LINE_SIZE, 0U);
-	sd->seg.dst_shm = odp_shm_reserve(PROG_NAME "_dst_shm", sd->dma.dst_seg_len * num_segs,
-					  ODP_CACHE_LINE_SIZE, 0U);
+	sd->seg.src_shm = odp_shm_reserve(PROG_NAME "_src_shm", shm_size, ODP_CACHE_LINE_SIZE, 0U);
+	sd->seg.dst_shm = odp_shm_reserve(PROG_NAME "_dst_shm", shm_size, ODP_CACHE_LINE_SIZE, 0U);
 
 	if (sd->seg.src_shm == ODP_SHM_INVALID || sd->seg.dst_shm == ODP_SHM_INVALID) {
 		ODPH_ERR("Error allocating SHM block\n");
