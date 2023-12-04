@@ -344,11 +344,6 @@ static parse_result_t check_options(prog_config_t *config)
 		return PRS_NOK;
 	}
 
-	if (config->seg_type == SPARSE_PACKET || config->seg_type == SPARSE_MEMORY) {
-		ODPH_ERR("Sparse segment types not yet implemented\n");
-		return PRS_NOT_SUP;
-	}
-
 	max_workers = ODPH_MIN(odp_thread_count_max() - 1, MAX_WORKERS);
 
 	if (config->num_workers <= 0 || config->num_workers > max_workers) {
