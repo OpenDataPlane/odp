@@ -1847,17 +1847,18 @@ void odp_packet_flow_hash_set(odp_packet_t pkt, uint32_t flow_hash);
 /**
  * Packet timestamp
  *
- * Returns packet timestamp value as odp_time_t type. Use time API for
- * additional operations on packet timestamp values or conversion into
- * nanoseconds. Use odp_packet_has_ts() to check if packet has a valid
- * timestamp. Packet input interface timestamp resolution can be checked with
- * odp_pktio_ts_res().
+ * Returns timestamp value recorded into the packet. Use odp_packet_has_ts() to check if the packet
+ * has a valid timestamp. Packet input uses packet IO interface specific time source and thus
+ * timestamp (or nanosecond) values from one interface cannot be mixed with values from another
+ * interface (or time source in general). Packet IO interface timestamp resolution can be checked
+ * with odp_pktio_ts_res() and current time with odp_pktio_time().
+ *
+ * Time API operations (e.g. odp_time_diff()) can be used with packet timestamp values or
+ * when converting those into nanoseconds (odp_time_to_ns()).
  *
  * @param pkt  Packet handle
  *
  * @return Timestamp value
- *
- * @see odp_pktio_ts_res(), odp_packet_has_ts(), odp_time_to_ns()
  */
 odp_time_t odp_packet_ts(odp_packet_t pkt);
 
