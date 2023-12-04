@@ -299,25 +299,45 @@ jobs:
       - if: ${{ failure() }}
         uses: ./.github/actions/run-failure-log
 
-  Run:
+  Run_gcc:
     runs-on: ubuntu-20.04
     strategy:
       fail-fast: false
       matrix:
-        cc: [gcc, clang]
-        conf: ['', '--enable-abi-compat', '--enable-deprecated --enable-helper-deprecated --enable-debug=full',
+        conf: ['',
+               '--enable-abi-compat',
+               '--enable-deprecated --enable-helper-deprecated --enable-debug=full',
                '--enable-dpdk-zero-copy --disable-static-applications',
                '--disable-host-optimization --enable-event-validation=warn',
                '--disable-host-optimization --enable-abi-compat',
                '--without-openssl --without-pcap']
     steps:
       - uses: actions/checkout@v3
-      - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}" -e ARCH="${ARCH}"
-               -e CXX=g++-10 -e CONF="${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/check.sh
+      - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC=gcc -e ARCH="${ARCH}"
+               -e CONF="${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/check.sh
       - if: ${{ failure() }}
         uses: ./.github/actions/run-failure-log
       - if: ${{ success() }}
         uses: ./.github/actions/dump-log
+
+  Run_clang:
+    runs-on: ubuntu-20.04
+    strategy:
+      fail-fast: false
+      matrix:
+        conf: ['',
+               '--enable-abi-compat',
+               '--enable-deprecated --enable-helper-deprecated --enable-debug=full',
+               '--enable-dpdk-zero-copy --disable-static-applications',
+               '--disable-host-optimization --enable-event-validation=warn',
+               '--disable-host-optimization --enable-abi-compat',
+               '--without-openssl --without-pcap']
+    steps:
+      - uses: actions/checkout@v3
+      - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC=clang -e ARCH="${ARCH}"
+               -e CONF="${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/check.sh
+      - if: ${{ failure() }}
+        uses: ./.github/actions/run-failure-log
 
   Run_OS:
     runs-on: ubuntu-20.04
