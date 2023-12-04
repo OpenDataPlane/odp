@@ -113,6 +113,10 @@ void odp_timer_pool_param_init(odp_timer_pool_param_t *param);
  * The use of pool name is optional. Unique names are not required. Use odp_timer_pool_param_init()
  * to initialize timer pool parameters into their default values.
  *
+ * After creation a timer pool can be either started (see odp_timer_pool_start_multi()) or
+ * destroyed. The returned pool handle cannot be used with any other APIs, except
+ * odp_timer_pool_to_u64(), before the pool is successfully started.
+ *
  * Periodic timer expiration frequency is a multiple of the timer pool base frequency
  * (odp_timer_pool_param_t::base_freq_hz). Depending on implementation, the base frequency may need
  * to be selected carefully with respect to the timer pool source clock frequency. Use
@@ -136,8 +140,29 @@ odp_timer_pool_t odp_timer_pool_create(const char *name, const odp_timer_pool_pa
  * The purpose of this call is to coordinate the creation of multiple timer
  * pools that may use the same underlying HW resources.
  * This function may be called multiple times.
+ *
+ * @deprecated Use odp_timer_pool_start_multi() instead
  */
 void odp_timer_pool_start(void);
+
+/**
+ * Start timer pools
+ *
+ * Start given timer pools. After a pool has been successfully started the pool handle can be used
+ * with other APIs. Each timer pool can be started only once.
+ *
+ * Returns 'num' when all given timer pools have been successfully started. If the return value
+ * N < 'num', only the first N pools started successfully and at least some of the remaining ones
+ * failed to start. In case of a negative return value, none of the pools were started. The
+ * unstarted timer pools cannot be used anymore (can only be destroyed).
+ *
+ * @param timer_pool  Array of timer pool handles
+ * @param num         Number of pools to start
+ *
+ * @retval  num on success
+ * @retval <num on failure
+ */
+int odp_timer_pool_start_multi(odp_timer_pool_t timer_pool[], int num);
 
 /**
  * Destroy a timer pool
