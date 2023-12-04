@@ -1658,8 +1658,10 @@ static void print_stats(const prog_config_t *config)
 				config->trs_type == ASYNC_DMA && config->compl_mode == EVENT ?
 					"DMA asynchronous-event" : "SW", config->num_in_segs,
 	       config->num_out_segs, config->src_seg_len,
-	       config->seg_type == DENSE_PACKET ? "packet" : "memory", config->num_inflight,
-	       config->policy == SINGLE ? "shared" : "per-worker");
+	       config->seg_type == DENSE_PACKET ? "dense packet" :
+		config->seg_type == SPARSE_PACKET ? "sparse packet" :
+			config->seg_type == DENSE_MEMORY ? "dense memory" : "sparse memory",
+	       config->num_inflight, config->policy == SINGLE ? "shared" : "per-worker");
 
 	for (int i = 0; i < config->num_workers; ++i) {
 		stats = &config->thread_config[i].stats;
