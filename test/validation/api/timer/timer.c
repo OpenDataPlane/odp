@@ -703,7 +703,7 @@ static void timer_pool_create_destroy(void)
 	tp[0] = odp_timer_pool_create("timer_pool_a", &tparam);
 	CU_ASSERT(tp[0] != ODP_TIMER_POOL_INVALID);
 
-	odp_timer_pool_start();
+	CU_ASSERT_FATAL(odp_timer_pool_start_multi(&tp[0], 1) == 1);
 
 	tim = odp_timer_alloc(tp[0], queue, USER_PTR);
 	CU_ASSERT(tim != ODP_TIMER_INVALID);
@@ -716,14 +716,14 @@ static void timer_pool_create_destroy(void)
 	tp[1] = odp_timer_pool_create("timer_pool_c", &tparam);
 	CU_ASSERT(tp[1] != ODP_TIMER_POOL_INVALID);
 
-	odp_timer_pool_start();
+	CU_ASSERT_FATAL(odp_timer_pool_start_multi(tp, 2) == 2);
 
 	odp_timer_pool_destroy(tp[0]);
 
 	tp[0] = odp_timer_pool_create("timer_pool_d", &tparam);
 	CU_ASSERT(tp[0] != ODP_TIMER_POOL_INVALID);
 
-	odp_timer_pool_start();
+	CU_ASSERT_FATAL(odp_timer_pool_start_multi(&tp[0], 1) == 1);
 
 	memset(&info, 0, sizeof(odp_timer_pool_info_t));
 	CU_ASSERT(odp_timer_pool_info(tp[1], &info) == 0);
@@ -801,7 +801,7 @@ static void timer_pool_create_max(void)
 		CU_ASSERT_FATAL(tp[i] != ODP_TIMER_POOL_INVALID);
 	}
 
-	odp_timer_pool_start();
+	CU_ASSERT_FATAL(odp_timer_pool_start_multi(tp, num) == (int)num);
 
 	for (i = 0; i < num; i++) {
 		timer[i] = odp_timer_alloc(tp[i], queue, USER_PTR);
@@ -884,7 +884,7 @@ static void timer_pool_max_res(void)
 		tp = odp_timer_pool_create("high_res_tp", &tp_param);
 		CU_ASSERT_FATAL(tp != ODP_TIMER_POOL_INVALID);
 
-		odp_timer_pool_start();
+		CU_ASSERT_FATAL(odp_timer_pool_start_multi(&tp, 1) == 1);
 
 		/* Maximum timeout length with maximum resolution */
 		tick = odp_timer_ns_to_tick(tp, capa.max_res.max_tmo);
@@ -1039,7 +1039,7 @@ static void timer_single_shot(odp_queue_type_t queue_type, odp_timer_tick_type_t
 	tp = odp_timer_pool_create("test_single", &tp_param);
 	CU_ASSERT_FATAL(tp != ODP_TIMER_POOL_INVALID);
 
-	odp_timer_pool_start();
+	CU_ASSERT_FATAL(odp_timer_pool_start_multi(&tp, 1) == 1);
 
 	timer = odp_timer_alloc(tp, queue, USER_PTR);
 	CU_ASSERT_FATAL(timer != ODP_TIMER_INVALID);
@@ -1242,6 +1242,7 @@ static void timer_pool_current_tick(void)
 	tp = odp_timer_pool_create("cur_tick", &tp_param);
 	CU_ASSERT_FATAL(tp != ODP_TIMER_POOL_INVALID);
 
+	/* API to be deprecated */
 	odp_timer_pool_start();
 
 	/* Allow +-10% error margin */
@@ -1312,7 +1313,7 @@ static void timer_pool_sample_ticks(void)
 	tp[1] = odp_timer_pool_create("timer_pool_1", &tp_param);
 	CU_ASSERT_FATAL(tp[1] != ODP_TIMER_POOL_INVALID);
 
-	odp_timer_pool_start();
+	CU_ASSERT_FATAL(odp_timer_pool_start_multi(tp, 2) == 2);
 
 	/* Allow +-10% error margin */
 	min[0] = odp_timer_ns_to_tick(tp[0], 0.9 * nsec);
@@ -1373,7 +1374,7 @@ static void timer_pool_tick_info(void)
 	tp = odp_timer_pool_create("tick_info_tp", &tp_param);
 	CU_ASSERT_FATAL(tp != ODP_TIMER_POOL_INVALID);
 
-	odp_timer_pool_start();
+	CU_ASSERT_FATAL(odp_timer_pool_start_multi(&tp, 1) == 1);
 
 	memset(&info, 0, sizeof(odp_timer_pool_info_t));
 	CU_ASSERT_FATAL(odp_timer_pool_info(tp, &info) == 0);
@@ -1461,7 +1462,7 @@ static void timer_test_event_type(odp_queue_type_t queue_type,
 	if (timer_pool == ODP_TIMER_POOL_INVALID)
 		CU_FAIL_FATAL("Timer pool create failed");
 
-	odp_timer_pool_start();
+	CU_ASSERT_FATAL(odp_timer_pool_start_multi(&timer_pool, 1) == 1);
 
 	odp_pool_param_init(&pool_param);
 
@@ -1690,7 +1691,7 @@ static void timer_test_queue_type(odp_queue_type_t queue_type, int priv, int exp
 	if (tp == ODP_TIMER_POOL_INVALID)
 		CU_FAIL_FATAL("Timer pool create failed");
 
-	odp_timer_pool_start();
+	CU_ASSERT_FATAL(odp_timer_pool_start_multi(&tp, 1) == 1);
 
 	odp_queue_param_init(&queue_param);
 	if (queue_type == ODP_QUEUE_TYPE_SCHED) {
@@ -1895,8 +1896,7 @@ static void timer_test_cancel(void)
 	if (tp == ODP_TIMER_POOL_INVALID)
 		CU_FAIL_FATAL("Timer pool create failed");
 
-	/* Start all created timer pools */
-	odp_timer_pool_start();
+	CU_ASSERT_FATAL(odp_timer_pool_start_multi(&tp, 1) == 1);
 
 	odp_queue_param_init(&queue_param);
 	if (capa.queue_type_plain) {
@@ -2006,7 +2006,7 @@ static void timer_test_tmo_limit(odp_queue_type_t queue_type,
 	if (timer_pool == ODP_TIMER_POOL_INVALID)
 		CU_FAIL_FATAL("Timer pool create failed");
 
-	odp_timer_pool_start();
+	CU_ASSERT_FATAL(odp_timer_pool_start_multi(&timer_pool, 1) == 1);
 
 	odp_pool_param_init(&pool_param);
 	pool_param.type    = ODP_POOL_TIMEOUT;
@@ -2608,8 +2608,7 @@ static void timer_test_all(odp_queue_type_t queue_type)
 		CU_FAIL_FATAL("Timer pool create failed");
 	tp = global_mem->tp;
 
-	/* Start all created timer pools */
-	odp_timer_pool_start();
+	CU_ASSERT_FATAL(odp_timer_pool_start_multi(&tp, 1) == 1);
 
 	if (odp_timer_pool_info(tp, &tpinfo) != 0)
 		CU_FAIL("odp_timer_pool_info");
@@ -2951,7 +2950,7 @@ static void timer_test_periodic(odp_queue_type_t queue_type, int use_first, int 
 	timer_pool = odp_timer_pool_create("periodic_timer", &timer_param);
 	CU_ASSERT_FATAL(timer_pool != ODP_TIMER_POOL_INVALID);
 
-	odp_timer_pool_start();
+	CU_ASSERT_FATAL(odp_timer_pool_start_multi(&timer_pool, 1) == 1);
 
 	odp_pool_param_init(&pool_param);
 	pool_param.type    = ODP_POOL_TIMEOUT;
