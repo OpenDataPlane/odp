@@ -311,6 +311,22 @@ int odp_timer_start(odp_timer_t timer, const odp_timer_start_t *start_param);
 int odp_timer_restart(odp_timer_t timer, const odp_timer_start_t *start_param);
 
 /**
+ * Return the number of timeout events
+ *
+ * Returns in start_param.num_tmo_ev the number of events that the application must allocate and
+ * provide in odp_timer_periodic_start(). Application must set the values of first_tick and
+ * freq_multiplier in start_param before calling this function, the rest of the parameters are
+ * ignored. On return, the value of num_tmo_ev is set and the other parameters are not modified.
+ *
+ * @param timer_pool          Timer pool
+ * @param start_param         Periodic timer start parameters
+ *
+ * @retval 0  Success.
+ * @retval <0 Failure.
+ */
+int odp_timer_periodic_events(odp_timer_pool_t timer_pool, odp_timer_periodic_start_t *start_param);
+
+/**
  * Start a periodic timer
  *
  * Starts a timer that delivers timeout events periodically to the destination queue starting
@@ -318,6 +334,10 @@ int odp_timer_restart(odp_timer_t timer, const odp_timer_start_t *start_param);
  * periodic timers. The timer must not be active when calling this function. After a successful
  * call, the timer remains active until it is cancelled and all its timeout events have been
  * acknowledged.
+ *
+ * Before calling this function, odp_timer_periodic_events() must be called to set the value of
+ * num_tmo_ev in start_param. The application must then allocate as many timeout events in an array,
+ * and set tmo_ev to point to the array.
  *
  * Timer expiration frequency (period) is defined as a multiple of the timer pool base frequency
  * (odp_timer_pool_param_t::base_freq_hz). The timeout event type must be ODP_EVENT_TIMEOUT
@@ -358,7 +378,7 @@ int odp_timer_periodic_start(odp_timer_t timer, const odp_timer_periodic_start_t
  * indicates timeout events from a cancelled timer. These events may not arrive at the
  * requested interval, but are used to finalize the timer cancel request. Return value of 2 marks
  * the last event from a cancelled timer. After receiving it application may free the timer and
- * the timeout event.
+ * the array of timeout events.
  *
  * @param timer    Periodic timer
  * @param tmo_ev   Timeout event that was received from the periodic timer

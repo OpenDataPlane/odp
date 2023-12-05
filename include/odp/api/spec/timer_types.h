@@ -501,12 +501,20 @@ typedef struct odp_timer_periodic_start_t {
 	 */
 	uint64_t freq_multiplier;
 
-	/** Timeout event
+	/** Number of timeout events
 	 *
-	 *  This event is enqueued to the destination queue when the timer expires. The event type
-	 *  must be ODP_EVENT_TIMEOUT.
+	 *  Number of timeout events in the tmo_ev array. This value is set by calling
+	 *  odp_timer_periodic_events().
 	 */
-	odp_event_t tmo_ev;
+	uint32_t num_tmo_ev;
+
+	/** Array of timeout events
+	 *
+	 *  One of these events is enqueued to the destination queue when the timer expires. The
+	 *  event type of the events must be ODP_EVENT_TIMEOUT. The application may free these
+	 *  events after receiving a return value of 2 (last event) from odp_timer_periodic_ack().
+	 */
+	odp_event_t *tmo_ev;
 
 } odp_timer_periodic_start_t;
 
