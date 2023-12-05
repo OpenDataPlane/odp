@@ -1,5 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
- * Copyright (c) 2019-2022, Nokia
+ * Copyright (c) 2019-2023, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -170,7 +170,6 @@ typedef struct {
 typedef struct timer_pool_s {
 	/* Put frequently accessed fields in the first cache line */
 	uint64_t nsec_per_scan;
-	odp_time_t start_time;
 	odp_atomic_u64_t cur_tick;/* Current tick value */
 	uint64_t min_rel_tck;
 	uint64_t max_rel_tck;
@@ -784,22 +783,6 @@ static inline void timer_pool_scan(timer_pool_t *tp, uint64_t tick)
  * Inline timer processing
  *****************************************************************************/
 
-static inline uint64_t time_nsec(timer_pool_t *tp, odp_time_t now)
-{
-	odp_time_t start = tp->start_time;
-
-	return odp_time_diff_ns(now, start);
-}
-
-static inline uint64_t current_nsec(timer_pool_t *tp)
-{
-	odp_time_t now;
-
-	now = odp_time_global();
-
-	return time_nsec(tp, now);
-}
-
 static inline void timer_pool_scan_inline(int num, odp_time_t now)
 {
 	timer_pool_t *tp;
@@ -824,7 +807,7 @@ static inline void timer_pool_scan_inline(int num, odp_time_t now)
 				continue;
 		}
 
-		nsec     = time_nsec(tp, now);
+		nsec     = odp_time_to_ns(now);
 		new_tick = nsec / tp->nsec_per_scan;
 		old_tick = odp_atomic_load_u64(&tp->cur_tick);
 		diff = new_tick - old_tick;
@@ -917,7 +900,7 @@ static inline void timer_run_posix(timer_pool_t *tp)
 	for (i = 0; i < 32; i += ODP_CACHE_LINE_SIZE / sizeof(array[0]))
 		__builtin_prefetch(&array[i], 0, 0);
 
-	nsec = current_nsec(tp);
+	nsec = odp_time_global_ns();
 	timer_pool_scan(tp, nsec);
 }
 
@@ -1271,7 +1254,6 @@ static odp_timer_pool_t timer_pool_new(const char *name, const odp_timer_pool_pa
 	}
 	tp->tp_idx = tp_idx;
 	odp_spinlock_init(&tp->lock);
-	tp->start_time = odp_time_global();
 
 	odp_ticketlock_lock(&timer_global->lock);
 
@@ -1471,16 +1453,15 @@ void odp_timer_pool_destroy(odp_timer_pool_t tpid)
 
 uint64_t odp_timer_current_tick(odp_timer_pool_t tpid)
 {
-	timer_pool_t *tp = timer_pool_from_hdl(tpid);
+	(void)tpid;
 
-	return current_nsec(tp);
+	return odp_time_global_ns();
 }
 
 int odp_timer_sample_ticks(odp_timer_pool_t timer_pool[], uint64_t tick[], uint64_t clk_count[],
 			   int num)
 {
-	timer_pool_t *tp[MAX_TIMER_POOLS];
-	odp_time_t now;
+	uint64_t nsec;
 	int i;
 
 	if (num <= 0 || num > MAX_TIMER_POOLS) {
@@ -1493,14 +1474,12 @@ int odp_timer_sample_ticks(odp_timer_pool_t timer_pool[], uint64_t tick[], uint6
 			_ODP_ERR("Invalid timer pool\n");
 			return -1;
 		}
-
-		tp[i] = timer_pool_from_hdl(timer_pool[i]);
 	}
 
-	now = odp_time_global();
+	nsec = odp_time_global_ns();
 
 	for (i = 0; i < num; i++) {
-		tick[i] = time_nsec(tp[i], now);
+		tick[i] = nsec;
 
 		if (clk_count)
 			clk_count[i] = tick[i];
@@ -1568,7 +1547,7 @@ odp_event_t odp_timer_free(odp_timer_t hdl)
 int ODP_DEPRECATE(odp_timer_set_abs)(odp_timer_t hdl, uint64_t abs_tck, odp_event_t *tmo_ev)
 {
 	timer_pool_t *tp = handle_to_tp(hdl);
-	uint64_t cur_tick = current_nsec(tp);
+	uint64_t cur_tick = odp_time_global_ns();
 	uint32_t idx = handle_to_idx(hdl, tp);
 
 	if (odp_unlikely(abs_tck < cur_tick + tp->min_rel_tck))
@@ -1584,7 +1563,7 @@ int ODP_DEPRECATE(odp_timer_set_abs)(odp_timer_t hdl, uint64_t abs_tck, odp_even
 int ODP_DEPRECATE(odp_timer_set_rel)(odp_timer_t hdl, uint64_t rel_tck, odp_event_t *tmo_ev)
 {
 	timer_pool_t *tp = handle_to_tp(hdl);
-	uint64_t cur_tick = current_nsec(tp);
+	uint64_t cur_tick = odp_time_global_ns();
 	uint64_t abs_tck = cur_tick + rel_tck;
 	uint32_t idx = handle_to_idx(hdl, tp);
 
@@ -1602,7 +1581,7 @@ int odp_timer_start(odp_timer_t timer, const odp_timer_start_t *start_param)
 {
 	uint64_t abs_tick, rel_tick;
 	timer_pool_t *tp = handle_to_tp(timer);
-	uint64_t cur_tick = current_nsec(tp);
+	uint64_t cur_tick = odp_time_global_ns();
 	uint32_t idx = handle_to_idx(timer, tp);
 	odp_event_t tmo_ev = start_param->tmo_ev;
 
@@ -1645,7 +1624,7 @@ int odp_timer_restart(odp_timer_t timer, const odp_timer_start_t *start_param)
 {
 	uint64_t abs_tick, rel_tick;
 	timer_pool_t *tp = handle_to_tp(timer);
-	uint64_t cur_tick = current_nsec(tp);
+	uint64_t cur_tick = odp_time_global_ns();
 	uint32_t idx = handle_to_idx(timer, tp);
 
 	if (start_param->tick_type == ODP_TIMER_TICK_ABS) {
@@ -1676,7 +1655,7 @@ int odp_timer_periodic_start(odp_timer_t timer, const odp_timer_periodic_start_t
 {
 	uint64_t abs_tick, period_ns;
 	timer_pool_t *tp = handle_to_tp(timer);
-	uint64_t cur_tick = current_nsec(tp);
+	uint64_t cur_tick = odp_time_global_ns();
 	uint32_t idx = handle_to_idx(timer, tp);
 	odp_event_t tmo_ev = start_param->tmo_ev;
 	_odp_timer_t *tim = &tp->timers[idx];
