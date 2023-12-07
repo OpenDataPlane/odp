@@ -37,6 +37,7 @@
 #define THREE_POINT_THREE_MSEC (10 * ODP_TIME_MSEC_IN_NS / 3)
 #define USER_PTR ((void *)0xdead)
 #define TICK_INVALID (~(uint64_t)0)
+#define YEAR_IN_NS             (365 * 24 * ODP_TIME_HOUR_IN_NS)
 
 /* Test case options */
 #define PRIV        1
@@ -1217,7 +1218,7 @@ static void timer_pool_current_tick_run(odp_timer_clk_src_t clk_src)
 	odp_timer_capability_t capa;
 	odp_timer_pool_param_t tp_param;
 	odp_timer_pool_t tp;
-	uint64_t t1, t2, ticks, min, max;
+	uint64_t t1, t2, ticks, min, max, limit;
 	uint64_t nsec = 100 * ODP_TIME_MSEC_IN_NS;
 
 	memset(&capa, 0, sizeof(capa));
@@ -1251,6 +1252,13 @@ static void timer_pool_current_tick_run(odp_timer_clk_src_t clk_src)
 	CU_ASSERT(t2 >= t1);
 	CU_ASSERT(ticks >= min);
 	CU_ASSERT(ticks <= max);
+
+	/* Timer tick (or tick in nsec) should not wrap in at least 10 years from ODP start.
+	 * Ignoring delay from start up and other test cases, which should be few seconds. */
+	limit = 10 * YEAR_IN_NS;
+	nsec = odp_timer_tick_to_ns(tp, t1);
+	CU_ASSERT(UINT64_MAX - nsec > limit);
+	CU_ASSERT(UINT64_MAX - t1 > odp_timer_ns_to_tick(tp, limit));
 
 	printf("\nClock source %i\n", clk_src);
 	printf("  Time nsec:      %" PRIu64 "\n", nsec);
