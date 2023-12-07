@@ -1,4 +1,4 @@
-/* Copyright (c) 2019-2022, Nokia
+/* Copyright (c) 2019-2023, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -45,7 +45,8 @@ typedef struct test_stat_t {
 	uint64_t rounds;
 	uint64_t events;
 	uint64_t nsec;
-	uint64_t cycles;
+	uint64_t cycles_0;
+	uint64_t cycles_1;
 
 	uint64_t cancels;
 	uint64_t sets;
@@ -59,7 +60,8 @@ typedef struct test_stat_sum_t {
 	uint64_t rounds;
 	uint64_t events;
 	uint64_t nsec;
-	uint64_t cycles;
+	uint64_t cycles_0;
+	uint64_t cycles_1;
 
 	uint64_t cancels;
 	uint64_t sets;
@@ -133,7 +135,8 @@ static void print_usage(void)
 	       "  -m, --mode             Select test mode. Default: 0\n"
 	       "                           0: Measure odp_schedule() overhead when using timers\n"
 	       "                           1: Measure timer set + cancel performance\n"
-	       "                           2: Measure odp_schedule() overhead while continuously restarting expiring timers\n"
+	       "                           2: Measure schedule and timer start overhead while continuously\n"
+	       "                              restarting expiring timers\n"
 	       "  -R, --rounds           Number of test rounds in timer set + cancel test.\n"
 	       "                           Default: 100000\n"
 	       "  -h, --help             This help\n"
@@ -637,7 +640,7 @@ static int sched_mode_worker(void *arg)
 
 	/* Update stats*/
 	global->stat[thr].events = events;
-	global->stat[thr].cycles = cycles;
+	global->stat[thr].cycles_0 = cycles;
 	global->stat[thr].rounds = rounds;
 	global->stat[thr].nsec   = nsec;
 	global->stat[thr].before = before;
@@ -818,7 +821,7 @@ static int set_cancel_mode_worker(void *arg)
 	global->stat[thr].events = num_tmo;
 	global->stat[thr].rounds = test_options->test_rounds - test_rounds;
 	global->stat[thr].nsec   = nsec;
-	global->stat[thr].cycles = diff;
+	global->stat[thr].cycles_0 = diff;
 
 	global->stat[thr].cancels = num_cancel;
 	global->stat[thr].sets    = num_set;
@@ -832,7 +835,7 @@ static int set_expire_mode_worker(void *arg)
 	uint32_t i, j, exit_test;
 	odp_event_t ev;
 	odp_timeout_t tmo;
-	uint64_t c2, diff, nsec, time_ns, target_ns, period_tick;
+	uint64_t c2, c3, c4, diff, nsec, time_ns, target_ns, period_tick;
 	odp_timer_t timer;
 	odp_timer_start_t start_param;
 	odp_time_t t1, t2;
@@ -842,7 +845,8 @@ static int set_expire_mode_worker(void *arg)
 	test_global_t *global = thread_arg->global;
 	test_options_t *opt = &global->test_options;
 	uint32_t num_tp = opt->num_tp;
-	uint64_t cycles = 0;
+	uint64_t sched_cycles = 0;
+	uint64_t start_cycles = 0;
 	uint64_t events = 0;
 	uint64_t rounds = 0;
 	uint64_t c1 = 0;
@@ -874,7 +878,7 @@ static int set_expire_mode_worker(void *arg)
 
 		c2      = odp_cpu_cycles();
 		diff    = odp_cpu_cycles_diff(c2, c1);
-		cycles += diff;
+		sched_cycles += diff;
 
 		if (ev == ODP_EVENT_INVALID && exit_test >= num_tp)
 			break;
@@ -914,7 +918,13 @@ static int set_expire_mode_worker(void *arg)
 		ctx->target_tick += period_tick;
 		start_param.tick = ctx->target_tick;
 		start_param.tmo_ev = ev;
+		c3 = odp_cpu_cycles();
+
 		status = odp_timer_start(timer, &start_param);
+
+		c4 = odp_cpu_cycles();
+		diff = odp_cpu_cycles_diff(c4, c3);
+		start_cycles += diff;
 
 		if (status != ODP_TIMER_SUCCESS) {
 			ODPH_ERR("Timer set (tmo) failed (ret %i)\n", status);
@@ -939,7 +949,8 @@ static int set_expire_mode_worker(void *arg)
 
 	/* Update stats*/
 	global->stat[thr].events = events;
-	global->stat[thr].cycles = cycles;
+	global->stat[thr].cycles_0 = sched_cycles;
+	global->stat[thr].cycles_1 = start_cycles;
 	global->stat[thr].rounds = rounds;
 	global->stat[thr].nsec   = nsec;
 	global->stat[thr].before = before;
@@ -1001,7 +1012,8 @@ static void sum_stat(test_global_t *global)
 		sum->num++;
 		sum->events  += global->stat[i].events;
 		sum->rounds  += global->stat[i].rounds;
-		sum->cycles  += global->stat[i].cycles;
+		sum->cycles_0 += global->stat[i].cycles_0;
+		sum->cycles_1 += global->stat[i].cycles_1;
 		sum->nsec    += global->stat[i].nsec;
 		sum->cancels += global->stat[i].cancels;
 		sum->sets    += global->stat[i].sets;
@@ -1041,7 +1053,7 @@ static void print_stat_sched_mode(test_global_t *global)
 			if ((num % 10) == 0)
 				printf("\n   ");
 
-			printf("%6.1f ", (double)global->stat[i].cycles / global->stat[i].rounds);
+			printf("%6.1f ", (double)global->stat[i].cycles_0 / global->stat[i].rounds);
 			num++;
 		}
 	}
@@ -1087,7 +1099,7 @@ static void print_stat_set_cancel_mode(test_global_t *global)
 			if ((num % 10) == 0)
 				printf("\n   ");
 
-			printf("%6.1f ", (double)global->stat[i].cycles / global->stat[i].sets);
+			printf("%6.1f ", (double)global->stat[i].cycles_0 / global->stat[i].sets);
 			num++;
 		}
 	}
@@ -1104,6 +1116,72 @@ static void print_stat_set_cancel_mode(test_global_t *global)
 	printf("  timer sets:          %" PRIu64 "\n", sum->sets);
 	printf("  ave time:            %.2f sec\n", sum->time_ave);
 	printf("  cancel+set per cpu:  %.2fM per sec\n", (set_ave / sum->time_ave) / 1000000.0);
+	printf("\n");
+}
+
+static void print_stat_expire_mode(test_global_t *global)
+{
+	int i;
+	test_stat_sum_t *sum = &global->stat_sum;
+	double round_ave = 0.0;
+	double before_ave = 0.0;
+	double after_ave = 0.0;
+	int num = 0;
+
+	printf("\n");
+	printf("RESULTS\n");
+	printf("odp_schedule() cycles per thread:\n");
+	printf("-------------------------------------------------\n");
+	printf("        1      2      3      4      5      6      7      8      9     10");
+
+	for (i = 0; i < ODP_THREAD_COUNT_MAX; i++) {
+		if (global->stat[i].rounds) {
+			if ((num % 10) == 0)
+				printf("\n   ");
+
+			printf("%6.1f ", (double)global->stat[i].cycles_0 / global->stat[i].rounds);
+			num++;
+		}
+	}
+
+	printf("\n\n");
+
+	num = 0;
+	printf("odp_timer_start() cycles per thread:\n");
+	printf("-------------------------------------------------\n");
+	printf("        1      2      3      4      5      6      7      8      9     10");
+
+	for (i = 0; i < ODP_THREAD_COUNT_MAX; i++) {
+		if (global->stat[i].rounds) {
+			if ((num % 10) == 0)
+				printf("\n   ");
+
+			printf("%6.1f ", (double)global->stat[i].cycles_1 / global->stat[i].events);
+			num++;
+		}
+	}
+
+	printf("\n\n");
+
+	if (sum->num)
+		round_ave = (double)sum->rounds / sum->num;
+
+	if (sum->before.num)
+		before_ave = (double)sum->before.sum_ns / sum->before.num;
+
+	if (sum->after.num)
+		after_ave = (double)sum->after.sum_ns / sum->after.num;
+
+	printf("TOTAL (%i workers)\n", sum->num);
+	printf("  events:             %" PRIu64 "\n", sum->events);
+	printf("  ave time:           %.2f sec\n", sum->time_ave);
+	printf("  ave rounds per sec: %.2fM\n", (round_ave / sum->time_ave) / 1000000.0);
+	printf("  num before:         %" PRIu64 "\n", sum->before.num);
+	printf("  ave before:         %.1f nsec\n", before_ave);
+	printf("  max before:         %" PRIu64 " nsec\n", sum->before.max_ns);
+	printf("  num after:          %" PRIu64 "\n", sum->after.num);
+	printf("  ave after:          %.1f nsec\n", after_ave);
+	printf("  max after:          %" PRIu64 " nsec\n", sum->after.max_ns);
 	printf("\n");
 }
 
@@ -1240,10 +1318,12 @@ int main(int argc, char **argv)
 
 	sum_stat(global);
 
-	if (mode == MODE_SCHED_OVERH || mode == MODE_START_EXPIRE)
+	if (mode == MODE_SCHED_OVERH)
 		print_stat_sched_mode(global);
-	else
+	else if (mode == MODE_START_CANCEL)
 		print_stat_set_cancel_mode(global);
+	else
+		print_stat_expire_mode(global);
 
 	destroy_timer_pool(global);
 
