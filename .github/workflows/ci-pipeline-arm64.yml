@@ -11,25 +11,47 @@ env:
   OS: ubuntu_20.04
 
 jobs:
-  Build:
+  Build_gcc:
     if: ${{ github.repository == 'OpenDataPlane/odp' }}
     runs-on: [self-hosted, ARM64]
     strategy:
       fail-fast: false
       matrix:
-        cc: [gcc, clang]
-        conf: ['', 'CFLAGS=-O3', 'CFLAGS=-O1', 'CFLAGS=-O0 --enable-debug=full', 'CFLAGS=-Os', 'CFLAGS=-pedantic',
-               '--enable-lto', '--enable-lto --enable-abi-compat', '--enable-pcapng-support']
-        exclude:
-          - cc: clang
-            conf: '--enable-lto'
-          - cc: clang
-            conf: '--enable-lto --enable-abi-compat'
+        conf: ['',
+               'CFLAGS=-O3',
+               'CFLAGS=-O1',
+               'CFLAGS=-O0 --enable-debug=full',
+               'CFLAGS=-Os',
+               'CFLAGS=-pedantic',
+               '--enable-lto',
+               '--enable-lto --enable-abi-compat',
+               '--enable-pcapng-support']
     steps:
       - uses: OpenDataPlane/action-clean-up@main
       - uses: actions/checkout@v3
-      - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}"
+      - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC=gcc
                -e CONF="${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-native /odp/scripts/ci/build_${ARCH}.sh
+      - if: ${{ failure() }}
+        uses: ./.github/actions/build-failure-log
+
+  Build_clang:
+    if: ${{ github.repository == 'OpenDataPlane/odp' }}
+    runs-on: [self-hosted, ARM64]
+    strategy:
+      fail-fast: false
+      matrix:
+        conf: ['',
+               'CFLAGS=-O3',
+               'CFLAGS=-O1',
+               'CFLAGS=-O0 --enable-debug=full',
+               'CFLAGS=-Os',
+               'CFLAGS=-pedantic',
+               '--enable-pcapng-support']
+    steps:
+      - uses: OpenDataPlane/action-clean-up@main
+      - uses: actions/checkout@v3
+      - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC=clang
+                -e CONF="${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-native /odp/scripts/ci/build_${ARCH}.sh
       - if: ${{ failure() }}
         uses: ./.github/actions/build-failure-log
 
