@@ -57,23 +57,43 @@ jobs:
           make doxygen-doc 2>&1 | tee ./doxygen.log
           ! fgrep -rq warning ./doxygen.log
 
-  Build:
+  Build_gcc:
     runs-on: ubuntu-20.04
     strategy:
       fail-fast: false
       matrix:
-        cc: [gcc, clang]
-        conf: ['', 'CFLAGS=-O3', 'CFLAGS=-O1', 'CFLAGS=-O0 --enable-debug=full', 'CFLAGS=-Os', 'CFLAGS=-pedantic',
-               '--enable-lto', '--enable-lto --enable-abi-compat', '--enable-pcapng-support']
-        exclude:
-          - cc: clang
-            conf: '--enable-lto'
-          - cc: clang
-            conf: '--enable-lto --enable-abi-compat'
+        conf: ['',
+               'CFLAGS=-O3',
+               'CFLAGS=-O1',
+               'CFLAGS=-O0 --enable-debug=full',
+               'CFLAGS=-Os',
+               'CFLAGS=-pedantic',
+               '--enable-lto',
+               '--enable-lto --enable-abi-compat',
+               '--enable-pcapng-support']
     steps:
       - uses: actions/checkout@v3
-      - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}"
+      - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC=gcc
                -e CONF="${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/build_${ARCH}.sh
+      - if: ${{ failure() }}
+        uses: ./.github/actions/build-failure-log
+
+  Build_clang:
+    runs-on: ubuntu-20.04
+    strategy:
+      fail-fast: false
+      matrix:
+        conf: ['',
+               'CFLAGS=-O3',
+               'CFLAGS=-O1',
+               'CFLAGS=-O0 --enable-debug=full',
+               'CFLAGS=-Os',
+               'CFLAGS=-pedantic',
+               '--enable-pcapng-support']
+    steps:
+      - uses: actions/checkout@v3
+      - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC=clang
+                -e CONF="${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/build_${ARCH}.sh
       - if: ${{ failure() }}
         uses: ./.github/actions/build-failure-log
 
