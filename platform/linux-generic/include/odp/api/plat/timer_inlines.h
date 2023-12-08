@@ -10,6 +10,8 @@
 #include <odp/api/event.h>
 #include <odp/api/timer_types.h>
 
+#include <odp/api/abi/time_inlines.h>
+
 #include <odp/api/plat/debug_inlines.h>
 #include <odp/api/plat/timer_inline_types.h>
 
@@ -24,6 +26,7 @@
 	#define odp_timeout_tick __odp_timeout_tick
 	#define odp_timeout_user_ptr __odp_timeout_user_ptr
 	#define odp_timeout_user_area __odp_timeout_user_area
+	#define odp_timer_current_tick __odp_timer_current_tick
 	#define odp_timer_tick_to_ns __odp_timer_tick_to_ns
 	#define odp_timer_ns_to_tick __odp_timer_ns_to_tick
 	#define odp_timeout_from_event __odp_timeout_from_event
@@ -51,6 +54,14 @@ _ODP_INLINE void *odp_timeout_user_ptr(odp_timeout_t tmo)
 _ODP_INLINE void *odp_timeout_user_area(odp_timeout_t tmo)
 {
 	return _odp_timeout_hdr_field(tmo, void *, uarea_addr);
+}
+
+_ODP_INLINE uint64_t odp_timer_current_tick(odp_timer_pool_t tpid)
+{
+	(void)tpid;
+
+	/* This is equal to odp_time_global_ns(). Cannot call inlined API function from here. */
+	return _odp_time_to_ns(_odp_time_cur());
 }
 
 _ODP_INLINE uint64_t odp_timer_tick_to_ns(odp_timer_pool_t tp, uint64_t ticks)

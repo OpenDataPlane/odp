@@ -1451,13 +1451,6 @@ void odp_timer_pool_destroy(odp_timer_pool_t tpid)
 	odp_timer_pool_del(timer_pool_from_hdl(tpid));
 }
 
-uint64_t odp_timer_current_tick(odp_timer_pool_t tpid)
-{
-	(void)tpid;
-
-	return odp_time_global_ns();
-}
-
 int odp_timer_sample_ticks(odp_timer_pool_t timer_pool[], uint64_t tick[], uint64_t clk_count[],
 			   int num)
 {
