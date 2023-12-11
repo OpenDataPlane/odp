@@ -61,7 +61,7 @@ extern "C" {
 /**
  * Branch unlikely taken
  */
-#define odp_unlikely(x) __builtin_expect((x), 0)
+#define odp_unlikely(x) __builtin_expect(!!(x), 0)
 
 /*
  * __builtin_prefetch (const void *addr, rw, locality)
