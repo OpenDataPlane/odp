@@ -141,7 +141,7 @@ jobs:
       matrix:
         cc: [gcc, clang]
         conf: ['', '--enable-abi-compat', 'CFLAGS=-march=armv8.2-a', 'CFLAGS=-march=armv8-a+lse',
-               '--with-crypto=armv8crypto']
+               '--with-crypto=armv8crypto', '--enable-wfe-locks']
     steps:
       - uses: actions/checkout@v3
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}"
