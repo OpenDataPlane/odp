@@ -89,7 +89,8 @@ jobs:
                'CFLAGS=-O0 --enable-debug=full',
                'CFLAGS=-Os',
                'CFLAGS=-pedantic',
-               '--enable-pcapng-support']
+               '--enable-pcapng-support',
+               '--without-openssl --without-pcap']
     steps:
       - uses: actions/checkout@v3
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC=clang
@@ -330,8 +331,7 @@ jobs:
                '--enable-deprecated --enable-helper-deprecated --enable-debug=full',
                '--enable-dpdk-zero-copy --disable-static-applications',
                '--disable-host-optimization --enable-event-validation=warn',
-               '--disable-host-optimization --enable-abi-compat',
-               '--without-openssl --without-pcap']
+               '--disable-host-optimization --enable-abi-compat']
     steps:
       - uses: actions/checkout@v3
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC=clang -e ARCH="${ARCH}"

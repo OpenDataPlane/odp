@@ -46,7 +46,10 @@ jobs:
                'CFLAGS=-O0 --enable-debug=full',
                'CFLAGS=-Os',
                'CFLAGS=-pedantic',
-               '--enable-pcapng-support']
+               '--enable-pcapng-support',
+               '--without-openssl --without-pcap',
+               '--with-crypto=armv8crypto',
+               '--with-crypto=ipsecmb']
     steps:
       - uses: OpenDataPlane/action-clean-up@main
       - uses: actions/checkout@v3
@@ -188,10 +191,7 @@ jobs:
                '--enable-deprecated --enable-helper-deprecated --enable-debug=full',
                '--enable-dpdk-zero-copy --disable-static-applications',
                '--disable-host-optimization --enable-event-validation=warn',
-               '--disable-host-optimization --enable-abi-compat',
-               '--without-openssl --without-pcap',
-               '--with-crypto=armv8crypto',
-               '--with-crypto=ipsecmb']
+               '--disable-host-optimization --enable-abi-compat']
     steps:
       - uses: OpenDataPlane/action-clean-up@main
       - uses: actions/checkout@v3
