@@ -49,7 +49,8 @@ jobs:
                '--enable-pcapng-support',
                '--without-openssl --without-pcap',
                '--with-crypto=armv8crypto',
-               '--with-crypto=ipsecmb']
+               '--with-crypto=ipsecmb',
+               '--enable-wfe-locks']
     steps:
       - uses: OpenDataPlane/action-clean-up@main
       - uses: actions/checkout@v3
@@ -169,7 +170,8 @@ jobs:
                '--disable-host-optimization --enable-abi-compat',
                '--without-openssl --without-pcap',
                '--with-crypto=armv8crypto',
-               '--with-crypto=ipsecmb']
+               '--with-crypto=ipsecmb',
+               '--enable-wfe-locks']
     steps:
       - uses: OpenDataPlane/action-clean-up@main
       - uses: actions/checkout@v3
