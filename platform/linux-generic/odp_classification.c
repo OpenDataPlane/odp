@@ -161,7 +161,7 @@ int odp_cls_capability(odp_cls_capability_t *capability)
 
 	capability->max_pmr = CLS_PMR_MAX_ENTRY;
 	capability->max_pmr_per_cos = CLS_PMR_PER_COS_MAX;
-	capability->max_pmr_terms = CLS_PMRTERM_MAX;
+	capability->max_terms_per_pmr = CLS_PMRTERM_MAX;
 	capability->available_pmr_terms = count;
 	capability->max_cos = CLS_COS_MAX_ENTRY;
 	capability->max_cos_stats = capability->max_cos;
