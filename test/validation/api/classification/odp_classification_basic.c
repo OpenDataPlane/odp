@@ -630,7 +630,7 @@ static void cls_pmr_composite_create(void)
 	odp_pool_t pkt_pool;
 	odp_cls_cos_param_t cls_param;
 	odp_pktio_t pktio;
-	uint32_t max_pmr_terms;
+	uint32_t max_terms_per_pmr;
 	uint16_t val = 1024;
 	uint16_t mask = 0xffff;
 
@@ -658,10 +658,10 @@ static void cls_pmr_composite_create(void)
 	cos = odp_cls_cos_create("pmr_match", &cls_param);
 	CU_ASSERT(cos != ODP_COS_INVALID);
 
-	max_pmr_terms = capa.max_pmr_terms;
-	odp_pmr_param_t pmr_terms[max_pmr_terms];
+	max_terms_per_pmr = capa.max_terms_per_pmr;
+	odp_pmr_param_t pmr_terms[max_terms_per_pmr];
 
-	for (uint32_t i = 0; i < max_pmr_terms; i++) {
+	for (uint32_t i = 0; i < max_terms_per_pmr; i++) {
 		odp_cls_pmr_param_init(&pmr_terms[i]);
 		pmr_terms[i].term = ODP_PMR_TCP_DPORT;
 		pmr_terms[i].match.value = &val;
@@ -670,7 +670,7 @@ static void cls_pmr_composite_create(void)
 		pmr_terms[i].val_sz = sizeof(val);
 	}
 
-	pmr_composite = odp_cls_pmr_create(pmr_terms, max_pmr_terms, default_cos, cos);
+	pmr_composite = odp_cls_pmr_create(pmr_terms, max_terms_per_pmr, default_cos, cos);
 	CU_ASSERT(odp_pmr_to_u64(pmr_composite) !=
 		  odp_pmr_to_u64(ODP_PMR_INVALID));
 

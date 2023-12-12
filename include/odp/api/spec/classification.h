@@ -544,7 +544,7 @@ typedef struct odp_cls_capability_t {
 	uint32_t max_pmr_per_cos;
 
 	/** Maximum number of terms per composite PMR */
-	uint32_t max_pmr_terms;
+	uint32_t max_terms_per_pmr;
 
 	/** Number of PMR terms available for use now */
 	uint32_t available_pmr_terms;
@@ -919,8 +919,8 @@ void odp_cls_pmr_create_opt_init(odp_pmr_create_opt_t *opt);
  * considered to match only if a packet matches with all its terms. It is implementation specific
  * which term combinations are supported as composite PMRs. When creating a composite PMR,
  * application should check the return value and perform appropriate fallback actions if the create
- * call returns failure. See odp_cls_capability_t::max_pmr and odp_cls_capability_t::max_pmr_terms
- * for related capabilities.
+ * call returns failure. See odp_cls_capability_t::max_pmr and
+ * odp_cls_capability_t::max_terms_per_pmr for related capabilities.
  *
  * Use odp_cls_pmr_param_init() to initialize parameters into their default values.
  *
