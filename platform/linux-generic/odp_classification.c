@@ -151,18 +151,10 @@ void odp_cls_pmr_param_init(odp_pmr_param_t *param)
 
 int odp_cls_capability(odp_cls_capability_t *capability)
 {
-	uint32_t count = 0;
-
 	memset(capability, 0, sizeof(odp_cls_capability_t));
-
-	for (int i = 0; i < CLS_PMR_MAX_ENTRY; i++)
-		if (!pmr_tbl->pmr[i].valid)
-			count++;
-
 	capability->max_pmr = CLS_PMR_MAX_ENTRY;
 	capability->max_pmr_per_cos = CLS_PMR_PER_COS_MAX;
 	capability->max_terms_per_pmr = CLS_PMRTERM_MAX;
-	capability->available_pmr_terms = count;
 	capability->max_cos = CLS_COS_MAX_ENTRY;
 	capability->max_cos_stats = capability->max_cos;
 	capability->pmr_range_supported = false;

@@ -546,9 +546,6 @@ typedef struct odp_cls_capability_t {
 	/** Maximum number of terms per composite PMR */
 	uint32_t max_terms_per_pmr;
 
-	/** Number of PMR terms available for use now */
-	uint32_t available_pmr_terms;
-
 	/** Maximum number of CoS supported */
 	uint32_t max_cos;
 
