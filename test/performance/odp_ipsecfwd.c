@@ -33,6 +33,7 @@
 #define PKT_CNT 32768U
 #define MAX_BURST 32U
 #define ORDERED 0U
+#define IP_ADDR_LEN 32U
 
 #define ALG_ENTRY(_alg_name, _type) \
 	{ \
@@ -77,10 +78,16 @@ typedef struct pktio_s {
 } pktio_t;
 
 typedef struct {
+	uint32_t prefix;
+	uint32_t mask;
 	odph_ethaddr_t dst_mac;
 	const pktio_t *pktio;
-	odph_iplookup_prefix_t prefix;
 } fwd_entry_t;
+
+typedef struct {
+	fwd_entry_t entries[MAX_FWDS];
+	uint32_t num;
+} lookup_table_t;
 
 typedef struct {
 	uint64_t ipsec_in_pkts;
@@ -113,7 +120,7 @@ typedef struct {
 } sa_config_t;
 
 typedef uint32_t (*rx_fn_t)(thread_config_t *config, odp_event_t evs[], int num);
-typedef void (*ipsec_fn_t)(odp_packet_t pkts[], int num, odph_table_t fwd_tbl, stats_t *stats);
+typedef void (*ipsec_fn_t)(odp_packet_t pkts[], int num, lookup_table_t *fwd_tbl, stats_t *stats);
 typedef void (*drain_fn_t)(prog_config_t *config);
 
 typedef struct {
@@ -127,9 +134,9 @@ typedef struct prog_config_s {
 	odph_thread_t thread_tbl[MAX_WORKERS];
 	thread_config_t thread_config[MAX_WORKERS];
 	odp_ipsec_sa_t sas[MAX_SAS];
-	fwd_entry_t fwd_entries[MAX_FWDS];
 	odp_queue_t sa_qs[MAX_SA_QUEUES];
 	pktio_t pktios[MAX_IFS];
+	lookup_table_t fwd_tbl;
 	odp_atomic_u32_t is_running;
 	sa_config_t default_cfg;
 	ops_t ops;
@@ -137,7 +144,6 @@ typedef struct prog_config_s {
 	odp_instance_t odp_instance;
 	odp_queue_t compl_q;
 	odp_pool_t pktio_pool;
-	odph_table_t fwd_tbl;
 	odp_barrier_t init_barrier;
 	odp_barrier_t term_barrier;
 	uint32_t num_input_qs;
@@ -147,7 +153,6 @@ typedef struct prog_config_s {
 	uint32_t pkt_len;
 	uint32_t num_ifs;
 	uint32_t num_sas;
-	uint32_t num_fwds;
 	int num_thrs;
 	odp_bool_t is_dir_rx;
 	odp_bool_t is_hashed_tx;
@@ -367,6 +372,11 @@ static void print_usage(void)
 	       "              prefix: \"192.168.1.0/24\"\n"
 	       "              if: \"ens9f1\"\n"
 	       "              dst_mac: \"00:00:05:00:07:00\"\n"
+	       "          },\n"
+	       "          {\n"
+	       "              prefix: \"192.1.0.0/16\"\n"
+	       "              if: \"ens9f0\"\n"
+	       "              dst_mac: \"00:00:05:00:08:00\"\n"
 	       "          }\n"
 	       "      );\n"
 	       "\n"
@@ -389,7 +399,8 @@ static void print_usage(void)
 	       "                      in 'fwd'-named list. With forwarding entries, every\n"
 	       "                      parameter is always required and interfaces present in\n"
 	       "                      forwarding entries should be one of the interfaces passed\n"
-	       "                      with '--interfaces' option. See example above for\n"
+	       "                      with '--interfaces' option. The entries are looked up\n"
+	       "                      in the order they are in the list. See example above for\n"
 	       "                      potential SA and forwarding configuration.\n"
 	       "\n"
 	       "                      Supported cipher and authentication algorithms for SAs:\n",
@@ -501,21 +512,36 @@ static inline int process_ipsec_out_enq(odp_packet_t pkts[], const odp_ipsec_sa_
 	return sent;
 }
 
-static inline const pktio_t *lookup_and_apply(odp_packet_t pkt, odph_table_t fwd_tbl,
+static inline const fwd_entry_t *get_fwd_entry(lookup_table_t *table, uint32_t ip)
+{
+	fwd_entry_t *entry;
+
+	for (uint32_t i = 0U; i < table->num; ++i) {
+		entry = &table->entries[i];
+
+		if ((ip & entry->mask) == entry->prefix)
+			return entry;
+	}
+
+	return NULL;
+}
+
+static inline const pktio_t *lookup_and_apply(odp_packet_t pkt, lookup_table_t *fwd_tbl,
 					      uint8_t *q_idx)
 {
 	const uint32_t l3_off = odp_packet_l3_offset(pkt);
 	odph_ipv4hdr_t ipv4;
 	uint32_t dst_ip, src_ip;
-	fwd_entry_t *fwd;
+	const fwd_entry_t *fwd;
 	odph_ethhdr_t eth;
 
 	if (odp_packet_copy_to_mem(pkt, l3_off, ODPH_IPV4HDR_LEN, &ipv4) < 0)
 		return NULL;
 
 	dst_ip = odp_be_to_cpu_32(ipv4.dst_addr);
+	fwd = get_fwd_entry(fwd_tbl, dst_ip);
 
-	if (odph_iplookup_table_get_value(fwd_tbl, &dst_ip, &fwd, 0U) < 0 || fwd == NULL)
+	if (fwd == NULL)
 		return NULL;
 
 	if (l3_off != ODPH_ETHHDR_LEN) {
@@ -543,7 +569,7 @@ static inline const pktio_t *lookup_and_apply(odp_packet_t pkt, odph_table_t fwd
 	return fwd->pktio;
 }
 
-static inline uint32_t forward_packets(odp_packet_t pkts[], int num, odph_table_t fwd_tbl)
+static inline uint32_t forward_packets(odp_packet_t pkts[], int num, lookup_table_t *fwd_tbl)
 {
 	odp_packet_t pkt;
 	odp_bool_t is_hashed_tx = ifs.is_hashed_tx;
@@ -599,7 +625,7 @@ static inline uint32_t forward_packets(odp_packet_t pkts[], int num, odph_table_
 	return num_procd;
 }
 
-static inline void process_packets_out_enq(odp_packet_t pkts[], int num, odph_table_t fwd_tbl,
+static inline void process_packets_out_enq(odp_packet_t pkts[], int num, lookup_table_t *fwd_tbl,
 					   stats_t *stats)
 {
 	odp_packet_t pkt, pkts_ips[MAX_BURST], pkts_fwd[MAX_BURST];
@@ -635,7 +661,7 @@ static inline void process_packets_out_enq(odp_packet_t pkts[], int num, odph_ta
 	}
 }
 
-static void process_packets_in_enq(odp_packet_t pkts[], int num, odph_table_t fwd_tbl,
+static void process_packets_in_enq(odp_packet_t pkts[], int num, lookup_table_t *fwd_tbl,
 				   stats_t *stats)
 {
 	odp_packet_t pkt, pkts_ips[MAX_BURST], pkts_out[MAX_BURST];
@@ -680,7 +706,8 @@ static inline odp_bool_t is_ipsec_in(odp_packet_t pkt)
 	return odp_packet_user_ptr(pkt) == NULL;
 }
 
-static void complete_ipsec_ops(odp_packet_t pkts[], int num, odph_table_t fwd_tbl, stats_t *stats)
+static void complete_ipsec_ops(odp_packet_t pkts[], int num, lookup_table_t *fwd_tbl,
+			       stats_t *stats)
 {
 	odp_packet_t pkt, pkts_out[MAX_BURST], pkts_fwd[MAX_BURST];
 	odp_bool_t is_in;
@@ -784,7 +811,7 @@ static inline int process_ipsec_out(odp_packet_t pkts[], const odp_ipsec_sa_t sa
 	return sent;
 }
 
-static inline void process_packets_out(odp_packet_t pkts[], int num, odph_table_t fwd_tbl,
+static inline void process_packets_out(odp_packet_t pkts[], int num, lookup_table_t *fwd_tbl,
 				       stats_t *stats)
 {
 	odp_packet_t pkt, pkts_ips[MAX_BURST], pkts_fwd[MAX_BURST], pkts_ips_out[MAX_BURST];
@@ -840,7 +867,8 @@ static inline void process_packets_out(odp_packet_t pkts[], int num, odph_table_
 	}
 }
 
-static void process_packets_in(odp_packet_t pkts[], int num, odph_table_t fwd_tbl, stats_t *stats)
+static void process_packets_in(odp_packet_t pkts[], int num, lookup_table_t *fwd_tbl,
+			       stats_t *stats)
 {
 	odp_packet_t pkt, pkts_ips[MAX_BURST], pkts_out[MAX_BURST], pkts_ips_out[MAX_BURST];
 	odp_ipsec_sa_t *sa, sas[MAX_BURST];
@@ -1297,9 +1325,8 @@ static void create_fwd_table_entry(config_setting_t *cfg, prog_config_t *config)
 	odph_ethaddr_t dst_mac;
 	const pktio_t *pktio = NULL;
 	fwd_entry_t *entry;
-	odph_iplookup_prefix_t prefix;
 
-	if (config->num_fwds == MAX_FWDS) {
+	if (config->fwd_tbl.num == MAX_FWDS) {
 		ODPH_ERR("Maximum number of forwarding entries parsed (%u), ignoring rest\n",
 			 MAX_FWDS);
 		return;
@@ -1313,6 +1340,11 @@ static void create_fwd_table_entry(config_setting_t *cfg, prog_config_t *config)
 
 		if (odph_ipv4_addr_parse(&dst_ip, dst_ip_str) < 0) {
 			ODPH_ERR("Syntax error in IP address for forwarding entry\n");
+			return;
+		}
+
+		if (mask > IP_ADDR_LEN) {
+			ODPH_ERR("Invalid subnet mask for forwarding entry: %u\n", mask);
 			return;
 		}
 	} else {
@@ -1339,13 +1371,13 @@ static void create_fwd_table_entry(config_setting_t *cfg, prog_config_t *config)
 		return;
 	}
 
-	entry = &config->fwd_entries[config->num_fwds];
+	mask = mask > 0U ? 0xFFFFFFFF << (IP_ADDR_LEN - mask) : 0U;
+	entry = &config->fwd_tbl.entries[config->fwd_tbl.num];
+	entry->prefix = dst_ip & mask;
+	entry->mask = mask;
 	entry->dst_mac = dst_mac;
 	entry->pktio = pktio;
-	prefix.ip = dst_ip;
-	prefix.cidr = mask;
-	entry->prefix = prefix;
-	++config->num_fwds;
+	++config->fwd_tbl.num;
 }
 
 static void parse_fwd_table(config_t *cfg, prog_config_t *config)
@@ -1385,9 +1417,9 @@ static parse_result_t check_options(prog_config_t *config)
 		return PRS_NOK;
 	}
 
-	if (config->num_fwds == 0U) {
+	if (config->fwd_tbl.num == 0U) {
 		ODPH_ERR("Invalid number of forwarding entries: %u (min: 1, max: %u)\n",
-			 config->num_fwds, MAX_FWDS);
+			 config->fwd_tbl.num, MAX_FWDS);
 		return PRS_NOK;
 	}
 
@@ -1710,30 +1742,6 @@ static odp_bool_t setup_pktios(prog_config_t *config)
 	return true;
 }
 
-static odp_bool_t setup_fwd_table(prog_config_t *config)
-{
-	fwd_entry_t *fwd_e;
-
-	config->fwd_tbl = odph_iplookup_table_create(SHORT_PROG_NAME "_fwd_tbl", 0U, 0U,
-						     sizeof(fwd_entry_t *));
-
-	if (config->fwd_tbl == NULL) {
-		ODPH_ERR("Error creating forwarding table\n");
-		return false;
-	}
-
-	for (uint32_t i = 0U; i < config->num_fwds; ++i) {
-		fwd_e = &config->fwd_entries[i];
-
-		if (odph_iplookup_table_put_value(config->fwd_tbl, &fwd_e->prefix, &fwd_e) < 0) {
-			ODPH_ERR("Error populating forwarding table\n");
-			return false;
-		}
-	}
-
-	return true;
-}
-
 static inline void check_ipsec_status_ev(odp_event_t ev, stats_t *stats)
 {
 	odp_ipsec_status_t status;
@@ -1755,7 +1763,7 @@ static int process_packets(void *args)
 	odp_event_type_t type;
 	odp_event_subtype_t subtype;
 	odp_packet_t pkt, pkts_in[MAX_BURST], pkts_ips[MAX_BURST];
-	odph_table_t fwd_tbl = config->prog_config->fwd_tbl;
+	lookup_table_t *fwd_tbl = &config->prog_config->fwd_tbl;
 	stats_t *stats = &config->stats;
 
 	ifs.is_hashed_tx = config->prog_config->is_hashed_tx;
@@ -1844,9 +1852,6 @@ static odp_bool_t setup_test(prog_config_t *config)
 	if (!setup_pktios(config))
 		return false;
 
-	if (!setup_fwd_table(config))
-		return false;
-
 	if (!setup_workers(config))
 		return false;
 
@@ -1930,8 +1935,6 @@ static void wait_sas_disabled(uint32_t num_sas)
 
 static void teardown_test(const prog_config_t *config)
 {
-	(void)odph_iplookup_table_destroy(config->fwd_tbl);
-
 	for (uint32_t i = 0U; i < config->num_ifs; ++i) {
 		free(config->pktios[i].name);
 
