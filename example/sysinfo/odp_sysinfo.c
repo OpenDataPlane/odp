@@ -990,7 +990,6 @@ int main(int argc, char **argv)
 	printf("    max_pmr:                %u\n", cls_capa.max_pmr);
 	printf("    max_pmr_per_cos:        %u\n", cls_capa.max_pmr_per_cos);
 	printf("    max_terms_per_pmr:      %u\n", cls_capa.max_terms_per_pmr);
-	printf("    available_pmr_terms:    %u\n", cls_capa.available_pmr_terms);
 	printf("    max_cos:                %u\n", cls_capa.max_cos);
 	printf("    max_hash_queues:        %u\n", cls_capa.max_hash_queues);
 	printf("    hash_protocols:         0x%x\n", cls_capa.hash_protocols.all_bits);
