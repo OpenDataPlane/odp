@@ -1284,11 +1284,14 @@ static int create_timers(test_global_t *test_global)
 		return -1;
 	}
 
+	if (odp_timer_pool_start_multi(&timer_pool, 1) != 1) {
+		ODPH_ERR("Timer pool start failed\n");
+		return -1;
+	}
+
 	test_global->timer.timer_pool = timer_pool;
 	tick = odp_timer_ns_to_tick(timer_pool, timeout_ns);
 	test_global->timer.timeout_tick = tick;
-
-	odp_timer_pool_start();
 
 	for (i = 0; i < num_pktio; i++) {
 		for (j = 0; j < num_queue; j++) {

@@ -432,7 +432,10 @@ static int create_timers(test_global_t *global)
 		return -1;
 	}
 
-	odp_timer_pool_start();
+	if (odp_timer_pool_start_multi(&tp, 1) != 1) {
+		ODPH_ERR("Timer pool start failed\n");
+		return -1;
+	}
 
 	global->period_ticks = odp_timer_ns_to_tick(tp, period_ns);
 

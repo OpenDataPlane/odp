@@ -456,7 +456,11 @@ int main(int argc, char *argv[])
 		ODPH_ERR("Timer pool create failed.\n");
 		goto err;
 	}
-	odp_timer_pool_start();
+
+	if (odp_timer_pool_start_multi(&gbls->tp, 1) != 1) {
+		ODPH_ERR("Timer pool start failed\n");
+		return -1;
+	}
 
 	odp_shm_print_all();
 	(void)odp_timer_pool_info(gbls->tp, &tpinfo);

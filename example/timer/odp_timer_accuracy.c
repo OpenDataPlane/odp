@@ -671,7 +671,11 @@ static int create_timers(test_global_t *test_global)
 		return -1;
 	}
 
-	odp_timer_pool_start();
+	if (odp_timer_pool_start_multi(&timer_pool, 1) != 1) {
+		ODPH_ERR("Timer pool start failed\n");
+		return -1;
+	}
+
 	odp_timer_pool_print(timer_pool);
 
 	/* Spend some time so that current tick would not be zero */

@@ -424,9 +424,12 @@ static int create_timer(void)
 		return -1;
 	}
 
-	gbl_args->timer_pool = tp;
+	if (odp_timer_pool_start_multi(&tp, 1) != 1) {
+		ODPH_ERR("Timer pool start failed\n");
+		return -1;
+	}
 
-	odp_timer_pool_start();
+	gbl_args->timer_pool = tp;
 
 	gbl_args->timer_nsec = TIMER_NSEC;
 	if (TIMER_NSEC < tp_param.min_tmo)
