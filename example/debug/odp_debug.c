@@ -39,7 +39,8 @@ static void print_usage(void)
 	       "  -s, --shm          Create a SHM and call odp_shm_print()\n"
 	       "  -p, --pool         Create various types of pools and call odp_pool_print()\n"
 	       "  -q, --queue        Create various types of queues and call odp_queue_print()\n"
-	       "  -i, --interface    Create packet IO interface (loop) and call odp_pktio_print()\n"
+	       "  -i, --interface    Create packet IO interface (loop), and call both odp_pktio_print()\n"
+	       "                     and odp_pktio_extra_stats_print()\n"
 	       "  -I, --ipsec        Call odp_ipsec_print()\n"
 	       "  -t, --timer        Call timer pool, timer and timeout print functions\n"
 	       "  -a, --stash        Create stash and call odp_stash_print()\n"
@@ -341,6 +342,9 @@ static int pktio_debug(void)
 
 	printf("\n");
 	odp_pktio_print(pktio);
+
+	printf("\n");
+	odp_pktio_extra_stats_print(pktio);
 
 	if (odp_pktio_close(pktio)) {
 		ODPH_ERR("Pktio close failed\n");
