@@ -394,6 +394,11 @@ static int create_timer_pools(test_global_t *global)
 			return -1;
 		}
 
+		if (odp_timer_pool_start_multi(&tp, 1) != 1) {
+			ODPH_ERR("Timer pool start failed (%u)\n", i);
+			return -1;
+		}
+
 		pool = odp_pool_create(tp_name, &pool_param);
 		global->pool[i] = pool;
 		if (pool == ODP_POOL_INVALID) {
@@ -412,8 +417,6 @@ static int create_timer_pools(test_global_t *global)
 									 test_options->period_ns);
 		global->timer_pool[i].start_tick = odp_timer_ns_to_tick(tp, START_NS);
 	}
-
-	odp_timer_pool_start();
 
 	printf("  start            %" PRIu64 " tick\n",  global->timer_pool[0].start_tick);
 	printf("  period           %" PRIu64 " ticks\n", global->timer_pool[0].period_tick);

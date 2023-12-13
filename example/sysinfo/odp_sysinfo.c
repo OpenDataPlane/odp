@@ -579,7 +579,10 @@ static int timer_capability(appl_args_t *appl_args)
 			return -1;
 		}
 
-		odp_timer_pool_start();
+		if (odp_timer_pool_start_multi(&pool, 1) != 1) {
+			ODPH_ERR("odp_timer_pool_start_multi() failed for clock source: %d\n", i);
+			return -1;
+		}
 
 		ret = odp_timer_pool_info(pool, info);
 		if (ret) {

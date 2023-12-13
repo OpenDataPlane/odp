@@ -435,7 +435,10 @@ static int timer_debug(void)
 		return -1;
 	}
 
-	odp_timer_pool_start();
+	if (odp_timer_pool_start_multi(&timer_pool, 1) != 1) {
+		ODPH_ERR("Timer pool start failed\n");
+		return -1;
+	}
 
 	odp_queue_param_init(&queue_param);
 	if (timer_capa.queue_type_sched)

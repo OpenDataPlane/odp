@@ -82,7 +82,12 @@ int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 		goto err;
 	}
 
-	odp_timer_pool_start();
+	if (odp_timer_pool_start_multi(&timer_pool, 1) != 1) {
+		ODPH_ERR("Timer pool start failed\n");
+		ret += 1;
+		goto err;
+	}
+
 	/* Configure scheduler */
 	odp_schedule_config(NULL);
 
