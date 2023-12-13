@@ -1095,7 +1095,7 @@ static void print_stat_set_cancel_mode(test_global_t *global)
 	printf("        1      2      3      4      5      6      7      8      9     10");
 
 	for (i = 0; i < ODP_THREAD_COUNT_MAX; i++) {
-		if (global->stat[i].rounds) {
+		if (global->stat[i].sets) {
 			if ((num % 10) == 0)
 				printf("\n   ");
 
@@ -1152,7 +1152,7 @@ static void print_stat_expire_mode(test_global_t *global)
 	printf("        1      2      3      4      5      6      7      8      9     10");
 
 	for (i = 0; i < ODP_THREAD_COUNT_MAX; i++) {
-		if (global->stat[i].rounds) {
+		if (global->stat[i].events) {
 			if ((num % 10) == 0)
 				printf("\n   ");
 
