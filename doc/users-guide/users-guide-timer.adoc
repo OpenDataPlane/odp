@@ -61,16 +61,11 @@ expired.
 === Timer Pool Management
 To facilitate implementation of the ODP timer APIs, an additional timer API is
 provided. During initialization, applications are expected to create the timer
-pools they need and then call `odp_timer_pool_start()`. ODP implementations
-may or may not fail further attempts to create timer pools after this API is
-called. For best portability, applications should not attempt to create
-further timer pools after calling `odp_timer_pool_start()`. Note that no such
-restrictions exist on timeout pools, as these are just ordinary ODP pools.
-
-Following start, applications may allocate, set, cancel, and free timers
-from their associated timer pools. During termination processing, after all
-timers allocated from a timer pool have been freed, the pool itself should be
-released via a call to `odp_timer_pool_destroy()`.
+pools they need and then call `odp_timer_pool_start_multi()`. Following start,
+applications may allocate, set, cancel, and free timers from their associated
+timer pools. During termination processing, after all timers allocated from a
+timer pool have been freed, the pool itself should be released via a call to
+`odp_timer_pool_destroy()`.
 
 === Timeout Event Management
 The purpose of ODP timers is to schedule their associated timeout events, which
