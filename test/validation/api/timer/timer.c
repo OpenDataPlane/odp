@@ -2044,6 +2044,14 @@ static void timer_test_tmo_limit(odp_queue_type_t queue_type,
 	ODPH_DBG("  tmo_ns      %" PRIu64 "\n",   tmo_ns);
 	ODPH_DBG("  tmo_tick    %" PRIu64 "\n\n", tmo_tick);
 
+	if (min) {
+		/*
+		 * Prevent the test from taking too long by asserting that the
+		 * timeout is reasonably short.
+		 */
+		CU_ASSERT_FATAL(tmo_ns < 5 * ODP_TIME_SEC_IN_NS);
+	}
+
 	for (i = 0; i < num; i++) {
 		timer[i] = odp_timer_alloc(timer_pool, queue, NULL);
 		CU_ASSERT_FATAL(timer[i] != ODP_TIMER_INVALID);
