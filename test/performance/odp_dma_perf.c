@@ -68,6 +68,8 @@ enum {
 #define MEGAS 1000000
 #define KILOS 1000
 
+#define DATA 0xAA
+
 typedef enum {
 	PRS_OK,
 	PRS_NOK,
@@ -81,6 +83,7 @@ typedef struct {
 	uint64_t poll_errs;
 	uint64_t scheduler_timeouts;
 	uint64_t transfer_errs;
+	uint64_t data_errs;
 	uint64_t tot_tm;
 	uint64_t trs_tm;
 	uint64_t max_trs_tm;
@@ -111,6 +114,7 @@ typedef struct {
 } trs_info_t;
 
 typedef struct sd_s sd_t;
+typedef void (*ver_fn_t)(trs_info_t *info, stats_t *stats);
 
 typedef struct ODP_ALIGNED_CACHE sd_s {
 	struct {
@@ -149,6 +153,8 @@ typedef struct ODP_ALIGNED_CACHE sd_s {
 	odp_schedule_group_t grp;
 	/* Prepare single transfer. */
 	void (*prep_trs_fn)(sd_t *sd, trs_info_t *info);
+	/* Verify single transfer. */
+	ver_fn_t ver_fn;
 } sd_t;
 
 typedef struct prog_config_s prog_config_t;
@@ -201,6 +207,7 @@ typedef struct prog_config_s {
 	uint32_t src_cache_size;
 	uint32_t dst_cache_size;
 	int num_workers;
+	odp_bool_t is_verify;
 	uint8_t trs_type;
 	uint8_t seg_type;
 	uint8_t compl_mode;
@@ -276,7 +283,7 @@ static void print_usage(void)
 	       "       " PROG_NAME " -s 10240\n"
 	       "       " PROG_NAME " -t 0 -i 1 -o 1 -s 51200 -S 2 -f 64 -T 10\n"
 	       "       " PROG_NAME " -t 1 -i 10 -o 10 -s 4096 -S 0 -m 1 -f 10 -c 4 -p 1\n"
-	       "       " PROG_NAME " -t 2 -i 10 -o 1 -s 1024 -S 3 -m 1 -f 10 -c 4 -p 1\n"
+	       "       " PROG_NAME " -t 2 -i 10 -o 1 -s 1024 -S 3 -f 10 -c 4 -p 1\n"
 	       "\n"
 	       "Optional OPTIONS:\n"
 	       "\n"
@@ -317,6 +324,8 @@ static void print_usage(void)
 	       "                      Policies:\n"
 	       "                          0: One session shared by workers\n"
 	       "                          1: One session per worker\n"
+	       "  -v, --verify        Verify transfers. Checks correctness of destination data\n"
+	       "                      after successful transfers.\n"
 	       "  -h, --help          This help.\n"
 	       "\n", DEF_TRS_TYPE, DEF_SEG_CNT, DEF_SEG_CNT, DEF_LEN, DEF_SEG_TYPE, DEF_MODE,
 	       DEF_INFLIGHT, DEF_TIME, DEF_WORKERS, DEF_POLICY);
@@ -551,10 +560,11 @@ static parse_result_t parse_options(int argc, char **argv, prog_config_t *config
 		{ "time_sec", required_argument, NULL, 'T' },
 		{ "worker_count", required_argument, NULL, 'c' },
 		{ "policy", required_argument, NULL, 'p' },
+		{ "verify", no_argument, NULL, 'v' },
 		{ "help", no_argument, NULL, 'h' },
 		{ NULL, 0, NULL, 0 }
 	};
-	static const char *shortopts = "t:i:o:s:S:m:f:T:c:p:h";
+	static const char *shortopts = "t:i:o:s:S:m:f:T:c:p:vh";
 
 	init_config(config);
 
@@ -594,6 +604,9 @@ static parse_result_t parse_options(int argc, char **argv, prog_config_t *config
 			break;
 		case 'p':
 			config->policy = atoi(optarg);
+			break;
+		case 'v':
+			config->is_verify = true;
 			break;
 		case 'h':
 			print_usage();
@@ -711,6 +724,11 @@ static odp_bool_t setup_packet_segments(sd_t *sd)
 	       (sd->seg.seg_type == DENSE_PACKET ? allocate_packets(sd) : true);
 }
 
+static inline void fill_data(uint8_t *data, uint32_t len)
+{
+	memset(data, DATA, len);
+}
+
 static void configure_packet_transfer(sd_t *sd)
 {
 	odp_dma_seg_t *start_src_seg, *start_dst_seg, *seg;
@@ -728,6 +746,9 @@ static void configure_packet_transfer(sd_t *sd)
 			seg->packet = pkt;
 			seg->offset = 0U;
 			seg->len = sd->dma.src_seg_len;
+
+			if (seg->packet != ODP_PACKET_INVALID)
+				fill_data(odp_packet_data(seg->packet), seg->len);
 		}
 
 		len = sd->dma.num_in_segs * sd->dma.src_seg_len;
@@ -813,6 +834,9 @@ static void configure_address_transfer(sd_t *sd)
 			seg->addr = sd->seg.seg_type == SPARSE_MEMORY ?
 					NULL : (uint8_t *)sd->seg.src + k * sd->dma.src_seg_len;
 			seg->len = sd->dma.src_seg_len;
+
+			if (seg->addr != NULL)
+				fill_data(seg->addr, seg->len);
 		}
 
 		len = sd->dma.num_in_segs * sd->dma.src_seg_len;
@@ -845,7 +869,7 @@ static void free_memory(const sd_t *sd)
 		(void)odp_shm_free(sd->seg.dst_shm);
 }
 
-static void run_transfer(odp_dma_t handle, trs_info_t *info, stats_t *stats)
+static void run_transfer(odp_dma_t handle, trs_info_t *info, stats_t *stats, ver_fn_t ver_fn)
 {
 	uint64_t start_tm, end_tm, start_cc, end_cc, trs_tm, trs_cc, start_cc_diff;
 	odp_dma_result_t res;
@@ -875,10 +899,14 @@ static void run_transfer(odp_dma_t handle, trs_info_t *info, stats_t *stats)
 		stats->start_cc += start_cc_diff;
 		++stats->start_cnt;
 
-		if (odp_unlikely(!res.success))
+		if (odp_unlikely(!res.success)) {
 			++stats->transfer_errs;
-		else
+		} else {
 			++stats->completed;
+
+			if (ver_fn != NULL)
+				ver_fn(info, stats);
+		}
 	}
 }
 
@@ -894,7 +922,7 @@ static void run_transfers_mt_unsafe(sd_t *sd, stats_t *stats)
 		if (sd->prep_trs_fn != NULL)
 			sd->prep_trs_fn(sd, info);
 
-		run_transfer(handle, info, stats);
+		run_transfer(handle, info, stats, sd->ver_fn);
 	}
 }
 
@@ -911,7 +939,7 @@ static void run_transfers_mt_safe(sd_t *sd, stats_t *stats)
 			if (sd->prep_trs_fn != NULL)
 				sd->prep_trs_fn(sd, info);
 
-			run_transfer(handle, info, stats);
+			run_transfer(handle, info, stats, sd->ver_fn);
 			odp_ticketlock_unlock(&info->lock);
 		}
 	}
@@ -975,10 +1003,14 @@ static void poll_transfer(sd_t *sd, trs_info_t *info, stats_t *stats)
 		stats->trs_poll_cnt += info->trs_poll_cnt;
 		++stats->trs_cnt;
 
-		if (odp_unlikely(!res.success))
+		if (odp_unlikely(!res.success)) {
 			++stats->transfer_errs;
-		else
+		} else {
 			++stats->completed;
+
+			if (sd->ver_fn != NULL)
+				sd->ver_fn(info, stats);
+		}
 
 		info->is_running = false;
 	} else {
@@ -1174,10 +1206,14 @@ static void wait_compl_event(sd_t *sd, stats_t *stats)
 	stats->wait_cc += wait_cc;
 	++stats->wait_cnt;
 
-	if (odp_unlikely(!res.success))
+	if (odp_unlikely(!res.success)) {
 		++stats->transfer_errs;
-	else
+	} else {
 		++stats->completed;
+
+		if (sd->ver_fn != NULL)
+			sd->ver_fn(info, stats);
+	}
 
 	if (sd->prep_trs_fn != NULL)
 		sd->prep_trs_fn(sd, info);
@@ -1212,7 +1248,7 @@ static void drain_compl_events(ODP_UNUSED sd_t *sd)
 	}
 }
 
-static void run_memcpy(trs_info_t *info, stats_t *stats)
+static void run_memcpy(trs_info_t *info, stats_t *stats, ver_fn_t ver_fn)
 {
 	uint64_t start_tm, end_tm, start_cc, end_cc, trs_tm, trs_cc, start_cc_diff;
 	const odp_dma_transfer_param_t *param = &info->trs_param;
@@ -1275,6 +1311,9 @@ static void run_memcpy(trs_info_t *info, stats_t *stats)
 	stats->start_cc += start_cc_diff;
 	++stats->start_cnt;
 	++stats->completed;
+
+	if (ver_fn != NULL)
+		ver_fn(info, stats);
 }
 
 static void run_memcpy_mt_unsafe(sd_t *sd, stats_t *stats)
@@ -1288,7 +1327,7 @@ static void run_memcpy_mt_unsafe(sd_t *sd, stats_t *stats)
 		if (sd->prep_trs_fn != NULL)
 			sd->prep_trs_fn(sd, info);
 
-		run_memcpy(info, stats);
+		run_memcpy(info, stats, sd->ver_fn);
 	}
 }
 
@@ -1304,7 +1343,7 @@ static void run_memcpy_mt_safe(sd_t *sd, stats_t *stats)
 			if (sd->prep_trs_fn != NULL)
 				sd->prep_trs_fn(sd, info);
 
-			run_memcpy(info, stats);
+			run_memcpy(info, stats, sd->ver_fn);
 			odp_ticketlock_unlock(&info->lock);
 		}
 	}
@@ -1370,6 +1409,8 @@ static void prepare_packet_transfer(sd_t *sd, trs_info_t *info)
 		if (odp_unlikely(seg->packet == ODP_PACKET_INVALID))
 			/* There should always be enough packets. */
 			ODPH_ABORT("Failed to allocate packet, aborting\n");
+
+		fill_data(odp_packet_data(seg->packet), seg->len);
 	}
 
 	for (uint32_t i = 0U; i < param->num_dst; ++i) {
@@ -1390,13 +1431,17 @@ static void prepare_address_transfer(sd_t *sd, trs_info_t *info)
 {
 	odp_dma_transfer_param_t *param = &info->trs_param;
 	uint8_t *addr = sd->seg.cur_src;
+	odp_dma_seg_t *seg;
 
 	for (uint32_t i = 0U; i < param->num_src; ++i) {
+		seg = &param->src_seg[i];
+
 		if (odp_unlikely(addr > (uint8_t *)sd->seg.src_high))
 			addr = sd->seg.src;
 
-		param->src_seg[i].addr = addr;
+		seg->addr = addr;
 		addr += sd->dma.src_seg_len;
+		fill_data(seg->addr, seg->len);
 	}
 
 	sd->seg.cur_src = addr + ODP_CACHE_LINE_SIZE;
@@ -1411,6 +1456,25 @@ static void prepare_address_transfer(sd_t *sd, trs_info_t *info)
 	}
 
 	sd->seg.cur_dst = addr + ODP_CACHE_LINE_SIZE;
+}
+
+static void verify_transfer(trs_info_t *info, stats_t *stats)
+{
+	odp_dma_transfer_param_t *param = &info->trs_param;
+	odp_dma_seg_t *seg;
+	const odp_bool_t is_addr = param->dst_format == ODP_DMA_FORMAT_ADDR;
+	uint8_t *data;
+
+	for (uint32_t i = 0U; i < param->num_dst; ++i) {
+		seg = &param->dst_seg[i];
+		data = is_addr ? seg->addr : odp_packet_data(seg->packet);
+
+		for (uint32_t j = 0U; j < seg->len; ++j)
+			if (odp_unlikely(data[j] != DATA)) {
+				++stats->data_errs;
+				return;
+			}
+	}
 }
 
 static odp_bool_t setup_session_descriptors(prog_config_t *config)
@@ -1451,6 +1515,7 @@ static odp_bool_t setup_session_descriptors(prog_config_t *config)
 		sd->prep_trs_fn = config->seg_type == SPARSE_PACKET ? prepare_packet_transfer :
 					config->seg_type == SPARSE_MEMORY ?
 						prepare_address_transfer : NULL;
+		sd->ver_fn = config->is_verify ? verify_transfer : NULL;
 	}
 
 	return true;
@@ -1684,9 +1749,12 @@ static void print_stats(const prog_config_t *config)
 				       stats->scheduler_timeouts);
 		}
 
-		printf("        transfer errors:      %" PRIu64 "\n"
-		       "        run time:             %" PRIu64 " ns\n",
-		       stats->transfer_errs, stats->tot_tm);
+		printf("        transfer errors:      %" PRIu64 "\n", stats->transfer_errs);
+
+		if (config->is_verify)
+			printf("        data errors:          %" PRIu64 "\n", stats->data_errs);
+
+		printf("        run time:             %" PRIu64 " ns\n", stats->tot_tm);
 
 		if (config->policy == MANY) {
 			printf("        session:\n"
