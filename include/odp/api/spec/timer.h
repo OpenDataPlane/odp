@@ -317,6 +317,7 @@ int odp_timer_restart(odp_timer_t timer, const odp_timer_start_t *start_param);
  * provide in odp_timer_periodic_start(). Application must set the values of first_tick and
  * freq_multiplier in start_param before calling this function, the rest of the parameters are
  * ignored. On return, the value of num_tmo_ev is set and the other parameters are not modified.
+ * The value of num_tmo_ev is less than or equal to periodic.max_tmo_events in timer capability.
  *
  * @param timer_pool          Timer pool
  * @param start_param         Periodic timer start parameters

@@ -213,6 +213,13 @@ typedef struct {
 		/** Maximum supported base frequency value */
 		odp_fract_u64_t max_base_freq_hz;
 
+		/** Maximum number of timeout events that may be needed
+		 *
+		 *  The number of timeout events per timer, as returned by
+		 *  odp_timer_periodic_events(), is less than or equal to this value.
+		 */
+		uint32_t max_tmo_events;
+
 	} periodic;
 
 } odp_timer_capability_t;
