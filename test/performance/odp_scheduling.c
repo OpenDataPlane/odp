@@ -5,9 +5,11 @@
  */
 
 /**
- * @file
+ * @example odp_scheduling.c
  *
- * @example  odp_example.c ODP example application
+ * Performance test application for miscellaneous scheduling operations
+ *
+ * @cond _ODP_HIDE_FROM_DOXYGEN_
  */
 
 #include <string.h>

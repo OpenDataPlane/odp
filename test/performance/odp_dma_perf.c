@@ -3,12 +3,14 @@
  */
 
 /**
- * DMA performance tester
+ * @example odp_dma_perf.c
  *
  * This tester application can be used to profile the performance of an ODP DMA implementation.
  * Tester workflow is simple and consists of issuing as many back-to-back DMA transfers as the
  * implementation allows and then recording key performance statistics (such as function overhead,
  * latencies etc.).
+ *
+ * @cond _ODP_HIDE_FROM_DOXYGEN_
  */
 
 #ifndef _GNU_SOURCE

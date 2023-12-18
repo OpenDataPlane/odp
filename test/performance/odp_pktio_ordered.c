@@ -5,9 +5,11 @@
  */
 
 /**
- * @file
+ * @example odp_pktio_ordered.c
  *
- * @example odp_pktio_ordered.c  ODP ordered pktio test application
+ * Test application for ordered packet IO
+ *
+ * @cond _ODP_HIDE_FROM_DOXYGEN_
  */
 
 /** enable strtok */

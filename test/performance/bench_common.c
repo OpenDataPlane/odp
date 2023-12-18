@@ -2,6 +2,8 @@
  * Copyright (c) 2023 Nokia
  */
 
+/** @cond _ODP_HIDE_FROM_DOXYGEN_ */
+
 #include <odp_api.h>
 #include <odp/helper/odph_api.h>
 

@@ -6,9 +6,11 @@
  */
 
 /**
- * @file
+ * @example odp_bench_packet.c
  *
- * @example odp_bench_packet.c  Microbenchmarks for packet functions
+ * Microbenchmark application for packet API functions
+ *
+ * @cond _ODP_HIDE_FROM_DOXYGEN_
  */
 
 #include <stdlib.h>

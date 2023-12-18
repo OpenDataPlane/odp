@@ -6,6 +6,14 @@
  * SPDX-License-Identifier:	BSD-3-Clause
  */
 
+/**
+ * @example odp_ipsec.c
+ *
+ * Performance test application for IPsec APIs
+ *
+ * @cond _ODP_HIDE_FROM_DOXYGEN_
+ */
+
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
 #endif /* _GNU_SOURCE */

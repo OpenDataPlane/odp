@@ -6,9 +6,11 @@
  */
 
 /**
- * @file
+ * @example odp_sched_latency.c
  *
- * @example odp_sched_latency.c  ODP scheduling latency benchmark application
+ * Scheduling latency benchmark application
+ *
+ * @cond _ODP_HIDE_FROM_DOXYGEN_
  */
 
 #include <string.h>

@@ -2,6 +2,8 @@
  * Copyright (c) 2023 Nokia
  */
 
+/** @cond _ODP_HIDE_FROM_DOXYGEN_ */
+
 #ifndef BENCH_COMMON_H
 #define BENCH_COMMON_H
 

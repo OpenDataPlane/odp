@@ -4,6 +4,14 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+/**
+ * @example odp_packet_gen.c
+ *
+ * Performance optimized packet generator application
+ *
+ * @cond _ODP_HIDE_FROM_DOXYGEN_
+ */
+
 /* enable usleep */
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE

@@ -4,6 +4,14 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+/**
+ * @example odp_cpu_bench.c
+ *
+ * Application for CPU stress testing
+ *
+ * @cond _ODP_HIDE_FROM_DOXYGEN_
+ */
+
 #include <odp_api.h>
 #include <odp/helper/odph_api.h>
 
