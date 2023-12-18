@@ -4,6 +4,8 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+/** @cond _ODP_HIDE_FROM_DOXYGEN_ */
+
 #ifndef ODP_IPSEC_STREAM_H_
 #define ODP_IPSEC_STREAM_H_
 

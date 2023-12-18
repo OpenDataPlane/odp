@@ -4,6 +4,14 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+/**
+ * @example odp_l2fwd_simple.c
+ *
+ * Minimal L2 forwarding example application
+ *
+ * @cond _ODP_HIDE_FROM_DOXYGEN_
+ */
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <getopt.h>

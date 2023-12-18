@@ -4,6 +4,14 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+/**
+ * @example odp_timer_test.c
+ *
+ * Timer test application
+ *
+ * @cond _ODP_HIDE_FROM_DOXYGEN_
+ */
+
 #include <string.h>
 #include <stdlib.h>
 #include <inttypes.h>

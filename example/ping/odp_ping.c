@@ -2,6 +2,16 @@
  * Copyright (c) 2019-2023 Nokia
  */
 
+/**
+ * @example odp_ping.c
+ *
+ * This application replies to IPv4 ping requests. It can be used to test
+ * connectivity with standard ping utility. ARP table needs to be setup manually
+ * on the sender side as the application does not reply to ARP requests.
+ *
+ * @cond _ODP_HIDE_FROM_DOXYGEN_
+ */
+
 #include <stdio.h>
 #include <string.h>
 #include <signal.h>

@@ -4,6 +4,14 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+/**
+ * @example time_global_test.c
+ *
+ * Time API test application
+ *
+ * @cond _ODP_HIDE_FROM_DOXYGEN_
+ */
+
 #include <inttypes.h>
 
 #include <odp_api.h>

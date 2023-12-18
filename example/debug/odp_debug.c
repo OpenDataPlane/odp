@@ -4,6 +4,14 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+/**
+ * @example odp_debug.c
+ *
+ * This example application demonstrates the usage of various debug print functions of ODP API.
+ *
+ * @cond _ODP_HIDE_FROM_DOXYGEN_
+ */
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>

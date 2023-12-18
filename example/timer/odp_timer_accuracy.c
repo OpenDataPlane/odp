@@ -5,6 +5,14 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+/**
+ * @example odp_timer_accuracy.c
+ *
+ * ODP timer accuracy test application
+ *
+ * @cond _ODP_HIDE_FROM_DOXYGEN_
+ */
+
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>

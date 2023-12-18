@@ -5,6 +5,7 @@ PROJECT_NUMBER = $(ODP_VERSION_API)
 PROJECT_LOGO = $(SRCDIR)/doc/images/ODP-Logo-HQ.svg
 INPUT = $(SRCDIR)/doc/application-api-guide \
 	include \
-	$(SRCDIR)/include
+	$(SRCDIR)/include \
+	$(SRCDIR)/example
 EXAMPLE_PATH = $(SRCDIR)/example $(SRCDIR)/CONTRIBUTING $(SRCDIR)/include/README
 WARNINGS = NO

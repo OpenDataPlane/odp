@@ -6,6 +6,14 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+/**
+ * @example odp_classifier.c
+ *
+ * Classifier API example application
+ *
+ * @cond _ODP_HIDE_FROM_DOXYGEN_
+ */
+
 #include <stdlib.h>
 #include <string.h>
 #include <getopt.h>

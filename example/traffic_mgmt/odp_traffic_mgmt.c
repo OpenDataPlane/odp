@@ -7,6 +7,14 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+ /**
+  * @example odp_traffic_mgmt.c
+  *
+  * Traffic manager API example application
+  *
+  * @cond _ODP_HIDE_FROM_DOXYGEN_
+  */
+
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
 #endif
