@@ -37,6 +37,8 @@
  *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/** @cond _ODP_HIDE_FROM_DOXYGEN_ */
+
 /**
  * @file
  *

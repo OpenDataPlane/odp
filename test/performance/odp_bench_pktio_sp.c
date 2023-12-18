@@ -2,6 +2,14 @@
  * Copyright (c) 2023 Nokia
  */
 
+/**
+ * @example odp_bench_pktio_sp.c
+ *
+ * Microbenchmark application for packet IO slow path functions
+ *
+ * @cond _ODP_HIDE_FROM_DOXYGEN_
+ */
+
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE /* Needed for sigaction */
 #endif

@@ -4,6 +4,14 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+/**
+ * @example odp_sched_pktio.c
+ *
+ * Test application for scheduled packet IO
+ *
+ * @cond _ODP_HIDE_FROM_DOXYGEN_
+ */
+
 #include <stdio.h>
 #include <string.h>
 #include <signal.h>

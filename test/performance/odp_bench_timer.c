@@ -4,6 +4,14 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+/**
+ * @example odp_bench_timer.c
+ *
+ * Microbenchmark application for timer API functions
+ *
+ * @cond _ODP_HIDE_FROM_DOXYGEN_
+ */
+
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE /* Needed for sigaction */
 #endif

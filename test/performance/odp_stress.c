@@ -4,6 +4,14 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+/**
+ * @example odp_stress.c
+ *
+ * Test application that can be used to stress CPU, memory, and HW accelerators.
+ *
+ * @cond _ODP_HIDE_FROM_DOXYGEN_
+ */
+
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>

@@ -2,14 +2,16 @@
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
+ */
+
+/**
+ * @example odp_pktio_perf.c
  *
- * ODP Packet IO basic performance test application.
- *
- * Runs a number of transmit and receive workers on separate cores, the
- * transmitters generate packets at a defined rate and the receivers consume
- * them. Generated packets are UDP and each packet is marked with a magic
- * number in the UDP payload allowing receiver to distinguish them from other
- * traffic.
+ * Packet IO basic performance test application. Runs a number of transmit and
+ * receive workers on separate cores, the transmitters generate packets at a
+ * defined rate and the receivers consume them. Generated packets are UDP and
+ * each packet is marked with a magic number in the UDP payload allowing
+ * receiver to distinguish them from other traffic.
  *
  * Each test iteration runs for a fixed period, at the end of the iteration
  * it is verified that the number of packets transmitted was as expected and
@@ -19,6 +21,7 @@
  * determine the maximum rate at which no packet loss occurs. Alternatively
  * a single packet rate can be specified on the command line.
  *
+ * @cond _ODP_HIDE_FROM_DOXYGEN_
  */
 
 #include <odp_api.h>

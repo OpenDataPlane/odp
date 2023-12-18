@@ -4,6 +4,14 @@
  * Copyright (c) 2023 Arm
  */
 
+/**
+ * @example odp_stash_perf.c
+ *
+ * Performance test application for stash APIs
+ *
+ * @cond _ODP_HIDE_FROM_DOXYGEN_
+ */
+
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>

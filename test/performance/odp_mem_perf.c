@@ -5,6 +5,14 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+/**
+ * @example odp_mem_perf.c
+ *
+ * Test application for measuring memory system bandwidth
+ *
+ * @cond _ODP_HIDE_FROM_DOXYGEN_
+ */
+
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>

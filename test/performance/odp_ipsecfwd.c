@@ -2,6 +2,15 @@
  * Copyright (c) 2022-2023 Nokia
  */
 
+/**
+ * @example odp_ipsecfwd.c
+ *
+ * Simple IPsec performance tester application which forwards and processes
+ * plain and IPsec packets.
+ *
+ * @cond _ODP_HIDE_FROM_DOXYGEN_
+ */
+
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
 #endif

@@ -5,6 +5,14 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+/**
+ * @example odp_atomic_perf.c
+ *
+ * Performance test application for atomic operation APIs
+ *
+ * @cond _ODP_HIDE_FROM_DOXYGEN_
+ */
+
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>

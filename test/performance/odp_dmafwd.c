@@ -3,12 +3,14 @@
  */
 
 /**
- * DMA forwarder
+ * @example odp_dmafwd.c
  *
  * This tester application can be used to profile the performance of an ODP DMA implementation.
  * Tester workflow consists of packet reception, copy and forwarding steps. Packets are first
  * received from configured interfaces after which packets are copied, either with plain SW memory
  * copy or with DMA offload copy. Finally, copied packets are echoed back to the sender(s).
+ *
+ * @cond _ODP_HIDE_FROM_DOXYGEN_
  */
 
 #ifndef _GNU_SOURCE

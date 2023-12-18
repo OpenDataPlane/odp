@@ -5,6 +5,14 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+/**
+ * @example odp_bench_buffer.c
+ *
+ * Microbenchmark application for buffer API functions
+ *
+ * @cond _ODP_HIDE_FROM_DOXYGEN_
+ */
+
 #include <odp_api.h>
 #include <odp/helper/odph_api.h>
 
