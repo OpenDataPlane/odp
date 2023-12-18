@@ -4,6 +4,8 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+/** @cond _ODP_HIDE_FROM_DOXYGEN_ */
+
 #ifndef _ODP_L3FWD_LPM_H_
 #define _ODP_L3FWD_LPM_H_
 

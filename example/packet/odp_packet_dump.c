@@ -4,6 +4,14 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+/**
+ * @example odp_packet_dump.c
+ *
+ * Packet dump example application which prints received packets to terminal
+ *
+ * @cond _ODP_HIDE_FROM_DOXYGEN_
+ */
+
 #include <stdio.h>
 #include <string.h>
 #include <signal.h>

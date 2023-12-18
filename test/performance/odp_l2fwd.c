@@ -6,6 +6,14 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+/**
+ * @example odp_l2fwd.c
+ *
+ * L2 forwarding example application
+ *
+ * @cond _ODP_HIDE_FROM_DOXYGEN_
+ */
+
 /* enable strtok */
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE

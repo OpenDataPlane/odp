@@ -3,11 +3,13 @@
  *
  * SPDX-License-Identifier:     BSD-3-Clause
  */
+
 /**
- * @file
+ * @example odp_timer_simple.c
  *
- * @example odp_timer_simple.c  ODP simple example to schedule timer
- *				action for 1 second.
+ * Minimal example application demonstrating ODP timer API usage
+ *
+ * @cond _ODP_HIDE_FROM_DOXYGEN_
  */
 
 #include <string.h>

@@ -5,9 +5,11 @@
  */
 
 /**
- * @file
+ * @example odp_ipfragreass.c
  *
- * @example odp_ipfragreass.c  ODP IPv4 lock-free fragmentation and reassembly
+ * IPv4 lock-free fragmentation and reassembly example application
+ *
+ * @cond _ODP_HIDE_FROM_DOXYGEN_
  */
 
 #include <stdio.h>

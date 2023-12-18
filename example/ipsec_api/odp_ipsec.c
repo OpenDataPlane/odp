@@ -5,9 +5,11 @@
  */
 
 /**
- * @file
+ * @example ipsec_api/odp_ipsec.c
  *
- * @example odp_example_ipsec.c  ODP basic packet IO cross connect with IPsec test application
+ * IPsec example application using ODP IPsec API
+ *
+ * @cond _ODP_HIDE_FROM_DOXYGEN_
  */
 
 /* enable strtok */

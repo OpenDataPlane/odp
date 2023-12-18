@@ -4,6 +4,8 @@
  * SPDX-License-Identifier:	 BSD-3-Clause
  */
 
+/** @cond _ODP_HIDE_FROM_DOXYGEN_ */
+
 #ifndef ODP_FRAGREASS_PP_REASSEMBLE_H_
 #define ODP_FRAGREASS_PP_REASSEMBLE_H_
 

@@ -3,6 +3,9 @@
  *
  * SPDX-License-Identifier:     BSD-3-Clause
  */
+
+/** @cond _ODP_HIDE_FROM_DOXYGEN_ */
+
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
 #endif

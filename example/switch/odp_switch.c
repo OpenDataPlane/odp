@@ -5,6 +5,14 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+/**
+ * @example odp_switch.c
+ *
+ * Minimal learning Ethernet switch example application
+ *
+ * @cond _ODP_HIDE_FROM_DOXYGEN_
+ */
+
 #include <stdio.h>
 #include <getopt.h>
 #include <unistd.h>

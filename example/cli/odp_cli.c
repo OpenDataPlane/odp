@@ -4,12 +4,14 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-/*
- * ODP CLI Helper Example
+/**
+ * @example odp_cli.c
  *
  * This example shows how to start and stop ODP CLI using the CLI helper
  * API functions. This example application can also be used to try out
  * the CLI by connecting to a running application with a telnet client.
+ *
+ * @cond _ODP_HIDE_FROM_DOXYGEN_
  */
 
 #include <odp_api.h>
