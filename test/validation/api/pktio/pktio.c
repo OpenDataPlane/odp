@@ -3776,6 +3776,11 @@ static void pktio_test_pktout_compl_poll(void)
 	pktio_rx_info.inq  = ODP_QUEUE_INVALID;
 	pktio_rx_info.in_mode = ODP_PKTIN_MODE_DIRECT;
 
+	for (i = 0; i < TX_BATCH_LEN;  i++) {
+		/* Completion status is initially zero */
+		CU_ASSERT(odp_packet_tx_compl_done(pktio_tx, i) == 0);
+	}
+
 	ret = create_packets(pkt_tbl, pkt_seq, TX_BATCH_LEN, pktio_tx, pktio_rx);
 	CU_ASSERT_FATAL(ret == TX_BATCH_LEN);
 
@@ -3805,6 +3810,9 @@ static void pktio_test_pktout_compl_poll(void)
 		CU_ASSERT(odp_packet_has_tx_compl_request(pkt_tbl[i]) != 0);
 		/* Set pkt sequence number as its user ptr */
 		odp_packet_user_ptr_set(pkt_tbl[i], (const void *)&pkt_seq[i]);
+
+		/* Completion status should be still zero after odp_packet_tx_compl_request() */
+		CU_ASSERT(odp_packet_tx_compl_done(pktio_tx, i) == 0);
 	}
 
 	CU_ASSERT_FATAL(odp_pktout_send(pktout_queue, pkt_tbl, TX_BATCH_LEN) == TX_BATCH_LEN);
@@ -3815,10 +3823,12 @@ static void pktio_test_pktout_compl_poll(void)
 	for (i = 0; i < num_rx; i++)
 		odp_packet_free(pkt_tbl[i]);
 
-	/* Transmits should be complete since we received the packets already */
 	for (i = 0; i < num_rx; i++) {
-		ret = odp_packet_tx_compl_done(pktio_tx, i);
-		CU_ASSERT(ret > 0);
+		/* Transmits should be complete since we received the packets already */
+		CU_ASSERT(odp_packet_tx_compl_done(pktio_tx, i) > 0);
+
+		/* Check that the previous call did not clear the status */
+		CU_ASSERT(odp_packet_tx_compl_done(pktio_tx, i) > 0);
 	}
 
 	for (i = 0; i < num_ifaces; i++) {
