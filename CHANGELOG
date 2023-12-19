@@ -1,3 +1,111 @@
+== OpenDataPlane (1.43.0.0)
+
+=== Backward incompatible API changes
+==== Classifier
+* Add new `odp_cls_capability_t.max_pmr` and
+`odp_cls_capability_t.max_pmr_per_cos` packet matching rule capabilities.
+* Rename `odp_cls_capability_t.max_pmr_terms` field to
+`odp_cls_capability_t.max_terms_per_pmr`.
+
+==== Time
+* Change local/global time specification to allow timestamp values to start from
+an implementation defined value, instead of always starting from zero.
+
+==== Timer
+* Deprecate `odp_timer_set_t` type. Use `odp_timer_retval_t` instead.
+* Deprecate `odp_timer_pool_start()` function in comments. Will be properly
+deprecated in an upcoming release. Use `odp_timer_pool_start_multi()` instead.
+* Deprecate `odp_timeout_fresh()` function.
+* Change `odp_timer_free()` specification to remove the possibility to free a
+timer that is running.
+* Change `odp_timer_pool_create()` specification to state that timer pool
+handles must not be used by other APIs, except `odp_timer_pool_to_u64()`,
+ before being started.
+
+=== Backward compatible API changes
+==== Event
+* Add `odp_event_pool()` function, which returns a handle to the pool where the
+event was allocated from.
+
+==== Hints
+* Fix a type conversion issue in `odp_unlikely()` implementation.
+
+==== Packet
+* Clarify that `ODP_PACKET_FREE_CTRL_DONT_FREE` option does not affect direct
+packet free calls.
+* Clarify that packet IO time is specific to the packet IO interface.
+
+==== Pool
+* Clarify that disabled/unused per thread statistics counters will not
+necessarily be zeroed by `odp_pool_stats()`.
+
+==== Scheduler
+* Clarify event ordering in ordered scheduling contexts.
+
+==== Thread
+* Add new functions `odp_thread_control_count_max()` and
+`odp_thread_worker_count_max()` for reading the maximum number of control and
+worker threads.
+* Add new functions `odp_thread_control_count()` and `odp_thread_worker_count()`
+for reading the current number of control and worker threads.
+
+==== Time
+* Add `odp_time_add_ns()` function for adding nanoseconds into a time value.
+* Add `odp_time_startup()` function for requesting ODP instance startup time.
+* Clarify `odp_time_sum()` specification by adding a notification that resulting
+timestamp may wrap around if large timestamp values are summed up.
+
+==== Timer
+* Add `odp_timer_pool_start_multi()` function for starting timer pools, which
+takes the to-be-started pool handles as arguments.
+* Clarify that timer ticks and related nanosecond values are specific to a timer
+pool. Also, state explicitly that those may not start from zero.
+
+=== Remove deprecated APIs
+==== Classifier
+* Remove deprecated `odp_cls_drop_t` enum.
+* Remove deprecated `odp_cos_drop_set()` function.
+* Remove deprecated `odp_cos_drop()` function.
+* Remove deprecated `odp_cos_with_l2_priority()` function.
+* Remove deprecated `odp_cos_with_l3_qos()` function.
+
+==== Crypto
+* Remove deprecated `ODP_CRYPTO_SES_CREATE_ERR_NONE`,
+`ODP_CRYPTO_SES_CREATE_ERR_ENOMEM`, `ODP_CRYPTO_SES_CREATE_ERR_INV_CIPHER`, and
+`ODP_CRYPTO_SES_CREATE_ERR_INV_AUTH` defines.
+* Remove deprecated `odp_crypto_alg_err_t.ODP_CRYPTO_ALG_ERR_KEY_SIZE` and
+`odp_crypto_alg_err_t.ODP_CRYPTO_ALG_ERR_IV_INVALID` enums.
+* Remove deprecated `odp_crypto_hw_err_t` enum.
+* Remove deprecated `odp_crypto_packet_result_t.ok` field.
+
+==== Scheduler
+* Remove deprecated `ODP_SCHED_PRIO_HIGHEST`, `ODP_SCHED_PRIO_NORMAL`,
+`ODP_SCHED_PRIO_LOWEST`, and `ODP_SCHED_PRIO_DEFAULT` defines.
+
+==== Timer
+* Remove deprecated `ODP_CLOCK_CPU` and `ODP_CLOCK_EXT` defines.
+* Remove deprecated `ODP_TIMER_TOOEARLY`, `ODP_TIMER_TOOLATE` and
+`ODP_TIMER_NOEVENT` defines.
+* Remove deprecated `odp_timer_set_abs()` function.
+* Remove deprecated `odp_timer_set_rel()` function.
+
+=== Helper (1.5.0)
+==== Backward incompatible changes
+* Remove deprecated `odph_odpthread_t` and `odph_odpthread_params_t` types.
+* Remove deprecated `odph_thread_param_t.instance` field.
+* Remove deprecated `odph_odpthreads_create()` and `odph_odpthreads_join()`
+functions.
+
+=== Implementation
+==== Ticketlock
+* Add WFE based aarch64 ticketlock implementation (`--enable-wfe-locks`) for
+power saving.
+
+=== Performance Tests
+==== dma_perf
+* Add option for using software memory copy in addition to DMA transfers.
+* Add options for using sparse packets and memory as the transfer segment type.
+
 == OpenDataPlane (1.42.1.0)
 
 === Backward compatible API changes
