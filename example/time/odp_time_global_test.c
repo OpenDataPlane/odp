@@ -5,7 +5,7 @@
  */
 
 /**
- * @example time_global_test.c
+ * @example odp_time_global_test.c
  *
  * Time API test application
  *
