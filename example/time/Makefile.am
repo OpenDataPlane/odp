@@ -6,4 +6,4 @@ if test_example
 TESTS = odp_time_global
 endif
 
-odp_time_global_SOURCES = time_global_test.c
+odp_time_global_SOURCES = odp_time_global_test.c
