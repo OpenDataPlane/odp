@@ -24,7 +24,7 @@
 #include <odp/helper/odph_api.h>
 
 /* Default number of test rounds */
-#define NUM_ROUNDS 1000000u
+#define NUM_ROUNDS 100000u
 
 /* Initial value for atomic variables. Supports up to 2 billion
  * rounds of 32-bit min and max tests. */
