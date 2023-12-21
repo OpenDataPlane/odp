@@ -1,7 +1,6 @@
-/* Copyright (c) 2015-2018, Linaro Limited
- * All rights reserved.
- *
- * SPDX-License-Identifier:     BSD-3-Clause
+/*  SPDX-License-Identifier: BSD-3-Clause
+ *  Copyright (c) 2015-2018 Linaro Limited
+ *  Copyright (c) 2023 Nokia
  */
 
 #include "ipc_common.h"
@@ -49,17 +48,17 @@ static int pktio_run_loop(odp_pool_t pool)
 	else
 		sprintf(name, TEST_IPC_PKTIO_NAME);
 
-	wait = odp_time_local_from_ns(run_time_sec * ODP_TIME_SEC_IN_NS);
+	wait = odp_time_local_from_ns(start_time_sec * ODP_TIME_SEC_IN_NS);
 	start_cycle = odp_time_local();
 	current_cycle = start_cycle;
 
 	for (;;) {
-		if (run_time_sec) {
+		if (start_time_sec) {
 			cycle = odp_time_local();
 			diff = odp_time_diff(cycle, start_cycle);
 			if (odp_time_cmp(wait, diff) < 0) {
-				printf("timeout exit, run_time_sec %d\n",
-				       run_time_sec);
+				printf("timeout exit 1, start_time_sec %d\n",
+				       start_time_sec);
 				return -1;
 			}
 		}
@@ -83,12 +82,12 @@ static int pktio_run_loop(odp_pool_t pool)
 
 	/* start ipc pktio, i.e. wait until other process connects */
 	for (;;) {
-		if (run_time_sec) {
+		if (start_time_sec) {
 			cycle = odp_time_local();
 			diff = odp_time_diff(cycle, start_cycle);
 			if (odp_time_cmp(wait, diff) < 0) {
-				printf("timeout exit, run_time_sec %d\n",
-				       run_time_sec);
+				printf("timeout exit 2, start_time_sec %d\n",
+				       start_time_sec);
 				goto exit;
 			}
 		}
@@ -102,6 +101,8 @@ static int pktio_run_loop(odp_pool_t pool)
 	}
 
 	/* packets loop */
+	wait = odp_time_local_from_ns(run_time_sec * ODP_TIME_SEC_IN_NS);
+	start_cycle = odp_time_local();
 	for (;;) {
 		int i;
 
