@@ -19,7 +19,7 @@ run()
 	if [ $(nproc) -lt $1 ]; then
 		echo "Not enough CPU cores. Skipping test."
 	else
-		$TEST_DIR/odp_scheduling${EXEEXT} -c $1
+		$TEST_DIR/odp_scheduling${EXEEXT} -c $1 -t 0.1
 		RET_VAL=$?
 		if [ $RET_VAL -ne 0 ]; then
 			echo odp_scheduling FAILED
