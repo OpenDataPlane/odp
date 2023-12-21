@@ -81,8 +81,8 @@ static void print_usage(void)
 	       "Stress test options:\n"
 	       "\n"
 	       "  -c, --num_cpu          Number of CPUs (worker threads). 0: all available CPUs. Default: 1\n"
-	       "  -p, --period_ns        Timeout period in nsec. Default: 1 sec\n"
-	       "  -r, --rounds           Number of timeout rounds. Default: 10\n"
+	       "  -p, --period_ns        Timeout period in nsec. Default: 100 ms\n"
+	       "  -r, --rounds           Number of timeout rounds. Default: 2\n"
 	       "  -m, --mode             Select test mode. Default: 1\n"
 	       "                           0: No stress, just wait for timeouts\n"
 	       "                           1: Memcpy\n"
@@ -114,8 +114,8 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 	static const char *shortopts = "+c:p:r:m:s:g:h";
 
 	test_options->num_cpu     = 1;
-	test_options->period_ns   = 1000 * ODP_TIME_MSEC_IN_NS;
-	test_options->rounds      = 10;
+	test_options->period_ns   = 100 * ODP_TIME_MSEC_IN_NS;
+	test_options->rounds      = 2;
 	test_options->mode        = 1;
 	test_options->mem_size    = 2048;
 	test_options->group_mode  = 1;
