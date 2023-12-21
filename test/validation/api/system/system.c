@@ -241,7 +241,7 @@ static void system_test_cpu_cycles_long_period(void)
 	}
 
 	/* wrap was detected, no need to continue */
-	if (i < PERIODS_100_MSEC) {
+	if (i < periods) {
 		printf("wrap was detected.\n");
 		return;
 	}
