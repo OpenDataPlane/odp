@@ -1,11 +1,12 @@
-/* Copyright (c) 2015-2018, Linaro Limited
- * All rights reserved.
- *
- * SPDX-License-Identifier:     BSD-3-Clause
+/*  SPDX-License-Identifier: BSD-3-Clause
+ *  Copyright (c) 2015-2018 Linaro Limited
+ *  Copyright (c) 2023 Nokia
  */
 
 #include "ipc_common.h"
 
+/** Start time in seconds */
+int start_time_sec;
 /** Run time in seconds */
 int run_time_sec;
 /** Pid of the master process */
@@ -97,23 +98,28 @@ void parse_args(int argc, char *argv[])
 	int opt;
 	int long_index;
 	static struct option longopts[] = {
-		{"time", required_argument, NULL, 't'},
+		{"start-timeout", required_argument, NULL, 's'},
+		{"run-time", required_argument, NULL, 't'},
 		{"pid", required_argument, NULL, 'p'}, /* master process pid */
 		{"help", no_argument, NULL, 'h'},     /* return 'h' */
 		{NULL, 0, NULL, 0}
 	};
 
+	start_time_sec = 0; /* wait forever if time is 0 */
 	run_time_sec = 0; /* loop forever if time to run is 0 */
 	master_pid = 0;
 
 	while (1) {
-		opt = getopt_long(argc, argv, "+t:p:h",
+		opt = getopt_long(argc, argv, "+s:t:p:h",
 				  longopts, &long_index);
 
 		if (opt == -1)
 			break;	/* No more options */
 
 		switch (opt) {
+		case 's':
+			start_time_sec = atoi(optarg);
+			break;
 		case 't':
 			run_time_sec = atoi(optarg);
 			break;
@@ -157,7 +163,8 @@ void usage(char *progname)
 	       "Optional OPTIONS\n"
 	       "  -h, --help           Display help and exit.\n"
 	       "  -p, --pid            PID of the master process.\n"
-	       "  -t, --time           Time to run in seconds.\n"
+	       "  -t, --run-time       Time to run in seconds.\n"
+	       "  -s, --start-timeout  Maximum time for pktio startup.\n"
 	       "\n", NO_PATH(progname)
 	    );
 }

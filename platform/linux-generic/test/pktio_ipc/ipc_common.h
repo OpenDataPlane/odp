@@ -1,7 +1,6 @@
-/* Copyright (c) 2015-2018, Linaro Limited
- * All rights reserved.
- *
- * SPDX-License-Identifier:     BSD-3-Clause
+/*  SPDX-License-Identifier: BSD-3-Clause
+ *  Copyright (c) 2015-2018 Linaro Limited
+ *  Copyright (c) 2023 Nokia
  */
 
 #define _POSIX_C_SOURCE 200809L
@@ -63,6 +62,9 @@ typedef struct ODP_PACKED {
 typedef struct ODP_PACKED {
 	odp_u32be_t magic;
 } pkt_tail_t;
+
+/** Start time in seconds */
+extern int start_time_sec;
 
 /** Run time in seconds */
 extern int run_time_sec;
