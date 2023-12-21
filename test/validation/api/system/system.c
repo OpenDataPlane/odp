@@ -202,23 +202,27 @@ static void system_test_cpu_cycles_long_period(void)
 {
 	int i;
 	int periods = PERIODS_100_MSEC;
+	uint64_t max_period_duration = 100 * ODP_TIME_MSEC_IN_NS + periods - 1;
 	uint64_t c2, c1, c3, max;
 	uint64_t tmp, diff, res;
 
 	res = odp_cpu_cycles_resolution();
 	max = odp_cpu_cycles_max();
 
+	c3 = odp_cpu_cycles();
+
+	CU_ASSERT(c3 <= max);
 	/*
-	 * We can virtually never see a 64 bit cycle counter wrap around,
-	 * so let's not even try. Use small a number of periods to speed
-	 * up testing in this common case.
+	 * If the cycle counter is not close to wrapping around during
+	 * the test, then speed up the test by not trying to see the wrap
+	 * around too hard. Assume cycle counter frequency of less than 10 GHz.
 	 */
-	if (max == UINT64_MAX)
+	CU_ASSERT(odp_cpu_hz_max() < 10ULL * ODP_TIME_SEC_IN_NS);
+	if (max - c3 > 10 * periods * max_period_duration)
 		periods = 10;
 
 	printf("\n        Testing CPU cycles for %i seconds... ", periods / 10);
 
-	c3 = odp_cpu_cycles();
 	for (i = 0; i < periods; i++) {
 		c1 = odp_cpu_cycles();
 		odp_time_wait_ns(100 * ODP_TIME_MSEC_IN_NS + i);
