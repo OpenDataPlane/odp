@@ -121,9 +121,8 @@ int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 
 	ev = odp_timeout_to_event(tmo);
 
-	/* Calculate period for timer in uint64_t value, in current case
-	 * we will schedule timer for 1 second */
-	period = odp_timer_ns_to_tick(timer_pool, 1 * ODP_TIME_SEC_IN_NS);
+	/* Calculate timer period in ticks */
+	period = odp_timer_ns_to_tick(timer_pool, 100 * ODP_TIME_MSEC_IN_NS);
 
 	/* Wait time to return from odp_schedule() if there are no
 	 * events
@@ -159,7 +158,7 @@ int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 		       i, odp_time_to_ns(time));
 
 		/* Do not free current event, just go back to loop and program
-		 * timeout to next second.
+		 * the next timeout.
 		 */
 	}
 
