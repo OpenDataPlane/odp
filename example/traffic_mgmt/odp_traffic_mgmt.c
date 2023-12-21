@@ -292,7 +292,7 @@ static uint32_t next_rand_byte;
 static odp_atomic_u32_t atomic_pkts_into_tm;
 static odp_atomic_u32_t atomic_pkts_from_tm;
 
-static uint32_t g_num_pkts_to_send = 1000;
+static uint32_t g_num_pkts_to_send = 100;
 static uint8_t  g_print_tm_stats   = TRUE;
 
 static void tester_egress_fcn(odp_packet_t odp_pkt);
