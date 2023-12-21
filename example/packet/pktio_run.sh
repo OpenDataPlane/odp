@@ -4,6 +4,8 @@
 # Copyright (c) 2016-2018 Linaro Limited
 #
 
+TEST_TIME=0.1
+
 if  [ -f ./pktio_env ]; then
 	. ./pktio_env
 else
@@ -15,7 +17,7 @@ fi
 setup_interfaces
 
 # burst mode
-./odp_pktio${EXEEXT} -i $IF1 -t 1 -m 0
+./odp_pktio${EXEEXT} -i $IF1 -t $TEST_TIME -m 0
 STATUS=$?
 if [ ${STATUS} -ne 0 ]; then
 	echo "Error: status ${STATUS}"
@@ -26,7 +28,7 @@ validate_result
 echo "Pass -m 0: status ${STATUS}"
 
 # queue mode
-./odp_pktio${EXEEXT} -i $IF1 -t 1 -m 1
+./odp_pktio${EXEEXT} -i $IF1 -t $TEST_TIME -m 1
 STATUS=$?
 
 if [ ${STATUS} -ne 0 ]; then
@@ -38,7 +40,7 @@ validate_result
 echo "Pass -m 1: status ${STATUS}"
 
 # sched/queue mode
-./odp_pktio${EXEEXT} -i $IF1 -t 1 -m 2
+./odp_pktio${EXEEXT} -i $IF1 -t $TEST_TIME -m 2
 STATUS=$?
 
 if [ ${STATUS} -ne 0 ]; then
@@ -50,7 +52,7 @@ validate_result
 echo "Pass -m 2: status ${STATUS}"
 
 # cpu number option test 1
-./odp_pktio${EXEEXT} -i $IF1 -t 1 -m 0 -c 1
+./odp_pktio${EXEEXT} -i $IF1 -t $TEST_TIME -m 0 -c 1
 STATUS=$?
 
 if [ ${STATUS} -ne 0 ]; then
