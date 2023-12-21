@@ -72,7 +72,7 @@ typedef struct {
 	char **if_names;	/**< Array of pointers to interface names */
 	int mode;		/**< Packet IO mode */
 	char *if_str;		/**< Storage for interface names */
-	int time;		/**< Time to run app */
+	double time;		/**< Time to run app */
 } appl_args_t;
 
 /**
@@ -479,7 +479,7 @@ int main(int argc, char *argv[])
 			odp_pktio_stop(pktio);
 		}
 		/* use delay to let workers clean up queues */
-		odp_time_wait_ns(ODP_TIME_SEC_IN_NS);
+		odp_time_wait_ns(100 * ODP_TIME_MSEC_IN_NS);
 		odp_atomic_store_u32(&args->exit_threads, 1);
 	}
 
@@ -615,7 +615,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 			appl_args->cpu_count = atoi(optarg);
 			break;
 		case 't':
-			appl_args->time = atoi(optarg);
+			appl_args->time = atof(optarg);
 			break;
 			/* parse packet-io interface names */
 		case 'i':
@@ -742,7 +742,7 @@ static void usage(char *progname)
 	       "\n"
 	       "Optional OPTIONS\n"
 	       "  -c, --count <number> CPU count, 0=all available, default=1\n"
-	       "  -t, --time <seconds> Number of seconds to run.\n"
+	       "  -t, --time <seconds> Number of seconds to run (e.g. 0.1).\n"
 	       "  -m, --mode      0: Receive and send directly (no queues)\n"
 	       "                  1: Receive and send via queues.\n"
 	       "                  2: Receive via scheduler, send via queues.\n"
