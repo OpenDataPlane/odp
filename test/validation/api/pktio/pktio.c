@@ -5097,7 +5097,7 @@ static void pktio_test_pktin_event_queue(odp_pktin_mode_t pktin_mode)
 	int num_buf = 0;
 	int num_bad = 0;
 	odp_pktio_t pktio[MAX_NUM_IFACES] = {0};
-	uint64_t wait_sec = odp_schedule_wait_time(ODP_TIME_SEC_IN_NS);
+	uint64_t wait_time = odp_schedule_wait_time(100 * ODP_TIME_MSEC_IN_NS);
 
 	CU_ASSERT_FATAL(num_ifaces >= 1);
 
@@ -5170,9 +5170,9 @@ static void pktio_test_pktin_event_queue(odp_pktin_mode_t pktin_mode)
 
 	/* Receive events */
 	while (1) {
-		/* Break after 1 sec of inactivity */
+		/* Break after a period of inactivity */
 		if (pktin_mode == ODP_PKTIN_MODE_SCHED) {
-			ev = odp_schedule(&from, wait_sec);
+			ev = odp_schedule(&from, wait_time);
 
 			if (ev == ODP_EVENT_INVALID)
 				break;

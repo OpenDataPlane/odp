@@ -689,9 +689,9 @@ static void lso_send_custom_eth(const uint8_t *test_packet, uint32_t pkt_len, ui
 
 	ODPH_DBG("\n    Sent payload length:     %u bytes\n", sent_payload);
 
-	/* Wait 1 sec to receive all created segments. Timeout and MAX_NUM_SEG values should be
+	/* Wait a bit to receive all created segments. Timeout and MAX_NUM_SEG values should be
 	 * large enough to ensure that we receive all created segments. */
-	num = recv_packets(pktio_b, ODP_TIME_SEC_IN_NS, pkt_out, MAX_NUM_SEG);
+	num = recv_packets(pktio_b, 100 * ODP_TIME_MSEC_IN_NS, pkt_out, MAX_NUM_SEG);
 	CU_ASSERT(num > 0);
 	CU_ASSERT(num < MAX_NUM_SEG);
 
@@ -814,9 +814,9 @@ static void lso_send_ipv4(const uint8_t *test_packet, uint32_t pkt_len, uint32_t
 
 	ODPH_DBG("\n    Sent payload length:     %u bytes\n", sent_payload);
 
-	/* Wait 1 sec to receive all created segments. Timeout and MAX_NUM_SEG values should be
+	/* Wait a bit to receive all created segments. Timeout and MAX_NUM_SEG values should be
 	 * large enough to ensure that we receive all created segments. */
-	num = recv_packets(pktio_b, ODP_TIME_SEC_IN_NS, packet, MAX_NUM_SEG);
+	num = recv_packets(pktio_b, 100 * ODP_TIME_MSEC_IN_NS, packet, MAX_NUM_SEG);
 	CU_ASSERT(num > 0);
 	CU_ASSERT(num < MAX_NUM_SEG);
 
