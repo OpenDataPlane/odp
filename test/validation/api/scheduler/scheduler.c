@@ -54,9 +54,9 @@
 #define CHAOS_PTR_TO_NDX(p) ((uint64_t)(uint32_t)(uintptr_t)p)
 #define CHAOS_NDX_TO_PTR(n) ((void *)(uintptr_t)n)
 
-#define WAIT_TIMEOUT     (1000 * ODP_TIME_MSEC_IN_NS)
+#define WAIT_TIMEOUT     (100 * ODP_TIME_MSEC_IN_NS)
 #define WAIT_ROUNDS      5
-#define WAIT_TOLERANCE   (150 * ODP_TIME_MSEC_IN_NS)
+#define WAIT_TOLERANCE   (15 * ODP_TIME_MSEC_IN_NS)
 #define WAIT_1MS_RETRIES 1000
 
 #define SCHED_AND_PLAIN_ROUNDS 10000
