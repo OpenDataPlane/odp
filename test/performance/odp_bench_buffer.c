@@ -34,7 +34,7 @@
 #define TEST_REPEAT_COUNT 1000
 
 /** Default number of rounds per test case */
-#define TEST_ROUNDS 1000u
+#define TEST_ROUNDS 100u
 
 /** Maximum burst size for *_multi operations */
 #define TEST_MAX_BURST 64
