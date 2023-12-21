@@ -1,7 +1,6 @@
-/* Copyright (c) 2013-2018, Linaro Limited
- * All rights reserved.
- *
- * SPDX-License-Identifier:     BSD-3-Clause
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2013-2018 Linaro Limited
+ * Copyright (c) 2019-2023 Nokia
  */
 
 /**
@@ -49,6 +48,7 @@ typedef struct {
 
 /** Test arguments */
 typedef struct {
+	double test_sec; /**< CPU frequency test duration in seconds */
 	unsigned int cpu_count;  /**< CPU count */
 	int fairness;   /**< Check fairness */
 } test_args_t;
@@ -687,17 +687,17 @@ static int run_thread(void *arg ODP_UNUSED)
 /**
  * @internal Test cycle counter frequency
  */
-static void test_cpu_freq(void)
+static void test_cpu_freq(double test_sec)
 {
 	odp_time_t cur_time, test_time, start_time, end_time;
 	uint64_t c1, c2, cycles;
 	uint64_t nsec;
 	double diff_max_hz, max_cycles;
 
-	printf("\nCPU cycle count frequency test (runs about %i sec)\n",
-	       TEST_SEC);
+	printf("\nCPU cycle count frequency test (runs about %f sec)\n",
+	       test_sec);
 
-	test_time = odp_time_local_from_ns(TEST_SEC * ODP_TIME_SEC_IN_NS);
+	test_time = odp_time_local_from_ns(test_sec * ODP_TIME_SEC_IN_NS);
 	start_time = odp_time_local();
 	end_time = odp_time_sum(start_time, test_time);
 
@@ -734,6 +734,7 @@ static void print_usage(void)
 {
 	printf("\n\nUsage: ./odp_example [options]\n");
 	printf("Options:\n");
+	printf("  -t, --time <number>     test duration, default=%.1f\n", (double)TEST_SEC);
 	printf("  -c, --count <number>    CPU count, 0=all available, default=1\n");
 	printf("  -h, --help              this help\n");
 	printf("  -f, --fair              collect fairness statistics\n");
@@ -753,15 +754,17 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 	int long_index;
 
 	static const struct option longopts[] = {
+		{"time", required_argument, NULL, 't'},
 		{"count", required_argument, NULL, 'c'},
 		{"fair", no_argument, NULL, 'f'},
 		{"help", no_argument, NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+c:fh";
+	static const char *shortopts = "+t:c:fh";
 
 	args->cpu_count = 1; /* use one worker by default */
+	args->test_sec = TEST_SEC;
 
 	while (1) {
 		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
@@ -772,6 +775,10 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 		switch (opt) {
 		case 'f':
 			args->fairness = 1;
+			break;
+
+		case 't':
+			args->test_sec = atof(optarg);
 			break;
 
 		case 'c':
@@ -864,7 +871,7 @@ int main(int argc, char *argv[])
 	}
 
 	/* Test cycle count frequency */
-	test_cpu_freq();
+	test_cpu_freq(args.test_sec);
 
 	shm = odp_shm_reserve("test_globals",
 			      sizeof(test_globals_t), ODP_CACHE_LINE_SIZE, 0);
