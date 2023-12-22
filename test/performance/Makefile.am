@@ -12,6 +12,7 @@ EXECUTABLES = odp_atomic_perf \
 	      odp_lock_perf \
 	      odp_mem_perf \
 	      odp_pktio_perf \
+	      odp_pool_latency \
 	      odp_pool_perf \
 	      odp_queue_perf \
 	      odp_stash_perf \
@@ -81,6 +82,7 @@ odp_sched_latency_SOURCES = odp_sched_latency.c
 odp_sched_pktio_SOURCES = odp_sched_pktio.c
 odp_scheduling_SOURCES = odp_scheduling.c
 odp_pktio_perf_SOURCES = odp_pktio_perf.c
+odp_pool_latency_SOURCES = odp_pool_latency.c
 odp_pool_perf_SOURCES = odp_pool_perf.c
 odp_queue_perf_SOURCES = odp_queue_perf.c
 odp_random_SOURCES = odp_random.c

@@ -20,6 +20,7 @@ odp_mem_perf
 odp_packet_gen
 odp_pktio_ordered
 odp_pktio_perf
+odp_pool_latency
 odp_pool_perf
 odp_queue_perf
 odp_random
