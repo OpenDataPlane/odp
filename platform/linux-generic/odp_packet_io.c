@@ -3015,8 +3015,15 @@ static int lso_update_custom(lso_profile_t *lso_prof, odp_packet_t pkt, int segn
 			ptr = &u32;
 		else if (size == 2)
 			ptr = &u16;
-		else
+		else {
+			/*
+			 * odp_lso_profile_create() ensures that size is one of the allowed values.
+			 * But compiler doesn't know that, so set it here to avoid possibility of
+			 * out of bounds warnings.
+			 */
+			size = 1;
 			ptr = &u8;
+		}
 
 		if (odp_packet_copy_to_mem(pkt, offset, size, ptr)) {
 			_ODP_ERR("Read from packet failed at offset %u\n", offset);
