@@ -178,7 +178,10 @@ static void test_abs_timeouts(int thr, test_globals_t *gbls)
 			continue;
 
 		odp_event_free(ttp->ev);
-		odp_timer_free(ttp->tim);
+
+		if (odp_timer_free(ttp->tim))
+			ODPH_ABORT("Timer free failed (%" PRIu64 ")\n", odp_timer_to_u64(ttp->tim));
+
 		ttp = NULL;
 	}
 
