@@ -20,7 +20,7 @@
 #include <unistd.h>
 
 /* Number of API function calls per test case */
-#define REPEAT_COUNT 1000
+#define REPEAT_COUNT 1024
 
 /* Default number of rounds per test case */
 #define ROUNDS 1000u
@@ -733,6 +733,42 @@ static int mb_full(void)
 	return i;
 }
 
+static int prefetch(void)
+{
+	uint64_t *a1 = gbl_args->a1;
+	uint32_t index = 0;
+	int i;
+
+	for (i = 0; i < REPEAT_COUNT; i++) {
+		odp_prefetch(&a1[index]);
+
+		/* Prefetch every 64B */
+		index += 8;
+		if (odp_unlikely(index >= REPEAT_COUNT))
+			index = 0;
+	}
+
+	return i;
+}
+
+static int prefetch_store(void)
+{
+	uint64_t *a1 = gbl_args->a1;
+	uint32_t index = 0;
+	int i;
+
+	for (i = 0; i < REPEAT_COUNT; i++) {
+		odp_prefetch_store(&a1[index]);
+
+		/* Prefetch every 64B */
+		index += 8;
+		if (odp_unlikely(index >= REPEAT_COUNT))
+			index = 0;
+	}
+
+	return i;
+}
+
 bench_info_t test_suite[] = {
 	BENCH_INFO(time_local, NULL, 0, NULL),
 	BENCH_INFO(time_local_strict, NULL, 0, NULL),
@@ -785,6 +821,8 @@ bench_info_t test_suite[] = {
 	BENCH_INFO(mb_release, NULL, 0, NULL),
 	BENCH_INFO(mb_acquire, NULL, 0, NULL),
 	BENCH_INFO(mb_full, NULL, 0, NULL),
+	BENCH_INFO(prefetch, NULL, 0, NULL),
+	BENCH_INFO(prefetch_store, NULL, 0, NULL),
 };
 
 /* Print usage information */
