@@ -1,9 +1,7 @@
 #!/bin/bash
 #
-# Copyright (c) 2016-2018, Linaro Limited
-# All rights reserved.
-#
-# SPDX-License-Identifier:     BSD-3-Clause
+# SPDX-License-Identifier: BSD-3-Clause
+# Copyright (c) 2016-2018 Linaro Limited
 #
 
 if  [ -f ./pktio_env ]; then

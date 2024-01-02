@@ -1,9 +1,7 @@
 #!/bin/bash
 #
-# Copyright (c) 2019, Nokia
-# All rights reserved.
-#
-# SPDX-License-Identifier:     BSD-3-Clause
+# SPDX-License-Identifier: BSD-3-Clause
+# Copyright (c) 2019 Nokia
 #
 
 if  [ -f ./pktio_env ]; then
