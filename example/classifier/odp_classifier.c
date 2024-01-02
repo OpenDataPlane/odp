@@ -1,9 +1,7 @@
-/* Copyright (c) 2015-2018, Linaro Limited
- * Copyright (c) 2019-2022, Nokia
- * Copyright (c) 2020, Marvell
- * All rights reserved.
- *
- * SPDX-License-Identifier:     BSD-3-Clause
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2015-2018 Linaro Limited
+ * Copyright (c) 2019-2022 Nokia
+ * Copyright (c) 2020 Marvell
  */
 
 /**
