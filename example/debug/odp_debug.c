@@ -325,6 +325,8 @@ static int pktio_debug(void)
 	odp_pool_t pool;
 	odp_pool_param_t pool_param;
 	odp_pktio_t pktio;
+	odp_pktio_link_info_t info;
+	uint8_t mac[ODPH_ETHADDR_LEN];
 	int pkt_len = 100;
 
 	odp_pool_param_init(&pool_param);
@@ -346,11 +348,71 @@ static int pktio_debug(void)
 		return -1;
 	}
 
+	/* Start interface with default config */
+	if (odp_pktin_queue_config(pktio, NULL)) {
+		ODPH_ERR("Packet input queue config failed\n");
+		return -1;
+	}
+
+	if (odp_pktout_queue_config(pktio, NULL)) {
+		ODPH_ERR("Packet output queue config failed\n");
+		return -1;
+	}
+
+	if (odp_pktio_start(pktio)) {
+		ODPH_ERR("Pktio start failed\n");
+		return -1;
+	}
+
+	printf("\nWaiting link up");
+
+	/* Wait max 5 seconds for link up */
+	for (int i = 0; i < 25; i++) {
+		if (odp_pktio_link_status(pktio) == ODP_PKTIO_LINK_STATUS_UP)
+			break;
+
+		odp_time_wait_ns(200 * ODP_TIME_MSEC_IN_NS);
+		printf(".");
+		fflush(NULL);
+	}
+
+	printf("\n\n");
+
+	printf("Packet IO\n---------\n");
+	printf("  index:         %i\n", odp_pktio_index(pktio));
+	printf("  handle:        0x%" PRIx64 "\n", odp_pktio_to_u64(pktio));
+
+	if (odp_pktio_mac_addr(pktio, mac, ODPH_ETHADDR_LEN) == ODPH_ETHADDR_LEN) {
+		printf("  mac address:   %02x:%02x:%02x:%02x:%02x:%02x\n", mac[0], mac[1], mac[2],
+		       mac[3], mac[4], mac[5]);
+	}
+
+	printf("  input maxlen:  %u\n", odp_pktin_maxlen(pktio));
+	printf("  output maxlen: %u\n", odp_pktout_maxlen(pktio));
+	printf("  promisc mode:  %i\n", odp_pktio_promisc_mode(pktio));
+	printf("  timestamp res: %" PRIu64 " Hz\n\n", odp_pktio_ts_res(pktio));
+
+	if (odp_pktio_link_info(pktio, &info) == 0) {
+		printf("Link info\n---------\n");
+		printf("  auto neg:  %i\n", info.autoneg);
+		printf("  duplex:    %i\n", info.duplex);
+		printf("  media:     %s\n", info.media);
+		printf("  pause_rx:  %i\n", info.pause_rx);
+		printf("  pause_tx:  %i\n", info.pause_tx);
+		printf("  speed:     %u Mbit/s\n", info.speed);
+		printf("  status:    %i\n", info.status);
+	}
+
 	printf("\n");
 	odp_pktio_print(pktio);
 
 	printf("\n");
 	odp_pktio_extra_stats_print(pktio);
+
+	if (odp_pktio_stop(pktio)) {
+		ODPH_ERR("Pktio stop failed\n");
+		return -1;
+	}
 
 	if (odp_pktio_close(pktio)) {
 		ODPH_ERR("Pktio close failed\n");
