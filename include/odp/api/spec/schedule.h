@@ -22,7 +22,7 @@ extern "C" {
 #include <odp/api/schedule_types.h>
 #include <odp/api/thrmask.h>
 
-/** @defgroup odp_scheduler ODP SCHEDULER
+/** @addtogroup odp_scheduler
  *  Event scheduler for work load balancing and prioritization.
  *  @{
  */

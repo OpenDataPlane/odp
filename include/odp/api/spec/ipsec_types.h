@@ -24,7 +24,7 @@ extern "C" {
 #include <odp/api/std_types.h>
 #include <odp/api/traffic_mngr.h>
 
-/** @addtogroup odp_ipsec
+/** @defgroup odp_ipsec ODP IPSEC
  *  @{
  */
 

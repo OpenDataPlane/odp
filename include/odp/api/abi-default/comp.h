@@ -14,7 +14,7 @@ extern "C" {
 /** @internal Dummy type for strong typing */
 typedef struct { char dummy; /**< @internal Dummy */ } _odp_abi_comp_session_t;
 
-/** @ingroup odp_compression
+/** @addtogroup odp_compression
  *  @{
  */
 

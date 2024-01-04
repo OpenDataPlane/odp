@@ -27,7 +27,7 @@ typedef struct { char dummy; /**< *internal Dummy */ } _odp_abi_packet_vector_t;
 /** @internal Dummy type for strong typing */
 typedef struct { char dummy; /**< *internal Dummy */ } _odp_abi_packet_tx_compl_t;
 
-/** @ingroup odp_packet
+/** @addtogroup odp_packet
  *  @{
  */
 

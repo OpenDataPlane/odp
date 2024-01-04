@@ -20,7 +20,7 @@ extern "C" {
 #include <odp/api/std_types.h>
 #include <odp/api/pool_types.h>
 
-/** @defgroup odp_pool ODP POOL
+/** @addtogroup odp_pool
  *  Packet and buffer (event) pools.
  *  @{
  */

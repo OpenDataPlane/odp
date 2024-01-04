@@ -20,7 +20,7 @@
 extern "C" {
 #endif
 
-/** @addtogroup odp_scheduler
+/** @defgroup odp_scheduler ODP SCHEDULER
  *  @{
  */
 

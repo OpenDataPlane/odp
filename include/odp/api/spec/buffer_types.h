@@ -17,7 +17,7 @@
 extern "C" {
 #endif
 
-/** @addtogroup odp_buffer
+/** @defgroup odp_buffer ODP BUFFER
  *  @{
  */
 

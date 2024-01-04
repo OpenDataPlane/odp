@@ -20,7 +20,7 @@
 extern "C" {
 #endif
 
-/** @addtogroup odp_crypto
+/** @defgroup odp_crypto ODP CRYPTO
  *  @{
  */
 

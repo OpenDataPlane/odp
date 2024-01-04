@@ -25,7 +25,6 @@ typedef struct { char dummy; /**< @internal Dummy */ } _odp_abi_pktio_t;
 typedef struct { char dummy; /**< @internal Dummy */ } _odp_abi_lso_profile_t;
 
 /** @addtogroup odp_packet_io
- *  Operations on a packet.
  *  @{
  */
 

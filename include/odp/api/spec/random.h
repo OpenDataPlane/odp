@@ -19,7 +19,7 @@ extern "C" {
 #include <odp/api/random_types.h>
 #include <odp/api/std_types.h>
 
-/** @defgroup odp_random ODP RANDOM
+/** @addtogroup odp_random
  *  Random number generation.
  *  @{
  */

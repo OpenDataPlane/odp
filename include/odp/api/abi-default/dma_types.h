@@ -17,7 +17,7 @@ typedef struct { char dummy; /**< @internal Dummy */ } _odp_abi_dma_t;
 /** @internal Dummy type for strong typing */
 typedef struct { char dummy; /**< @internal Dummy */ } _odp_abi_dma_compl_t;
 
-/** @ingroup odp_dma
+/** @addtogroup odp_dma
  *  @{
  */
 

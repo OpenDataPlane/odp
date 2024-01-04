@@ -12,7 +12,7 @@ extern "C" {
 
 #include <stdint.h>
 
-/** @ingroup odp_crypto
+/** @addtogroup odp_crypto
  *  @{
  */
 

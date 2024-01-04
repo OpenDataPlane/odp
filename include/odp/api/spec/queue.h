@@ -21,7 +21,7 @@ extern "C" {
 #include <odp/api/queue_types.h>
 #include <odp/api/std_types.h>
 
-/** @defgroup odp_queue ODP QUEUE
+/** @addtogroup odp_queue
  *  Queues for event passing and scheduling.
  *  @{
  */

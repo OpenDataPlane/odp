@@ -23,7 +23,7 @@ extern "C" {
 #include <odp/api/packet_types.h>
 #include <odp/api/std_types.h>
 
-/** @defgroup odp_ipsec ODP IPSEC
+/** @addtogroup odp_ipsec
  *  IPSEC protocol offload.
  *  @{
  */

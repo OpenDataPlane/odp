@@ -208,7 +208,7 @@ Within the platform agnostic area, the validation tests for a given interface
 are also grouped by modules, matching the ODP interface modules: for instance,
 `test/common_plat/validation/api` mainly contains a list of
 directories matching each module name (as defined by the doxygen `@defgroup`
-or `@ingroup` statement present in each API `.h` file).
+or `@addtogroup` statement present in each API `.h` file).
 
 Within each of these directories, a library (called `libtest<module>.la`) and
 its associated `.h` file (called `<module>.h`) defines all the test functions

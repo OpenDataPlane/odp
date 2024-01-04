@@ -18,7 +18,7 @@ extern "C" {
 
 #include <odp/api/std_types.h>
 
-/** @addtogroup odp_stash
+/** @defgroup odp_stash ODP STASH
  *  @{
  */
 

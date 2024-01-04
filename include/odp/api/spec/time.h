@@ -20,7 +20,7 @@ extern "C" {
 #include <odp/api/std_types.h>
 #include <odp/api/time_types.h>
 
-/** @defgroup odp_time ODP TIME
+/** @addtogroup odp_time
  *  SoC global and CPU local wall clock time
  *
  *  @{

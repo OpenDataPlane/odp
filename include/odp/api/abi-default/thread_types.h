@@ -9,7 +9,7 @@
 extern "C" {
 #endif
 
-/** @ingroup odp_thread
+/** @addtogroup odp_thread
  *  @{
  */
 

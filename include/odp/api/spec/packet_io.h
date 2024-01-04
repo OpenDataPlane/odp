@@ -25,7 +25,7 @@ extern "C" {
 #include <odp/api/reassembly.h>
 #include <odp/api/time_types.h>
 
-/** @defgroup odp_packet_io ODP PACKET IO
+/** @addtogroup odp_packet_io
  *  Packet IO interfaces.
  *
  * Packet IO is the Ingress and Egress interface to ODP processing. It

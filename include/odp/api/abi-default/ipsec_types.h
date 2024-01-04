@@ -15,7 +15,7 @@ extern "C" {
 /** @internal Dummy type for strong typing */
 typedef struct { char dummy; /**< @internal Dummy */ } _odp_abi_ipsec_sa_t;
 
-/** @ingroup odp_ipsec
+/** @addtogroup odp_ipsec
  *  @{
  */
 

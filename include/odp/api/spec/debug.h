@@ -15,6 +15,10 @@
 extern "C" {
 #endif
 
+/** @addtogroup odp_initialization
+ *  @{
+ */
+
 /**
  * @def ODP_STATIC_ASSERT
  * Compile time assertion macro. Fails compilation and outputs message 'msg'
@@ -24,6 +28,10 @@ extern "C" {
  * @param cond Conditional expression to be evaluated at compile time
  *
  * @param msg  Compile time error message to be displayed if cond is false
+ */
+
+/**
+ * @}
  */
 
 #ifdef __cplusplus

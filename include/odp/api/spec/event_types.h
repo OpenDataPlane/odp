@@ -17,7 +17,7 @@
 extern "C" {
 #endif
 
-/** @addtogroup odp_event
+/** @defgroup odp_event ODP EVENT
  *  @{
  */
 

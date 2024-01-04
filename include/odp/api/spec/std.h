@@ -19,12 +19,10 @@ extern "C" {
 
 #include <odp/api/std_types.h>
 
-/**
- * @defgroup odp_std ODP STD
- * Standard types and performance optimized versions of selected C library
- * functions.
- *
- * @{
+/** @addtogroup odp_std
+ *  Standard types and performance optimized versions of selected C library
+ *  functions.
+ *  @{
  */
 
 /**
