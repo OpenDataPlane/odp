@@ -80,7 +80,7 @@ typedef struct ODP_ALIGNED(sizeof(odp_u128_t)) odp_atomic_u128_s {
 
 #endif
 
-/** @ingroup odp_atomic
+/** @addtogroup odp_atomic
  *  @{
  */
 

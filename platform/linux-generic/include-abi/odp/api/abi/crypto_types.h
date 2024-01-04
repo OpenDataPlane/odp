@@ -22,7 +22,7 @@ extern "C" {
 
 #include <odp/api/plat/strong_types.h>
 
-/** @ingroup odp_crypto
+/** @addtogroup odp_crypto
  *  @{
  */
 

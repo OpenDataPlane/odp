@@ -30,7 +30,7 @@ extern "C" {
 #include <protocols/ip.h>
 #include <stdint.h>
 
-/** @ingroup odp_ipsec
+/** @addtogroup odp_ipsec
  *  @{
  */
 

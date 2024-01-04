@@ -22,7 +22,7 @@ extern "C" {
 
 #include <odp/api/plat/strong_types.h>
 
-/** @ingroup odp_ipsec
+/** @addtogroup odp_ipsec
  *  @{
  */
 

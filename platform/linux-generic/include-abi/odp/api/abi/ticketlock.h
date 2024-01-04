@@ -19,7 +19,7 @@ extern "C" {
 
 #include <odp/api/atomic.h>
 
-/** @ingroup odp_locks
+/** @addtogroup odp_locks
  *  @{
  */
 
