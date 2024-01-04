@@ -1,8 +1,6 @@
-/* Copyright (c) 2015-2018, Linaro Limited
- * Copyright (c) 2019-2023, Nokia
- * All rights reserved.
- *
- * SPDX-License-Identifier:     BSD-3-Clause
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2015-2018 Linaro Limited
+ * Copyright (c) 2019-2024 Nokia
  */
 
 #include <odp_api.h>
@@ -297,12 +295,19 @@ static int fill_testinfo(odp_testinfo_t *info, unsigned int test_case)
 int main(int argc, char *argv[])
 {
 	int ret;
-
-	if (fill_testinfo(&init_suite[0], INIT_TEST))
-		return -1;
+	int test_id;
 
 	/* Parse common options */
 	if (odp_cunit_parse_options(&argc, argv))
+		return -1;
+
+	if (argc < 2) {
+		ODPH_ERR("Usage: init_main <test case number>\n");
+		return -1;
+	}
+	test_id = atoi(argv[1]);
+
+	if (fill_testinfo(&init_suite[0], test_id))
 		return -1;
 
 	/* Prevent default ODP init */

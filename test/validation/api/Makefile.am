@@ -46,15 +46,15 @@ TESTS = \
 	errno/errno_main$(EXEEXT) \
 	event/event_main$(EXEEXT) \
 	hash/hash_main$(EXEEXT) \
-	init/init_defaults$(EXEEXT) \
-	init/init_abort$(EXEEXT) \
-	init/init_log$(EXEEXT) \
-	init/init_log_thread$(EXEEXT) \
-	init/init_num_thr$(EXEEXT) \
-	init/init_feature_enabled$(EXEEXT) \
-	init/init_feature_disabled$(EXEEXT) \
-	init/init_test_param_init$(EXEEXT) \
-	init/init_test_term_abnormal$(EXEEXT) \
+	init/init_defaults.sh \
+	init/init_abort.sh \
+	init/init_log.sh \
+	init/init_log_thread.sh \
+	init/init_num_thr.sh \
+	init/init_feature_enabled.sh \
+	init/init_feature_disabled.sh \
+	init/init_test_param_init.sh \
+	init/init_test_term_abnormal.sh \
 	ipsec/ipsec_sync.sh \
 	ipsec/ipsec_async.sh \
 	ipsec/ipsec_inline_in.sh \
