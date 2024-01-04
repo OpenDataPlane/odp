@@ -13,7 +13,7 @@ extern "C" {
 /** @internal Dummy type for strong typing */
 typedef struct { char dummy; /**< @internal Dummy */ } _odp_abi_pool_t;
 
-/** @ingroup odp_pool
+/** @addtogroup odp_pool
  *  @{
  */
 

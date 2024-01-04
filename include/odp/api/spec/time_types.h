@@ -17,7 +17,7 @@
 extern "C" {
 #endif
 
-/** @addtogroup odp_time
+/** @defgroup odp_time ODP TIME
  *  @{
  */
 

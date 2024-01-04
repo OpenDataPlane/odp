@@ -11,7 +11,7 @@ extern "C" {
 
 #include <stdint.h>
 
-/** @ingroup odp_time
+/** @addtogroup odp_time
  *  @{
  **/
 

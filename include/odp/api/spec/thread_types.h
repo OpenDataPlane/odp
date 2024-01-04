@@ -15,7 +15,7 @@
 extern "C" {
 #endif
 
-/** @ingroup odp_thread ODP THREAD
+/** @defgroup odp_thread ODP THREAD
  *  @{
  */
 

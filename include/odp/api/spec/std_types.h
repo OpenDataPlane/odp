@@ -22,7 +22,7 @@
 extern "C" {
 #endif
 
-/** @addtogroup odp_std ODP STD
+/** @defgroup odp_std ODP STD
  *  @{
  */
 

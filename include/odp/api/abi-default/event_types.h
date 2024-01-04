@@ -15,7 +15,7 @@ extern "C" {
 /** @internal Dummy type for strong typing */
 typedef struct { char dummy; /**< @internal Dummy */ } _odp_abi_event_t;
 
-/** @ingroup odp_event
+/** @addtogroup odp_event
  *  @{
  */
 

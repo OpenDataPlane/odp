@@ -15,7 +15,7 @@ typedef struct { char dummy; /**< @internal Dummy */ } _odp_abi_cos_t;
 /** Dummy type for strong typing */
 typedef struct { char dummy; /**< @internal Dummy */ } _odp_abi_pmr_t;
 
-/** @ingroup odp_classification
+/** @addtogroup odp_classification
  *  @{
  */
 

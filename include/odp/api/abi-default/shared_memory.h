@@ -12,7 +12,7 @@ extern "C" {
 /** @internal Dummy type for strong typing */
 typedef struct { char dummy; /**< @internal Dummy */ } _odp_abi_shm_t;
 
-/** @ingroup odp_shared_memory
+/** @addtogroup odp_shared_memory
  *  @{
  */
 

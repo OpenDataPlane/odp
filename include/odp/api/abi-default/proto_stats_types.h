@@ -15,8 +15,7 @@ extern "C" {
 /** @internal Dummy type for strong typing */
 typedef struct { char dummy; /**< @internal Dummy */ } _odp_abi_proto_stats_t;
 
-/** @ingroup odp_proto_stats
- *  Operations on a proto stats object.
+/** @addtogroup odp_proto_stats
  *  @{
  */
 

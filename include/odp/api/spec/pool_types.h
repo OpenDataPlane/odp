@@ -19,7 +19,7 @@ extern "C" {
 #include <odp/api/std_types.h>
 #include <odp/api/dma_types.h>
 
-/** @addtogroup odp_pool
+/** @defgroup odp_pool ODP POOL
  *  @{
  */
 

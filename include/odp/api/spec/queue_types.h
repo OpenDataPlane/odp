@@ -18,7 +18,7 @@ extern "C" {
 
 #include <odp/api/schedule_types.h>
 
-/** @addtogroup odp_queue
+/** @defgroup odp_queue ODP QUEUE
  *  @{
  */
 

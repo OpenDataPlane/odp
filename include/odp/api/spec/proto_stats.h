@@ -18,7 +18,7 @@ extern "C" {
 
 #include <odp/api/proto_stats_types.h>
 
-/** @defgroup odp_proto_stats ODP PROTO STATS
+/** @addtogroup odp_proto_stats
  *  Flow specific packet statistics.
  *  @{
  */

@@ -24,7 +24,7 @@ extern "C" {
 #include <odp/api/reassembly.h>
 #include <odp/api/std_types.h>
 
-/** @addtogroup odp_packet_io
+/** @defgroup odp_packet_io ODP PACKET IO
  *  @{
  */
 

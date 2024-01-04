@@ -21,7 +21,7 @@
 extern "C" {
 #endif
 
-/** @defgroup odp_crypto ODP CRYPTO
+/** @addtogroup odp_crypto
  *  Data ciphering and authentication.
  *  @{
  */

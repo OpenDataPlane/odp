@@ -19,7 +19,7 @@ extern "C" {
 
 #include <odp/api/thread_types.h>
 
-/** @defgroup odp_thread ODP THREAD
+/** @addtogroup odp_thread
  *  Thread types, masks and IDs.
  *  @{
  */

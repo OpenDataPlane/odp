@@ -19,8 +19,13 @@ extern "C" {
 
 #include <odp/api/std_types.h>
 
-/** @addtogroup odp_proto_stats
+/** @defgroup odp_proto_stats ODP PROTO STATS
  *  @{
+ */
+
+/**
+ * @typedef odp_proto_stats_t
+ * ODP proto stats handle
  */
 
 /**
