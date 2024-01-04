@@ -20,7 +20,7 @@ extern "C" {
 
 #include <odp/api/plat/strong_types.h>
 
-/** @ingroup odp_event
+/** @addtogroup odp_event
  *  @{
  */
 

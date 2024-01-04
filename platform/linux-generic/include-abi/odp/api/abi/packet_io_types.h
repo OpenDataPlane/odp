@@ -21,7 +21,7 @@ extern "C" {
 #include <odp/api/std_types.h>
 #include <odp/api/plat/strong_types.h>
 
-/** @ingroup odp_packet_io
+/** @addtogroup odp_packet_io
  *  @{
  */
 

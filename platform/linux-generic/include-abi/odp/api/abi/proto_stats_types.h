@@ -21,7 +21,7 @@ extern "C" {
 #include <odp/api/std_types.h>
 #include <odp/api/plat/strong_types.h>
 
-/** @ingroup odp_proto_stats
+/** @addtogroup odp_proto_stats
  *  @{
  */
 

@@ -17,7 +17,7 @@
 extern "C" {
 #endif
 
-/** @ingroup odp_barrier
+/** @addtogroup odp_barrier
  *  @{
  */
 

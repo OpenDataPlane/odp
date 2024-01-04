@@ -19,7 +19,7 @@ extern "C" {
 
 #include <odp/api/plat/strong_types.h>
 
-/** @ingroup odp_pool
+/** @addtogroup odp_pool
  *  @{
  */
 

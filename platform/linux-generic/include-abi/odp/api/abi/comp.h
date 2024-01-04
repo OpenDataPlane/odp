@@ -15,7 +15,7 @@ extern "C" {
 
 #include <stdint.h>
 
-/** @ingroup odp_compression
+/** @addtogroup odp_compression
  *  @{
  */
 
