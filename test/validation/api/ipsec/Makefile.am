@@ -11,14 +11,15 @@ libtestipsec_la_SOURCES = \
 	reass_test_vectors.c
 
 test_PROGRAMS = \
-	ipsec_sync \
-	ipsec_async \
-	ipsec_inline_in \
-	ipsec_inline_out
+	ipsec_main
 
-ipsec_sync_SOURCES = ipsec_sync.c
-ipsec_async_SOURCES = ipsec_async.c
-ipsec_inline_in_SOURCES = ipsec_inline_in.c
-ipsec_inline_out_SOURCES = ipsec_inline_out.c
+ipsec_main_SOURCES = \
+	ipsec_main.c
 
 PRELDADD += libtestipsec.la
+
+EXTRA_DIST = \
+	ipsec_sync.sh \
+	ipsec_async.sh \
+	ipsec_inline_in.sh \
+	ipsec_inline_out.sh

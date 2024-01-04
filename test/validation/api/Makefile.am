@@ -55,10 +55,10 @@ TESTS = \
 	init/init_feature_disabled$(EXEEXT) \
 	init/init_test_param_init$(EXEEXT) \
 	init/init_test_term_abnormal$(EXEEXT) \
-	ipsec/ipsec_sync$(EXEEXT) \
-	ipsec/ipsec_async$(EXEEXT) \
-	ipsec/ipsec_inline_in$(EXEEXT) \
-	ipsec/ipsec_inline_out$(EXEEXT) \
+	ipsec/ipsec_sync.sh \
+	ipsec/ipsec_async.sh \
+	ipsec/ipsec_inline_in.sh \
+	ipsec/ipsec_inline_out.sh \
 	lock/lock_main$(EXEEXT) \
 	packet/packet_main$(EXEEXT) \
 	pktio/pktio_main$(EXEEXT) \

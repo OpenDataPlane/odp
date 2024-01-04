@@ -20,9 +20,8 @@
 extern odp_testinfo_t ipsec_in_suite[];
 extern odp_testinfo_t ipsec_out_suite[];
 
-int ipsec_init(odp_instance_t *inst, odp_ipsec_op_mode_t mode);
+int ipsec_init(odp_instance_t *inst);
 int ipsec_term(odp_instance_t inst);
-int ipsec_config(odp_instance_t inst);
 
 int ipsec_in_inline_init(void);
 int ipsec_out_inline_init(void);
@@ -31,8 +30,6 @@ int ipsec_suite_sync_init(void);
 int ipsec_suite_plain_init(void);
 int ipsec_suite_sched_init(void);
 int ipsec_suite_term(void);
-int ipsec_in_term(void);
-int ipsec_out_term(void);
 
 struct suite_context_s {
 	odp_bool_t reass_ipv4;

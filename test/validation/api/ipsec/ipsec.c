@@ -29,7 +29,6 @@ static odp_ipsec_capability_t capa;
 static int sched_ev_buffer_tail;
 odp_bool_t sa_expiry_notified;
 
-
 #define PKT_POOL_NUM  64
 #define EVENT_WAIT_TIME ODP_TIME_SEC_IN_NS
 #define STATUS_EVENT_WAIT_TIME ODP_TIME_MSEC_IN_NS
@@ -37,6 +36,8 @@ odp_bool_t sa_expiry_notified;
 
 #define PACKET_USER_PTR	((void *)0x1212fefe)
 #define IPSEC_SA_CTX	((void *)0xfefefafa)
+
+static int ipsec_config(void);
 
 static odp_pktio_t pktio_create(odp_pool_t pool)
 {
@@ -1296,16 +1297,6 @@ int ipsec_suite_term(void)
 	return 0;
 }
 
-int ipsec_in_term(void)
-{
-	return ipsec_suite_term();
-}
-
-int ipsec_out_term(void)
-{
-	return ipsec_suite_term();
-}
-
 static odp_queue_t sched_queue_create(const char *name)
 {
 	odp_queue_param_t qparam;
@@ -1366,12 +1357,10 @@ int ipsec_suite_sched_init(void)
 	return ipsec_suite_init();
 }
 
-int ipsec_init(odp_instance_t *inst, odp_ipsec_op_mode_t mode)
+int ipsec_init(odp_instance_t *inst)
 {
 	odp_pool_param_t params;
-	odp_pool_t pool;
 	odp_pool_capability_t pool_capa;
-	odp_pktio_t pktio;
 	odp_init_t init_param;
 	odph_helper_options_t helper_options;
 
@@ -1427,25 +1416,26 @@ int ipsec_init(odp_instance_t *inst, odp_ipsec_op_mode_t mode)
 		return -1;
 	}
 
-	pool = odp_pool_create("packet_pool", &params);
+	suite_context.pool = odp_pool_create("packet_pool", &params);
 
-	if (ODP_POOL_INVALID == pool) {
+	if (suite_context.pool == ODP_POOL_INVALID) {
 		ODPH_ERR("Packet pool creation failed\n");
 		return -1;
 	}
 
-	if (mode == ODP_IPSEC_OP_MODE_INLINE) {
-		pktio = pktio_create(pool);
-		if (ODP_PKTIO_INVALID == pktio) {
+	if (suite_context.inbound_op_mode == ODP_IPSEC_OP_MODE_INLINE ||
+	    suite_context.outbound_op_mode == ODP_IPSEC_OP_MODE_INLINE) {
+		suite_context.pktio = pktio_create(suite_context.pool);
+		if (suite_context.pktio == ODP_PKTIO_INVALID) {
 			ODPH_ERR("IPsec pktio creation failed\n");
 			return -1;
 		}
 	}
 
-	return 0;
+	return ipsec_config();
 }
 
-int ipsec_config(odp_instance_t ODP_UNUSED inst)
+static int ipsec_config(void)
 {
 	odp_ipsec_config_t ipsec_config;
 
