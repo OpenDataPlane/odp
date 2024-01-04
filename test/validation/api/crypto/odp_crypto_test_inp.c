@@ -2399,7 +2399,7 @@ int main(int argc, char *argv[])
 	printf("Test mode: %s\n", full_test ? "full" : "partial");
 
 	/* parse common options: */
-	if (odp_cunit_parse_options(argc, argv))
+	if (odp_cunit_parse_options(&argc, argv))
 		return -1;
 
 	odp_cunit_register_global_init(crypto_init);

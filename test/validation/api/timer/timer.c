@@ -3262,7 +3262,7 @@ int main(int argc, char *argv[])
 	int ret = 0;
 
 	/* parse common options: */
-	if (odp_cunit_parse_options(argc, argv))
+	if (odp_cunit_parse_options(&argc, argv))
 		return -1;
 
 	if (global_init())

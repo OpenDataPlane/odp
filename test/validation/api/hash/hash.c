@@ -753,7 +753,7 @@ int main(int argc, char *argv[])
 	int ret;
 
 	/* parse common options: */
-	if (odp_cunit_parse_options(argc, argv))
+	if (odp_cunit_parse_options(&argc, argv))
 		return -1;
 
 	ret = odp_cunit_register(hash_suites);

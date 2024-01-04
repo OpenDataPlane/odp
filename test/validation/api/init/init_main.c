@@ -302,7 +302,7 @@ int main(int argc, char *argv[])
 		return -1;
 
 	/* Parse common options */
-	if (odp_cunit_parse_options(argc, argv))
+	if (odp_cunit_parse_options(&argc, argv))
 		return -1;
 
 	/* Prevent default ODP init */
