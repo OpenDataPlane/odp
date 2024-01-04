@@ -708,13 +708,13 @@ int odp_cunit_register(odp_suiteinfo_t testsuites[])
  * (hence also helpers options as cunit_common uses the helpers)
  * Options private to the test calling cunit_common are not parsed here.
  */
-int odp_cunit_parse_options(int argc, char *argv[])
+int odp_cunit_parse_options(int *argc, char *argv[])
 {
 	const char *ctrl_thread_env = getenv("CI_THREAD_TYPE_CONTROL");
 	const char *env = getenv("CI");
 
 	progname = argv[0];
-	odph_parse_options(argc, argv);
+	*argc = odph_parse_options(*argc, argv);
 	/* Check if we need to use control thread */
 	if (ctrl_thread_env && !strcmp(ctrl_thread_env, "true"))
 		control_thread = true;

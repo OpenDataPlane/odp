@@ -5025,7 +5025,7 @@ odp_suiteinfo_t traffic_mngr_suites[] = {
 int main(int argc, char *argv[])
 {
 	/* parse common options: */
-	if (odp_cunit_parse_options(argc, argv))
+	if (odp_cunit_parse_options(&argc, argv))
 		return -1;
 
 	int ret = odp_cunit_register(traffic_mngr_suites);

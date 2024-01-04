@@ -1007,7 +1007,7 @@ int main(int argc, char *argv[])
 	int ret;
 
 	/* parse common options: */
-	if (odp_cunit_parse_options(argc, argv))
+	if (odp_cunit_parse_options(&argc, argv))
 		return -1;
 
 	odp_cunit_register_global_init(time_global_init);
