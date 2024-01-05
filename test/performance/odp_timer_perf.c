@@ -691,7 +691,7 @@ static int cancel_timers(test_global_t *global, uint32_t worker_idx)
 static int set_cancel_mode_worker(void *arg)
 {
 	uint64_t tick, start_tick, period_tick, nsec;
-	uint64_t c1, c2, diff;
+	uint64_t c1, c2;
 	int thr, status;
 	uint32_t i, j, worker_idx;
 	odp_event_t ev;
@@ -712,11 +712,12 @@ static int set_cancel_mode_worker(void *arg)
 	uint64_t num_tmo = 0;
 	uint64_t num_cancel = 0;
 	uint64_t num_set = 0;
+	uint64_t cancel_cycles = 0, start_cycles = 0;
+	odp_event_t ev_tbl[MAX_TIMERS];
 
 	thr = odp_thread_id();
 	worker_idx = thread_arg->worker_idx;
 	t1 = ODP_TIME_NULL;
-	c1 = 0;
 
 	/* Start all workers at the same time */
 	odp_barrier_wait(&global->barrier);
@@ -766,7 +767,6 @@ static int set_cancel_mode_worker(void *arg)
 			/* Start measurements */
 			started = 1;
 			t1 = odp_time_local();
-			c1 = odp_cpu_cycles();
 		}
 
 		/* Cancel and set timers again */
@@ -779,13 +779,16 @@ static int set_cancel_mode_worker(void *arg)
 			period_tick = global->timer_pool[i].period_tick;
 
 			tick = odp_timer_current_tick(tp) + start_tick;
+			c1 = odp_cpu_cycles();
 
 			for (j = worker_idx; j < num_timer; j += num_worker) {
+				ev_tbl[j] = ODP_EVENT_INVALID;
+
 				timer = global->timer[i][j];
 				if (timer == ODP_TIMER_INVALID)
 					continue;
 
-				status = odp_timer_cancel(timer, &ev);
+				status = odp_timer_cancel(timer, &ev_tbl[j]);
 				num_cancel++;
 
 				if (odp_unlikely(status == ODP_TIMER_TOO_NEAR)) {
@@ -796,10 +799,23 @@ static int set_cancel_mode_worker(void *arg)
 					ret = -1;
 					break;
 				}
+			}
+
+			c2 = odp_cpu_cycles();
+			cancel_cycles += odp_cpu_cycles_diff(c2, c1);
+			c1 = c2;
+
+			for (j = worker_idx; j < num_timer; j += num_worker) {
+				if (ev_tbl[j] == ODP_EVENT_INVALID)
+					continue;
+
+				timer = global->timer[i][j];
+				if (timer == ODP_TIMER_INVALID)
+					continue;
 
 				start_param.tick_type = ODP_TIMER_TICK_ABS;
 				start_param.tick = tick + j * period_tick;
-				start_param.tmo_ev = ev;
+				start_param.tmo_ev = ev_tbl[j];
 
 				status = odp_timer_start(timer, &start_param);
 				num_set++;
@@ -811,6 +827,9 @@ static int set_cancel_mode_worker(void *arg)
 					break;
 				}
 			}
+
+			c2 = odp_cpu_cycles();
+			start_cycles += odp_cpu_cycles_diff(c2, c1);
 		}
 
 		if (test_rounds) {
@@ -821,9 +840,7 @@ static int set_cancel_mode_worker(void *arg)
 	}
 
 	t2   = odp_time_local();
-	c2   = odp_cpu_cycles();
 	nsec = odp_time_diff_ns(t2, t1);
-	diff = odp_cpu_cycles_diff(c2, c1);
 
 	/* Cancel all timers that belong to this thread */
 	if (cancel_timers(global, worker_idx))
@@ -833,7 +850,8 @@ static int set_cancel_mode_worker(void *arg)
 	global->stat[thr].events = num_tmo;
 	global->stat[thr].rounds = test_options->test_rounds - test_rounds;
 	global->stat[thr].nsec   = nsec;
-	global->stat[thr].cycles_0 = diff;
+	global->stat[thr].cycles_0 = cancel_cycles;
+	global->stat[thr].cycles_1 = start_cycles;
 
 	global->stat[thr].cancels = num_cancel;
 	global->stat[thr].sets    = num_set;
@@ -1106,16 +1124,38 @@ static void print_stat_set_cancel_mode(test_global_t *global)
 	int num = 0;
 
 	printf("\n");
-	printf("RESULTS - timer cancel + set cycles per thread:\n");
-	printf("-----------------------------------------------\n");
+	printf("RESULTS\n");
+	printf("odp_timer_cancel() cycles per thread:\n");
+	printf("-------------------------------------------------\n");
 	printf("        1      2      3      4      5      6      7      8      9     10");
 
 	for (i = 0; i < ODP_THREAD_COUNT_MAX; i++) {
-		if (global->stat[i].sets) {
+		const test_stat_t *si = &global->stat[i];
+
+		if (si->cancels) {
 			if ((num % 10) == 0)
 				printf("\n   ");
 
-			printf("%6.1f ", (double)global->stat[i].cycles_0 / global->stat[i].sets);
+			printf("%6.1f ", (double)si->cycles_0 / si->cancels);
+			num++;
+		}
+	}
+
+	printf("\n\n");
+
+	num = 0;
+	printf("odp_timer_start() cycles per thread:\n");
+	printf("-------------------------------------------------\n");
+	printf("        1      2      3      4      5      6      7      8      9     10");
+
+	for (i = 0; i < ODP_THREAD_COUNT_MAX; i++) {
+		const test_stat_t *si = &global->stat[i];
+
+		if (si->sets) {
+			if ((num % 10) == 0)
+				printf("\n   ");
+
+			printf("%6.1f ", (double)si->cycles_1 / si->sets);
 			num++;
 		}
 	}
