@@ -667,10 +667,7 @@ static int cancel_timers(test_global_t *global, uint32_t worker_idx)
 	int ret = 0;
 
 	for (i = 0; i < num_tp; i++) {
-		for (j = 0; j < num_timer; j++) {
-			if ((j % num_worker) != worker_idx)
-				continue;
-
+		for (j = worker_idx; j < num_timer; j += num_worker) {
 			timer = global->timer[i][j];
 			if (timer == ODP_TIMER_INVALID)
 				continue;
@@ -783,10 +780,7 @@ static int set_cancel_mode_worker(void *arg)
 
 			tick = odp_timer_current_tick(tp) + start_tick;
 
-			for (j = 0; j < num_timer; j++) {
-				if ((j % num_worker) != worker_idx)
-					continue;
-
+			for (j = worker_idx; j < num_timer; j += num_worker) {
 				timer = global->timer[i][j];
 				if (timer == ODP_TIMER_INVALID)
 					continue;
