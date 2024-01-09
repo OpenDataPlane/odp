@@ -151,15 +151,13 @@ void usage(char *progname)
 {
 	printf("\n"
 	       "Usage: %s OPTIONS\n"
-	       "  E.g. -n ipc_name_space %s -t seconds\n"
 	       "\n"
 	       "OpenDataPlane odp-linux ipc test application.\n"
 	       "\n"
-		"Mandatory OPTIONS:\n"
-	       "  -n, --ns           IPC name space ID /dev/shm/odp-<ns>-objname.\n"
 	       "Optional OPTIONS\n"
 	       "  -h, --help           Display help and exit.\n"
+	       "  -p, --pid            PID of the master process.\n"
 	       "  -t, --time           Time to run in seconds.\n"
-	       "\n", NO_PATH(progname), NO_PATH(progname)
+	       "\n", NO_PATH(progname)
 	    );
 }
