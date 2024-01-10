@@ -89,9 +89,9 @@ typedef struct {
 	/** Array for storing test pool handles */
 	odp_pool_t pool_tbl[TEST_REPEAT_COUNT];
 	/** Array for storing test event types */
-	odp_event_type_t event_type_tbl[TEST_REPEAT_COUNT];
+	odp_event_type_t event_type_tbl[TEST_REPEAT_COUNT * TEST_MAX_BURST];
 	/** Array for storing test event subtypes */
-	odp_event_subtype_t event_subtype_tbl[TEST_REPEAT_COUNT];
+	odp_event_subtype_t event_subtype_tbl[TEST_REPEAT_COUNT * TEST_MAX_BURST];
 	/** CPU mask as string */
 	char cpumask_str[ODP_CPUMASK_STR_SIZE];
 } args_t;
@@ -121,14 +121,14 @@ static void allocate_test_buffers(odp_buffer_t buf[], int num)
 	}
 }
 
-static void alloc_buffers_multi(void)
-{
-	allocate_test_buffers(gbl_args->buf_tbl, TEST_REPEAT_COUNT * gbl_args->appl.burst_size);
-}
-
 static void create_buffers(void)
 {
 	allocate_test_buffers(gbl_args->buf_tbl, TEST_REPEAT_COUNT);
+}
+
+static void create_buffers_multi(void)
+{
+	allocate_test_buffers(gbl_args->buf_tbl, TEST_REPEAT_COUNT * gbl_args->appl.burst_size);
 }
 
 static void create_events(void)
@@ -184,6 +184,20 @@ static int buffer_from_event(void)
 	return i;
 }
 
+static int buffer_from_event_multi(void)
+{
+	odp_buffer_t *buf_tbl = gbl_args->buf_tbl;
+	odp_event_t *event_tbl = gbl_args->event_tbl;
+	int burst_size = gbl_args->appl.burst_size;
+	int i;
+
+	for (i = 0; i < TEST_REPEAT_COUNT; i++)
+		odp_buffer_from_event_multi(&buf_tbl[i * burst_size],
+					    &event_tbl[i * burst_size], burst_size);
+
+	return i;
+}
+
 static int buffer_to_event(void)
 {
 	odp_buffer_t *buf_tbl = gbl_args->buf_tbl;
@@ -192,6 +206,20 @@ static int buffer_to_event(void)
 
 	for (i = 0; i < TEST_REPEAT_COUNT; i++)
 		event_tbl[i] = odp_buffer_to_event(buf_tbl[i]);
+
+	return i;
+}
+
+static int buffer_to_event_multi(void)
+{
+	odp_buffer_t *buf_tbl = gbl_args->buf_tbl;
+	odp_event_t *event_tbl = gbl_args->event_tbl;
+	int burst_size = gbl_args->appl.burst_size;
+	int i;
+
+	for (i = 0; i < TEST_REPEAT_COUNT; i++)
+		odp_buffer_to_event_multi(&buf_tbl[i * burst_size],
+					  &event_tbl[i * burst_size], burst_size);
 
 	return i;
 }
@@ -373,6 +401,36 @@ static int event_types(void)
 	return i;
 }
 
+static int event_types_multi(void)
+{
+	odp_event_t *event_tbl = gbl_args->event_tbl;
+	odp_event_type_t *event_type_tbl = gbl_args->event_type_tbl;
+	odp_event_subtype_t *event_subtype_tbl = gbl_args->event_subtype_tbl;
+	int burst_size = gbl_args->appl.burst_size;
+	int i;
+
+	for (i = 0; i < TEST_REPEAT_COUNT; i++)
+		odp_event_types_multi(&event_tbl[i * burst_size],
+				      &event_type_tbl[i * burst_size],
+				      &event_subtype_tbl[i * burst_size], burst_size);
+
+	return i;
+}
+
+static int event_types_multi_no_sub(void)
+{
+	odp_event_t *event_tbl = gbl_args->event_tbl;
+	odp_event_type_t *event_type_tbl = gbl_args->event_type_tbl;
+	int burst_size = gbl_args->appl.burst_size;
+	int i;
+
+	for (i = 0; i < TEST_REPEAT_COUNT; i++)
+		odp_event_types_multi(&event_tbl[i * burst_size],
+				      &event_type_tbl[i * burst_size], NULL, burst_size);
+
+	return i;
+}
+
 static int event_type_multi(void)
 {
 	odp_event_t *event_tbl = gbl_args->event_tbl;
@@ -383,6 +441,45 @@ static int event_type_multi(void)
 	for (int i = 0; i < TEST_REPEAT_COUNT; i++)
 		ret += odp_event_type_multi(&event_tbl[i * burst_size], burst_size,
 					    &event_type_tbl[i]);
+
+	return ret;
+}
+
+static int event_pool(void)
+{
+	odp_event_t *event_tbl = gbl_args->event_tbl;
+	odp_pool_t *pool_tbl = gbl_args->pool_tbl;
+	int i;
+
+	for (i = 0; i < TEST_REPEAT_COUNT; i++)
+		pool_tbl[i] = odp_event_pool(event_tbl[i]);
+
+	return i;
+}
+
+static int event_user_area(void)
+{
+	odp_event_t *event_tbl = gbl_args->event_tbl;
+	void **ptr_tbl = gbl_args->ptr_tbl;
+	int i;
+
+	for (i = 0; i < TEST_REPEAT_COUNT; i++)
+		ptr_tbl[i] = odp_event_user_area(event_tbl[i]);
+
+	return i;
+}
+
+static int event_user_area_and_flag(void)
+{
+	odp_event_t *event_tbl = gbl_args->event_tbl;
+	void **ptr_tbl = gbl_args->ptr_tbl;
+	int ret = 0;
+	int flag;
+
+	for (int i = 0; i < TEST_REPEAT_COUNT; i++) {
+		ptr_tbl[i] = odp_event_user_area_and_flag(event_tbl[i], &flag);
+		ret += flag;
+	}
 
 	return ret;
 }
@@ -580,7 +677,9 @@ static void print_info(void)
  */
 bench_info_t test_suite[] = {
 	BENCH_INFO(buffer_from_event, create_events, free_buffers, NULL),
+	BENCH_INFO(buffer_from_event_multi, create_events_multi, free_buffers_multi, NULL),
 	BENCH_INFO(buffer_to_event, create_buffers, free_buffers, NULL),
+	BENCH_INFO(buffer_to_event_multi, create_buffers_multi, free_buffers_multi, NULL),
 	BENCH_INFO(buffer_addr, create_buffers, free_buffers, NULL),
 	BENCH_INFO(buffer_size, create_buffers, free_buffers, NULL),
 	BENCH_INFO_COND(buffer_user_area, create_buffers, free_buffers, NULL, check_uarea),
@@ -588,14 +687,20 @@ bench_info_t test_suite[] = {
 	BENCH_INFO(buffer_alloc, NULL, free_buffers, NULL),
 	BENCH_INFO(buffer_alloc_multi, NULL, free_buffers_multi, NULL),
 	BENCH_INFO(buffer_free, create_buffers, NULL, NULL),
-	BENCH_INFO(buffer_free_multi, alloc_buffers_multi, NULL, NULL),
+	BENCH_INFO(buffer_free_multi, create_buffers_multi, NULL, NULL),
 	BENCH_INFO(buffer_alloc_free, NULL, NULL, NULL),
 	BENCH_INFO(buffer_alloc_free_multi, NULL, NULL, NULL),
 	BENCH_INFO(buffer_is_valid, create_buffers, free_buffers, NULL),
 	BENCH_INFO(event_type, create_events, free_buffers, NULL),
-	BENCH_INFO(event_subtype, create_buffers, free_buffers, NULL),
-	BENCH_INFO(event_types, create_buffers, free_buffers, NULL),
+	BENCH_INFO(event_subtype, create_events, free_buffers, NULL),
+	BENCH_INFO(event_types, create_events, free_buffers, NULL),
+	BENCH_INFO(event_types_multi, create_events_multi, free_buffers_multi, NULL),
+	BENCH_INFO(event_types_multi_no_sub, create_events_multi, free_buffers_multi,
+		   "event_types_multi (no sub)"),
 	BENCH_INFO(event_type_multi, create_events_multi, free_buffers_multi, NULL),
+	BENCH_INFO(event_pool, create_events, free_buffers, NULL),
+	BENCH_INFO_COND(event_user_area, create_events, free_buffers, NULL, check_uarea),
+	BENCH_INFO_COND(event_user_area_and_flag, create_events, free_buffers, NULL, check_uarea),
 	BENCH_INFO(event_is_valid, create_events, free_buffers, NULL),
 	BENCH_INFO(event_free, create_events, NULL, NULL),
 	BENCH_INFO(event_free_multi, create_events_multi, NULL, NULL),
