@@ -15,7 +15,7 @@ jobs:
   Coverity-analysis:
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g
                -e CC="${CC}" -e GITHUB_SHA="${GITHUB_SHA}"
                -e COVERITY_TOKEN="${{ secrets.COVERITY_TOKEN }}"
