@@ -1,5 +1,5 @@
 /* Copyright (c) 2014-2018, Linaro Limited
- * Copyright (c) 2019-2022, Nokia
+ * Copyright (c) 2019-2024, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -1355,7 +1355,7 @@ static void chaos_run(unsigned int qtype)
 	test_globals_t *globals;
 	thread_args_t *args;
 	odp_shm_t shm;
-	int i, rc, num_thr;
+	int i, rc;
 	void *arg_ptr;
 	odp_schedule_sync_t sync[] = {ODP_SCHED_SYNC_PARALLEL,
 				      ODP_SCHED_SYNC_ATOMIC,
@@ -1418,16 +1418,10 @@ static void chaos_run(unsigned int qtype)
 		CU_ASSERT_FATAL(rc == 0);
 	}
 
-	/* Test runs also on the main thread */
-	num_thr = globals->num_workers - 1;
 	arg_ptr = args;
-	if (num_thr > 0)
-		odp_cunit_thread_create(num_thr, chaos_thread, &arg_ptr, 0, 0);
+	odp_cunit_thread_create(globals->num_workers, chaos_thread, &arg_ptr, 0, 0);
 
-	chaos_thread(args);
-
-	if (num_thr > 0)
-		odp_cunit_thread_join(num_thr);
+	odp_cunit_thread_join(globals->num_workers);
 
 	if (CHAOS_DEBUG)
 		printf("Thread %d returning from chaos threads..cleaning up\n",
@@ -1830,7 +1824,6 @@ static void parallel_execute(odp_schedule_sync_t sync, int num_queues,
 	test_globals_t *globals;
 	thread_args_t *args;
 	void *arg_ptr;
-	int num;
 
 	shm = odp_shm_lookup(GLOBALS_SHM_NAME);
 	CU_ASSERT_FATAL(shm != ODP_SHM_INVALID);
@@ -1860,18 +1853,11 @@ static void parallel_execute(odp_schedule_sync_t sync, int num_queues,
 		odp_schedule_print();
 
 	/* Create and launch worker threads */
-
-	/* Test runs also on the main thread */
-	num = globals->num_workers - 1;
 	arg_ptr = args;
-	if (num > 0)
-		odp_cunit_thread_create(num, schedule_common_, &arg_ptr, 0, 0);
-
-	schedule_common_(args);
+	odp_cunit_thread_create(globals->num_workers, schedule_common_, &arg_ptr, 0, 0);
 
 	/* Wait for worker threads to terminate */
-	if (num > 0)
-		odp_cunit_thread_join(num);
+	odp_cunit_thread_join(globals->num_workers);
 
 	/* Cleanup ordered queues for next pass */
 	if (sync == ODP_SCHED_SYNC_ORDERED)
@@ -2590,7 +2576,7 @@ static void scheduler_test_sched_and_plain(odp_schedule_sync_t sync)
 	uint64_t wait = odp_schedule_wait_time(100 * ODP_TIME_MSEC_IN_NS);
 	uint32_t events_per_queue = BUFS_PER_QUEUE / 2;
 	uint32_t prev_seq;
-	int first, num;
+	int first;
 	void *arg_ptr;
 
 	CU_ASSERT_FATAL(!odp_schedule_capability(&sched_capa));
@@ -2673,16 +2659,10 @@ static void scheduler_test_sched_and_plain(odp_schedule_sync_t sync)
 	}
 	CU_ASSERT_FATAL(seq > 2);
 
-	/* Test runs also on the main thread */
-	num = globals->num_workers - 1;
 	arg_ptr = args;
-	if (num > 0)
-		odp_cunit_thread_create(num, sched_and_plain_thread, &arg_ptr, 0, 0);
+	odp_cunit_thread_create(globals->num_workers, sched_and_plain_thread, &arg_ptr, 0, 0);
 
-	sched_and_plain_thread(args);
-
-	if (num > 0)
-		odp_cunit_thread_join(num);
+	odp_cunit_thread_join(globals->num_workers);
 
 	/* Check plain queue sequence numbers and free events */
 	first = 1;
@@ -2979,15 +2959,10 @@ static void scheduler_fifo_mt(odp_schedule_sync_t sync, int multi)
 	for (i = 0; i < num_thr; i++)
 		arg[i] = i;
 
-	if (num_thr > 1)
-		odp_cunit_thread_create(num_thr - 1, scheduler_fifo_test, (void **)&arg[1], 1, 0);
-
-	/* Main thread runs as thread 0 */
-	scheduler_fifo_test(0);
+	odp_cunit_thread_create(num_thr, scheduler_fifo_test, (void **)&arg[0], 1, 0);
 
 	/* Wait for worker threads to terminate */
-	if (num_thr > 1)
-		odp_cunit_thread_join(num_thr - 1);
+	odp_cunit_thread_join(num_thr);
 }
 
 static void scheduler_fifo_mt_parallel_single(void)
@@ -3083,7 +3058,7 @@ static void scheduler_test_atomicity(void)
 	odp_pool_t pool;
 	odp_queue_t queue;
 	odp_queue_param_t queue_param;
-	int i, num;
+	int i;
 	void *arg_ptr;
 
 	shm = odp_shm_lookup(GLOBALS_SHM_NAME);
@@ -3121,18 +3096,12 @@ static void scheduler_test_atomicity(void)
 	odp_atomic_init_u32(&globals->atomicity_q.state, 0);
 
 	/* Create and launch worker threads */
-	/* Test runs also on the main thread */
 	args->num_workers = globals->num_workers;
-	num = globals->num_workers - 1;
 	arg_ptr = args;
-	if (num > 0)
-		odp_cunit_thread_create(num, atomicity_test_run, &arg_ptr, 0, 0);
-
-	atomicity_test_run(args);
+	odp_cunit_thread_create(globals->num_workers, atomicity_test_run, &arg_ptr, 0, 0);
 
 	/* Wait for worker threads to terminate */
-	if (num > 0)
-		odp_cunit_thread_join(num);
+	odp_cunit_thread_join(globals->num_workers);
 
 	odp_queue_destroy(globals->atomicity_q.handle);
 }
