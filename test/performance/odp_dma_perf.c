@@ -204,7 +204,7 @@ typedef struct prog_config_s {
 	uint32_t src_seg_len;
 	uint32_t dst_seg_len;
 	uint32_t num_inflight;
-	uint32_t time_sec;
+	double time_sec;
 	uint32_t num_sessions;
 	uint32_t src_cache_size;
 	uint32_t dst_cache_size;
@@ -599,7 +599,7 @@ static parse_result_t parse_options(int argc, char **argv, prog_config_t *config
 			config->num_inflight = atoi(optarg);
 			break;
 		case 'T':
-			config->time_sec = atoi(optarg);
+			config->time_sec = atof(optarg);
 			break;
 		case 'c':
 			config->num_workers = atoi(optarg);
@@ -1243,7 +1243,7 @@ static void drain_compl_events(ODP_UNUSED sd_t *sd)
 	odp_event_t ev;
 
 	while (true) {
-		ev = odp_schedule(NULL, odp_schedule_wait_time(ODP_TIME_SEC_IN_NS));
+		ev = odp_schedule(NULL, odp_schedule_wait_time(100 * ODP_TIME_MSEC_IN_NS));
 
 		if (ev == ODP_EVENT_INVALID)
 			break;
@@ -1916,8 +1916,12 @@ int main(int argc, char **argv)
 		goto out_test;
 	}
 
-	if (prog_conf->time_sec) {
-		sleep(prog_conf->time_sec);
+	if (prog_conf->time_sec > 0.001) {
+		struct timespec ts;
+
+		ts.tv_sec = prog_conf->time_sec;
+		ts.tv_nsec = (prog_conf->time_sec - ts.tv_sec) * ODP_TIME_SEC_IN_NS;
+		nanosleep(&ts, NULL);
 		odp_atomic_store_u32(&prog_conf->is_running, 0U);
 	}
 
