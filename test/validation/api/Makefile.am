@@ -1,4 +1,5 @@
-ODP_MODULES = atomic \
+ODP_MODULES = align \
+	      atomic \
 	      barrier \
 	      buffer \
 	      chksum \
@@ -34,6 +35,7 @@ include $(top_srcdir)/test/Makefile.inc
 TESTS_ENVIRONMENT += TEST_DIR=${top_builddir}/test/validation/api
 
 TESTS = \
+	align/align_main$(EXEEXT) \
 	atomic/atomic_main$(EXEEXT) \
 	barrier/barrier_main$(EXEEXT) \
 	buffer/buffer_main$(EXEEXT) \
