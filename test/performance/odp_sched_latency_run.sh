@@ -19,7 +19,7 @@ run()
 	if [ $(nproc) -lt $1 ]; then
 		echo "Not enough CPU cores. Skipping test."
 	else
-		$TEST_DIR/odp_sched_latency${EXEEXT} -c $1 || exit $?
+		$TEST_DIR/odp_sched_latency${EXEEXT} -c $1 -d 1 || exit $?
 	fi
 }
 
