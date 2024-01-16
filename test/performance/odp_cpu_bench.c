@@ -335,7 +335,7 @@ static int run_thread(void *arg)
 		odp_event_t  ev;
 
 		ev = odp_schedule(NULL,
-				  odp_schedule_wait_time(ODP_TIME_SEC_IN_NS));
+				  odp_schedule_wait_time(100 * ODP_TIME_MSEC_IN_NS));
 
 		if (ev == ODP_EVENT_INVALID)
 			break;
