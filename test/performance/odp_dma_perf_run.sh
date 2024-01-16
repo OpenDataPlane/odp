@@ -10,7 +10,7 @@ BIN_NAME=odp_dma_perf
 SEGC=0
 SEGS=1024
 INFL=1
-TIME=1
+TIME=0.1
 TESTS_RUN=0
 
 check_result()
