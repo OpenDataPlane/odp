@@ -386,8 +386,9 @@ int _odp_system_info_init(void)
 			num_cpus);
 
 	/* Read and save all CPU frequencies for static mode */
-	for (i = 0; i < CONFIG_NUM_CPU_IDS; i++)
-		odp_global_ro.system_info.cpu_hz[i] = cpu_hz_current(i);
+	if (odp_global_ro.system_info.cpu_hz_static)
+		for (i = 0; i < CONFIG_NUM_CPU_IDS; i++)
+			odp_global_ro.system_info.cpu_hz[i] = cpu_hz_current(i);
 
 	/* By default, read max frequency from a cpufreq file */
 	for (i = 0; i < CONFIG_NUM_CPU_IDS; i++) {
