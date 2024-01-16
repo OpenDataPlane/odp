@@ -1692,7 +1692,7 @@ static void print_humanised(uint64_t value, const char *type)
 	else if (value > MEGAS)
 		printf("%.2f M%s\n", (double)value / MEGAS, type);
 	else if (value > KILOS)
-		printf("%.2f K%s\n", (double)value / KILOS, type);
+		printf("%.2f k%s\n", (double)value / KILOS, type);
 	else
 		printf("%" PRIu64 " %s\n", value, type);
 }
@@ -1702,8 +1702,8 @@ static void print_stats(const prog_config_t *config)
 	const stats_t *stats;
 	uint64_t data_cnt = config->num_in_segs * config->src_seg_len, tot_completed = 0U,
 	tot_tm = 0U, tot_trs_tm = 0U, tot_trs_cc = 0U, tot_trs_cnt = 0U, tot_min_tm = UINT64_MAX,
-	tot_max_tm = 0U, tot_min_cc = UINT64_MAX, tot_max_cc = 0U, avg_start_cc, avg_wait_cc,
-	avg_tot_tm;
+	tot_max_tm = 0U, tot_min_cc = UINT64_MAX, tot_max_cc = 0U, avg_start_cc, avg_wait_cc;
+	double avg_tot_tm;
 
 	printf("\n======================\n\n"
 	       "DMA performance test done\n\n"
@@ -1771,11 +1771,12 @@ static void print_stats(const prog_config_t *config)
 			       stats->trs_cnt > 0U ? stats->trs_cc / stats->trs_cnt : 0U,
 			       stats->trs_cnt > 0U ? stats->min_trs_cc : 0U,
 			       stats->trs_cnt > 0U ? stats->max_trs_cc : 0U);
-			print_humanised(stats->completed / (stats->tot_tm / ODP_TIME_SEC_IN_NS),
+			print_humanised(stats->completed /
+					((double)stats->tot_tm / ODP_TIME_SEC_IN_NS),
 					"OPS");
 			printf("            speed:                       ");
 			print_humanised(stats->completed * data_cnt /
-					(stats->tot_tm / ODP_TIME_SEC_IN_NS), "B/s");
+					((double)stats->tot_tm / ODP_TIME_SEC_IN_NS), "B/s");
 		}
 
 		avg_start_cc = stats->start_cnt > 0U ? stats->start_cc / stats->start_cnt : 0U;
@@ -1818,7 +1819,7 @@ static void print_stats(const prog_config_t *config)
 		printf("\n");
 	}
 
-	avg_tot_tm = tot_tm / config->num_workers / ODP_TIME_SEC_IN_NS;
+	avg_tot_tm = (double)tot_tm / config->num_workers / ODP_TIME_SEC_IN_NS;
 	printf("    total:\n"
 	       "        average time per transfer:   %" PRIu64 " (min: %" PRIu64
 	       ", max: %" PRIu64 ") ns\n"
