@@ -10,7 +10,7 @@ PERF_TEST_DIR=${TEST_SRC_DIR}/../../${PERF_TEST_DIR}
 
 BIN_NAME=odp_dmafwd
 BATCH=10
-TIME=2
+TIME=0.1
 TESTS_RUN=0
 
 check_env()
