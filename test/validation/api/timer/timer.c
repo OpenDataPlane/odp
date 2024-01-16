@@ -192,8 +192,8 @@ static int timer_global_init(odp_instance_t *instance)
 
 	global_mem->periodic_support = capa.periodic.max_pools > 0;
 
-	/* By default 20 msec resolution */
-	res_ns = 20 * ODP_TIME_MSEC_IN_NS;
+	/* By default 2 msec resolution */
+	res_ns = 2 * ODP_TIME_MSEC_IN_NS;
 	if (res_ns < capa.max_res.res_ns)
 		res_ns = capa.max_res.res_ns;
 
@@ -1131,42 +1131,42 @@ static void timer_single_shot(odp_queue_type_t queue_type, odp_timer_tick_type_t
 
 static void timer_plain_rel_wait(void)
 {
-	timer_single_shot(ODP_QUEUE_TYPE_PLAIN, RELATIVE, START, TIMEOUT, 2, 500 * MSEC);
+	timer_single_shot(ODP_QUEUE_TYPE_PLAIN, RELATIVE, START, TIMEOUT, 2, 50 * MSEC);
 }
 
 static void timer_plain_abs_wait(void)
 {
-	timer_single_shot(ODP_QUEUE_TYPE_PLAIN, ABSOLUTE, START, TIMEOUT, 2, 500 * MSEC);
+	timer_single_shot(ODP_QUEUE_TYPE_PLAIN, ABSOLUTE, START, TIMEOUT, 2, 50 * MSEC);
 }
 
 static void timer_plain_rel_cancel(void)
 {
-	timer_single_shot(ODP_QUEUE_TYPE_PLAIN, RELATIVE, START, CANCEL, 5, 1000 * MSEC);
+	timer_single_shot(ODP_QUEUE_TYPE_PLAIN, RELATIVE, START, CANCEL, 5, 100 * MSEC);
 }
 
 static void timer_plain_abs_cancel(void)
 {
-	timer_single_shot(ODP_QUEUE_TYPE_PLAIN, ABSOLUTE, START, CANCEL, 5, 1000 * MSEC);
+	timer_single_shot(ODP_QUEUE_TYPE_PLAIN, ABSOLUTE, START, CANCEL, 5, 100 * MSEC);
 }
 
 static void timer_plain_rel_restart_wait(void)
 {
-	timer_single_shot(ODP_QUEUE_TYPE_PLAIN, RELATIVE, RESTART, TIMEOUT, 2, 600 * MSEC);
+	timer_single_shot(ODP_QUEUE_TYPE_PLAIN, RELATIVE, RESTART, TIMEOUT, 2, 60 * MSEC);
 }
 
 static void timer_plain_abs_restart_wait(void)
 {
-	timer_single_shot(ODP_QUEUE_TYPE_PLAIN, ABSOLUTE, RESTART, TIMEOUT, 2, 600 * MSEC);
+	timer_single_shot(ODP_QUEUE_TYPE_PLAIN, ABSOLUTE, RESTART, TIMEOUT, 2, 60 * MSEC);
 }
 
 static void timer_plain_rel_restart_cancel(void)
 {
-	timer_single_shot(ODP_QUEUE_TYPE_PLAIN, RELATIVE, RESTART, CANCEL, 5, 1000 * MSEC);
+	timer_single_shot(ODP_QUEUE_TYPE_PLAIN, RELATIVE, RESTART, CANCEL, 5, 100 * MSEC);
 }
 
 static void timer_plain_abs_restart_cancel(void)
 {
-	timer_single_shot(ODP_QUEUE_TYPE_PLAIN, ABSOLUTE, RESTART, CANCEL, 5, 1000 * MSEC);
+	timer_single_shot(ODP_QUEUE_TYPE_PLAIN, ABSOLUTE, RESTART, CANCEL, 5, 100 * MSEC);
 }
 
 static void timer_plain_abs_wait_3sec(void)
@@ -1176,42 +1176,42 @@ static void timer_plain_abs_wait_3sec(void)
 
 static void timer_sched_rel_wait(void)
 {
-	timer_single_shot(ODP_QUEUE_TYPE_SCHED, RELATIVE, START, TIMEOUT, 2, 500 * MSEC);
+	timer_single_shot(ODP_QUEUE_TYPE_SCHED, RELATIVE, START, TIMEOUT, 2, 50 * MSEC);
 }
 
 static void timer_sched_abs_wait(void)
 {
-	timer_single_shot(ODP_QUEUE_TYPE_SCHED, ABSOLUTE, START, TIMEOUT, 2, 500 * MSEC);
+	timer_single_shot(ODP_QUEUE_TYPE_SCHED, ABSOLUTE, START, TIMEOUT, 2, 50 * MSEC);
 }
 
 static void timer_sched_rel_cancel(void)
 {
-	timer_single_shot(ODP_QUEUE_TYPE_SCHED, RELATIVE, START, CANCEL, 5, 1000 * MSEC);
+	timer_single_shot(ODP_QUEUE_TYPE_SCHED, RELATIVE, START, CANCEL, 5, 100 * MSEC);
 }
 
 static void timer_sched_abs_cancel(void)
 {
-	timer_single_shot(ODP_QUEUE_TYPE_SCHED, ABSOLUTE, START, CANCEL, 5, 1000 * MSEC);
+	timer_single_shot(ODP_QUEUE_TYPE_SCHED, ABSOLUTE, START, CANCEL, 5, 100 * MSEC);
 }
 
 static void timer_sched_rel_restart_wait(void)
 {
-	timer_single_shot(ODP_QUEUE_TYPE_SCHED, RELATIVE, RESTART, TIMEOUT, 2, 600 * MSEC);
+	timer_single_shot(ODP_QUEUE_TYPE_SCHED, RELATIVE, RESTART, TIMEOUT, 2, 60 * MSEC);
 }
 
 static void timer_sched_abs_restart_wait(void)
 {
-	timer_single_shot(ODP_QUEUE_TYPE_SCHED, ABSOLUTE, RESTART, TIMEOUT, 2, 600 * MSEC);
+	timer_single_shot(ODP_QUEUE_TYPE_SCHED, ABSOLUTE, RESTART, TIMEOUT, 2, 60 * MSEC);
 }
 
 static void timer_sched_rel_restart_cancel(void)
 {
-	timer_single_shot(ODP_QUEUE_TYPE_SCHED, RELATIVE, RESTART, CANCEL, 5, 1000 * MSEC);
+	timer_single_shot(ODP_QUEUE_TYPE_SCHED, RELATIVE, RESTART, CANCEL, 5, 100 * MSEC);
 }
 
 static void timer_sched_abs_restart_cancel(void)
 {
-	timer_single_shot(ODP_QUEUE_TYPE_SCHED, ABSOLUTE, RESTART, CANCEL, 5, 1000 * MSEC);
+	timer_single_shot(ODP_QUEUE_TYPE_SCHED, ABSOLUTE, RESTART, CANCEL, 5, 100 * MSEC);
 }
 
 static void timer_sched_abs_wait_3sec(void)
@@ -2862,9 +2862,9 @@ static void timer_test_periodic(odp_queue_type_t queue_type, int use_first, int 
 	int num_tmo;
 	int done;
 	const int num = 200;
-	/* Test frequency: 1x 100Hz, or 1x min/max_base_freq */
+	/* Test frequency: 1x 1000 Hz, or 1x min/max_base_freq */
 	const uint64_t multiplier = 1;
-	odp_fract_u64_t base_freq = {100, 0, 0};
+	odp_fract_u64_t base_freq = {1000, 0, 0};
 	odp_timer_clk_src_t clk_src = test_global->clk_src;
 
 	memset(&timer_capa, 0, sizeof(odp_timer_capability_t));
