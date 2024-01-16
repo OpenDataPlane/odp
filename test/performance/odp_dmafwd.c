@@ -22,6 +22,7 @@
 #include <signal.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <time.h>
 
 #include <odp_api.h>
 #include <odp/helper/odph_api.h>
@@ -154,7 +155,7 @@ typedef struct prog_config_s {
 	uint32_t trs_cache_size;
 	uint32_t compl_cache_size;
 	uint32_t stash_cache_size;
-	uint32_t time_sec;
+	double time_sec;
 	odp_stash_type_t stash_type;
 	int num_thrs;
 	uint8_t num_ifs;
@@ -507,7 +508,7 @@ static parse_result_t parse_options(int argc, char **argv, prog_config_t *config
 			config->cache_size = atoi(optarg);
 			break;
 		case 'T':
-			config->time_sec = atoi(optarg);
+			config->time_sec = atof(optarg);
 			break;
 		case 'h':
 			print_usage(&config->dyn_defs);
@@ -760,7 +761,7 @@ static void drain_events(thread_config_t *config ODP_UNUSED)
 	transfer_t *trs;
 
 	while (true) {
-		ev = odp_schedule(NULL, odp_schedule_wait_time(ODP_TIME_SEC_IN_NS * 2U));
+		ev = odp_schedule(NULL, odp_schedule_wait_time(100 * ODP_TIME_MSEC_IN_NS));
 
 		if (ev == ODP_EVENT_INVALID)
 			break;
@@ -1438,8 +1439,12 @@ int main(int argc, char **argv)
 		goto out_test;
 	}
 
-	if (prog_conf->time_sec) {
-		sleep(prog_conf->time_sec);
+	if (prog_conf->time_sec > 0.001) {
+		struct timespec ts;
+
+		ts.tv_sec = prog_conf->time_sec;
+		ts.tv_nsec = (prog_conf->time_sec - ts.tv_sec) * ODP_TIME_SEC_IN_NS;
+		nanosleep(&ts, NULL);
 		odp_atomic_store_u32(&prog_conf->is_running, 0U);
 	} else {
 		while (odp_atomic_load_u32(&prog_conf->is_running))
