@@ -11,6 +11,7 @@ ODP_MODULES = align \
 	      errno \
 	      event \
 	      hash \
+	      hints \
 	      init \
 	      ipsec \
 	      lock \
@@ -48,6 +49,7 @@ TESTS = \
 	errno/errno_main$(EXEEXT) \
 	event/event_main$(EXEEXT) \
 	hash/hash_main$(EXEEXT) \
+	hints/hints_main$(EXEEXT) \
 	init/init_defaults.sh \
 	init/init_abort.sh \
 	init/init_log.sh \

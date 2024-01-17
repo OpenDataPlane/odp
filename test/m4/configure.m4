@@ -30,6 +30,7 @@ AC_CONFIG_FILES([test/common/Makefile
 		 test/validation/api/errno/Makefile
 		 test/validation/api/event/Makefile
 		 test/validation/api/hash/Makefile
+		 test/validation/api/hints/Makefile
 		 test/validation/api/init/Makefile
 		 test/validation/api/ipsec/Makefile
 		 test/validation/api/lock/Makefile
