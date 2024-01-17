@@ -1698,16 +1698,13 @@ static inline int schedule_loop_sleep(odp_queue_t *out_queue, uint64_t wait,
 			nanosleep(&ts, NULL);
 		}
 
-		if (wait != ODP_SCHED_WAIT || !sleep) {
+		if (!sleep || wait != ODP_SCHED_WAIT)
 			current = odp_time_local();
-			if (odp_time_cmp(start_sleep, current) < 0)
-				sleep = 1;
-		}
 
-		if (wait == ODP_SCHED_WAIT)
-			continue;
+		if (!sleep && odp_time_cmp(start_sleep, current) < 0)
+			sleep = 1;
 
-		if (odp_time_cmp(end, current) < 0)
+		if (wait != ODP_SCHED_WAIT && odp_time_cmp(end, current) < 0)
 			break;
 	}
 
