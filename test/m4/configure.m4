@@ -21,6 +21,7 @@ AC_CONFIG_FILES([test/common/Makefile
 		 test/validation/api/atomic/Makefile
 		 test/validation/api/barrier/Makefile
 		 test/validation/api/buffer/Makefile
+		 test/validation/api/byteorder/Makefile
 		 test/validation/api/chksum/Makefile
 		 test/validation/api/classification/Makefile
 		 test/validation/api/comp/Makefile
