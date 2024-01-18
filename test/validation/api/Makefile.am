@@ -2,6 +2,7 @@ ODP_MODULES = align \
 	      atomic \
 	      barrier \
 	      buffer \
+	      byteorder \
 	      chksum \
 	      classification \
 	      comp \
@@ -40,6 +41,7 @@ TESTS = \
 	atomic/atomic_main$(EXEEXT) \
 	barrier/barrier_main$(EXEEXT) \
 	buffer/buffer_main$(EXEEXT) \
+	byteorder/byteorder_main$(EXEEXT) \
 	chksum/chksum_main$(EXEEXT) \
 	classification/classification_main$(EXEEXT) \
 	comp/comp_main$(EXEEXT) \
