@@ -1,5 +1,5 @@
 /* Copyright (c) 2015-2018, Linaro Limited
- * Copyright (c) 2019-2023, Nokia
+ * Copyright (c) 2019-2024, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -24,6 +24,7 @@
 #define TIME_SAMPLES		2
 #define TIME_TOLERANCE_NS	1000000
 #define TIME_TOLERANCE_CI_NS	40000000
+#define TIME_TOLERANCE_1CPU_NS	40000000
 #define GLOBAL_SHM_NAME		"GlobalTimeTest"
 #define YEAR_IN_NS              (365 * 24 * ODP_TIME_HOUR_IN_NS)
 
@@ -858,8 +859,7 @@ static void time_test_global_sync(const int ctrl)
 	odph_thread_common_param_t thr_common;
 	odph_thread_param_t thr_param;
 	odph_thread_t thread_tbl[MAX_WORKERS];
-	const uint64_t tolerance =
-		odp_cunit_ci() ? TIME_TOLERANCE_CI_NS : TIME_TOLERANCE_NS;
+	uint64_t tolerance = odp_cunit_ci() ? TIME_TOLERANCE_CI_NS : TIME_TOLERANCE_NS;
 	const int num = ctrl ? 2 : global_mem->num_threads;
 
 	if (num < 2) {
@@ -879,14 +879,23 @@ static void time_test_global_sync(const int ctrl)
 
 	if (ctrl) {
 		/* Test sync between one control and one worker thread. */
+		int control_cpu;
+		int worker_cpu;
+
 		odp_cpumask_default_control(&cpumask, 1);
 		thr_common.cpumask = &cpumask;
 		thr_param.thr_type = ODP_THREAD_CONTROL;
+		control_cpu = odp_cpumask_first(&cpumask);
 
 		int r = odph_thread_create(&thread_tbl[thr++],
 					   &thr_common, &thr_param, 1);
 		CU_ASSERT_FATAL(r == 1);
 		odp_cpumask_default_worker(&cpumask, 1);
+		worker_cpu = odp_cpumask_first(&cpumask);
+		if (control_cpu == worker_cpu) {
+			printf(" single CPU, relaxing tolerance. ");
+			tolerance = TIME_TOLERANCE_1CPU_NS;
+		}
 	} else {
 		/* Test sync between num worker threads. */
 		odp_cpumask_default_worker(&cpumask, num);
