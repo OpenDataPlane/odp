@@ -2481,16 +2481,6 @@ out:
 	CU_ASSERT(odp_queue_destroy(queue) == 0);
 }
 
-static int check_2_workers(void)
-{
-	if (globals->num_workers < 2) {
-		printf("\nTest: scheduler_test_order_wait_2_threads: SKIPPED\n");
-		return ODP_TEST_INACTIVE;
-	}
-
-	return ODP_TEST_ACTIVE;
-}
-
 static int sched_and_plain_thread(void *arg)
 {
 	odp_event_t ev1, ev2;
@@ -3689,7 +3679,7 @@ odp_testinfo_t scheduler_basic_suite[] = {
 	ODP_TEST_INFO(scheduler_test_pause_enqueue),
 	ODP_TEST_INFO(scheduler_test_ordered_lock),
 	ODP_TEST_INFO(scheduler_test_order_wait_1_thread),
-	ODP_TEST_INFO_CONDITIONAL(scheduler_test_order_wait_2_threads, check_2_workers),
+	ODP_TEST_INFO(scheduler_test_order_wait_2_threads),
 	ODP_TEST_INFO_CONDITIONAL(scheduler_test_flow_aware,
 				  check_flow_aware_support),
 	ODP_TEST_INFO(scheduler_test_parallel),
