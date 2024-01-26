@@ -2604,7 +2604,7 @@ int odp_pktin_recv_mq_tmo(const odp_pktin_queue_t queues[], uint32_t num_q, uint
 {
 	uint32_t i;
 	int ret;
-	odp_time_t t1, t2;
+	odp_time_t t1 = ODP_TIME_NULL, t2;
 	struct timespec ts;
 	int started = 0;
 	uint64_t sleep_round = 0;
@@ -2833,7 +2833,7 @@ int odp_pktout_ts_read(odp_pktio_t hdl, odp_time_t *ts)
 	if (odp_unlikely(ts_val == 0))
 		return 1;
 
-	ts->u64 = ts_val;
+	*ts = _odp_time_from_u64(ts_val);
 	return 0;
 }
 

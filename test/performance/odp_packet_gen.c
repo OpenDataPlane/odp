@@ -1794,7 +1794,7 @@ static int rx_thread(void *arg)
 	int i, thr, num;
 	uint32_t exit_test;
 	uint64_t bytes;
-	odp_time_t t1, t2, exit_time;
+	odp_time_t t1, t2 = ODP_TIME_NULL, exit_time;
 	thread_arg_t *thread_arg = arg;
 	test_global_t *global = thread_arg->global;
 	int direct_rx = global->test_options.direct_rx;
