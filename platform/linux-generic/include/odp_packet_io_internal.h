@@ -25,6 +25,7 @@ extern "C" {
 #include <odp/api/time.h>
 
 #include <odp/api/plat/packet_io_inlines.h>
+#include <odp/api/plat/time_inlines.h>
 
 #include <odp/autoheader_internal.h>
 #include <odp_classification_datamodel.h>
@@ -290,9 +291,7 @@ static inline int _odp_pktio_tx_aging_enabled(pktio_entry_t *entry)
 
 static inline void _odp_pktio_tx_ts_set(pktio_entry_t *entry)
 {
-	odp_time_t ts_val = odp_time_global();
-
-	odp_atomic_store_u64(&entry->tx_ts, ts_val.u64);
+	odp_atomic_store_u64(&entry->tx_ts, _odp_time_to_u64(odp_time_global()));
 }
 
 extern const pktio_if_ops_t _odp_dpdk_pktio_ops;

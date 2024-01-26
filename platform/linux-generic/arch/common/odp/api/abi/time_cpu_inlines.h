@@ -1,5 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
- * Copyright (c) 2020-2023, Nokia
+ * Copyright (c) 2020-2024, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -22,34 +22,38 @@ extern "C" {
 
 typedef struct _odp_time_global_t {
 	uint64_t freq_hz;
-	uint64_t start_time;
+	odp_time_t start_time;
 	uint64_t start_time_ns;
 
 } _odp_time_global_t;
 
 extern _odp_time_global_t _odp_time_glob;
 
+static inline uint64_t _odp_time_to_u64(odp_time_t time)
+{
+	return (uint64_t)time;
+}
+
+static inline odp_time_t _odp_time_from_u64(uint64_t val)
+{
+	return (odp_time_t)val;
+}
+
 static inline odp_time_t _odp_time_cur(void)
 {
-	odp_time_t time;
-
-	time.count = _odp_time_cpu_global();
-	return time;
+	return _odp_time_from_u64(_odp_time_cpu_global());
 }
 
 static inline odp_time_t _odp_time_cur_strict(void)
 {
-	odp_time_t time;
-
-	time.count = _odp_time_cpu_global_strict();
-	return time;
+	return _odp_time_from_u64(_odp_time_cpu_global_strict());
 }
 
 static inline uint64_t _odp_time_to_ns(odp_time_t time)
 {
 	uint64_t nsec;
 	uint64_t freq_hz = _odp_time_glob.freq_hz;
-	uint64_t count = time.count;
+	uint64_t count = _odp_time_to_u64(time);
 	uint64_t sec = 0;
 
 	if (count >= freq_hz) {
@@ -64,7 +68,6 @@ static inline uint64_t _odp_time_to_ns(odp_time_t time)
 
 static inline odp_time_t _odp_time_from_ns(uint64_t ns)
 {
-	odp_time_t time;
 	uint64_t count;
 	uint64_t freq_hz = _odp_time_glob.freq_hz;
 	uint64_t sec = 0;
@@ -77,9 +80,7 @@ static inline odp_time_t _odp_time_from_ns(uint64_t ns)
 	count  = sec * freq_hz;
 	count += (ns * freq_hz) / ODP_TIME_SEC_IN_NS;
 
-	time.count = count;
-
-	return time;
+	return _odp_time_from_u64(count);
 }
 
 static inline uint64_t _odp_time_res(void)
@@ -89,8 +90,8 @@ static inline uint64_t _odp_time_res(void)
 
 static inline void _odp_time_startup(odp_time_startup_t *startup)
 {
-	startup->global.count = _odp_time_glob.start_time;
-	startup->global_ns    = _odp_time_glob.start_time_ns;
+	startup->global = _odp_time_glob.start_time;
+	startup->global_ns = _odp_time_glob.start_time_ns;
 }
 
 #ifdef __cplusplus

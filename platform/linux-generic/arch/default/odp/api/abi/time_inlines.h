@@ -27,16 +27,22 @@ static inline odp_time_t _odp_time_cur_strict(void)
 
 static inline uint64_t _odp_time_to_ns(odp_time_t time)
 {
-	return time.nsec;
+	return (uint64_t)time;
 }
 
 static inline odp_time_t _odp_time_from_ns(uint64_t ns)
 {
-	odp_time_t time;
+	return (odp_time_t)ns;
+}
 
-	time.nsec = ns;
+static inline uint64_t _odp_time_to_u64(odp_time_t time)
+{
+	return (uint64_t)time;
+}
 
-	return time;
+static inline odp_time_t _odp_time_from_u64(uint64_t val)
+{
+	return (odp_time_t)val;
 }
 
 #ifdef __cplusplus

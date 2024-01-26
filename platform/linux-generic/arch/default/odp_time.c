@@ -43,16 +43,13 @@ static inline uint64_t time_nsec(struct timespec *t)
 odp_time_t _odp_time_cur(void)
 {
 	int ret;
-	odp_time_t time;
 	struct timespec sys_time;
 
 	ret = clock_gettime(CLOCK_MONOTONIC_RAW, &sys_time);
 	if (odp_unlikely(ret != 0))
 		_ODP_ABORT("clock_gettime() failed\n");
 
-	time.nsec = time_nsec(&sys_time);
-
-	return time;
+	return _odp_time_from_u64(time_nsec(&sys_time));
 }
 
 uint64_t _odp_time_res(void)
@@ -69,8 +66,8 @@ uint64_t _odp_time_res(void)
 
 void _odp_time_startup(odp_time_startup_t *startup)
 {
-	startup->global.nsec = _odp_time_glob.start_time_ns;
-	startup->global_ns   = _odp_time_glob.start_time_ns;
+	startup->global = _odp_time_from_u64(_odp_time_glob.start_time_ns);
+	startup->global_ns = _odp_time_glob.start_time_ns;
 }
 
 #include <odp/visibility_end.h>
