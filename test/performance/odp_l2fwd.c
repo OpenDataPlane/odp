@@ -89,7 +89,23 @@ static inline int sched_mode(pktin_mode_t in_mode)
  */
 typedef struct {
 	/* Some extra features (e.g. error checks) have been enabled */
-	int extra_feat;
+	uint8_t extra_feat;
+
+	/* Change destination eth addresses */
+	uint8_t dst_change;
+
+	/* Change source eth addresses */
+	uint8_t src_change;
+
+	/* Check packet errors */
+	uint8_t error_check;
+
+	/* Packet copy */
+	uint8_t packet_copy;
+
+	/* Checksum offload */
+	uint8_t chksum;
+
 	unsigned int cpu_count;
 	int if_count;		/* Number of interfaces to be used */
 	int addr_count;		/* Number of dst addresses to be used */
@@ -101,11 +117,6 @@ typedef struct {
 	int time;		/* Time in seconds to run. */
 	int accuracy;		/* Number of seconds to get and print stats */
 	char *if_str;		/* Storage for interface names */
-	int dst_change;		/* Change destination eth addresses */
-	int src_change;		/* Change source eth addresses */
-	int error_check;        /* Check packet errors */
-	int packet_copy;        /* Packet copy */
-	int chksum;             /* Checksum offload */
 	int sched_mode;         /* Scheduler mode */
 	int num_groups;         /* Number of scheduling groups */
 	int group_mode;         /* How threads join groups */
@@ -352,21 +363,21 @@ static inline int copy_packets(odp_packet_t *pkt_tbl, int pkts)
 /*
  * Return number of packets remaining in the pkt_tbl
  */
-static inline int process_extra_features(odp_packet_t *pkt_tbl, int pkts,
-					 stats_t *stats)
+static inline int process_extra_features(const appl_args_t *appl_args, odp_packet_t *pkt_tbl,
+					 int pkts, stats_t *stats)
 {
-	if (odp_unlikely(gbl_args->appl.extra_feat)) {
-		if (gbl_args->appl.packet_copy) {
+	if (odp_unlikely(appl_args->extra_feat)) {
+		if (appl_args->packet_copy) {
 			int fails;
 
 			fails = copy_packets(pkt_tbl, pkts);
 			stats->s.copy_fails += fails;
 		}
 
-		if (gbl_args->appl.chksum)
+		if (appl_args->chksum)
 			chksum_insert(pkt_tbl, pkts);
 
-		if (gbl_args->appl.error_check) {
+		if (appl_args->error_check) {
 			int rx_drops;
 
 			/* Drop packets with errors */
@@ -430,6 +441,7 @@ static int run_worker_sched_mode_vector(void *arg)
 	odp_queue_t tx_queue[MAX_PKTIOS];
 	thread_args_t *thr_args = arg;
 	stats_t *stats = &thr_args->stats;
+	const appl_args_t *appl_args = &gbl_args->appl;
 	int use_event_queue = gbl_args->appl.out_mode;
 	pktin_mode_t in_mode = gbl_args->appl.in_mode;
 
@@ -493,7 +505,8 @@ static int run_worker_sched_mode_vector(void *arg)
 				pkts = odp_packet_vector_tbl(pkt_vec, &pkt_tbl);
 			}
 
-			pkts = process_extra_features(pkt_tbl, pkts, stats);
+			pkts = process_extra_features(appl_args, pkt_tbl, pkts, stats);
+
 			if (odp_unlikely(pkts) == 0) {
 				if (pkt_vec != ODP_PACKET_VECTOR_INVALID)
 					odp_packet_vector_free(pkt_vec);
@@ -576,6 +589,7 @@ static int run_worker_sched_mode(void *arg)
 	char extra_str[EXTRA_STR_LEN];
 	thread_args_t *thr_args = arg;
 	stats_t *stats = &thr_args->stats;
+	const appl_args_t *appl_args = &gbl_args->appl;
 	int use_event_queue = gbl_args->appl.out_mode;
 	pktin_mode_t in_mode = gbl_args->appl.in_mode;
 
@@ -639,7 +653,8 @@ static int run_worker_sched_mode(void *arg)
 
 		odp_packet_from_event_multi(pkt_tbl, ev_tbl, pkts);
 
-		pkts = process_extra_features(pkt_tbl, pkts, stats);
+		pkts = process_extra_features(appl_args, pkt_tbl, pkts, stats);
+
 		if (odp_unlikely(pkts) == 0)
 			continue;
 
@@ -713,6 +728,7 @@ static int run_worker_plain_queue_mode(void *arg)
 	int pktio = 0;
 	thread_args_t *thr_args = arg;
 	stats_t *stats = &thr_args->stats;
+	const appl_args_t *appl_args = &gbl_args->appl;
 	int use_event_queue = gbl_args->appl.out_mode;
 	int i;
 
@@ -752,7 +768,8 @@ static int run_worker_plain_queue_mode(void *arg)
 
 		odp_packet_from_event_multi(pkt_tbl, event, pkts);
 
-		pkts = process_extra_features(pkt_tbl, pkts, stats);
+		pkts = process_extra_features(appl_args, pkt_tbl, pkts, stats);
+
 		if (odp_unlikely(pkts) == 0)
 			continue;
 
@@ -810,6 +827,7 @@ static int run_worker_direct_mode(void *arg)
 	int pktio = 0;
 	thread_args_t *thr_args = arg;
 	stats_t *stats = &thr_args->stats;
+	const appl_args_t *appl_args = &gbl_args->appl;
 	int use_event_queue = gbl_args->appl.out_mode;
 
 	thr = odp_thread_id();
@@ -844,7 +862,8 @@ static int run_worker_direct_mode(void *arg)
 		if (odp_unlikely(pkts <= 0))
 			continue;
 
-		pkts = process_extra_features(pkt_tbl, pkts, stats);
+		pkts = process_extra_features(appl_args, pkt_tbl, pkts, stats);
+
 		if (odp_unlikely(pkts) == 0)
 			continue;
 
