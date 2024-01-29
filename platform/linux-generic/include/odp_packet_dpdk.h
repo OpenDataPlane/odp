@@ -14,16 +14,6 @@
 #include <odp_parse_internal.h>
 
 #include <rte_mbuf.h>
-#include <rte_version.h>
-
-#if RTE_VERSION < RTE_VERSION_NUM(21, 11, 0, 0)
-	#define RTE_MBUF_F_RX_IP_CKSUM_MASK PKT_RX_IP_CKSUM_MASK
-	#define RTE_MBUF_F_RX_IP_CKSUM_GOOD PKT_RX_IP_CKSUM_GOOD
-	#define RTE_MBUF_F_RX_IP_CKSUM_UNKNOWN PKT_RX_IP_CKSUM_UNKNOWN
-	#define RTE_MBUF_F_RX_L4_CKSUM_MASK PKT_RX_L4_CKSUM_MASK
-	#define RTE_MBUF_F_RX_L4_CKSUM_GOOD PKT_RX_L4_CKSUM_GOOD
-	#define RTE_MBUF_F_RX_L4_CKSUM_UNKNOWN PKT_RX_L4_CKSUM_UNKNOWN
-#endif
 
 #define IP4_CSUM_RESULT(ol_flags) ((ol_flags) & RTE_MBUF_F_RX_IP_CKSUM_MASK)
 #define L4_CSUM_RESULT(ol_flags) ((ol_flags) & RTE_MBUF_F_RX_L4_CKSUM_MASK)

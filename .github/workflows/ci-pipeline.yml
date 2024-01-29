@@ -387,24 +387,6 @@ jobs:
       - if: ${{ failure() }}
         uses: ./.github/actions/run-failure-log
 
-  Run_dpdk-19_11:
-    runs-on: ubuntu-20.04
-    steps:
-      - uses: actions/checkout@v4
-      - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}" -e ARCH="${ARCH}"
-               -e CONF="${CONF}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-dpdk_19.11 /odp/scripts/ci/check.sh
-      - if: ${{ failure() }}
-        uses: ./.github/actions/run-failure-log
-
-  Run_dpdk-20_11:
-    runs-on: ubuntu-20.04
-    steps:
-      - uses: actions/checkout@v4
-      - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}" -e ARCH="${ARCH}"
-               -e CONF="${CONF}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-dpdk_20.11 /odp/scripts/ci/check.sh
-      - if: ${{ failure() }}
-        uses: ./.github/actions/run-failure-log
-
   Run_dpdk-21_11:
     runs-on: ubuntu-20.04
     steps:
