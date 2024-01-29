@@ -155,50 +155,28 @@ Prerequisites for building the OpenDataPlane (ODP) API
 
 3.5 DPDK packet I/O support (optional)
 
-   Use DPDK for ODP packet I/O. Currently supported DPDK versions are v19.11,
-   v20.11, v21.11, and v22.11 (recommended).
+   Use DPDK for ODP packet I/O. Currently supported DPDK versions are v21.11
+   and v22.11 (recommended).
 
    Note: only packet I/O is accelerated with DPDK. See
         https://github.com/OpenDataPlane/odp-dpdk.git
    for a full DPDK based ODP implementation.
 
-3.5.1 DPDK pktio requirements
+3.5.1 Native DPDK install
 
-   DPDK pktio adds a dependency to NUMA library.
-   # Debian/Ubuntu
-   $ sudo apt-get install libnuma-dev
-
-   # CentOS/RedHat/Fedora
-   $ sudo yum install numactl-devel
-
-3.5.2 Native DPDK install
-   # Debian/Ubuntu starting from 20.04
+   # Debian 12 or Ubuntu 22.04
    $ sudo apt-get install dpdk-dev
 
-3.5.3 Build DPDK v19.11 from source
-   $ git clone https://dpdk.org/git/dpdk-stable --branch 19.11 --depth 1 ./<dpdk-dir>
+3.5.2 Build DPDK from source
 
-   # Make and edit DPDK configuration
-   $ export TARGET="x86_64-native-linuxapp-gcc"
-   $ make config T=${TARGET} O=${TARGET}
-   $ pushd ${TARGET}
+   Minimal instructions for building DPDK library. For more instructions refer
+   to https://dpdk.org/doc/guides/linux_gsg/build_dpdk.html.
 
-   # Enable pcap PMD to use DPDK pktio without supported NICs:
-   $ sed -ri 's,(CONFIG_RTE_LIBRTE_PMD_PCAP=).*,\1y,' .config
-   $ popd
-
-   # Build and install DPDK
-   $ make install T=${TARGET} EXTRA_CFLAGS="-fPIC" DESTDIR=./install
-
-   # Configure ODP
-   $ ./configure --with-dpdk-path=<dpdk-dir>
-
-3.5.4 Build DPDK v20.11 and onwards from source
    $ git clone https://dpdk.org/git/dpdk-stable --branch <version, e.g. 22.11> --depth 1 ./<dpdk-dir>
 
    # Prepare the build directory
    $ cd <dpdk-dir>
-   $ meson build
+   $ meson setup build
    $ cd build
 
    # Optionally, configure the location where DPDK will be installed. By default,
@@ -209,23 +187,20 @@ Prerequisites for building the OpenDataPlane (ODP) API
    $ ninja install
 
    # Configure ODP
+   $ cd <odp-dir>
+   $ ./bootstrap
    $ ./configure --enable-dpdk
    # Or, if DPDK was not installed to the default location, set PKG_CONFIG_PATH:
    $ PKG_CONFIG_PATH=<dpdk-dir>/install/lib/x86_64-linux-gnu/pkgconfig ./configure --enable-dpdk
 
-3.5.5 Setup system
-
-   # Load DPDK modules
-   $ sudo modprobe uio
-   $ cd <dpdk-dir>
-   $ sudo insmod x86_64-native-linuxapp-gcc/kmod/igb_uio.ko
+3.5.3 Setup system
 
    Reserve and mount huge pages and bind supported interfaces to DPDK modules
    following the DPDK documentation. ODP DPDK packet I/O has been tested with
-   512 x 2MB huge pages. All this can be done with the DPDK setup script
-   (<dpdk-dir>/usertools/dpdk-setup.sh).
+   512 x 2MB huge pages. All this can be done with the DPDK helper scripts
+   (<dpdk-dir>/usertools/).
 
-3.5.6 Running ODP with DPDK pktio
+3.5.4 Running ODP with DPDK pktio
 
    ODP applications will try use DPDK for packet I/O by default. If some other
    I/O type is desired instead, DPDK I/O can be disabled by setting the
@@ -233,7 +208,7 @@ Prerequisites for building the OpenDataPlane (ODP) API
 
    DPDK interfaces are accessed using indexes. For example, two first DPDK
    interfaces can be used with the odp_l2fwd example as follows:
-   $ cd <odp_dir>
+   $ cd <odp-dir>
    $ sudo ./test/performance/odp_l2fwd -i 0,1 -c 2 -m 0
 
    Additionally, DPDK command line options can be passed to the application
