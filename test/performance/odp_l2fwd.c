@@ -91,6 +91,9 @@ typedef struct {
 	/* Some extra features (e.g. error checks) have been enabled */
 	uint8_t extra_feat;
 
+	/* Prefetch packet data */
+	uint8_t prefetch;
+
 	/* Change destination eth addresses */
 	uint8_t dst_change;
 
@@ -271,6 +274,15 @@ static inline int drop_err_pkts(odp_packet_t pkt_tbl[], unsigned num)
 	return dropped;
 }
 
+static inline void prefetch_data(uint8_t prefetch, odp_packet_t pkt_tbl[], uint32_t num)
+{
+	if (prefetch == 0)
+		return;
+
+	for (uint32_t i = 0; i < num; i++)
+		odp_packet_prefetch(pkt_tbl[i], 0, prefetch * 64);
+}
+
 /*
  * Fill packets' eth addresses according to the destination port
  *
@@ -290,9 +302,6 @@ static inline void fill_eth_addrs(odp_packet_t pkt_tbl[],
 
 	for (i = 0; i < num; ++i) {
 		pkt = pkt_tbl[i];
-
-		odp_packet_prefetch(pkt, 0, ODPH_ETHHDR_LEN);
-
 		eth = odp_packet_data(pkt);
 
 		if (gbl_args->appl.src_change)
@@ -505,6 +514,8 @@ static int run_worker_sched_mode_vector(void *arg)
 				pkts = odp_packet_vector_tbl(pkt_vec, &pkt_tbl);
 			}
 
+			prefetch_data(appl_args->prefetch, pkt_tbl, pkts);
+
 			pkts = process_extra_features(appl_args, pkt_tbl, pkts, stats);
 
 			if (odp_unlikely(pkts) == 0) {
@@ -653,6 +664,8 @@ static int run_worker_sched_mode(void *arg)
 
 		odp_packet_from_event_multi(pkt_tbl, ev_tbl, pkts);
 
+		prefetch_data(appl_args->prefetch, pkt_tbl, pkts);
+
 		pkts = process_extra_features(appl_args, pkt_tbl, pkts, stats);
 
 		if (odp_unlikely(pkts) == 0)
@@ -768,6 +781,8 @@ static int run_worker_plain_queue_mode(void *arg)
 
 		odp_packet_from_event_multi(pkt_tbl, event, pkts);
 
+		prefetch_data(appl_args->prefetch, pkt_tbl, pkts);
+
 		pkts = process_extra_features(appl_args, pkt_tbl, pkts, stats);
 
 		if (odp_unlikely(pkts) == 0)
@@ -861,6 +876,8 @@ static int run_worker_direct_mode(void *arg)
 		pkts = odp_pktin_recv(pktin, pkt_tbl, max_burst);
 		if (odp_unlikely(pkts <= 0))
 			continue;
+
+		prefetch_data(appl_args->prefetch, pkt_tbl, pkts);
 
 		pkts = process_extra_features(appl_args, pkt_tbl, pkts, stats);
 
@@ -1547,6 +1564,7 @@ static void usage(char *progname)
 	       "  -l, --packet_len <len>  Maximum length of packets supported (default %d).\n"
 	       "  -L, --seg_len <len>     Packet pool segment length\n"
 	       "                          (default equal to packet length).\n"
+	       "  -F, --prefetch <num>    Prefetch packet data in 64 byte multiples (default 1).\n"
 	       "  -f, --flow_aware        Enable flow aware scheduling.\n"
 	       "  -T, --input_ts          Enable packet input timestamping.\n"
 	       "  -v, --verbose           Verbose output.\n"
@@ -1597,6 +1615,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{"promisc_mode", no_argument, NULL, 'P'},
 		{"packet_len", required_argument, NULL, 'l'},
 		{"seg_len", required_argument, NULL, 'L'},
+		{"prefetch", required_argument, NULL, 'F'},
 		{"flow_aware", no_argument, NULL, 'f'},
 		{"input_ts", no_argument, NULL, 'T'},
 		{"verbose", no_argument, NULL, 'v'},
@@ -1604,7 +1623,8 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+c:t:a:i:m:o:r:d:s:e:k:g:G:I:b:q:p:y:n:l:L:w:x:z:M:uPfTvh";
+	static const char *shortopts = "+c:t:a:i:m:o:r:d:s:e:k:g:G:I:"
+				       "b:q:p:y:n:l:L:w:x:z:M:F:uPfTvh";
 
 	appl_args->time = 0; /* loop forever if time to run is 0 */
 	appl_args->accuracy = 1; /* get and print pps stats second */
@@ -1632,6 +1652,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	appl_args->flow_aware = 0;
 	appl_args->input_ts = 0;
 	appl_args->num_prio = 0;
+	appl_args->prefetch = 1;
 
 	while (1) {
 		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
@@ -1833,6 +1854,9 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		case 'z':
 			appl_args->vec_tmo_ns = atoi(optarg);
 			break;
+		case 'F':
+			appl_args->prefetch = atoi(optarg);
+			break;
 		case 'f':
 			appl_args->flow_aware = 1;
 			break;
@@ -1952,6 +1976,7 @@ static void print_info(void)
 	printf("Packets per pool:   %u\n", gbl_args->num_pkt);
 	printf("Packet length:      %u\n", gbl_args->pkt_len);
 	printf("Segment length:     %u\n", gbl_args->seg_len);
+	printf("Prefetch data       %u bytes\n", appl_args->prefetch * 64);
 	printf("Vectors per pool:   %u\n", gbl_args->vector_num);
 	printf("Vector size:        %u\n", gbl_args->vector_max_size);
 	printf("Priority per IF:   ");
