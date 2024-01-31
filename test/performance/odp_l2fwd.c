@@ -100,6 +100,9 @@ typedef struct {
 	/* Change source eth addresses */
 	uint8_t src_change;
 
+	/* Read packet data in uint64_t words */
+	uint16_t data_rd;
+
 	/* Check packet errors */
 	uint8_t error_check;
 
@@ -154,6 +157,8 @@ typedef union ODP_ALIGNED_CACHE {
 		uint64_t tx_drops;
 		/* Number of failed packet copies */
 		uint64_t copy_fails;
+		/* Dummy sum of packet data */
+		uint64_t dummy_sum;
 	} s;
 
 	uint8_t padding[ODP_CACHE_LINE_SIZE];
@@ -347,6 +352,30 @@ static inline void chksum_insert(odp_packet_t *pkt_tbl, int pkts)
 	}
 }
 
+static inline void data_rd(odp_packet_t *pkt_tbl, int num, uint16_t rd_words, stats_t *stats)
+{
+	odp_packet_t pkt;
+	uint64_t *data;
+	int i;
+	uint32_t len, words, j;
+	uint64_t sum = 0;
+
+	for (i = 0; i < num; i++) {
+		pkt  = pkt_tbl[i];
+		data = odp_packet_data(pkt);
+		len  = odp_packet_seg_len(pkt);
+
+		words = rd_words;
+		if (rd_words * 8 > len)
+			words = len / 8;
+
+		for (j = 0; j < words; j++)
+			sum += data[j];
+	}
+
+	stats->s.dummy_sum += sum;
+}
+
 static inline int copy_packets(odp_packet_t *pkt_tbl, int pkts)
 {
 	odp_packet_t old_pkt, new_pkt;
@@ -376,6 +405,11 @@ static inline int process_extra_features(const appl_args_t *appl_args, odp_packe
 					 int pkts, stats_t *stats)
 {
 	if (odp_unlikely(appl_args->extra_feat)) {
+		uint16_t rd_words = appl_args->data_rd;
+
+		if (rd_words)
+			data_rd(pkt_tbl, pkts, rd_words, stats);
+
 		if (appl_args->packet_copy) {
 			int fails;
 
@@ -1548,6 +1582,10 @@ static void usage(char *progname)
 	       "  -p, --packet_copy       0: Don't copy packet (default)\n"
 	       "                          1: Create and send copy of the received packet.\n"
 	       "                             Free the original packet.\n"
+	       "  -R, --data_rd <num>     Number of packet data words (uint64_t) to read from\n"
+	       "                          every received packet. Number of words is rounded down\n"
+	       "                          to fit into the first segment of a packet. Default\n"
+	       "                          is 0.\n"
 	       "  -y, --pool_per_if       Create a packet (and packet vector) pool per interface.\n"
 	       "                          0: Share a single pool between all interfaces (default)\n"
 	       "                          1: Create a pool per interface\n"
@@ -1605,6 +1643,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{"burst_rx", required_argument, NULL, 'b'},
 		{"rx_queues", required_argument, NULL, 'q'},
 		{"packet_copy", required_argument, NULL, 'p'},
+		{"data_rd", required_argument, NULL, 'R'},
 		{"pool_per_if", required_argument, NULL, 'y'},
 		{"num_pkt", required_argument, NULL, 'n'},
 		{"num_vec", required_argument, NULL, 'w'},
@@ -1624,7 +1663,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	};
 
 	static const char *shortopts = "+c:t:a:i:m:o:r:d:s:e:k:g:G:I:"
-				       "b:q:p:y:n:l:L:w:x:z:M:F:uPfTvh";
+				       "b:q:p:R:y:n:l:L:w:x:z:M:F:uPfTvh";
 
 	appl_args->time = 0; /* loop forever if time to run is 0 */
 	appl_args->accuracy = 1; /* get and print pps stats second */
@@ -1653,6 +1692,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	appl_args->input_ts = 0;
 	appl_args->num_prio = 0;
 	appl_args->prefetch = 1;
+	appl_args->data_rd = 0;
 
 	while (1) {
 		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
@@ -1824,6 +1864,9 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		case 'p':
 			appl_args->packet_copy = atoi(optarg);
 			break;
+		case 'R':
+			appl_args->data_rd = atoi(optarg);
+			break;
 		case 'y':
 			appl_args->pool_per_if = atoi(optarg);
 			break;
@@ -1901,7 +1944,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 
 	appl_args->extra_feat = 0;
 	if (appl_args->error_check || appl_args->chksum ||
-	    appl_args->packet_copy)
+	    appl_args->packet_copy || appl_args->data_rd)
 		appl_args->extra_feat = 1;
 
 	optind = 1;		/* reset 'extern optind' from the getopt lib */
@@ -1957,10 +2000,11 @@ static void print_info(void)
 					   appl_args->if_count : 1);
 
 	if (appl_args->extra_feat) {
-		printf("Extra features:     %s%s%s\n",
+		printf("Extra features:     %s%s%s%s\n",
 		       appl_args->error_check ? "error_check " : "",
 		       appl_args->chksum ? "chksum " : "",
-		       appl_args->packet_copy ? "packet_copy" : "");
+		       appl_args->packet_copy ? "packet_copy " : "",
+		       appl_args->data_rd ? "data_rd" : "");
 	}
 
 	printf("Num worker threads: %i\n", appl_args->num_workers);
@@ -1976,6 +2020,7 @@ static void print_info(void)
 	printf("Packets per pool:   %u\n", gbl_args->num_pkt);
 	printf("Packet length:      %u\n", gbl_args->pkt_len);
 	printf("Segment length:     %u\n", gbl_args->seg_len);
+	printf("Read data:          %u bytes\n", appl_args->data_rd * 8);
 	printf("Prefetch data       %u bytes\n", appl_args->prefetch * 64);
 	printf("Vectors per pool:   %u\n", gbl_args->vector_num);
 	printf("Vector size:        %u\n", gbl_args->vector_max_size);
@@ -2215,6 +2260,12 @@ int main(int argc, char *argv[])
 	if ((gbl_args->appl.seg_len != UINT32_MAX) && (seg_len != gbl_args->appl.seg_len))
 		printf("\nWarning: Segment length requested %d configured %d\n",
 		       gbl_args->appl.seg_len, seg_len);
+
+	if (seg_len < gbl_args->appl.data_rd * 8) {
+		ODPH_ERR("Requested data read length %u exceeds maximum segment length %u\n",
+			 gbl_args->appl.data_rd * 8, seg_len);
+			return -1;
+	}
 
 	/* zero means default number of packets */
 	if (gbl_args->appl.num_pkt == 0)
