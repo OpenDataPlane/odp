@@ -1950,10 +1950,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	optind = 1;		/* reset 'extern optind' from the getopt lib */
 }
 
-/*
- * Print system and application info
- */
-static void print_info(void)
+static void print_options(void)
 {
 	int i;
 	appl_args_t *appl_args = &gbl_args->appl;
@@ -2017,13 +2014,14 @@ static void print_info(void)
 	else
 		printf("group:              ODP_SCHED_GROUP_WORKER\n");
 
-	printf("Packets per pool:   %u\n", gbl_args->num_pkt);
-	printf("Packet length:      %u\n", gbl_args->pkt_len);
-	printf("Segment length:     %u\n", gbl_args->seg_len);
+	printf("Packets per pool:   %u\n", appl_args->num_pkt);
+	printf("Packet length:      %u\n", appl_args->packet_len);
+	printf("Segment length:     %u\n", appl_args->seg_len == UINT32_MAX ? 0 :
+	       appl_args->seg_len);
 	printf("Read data:          %u bytes\n", appl_args->data_rd * 8);
 	printf("Prefetch data       %u bytes\n", appl_args->prefetch * 64);
-	printf("Vectors per pool:   %u\n", gbl_args->vector_num);
-	printf("Vector size:        %u\n", gbl_args->vector_max_size);
+	printf("Vectors per pool:   %u\n", appl_args->num_vec);
+	printf("Vector size:        %u\n", appl_args->vec_size);
 	printf("Priority per IF:   ");
 
 	for (i = 0; i < appl_args->if_count; i++)
@@ -2212,8 +2210,7 @@ int main(int argc, char *argv[])
 
 	gbl_args->appl.num_workers = num_workers;
 
-	/* Print application information */
-	print_info();
+	print_options();
 
 	for (i = 0; i < num_workers; i++)
 		gbl_args->thread_args[i].thr_idx = i;
@@ -2289,6 +2286,11 @@ int main(int argc, char *argv[])
 	gbl_args->pkt_len = pkt_len;
 	gbl_args->seg_len = seg_len;
 
+	printf("Resulting pool parameter values:\n");
+	printf("Packets per pool:   %u\n", num_pkt);
+	printf("Packet length:      %u\n", pkt_len);
+	printf("Segment length:     %u\n", seg_len);
+
 	/* Create packet pool */
 	odp_pool_param_init(&params);
 	params.pkt.seg_len = seg_len;
@@ -2329,6 +2331,10 @@ int main(int argc, char *argv[])
 		gbl_args->vector_num = params.vector.num;
 		gbl_args->vector_max_size = params.vector.max_size;
 
+		/* Print resulting values */
+		printf("Vectors per pool:   %u\n", gbl_args->vector_num);
+		printf("Vector size:        %u\n", gbl_args->vector_max_size);
+
 		for (i = 0; i < num_vec_pools; i++) {
 			vec_pool_tbl[i] = odp_pool_create("vector pool", &params);
 
@@ -2341,6 +2347,8 @@ int main(int argc, char *argv[])
 				odp_pool_print(vec_pool_tbl[i]);
 		}
 	}
+
+	printf("\n");
 
 	bind_workers();
 
