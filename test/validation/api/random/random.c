@@ -313,11 +313,10 @@ static void random_test_independence(odp_random_kind_t kind)
 
 		for (int i = 0; i < 256; i++) {
 			for (int j = 0; j < 256; j++) {
-				double expected =
-					(double)row[i] * (double)col[j] / (double)num;
-				double diff =
-					(double)freq[i][j] - expected;
-				chisq += diff * diff / expected;
+				double expect = (double)row[i] * (double)col[j] / (double)num;
+				double diff   = (double)freq[i][j] - expect;
+
+				chisq += diff * diff / expect;
 			}
 		}
 
