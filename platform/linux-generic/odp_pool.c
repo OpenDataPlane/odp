@@ -543,7 +543,6 @@ static void init_event_hdr(pool_t *pool, _odp_event_hdr_t *event_hdr, uint32_t e
 
 static void init_buffers(pool_t *pool)
 {
-	uint64_t i;
 	_odp_event_hdr_t *event_hdr;
 	odp_buffer_hdr_t *buf_hdr;
 	odp_packet_hdr_t *pkt_hdr;
@@ -567,7 +566,7 @@ static void init_buffers(pool_t *pool)
 	mask = pool->ring_mask;
 	type = pool->type;
 
-	for (i = 0; i < pool->num + skipped_blocks ; i++) {
+	for (uint64_t i = 0; i < pool->num + skipped_blocks ; i++) {
 		int skip = 0;
 		addr = &pool->base_addr[i * pool->block_size];
 
@@ -1372,11 +1371,11 @@ static inline void event_free_to_pool(pool_t *pool,
 		if (odp_unlikely((uint32_t)num > cache_num))
 			burst = cache_num;
 
-		_odp_event_hdr_t *event_hdr[burst];
+		_odp_event_hdr_t *ev_hdr[burst];
 
-		cache_pop(cache, event_hdr, burst);
+		cache_pop(cache, ev_hdr, burst);
 
-		ring_ptr_enq_multi(ring, mask, (void **)event_hdr, burst);
+		ring_ptr_enq_multi(ring, mask, (void **)ev_hdr, burst);
 		if (CONFIG_POOL_STATISTICS && pool->params.stats.bit.free_ops)
 			odp_atomic_inc_u64(&pool->stats.free_ops);
 	}
