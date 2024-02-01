@@ -1383,8 +1383,6 @@ int main(int argc, char *argv[])
 			run_measure_one_config(&cargs, cargs.alg_config);
 		}
 	} else {
-		unsigned int i;
-
 		for (i = 0; i < ODPH_ARRAY_SIZE(algs_config); i++) {
 			if (cargs.ah &&
 			    algs_config[i].crypto.cipher_alg !=
