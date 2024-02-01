@@ -123,8 +123,6 @@ static void rwin_insert(reorder_window_t *rwin,
 				     /*readonly=*/false);
 		rctx = NULL;
 		do {
-			hc_t new;
-
 			new.head = old.head;
 			new.chgi = old.chgi + 1; /* Changed value */
 			/* Update head & chgi, fail if any has changed */
