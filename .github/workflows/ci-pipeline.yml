@@ -28,7 +28,7 @@ jobs:
         run: |
           AFTER=${{ github.event.after }}
           BEFORE=${{ github.event.before }}
-          if [ -z "${BEFORE//0}" ] || [ -z "${AFTER//0}" ]; then
+          if [ -z "${BEFORE//0}" ] || [ -z "${AFTER//0}" ] || ${{ github.event.forced }}; then
             COMMIT_RANGE=""
           else
             COMMIT_RANGE="${BEFORE}..${AFTER}"
