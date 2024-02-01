@@ -167,7 +167,7 @@ static void test_abs_timeouts(int thr, test_globals_t *gbls)
 			ODPH_ABORT("Unexpected event type (%u) received\n",
 				   odp_event_type(ev));
 		}
-		odp_timeout_t tmo = odp_timeout_from_event(ev);
+		tmo = odp_timeout_from_event(ev);
 		tick = odp_timeout_tick(tmo);
 		ttp = odp_timeout_user_ptr(tmo);
 		ttp->ev = ev;
