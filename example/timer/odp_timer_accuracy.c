@@ -767,7 +767,7 @@ static int start_timers(test_global_t *test_global)
 			odp_timer_start_t start_param;
 
 			if (mode == MODE_PERIODIC) {
-				odp_timer_periodic_start_t start_param;
+				odp_timer_periodic_start_t periodic_start;
 
 				nsec = offset_ns + (j * burst_gap);
 
@@ -781,13 +781,13 @@ static int start_timers(test_global_t *test_global)
 				ctx->first_period = start_tick +
 					odp_timer_ns_to_tick(timer_pool,
 							     test_global->period_dbl + 0.5);
-				start_param.freq_multiplier = test_global->opt.multiplier;
-				start_param.first_tick = 0;
+				periodic_start.freq_multiplier = test_global->opt.multiplier;
+				periodic_start.first_tick = 0;
 				if (nsec)
-					start_param.first_tick =
+					periodic_start.first_tick =
 						start_tick + odp_timer_ns_to_tick(timer_pool, nsec);
-				start_param.tmo_ev = ctx->event;
-				retval = odp_timer_periodic_start(ctx->timer, &start_param);
+				periodic_start.tmo_ev = ctx->event;
+				retval = odp_timer_periodic_start(ctx->timer, &periodic_start);
 			} else {
 				nsec = offset_ns + (i * period_ns) + (j * burst_gap);
 				ctx->nsec = start_ns + nsec;
@@ -875,7 +875,6 @@ static void print_nsec_error(const char *str, int64_t nsec, double res_ns,
 
 static void print_stat(test_global_t *test_global)
 {
-	uint64_t i;
 	test_stat_t test_stat;
 	test_stat_t *stat = &test_stat;
 	uint64_t tot_timers;
@@ -943,7 +942,7 @@ static void print_stat(test_global_t *test_global)
 
 		fprintf(file, "   Timer  thread      tmo(ns)   diff(ns)\n");
 
-		for (i = 0; i < tot_timers; i++) {
+		for (uint64_t i = 0; i < tot_timers; i++) {
 			fprintf(file, "%8" PRIu64 " %7u %12" PRIu64 " %10"
 				PRIi64 "\n", i, log[i].tid, log[i].tmo_ns, log[i].diff_ns);
 		}
