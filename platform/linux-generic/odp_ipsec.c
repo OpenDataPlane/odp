@@ -2180,7 +2180,7 @@ finish:
 int odp_ipsec_in(const odp_packet_t pkt_in[], int num_in, odp_packet_t pkt_out[], int *num_out,
 		 const odp_ipsec_in_param_t *param)
 {
-	int max_out = _ODP_MIN(_ODP_MIN(num_in, *num_out), MAX_BURST), num_crypto;
+	int max_out = _ODP_MIN3(num_in, *num_out, MAX_BURST), num_crypto;
 	odp_packet_t crypto_pkts[MAX_BURST];
 	odp_crypto_packet_op_param_t crypto_param[MAX_BURST];
 	ipsec_op_t ops[MAX_BURST], *crypto_ops[MAX_BURST];
@@ -2288,7 +2288,7 @@ finish:
 int odp_ipsec_out(const odp_packet_t pkt_in[], int num_in, odp_packet_t pkt_out[], int *num_out,
 		  const odp_ipsec_out_param_t *param)
 {
-	int max_out = _ODP_MIN(_ODP_MIN(num_in, *num_out), MAX_BURST), num_crypto;
+	int max_out = _ODP_MIN3(num_in, *num_out, MAX_BURST), num_crypto;
 	odp_packet_t crypto_pkts[MAX_BURST];
 	odp_crypto_packet_op_param_t crypto_param[MAX_BURST];
 	ipsec_op_t ops[MAX_BURST], *crypto_ops[MAX_BURST];
