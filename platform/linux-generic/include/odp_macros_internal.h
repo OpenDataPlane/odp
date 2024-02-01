@@ -1,5 +1,5 @@
 /* Copyright (c) 2014-2018, Linaro Limited
- * Copyright (c) 2022, Nokia
+ * Copyright (c) 2022-2024, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -26,19 +26,35 @@ extern "C" {
 
 #define _ODP_MIN(a, b)				\
 	__extension__ ({			\
-		__typeof__(a) tmp_a = (a);	\
-		__typeof__(b) tmp_b = (b);	\
-		tmp_a < tmp_b ? tmp_a : tmp_b;	\
+		__typeof__(a) min_a = (a);	\
+		__typeof__(b) min_b = (b);	\
+		min_a < min_b ? min_a : min_b;	\
 	})
 
 #define _ODP_MAX(a, b)				\
 	__extension__ ({			\
-		__typeof__(a) tmp_a = (a);	\
-		__typeof__(b) tmp_b = (b);	\
-		tmp_a > tmp_b ? tmp_a : tmp_b;	\
+		__typeof__(a) max_a = (a);	\
+		__typeof__(b) max_b = (b);	\
+		max_a > max_b ? max_a : max_b;	\
 	})
 
-#define _ODP_MAX3(a, b, c) (_ODP_MAX(_ODP_MAX((a), (b)), (c)))
+#define _ODP_MIN3(a, b, c)		\
+__extension__ ({			\
+	__typeof__(a) min3_a = (a);	\
+	__typeof__(b) min3_b = (b);	\
+	__typeof__(c) min3_c = (c);	\
+	(min3_a < min3_b ? (min3_a < min3_c ? min3_a : min3_c) : \
+	(min3_b < min3_c ? min3_b : min3_c)); \
+})
+
+#define _ODP_MAX3(a, b, c)		\
+__extension__ ({			\
+	__typeof__(a) max3_a = (a);	\
+	__typeof__(b) max3_b = (b);	\
+	__typeof__(c) max3_c = (c);	\
+	(max3_a > max3_b ? (max3_a > max3_c ? max3_a : max3_c) : \
+	(max3_b > max3_c ? max3_b : max3_c)); \
+})
 
 /* Macros to calculate ODP_ROUNDUP_POWER2_U32() in five rounds of shift
  * and OR operations. */
