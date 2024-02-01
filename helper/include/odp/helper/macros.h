@@ -32,9 +32,9 @@ extern "C" {
  */
 #define ODPH_MIN(a, b)				\
 	__extension__ ({			\
-		__typeof__(a) tmp_a = (a);	\
-		__typeof__(b) tmp_b = (b);	\
-		tmp_a < tmp_b ? tmp_a : tmp_b;	\
+		__typeof__(a) min_a = (a);	\
+		__typeof__(b) min_b = (b);	\
+		min_a < min_b ? min_a : min_b;	\
 	})
 
 /**
@@ -42,9 +42,9 @@ extern "C" {
  */
 #define ODPH_MAX(a, b)				\
 	__extension__ ({			\
-		__typeof__(a) tmp_a = (a);	\
-		__typeof__(b) tmp_b = (b);	\
-		tmp_a > tmp_b ? tmp_a : tmp_b;	\
+		__typeof__(a) max_a = (a);	\
+		__typeof__(b) max_b = (b);	\
+		max_a > max_b ? max_a : max_b;	\
 	})
 
 /**
@@ -52,8 +52,8 @@ extern "C" {
  */
 #define ODPH_ABS(v)				\
 	__extension__ ({			\
-		__typeof__(v) tmp_v = (v);	\
-		tmp_v < 0 ? -tmp_v : tmp_v;	\
+		__typeof__(v) abs_v = (v);	\
+		abs_v < 0 ? -abs_v : abs_v;	\
 	})
 
 /**
