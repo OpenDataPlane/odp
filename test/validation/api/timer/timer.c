@@ -2403,7 +2403,6 @@ static int worker_entrypoint(void *arg ODP_UNUSED)
 			}
 		} else {
 			uint64_t cur_tick;
-			uint64_t tck;
 			int reset_timer = 0;
 
 			if (tt[i].ev != ODP_EVENT_INVALID) {
