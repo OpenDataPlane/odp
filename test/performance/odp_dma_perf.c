@@ -251,14 +251,14 @@ static void init_config(prog_config_t *config)
 		stats = &config->thread_config[i].stats;
 		memset(sd, 0, sizeof(*sd));
 
-		for (uint32_t i = 0U; i < MAX_SEGS; ++i) {
-			info = &sd->dma.infos[i];
+		for (uint32_t j = 0U; j < MAX_SEGS; ++j) {
+			info = &sd->dma.infos[j];
 			info->compl_param.transfer_id = ODP_DMA_TRANSFER_ID_INVALID;
 			info->compl_param.event = ODP_EVENT_INVALID;
 			info->compl_param.queue = ODP_QUEUE_INVALID;
 			odp_ticketlock_init(&info->lock);
-			sd->seg.src_pkt[i] = ODP_PACKET_INVALID;
-			sd->seg.dst_pkt[i] = ODP_PACKET_INVALID;
+			sd->seg.src_pkt[j] = ODP_PACKET_INVALID;
+			sd->seg.dst_pkt[j] = ODP_PACKET_INVALID;
 		}
 
 		sd->dma.handle = ODP_DMA_INVALID;
