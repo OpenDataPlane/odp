@@ -299,10 +299,11 @@ odp_cos_t odp_cls_cos_create(const char *name, const odp_cls_cos_param_t *param_
 							   param.hash_proto);
 				tbl_index = i * CLS_COS_QUEUE_MAX;
 				for (j = 0; j < param.num_queue; j++) {
-					char name[ODP_QUEUE_NAME_LEN];
+					char hq_name[ODP_QUEUE_NAME_LEN];
 
-					snprintf(name, sizeof(name), "_odp_cos_hq_%u_%u", i, j);
-					queue = odp_queue_create(name, &cos->queue_param);
+					snprintf(hq_name, sizeof(hq_name), "_odp_cos_hq_%u_%u",
+						 i, j);
+					queue = odp_queue_create(hq_name, &cos->queue_param);
 					if (queue == ODP_QUEUE_INVALID) {
 						/* unwind the queues */
 						_cls_queue_unwind(tbl_index, j);
