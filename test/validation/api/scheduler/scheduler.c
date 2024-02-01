@@ -1469,8 +1469,7 @@ static int schedule_common_(void *arg)
 	odp_pool_t pool;
 	int locked;
 	int num;
-	odp_event_t ev;
-	odp_buffer_t buf, buf_cpy;
+	odp_buffer_t buf;
 	odp_queue_t from;
 
 	globals = args->globals;
@@ -1553,7 +1552,8 @@ static int schedule_common_(void *arg)
 				odp_event_free(events[j]);
 			}
 		} else {
-			ev  = odp_schedule(&from, ODP_SCHED_NO_WAIT);
+			odp_event_t ev = odp_schedule(&from, ODP_SCHED_NO_WAIT);
+
 			if (ev == ODP_EVENT_INVALID)
 				continue;
 
@@ -1564,6 +1564,7 @@ static int schedule_common_(void *arg)
 				uint32_t ndx;
 				uint32_t ndx_max;
 				int rc;
+				odp_buffer_t buf_cpy;
 
 				ndx_max = odp_queue_lock_count(from);
 				CU_ASSERT_FATAL(ndx_max > 0);
