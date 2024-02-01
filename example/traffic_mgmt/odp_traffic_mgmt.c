@@ -637,20 +637,19 @@ static int create_and_config_tm(void)
 	tm_shaper_max_burst = tm_capa.per_level[0].max_burst;
 
 	for (level = 1; level < tm_capa.max_levels; level++) {
-		odp_tm_level_capabilities_t *per_level =
-			&tm_capa.per_level[level];
+		odp_tm_level_capabilities_t *level_capa = &tm_capa.per_level[level];
 
-		if (per_level->min_rate > tm_shaper_min_rate)
-			tm_shaper_min_rate = per_level->min_rate;
+		if (level_capa->min_rate > tm_shaper_min_rate)
+			tm_shaper_min_rate = level_capa->min_rate;
 
-		if (per_level->min_burst > tm_shaper_min_burst)
-			tm_shaper_min_burst = per_level->min_burst;
+		if (level_capa->min_burst > tm_shaper_min_burst)
+			tm_shaper_min_burst = level_capa->min_burst;
 
-		if (per_level->max_rate < tm_shaper_max_rate)
-			tm_shaper_max_rate = per_level->max_rate;
+		if (level_capa->max_rate < tm_shaper_max_rate)
+			tm_shaper_max_rate = level_capa->max_rate;
 
-		if (per_level->max_burst < tm_shaper_max_burst)
-			tm_shaper_max_burst = per_level->max_burst;
+		if (level_capa->max_burst < tm_shaper_max_burst)
+			tm_shaper_max_burst = level_capa->max_burst;
 	}
 
 	if (tm_shaper_min_rate > tm_shaper_max_rate ||
