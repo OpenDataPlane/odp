@@ -197,11 +197,11 @@ static inline int _odp_atomic_cas_acq_rel_u128(odp_atomic_u128_t *atom, odp_u128
 #define ATOMIC_CAS_OP_128(ret_ptr, old_val, new_val) \
 __extension__ ({ \
 	int *_ret_ptr = ret_ptr; \
-	odp_u128_t *_old_val = old_val; \
-	odp_u128_t _new_val = new_val; \
-	if (((_atom)->v.u64[0] == (_old_val)->u64[0]) && \
-	    ((_atom)->v.u64[1] == (_old_val)->u64[1])) { \
-		(_atom)->v = (_new_val); \
+	odp_u128_t *_cas_old = old_val; \
+	odp_u128_t _cas_new = new_val; \
+	if (((_atom)->v.u64[0] == (_cas_old)->u64[0]) && \
+	    ((_atom)->v.u64[1] == (_cas_old)->u64[1])) { \
+		(_atom)->v = (_cas_new); \
 		*(_ret_ptr) = 1; \
 	} else { \
 		*(_ret_ptr) = 0; \
