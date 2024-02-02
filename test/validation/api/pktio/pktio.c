@@ -1,5 +1,5 @@
 /* Copyright (c) 2014-2018, Linaro Limited
- * Copyright (c) 2020-2023, Nokia
+ * Copyright (c) 2020-2024, Nokia
  * Copyright (c) 2020, Marvell
  * All rights reserved.
  *
@@ -11,6 +11,7 @@
 
 #include <odp/helper/odph_api.h>
 
+#include <inttypes.h>
 #include <stdlib.h>
 #include "parser.h"
 #include "lso.h"
@@ -3303,7 +3304,7 @@ static void pktio_test_pktin_ts(void)
 	odp_packet_t pkt_tbl[TX_BATCH_LEN];
 	uint32_t pkt_seq[TX_BATCH_LEN];
 	uint64_t ns1, ns2;
-	uint64_t res, res_ns;
+	uint64_t res, res_ns, input_delay;
 	odp_time_t ts_prev;
 	odp_time_t ts;
 	int num_rx = 0;
@@ -3366,6 +3367,18 @@ static void pktio_test_pktin_ts(void)
 				       1, TXRX_MODE_SINGLE, ODP_TIME_SEC_IN_NS, false);
 		if (ret != 1)
 			break;
+
+		/* Compare to packet IO time to input timestamp */
+		ts = odp_pktio_time(pktio_rx_info.id, NULL);
+		CU_ASSERT_FATAL(odp_packet_has_ts(pkt_tbl[i]));
+		ts_prev = odp_packet_ts(pkt_tbl[i]);
+		CU_ASSERT(odp_time_cmp(ts, ts_prev) >= 0);
+		input_delay = odp_time_diff_ns(ts, ts_prev);
+		if (input_delay > 100 * ODP_TIME_MSEC_IN_NS) {
+			printf("    Test packet %d input delay: %" PRIu64 "ns\n", i, input_delay);
+			CU_FAIL("Packet input delay too long");
+		}
+
 		odp_time_wait_ns(PKTIO_TS_INTERVAL);
 	}
 	num_rx = i;
