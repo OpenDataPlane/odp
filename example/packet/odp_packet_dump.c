@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2018 Linaro Limited
+ * Copyright (c) 2024 Nokia
  */
 
 /**
@@ -213,6 +214,7 @@ static int open_pktios(test_global_t *global)
 	odp_pool_param_t  pool_param;
 	odp_pktio_param_t pktio_param;
 	odp_pool_t pool;
+	odp_pktio_capability_t pktio_capa;
 	odp_pool_capability_t pool_capa;
 	odp_pktio_t pktio;
 	odp_pktio_config_t pktio_config;
@@ -263,10 +265,15 @@ static int open_pktios(test_global_t *global)
 
 		global->pktio[i].pktio = pktio;
 
+		if (odp_pktio_capability(pktio, &pktio_capa)) {
+			ODPH_ERR("Pktio capability failed for %s\n", name);
+			return -1;
+		}
+
 		odp_pktio_print(pktio);
 
 		odp_pktio_config_init(&pktio_config);
-		pktio_config.pktin.bit.ts_all = 1;
+		pktio_config.pktin.bit.ts_all = pktio_capa.config.pktin.bit.ts_all;
 		pktio_config.parser.layer = ODP_PROTO_LAYER_ALL;
 
 		odp_pktio_config(pktio, &pktio_config);
@@ -431,9 +438,9 @@ static void print_data(odp_packet_t pkt, uint32_t offset, uint32_t len)
 static int print_packet(test_global_t *global, odp_packet_t pkt,
 			uint64_t num_packet)
 {
-	odp_pktio_t pktio;
+	odp_pktio_t pktio = odp_packet_input(pkt);
 	odp_pktio_info_t pktio_info;
-	odp_time_t time;
+	odp_time_t pktio_time, time;
 	uint64_t sec, nsec;
 	uint32_t offset;
 	int i, type, match;
@@ -450,10 +457,13 @@ static int print_packet(test_global_t *global, odp_packet_t pkt,
 	int icmp = odp_packet_has_icmp(pkt);
 	int ipv4 = odp_packet_has_ipv4(pkt);
 
-	if (odp_packet_has_ts(pkt))
+	if (odp_packet_has_ts(pkt)) {
+		pktio_time = odp_pktio_time(pktio, NULL);
 		time = odp_packet_ts(pkt);
-	else
+	} else {
 		time = odp_time_local();
+		pktio_time = ODP_TIME_NULL;
+	}
 
 	/* Filter based on L3 type */
 	if (num_filter_l3) {
@@ -492,7 +502,6 @@ static int print_packet(test_global_t *global, odp_packet_t pkt,
 	nsec  = odp_time_to_ns(time);
 	sec   = nsec / ODP_TIME_SEC_IN_NS;
 	nsec  = nsec - (sec * ODP_TIME_SEC_IN_NS);
-	pktio = odp_packet_input(pkt);
 
 	if (odp_pktio_info(pktio, &pktio_info)) {
 		ODPH_ERR("Pktio info failed\n");
@@ -501,6 +510,15 @@ static int print_packet(test_global_t *global, odp_packet_t pkt,
 
 	printf("PACKET [%" PRIu64 "]\n", num_packet);
 	printf("  time:            %" PRIu64 ".%09" PRIu64 " sec\n", sec, nsec);
+
+	if (odp_time_cmp(pktio_time, ODP_TIME_NULL)) {
+		nsec  = odp_time_to_ns(pktio_time);
+		sec   = nsec / ODP_TIME_SEC_IN_NS;
+		nsec  = nsec - (sec * ODP_TIME_SEC_IN_NS);
+		printf("  pktio time:      %" PRIu64 ".%09" PRIu64 " sec\n", sec, nsec);
+		printf("  input delay:     %" PRIu64 " nsec\n", odp_time_diff_ns(pktio_time, time));
+	}
+
 	printf("  interface name:  %s\n", pktio_info.name);
 	printf("  packet length:   %u bytes\n", odp_packet_len(pkt));
 
