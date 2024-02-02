@@ -1,5 +1,5 @@
 /* Copyright (c) 2014-2018, Linaro Limited
- * Copyright (c) 2019-2023, Nokia
+ * Copyright (c) 2019-2024, Nokia
  * Copyright (c) 2020-2021, Marvell
  * All rights reserved.
  *
@@ -117,11 +117,12 @@ typedef struct {
 	uint32_t num_vec;       /* Number of vectors per pool */
 	uint64_t vec_tmo_ns;    /* Vector formation timeout in ns */
 	uint32_t vec_size;      /* Vector size */
-	int verbose;		/* Verbose output */
-	uint32_t packet_len;	/* Maximum packet length supported */
-	uint32_t seg_len;	/* Pool segment length */
+	int verbose;            /* Verbose output */
+	uint32_t packet_len;    /* Maximum packet length supported */
+	uint32_t seg_len;       /* Pool segment length */
 	int promisc_mode;       /* Promiscuous mode enabled */
 	int flow_aware;         /* Flow aware scheduling enabled */
+	uint8_t input_ts;       /* Packet input timestamping enabled */
 	int mtu;                /* Interface MTU */
 	int num_prio;
 	odp_schedule_prio_t prio[MAX_PKTIOS]; /* Priority of input queues of an interface */
@@ -969,6 +970,14 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx, odp_po
 
 	odp_pktio_config_init(&config);
 
+	if (gbl_args->appl.input_ts) {
+		if (!pktio_capa.config.pktin.bit.ts_all) {
+			ODPH_ERR("Packet input timestamping not supported: %s\n", dev);
+			return -1;
+		}
+		config.pktin.bit.ts_all = 1;
+	}
+
 	config.parser.layer = ODP_PROTO_LAYER_NONE;
 	if (gbl_args->appl.error_check || gbl_args->appl.chksum)
 		config.parser.layer = ODP_PROTO_LAYER_ALL;
@@ -1520,6 +1529,7 @@ static void usage(char *progname)
 	       "  -L, --seg_len <len>     Packet pool segment length\n"
 	       "                          (default equal to packet length).\n"
 	       "  -f, --flow_aware        Enable flow aware scheduling.\n"
+	       "  -T, --input_ts          Enable packet input timestamping.\n"
 	       "  -v, --verbose           Verbose output.\n"
 	       "  -h, --help              Display help and exit.\n\n"
 	       "\n", DEFAULT_VEC_SIZE, DEFAULT_VEC_TMO, POOL_PKT_LEN);
@@ -1569,12 +1579,13 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{"packet_len", required_argument, NULL, 'l'},
 		{"seg_len", required_argument, NULL, 'L'},
 		{"flow_aware", no_argument, NULL, 'f'},
+		{"input_ts", no_argument, NULL, 'T'},
 		{"verbose", no_argument, NULL, 'v'},
 		{"help", no_argument, NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+c:t:a:i:m:o:r:d:s:e:k:g:G:I:b:q:p:y:n:l:L:w:x:z:M:uPfvh";
+	static const char *shortopts = "+c:t:a:i:m:o:r:d:s:e:k:g:G:I:b:q:p:y:n:l:L:w:x:z:M:uPfTvh";
 
 	appl_args->time = 0; /* loop forever if time to run is 0 */
 	appl_args->accuracy = 1; /* get and print pps stats second */
@@ -1600,6 +1611,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	appl_args->vec_size = 0;
 	appl_args->vec_tmo_ns = 0;
 	appl_args->flow_aware = 0;
+	appl_args->input_ts = 0;
 	appl_args->num_prio = 0;
 
 	while (1) {
@@ -1805,6 +1817,9 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		case 'f':
 			appl_args->flow_aware = 1;
 			break;
+		case 'T':
+			appl_args->input_ts = 1;
+			break;
 		case 'v':
 			appl_args->verbose = 1;
 			break;
@@ -1892,6 +1907,7 @@ static void print_info(void)
 					   "enabled" : "disabled");
 	printf("Flow aware:         %s\n", appl_args->flow_aware ?
 					   "yes" : "no");
+	printf("Input TS:           %s\n", appl_args->input_ts ? "yes" : "no");
 	printf("Burst size:         %i\n", appl_args->burst_rx);
 	printf("RX queues per IF:   %i\n", appl_args->rx_queues);
 	printf("Number of pools:    %i\n", appl_args->pool_per_if ?
