@@ -1,5 +1,5 @@
 /* Copyright (c) 2014-2018, Linaro Limited
- * Copyright (c) 2021-2023, Nokia
+ * Copyright (c) 2021-2024, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:	BSD-3-Clause
@@ -50,7 +50,7 @@ int crypto_op(odp_packet_t pkt_in,
 	      odp_crypto_op_type_t op_type)
 {
 	int rc;
-	odp_event_t event;
+	odp_event_t event, event2;
 	odp_crypto_packet_result_t result;
 	odp_event_subtype_t subtype;
 	odp_packet_t orig_pkt_out;
@@ -95,14 +95,18 @@ int crypto_op(odp_packet_t pkt_in,
 
 	if (op_type != ODP_CRYPTO_OP_TYPE_BASIC)
 		CU_ASSERT(*pkt_out == orig_pkt_out);
-	CU_ASSERT(ODP_EVENT_PACKET ==
-		  odp_event_type(odp_packet_to_event(*pkt_out)));
-	CU_ASSERT(ODP_EVENT_PACKET_CRYPTO ==
-		  odp_event_subtype(odp_packet_to_event(*pkt_out)));
-	CU_ASSERT(ODP_EVENT_PACKET ==
-		  odp_event_types(odp_packet_to_event(*pkt_out), &subtype));
+
+	event = odp_packet_to_event(*pkt_out);
+	CU_ASSERT(ODP_EVENT_PACKET == odp_event_type(event));
+	CU_ASSERT(ODP_EVENT_PACKET_CRYPTO == odp_event_subtype(event));
+	CU_ASSERT(ODP_EVENT_PACKET == odp_event_types(event, &subtype));
 	CU_ASSERT(ODP_EVENT_PACKET_CRYPTO == subtype);
 	CU_ASSERT(odp_packet_subtype(*pkt_out) == ODP_EVENT_PACKET_CRYPTO);
+
+	event2 = odp_crypto_packet_to_event(*pkt_out);
+	CU_ASSERT(ODP_EVENT_PACKET == odp_event_type(event2));
+	CU_ASSERT(ODP_EVENT_PACKET_CRYPTO == odp_event_subtype(event2));
+	CU_ASSERT(odp_event_to_u64(event) == odp_event_to_u64(event2));
 
 	rc = odp_crypto_result(&result, *pkt_out);
 	if (rc < -1)
