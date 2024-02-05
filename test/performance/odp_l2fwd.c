@@ -112,6 +112,9 @@ typedef struct {
 	/* Checksum offload */
 	uint8_t chksum;
 
+	/* Print debug info on every packet */
+	uint8_t verbose_pkt;
+
 	unsigned int cpu_count;
 	int if_count;		/* Number of interfaces to be used */
 	int addr_count;		/* Number of dst addresses to be used */
@@ -352,6 +355,33 @@ static inline void chksum_insert(odp_packet_t *pkt_tbl, int pkts)
 	}
 }
 
+static void print_packets(odp_packet_t *pkt_tbl, int num)
+{
+	odp_packet_t pkt;
+	uintptr_t data_ptr;
+	uint32_t bit, align;
+
+	for (int i = 0; i < num; i++) {
+		pkt = pkt_tbl[i];
+		data_ptr = (uintptr_t)odp_packet_data(pkt);
+
+		for (bit = 0, align = 1; bit < 32; bit++, align *= 2)
+			if (data_ptr & (0x1 << bit))
+				break;
+
+		printf("  Packet data:    0x%" PRIxPTR "\n"
+		       "  Packet len:     %u\n"
+		       "  Packet seg len: %u\n"
+		       "  Data align:     %u\n"
+		       "  Num segments:   %i\n"
+		       "  Headroom size:  %u\n"
+		       "  User area size: %u\n\n",
+		       data_ptr, odp_packet_len(pkt), odp_packet_seg_len(pkt), align,
+		       odp_packet_num_segs(pkt), odp_packet_headroom(pkt),
+		       odp_packet_user_area_size(pkt));
+	}
+}
+
 static inline void data_rd(odp_packet_t *pkt_tbl, int num, uint16_t rd_words, stats_t *stats)
 {
 	odp_packet_t pkt;
@@ -406,6 +436,9 @@ static inline int process_extra_features(const appl_args_t *appl_args, odp_packe
 {
 	if (odp_unlikely(appl_args->extra_feat)) {
 		uint16_t rd_words = appl_args->data_rd;
+
+		if (appl_args->verbose_pkt)
+			print_packets(pkt_tbl, pkts);
 
 		if (rd_words)
 			data_rd(pkt_tbl, pkts, rd_words, stats);
@@ -1606,6 +1639,7 @@ static void usage(char *progname)
 	       "  -f, --flow_aware        Enable flow aware scheduling.\n"
 	       "  -T, --input_ts          Enable packet input timestamping.\n"
 	       "  -v, --verbose           Verbose output.\n"
+	       "  -V, --verbose_pkt       Print debug information on every received packet.\n"
 	       "  -h, --help              Display help and exit.\n\n"
 	       "\n", DEFAULT_VEC_SIZE, DEFAULT_VEC_TMO, POOL_PKT_LEN);
 }
@@ -1658,12 +1692,13 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{"flow_aware", no_argument, NULL, 'f'},
 		{"input_ts", no_argument, NULL, 'T'},
 		{"verbose", no_argument, NULL, 'v'},
+		{"verbose_pkt", no_argument, NULL, 'V'},
 		{"help", no_argument, NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
 
 	static const char *shortopts = "+c:t:a:i:m:o:r:d:s:e:k:g:G:I:"
-				       "b:q:p:R:y:n:l:L:w:x:z:M:F:uPfTvh";
+				       "b:q:p:R:y:n:l:L:w:x:z:M:F:uPfTvVh";
 
 	appl_args->time = 0; /* loop forever if time to run is 0 */
 	appl_args->accuracy = 1; /* get and print pps stats second */
@@ -1677,6 +1712,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	appl_args->burst_rx = 0;
 	appl_args->rx_queues = 0;
 	appl_args->verbose = 0;
+	appl_args->verbose_pkt = 0;
 	appl_args->chksum = 0; /* don't use checksum offload by default */
 	appl_args->pool_per_if = 0;
 	appl_args->num_pkt = 0;
@@ -1909,6 +1945,9 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		case 'v':
 			appl_args->verbose = 1;
 			break;
+		case 'V':
+			appl_args->verbose_pkt = 1;
+			break;
 		case 'h':
 			usage(argv[0]);
 			exit(EXIT_SUCCESS);
@@ -1944,7 +1983,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 
 	appl_args->extra_feat = 0;
 	if (appl_args->error_check || appl_args->chksum ||
-	    appl_args->packet_copy || appl_args->data_rd)
+	    appl_args->packet_copy || appl_args->data_rd || appl_args->verbose_pkt)
 		appl_args->extra_feat = 1;
 
 	optind = 1;		/* reset 'extern optind' from the getopt lib */
@@ -1997,11 +2036,12 @@ static void print_options(void)
 					   appl_args->if_count : 1);
 
 	if (appl_args->extra_feat) {
-		printf("Extra features:     %s%s%s%s\n",
+		printf("Extra features:     %s%s%s%s%s\n",
 		       appl_args->error_check ? "error_check " : "",
 		       appl_args->chksum ? "chksum " : "",
 		       appl_args->packet_copy ? "packet_copy " : "",
-		       appl_args->data_rd ? "data_rd" : "");
+		       appl_args->data_rd ? "data_rd" : "",
+		       appl_args->verbose_pkt ? "verbose_pkt" : "");
 	}
 
 	printf("Num worker threads: %i\n", appl_args->num_workers);
