@@ -534,7 +534,7 @@ static parse_result_t check_options(prog_config_t *config)
 		return PRS_NOK;
 	}
 
-	shm_size = config->num_data_elems * config->handle_size;
+	shm_size = (uint64_t)config->num_data_elems * config->handle_size;
 
 	if (shm_capa.max_size != 0U && shm_size > shm_capa.max_size) {
 		ODPH_ERR("Invalid total SHM block size: %" PRIu64 " (max: %" PRIu64 ")\n",
