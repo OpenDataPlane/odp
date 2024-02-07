@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2015-2018 Linaro Limited
- * Copyright (c) 2022-2023 Nokia
+ * Copyright (c) 2022-2024 Nokia
  */
 
 /**
@@ -142,6 +142,20 @@ void *odp_event_user_area(odp_event_t event);
  * @retval NULL  The event does not have user area
  */
 void *odp_event_user_area_and_flag(odp_event_t event, int *flag);
+
+/**
+ * Set event user flag
+ *
+ * Set (or clear) the user flag.
+ *
+ * The user flag maps to the user flag value of underlying event type (e.g.
+ * odp_packet_user_flag() for packets). If the event does not have user flag,
+ * nothing is done.
+ *
+ * @param event   Event handle
+ * @param val     New value for the flag. Zero clears the flag, other values set the flag.
+ */
+void odp_event_user_flag_set(odp_event_t event, int val);
 
 /**
  * Filter and convert packet events
