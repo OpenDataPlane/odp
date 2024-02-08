@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright (c) 2021-2023 Nokia
+ * Copyright (c) 2021-2024 Nokia
  */
 
 /**
@@ -437,8 +437,10 @@ typedef struct odp_pool_param_t {
 		/** Number of buffers in the pool */
 		uint32_t num;
 
-		/** Buffer size in bytes. The maximum number of bytes
-		 *  application will store in each buffer.
+		/** Minimum buffer size in bytes.
+		 *
+		 *  An implementation may round up the given value. The maximum
+		 *  value is defined by buf.max_size pool capability.
 		 */
 		uint32_t size;
 
