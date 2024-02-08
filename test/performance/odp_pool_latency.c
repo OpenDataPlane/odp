@@ -1312,7 +1312,7 @@ int main(int argc, char **argv)
 	odp_init_param_init(&init_param);
 	init_param.mem_model = odph_opts.mem_model;
 
-	if (odp_init_global(&odp_instance, NULL, NULL)) {
+	if (odp_init_global(&odp_instance, &init_param, NULL)) {
 		ODPH_ERR("ODP global init failed, exiting\n");
 		exit(EXIT_FAILURE);
 	}
