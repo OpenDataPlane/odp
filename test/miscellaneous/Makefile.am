@@ -1,10 +1,13 @@
 include $(top_srcdir)/test/Makefile.inc
 
+bin_PROGRAMS = odp_dyn_workers
+
 if test_cpp
-bin_PROGRAMS =  odp_api_from_cpp
+bin_PROGRAMS +=  odp_api_from_cpp
 TESTS = odp_api_from_cpp
 endif
 
+odp_dyn_workers_SOURCES = odp_dyn_workers.c
 odp_api_from_cpp_SOURCES = odp_api_from_cpp.cpp
 
 noinst_PROGRAMS = odp_api_headers
