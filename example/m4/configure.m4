@@ -34,7 +34,6 @@ AC_CONFIG_FILES([example/classifier/Makefile
 		 example/simple_pipeline/Makefile
 		 example/switch/Makefile
 		 example/sysinfo/Makefile
-		 example/time/Makefile
 		 example/timer/Makefile
 		 example/traffic_mgmt/Makefile
 		 example/Makefile])
