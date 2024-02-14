@@ -1,5 +1,4 @@
 *.log
 *.trs
 odp_timer_accuracy
-odp_timer_test
 odp_timer_simple
