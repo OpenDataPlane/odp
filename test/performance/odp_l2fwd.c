@@ -9,7 +9,13 @@
 /**
  * @example odp_l2fwd.c
  *
- * L2 forwarding example application
+ * This L2 forwarding application can be used as example as well as performance
+ * test for different ODP packet I/O modes (direct, queue or scheduled).
+ *
+ * Note that this example is tuned for performance. As a result, when using
+ * scheduled packet input mode with direct or queued output mode and multiple
+ * output queues, packet order is not guaranteed. To maintain packet order,
+ * use a single worker thread or output interfaces with one output queue.
  *
  * @cond _ODP_HIDE_FROM_DOXYGEN_
  */
