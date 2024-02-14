@@ -30,4 +30,5 @@ odp_sched_pktio
 odp_scheduling
 odp_stash_perf
 odp_stress
+odp_timer_accuracy
 odp_timer_perf
