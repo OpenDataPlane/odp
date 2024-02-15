@@ -27,7 +27,6 @@ odp_random
 odp_sched_latency
 odp_sched_perf
 odp_sched_pktio
-odp_scheduling
 odp_stash_perf
 odp_stress
 odp_timer_accuracy

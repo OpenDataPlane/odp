@@ -30,7 +30,6 @@ COMPILE_ONLY = odp_cpu_bench \
 	       odp_sched_latency \
 	       odp_sched_perf \
 	       odp_sched_pktio \
-	       odp_scheduling \
 	       odp_timer_accuracy \
 	       odp_timer_perf
 
@@ -47,7 +46,6 @@ TESTSCRIPTS = odp_cpu_bench_run.sh \
 	      odp_sched_latency_run.sh \
 	      odp_sched_perf_run.sh \
 	      odp_sched_pktio_run.sh \
-	      odp_scheduling_run.sh \
 	      odp_timer_accuracy_run.sh \
 	      odp_timer_perf_run.sh
 
@@ -82,7 +80,6 @@ odp_packet_gen_SOURCES = odp_packet_gen.c
 odp_pktio_ordered_SOURCES = odp_pktio_ordered.c dummy_crc.h
 odp_sched_latency_SOURCES = odp_sched_latency.c
 odp_sched_pktio_SOURCES = odp_sched_pktio.c
-odp_scheduling_SOURCES = odp_scheduling.c
 odp_pktio_perf_SOURCES = odp_pktio_perf.c
 odp_pool_latency_SOURCES = odp_pool_latency.c
 odp_pool_perf_SOURCES = odp_pool_perf.c
