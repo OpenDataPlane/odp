@@ -1,4 +1,4 @@
-/* Copyright (c) 2020-2023, Nokia
+/* Copyright (c) 2020-2024, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -38,8 +38,8 @@
 
 #define MAX_WORKERS  (MAX_THREADS - 1)
 
-/* At least one control and two worker threads */
-ODP_STATIC_ASSERT(MAX_WORKERS >= 2, "Too few threads");
+/* At least one control and one worker thread */
+ODP_STATIC_ASSERT(MAX_WORKERS >= 1, "Too few threads");
 
 /* Maximum number of packet IO interfaces */
 #define MAX_PKTIOS        16
@@ -637,8 +637,8 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 		return -1;
 	}
 
-	if (test_options->num_rx < 1 || test_options->num_tx < 1) {
-		ODPH_ERR("Error: At least one rx and tx thread needed.\n");
+	if (test_options->num_rx < 1 && test_options->num_tx < 1) {
+		ODPH_ERR("Error: At least one rx or tx thread needed.\n");
 		return -1;
 	}
 
@@ -682,6 +682,10 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 
 	if (test_options->calc_latency && test_options->tx_mode == TX_MODE_REF) {
 		ODPH_ERR("Error: Latency test is not supported with packet references (--tx_mode 1)\n");
+		return -1;
+	}
+	if (test_options->calc_latency && (test_options->num_rx < 1 || test_options->num_tx < 1)) {
+		ODPH_ERR("Error: Latency test requires both rx and tx threads\n");
 		return -1;
 	}
 
@@ -891,12 +895,11 @@ static int open_pktios(test_global_t *global)
 
 	odp_pktio_param_init(&pktio_param);
 
-	if (test_options->direct_rx)
-		pktio_param.in_mode = ODP_PKTIN_MODE_DIRECT;
-	else
-		pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
+	pktio_param.in_mode = num_rx ? (test_options->direct_rx ?
+					ODP_PKTIN_MODE_DIRECT : ODP_PKTIN_MODE_SCHED) :
+					ODP_PKTIN_MODE_DISABLED;
 
-	pktio_param.out_mode = ODP_PKTOUT_MODE_DIRECT;
+	pktio_param.out_mode = num_tx ? ODP_PKTOUT_MODE_DIRECT : ODP_PKTOUT_MODE_DISABLED;
 
 	for (i = 0; i < num_pktio; i++)
 		global->pktio[i].pktio = ODP_PKTIO_INVALID;
@@ -1034,15 +1037,17 @@ static int open_pktios(test_global_t *global)
 			return -1;
 		}
 
-		if (odp_pktout_queue(pktio, pktout, num_tx) != num_tx) {
-			ODPH_ERR("Error (%s): Pktout queue request failed.\n", name);
-			return -1;
+		if (num_tx > 0) {
+			if (odp_pktout_queue(pktio, pktout, num_tx) != num_tx) {
+				ODPH_ERR("Error (%s): Pktout queue request failed.\n", name);
+				return -1;
+			}
+
+			for (j = 0; j < num_tx; j++)
+				global->pktio[i].pktout[j] = pktout[j];
 		}
 
-		for (j = 0; j < num_tx; j++)
-			global->pktio[i].pktout[j] = pktout[j];
-
-		if (test_options->direct_rx) {
+		if (num_rx > 0 && test_options->direct_rx) {
 			if (odp_pktin_queue(pktio, pktin, num_rx) != num_rx) {
 				ODPH_ERR("Error (%s): Pktin queue request failed.\n", name);
 				return -1;
@@ -1884,16 +1889,19 @@ static void print_periodic_stat(test_global_t *global, uint64_t nsec)
 				num_tx[i] += global->stat[j].pktio[i].tx_packets;
 		}
 	}
+	if (global->test_options.num_tx) {
+		printf("  TX: %12.6fs", sec);
+		for (i = 0; i < num_pktio; i++)
+			printf(" %10" PRIu64 "", num_tx[i]);
+		printf("\n");
+	}
 
-	printf("  TX: %12.6fs", sec);
-	for (i = 0; i < num_pktio; i++)
-		printf(" %10" PRIu64 "", num_tx[i]);
-
-	printf("\n  RX: %12.6fs", sec);
-	for (i = 0; i < num_pktio; i++)
-		printf(" %10" PRIu64 "", num_rx[i]);
-
-	printf("\n");
+	if (global->test_options.num_rx) {
+		printf("  RX: %12.6fs", sec);
+		for (i = 0; i < num_pktio; i++)
+			printf(" %10" PRIu64 "", num_rx[i]);
+		printf("\n");
+	}
 }
 
 static void periodic_print_loop(test_global_t *global)
@@ -1948,7 +1956,7 @@ static void print_humanised_latency(double lat_nsec, double lat_min_nsec, double
 static int print_final_stat(test_global_t *global)
 {
 	int i, num_thr;
-	double rx_pkt_ave, rx_mbit_per_sec, tx_mbit_per_sec;
+	double rx_mbit_per_sec, tx_mbit_per_sec;
 	test_options_t *test_options = &global->test_options;
 	int num_rx = test_options->num_rx;
 	int num_tx = test_options->num_tx;
@@ -1965,6 +1973,7 @@ static int print_final_stat(test_global_t *global)
 	uint64_t tx_byte_sum = 0;
 	uint64_t tx_drop_sum = 0;
 	uint64_t tx_tmo_sum = 0;
+	double rx_pkt_ave = 0.0;
 	double rx_pkt_per_sec = 0.0;
 	double rx_byte_per_sec = 0.0;
 	double rx_pkt_len = 0.0;
@@ -2036,7 +2045,8 @@ static int print_final_stat(test_global_t *global)
 		}
 	}
 
-	rx_pkt_ave = (double)rx_pkt_sum / num_rx;
+	if (num_rx)
+		rx_pkt_ave = (double)rx_pkt_sum / num_rx;
 	rx_sec = rx_nsec_sum / 1000000000.0;
 	tx_sec = tx_nsec_sum / 1000000000.0;
 
