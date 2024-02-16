@@ -686,7 +686,7 @@ static void parse_interfaces(appl_args_t *config, const char *optarg)
 				 MAX_NAME_LEN);
 			exit(EXIT_FAILURE);
 		}
-		strncpy(config->pktio[config->num_pktio].name, tmp, MAX_NAME_LEN);
+		odph_strcpy(config->pktio[config->num_pktio].name, tmp, MAX_NAME_LEN);
 
 		config->num_pktio++;
 

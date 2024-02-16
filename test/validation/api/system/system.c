@@ -25,8 +25,8 @@ static void test_version_api_str(void)
 	char version_string[128];
 	char *s = version_string;
 
-	strncpy(version_string, odp_version_api_str(),
-		sizeof(version_string) - 1);
+	odph_strcpy(version_string, odp_version_api_str(),
+		    sizeof(version_string));
 
 	while (*s) {
 		if (isdigit((int)*s) || (strncmp(s, ".", 1) == 0)) {

@@ -422,10 +422,10 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 	test_options->calc_latency = 0;
 	test_options->calc_cs    = 1;
 	test_options->fill_pl    = 1;
-	strncpy(test_options->ipv4_src_s, "192.168.0.1",
-		sizeof(test_options->ipv4_src_s) - 1);
-	strncpy(test_options->ipv4_dst_s, "192.168.0.2",
-		sizeof(test_options->ipv4_dst_s) - 1);
+	odph_strcpy(test_options->ipv4_src_s, "192.168.0.1",
+		    sizeof(test_options->ipv4_src_s));
+	odph_strcpy(test_options->ipv4_dst_s, "192.168.0.2",
+		    sizeof(test_options->ipv4_dst_s));
 	if (odph_ipv4_addr_parse(&test_options->ipv4_src, test_options->ipv4_src_s)) {
 		ODPH_ERR("Address parse failed\n");
 		return -1;
@@ -595,8 +595,8 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 				ODPH_ERR("Error: Bad IPv4 source address: %s\n", optarg);
 				ret = -1;
 			}
-			strncpy(test_options->ipv4_src_s, optarg,
-				sizeof(test_options->ipv4_src_s) - 1);
+			odph_strcpy(test_options->ipv4_src_s, optarg,
+				    sizeof(test_options->ipv4_src_s));
 			break;
 		case 'd':
 			if (odph_ipv4_addr_parse(&test_options->ipv4_dst,
@@ -604,8 +604,8 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 				ODPH_ERR("Error: Bad IPv4 destination address: %s\n", optarg);
 				ret = -1;
 			}
-			strncpy(test_options->ipv4_dst_s, optarg,
-				sizeof(test_options->ipv4_dst_s) - 1);
+			odph_strcpy(test_options->ipv4_dst_s, optarg,
+				    sizeof(test_options->ipv4_dst_s));
 			break;
 		case 'c':
 			count = strtoul(optarg, &end, 0);

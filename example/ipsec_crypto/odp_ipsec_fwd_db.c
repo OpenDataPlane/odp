@@ -78,8 +78,7 @@ int create_fwd_db_entry(char *input, char **if_names, int if_count)
 					  &entry->subnet.mask);
 			break;
 		case 1:
-			strncpy(entry->oif, token, OIF_LEN - 1);
-			entry->oif[OIF_LEN - 1] = 0;
+			odph_strcpy(entry->oif, token, OIF_LEN);
 			for (i = 0; i < if_count; i++) {
 				if (!strcmp(if_names[i], entry->oif)) {
 					match = 1;

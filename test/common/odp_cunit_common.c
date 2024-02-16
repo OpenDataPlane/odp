@@ -105,10 +105,8 @@ void odp_cu_assert(CU_BOOL value, unsigned int line,
 	if (idx < MAX_FAILURES) {
 		assertion_failure_t *a = &thr_global->failure[idx];
 
-		strncpy(a->cond, condition, sizeof(a->cond));
-		strncpy(a->file, file, sizeof(a->file));
-		a->cond[sizeof(a->cond) - 1] = 0;
-		a->file[sizeof(a->file) - 1] = 0;
+		odph_strcpy(a->cond, condition, sizeof(a->cond));
+		odph_strcpy(a->file, file, sizeof(a->file));
 		a->line = line;
 		a->fatal = fatal;
 	}
