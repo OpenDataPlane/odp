@@ -674,13 +674,12 @@ static int schedule_init_global(void)
 	sched->sched_grp[ODP_SCHED_GROUP_ALL].allocated = 1;
 	sched->sched_grp[ODP_SCHED_GROUP_WORKER].allocated = 1;
 	sched->sched_grp[ODP_SCHED_GROUP_CONTROL].allocated = 1;
-	strncpy(sched->sched_grp[ODP_SCHED_GROUP_ALL].name, "__SCHED_GROUP_ALL",
-		ODP_SCHED_GROUP_NAME_LEN - 1);
-	strncpy(sched->sched_grp[ODP_SCHED_GROUP_WORKER].name, "__SCHED_GROUP_WORKER",
-		ODP_SCHED_GROUP_NAME_LEN - 1);
-	strncpy(sched->sched_grp[ODP_SCHED_GROUP_CONTROL].name, "__SCHED_GROUP_CONTROL",
-		ODP_SCHED_GROUP_NAME_LEN - 1);
-
+	_odp_strcpy(sched->sched_grp[ODP_SCHED_GROUP_ALL].name, "__SCHED_GROUP_ALL",
+		    ODP_SCHED_GROUP_NAME_LEN);
+	_odp_strcpy(sched->sched_grp[ODP_SCHED_GROUP_WORKER].name, "__SCHED_GROUP_WORKER",
+		    ODP_SCHED_GROUP_NAME_LEN);
+	_odp_strcpy(sched->sched_grp[ODP_SCHED_GROUP_CONTROL].name, "__SCHED_GROUP_CONTROL",
+		    ODP_SCHED_GROUP_NAME_LEN);
 
 	odp_thrmask_setall(&sched->mask_all);
 
@@ -1933,13 +1932,11 @@ static odp_schedule_group_t schedule_group_create(const char *name,
 		if (!sched->sched_grp[i].allocated) {
 			char *grp_name = sched->sched_grp[i].name;
 
-			if (name == NULL) {
+			if (name == NULL)
 				grp_name[0] = 0;
-			} else {
-				strncpy(grp_name, name,
-					ODP_SCHED_GROUP_NAME_LEN - 1);
-				grp_name[ODP_SCHED_GROUP_NAME_LEN - 1] = 0;
-			}
+			else
+				_odp_strcpy(grp_name, name,
+					    ODP_SCHED_GROUP_NAME_LEN);
 
 			grp_update_mask(i, mask);
 			group = (odp_schedule_group_t)i;

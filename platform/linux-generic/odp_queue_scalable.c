@@ -29,6 +29,7 @@
 #include <odp/api/plat/queue_inline_types.h>
 #include <odp_global_data.h>
 #include <odp_macros_internal.h>
+#include <odp_string_internal.h>
 
 #include <string.h>
 #include <inttypes.h>
@@ -104,8 +105,7 @@ static int queue_init(queue_entry_t *queue, const char *name,
 	sched_elem = &queue->sched_elem;
 	ring_size = param->size > 0 ?
 		_ODP_ROUNDUP_POWER2_U32(param->size) : CONFIG_SCAL_QUEUE_SIZE;
-	strncpy(queue->name, name ? name : "", ODP_QUEUE_NAME_LEN - 1);
-	queue->name[ODP_QUEUE_NAME_LEN - 1] = 0;
+	_odp_strcpy(queue->name, name ? name : "", ODP_QUEUE_NAME_LEN);
 	memcpy(&queue->param, param, sizeof(odp_queue_param_t));
 
 	size = ring_size * sizeof(_odp_event_hdr_t *);

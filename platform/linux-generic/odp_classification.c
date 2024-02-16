@@ -21,6 +21,7 @@
 #include <odp_packet_io_internal.h>
 #include <odp_classification_datamodel.h>
 #include <odp_classification_internal.h>
+#include <odp_string_internal.h>
 #include <protocols/eth.h>
 #include <protocols/ip.h>
 #include <protocols/ipsec.h>
@@ -278,12 +279,11 @@ odp_cos_t odp_cls_cos_create(const char *name, const odp_cls_cos_param_t *param_
 		if (0 == cos->valid) {
 			char *cos_name = cos->name;
 
-			if (name == NULL) {
+			if (name == NULL)
 				cos_name[0] = 0;
-			} else {
-				strncpy(cos_name, name, ODP_COS_NAME_LEN - 1);
-				cos_name[ODP_COS_NAME_LEN - 1] = 0;
-			}
+			else
+				_odp_strcpy(cos_name, name, ODP_COS_NAME_LEN);
+
 			for (j = 0; j < CLS_PMR_PER_COS_MAX; j++) {
 				cos->pmr[j] = NULL;
 				cos->linked_cos[j] = NULL;

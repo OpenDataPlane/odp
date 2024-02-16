@@ -26,6 +26,7 @@
 #include <odp_libconfig_internal.h>
 #include <odp_macros_internal.h>
 #include <odp_pool_internal.h>
+#include <odp_string_internal.h>
 
 #include <onnxruntime_c_api.h>
 
@@ -505,8 +506,7 @@ static int get_model_io_info(OrtSession *session, ml_model_t *mdl,
 			return -1;
 		}
 
-		strncpy(input_info[i].name, name, ODP_ML_MODEL_IO_NAME_LEN - 1);
-		input_info[i].name[ODP_ML_MODEL_IO_NAME_LEN - 1] = 0;
+		_odp_strcpy(input_info[i].name, name, ODP_ML_MODEL_IO_NAME_LEN);
 
 		/* Free memory allocated by SessionGetInputName */
 		status = ort_api->AllocatorFree(allocator, name);
@@ -556,8 +556,7 @@ static int get_model_io_info(OrtSession *session, ml_model_t *mdl,
 			return -1;
 		}
 
-		strncpy(output_info[i].name, name, ODP_ML_MODEL_IO_NAME_LEN - 1);
-		output_info[i].name[ODP_ML_MODEL_IO_NAME_LEN - 1] = 0;
+		_odp_strcpy(output_info[i].name, name, ODP_ML_MODEL_IO_NAME_LEN);
 
 		/* Free memory allocated by SessionGetOutputName */
 		status = ort_api->AllocatorFree(allocator, name);
@@ -917,10 +916,8 @@ odp_ml_model_t odp_ml_model_create(const char *name, const odp_ml_model_param_t 
 	mdl->session_opts = session_opts;
 	info->index = i;
 
-	if (name) {
-		strncpy(info->name, name, ODP_ML_MODEL_NAME_LEN - 1);
-		info->name[ODP_ML_MODEL_NAME_LEN - 1] = 0;
-	}
+	if (name)
+		_odp_strcpy(info->name, name, ODP_ML_MODEL_NAME_LEN);
 
 	mdl->max_compl_id = param->max_compl_id;
 	for (uint32_t j = 0; j < ML_MAX_COMPL_ID; j++)

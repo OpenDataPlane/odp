@@ -31,6 +31,7 @@
 #include <odp_libconfig_internal.h>
 #include <odp_packet_internal.h>
 #include <odp_packet_io_internal.h>
+#include <odp_string_internal.h>
 #include <odp_pcapng.h>
 #include <odp_queue_if.h>
 #include <odp_schedule_if.h>
@@ -229,8 +230,7 @@ static const char *strip_pktio_type(const char *name, char *type_out)
 		int type_len = if_name - name;
 		char pktio_type[type_len + 1];
 
-		strncpy(pktio_type, name, type_len);
-		pktio_type[type_len] = '\0';
+		_odp_strcpy(pktio_type, name, type_len + 1);
 
 		/* Remove colon */
 		if_name++;

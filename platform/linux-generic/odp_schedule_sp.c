@@ -32,6 +32,7 @@
 #include <odp_ring_u32_internal.h>
 #include <odp_timer_internal.h>
 #include <odp_queue_basic_internal.h>
+#include <odp_string_internal.h>
 #include <odp_global_data.h>
 
 #include <string.h>
@@ -213,18 +214,18 @@ static int init_global(void)
 	for (i = 0; i < NUM_THREAD; i++)
 		odp_atomic_init_u32(&sched_group->s.thr[i].gen_cnt, 0);
 
-	strncpy(sched_group->s.group[GROUP_ALL].name, "__group_all",
-		ODP_SCHED_GROUP_NAME_LEN - 1);
+	_odp_strcpy(sched_group->s.group[GROUP_ALL].name, "__group_all",
+		    ODP_SCHED_GROUP_NAME_LEN);
 	odp_thrmask_zero(&sched_group->s.group[GROUP_ALL].mask);
 	sched_group->s.group[GROUP_ALL].allocated = 1;
 
-	strncpy(sched_group->s.group[GROUP_WORKER].name, "__group_worker",
-		ODP_SCHED_GROUP_NAME_LEN - 1);
+	_odp_strcpy(sched_group->s.group[GROUP_WORKER].name, "__group_worker",
+		    ODP_SCHED_GROUP_NAME_LEN);
 	odp_thrmask_zero(&sched_group->s.group[GROUP_WORKER].mask);
 	sched_group->s.group[GROUP_WORKER].allocated = 1;
 
-	strncpy(sched_group->s.group[GROUP_CONTROL].name, "__group_control",
-		ODP_SCHED_GROUP_NAME_LEN - 1);
+	_odp_strcpy(sched_group->s.group[GROUP_CONTROL].name, "__group_control",
+		    ODP_SCHED_GROUP_NAME_LEN);
 	odp_thrmask_zero(&sched_group->s.group[GROUP_CONTROL].mask);
 	sched_group->s.group[GROUP_CONTROL].allocated = 1;
 
@@ -804,13 +805,11 @@ static odp_schedule_group_t schedule_group_create(const char *name,
 #if __GNUC__ >= 13
 #pragma GCC diagnostic ignored "-Wstringop-overflow"
 #endif
-			if (name == NULL) {
+			if (name == NULL)
 				grp_name[0] = 0;
-			} else {
-				strncpy(grp_name, name,
-					ODP_SCHED_GROUP_NAME_LEN - 1);
-				grp_name[ODP_SCHED_GROUP_NAME_LEN - 1] = 0;
-			}
+			else
+				_odp_strcpy(grp_name, name,
+					    ODP_SCHED_GROUP_NAME_LEN);
 #pragma GCC diagnostic pop
 
 			odp_thrmask_copy(&sched_group->s.group[i].mask, thrmask);
