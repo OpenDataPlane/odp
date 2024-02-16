@@ -19,14 +19,15 @@
 #define MIN_TIME_RATE		32000
 #define MAX_TIME_RATE		15000000000
 #define DELAY_TOLERANCE		40000000	    /* deviation for delay */
-#define WAIT_SECONDS            3
+#define WAIT_SECONDS		3
 #define MAX_WORKERS		32
+#define TEST_ROUNDS		1024
 #define TIME_SAMPLES		2
 #define TIME_TOLERANCE_NS	1000000
 #define TIME_TOLERANCE_CI_NS	40000000
 #define TIME_TOLERANCE_1CPU_NS	40000000
 #define GLOBAL_SHM_NAME		"GlobalTimeTest"
-#define YEAR_IN_NS              (365 * 24 * ODP_TIME_HOUR_IN_NS)
+#define YEAR_IN_NS		(365 * 24 * ODP_TIME_HOUR_IN_NS)
 
 static uint64_t local_res;
 static uint64_t global_res;
@@ -40,6 +41,9 @@ typedef struct {
 	uint32_t num_threads;
 	odp_barrier_t test_barrier;
 	odp_time_t time[MAX_WORKERS + 1][TIME_SAMPLES];
+	odp_queue_t queue[MAX_WORKERS];
+	uint32_t num_queues;
+	odp_atomic_u32_t event_count;
 } global_shared_mem_t;
 
 static global_shared_mem_t *global_mem;
@@ -975,6 +979,172 @@ static void time_test_global_sync_control(void)
 	time_test_global_sync(1);
 }
 
+static odp_queue_t select_dst_queue(int thread_id, const odp_queue_t queue[], uint32_t num)
+{
+	uint8_t rand_u8;
+	int rand_id = 0;
+
+	if (num == 1)
+		return queue[0];
+
+	do {
+		odp_random_data(&rand_u8, 1, ODP_RANDOM_BASIC);
+		rand_id = rand_u8 % num;
+	} while (rand_id == thread_id);
+
+	return queue[rand_id];
+}
+
+static int run_time_global_thread(void *arg)
+{
+	global_shared_mem_t *gbl = arg;
+	const int thread_id = odp_thread_id();
+	const odp_queue_t src_queue = gbl->queue[thread_id % gbl->num_queues];
+	const odp_queue_t *queues = gbl->queue;
+	const uint32_t num_queues = gbl->num_queues;
+	odp_atomic_u32_t *event_count = &gbl->event_count;
+
+	odp_barrier_wait(&gbl->test_barrier);
+
+	while (odp_atomic_load_u32(event_count) < TEST_ROUNDS) {
+		odp_time_t *ts;
+		odp_time_t cur_time;
+		odp_buffer_t buf;
+		odp_queue_t dst_queue;
+		odp_event_t ev = odp_queue_deq(src_queue);
+
+		if (ev == ODP_EVENT_INVALID) {
+			odp_cpu_pause();
+			continue;
+		}
+
+		cur_time = odp_time_global();
+
+		buf = odp_buffer_from_event(ev);
+		ts = odp_buffer_addr(buf);
+
+		CU_ASSERT(odp_time_cmp(cur_time, *ts) >= 0);
+
+		*ts = cur_time;
+
+		dst_queue = select_dst_queue(thread_id, queues, num_queues);
+
+		CU_ASSERT_FATAL(odp_queue_enq(dst_queue, ev) == 0);
+
+		odp_atomic_inc_u32(event_count);
+	}
+	return 0;
+}
+
+static void time_test_global_mt(void)
+{
+	odp_cpumask_t cpumask;
+	odp_pool_t pool;
+	odp_pool_param_t pool_param;
+	odp_pool_capability_t pool_capa;
+	odp_queue_param_t queue_param;
+	odp_queue_capability_t queue_capa;
+	odph_thread_t thread_tbl[MAX_WORKERS];
+	odph_thread_common_param_t thr_common;
+	odph_thread_param_t thr_param;
+	odp_time_t cur_time;
+	uint32_t i;
+	int num_workers = odp_cpumask_default_worker(&cpumask, global_mem->num_threads);
+	uint32_t num_events = num_workers;
+	uint32_t num_queues = num_workers;
+
+	CU_ASSERT_FATAL(odp_pool_capability(&pool_capa) == 0);
+	CU_ASSERT_FATAL(odp_queue_capability(&queue_capa) == 0);
+
+	if (pool_capa.buf.max_num && num_events > pool_capa.buf.max_num)
+		num_events = pool_capa.buf.max_num;
+
+	if (queue_capa.plain.max_size && num_events > queue_capa.plain.max_size)
+		num_events = queue_capa.plain.max_size;
+
+	if (queue_capa.plain.max_num < num_queues)
+		num_queues = queue_capa.plain.max_num;
+	CU_ASSERT_FATAL(num_queues > 0);
+
+	odp_pool_param_init(&pool_param);
+	pool_param.buf.size = sizeof(odp_time_t);
+	pool_param.buf.num = num_events;
+	pool_param.type = ODP_POOL_BUFFER;
+
+	pool = odp_pool_create("test event pool", &pool_param);
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+
+	odp_queue_param_init(&queue_param);
+	queue_param.size = num_events;
+	queue_param.type = ODP_QUEUE_TYPE_PLAIN;
+
+	for (i = 0; i < num_queues; i++) {
+		global_mem->queue[i]  = odp_queue_create(NULL, &queue_param);
+		CU_ASSERT_FATAL(global_mem->queue[i] != ODP_QUEUE_INVALID);
+	}
+	global_mem->num_queues = num_queues;
+
+	odp_atomic_init_u32(&global_mem->event_count, 0);
+
+	for (i = 0; i < num_events; i++) {
+		odp_time_t *ts;
+		odp_buffer_t buf = odp_buffer_alloc(pool);
+
+		if (buf == ODP_BUFFER_INVALID)
+			break;
+
+		ts = odp_buffer_addr(buf);
+		*ts = odp_time_global();
+
+		CU_ASSERT_FATAL(odp_queue_enq(global_mem->queue[i % num_queues],
+					      odp_buffer_to_event(buf)) == 0);
+	}
+	CU_ASSERT_FATAL(i > 0);
+	CU_ASSERT(i == num_events);
+
+	odp_barrier_init(&global_mem->test_barrier, num_workers);
+
+	odph_thread_param_init(&thr_param);
+	thr_param.start    = run_time_global_thread;
+	thr_param.arg      = global_mem;
+	thr_param.thr_type = ODP_THREAD_WORKER;
+
+	odph_thread_common_param_init(&thr_common);
+	thr_common.instance = *instance;
+	thr_common.cpumask = &cpumask;
+	thr_common.share_param = 1;
+
+	CU_ASSERT_FATAL(odph_thread_create(thread_tbl, &thr_common, &thr_param, num_workers) ==
+			num_workers);
+
+	CU_ASSERT(odph_thread_join(thread_tbl, num_workers) == num_workers);
+
+	cur_time = odp_time_global_strict();
+
+	for (i = 0; i < num_queues; i++) {
+		odp_queue_t queue = global_mem->queue[i];
+
+		while (1) {
+			odp_buffer_t buf;
+			odp_time_t *ts;
+			odp_event_t ev = odp_queue_deq(queue);
+
+			if (ev == ODP_EVENT_INVALID)
+				break;
+
+			buf = odp_buffer_from_event(ev);
+			ts = odp_buffer_addr(buf);
+
+			CU_ASSERT(odp_time_cmp(cur_time, *ts) >= 0);
+			odp_buffer_free(buf);
+		};
+
+		CU_ASSERT(odp_queue_destroy(queue) == 0);
+	}
+
+	CU_ASSERT(odp_pool_destroy(pool) == 0);
+}
+
 odp_testinfo_t time_suite_time[] = {
 	ODP_TEST_INFO(time_test_constants),
 	ODP_TEST_INFO(time_test_startup_time),
@@ -983,6 +1153,7 @@ odp_testinfo_t time_suite_time[] = {
 	ODP_TEST_INFO(time_test_local_cmp),
 	ODP_TEST_INFO(time_test_local_diff),
 	ODP_TEST_INFO(time_test_local_sum),
+	ODP_TEST_INFO(time_test_global_mt),
 	ODP_TEST_INFO(time_test_global_res),
 	ODP_TEST_INFO(time_test_global_conversion),
 	ODP_TEST_INFO(time_test_global_cmp),
