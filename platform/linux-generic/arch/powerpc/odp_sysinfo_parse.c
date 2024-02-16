@@ -6,6 +6,7 @@
 
 #include <odp_global_data.h>
 #include <odp_sysinfo_internal.h>
+#include <odp_string_internal.h>
 #include <string.h>
 
 int _odp_cpuinfo_parser(FILE *file, system_info_t *sysinfo)
@@ -39,13 +40,9 @@ int _odp_cpuinfo_parser(FILE *file, system_info_t *sysinfo)
 			pos = strstr(str, "cpu");
 
 			if (pos) {
-				int len;
-
 				pos = strchr(str, ':');
-				strncpy(sysinfo->model_str[id], pos + 2,
-					MODEL_STR_SIZE - 1);
-				len = strlen(sysinfo->model_str[id]);
-				sysinfo->model_str[id][len - 1] = 0;
+				_odp_strcpy(sysinfo->model_str[id], pos + 2,
+					    MODEL_STR_SIZE);
 				model = 1;
 				count--;
 			}

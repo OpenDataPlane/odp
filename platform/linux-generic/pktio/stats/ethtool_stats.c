@@ -10,6 +10,7 @@
 #include <odp/api/packet_io_stats.h>
 
 #include <odp_debug_internal.h>
+#include <odp_string_internal.h>
 #include <odp_ethtool_stats.h>
 
 #include <sys/ioctl.h>
@@ -234,7 +235,7 @@ int _odp_ethtool_extra_stat_info(int fd, const char *name,
 	for (i = 0; i < n_stats && i < (unsigned int)num; i++) {
 		char *cnt = (char *)&strings->data[i * ETH_GSTRING_LEN];
 
-		strncpy(info[i].name, cnt, ODP_PKTIO_STATS_EXTRA_NAME_LEN - 1);
+		_odp_strcpy(info[i].name, cnt, ODP_PKTIO_STATS_EXTRA_NAME_LEN);
 	}
 
 	free(strings);

@@ -33,6 +33,7 @@
 #include <odp_queue_if.h>
 #include <odp_schedule_if.h>
 #include <odp_timer_internal.h>
+#include <odp_string_internal.h>
 
 #include <inttypes.h>
 #include <string.h>
@@ -1049,12 +1050,10 @@ static int queue_init(queue_entry_t *queue, const char *name,
 
 	queue_type = param->type;
 
-	if (name == NULL) {
+	if (name == NULL)
 		queue->name[0] = 0;
-	} else {
-		strncpy(queue->name, name, ODP_QUEUE_NAME_LEN - 1);
-		queue->name[ODP_QUEUE_NAME_LEN - 1] = 0;
-	}
+	else
+		_odp_strcpy(queue->name, name, ODP_QUEUE_NAME_LEN);
 	memcpy(&queue->param, param, sizeof(odp_queue_param_t));
 	if (queue->param.sched.lock_count > _odp_sched_fn->max_ordered_locks())
 		return -1;

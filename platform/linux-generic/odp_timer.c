@@ -1232,12 +1232,10 @@ static odp_timer_pool_t timer_pool_new(const char *name, const odp_timer_pool_pa
 
 	odp_atomic_init_u64(&tp->cur_tick, 0);
 
-	if (name == NULL) {
+	if (name == NULL)
 		tp->name[0] = 0;
-	} else {
-		strncpy(tp->name, name, ODP_TIMER_POOL_NAME_LEN - 1);
-		tp->name[ODP_TIMER_POOL_NAME_LEN - 1] = 0;
-	}
+	else
+		_odp_strcpy(tp->name, name, ODP_TIMER_POOL_NAME_LEN);
 
 	tp->param = *param;
 	tp->param.res_ns = res_ns;

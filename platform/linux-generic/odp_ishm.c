@@ -49,6 +49,7 @@
 #include <odp_ishmphy_internal.h>
 #include <odp_ishmpool_internal.h>
 #include <odp_libconfig_internal.h>
+#include <odp_string_internal.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -1090,7 +1091,7 @@ int _odp_ishm_reserve(const char *name, uint64_t size, int fd,
 
 	/* save block name (if any given): */
 	if (name)
-		strncpy(new_block->name, name, ISHM_NAME_MAXLEN - 1);
+		_odp_strcpy(new_block->name, name, ISHM_NAME_MAXLEN);
 	else
 		new_block->name[0] = 0;
 

@@ -32,6 +32,7 @@
 #include <odp_timer_internal.h>
 #include <odp_event_vector_internal.h>
 #include <odp_buffer_internal.h>
+#include <odp_string_internal.h>
 
 #include <string.h>
 #include <stdio.h>
@@ -647,12 +648,10 @@ static bool shm_is_from_huge_pages(odp_shm_t shm)
 
 static void set_pool_name(pool_t *pool, const char *name)
 {
-	if (name == NULL) {
+	if (name == NULL)
 		pool->name[0] = 0;
-	} else {
-		strncpy(pool->name, name, ODP_POOL_NAME_LEN - 1);
-		pool->name[ODP_POOL_NAME_LEN - 1] = 0;
-	}
+	else
+		_odp_strcpy(pool->name, name, ODP_POOL_NAME_LEN);
 }
 
 static void set_pool_cache_size(pool_t *pool, uint32_t cache_size)
