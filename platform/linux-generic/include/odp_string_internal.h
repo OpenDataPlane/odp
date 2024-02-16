@@ -20,6 +20,15 @@ extern "C" {
  * always with the end mark. */
 int _odp_snprint(char *str, size_t size, const char *format, ...);
 
+/*
+ * Copy a string
+ *
+ * Like strncpy(), but additionally ensures that the destination string is null
+ * terminated, unless sz is zero in which case returns dst without doing
+ * anything else.
+ */
+char *_odp_strcpy(char *restrict dst, const char *restrict src, size_t sz);
+
 #ifdef __cplusplus
 }
 #endif
