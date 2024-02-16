@@ -824,7 +824,7 @@ static int parse_interface(appl_args_t *appl_args, const char *optarg)
 		ODPH_ERR("Unable to store interface name (MAX_NAME_LEN=%d)\n", MAX_NAME_LEN);
 		return -1;
 	}
-	strncpy(appl_args->opt.name, optarg, MAX_NAME_LEN);
+	odph_strcpy(appl_args->opt.name, optarg, MAX_NAME_LEN);
 	return 0;
 }
 
@@ -849,7 +849,7 @@ static int parse_args(int argc, char *argv[])
 
 	static const char *shortopts =  "i:m:o:p:q:r:s:t:h";
 
-	strncpy(gbl_args->opt.name, "loop", MAX_NAME_LEN);
+	odph_strcpy(gbl_args->opt.name, "loop", MAX_NAME_LEN);
 	gbl_args->opt.rounds = ROUNDS;
 	gbl_args->opt.in_mode = ODP_PKTIN_MODE_DIRECT;
 	gbl_args->opt.out_mode = ODP_PKTOUT_MODE_DIRECT;

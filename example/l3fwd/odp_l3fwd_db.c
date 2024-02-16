@@ -401,8 +401,7 @@ int create_fwd_db_entry(char *input, char **oif, uint8_t **dst_mac)
 					  &entry->subnet.depth);
 			break;
 		case 1:
-			strncpy(entry->oif, token, OIF_LEN - 1);
-			entry->oif[OIF_LEN - 1] = 0;
+			odph_strcpy(entry->oif, token, OIF_LEN);
 			*oif = entry->oif;
 			break;
 		case 2:
