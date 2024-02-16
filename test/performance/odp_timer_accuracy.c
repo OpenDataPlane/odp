@@ -59,7 +59,7 @@ typedef struct test_opt_t {
 	uint64_t warmup_timers;
 	uint64_t tot_timers;
 	uint64_t alloc_timers;
-	char filename[MAX_FILENAME + 1];
+	char filename[MAX_FILENAME];
 } test_opt_t;
 
 typedef struct timer_ctx_t {
@@ -277,8 +277,11 @@ static int parse_options(int argc, char *argv[], test_opt_t *test_opt)
 			break;
 		case 'o':
 			test_opt->output = 1;
-			/* filename is NULL terminated in anycase */
-			strncpy(test_opt->filename, optarg, MAX_FILENAME);
+			if (strlen(optarg) >= MAX_FILENAME) {
+				printf("Filename too long\n");
+				return -1;
+			}
+			odph_strcpy(test_opt->filename, optarg, MAX_FILENAME);
 			break;
 		case 'e':
 			test_opt->early_retry = atoi(optarg);

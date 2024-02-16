@@ -979,16 +979,16 @@ static int parse_pmr_policy(appl_args_t *appl_args, char *optarg)
 	case ODP_PMR_TCP_SPORT:
 		/* :<port>:<mask> */
 		token = strtok(NULL, ":");
-		strncpy(stats[policy_count].value, token,
-			DISPLAY_STRING_LEN - 1);
+		odph_strcpy(stats[policy_count].value, token,
+			    DISPLAY_STRING_LEN);
 		value = strtoul(token, NULL, 0);
 		u16 = value;
 		u16 = odp_cpu_to_be_16(u16);
 		memcpy(stats[policy_count].rule.value_be, &u16, sizeof(u16));
 
 		token = strtok(NULL, ":");
-		strncpy(stats[policy_count].mask, token,
-			DISPLAY_STRING_LEN - 1);
+		odph_strcpy(stats[policy_count].mask, token,
+			    DISPLAY_STRING_LEN);
 		mask = strtoul(token, NULL, 0);
 		u16 = mask;
 		u16 = odp_cpu_to_be_16(u16);
@@ -1001,8 +1001,8 @@ static int parse_pmr_policy(appl_args_t *appl_args, char *optarg)
 	case ODP_PMR_SIP_ADDR:
 		/* :<IP addr>:<mask> */
 		token = strtok(NULL, ":");
-		strncpy(stats[policy_count].value, token,
-			DISPLAY_STRING_LEN - 1);
+		odph_strcpy(stats[policy_count].value, token,
+			    DISPLAY_STRING_LEN);
 
 		if (odph_ipv4_addr_parse(&ip_addr, token)) {
 			ODPH_ERR("Bad IP address\n");
@@ -1013,8 +1013,8 @@ static int parse_pmr_policy(appl_args_t *appl_args, char *optarg)
 		memcpy(stats[policy_count].rule.value_be, &u32, sizeof(u32));
 
 		token = strtok(NULL, ":");
-		strncpy(stats[policy_count].mask, token,
-			DISPLAY_STRING_LEN - 1);
+		odph_strcpy(stats[policy_count].mask, token,
+			    DISPLAY_STRING_LEN);
 		mask = strtoul(token, NULL, 0);
 		u32 = mask;
 		u32 = odp_cpu_to_be_32(u32);
@@ -1025,8 +1025,8 @@ static int parse_pmr_policy(appl_args_t *appl_args, char *optarg)
 	case ODP_PMR_DMAC:
 		/* :<MAC addr>:<mask> */
 		token = strtok(NULL, ":");
-		strncpy(stats[policy_count].value, token,
-			DISPLAY_STRING_LEN - 1);
+		odph_strcpy(stats[policy_count].value, token,
+			    DISPLAY_STRING_LEN);
 
 		/* Replace hyphens in the MAC string with colons to be compatible with
 		 * odph_eth_addr_parse(). */
@@ -1043,7 +1043,7 @@ static int parse_pmr_policy(appl_args_t *appl_args, char *optarg)
 		stats[policy_count].rule.val_sz = 6;
 
 		token = strtok(NULL, ":");
-		strncpy(stats[policy_count].mask, token, DISPLAY_STRING_LEN - 1);
+		odph_strcpy(stats[policy_count].mask, token, DISPLAY_STRING_LEN);
 		mask_sz = parse_custom(token, stats[policy_count].rule.mask_be, ODPH_ETHADDR_LEN);
 		if (mask_sz != ODPH_ETHADDR_LEN) {
 			ODPH_ERR("Invalid mask. Provide mask without 0x prefix.\n");
@@ -1062,8 +1062,8 @@ static int parse_pmr_policy(appl_args_t *appl_args, char *optarg)
 			goto error;
 
 		token = strtok(NULL, ":");
-		strncpy(stats[policy_count].value, token,
-			DISPLAY_STRING_LEN - 1);
+		odph_strcpy(stats[policy_count].value, token,
+			    DISPLAY_STRING_LEN);
 		val_sz = parse_custom(token,
 				      stats[policy_count].rule.value_be,
 				      MAX_VAL_SIZE);
@@ -1072,8 +1072,8 @@ static int parse_pmr_policy(appl_args_t *appl_args, char *optarg)
 			goto error;
 
 		token = strtok(NULL, ":");
-		strncpy(stats[policy_count].mask, token,
-			DISPLAY_STRING_LEN - 1);
+		odph_strcpy(stats[policy_count].mask, token,
+			    DISPLAY_STRING_LEN);
 		mask_sz = parse_custom(token,
 				       stats[policy_count].rule.mask_be,
 				       MAX_VAL_SIZE);
@@ -1093,13 +1093,13 @@ static int parse_pmr_policy(appl_args_t *appl_args, char *optarg)
 
 	if (cos1) {
 		stats[policy_count].has_src_cos = 1;
-		strncpy(stats[policy_count].src_cos_name, cos0,
-			ODP_COS_NAME_LEN - 1);
-		strncpy(stats[policy_count].cos_name, cos1,
-			ODP_COS_NAME_LEN - 1);
+		odph_strcpy(stats[policy_count].src_cos_name, cos0,
+			    ODP_COS_NAME_LEN);
+		odph_strcpy(stats[policy_count].cos_name, cos1,
+			    ODP_COS_NAME_LEN);
 	} else {
-		strncpy(stats[policy_count].cos_name, cos0,
-			ODP_COS_NAME_LEN - 1);
+		odph_strcpy(stats[policy_count].cos_name, cos0,
+			    ODP_COS_NAME_LEN);
 	}
 
 	appl_args->policy_count++;
