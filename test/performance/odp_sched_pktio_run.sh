@@ -11,15 +11,13 @@ TEST_DIR="${TEST_DIR:-$PWD}"
 # directory where test sources are, including scripts
 TEST_SRC_DIR=$(dirname $0)
 
-PATH=$TEST_DIR:$TEST_DIR/../../example/generator:$PATH
+PATH=$TEST_DIR:$PATH
 
 # exit codes expected by automake for skipped tests
 TEST_SKIPPED=77
 
 VALIDATION_TESTDIR=platform/$ODP_PLATFORM/test/validation
 PLATFORM_VALIDATION=${TEST_SRC_DIR}/../../$VALIDATION_TESTDIR
-
-FLOOD_MODE=0
 
 # Use installed pktio env or for make check take it from platform directory
 if [ -f "./pktio_env" ]; then
@@ -47,9 +45,9 @@ run_sched_pktio()
 		exit $TEST_SKIPPED
 	fi
 
-	type odp_generator > /dev/null
+	type odp_packet_gen > /dev/null
 	if [ $? -ne 0 ]; then
-		echo "odp_generator not installed. Aborting."
+		echo "odp_packet_gen not installed. Aborting."
 		cleanup_pktio_env
 		exit 1
 	fi
@@ -61,10 +59,10 @@ run_sched_pktio()
 
 	sleep 1
 
-	# Run generator with one worker
-	(odp_generator${EXEEXT} --interval $FLOOD_MODE -I $IF0 \
-			--srcip 192.168.0.1 --dstip 192.168.0.2 \
-			-m u -w 1 2>&1 > /dev/null) \
+	# Run odp_packet_gen with one tx thread
+	(odp_packet_gen${EXEEXT} --gap 0 -i $IF0 \
+			--ipv4_src 192.168.0.1 --ipv4_dst 192.168.0.2 \
+			-r 0 -t 1 2>&1 > /dev/null) \
 			2>&1 > /dev/null &
 
 	GEN_PID=$!
