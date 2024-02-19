@@ -16,5 +16,3 @@ TESTS  = odp_timer_accuracy_run.sh \
 endif
 
 EXTRA_DIST = odp_timer_accuracy_run.sh
-
-.NOTPARALLEL:
