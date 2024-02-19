@@ -95,11 +95,6 @@ odp_ipsecfwd_SOURCES = odp_ipsecfwd.c
 AM_CFLAGS += $(LIBCONFIG_CFLAGS)
 endif
 
-# l2fwd test depends on generator example
-EXTRA_odp_l2fwd_DEPENDENCIES = $(top_builddir)/example/generator/odp_generator$(EXEEXT)
-$(top_builddir)/example/generator/odp_generator$(EXEEXT):
-	$(MAKE) -C $(top_builddir)/example/generator odp_generator$(EXEEXT)
-
 dist_check_SCRIPTS = $(TESTSCRIPTS)
 
 dist_check_DATA = udp64.pcap

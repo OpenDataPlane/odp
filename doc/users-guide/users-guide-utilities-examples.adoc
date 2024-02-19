@@ -11,9 +11,8 @@ will stop the capturing process.
 
 . `./configure --enable-pcapng-support`
 . `sudo mkdir /var/run/odp`
-. `sudo ./example/generator/odp_generator -I enp2s0 -mu --dstmac
-A0:F6:FD:AE:62:6C --dstip 192.168.49.20 --srcmac 2c:56:dc:9a:8f:06 --srcip
-192.168.49.4 -i0 -w1`
+. `sudo ./test/performance/odp_packet_gen -i enp2s0 --eth_dst A0:F6:FD:AE:62:6C
+--ipv4_dst 192.168.49.20 --ipv4_src 192.168.49.4 -g 0`
 . `sudo dd if=/var/run/odp/26737-enp2s0-flow-0 of=~/test.pcap`
 . `ctrl^c`
 . `wireshark ~/test.pcap`
