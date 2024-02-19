@@ -16,4 +16,4 @@ export CI="true"
 # Additional configure flags for distcheck
 export DISTCHECK_CONFIGURE_FLAGS="${CONF}"
 
-make -j $(nproc) distcheck
+make distcheck
