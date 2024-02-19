@@ -22,7 +22,6 @@ AM_CONDITIONAL([test_example], [test x$test_example = xyes ])
 AC_CONFIG_FILES([example/classifier/Makefile
 		 example/cli/Makefile
 		 example/debug/Makefile
-		 example/generator/Makefile
 		 example/hello/Makefile
 		 example/ipsec_api/Makefile
 		 example/ipsec_crypto/Makefile

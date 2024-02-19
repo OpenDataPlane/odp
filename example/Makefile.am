@@ -1,6 +1,5 @@
 SUBDIRS = classifier \
 	  debug \
-	  generator \
 	  hello \
 	  ipsec_api \
 	  ipsec_crypto \

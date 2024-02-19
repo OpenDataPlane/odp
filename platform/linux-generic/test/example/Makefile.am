@@ -1,6 +1,5 @@
 SUBDIRS = \
 	classifier \
-	generator \
 	ipsec_api \
 	ipsec_crypto \
 	l2fwd_simple \
