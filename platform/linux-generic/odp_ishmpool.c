@@ -135,8 +135,8 @@ static inline uintptr_t get_bblock_nr(pool_t *bpool, void *addr)
 static inline void remove_from_list(pool_t *bpool, uint8_t order,
 				    bblock_t *bblock)
 {
-	bblock_t *curr;       /* current bblock (when parsing list) */
-	bblock_t *prev;       /* previous bblock (when parsing list) */
+	bblock_t *curr;
+	bblock_t *prev = NULL;
 
 	curr = bpool->ctrl.free_heads[order];
 	if (!curr)
