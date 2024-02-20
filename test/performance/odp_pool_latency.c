@@ -16,6 +16,7 @@
 #endif
 
 #include <inttypes.h>
+#include <signal.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -107,6 +108,7 @@ typedef struct {
 	uint64_t reallocs;
 	uint64_t alloc_errs;
 	uint64_t pattern_errs;
+	uint32_t act_num_rounds;
 	uint8_t max_alloc_pt;
 	uint8_t min_alloc_pt;
 	uint8_t max_uarea_pt;
@@ -150,6 +152,7 @@ typedef struct prog_config_s {
 	alloc_fn_t alloc_fn;
 	free_fn_t free_fn;
 	int64_t cache_size;
+	odp_atomic_u32_t is_running;
 	uint32_t num_data_elems;
 	uint32_t seg_len;
 	uint32_t handle_size;
@@ -165,6 +168,11 @@ typedef struct prog_config_s {
 } prog_config_t;
 
 static prog_config_t *prog_conf;
+
+static void terminate(int signal ODP_UNUSED)
+{
+	odp_atomic_store_u32(&prog_conf->is_running, 0U);
+}
 
 static void init_config(prog_config_t *config)
 {
@@ -634,6 +642,21 @@ static parse_result_t parse_options(int argc, char **argv, prog_config_t *config
 	return check_options(config);
 }
 
+static parse_result_t setup_program(int argc, char **argv, prog_config_t *config)
+{
+	struct sigaction action = { .sa_handler = terminate };
+
+	if (sigemptyset(&action.sa_mask) == -1 || sigaddset(&action.sa_mask, SIGINT) == -1 ||
+	    sigaddset(&action.sa_mask, SIGTERM) == -1 ||
+	    sigaddset(&action.sa_mask, SIGHUP) == -1 || sigaction(SIGINT, &action, NULL) == -1 ||
+	    sigaction(SIGTERM, &action, NULL) == -1 || sigaction(SIGHUP, &action, NULL) == -1) {
+		ODPH_ERR("Error installing signal handler\n");
+		return PRS_NOK;
+	}
+
+	return parse_options(argc, argv, config);
+}
+
 static inline void save_alloc_stats(odp_time_t t1, odp_time_t t2, uint32_t num_alloc,
 				    uint64_t round, uint8_t pattern, stats_t *stats)
 {
@@ -1040,8 +1063,10 @@ static int run_test(void *args)
 {
 	worker_config_t *config = args;
 	odp_time_t t1, t2;
-	uint32_t head_idx, cur_idx, num_ignore = config->prog_config->num_ignore, val, num_alloc,
-	idx;
+	const uint32_t num_rounds = config->prog_config->num_rounds;
+	odp_atomic_u32_t *is_running = &config->prog_config->is_running;
+	uint32_t i, head_idx, cur_idx, num_ignore = config->prog_config->num_ignore, val,
+	num_alloc, idx;
 	odp_bool_t is_saved;
 	const uint8_t num_elems = config->prog_config->num_elems;
 	const alloc_elem_t *elems = config->prog_config->alloc_elems, *elem;
@@ -1054,7 +1079,7 @@ static int run_test(void *args)
 	odp_barrier_wait(&config->prog_config->init_barrier);
 	t1 = odp_time_local_strict();
 
-	for (uint32_t i = 0U; i < config->prog_config->num_rounds; ++i) {
+	for (i = 0U; i < num_rounds && odp_atomic_load_u32(is_running); ++i) {
 		head_idx = 0U;
 		cur_idx = head_idx;
 		is_saved = (num_ignore > 0U ? num_ignore-- : num_ignore) == 0U;
@@ -1093,6 +1118,7 @@ static int run_test(void *args)
 
 	t2 = odp_time_local_strict();
 	stats->tot_tm = odp_time_diff_ns(t2, t1);
+	stats->act_num_rounds = i;
 	odp_barrier_wait(&config->prog_config->term_barrier);
 
 	return 0;
@@ -1151,20 +1177,21 @@ static void print_stats(const prog_config_t *config)
 
 	printf("\n==================\n\n"
 	       "Pool latency test done\n\n"
-	       "    type:         %s\n"
-	       "    event count:  %u\n", config->type == BUFFER ? "buffer" :
+	       "    type:               %s\n"
+	       "    event count:        %u\n", config->type == BUFFER ? "buffer" :
 		config->type == PACKET ? "packet" : config->type == TMO ? "timeout" : "vector",
 	       config->num_evs);
 
 	if (config->type != TMO)
-		printf("    %s  %u\n", config->type != VECTOR ? "data size:  " : "vector size:",
+		printf("    %s  %u\n",
+		       config->type != VECTOR ? "data size:        " : "vector size:      ",
 		       config->data_size);
 
-	printf("    pool policy:  %s\n"
-	       "    round count:  %u\n"
-	       "    ignore count: %u\n"
-	       "    cache size:   %" PRIi64 "\n"
-	       "    user area:    %u (B)\n"
+	printf("    pool policy:        %s\n"
+	       "    target round count: %u\n"
+	       "    ignore count:       %u\n"
+	       "    cache size:         %" PRIi64 "\n"
+	       "    user area:          %u (B)\n"
 	       "    burst pattern:\n", config->policy == SINGLE ? "shared" : "per-worker",
 	       config->num_rounds, config->num_ignore, config->cache_size, config->uarea_size);
 
@@ -1194,6 +1221,7 @@ static void print_stats(const prog_config_t *config)
 		ave_free_tm = stats->alloc_cnt > 0U ? stats->free_tm / stats->alloc_cnt : 0U;
 
 		printf("    worker %d:\n"
+		       "        actual round count:                 %u\n"
 		       "        significant events allocated/freed: %" PRIu64 "\n"
 		       "        allocation retries:                 %" PRIu64 "\n"
 		       "        allocation errors:                  %" PRIu64 "\n"
@@ -1208,9 +1236,9 @@ static void print_stats(const prog_config_t *config)
 		       "            per free burst:       %" PRIu64 " (min: %" PRIu64 " (round: %"
 		       PRIu64 ", pattern: %u), max: %" PRIu64 " (round: %" PRIu64 ", pattern: %u))"
 		       "\n"
-		       "            per free:             %" PRIu64 "\n", i, stats->alloc_cnt,
-		       stats->reallocs, stats->alloc_errs, stats->pattern_errs, stats->tot_tm,
-		       ev_rate, ave_b_alloc_tm, b_alloc_min, stats->min_alloc_rnd,
+		       "            per free:             %" PRIu64 "\n", i, stats->act_num_rounds,
+		       stats->alloc_cnt, stats->reallocs, stats->alloc_errs, stats->pattern_errs,
+		       stats->tot_tm, ev_rate, ave_b_alloc_tm, b_alloc_min, stats->min_alloc_rnd,
 		       stats->min_alloc_pt, b_alloc_max, stats->max_alloc_rnd, stats->max_alloc_pt,
 		       ave_alloc_tm, ave_b_free_tm, b_free_min, stats->min_free_rnd,
 		       stats->min_free_pt, b_free_max, stats->max_free_rnd, stats->max_free_pt,
@@ -1339,7 +1367,7 @@ int main(int argc, char **argv)
 		goto out;
 	}
 
-	parse_res = parse_options(argc, argv, prog_conf);
+	parse_res = setup_program(argc, argv, prog_conf);
 
 	if (parse_res == PRS_NOK) {
 		ret = EXIT_FAILURE;
@@ -1352,6 +1380,7 @@ int main(int argc, char **argv)
 	}
 
 	prog_conf->odp_instance = odp_instance;
+	odp_atomic_init_u32(&prog_conf->is_running, 1U);
 
 	if (!setup_test(prog_conf)) {
 		ret = EXIT_FAILURE;
