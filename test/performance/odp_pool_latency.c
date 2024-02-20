@@ -108,7 +108,7 @@ typedef struct {
 	uint64_t reallocs;
 	uint64_t alloc_errs;
 	uint64_t pattern_errs;
-	uint32_t act_num_rounds;
+	uint64_t act_num_rounds;
 	uint8_t max_alloc_pt;
 	uint8_t min_alloc_pt;
 	uint8_t max_uarea_pt;
@@ -152,14 +152,14 @@ typedef struct prog_config_s {
 	alloc_fn_t alloc_fn;
 	free_fn_t free_fn;
 	int64_t cache_size;
+	uint64_t num_rounds;
+	uint64_t num_ignore;
 	odp_atomic_u32_t is_running;
 	uint32_t num_data_elems;
 	uint32_t seg_len;
 	uint32_t handle_size;
 	uint32_t num_evs;
 	uint32_t data_size;
-	uint32_t num_rounds;
-	uint32_t num_ignore;
 	uint32_t num_workers;
 	uint32_t uarea_size;
 	uint8_t num_elems;
@@ -306,7 +306,8 @@ static void print_usage(const dynamic_defs_t *dyn_defs)
 	       "                      Policies:\n"
 	       "                          0: One pool shared by workers\n"
 	       "                          1: One pool per worker\n"
-	       "  -r, --round_count   Number of rounds to run. %u by default.\n"
+	       "  -r, --round_count   Number of rounds to run. Use 0 to run indefinitely. %u by\n"
+	       "                      default.\n"
 	       "  -i, --ignore_rounds Ignore an amount of initial rounds. %u by default.\n"
 	       "  -c, --worker_count  Number of workers. %u by default.\n"
 	       "  -C, --cache_size    Maximum cache size for pools. Defaults:\n"
@@ -555,14 +556,9 @@ static parse_result_t check_options(prog_config_t *config)
 		return PRS_NOK;
 	}
 
-	if (config->num_rounds == 0U) {
-		ODPH_ERR("Invalid round count: %u (min: 1)\n", config->num_rounds);
-		return PRS_NOK;
-	}
-
-	if (config->num_ignore >= config->num_rounds) {
-		ODPH_ERR("Invalid round ignorance count: %u (max: %u)\n", config->num_ignore,
-			 config->num_rounds - 1U);
+	if (config->num_rounds > 0U && config->num_ignore >= config->num_rounds) {
+		ODPH_ERR("Invalid round ignore count: %" PRIu64 " (max: %" PRIu64 ")\n",
+			 config->num_ignore, config->num_rounds - 1U);
 		return PRS_NOK;
 	}
 
@@ -615,10 +611,10 @@ static parse_result_t parse_options(int argc, char **argv, prog_config_t *config
 			config->policy = atoi(optarg);
 			break;
 		case 'r':
-			config->num_rounds = atoi(optarg);
+			config->num_rounds = atoll(optarg);
 			break;
 		case 'i':
-			config->num_ignore = atoi(optarg);
+			config->num_ignore = atoll(optarg);
 			break;
 		case 'c':
 			config->num_workers = atoi(optarg);
@@ -1063,10 +1059,10 @@ static int run_test(void *args)
 {
 	worker_config_t *config = args;
 	odp_time_t t1, t2;
-	const uint32_t num_rounds = config->prog_config->num_rounds;
+	uint64_t i, num_ignore = config->prog_config->num_ignore;
+	const uint64_t num_rnds = config->prog_config->num_rounds;
 	odp_atomic_u32_t *is_running = &config->prog_config->is_running;
-	uint32_t i, head_idx, cur_idx, num_ignore = config->prog_config->num_ignore, val,
-	num_alloc, idx;
+	uint32_t head_idx, cur_idx, val, num_alloc, idx;
 	odp_bool_t is_saved;
 	const uint8_t num_elems = config->prog_config->num_elems;
 	const alloc_elem_t *elems = config->prog_config->alloc_elems, *elem;
@@ -1079,7 +1075,7 @@ static int run_test(void *args)
 	odp_barrier_wait(&config->prog_config->init_barrier);
 	t1 = odp_time_local_strict();
 
-	for (i = 0U; i < num_rounds && odp_atomic_load_u32(is_running); ++i) {
+	for (i = 0U; (i < num_rnds || num_rnds == 0U) && odp_atomic_load_u32(is_running); ++i) {
 		head_idx = 0U;
 		cur_idx = head_idx;
 		is_saved = (num_ignore > 0U ? num_ignore-- : num_ignore) == 0U;
@@ -1188,8 +1184,8 @@ static void print_stats(const prog_config_t *config)
 		       config->data_size);
 
 	printf("    pool policy:        %s\n"
-	       "    target round count: %u\n"
-	       "    ignore count:       %u\n"
+	       "    target round count: %" PRIu64 "\n"
+	       "    ignore count:       %" PRIu64 "\n"
 	       "    cache size:         %" PRIi64 "\n"
 	       "    user area:          %u (B)\n"
 	       "    burst pattern:\n", config->policy == SINGLE ? "shared" : "per-worker",
@@ -1221,7 +1217,7 @@ static void print_stats(const prog_config_t *config)
 		ave_free_tm = stats->alloc_cnt > 0U ? stats->free_tm / stats->alloc_cnt : 0U;
 
 		printf("    worker %d:\n"
-		       "        actual round count:                 %u\n"
+		       "        actual round count:                 %" PRIu64 "\n"
 		       "        significant events allocated/freed: %" PRIu64 "\n"
 		       "        allocation retries:                 %" PRIu64 "\n"
 		       "        allocation errors:                  %" PRIu64 "\n"
