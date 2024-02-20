@@ -864,7 +864,7 @@ int main(int argc, char *argv[])
 	printf("first CPU:          %i\n", odp_cpumask_first(&cpumask));
 	printf("cpu mask:           %s\n", cpumaskstr);
 
-	thread_tbl = calloc(sizeof(odph_thread_t), num_workers);
+	thread_tbl = calloc(num_workers, sizeof(odph_thread_t));
 	if (!thread_tbl) {
 		ODPH_ERR("no memory for thread_tbl\n");
 		return -1;
