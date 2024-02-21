@@ -1,3 +1,40 @@
+== OpenDataPlane (1.44.0.0)
+
+=== Backward compatible API changes
+==== ML
+* Add new API module for Machine Learning offload.
+
+=== Implementation
+==== ML
+* Implement the API using ONNX Runtime. A non-standard ONNX install path can be
+passed with `--with-ort-path` configure option. See `DEPENDENCIES` for
+additional information.
+
+=== Example Applications
+==== debug
+* Print packet IO link information.
+* Add packet IO interface name option (`-i`).
+
+==== packet_dump
+* Add support for measuring packet input delay.
+
+=== Performance Tests
+==== l2fwd
+* Add packet input timestamping option (`-T`).
+* Add packet data prefetch option (`-F`).
+* Add packet data read option (`-R`).
+* Add packet print option (`-V`).
+
+==== pool_latency
+* New pool latency tester application for profiling pool allocation and free
+latencies under different load patterns.
+
+==== sched_perf
+* Add options to read (`-u`) and modify (`-U`) event user area contents per
+event reception.
+* Run application indefinitely when the number of events to schedule option
+(`-s`) is set to zero.
+
 == OpenDataPlane (1.43.0.0)
 
 === Backward incompatible API changes
