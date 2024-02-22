@@ -313,7 +313,7 @@ static int _ipc_init_master(pktio_entry_t *pktio_entry,
 	/* Set up pool name for remote info */
 	pinfo = pktio_ipc->pinfo;
 	pool_name = _ipc_odp_buffer_pool_shm_name(pool_hdl);
-	if (strlen(pool_name) > ODP_POOL_NAME_LEN) {
+	if (strlen(pool_name) >= ODP_POOL_NAME_LEN) {
 		_ODP_ERR("pid %d ipc pool name %s is too big %zu\n",
 			 getpid(), pool_name, strlen(pool_name));
 		goto free_s_prod;

@@ -301,7 +301,7 @@ static odp_pktio_t setup_pktio_entry(const char *name, odp_pool_t pool,
 	uint16_t pktin_frame_offset = pktio_global->config.pktin_frame_offset;
 	int ret = -1;
 
-	if (strlen(name) >= PKTIO_NAME_LEN - 1) {
+	if (strlen(name) >= PKTIO_NAME_LEN) {
 		/* ioctl names limitation */
 		_ODP_ERR("pktio name %s is too long (max: %d chars)\n", name, PKTIO_NAME_LEN - 1);
 		return ODP_PKTIO_INVALID;
