@@ -2520,7 +2520,7 @@ static int read_config_file(ort_run_opts_t *opts)
 	_ODP_PRINT("  %s: %i\n", conf_str, opts->enable_profiling);
 
 	conf_str =  "ml.execution_mode";
-	if (_odp_libconfig_lookup_str(conf_str, mode_str, ML_MAX_CONFIG_STR_LEN) < 0) {
+	if (_odp_libconfig_lookup_str(conf_str, mode_str, ML_MAX_CONFIG_STR_LEN - 1) < 0) {
 		_ODP_ERR("Config option '%s' not found.\n", conf_str);
 		return -1;
 	}
@@ -2547,7 +2547,7 @@ static int read_config_file(ort_run_opts_t *opts)
 
 	conf_str =  "ml.graph_optimization_level";
 	if (_odp_libconfig_lookup_str(conf_str, opt_level_str,
-				      ML_MAX_CONFIG_STR_LEN) < 0) {
+				      ML_MAX_CONFIG_STR_LEN - 1) < 0) {
 		_ODP_ERR("Config option '%s' not found.\n", conf_str);
 		return -1;
 	}
@@ -2560,7 +2560,7 @@ static int read_config_file(ort_run_opts_t *opts)
 
 	conf_str =  "ml.optimized_model_filepath";
 	if (_odp_libconfig_lookup_str(conf_str, opts->opt_model_filepath,
-				      ML_MAX_CONFIG_STR_LEN) < 0) {
+				      ML_MAX_CONFIG_STR_LEN - 1) < 0) {
 		_ODP_ERR("Config option '%s' not found.\n", conf_str);
 		return -1;
 	}
