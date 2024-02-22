@@ -153,13 +153,13 @@ int odph_cli_register_command(const char *name, odph_cli_user_cmd_func_t func,
 
 	cmd->fn = func;
 
-	if (strlen(name) >= MAX_NAME_LEN - 1) {
+	if (strlen(name) >= MAX_NAME_LEN) {
 		ODPH_ERR("Error: command name too long\n");
 		goto error;
 	}
 	strcpy(cmd->name, name);
 
-	if (strlen(help) >= MAX_HELP_LEN - 1) {
+	if (strlen(help) >= MAX_HELP_LEN) {
 		ODPH_ERR("Error: command help too long\n");
 		goto error;
 	}
