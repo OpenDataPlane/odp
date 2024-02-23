@@ -9,6 +9,7 @@
 
 #include <odp/helper/odph_hashtable.h>
 #include <odp/helper/odph_debug.h>
+#include <odp/helper/string.h>
 #include "odph_list_internal.h"
 #include <odp_api.h>
 
@@ -99,7 +100,7 @@ odph_table_t odph_hash_table_create(const char *name, uint32_t capacity,
 	memset(tbl, 0, capacity << 20);
 
 	tbl->init_cap = capacity << 20;
-	strncpy(tbl->name, name, ODPH_TABLE_NAME_LEN - 1);
+	odph_strcpy(tbl->name, name, ODPH_TABLE_NAME_LEN);
 	tbl->key_size = key_size;
 	tbl->value_size = value_size;
 
