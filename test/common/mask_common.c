@@ -123,8 +123,8 @@ MASK_TESTFUNC(to_from_str)
 		/* check that returned size matches original (with NULL): */
 		CU_ASSERT(str_sz == (int32_t)stringlen(buf_in) + 1);
 
-		/* check that returned string matches original (with NULL): */
-		CU_ASSERT_NSTRING_EQUAL(buf_out, buf_in, stringlen(buf_in) + 1);
+		/* check that returned string matches original: */
+		CU_ASSERT(!strcmp(buf_out, buf_in));
 
 		/* check that no extra buffer writes occurred: */
 		CU_ASSERT(buf_out[stringlen(buf_in) + 2] == FILLING_PATTERN);
@@ -150,8 +150,7 @@ MASK_TESTFUNC(to_from_str)
 				  stringlen(TEST_MASK_0) + 1);
 	CU_ASSERT(str_sz  == (int32_t)stringlen(TEST_MASK_0) + 1);
 
-	CU_ASSERT_NSTRING_EQUAL(buf_out, TEST_MASK_0,
-				stringlen(TEST_MASK_0) + 1);
+	CU_ASSERT(!strcmp(buf_out, TEST_MASK_0));
 
 	free(buf_out);
 	free(buf_in);
@@ -167,7 +166,7 @@ MASK_TESTFUNC(equal)
 	_odp_mask_from_str(&mask2, TEST_MASK_0);
 	_odp_mask_from_str(&mask3, TEST_MASK_NONE);
 	CU_ASSERT(_odp_mask_equal(&mask1, &mask2));
-	CU_ASSERT_FALSE(_odp_mask_equal(&mask1, &mask3));
+	CU_ASSERT(!_odp_mask_equal(&mask1, &mask3));
 
 	if (mask_capacity() < 4)
 		return;
@@ -176,7 +175,7 @@ MASK_TESTFUNC(equal)
 	_odp_mask_from_str(&mask2, TEST_MASK_0_2);
 	_odp_mask_from_str(&mask3, TEST_MASK_1_2);
 	CU_ASSERT(_odp_mask_equal(&mask1, &mask2));
-	CU_ASSERT_FALSE(_odp_mask_equal(&mask1, &mask3));
+	CU_ASSERT(!_odp_mask_equal(&mask1, &mask3));
 
 	if (mask_capacity() < 8)
 		return;
@@ -185,7 +184,7 @@ MASK_TESTFUNC(equal)
 	_odp_mask_from_str(&mask2, TEST_MASK_0_2_4_6);
 	_odp_mask_from_str(&mask3, TEST_MASK_1_2_4_6);
 	CU_ASSERT(_odp_mask_equal(&mask1, &mask2));
-	CU_ASSERT_FALSE(_odp_mask_equal(&mask1, &mask3));
+	CU_ASSERT(!_odp_mask_equal(&mask1, &mask3));
 }
 
 MASK_TESTFUNC(zero)
@@ -256,16 +255,16 @@ MASK_TESTFUNC(isset)
 	CU_ASSERT(_odp_mask_isset(&mask1, 0));
 
 	_odp_mask_from_str(&mask1, TEST_MASK_NONE);
-	CU_ASSERT_FALSE(_odp_mask_isset(&mask1, 0));
+	CU_ASSERT(!_odp_mask_isset(&mask1, 0));
 
 	if (mask_capacity() < 4)
 		return;
 
 	_odp_mask_from_str(&mask1, TEST_MASK_0_2);
 	CU_ASSERT(_odp_mask_isset(&mask1, 0));
-	CU_ASSERT_FALSE(_odp_mask_isset(&mask1, 1));
+	CU_ASSERT(!_odp_mask_isset(&mask1, 1));
 	CU_ASSERT(_odp_mask_isset(&mask1, 2));
-	CU_ASSERT_FALSE(_odp_mask_isset(&mask1, 3));
+	CU_ASSERT(!_odp_mask_isset(&mask1, 3));
 }
 
 MASK_TESTFUNC(count)

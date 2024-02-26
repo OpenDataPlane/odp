@@ -1136,7 +1136,7 @@ static void pool_test_create_after_fork(void)
 	shm = odp_shm_reserve(NULL, sizeof(global_shared_mem_t), 0, 0);
 	CU_ASSERT_FATAL(shm != ODP_SHM_INVALID);
 	global_mem = odp_shm_addr(shm);
-	CU_ASSERT_PTR_NOT_NULL_FATAL(global_mem);
+	CU_ASSERT_FATAL(global_mem != NULL);
 
 	num = odp_cpumask_default_worker(NULL, 0);
 	if (num > MAX_WORKERS)

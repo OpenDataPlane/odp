@@ -22,14 +22,14 @@ static void test_defaults(uint8_t fill)
 
 	CU_ASSERT(cos_param.action == ODP_COS_ACTION_ENQUEUE);
 	CU_ASSERT(cos_param.num_queue == 1);
-	CU_ASSERT_EQUAL(cos_param.stats_enable, false);
-	CU_ASSERT_EQUAL(cos_param.red.enable, false);
-	CU_ASSERT_EQUAL(cos_param.bp.enable, false);
-	CU_ASSERT_EQUAL(cos_param.vector.enable, false);
+	CU_ASSERT(cos_param.stats_enable == false);
+	CU_ASSERT(cos_param.red.enable == false);
+	CU_ASSERT(cos_param.bp.enable == false);
+	CU_ASSERT(cos_param.vector.enable == false);
 
 	memset(&pmr_param, fill, sizeof(pmr_param));
 	odp_cls_pmr_param_init(&pmr_param);
-	CU_ASSERT_EQUAL(pmr_param.range_term, false);
+	CU_ASSERT(pmr_param.range_term == false);
 }
 
 static void cls_default_values(void)

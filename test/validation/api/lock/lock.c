@@ -117,7 +117,7 @@ static per_thread_mem_t *thread_init(void)
 
 	global_shm = odp_shm_lookup(GLOBAL_SHM_NAME);
 	global_mem = odp_shm_addr(global_shm);
-	CU_ASSERT_PTR_NOT_NULL(global_mem);
+	CU_ASSERT(global_mem != NULL);
 
 	per_thread_mem->global_mem = global_mem;
 

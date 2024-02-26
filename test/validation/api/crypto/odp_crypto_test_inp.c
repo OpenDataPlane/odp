@@ -34,18 +34,18 @@ static void test_defaults(uint8_t fill)
 	memset(&param, fill, sizeof(param));
 	odp_crypto_session_param_init(&param);
 
-	CU_ASSERT_EQUAL(param.op, ODP_CRYPTO_OP_ENCODE);
-	CU_ASSERT_EQUAL(param.op_type, ODP_CRYPTO_OP_TYPE_LEGACY);
-	CU_ASSERT_EQUAL(param.cipher_range_in_bits, false);
-	CU_ASSERT_EQUAL(param.auth_range_in_bits, false);
-	CU_ASSERT_EQUAL(param.auth_cipher_text, false);
-	CU_ASSERT_EQUAL(param.null_crypto_enable, false);
-	CU_ASSERT_EQUAL(param.op_mode, ODP_CRYPTO_SYNC);
-	CU_ASSERT_EQUAL(param.cipher_alg, ODP_CIPHER_ALG_NULL);
-	CU_ASSERT_EQUAL(param.cipher_iv_len, 0);
-	CU_ASSERT_EQUAL(param.auth_alg, ODP_AUTH_ALG_NULL);
-	CU_ASSERT_EQUAL(param.auth_iv_len, 0);
-	CU_ASSERT_EQUAL(param.auth_aad_len, 0);
+	CU_ASSERT(param.op == ODP_CRYPTO_OP_ENCODE);
+	CU_ASSERT(param.op_type == ODP_CRYPTO_OP_TYPE_LEGACY);
+	CU_ASSERT(param.cipher_range_in_bits == false);
+	CU_ASSERT(param.auth_range_in_bits == false);
+	CU_ASSERT(param.auth_cipher_text == false);
+	CU_ASSERT(param.null_crypto_enable == false);
+	CU_ASSERT(param.op_mode == ODP_CRYPTO_SYNC);
+	CU_ASSERT(param.cipher_alg == ODP_CIPHER_ALG_NULL);
+	CU_ASSERT(param.cipher_iv_len == 0);
+	CU_ASSERT(param.auth_alg == ODP_AUTH_ALG_NULL);
+	CU_ASSERT(param.auth_iv_len == 0);
+	CU_ASSERT(param.auth_aad_len == 0);
 }
 
 static void test_default_values(void)

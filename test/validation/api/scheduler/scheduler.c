@@ -1367,12 +1367,12 @@ static void chaos_run(unsigned int qtype)
 	shm = odp_shm_lookup(GLOBALS_SHM_NAME);
 	CU_ASSERT_FATAL(shm != ODP_SHM_INVALID);
 	globals = odp_shm_addr(shm);
-	CU_ASSERT_PTR_NOT_NULL_FATAL(globals);
+	CU_ASSERT_FATAL(globals != NULL);
 
 	shm = odp_shm_lookup(SHM_THR_ARGS_NAME);
 	CU_ASSERT_FATAL(shm != ODP_SHM_INVALID);
 	args = odp_shm_addr(shm);
-	CU_ASSERT_PTR_NOT_NULL_FATAL(args);
+	CU_ASSERT_FATAL(args != NULL);
 
 	args->globals = globals;
 
@@ -1798,7 +1798,7 @@ static void schedule_common(odp_schedule_sync_t sync, int num_queues,
 	shm = odp_shm_lookup(GLOBALS_SHM_NAME);
 	CU_ASSERT_FATAL(shm != ODP_SHM_INVALID);
 	globals = odp_shm_addr(shm);
-	CU_ASSERT_PTR_NOT_NULL_FATAL(globals);
+	CU_ASSERT_FATAL(globals != NULL);
 
 	memset(&args, 0, sizeof(thread_args_t));
 	args.globals = globals;
@@ -1829,12 +1829,12 @@ static void parallel_execute(odp_schedule_sync_t sync, int num_queues,
 	shm = odp_shm_lookup(GLOBALS_SHM_NAME);
 	CU_ASSERT_FATAL(shm != ODP_SHM_INVALID);
 	globals = odp_shm_addr(shm);
-	CU_ASSERT_PTR_NOT_NULL_FATAL(globals);
+	CU_ASSERT_FATAL(globals != NULL);
 
 	shm = odp_shm_lookup(SHM_THR_ARGS_NAME);
 	CU_ASSERT_FATAL(shm != ODP_SHM_INVALID);
 	args = odp_shm_addr(shm);
-	CU_ASSERT_PTR_NOT_NULL_FATAL(args);
+	CU_ASSERT_FATAL(args != NULL);
 
 	args->globals = globals;
 	args->sync = sync;
@@ -2583,12 +2583,12 @@ static void scheduler_test_sched_and_plain(odp_schedule_sync_t sync)
 	shm = odp_shm_lookup(GLOBALS_SHM_NAME);
 	CU_ASSERT_FATAL(shm != ODP_SHM_INVALID);
 	globals = odp_shm_addr(shm);
-	CU_ASSERT_PTR_NOT_NULL_FATAL(globals);
+	CU_ASSERT_FATAL(globals != NULL);
 
 	shm = odp_shm_lookup(SHM_THR_ARGS_NAME);
 	CU_ASSERT_FATAL(shm != ODP_SHM_INVALID);
 	args = odp_shm_addr(shm);
-	CU_ASSERT_PTR_NOT_NULL_FATAL(args);
+	CU_ASSERT_FATAL(args != NULL);
 	args->globals = globals;
 
 	/* Make sure all events fit to queues */
