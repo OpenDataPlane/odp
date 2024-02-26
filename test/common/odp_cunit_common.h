@@ -154,48 +154,33 @@ static inline void odp_cu_assert_fatal(CU_BOOL value, unsigned int line,
 #define CU_FAIL_FATAL(msg) \
 	{ odp_cu_assert_fatal(CU_FALSE, __LINE__, ("CU_FAIL_FATAL(" #msg ")"), __FILE__); }
 
+#undef CU_ASSERT_TRUE
+#undef CU_ASSERT_TRUE_FATAL
+#undef CU_ASSERT_FALSE
+#undef CU_ASSERT_FALSE_FATAL
 #undef CU_ASSERT_EQUAL
-#define CU_ASSERT_EQUAL(actual, expected) \
-	{ odp_cu_assert(((actual) == (expected)), __LINE__, \
-			("CU_ASSERT_EQUAL(" #actual "," #expected ")"), \
-			__FILE__, CU_FALSE); }
-
 #undef CU_ASSERT_EQUAL_FATAL
-#define CU_ASSERT_EQUAL_FATAL(actual, expected) \
-	{ odp_cu_assert_fatal(((actual) == (expected)), __LINE__, \
-			      ("CU_ASSERT_EQUAL_FATAL(" #actual "," #expected ")"), \
-			      __FILE__); }
-
 #undef CU_ASSERT_NOT_EQUAL
-#define CU_ASSERT_NOT_EQUAL(actual, expected) \
-	{ odp_cu_assert(((actual) != (expected)), __LINE__, \
-			("CU_ASSERT_NOT_EQUAL(" #actual "," #expected ")"), \
-			__FILE__, CU_FALSE); }
-
 #undef CU_ASSERT_NOT_EQUAL_FATAL
-#define CU_ASSERT_NOT_EQUAL_FATAL(actual, expected) \
-	{ odp_cu_assert_fatal(((actual) != (expected)), __LINE__, \
-			      ("CU_ASSERT_NOT_EQUAL_FATAL(" #actual "," #expected ")"), \
-			      __FILE__); }
-
+#undef CU_ASSERT_PTR_EQUAL
+#undef CU_ASSERT_PTR_EQUAL_FATAL
+#undef CU_ASSERT_PTR_NOT_EQUAL
+#undef CU_ASSERT_PTR_NOT_EQUAL_FATAL
 #undef CU_ASSERT_PTR_NULL
-#define CU_ASSERT_PTR_NULL(value) \
-	{ odp_cu_assert((NULL == (const void *)(value)), __LINE__, \
-			("CU_ASSERT_PTR_NULL(" #value ")"), __FILE__, CU_FALSE); }
-
 #undef CU_ASSERT_PTR_NULL_FATAL
-#define CU_ASSERT_PTR_NULL_FATAL(value) \
-	{ odp_cu_assert_fatal((NULL == (const void *)(value)), __LINE__, \
-			      ("CU_ASSERT_PTR_NULL_FATAL(" #value ")"), __FILE__); }
-
 #undef CU_ASSERT_PTR_NOT_NULL
-#define CU_ASSERT_PTR_NOT_NULL(value) \
-	{ odp_cu_assert((NULL != (const void *)(value)), __LINE__, \
-			("CU_ASSERT_PTR_NOT_NULL_FATAL(" #value ")"), __FILE__, CU_FALSE); }
-
 #undef CU_ASSERT_PTR_NOT_NULL_FATAL
-#define CU_ASSERT_PTR_NOT_NULL_FATAL(value) \
-	{ odp_cu_assert_fatal((NULL != (const void *)(value)), __LINE__, \
-			      ("CU_ASSERT_PTR_NOT_NULL_FATAL(" #value ")"), __FILE__); }
+#undef CU_ASSERT_STRING_EQUAL
+#undef CU_ASSERT_STRING_EQUAL_FATAL
+#undef CU_ASSERT_STRING_NOT_EQUAL
+#undef CU_ASSERT_STRING_NOT_EQUAL_FATAL
+#undef CU_ASSERT_NSTRING_EQUAL
+#undef CU_ASSERT_NSTRING_EQUAL_FATAL
+#undef CU_ASSERT_NSTRING_NOT_EQUAL
+#undef CU_ASSERT_NSTRING_NOT_EQUAL_FATAL
+#undef CU_ASSERT_DOUBLE_EQUAL
+#undef CU_ASSERT_DOUBLE_EQUAL_FATAL
+#undef CU_ASSERT_DOUBLE_NOT_EQUAL
+#undef CU_ASSERT_DOUBLE_NOT_EQUAL_FATAL
 
 #endif /* ODP_CUNICT_COMMON_H */
