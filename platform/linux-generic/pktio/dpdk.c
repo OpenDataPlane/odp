@@ -119,6 +119,8 @@ ODP_STATIC_ASSERT(CONFIG_PACKET_HEADROOM == RTE_PKTMBUF_HEADROOM,
 #define IXGBE_DRV_NAME "net_ixgbe"
 #define I40E_DRV_NAME "net_i40e"
 
+#define PCAP_DRV_NAME "net_pcap"
+
 #define DPDK_MEMORY_MB 512
 #define DPDK_NB_MBUF 16384
 #define DPDK_MBUF_BUF_SIZE RTE_MBUF_DEFAULT_BUF_SIZE
@@ -2084,13 +2086,19 @@ static int dpdk_start(pktio_entry_t *pktio_entry)
 	uint16_t port_id = pkt_dpdk->port_id;
 	int ret;
 
-	/* DPDK doesn't support nb_rx_q/nb_tx_q being 0 */
-	if (!pktio_entry->num_in_queue)
-		pktio_entry->num_in_queue = 1;
-	if (!pktio_entry->num_out_queue)
-		pktio_entry->num_out_queue = 1;
-
 	rte_eth_dev_info_get(port_id, &dev_info);
+
+	/* Pcap driver reconfiguration may fail if number of rx/tx queues is set to zero */
+	if (!strncmp(dev_info.driver_name, PCAP_DRV_NAME, strlen(PCAP_DRV_NAME))) {
+		if (!pktio_entry->num_in_queue) {
+			pktio_entry->num_in_queue = 1;
+			pkt_dpdk->num_rx_desc[0] = dev_info.rx_desc_lim.nb_min;
+		}
+		if (!pktio_entry->num_out_queue) {
+			pktio_entry->num_out_queue = 1;
+			pkt_dpdk->num_tx_desc[0] = dev_info.tx_desc_lim.nb_min;
+		}
+	}
 
 	/* Setup device */
 	if (dpdk_setup_eth_dev(pktio_entry)) {
