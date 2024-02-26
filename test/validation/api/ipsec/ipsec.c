@@ -457,8 +457,8 @@ static void ipsec_status_event_handle(odp_event_t ev_status,
 	};
 
 	CU_ASSERT_FATAL(ODP_EVENT_INVALID != ev_status);
-	CU_ASSERT_EQUAL(1, odp_event_is_valid(ev_status));
-	CU_ASSERT_EQUAL_FATAL(ODP_EVENT_IPSEC_STATUS, odp_event_type(ev_status));
+	CU_ASSERT(1 == odp_event_is_valid(ev_status));
+	CU_ASSERT_FATAL(ODP_EVENT_IPSEC_STATUS == odp_event_type(ev_status));
 
 	/* No user area or source pool for IPsec status events */
 	CU_ASSERT(odp_event_user_area(ev_status) == NULL);
@@ -467,17 +467,17 @@ static void ipsec_status_event_handle(odp_event_t ev_status,
 
 	CU_ASSERT(odp_event_pool(ev_status) == ODP_POOL_INVALID);
 
-	CU_ASSERT_EQUAL(0, odp_ipsec_status(&status, ev_status));
-	CU_ASSERT_EQUAL(ODP_IPSEC_STATUS_WARN, status.id);
-	CU_ASSERT_EQUAL(sa, status.sa);
-	CU_ASSERT_EQUAL(0, status.result);
+	CU_ASSERT(0 == odp_ipsec_status(&status, ev_status));
+	CU_ASSERT(ODP_IPSEC_STATUS_WARN == status.id);
+	CU_ASSERT(sa == status.sa);
+	CU_ASSERT(0 == status.result);
 
 	if (IPSEC_TEST_EXPIRY_IGNORED != sa_expiry) {
 		if (IPSEC_TEST_EXPIRY_SOFT_PKT == sa_expiry) {
-			CU_ASSERT_EQUAL(1, status.warn.soft_exp_packets);
+			CU_ASSERT(1 == status.warn.soft_exp_packets);
 			sa_expiry_notified = true;
 		} else if (IPSEC_TEST_EXPIRY_SOFT_BYTE == sa_expiry) {
-			CU_ASSERT_EQUAL(1, status.warn.soft_exp_bytes);
+			CU_ASSERT(1 == status.warn.soft_exp_bytes);
 			sa_expiry_notified = true;
 		}
 	}
@@ -502,51 +502,47 @@ void ipsec_sa_destroy(odp_ipsec_sa_t sa)
 	odp_ipsec_status_t status;
 	int ret;
 
-	CU_ASSERT_EQUAL(IPSEC_SA_CTX, odp_ipsec_sa_context(sa));
+	CU_ASSERT(IPSEC_SA_CTX == odp_ipsec_sa_context(sa));
 
-	CU_ASSERT_EQUAL(ODP_IPSEC_OK, odp_ipsec_sa_disable(sa));
+	CU_ASSERT(ODP_IPSEC_OK == odp_ipsec_sa_disable(sa));
 
 	if (ODP_QUEUE_INVALID != suite_context.queue) {
 		event = recv_event(suite_context.queue, EVENT_WAIT_TIME);
 
 		CU_ASSERT(odp_event_is_valid(event) == 1);
-		CU_ASSERT_EQUAL(ODP_EVENT_IPSEC_STATUS, odp_event_type(event));
+		CU_ASSERT(ODP_EVENT_IPSEC_STATUS == odp_event_type(event));
 
 		ret = odp_ipsec_status(&status, event);
 		CU_ASSERT(ret == 0);
 
 		if (ret == 0) {
-			CU_ASSERT_EQUAL(ODP_IPSEC_STATUS_SA_DISABLE, status.id);
-			CU_ASSERT_EQUAL(sa, status.sa);
-			CU_ASSERT_EQUAL(0, status.result);
-			CU_ASSERT_EQUAL(0, status.warn.all);
+			CU_ASSERT(ODP_IPSEC_STATUS_SA_DISABLE == status.id);
+			CU_ASSERT(sa == status.sa);
+			CU_ASSERT(0 == status.result);
+			CU_ASSERT(0 == status.warn.all);
 		}
 
 		odp_event_free(event);
 	}
 
-	CU_ASSERT_EQUAL(ODP_IPSEC_OK, odp_ipsec_sa_destroy(sa));
+	CU_ASSERT(ODP_IPSEC_OK == odp_ipsec_sa_destroy(sa));
 }
 
 odp_packet_t ipsec_packet(const ipsec_test_packet *itp)
 {
 	odp_packet_t pkt = odp_packet_alloc(suite_context.pool, itp->len);
 
-	CU_ASSERT_NOT_EQUAL_FATAL(ODP_PACKET_INVALID, pkt);
+	CU_ASSERT_FATAL(ODP_PACKET_INVALID != pkt);
 	if (ODP_PACKET_INVALID == pkt)
 		return pkt;
 
-	CU_ASSERT_EQUAL(0, odp_packet_copy_from_mem(pkt, 0, itp->len,
-						    itp->data));
+	CU_ASSERT(0 == odp_packet_copy_from_mem(pkt, 0, itp->len, itp->data));
 	if (itp->l2_offset != ODP_PACKET_OFFSET_INVALID)
-		CU_ASSERT_EQUAL(0, odp_packet_l2_offset_set(pkt,
-							    itp->l2_offset));
+		CU_ASSERT(0 == odp_packet_l2_offset_set(pkt, itp->l2_offset));
 	if (itp->l3_offset != ODP_PACKET_OFFSET_INVALID)
-		CU_ASSERT_EQUAL(0, odp_packet_l3_offset_set(pkt,
-							    itp->l3_offset));
+		CU_ASSERT(0 == odp_packet_l3_offset_set(pkt, itp->l3_offset));
 	if (itp->l4_offset != ODP_PACKET_OFFSET_INVALID)
-		CU_ASSERT_EQUAL(0, odp_packet_l4_offset_set(pkt,
-							    itp->l4_offset));
+		CU_ASSERT(0 == odp_packet_l4_offset_set(pkt, itp->l4_offset));
 
 	odp_packet_user_ptr_set(pkt, PACKET_USER_PTR);
 
@@ -568,11 +564,9 @@ static void check_l2_header(const ipsec_test_packet *itp, odp_packet_t pkt)
 
 	CU_ASSERT_FATAL(l2 != ODP_PACKET_OFFSET_INVALID);
 	CU_ASSERT_FATAL(l3 != ODP_PACKET_OFFSET_INVALID);
-	CU_ASSERT_EQUAL(l3 - l2, hdr_len);
+	CU_ASSERT(l3 - l2 == hdr_len);
 	odp_packet_copy_to_mem(pkt, 0, len, data);
-	CU_ASSERT_EQUAL(0, memcmp(data + l2,
-				  itp->data + itp->l2_offset,
-				  hdr_len));
+	CU_ASSERT(0 == memcmp(data + l2, itp->data + itp->l2_offset, hdr_len));
 }
 
 /*
@@ -595,17 +589,17 @@ static void ipsec_check_packet(const ipsec_test_packet *itp, odp_packet_t pkt,
 	odp_packet_copy_to_mem(pkt, 0, len, data);
 
 	if (l3 == ODP_PACKET_OFFSET_INVALID) {
-		CU_ASSERT_EQUAL(itp->l3_offset, ODP_PACKET_OFFSET_INVALID);
-		CU_ASSERT_EQUAL(l4, ODP_PACKET_OFFSET_INVALID);
+		CU_ASSERT(itp->l3_offset == ODP_PACKET_OFFSET_INVALID);
+		CU_ASSERT(l4 == ODP_PACKET_OFFSET_INVALID);
 
 		return;
 	}
 
-	CU_ASSERT_EQUAL(len - l3, itp->len - itp->l3_offset);
+	CU_ASSERT(len - l3 == itp->len - itp->l3_offset);
 	if (len - l3 != itp->len - itp->l3_offset)
 		return;
 
-	CU_ASSERT_EQUAL(l4 - l3, itp->l4_offset - itp->l3_offset);
+	CU_ASSERT(l4 - l3 == itp->l4_offset - itp->l3_offset);
 	if (l4 - l3 != itp->l4_offset - itp->l3_offset)
 		return;
 
@@ -634,16 +628,13 @@ static void ipsec_check_packet(const ipsec_test_packet *itp, odp_packet_t pkt,
 			 * Check packet data before the first possible
 			 * location of the AH ICV field.
 			 */
-			CU_ASSERT_EQUAL(0, memcmp(data + l3,
-						  itp->data + itp->l3_offset,
-						  ODPH_IPV4HDR_LEN + 12));
+			CU_ASSERT(0 == memcmp(data + l3, itp->data + itp->l3_offset,
+					      ODPH_IPV4HDR_LEN + 12));
 			return;
 		}
 	}
 
-	CU_ASSERT_EQUAL(0, memcmp(data + l3,
-				  itp->data + itp->l3_offset,
-				  len - l3));
+	CU_ASSERT(0 == memcmp(data + l3, itp->data + itp->l3_offset, len - l3));
 }
 
 static int send_pkts(const ipsec_test_part part[], int num_part)
@@ -660,7 +651,7 @@ static int send_pkts(const ipsec_test_part part[], int num_part)
 	for (i = 0; i < num_part; i++)
 		pkt[i] = ipsec_packet(part[i].pkt_in);
 
-	CU_ASSERT_EQUAL(num_part, odp_pktout_send(pktout, pkt, num_part));
+	CU_ASSERT(num_part == odp_pktout_send(pktout, pkt, num_part));
 
 	return num_part;
 }
@@ -689,8 +680,7 @@ static int recv_pkts_inline(const ipsec_test_part *part,
 	odp_queue_t queue = ODP_QUEUE_INVALID;
 	int i;
 
-	CU_ASSERT_EQUAL_FATAL(1, odp_pktin_event_queue(suite_context.pktio,
-						       &queue, 1));
+	CU_ASSERT_FATAL(1 == odp_pktin_event_queue(suite_context.pktio, &queue, 1));
 
 	for (i = 0; i < part->num_pkt;) {
 		odp_event_t ev;
@@ -699,10 +689,8 @@ static int recv_pkts_inline(const ipsec_test_part *part,
 		ev = recv_event(queue, 0);
 		if (ODP_EVENT_INVALID != ev) {
 			CU_ASSERT(odp_event_is_valid(ev) == 1);
-			CU_ASSERT_EQUAL(ODP_EVENT_PACKET,
-					odp_event_types(ev, &subtype));
-			CU_ASSERT_EQUAL(ODP_EVENT_PACKET_BASIC,
-					subtype);
+			CU_ASSERT(ODP_EVENT_PACKET == odp_event_types(ev, &subtype));
+			CU_ASSERT(ODP_EVENT_PACKET_BASIC == subtype);
 			CU_ASSERT(part->out[i].status.error.sa_lookup);
 
 			pkto[i] = odp_packet_from_event(ev);
@@ -722,7 +710,7 @@ static int recv_pkts_inline(const ipsec_test_part *part,
 			int j;
 
 			CU_ASSERT(odp_event_is_valid(ev) == 1);
-			CU_ASSERT_EQUAL(ODP_EVENT_PACKET, odp_event_type(ev));
+			CU_ASSERT(ODP_EVENT_PACKET == odp_event_type(ev));
 			pkt = odp_packet_from_event(ev);
 
 			CU_ASSERT(!part->out[i].status.error.sa_lookup);
@@ -785,10 +773,8 @@ static int ipsec_process_in(const ipsec_test_part *part,
 
 	if (ODP_IPSEC_OP_MODE_SYNC == suite_context.inbound_op_mode) {
 		pkt = ipsec_packet(part->pkt_in);
-		CU_ASSERT_EQUAL(part->num_pkt, odp_ipsec_in(&pkt, 1,
-							    pkto, &num_out,
-							    &param));
-		CU_ASSERT_EQUAL(num_out, part->num_pkt);
+		CU_ASSERT(part->num_pkt == odp_ipsec_in(&pkt, 1, pkto, &num_out, &param));
+		CU_ASSERT(num_out == part->num_pkt);
 		CU_ASSERT_FATAL(*pkto != ODP_PACKET_INVALID);
 		CU_ASSERT(odp_packet_subtype(*pkto) == ODP_EVENT_PACKET_IPSEC);
 	} else if (ODP_IPSEC_OP_MODE_ASYNC == suite_context.inbound_op_mode) {
@@ -796,7 +782,7 @@ static int ipsec_process_in(const ipsec_test_part *part,
 
 		pkt = ipsec_packet(part->pkt_in);
 		consumed = odp_ipsec_in_enq(&pkt, 1, &param);
-		CU_ASSERT_EQUAL(1, consumed);
+		CU_ASSERT(1 == consumed);
 		if (consumed <= 0)
 			num_out = 0;
 
@@ -807,18 +793,17 @@ static int ipsec_process_in(const ipsec_test_part *part,
 			event = recv_pkt_async_inbound(part->out[i].status);
 
 			CU_ASSERT(odp_event_is_valid(event) == 1);
-			CU_ASSERT_EQUAL(ODP_EVENT_PACKET,
-					odp_event_types(event, &subtype));
-			CU_ASSERT_EQUAL(ODP_EVENT_PACKET_IPSEC, subtype);
+			CU_ASSERT(ODP_EVENT_PACKET == odp_event_types(event, &subtype));
+			CU_ASSERT(ODP_EVENT_PACKET_IPSEC == subtype);
 			pkto[i] = odp_ipsec_packet_from_event(event);
 			CU_ASSERT_FATAL(pkto[i] != ODP_PACKET_INVALID);
 			CU_ASSERT(odp_packet_subtype(pkto[i]) ==
 				  ODP_EVENT_PACKET_IPSEC);
 		}
 	} else {
-		CU_ASSERT_EQUAL(1, send_pkts(part, 1));
+		CU_ASSERT(1 == send_pkts(part, 1));
 		if (part->num_pkt)
-			CU_ASSERT_EQUAL(part->num_pkt, recv_pkts_inline(part, pkto));
+			CU_ASSERT(part->num_pkt == recv_pkts_inline(part, pkto));
 	}
 
 	return num_out;
@@ -881,14 +866,13 @@ static int ipsec_send_out_one(const ipsec_test_part *part,
 	param.opt = &part->opt;
 
 	if (ODP_IPSEC_OP_MODE_SYNC == suite_context.outbound_op_mode) {
-		CU_ASSERT_EQUAL(1, odp_ipsec_out(&pkt, 1, pkto, &num_out,
-						 &param));
+		CU_ASSERT(1 == odp_ipsec_out(&pkt, 1, pkto, &num_out, &param));
 		CU_ASSERT_FATAL(num_out == 1);
 		CU_ASSERT_FATAL(*pkto != ODP_PACKET_INVALID);
 		CU_ASSERT(odp_packet_subtype(*pkto) == ODP_EVENT_PACKET_IPSEC);
 	} else if (ODP_IPSEC_OP_MODE_ASYNC == suite_context.outbound_op_mode) {
 		num_out = odp_ipsec_out_enq(&pkt, 1, &param);
-		CU_ASSERT_EQUAL(1, num_out);
+		CU_ASSERT(1 == num_out);
 
 		num_out = (num_out == 1) ?  1 : 0;
 
@@ -899,9 +883,8 @@ static int ipsec_send_out_one(const ipsec_test_part *part,
 			event = recv_event(suite_context.queue, EVENT_WAIT_TIME);
 
 			CU_ASSERT(odp_event_is_valid(event) == 1);
-			CU_ASSERT_EQUAL(ODP_EVENT_PACKET,
-					odp_event_types(event, &subtype));
-			CU_ASSERT_EQUAL(ODP_EVENT_PACKET_IPSEC, subtype);
+			CU_ASSERT(ODP_EVENT_PACKET == odp_event_types(event, &subtype));
+			CU_ASSERT(ODP_EVENT_PACKET_IPSEC == subtype);
 			pkto[i] = odp_ipsec_packet_from_event(event);
 			CU_ASSERT_FATAL(pkto[i] != ODP_PACKET_INVALID);
 			CU_ASSERT(odp_packet_subtype(pkto[i]) ==
@@ -967,12 +950,8 @@ static int ipsec_send_out_one(const ipsec_test_part *part,
 		inline_param.tm_queue = ODP_TM_INVALID;
 		inline_param.outer_hdr.len = hdr_len;
 
-		CU_ASSERT_EQUAL(1, odp_ipsec_out_inline(&pkt, 1, &param,
-							&inline_param));
-		CU_ASSERT_EQUAL_FATAL(1,
-				      odp_pktin_event_queue(suite_context.
-							    pktio,
-							    &queue, 1));
+		CU_ASSERT(1 == odp_ipsec_out_inline(&pkt, 1, &param, &inline_param));
+		CU_ASSERT_FATAL(1 == odp_pktin_event_queue(suite_context.pktio, &queue, 1));
 
 		for (i = 0; i < num_out;) {
 			odp_event_t ev;
@@ -981,10 +960,8 @@ static int ipsec_send_out_one(const ipsec_test_part *part,
 			ev = recv_event(queue, 0);
 			if (ODP_EVENT_INVALID != ev) {
 				CU_ASSERT(odp_event_is_valid(ev) == 1);
-				CU_ASSERT_EQUAL(ODP_EVENT_PACKET,
-						odp_event_types(ev, &subtype));
-				CU_ASSERT_EQUAL(ODP_EVENT_PACKET_BASIC,
-						subtype);
+				CU_ASSERT(ODP_EVENT_PACKET == odp_event_types(ev, &subtype));
+				CU_ASSERT(ODP_EVENT_PACKET_BASIC == subtype);
 				CU_ASSERT(!part->out[i].status.error.all);
 
 				pkto[i] = odp_packet_from_event(ev);
@@ -1010,10 +987,8 @@ static int ipsec_send_out_one(const ipsec_test_part *part,
 					continue;
 				}
 
-				CU_ASSERT_EQUAL(ODP_EVENT_PACKET,
-						ev_type);
-				CU_ASSERT_EQUAL(ODP_EVENT_PACKET_IPSEC,
-						subtype);
+				CU_ASSERT(ODP_EVENT_PACKET == ev_type);
+				CU_ASSERT(ODP_EVENT_PACKET_IPSEC == subtype);
 
 				/* In the case of SA hard expiry tests, hard expiry error bits are
 				 * expected to be set. The exact error bits expected to be set based
@@ -1053,9 +1028,8 @@ static void ipsec_pkt_seq_num_check(odp_packet_t pkt, uint32_t seq_num)
 	uint32_t l4_off;
 	odph_ipv4hdr_t ip;
 
-	CU_ASSERT_NOT_EQUAL_FATAL(ODP_PACKET_OFFSET_INVALID, l3_off);
-	CU_ASSERT_EQUAL_FATAL(0, odp_packet_copy_to_mem(pkt, l3_off, sizeof(ip),
-							&ip));
+	CU_ASSERT_FATAL(ODP_PACKET_OFFSET_INVALID != l3_off);
+	CU_ASSERT_FATAL(0 == odp_packet_copy_to_mem(pkt, l3_off, sizeof(ip), &ip));
 
 	if (ODPH_IPV4HDR_VER(ip.ver_ihl) == ODPH_IPV4) {
 		l4_off = l3_off + (ODPH_IPV4HDR_IHL(ip.ver_ihl) * 4);
@@ -1064,12 +1038,12 @@ static void ipsec_pkt_seq_num_check(odp_packet_t pkt, uint32_t seq_num)
 			odph_esphdr_t esp;
 
 			odp_packet_copy_to_mem(pkt, l4_off, sizeof(esp), &esp);
-			CU_ASSERT_EQUAL(odp_be_to_cpu_32(esp.seq_no), seq_num);
+			CU_ASSERT(odp_be_to_cpu_32(esp.seq_no) == seq_num);
 		} else if (ip.proto == ODPH_IPPROTO_AH) {
 			odph_ahhdr_t ah;
 
 			odp_packet_copy_to_mem(pkt, l4_off, sizeof(ah), &ah);
-			CU_ASSERT_EQUAL(odp_be_to_cpu_32(ah.seq_no), seq_num);
+			CU_ASSERT(odp_be_to_cpu_32(ah.seq_no) == seq_num);
 		} else {
 			CU_FAIL("Unexpected IP Proto");
 		}
@@ -1092,11 +1066,10 @@ static void verify_in(const ipsec_test_part *part,
 		if (ODP_EVENT_PACKET_IPSEC !=
 		    odp_event_subtype(odp_packet_to_event(pkto[i]))) {
 			/* Inline packet failed SA lookup */
-			CU_ASSERT_EQUAL(1, part->out[i].status.error.sa_lookup);
+			CU_ASSERT(1 == part->out[i].status.error.sa_lookup);
 		} else {
-			CU_ASSERT_EQUAL(0, odp_ipsec_result(&result, pkto[i]));
-			CU_ASSERT_EQUAL(part->out[i].status.error.all,
-					result.status.error.all);
+			CU_ASSERT(0 == odp_ipsec_result(&result, pkto[i]));
+			CU_ASSERT(part->out[i].status.error.all == result.status.error.all);
 
 			if (part->out[i].status.error.all != 0) {
 				odp_packet_free(pkto[i]);
@@ -1104,17 +1077,13 @@ static void verify_in(const ipsec_test_part *part,
 			}
 
 			if (0 == result.status.error.all)
-				CU_ASSERT_EQUAL(0,
-						odp_packet_has_error(pkto[i]));
-			CU_ASSERT_EQUAL(suite_context.inbound_op_mode ==
-					ODP_IPSEC_OP_MODE_INLINE,
-					result.flag.inline_mode);
-			CU_ASSERT_EQUAL(sa, result.sa);
-			CU_ASSERT_EQUAL(part->out[i].status.warn.all,
-					result.status.warn.all);
+				CU_ASSERT(0 == odp_packet_has_error(pkto[i]));
+			CU_ASSERT((suite_context.inbound_op_mode == ODP_IPSEC_OP_MODE_INLINE) ==
+				  result.flag.inline_mode);
+			CU_ASSERT(sa == result.sa);
+			CU_ASSERT(part->out[i].status.warn.all == result.status.warn.all);
 			if (ODP_IPSEC_SA_INVALID != sa)
-				CU_ASSERT_EQUAL(IPSEC_SA_CTX,
-						odp_ipsec_sa_context(sa));
+				CU_ASSERT(IPSEC_SA_CTX == odp_ipsec_sa_context(sa));
 			if (suite_context.inbound_op_mode != ODP_IPSEC_OP_MODE_SYNC) {
 				uint32_t len;
 
@@ -1135,12 +1104,10 @@ static void verify_in(const ipsec_test_part *part,
 
 		if (part->out[i].pkt_res != NULL &&
 		    part->out[i].l3_type != _ODP_PROTO_L3_TYPE_UNDEF)
-			CU_ASSERT_EQUAL(part->out[i].l3_type,
-					odp_packet_l3_type(pkto[i]));
+			CU_ASSERT(part->out[i].l3_type == odp_packet_l3_type(pkto[i]));
 		if (part->out[i].pkt_res != NULL &&
 		    part->out[i].l4_type != _ODP_PROTO_L4_TYPE_UNDEF)
-			CU_ASSERT_EQUAL(part->out[i].l4_type,
-					odp_packet_l4_type(pkto[i]));
+			CU_ASSERT(part->out[i].l4_type == odp_packet_l4_type(pkto[i]));
 		odp_packet_free(pkto[i]);
 	}
 }
@@ -1180,26 +1147,23 @@ int ipsec_check_out(const ipsec_test_part *part, odp_ipsec_sa_t sa,
 		if (ODP_EVENT_PACKET_IPSEC !=
 		    odp_event_subtype(odp_packet_to_event(pkto[i]))) {
 			/* Inline packet went through loop */
-			CU_ASSERT_EQUAL(0, part->out[i].status.error.all);
+			CU_ASSERT(0 == part->out[i].status.error.all);
 			CU_ASSERT(odp_packet_user_ptr(pkto[i]) == NULL);
 			/* L2 header must match the requested one */
 			check_l2_header(part->out[i].pkt_res, pkto[i]);
 		} else {
 			/* IPsec packet */
-			CU_ASSERT_EQUAL(0, odp_ipsec_result(&result, pkto[i]));
+			CU_ASSERT(0 == odp_ipsec_result(&result, pkto[i]));
 
 			if (part->out[i].sa_expiry != IPSEC_TEST_EXPIRY_NONE)
 				if (ipsec_check_sa_expiry(part->out[i].sa_expiry, &result) != 0)
 					return num_out;
 
-			CU_ASSERT_EQUAL(part->out[i].status.error.all,
-					result.status.error.all);
+			CU_ASSERT(part->out[i].status.error.all == result.status.error.all);
 			if (0 == result.status.error.all)
-				CU_ASSERT_EQUAL(0,
-						odp_packet_has_error(pkto[i]));
-			CU_ASSERT_EQUAL(sa, result.sa);
-			CU_ASSERT_EQUAL(IPSEC_SA_CTX,
-					odp_ipsec_sa_context(sa));
+				CU_ASSERT(0 == odp_packet_has_error(pkto[i]));
+			CU_ASSERT(sa == result.sa);
+			CU_ASSERT(IPSEC_SA_CTX == odp_ipsec_sa_context(sa));
 			CU_ASSERT(odp_packet_user_ptr(pkto[i]) == PACKET_USER_PTR);
 
 			/* Parse the packet to set L4 offset and type */
@@ -1236,7 +1200,7 @@ void ipsec_check_in_one(const ipsec_test_part *part, odp_ipsec_sa_t sa)
 	int num_out;
 
 	num_out = ipsec_process_in(part, sa, pkto);
-	CU_ASSERT_EQUAL(num_out, part->num_pkt);
+	CU_ASSERT(num_out == part->num_pkt);
 
 	verify_in(part, sa, pkto);
 }

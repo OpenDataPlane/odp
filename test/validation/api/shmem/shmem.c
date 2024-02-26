@@ -610,7 +610,7 @@ static int run_test_reserve_after_fork(void *arg ODP_UNUSED)
 		CU_ASSERT(ODP_SHM_INVALID != shm);
 		glob_data->shm[thr_index] = shm;
 		pattern_small = odp_shm_addr(shm);
-		CU_ASSERT_PTR_NOT_NULL(pattern_small);
+		CU_ASSERT(pattern_small != NULL);
 		for (i = 0; i < SMALL_MEM; i++)
 			pattern_small->data[i] = i;
 		break;
@@ -620,7 +620,7 @@ static int run_test_reserve_after_fork(void *arg ODP_UNUSED)
 		CU_ASSERT(ODP_SHM_INVALID != shm);
 		glob_data->shm[thr_index] = shm;
 		pattern_medium = odp_shm_addr(shm);
-		CU_ASSERT_PTR_NOT_NULL(pattern_medium);
+		CU_ASSERT(pattern_medium != NULL);
 		for (i = 0; i < MEDIUM_MEM; i++)
 			pattern_medium->data[i] = (i << 2);
 		break;
@@ -630,7 +630,7 @@ static int run_test_reserve_after_fork(void *arg ODP_UNUSED)
 		CU_ASSERT(ODP_SHM_INVALID != shm);
 		glob_data->shm[thr_index] = shm;
 		pattern_big = odp_shm_addr(shm);
-		CU_ASSERT_PTR_NOT_NULL(pattern_big);
+		CU_ASSERT(pattern_big != NULL);
 		for (i = 0; i < BIG_MEM; i++)
 			pattern_big->data[i] = (i >> 2);
 		break;
@@ -663,7 +663,7 @@ static void shmem_test_reserve_after_fork(void)
 	shm = odp_shm_reserve(MEM_NAME, sizeof(shared_test_data_t), 0, 0);
 	CU_ASSERT(ODP_SHM_INVALID != shm);
 	glob_data = odp_shm_addr(shm);
-	CU_ASSERT_PTR_NOT_NULL(glob_data);
+	CU_ASSERT(glob_data != NULL);
 
 	num = odp_cpumask_default_worker(NULL, 0);
 	if (num > MAX_WORKERS)
@@ -690,21 +690,21 @@ static void shmem_test_reserve_after_fork(void)
 		case 0:
 			pattern_small =
 				odp_shm_addr(glob_data->shm[thr_index]);
-			CU_ASSERT_PTR_NOT_NULL(pattern_small);
+			CU_ASSERT(pattern_small != NULL);
 			for (i = 0; i < SMALL_MEM; i++)
 				CU_ASSERT(pattern_small->data[i] == i);
 			break;
 		case 1:
 			pattern_medium =
 				odp_shm_addr(glob_data->shm[thr_index]);
-			CU_ASSERT_PTR_NOT_NULL(pattern_medium);
+			CU_ASSERT(pattern_medium != NULL);
 			for (i = 0; i < MEDIUM_MEM; i++)
 				CU_ASSERT(pattern_medium->data[i] == (i << 2));
 			break;
 		case 2:
 			pattern_big =
 				odp_shm_addr(glob_data->shm[thr_index]);
-			CU_ASSERT_PTR_NOT_NULL(pattern_big);
+			CU_ASSERT(pattern_big != NULL);
 			for (i = 0; i < BIG_MEM; i++)
 				CU_ASSERT(pattern_big->data[i] == (i >> 2));
 			break;
@@ -774,7 +774,7 @@ static int run_test_singleva_after_fork(void *arg ODP_UNUSED)
 		CU_ASSERT_FATAL(ODP_SHM_INVALID != shm);
 		glob_data->shm[thr_index] = shm;
 		pattern_small = odp_shm_addr(shm);
-		CU_ASSERT_PTR_NOT_NULL(pattern_small);
+		CU_ASSERT(pattern_small != NULL);
 		glob_data->address[thr_index] = (void *)pattern_small;
 		for (i = 0; i < SMALL_MEM; i++)
 			pattern_small->data[i] = i;
@@ -786,7 +786,7 @@ static int run_test_singleva_after_fork(void *arg ODP_UNUSED)
 		CU_ASSERT_FATAL(ODP_SHM_INVALID != shm);
 		glob_data->shm[thr_index] = shm;
 		pattern_medium = odp_shm_addr(shm);
-		CU_ASSERT_PTR_NOT_NULL(pattern_medium);
+		CU_ASSERT(pattern_medium != NULL);
 		glob_data->address[thr_index] = (void *)pattern_medium;
 		for (i = 0; i < MEDIUM_MEM; i++)
 			pattern_medium->data[i] = (i << 2);
@@ -798,7 +798,7 @@ static int run_test_singleva_after_fork(void *arg ODP_UNUSED)
 		CU_ASSERT_FATAL(ODP_SHM_INVALID != shm);
 		glob_data->shm[thr_index] = shm;
 		pattern_big = odp_shm_addr(shm);
-		CU_ASSERT_PTR_NOT_NULL(pattern_big);
+		CU_ASSERT(pattern_big != NULL);
 		glob_data->address[thr_index] = (void *)pattern_big;
 		for (i = 0; i < BIG_MEM; i++)
 			pattern_big->data[i] = (i >> 2);
@@ -855,7 +855,7 @@ static void shmem_test_singleva_after_fork(void)
 			      0, 0);
 	CU_ASSERT(ODP_SHM_INVALID != shm);
 	glob_data = odp_shm_addr(shm);
-	CU_ASSERT_PTR_NOT_NULL(glob_data);
+	CU_ASSERT(glob_data != NULL);
 
 	num = odp_cpumask_default_worker(NULL, 3);
 	if (num > MAX_WORKERS)
@@ -885,21 +885,21 @@ static void shmem_test_singleva_after_fork(void)
 		case 0:
 			pattern_small =
 				odp_shm_addr(glob_data->shm[thr_index]);
-			CU_ASSERT_PTR_NOT_NULL_FATAL(pattern_small);
+			CU_ASSERT_FATAL(pattern_small != NULL);
 			for (i = 0; i < SMALL_MEM; i++)
 				CU_ASSERT(pattern_small->data[i] == i);
 			break;
 		case 1:
 			pattern_medium =
 				odp_shm_addr(glob_data->shm[thr_index]);
-			CU_ASSERT_PTR_NOT_NULL_FATAL(pattern_medium);
+			CU_ASSERT_FATAL(pattern_medium != NULL);
 			for (i = 0; i < MEDIUM_MEM; i++)
 				CU_ASSERT(pattern_medium->data[i] == (i << 2));
 			break;
 		case 2:
 			pattern_big =
 				odp_shm_addr(glob_data->shm[thr_index]);
-			CU_ASSERT_PTR_NOT_NULL_FATAL(pattern_big);
+			CU_ASSERT_FATAL(pattern_big != NULL);
 			for (i = 0; i < BIG_MEM; i++)
 				CU_ASSERT(pattern_big->data[i] == (i >> 2));
 			break;
@@ -950,7 +950,7 @@ static int run_test_stress(void *arg ODP_UNUSED)
 
 	shm = odp_shm_lookup(MEM_NAME);
 	glob_data = odp_shm_addr(shm);
-	CU_ASSERT_PTR_NOT_NULL(glob_data);
+	CU_ASSERT(glob_data != NULL);
 
 	/* wait for general GO! */
 	odp_barrier_wait(&glob_data->test_barrier1);
@@ -1000,7 +1000,7 @@ static int run_test_stress(void *arg ODP_UNUSED)
 			}
 
 			address = odp_shm_addr(shm);
-			CU_ASSERT_PTR_NOT_NULL(address);
+			CU_ASSERT(address != NULL);
 			glob_data->stress[index].address = address;
 			glob_data->stress[index].flags = flags;
 			glob_data->stress[index].size = size;
@@ -1035,7 +1035,7 @@ static int run_test_stress(void *arg ODP_UNUSED)
 				  != 0);
 
 			address = odp_shm_addr(shm);
-			CU_ASSERT_PTR_NOT_NULL(address);
+			CU_ASSERT(address != NULL);
 
 			align = glob_data->stress[index].align;
 			if (align) {
@@ -1091,7 +1091,7 @@ static void shmem_test_stress(void)
 				  0, 0);
 	CU_ASSERT(ODP_SHM_INVALID != globshm);
 	glob_data = odp_shm_addr(globshm);
-	CU_ASSERT_PTR_NOT_NULL(glob_data);
+	CU_ASSERT(glob_data != NULL);
 
 	num = odp_cpumask_default_worker(NULL, 0);
 	if (num > MAX_WORKERS)

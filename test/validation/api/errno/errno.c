@@ -13,9 +13,9 @@ static void errno_test_odp_errno_sunny_day(void)
 
 	odp_errno_zero();
 	my_errno = odp_errno();
-	CU_ASSERT_TRUE(my_errno == 0);
+	CU_ASSERT(my_errno == 0);
 	odp_errno_print("odp_errno");
-	CU_ASSERT_PTR_NOT_NULL(odp_errno_str(my_errno));
+	CU_ASSERT(odp_errno_str(my_errno) != NULL);
 }
 
 odp_testinfo_t errno_suite[] = {
