@@ -14,7 +14,7 @@
 #include <odp_debug_internal.h>
 #include <odp_event_vector_internal.h>
 #include <odp_pool_internal.h>
-#include <odp_print_internal.h>
+#include <odp_string_internal.h>
 
 #include <inttypes.h>
 #include <stdint.h>

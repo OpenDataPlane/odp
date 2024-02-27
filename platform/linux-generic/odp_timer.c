@@ -46,7 +46,7 @@
 #include <odp_libconfig_internal.h>
 #include <odp_macros_internal.h>
 #include <odp_pool_internal.h>
-#include <odp_print_internal.h>
+#include <odp_string_internal.h>
 #include <odp_queue_if.h>
 #include <odp_timer_internal.h>
 #include <odp_types_internal.h>

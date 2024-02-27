@@ -40,7 +40,7 @@
 #include <odp_global_data.h>
 #include <odp_event_internal.h>
 #include <odp_macros_internal.h>
-#include <odp_print_internal.h>
+#include <odp_string_internal.h>
 
 #include <string.h>
 #include <time.h>

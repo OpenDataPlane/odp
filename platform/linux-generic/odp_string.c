@@ -5,15 +5,10 @@
  */
 
 #include <odp/api/hints.h>
-#include <odp_print_internal.h>
+#include <odp_string_internal.h>
 #include <stdarg.h>
 #include <stdio.h>
 
-/* Helps with snprintf() return value checking
- *
- * Otherwise like snprintf(), but returns always the number of characters
- * printed (without the end mark) or zero on error. Terminates the string
- * always with the end mark. */
 ODP_PRINTF_FORMAT(3, 4)
 int _odp_snprint(char *str, size_t size, const char *format, ...)
 {
