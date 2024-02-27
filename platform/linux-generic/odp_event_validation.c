@@ -20,7 +20,7 @@
 #include <odp_init_internal.h>
 #include <odp_libconfig_internal.h>
 #include <odp_macros_internal.h>
-#include <odp_print_internal.h>
+#include <odp_string_internal.h>
 
 #include <inttypes.h>
 #include <string.h>
