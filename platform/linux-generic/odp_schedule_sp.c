@@ -107,7 +107,7 @@ typedef struct ODP_ALIGNED_CACHE sched_group_t {
 
 		/* All groups */
 		struct {
-			char          name[ODP_SCHED_GROUP_NAME_LEN + 1];
+			char          name[ODP_SCHED_GROUP_NAME_LEN];
 			odp_thrmask_t mask;
 			int           allocated;
 		} group[NUM_GROUP];
@@ -214,17 +214,17 @@ static int init_global(void)
 		odp_atomic_init_u32(&sched_group->s.thr[i].gen_cnt, 0);
 
 	strncpy(sched_group->s.group[GROUP_ALL].name, "__group_all",
-		ODP_SCHED_GROUP_NAME_LEN);
+		ODP_SCHED_GROUP_NAME_LEN - 1);
 	odp_thrmask_zero(&sched_group->s.group[GROUP_ALL].mask);
 	sched_group->s.group[GROUP_ALL].allocated = 1;
 
 	strncpy(sched_group->s.group[GROUP_WORKER].name, "__group_worker",
-		ODP_SCHED_GROUP_NAME_LEN);
+		ODP_SCHED_GROUP_NAME_LEN - 1);
 	odp_thrmask_zero(&sched_group->s.group[GROUP_WORKER].mask);
 	sched_group->s.group[GROUP_WORKER].allocated = 1;
 
 	strncpy(sched_group->s.group[GROUP_CONTROL].name, "__group_control",
-		ODP_SCHED_GROUP_NAME_LEN);
+		ODP_SCHED_GROUP_NAME_LEN - 1);
 	odp_thrmask_zero(&sched_group->s.group[GROUP_CONTROL].mask);
 	sched_group->s.group[GROUP_CONTROL].allocated = 1;
 
