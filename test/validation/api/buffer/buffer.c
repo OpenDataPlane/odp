@@ -9,6 +9,7 @@
 #include "odp_cunit_common.h"
 
 #define BUF_ALIGN  ODP_CACHE_LINE_SIZE
+#define BUF_MAX_SIZE 65536
 #define BUF_SIZE   1500
 #define BUF_NUM    100
 #define BURST      8
@@ -391,6 +392,16 @@ static void buffer_test_pool_alloc_free(void)
 	test_pool_alloc_free(&default_param);
 }
 
+static void buffer_test_pool_alloc_free_max_size(void)
+{
+	odp_pool_param_t param;
+
+	memcpy(&param, &default_param, sizeof(odp_pool_param_t));
+	param.buf.size = pool_capa.buf.max_size ? pool_capa.buf.max_size : BUF_MAX_SIZE;
+
+	test_pool_alloc_free(&param);
+}
+
 static void buffer_test_pool_alloc_free_min_cache(void)
 {
 	odp_pool_param_t param;
@@ -412,6 +423,16 @@ static void buffer_test_pool_alloc_free_max_cache(void)
 static void buffer_test_pool_alloc_free_multi(void)
 {
 	test_pool_alloc_free_multi(&default_param);
+}
+
+static void buffer_test_pool_alloc_free_multi_max_size(void)
+{
+	odp_pool_param_t param;
+
+	memcpy(&param, &default_param, sizeof(odp_pool_param_t));
+	param.buf.size = pool_capa.buf.max_size ? pool_capa.buf.max_size : BUF_MAX_SIZE;
+
+	test_pool_alloc_free_multi(&param);
 }
 
 static void buffer_test_pool_alloc_free_multi_min_cache(void)
@@ -572,9 +593,11 @@ static void buffer_test_user_area(void)
 
 odp_testinfo_t buffer_suite[] = {
 	ODP_TEST_INFO(buffer_test_pool_alloc_free),
+	ODP_TEST_INFO(buffer_test_pool_alloc_free_max_size),
 	ODP_TEST_INFO(buffer_test_pool_alloc_free_min_cache),
 	ODP_TEST_INFO(buffer_test_pool_alloc_free_max_cache),
 	ODP_TEST_INFO(buffer_test_pool_alloc_free_multi),
+	ODP_TEST_INFO(buffer_test_pool_alloc_free_multi_max_size),
 	ODP_TEST_INFO(buffer_test_pool_alloc_free_multi_min_cache),
 	ODP_TEST_INFO(buffer_test_pool_alloc_free_multi_max_cache),
 	ODP_TEST_INFO(buffer_test_pool_single_pool),
