@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2014-2018 Linaro Limited
- * Copyright (c) 2019-2022 Nokia
+ * Copyright (c) 2019-2024 Nokia
  * Copyright (c) 2022 Marvell
  */
 
@@ -59,6 +59,7 @@ static void test_pool_alloc_free(const odp_pool_param_t *param)
 	uint32_t num_buf = 0;
 	void *addr;
 	odp_event_subtype_t subtype;
+	const uint32_t max_size = pool_capa.buf.max_size;
 	uint32_t num = param->buf.num;
 	uint32_t size = param->buf.size;
 	uint32_t align = param->buf.align;
@@ -102,7 +103,8 @@ static void test_pool_alloc_free(const odp_pool_param_t *param)
 			wrong_type = true;
 		if (subtype != ODP_EVENT_NO_SUBTYPE)
 			wrong_subtype = true;
-		if (odp_buffer_size(buffer[i]) < size)
+		if (odp_buffer_size(buffer[i]) < size ||
+		    (max_size && odp_buffer_size(buffer[i]) > max_size))
 			wrong_size = true;
 
 		addr = odp_buffer_addr(buffer[i]);
@@ -140,6 +142,7 @@ static void test_pool_alloc_free_multi(const odp_pool_param_t *param)
 	odp_event_t ev;
 	void *addr;
 	odp_event_subtype_t subtype;
+	const uint32_t max_size = pool_capa.buf.max_size;
 	uint32_t num = param->buf.num;
 	uint32_t size = param->buf.size;
 	uint32_t align = param->buf.align;
@@ -191,7 +194,8 @@ static void test_pool_alloc_free_multi(const odp_pool_param_t *param)
 			wrong_type = true;
 		if (subtype != ODP_EVENT_NO_SUBTYPE)
 			wrong_subtype = true;
-		if (odp_buffer_size(buffer[i]) < size)
+		if (odp_buffer_size(buffer[i]) < size ||
+		    (max_size && odp_buffer_size(buffer[i]) > max_size))
 			wrong_size = true;
 
 		addr = odp_buffer_addr(buffer[i]);
