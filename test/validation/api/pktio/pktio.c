@@ -3659,7 +3659,8 @@ static void pktio_test_pktout_compl_event(bool use_plain_queue)
 			CU_ASSERT(odp_packet_tx_compl_user_ptr(tx_compl) ==
 				  (const void *)&pkt_seq[i]);
 
-			/* No user area or source pool for TX completion events */
+			/* No user area/flag or source pool for TX completion events */
+			odp_event_user_flag_set(ev, 1);
 			CU_ASSERT(odp_event_user_area(ev) == NULL);
 			CU_ASSERT(odp_event_user_area_and_flag(ev, &flag) == NULL);
 			CU_ASSERT(flag < 0);
@@ -3701,7 +3702,8 @@ static void pktio_test_pktout_compl_event(bool use_plain_queue)
 				}
 			}
 
-			/* No user area or source pool for TX completion events */
+			/* No user area/flag or source pool for TX completion events */
+			odp_event_user_flag_set(ev, 1);
 			CU_ASSERT(odp_event_user_area(ev) == NULL);
 			CU_ASSERT(odp_event_user_area_and_flag(ev, &flag) == NULL);
 			CU_ASSERT(flag < 0);
