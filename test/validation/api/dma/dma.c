@@ -492,6 +492,7 @@ static void test_dma_compl_user_area(void)
 		CU_ASSERT(prev != addr);
 
 		ev = odp_dma_compl_to_event(compl_evs[i]);
+		odp_event_user_flag_set(ev, 1);
 		CU_ASSERT(odp_event_user_area(ev) == addr);
 		CU_ASSERT(odp_event_user_area_and_flag(ev, &flag) == addr);
 		CU_ASSERT(flag < 0);

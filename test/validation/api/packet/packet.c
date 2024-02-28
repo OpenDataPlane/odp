@@ -3289,6 +3289,10 @@ static void packet_vector_test_user_area(void)
 		CU_ASSERT(odp_event_user_area(ev) == addr);
 		CU_ASSERT(odp_event_user_area_and_flag(ev, &flag) == addr);
 		CU_ASSERT(flag == 0);
+		odp_event_user_flag_set(ev, 1);
+		CU_ASSERT(odp_event_user_area_and_flag(ev, &flag) == addr);
+		CU_ASSERT(flag > 0);
+		CU_ASSERT(odp_packet_vector_user_flag(pktv[i]) > 0);
 
 		prev = addr;
 		memset(addr, 0, size);
@@ -3482,6 +3486,10 @@ static void packet_test_user_area(void)
 	CU_ASSERT(odp_event_user_area(ev) == odp_packet_user_area(pkt));
 	CU_ASSERT(odp_event_user_area_and_flag(ev, &flag) == odp_packet_user_area(pkt));
 	CU_ASSERT(flag == 0);
+	odp_event_user_flag_set(ev, 1);
+	CU_ASSERT(odp_event_user_area_and_flag(ev, &flag) == odp_packet_user_area(pkt));
+	CU_ASSERT(flag > 0);
+	CU_ASSERT(odp_packet_user_flag(pkt) > 0);
 
 	odp_packet_free(pkt);
 	CU_ASSERT(odp_pool_destroy(pool) == 0);
