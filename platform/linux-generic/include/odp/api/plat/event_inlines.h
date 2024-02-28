@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2018 Linaro Limited
- * Copyright (c) 2022-2023 Nokia
+ * Copyright (c) 2022-2024 Nokia
  */
 
 #ifndef ODP_PLAT_EVENT_INLINES_H_
@@ -29,6 +29,7 @@
 	#define odp_event_pool __odp_event_pool
 	#define odp_event_user_area __odp_event_user_area
 	#define odp_event_user_area_and_flag __odp_event_user_area_and_flag
+	#define odp_event_user_flag_set __odp_event_user_flag_set
 	#define odp_event_subtype __odp_event_subtype
 	#define odp_event_types __odp_event_types
 	#define odp_event_types_multi __odp_event_types_multi
@@ -149,6 +150,34 @@ _ODP_INLINE void *odp_event_user_area_and_flag(odp_event_t event, int *flag)
 	default:
 		*flag = -1;
 		return NULL;
+	}
+}
+
+_ODP_INLINE void odp_event_user_flag_set(odp_event_t event, int val)
+{
+	const odp_event_type_t type = __odp_event_type_get(event);
+
+	switch (type) {
+	case ODP_EVENT_PACKET:
+	{
+		odp_packet_t pkt = (odp_packet_t)event;
+		_odp_packet_flags_t *flags = _odp_pkt_get_ptr(pkt, _odp_packet_flags_t, flags);
+
+		flags->user_flag = !!val;
+		return;
+	}
+	case ODP_EVENT_PACKET_VECTOR:
+	{
+		odp_packet_vector_t pktv = (odp_packet_vector_t)event;
+		_odp_event_vector_flags_t *flags =
+				_odp_event_vect_get_ptr(pktv, _odp_event_vector_flags_t, flags);
+
+		flags->user_flag = !!val;
+		return;
+	}
+	default:
+		/* Nothing to do */
+		return;
 	}
 }
 
