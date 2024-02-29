@@ -32,10 +32,10 @@ int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 	char ip_addr1[] = "12345678";
 	char ip_addr2[] = "11223344";
 	char ip_addr3[] = "55667788";
-	char mac_addr1[] = "0A1122334401";
-	char mac_addr2[] = "0A1122334402";
-	char mac_addr3[] = "0B4433221101";
-	char mac_addr4[] = "0B4433221102";
+	char mac_addr1[] = { 30, 31, 32, 33, 34, 35, };
+	char mac_addr2[] = { 40, 41, 42, 43, 44, 45, };
+	char mac_addr3[] = { 50, 51, 52, 53, 54, 55, };
+	char mac_addr4[] = { 60, 61, 62, 63, 64, 65, };
 
 	ret = odp_init_global(&instance, NULL, NULL);
 	if (ret != 0) {
@@ -51,7 +51,7 @@ int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 	printf("test hash table:\n");
 	test_ops = &odph_hash_table_ops;
 
-	table = test_ops->f_create("test", 2, 4, 16);
+	table = test_ops->f_create("test", 2, 4, sizeof(mac_addr1));
 	if (table == NULL) {
 		printf("table create fail\n");
 		return -1;
@@ -81,7 +81,7 @@ int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 	}
 
 	ret = test_ops->f_get(table, &ip_addr1, &tmp, 32);
-	if (ret != 0 || strcmp(tmp, mac_addr4) != 0) {
+	if (ret != 0 || memcmp(tmp, mac_addr4, sizeof(mac_addr4)) != 0) {
 		printf("get value fail\n");
 		return -1;
 	}
