@@ -29,9 +29,9 @@ int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 	odph_table_t tmp_tbl;
 	odph_table_ops_t *test_ops;
 	char tmp[32];
-	char ip_addr1[] = "12345678";
-	char ip_addr2[] = "11223344";
-	char ip_addr3[] = "55667788";
+	char key1[] = { 0, 10, 11, 12, 13, };
+	char key2[] = { 1, 14, 15, 16, 17, };
+	char key3[] = { 2, 18, 19, 20, 21, };
 	char mac_addr1[] = { 30, 31, 32, 33, 34, 35, };
 	char mac_addr2[] = { 40, 41, 42, 43, 44, 45, };
 	char mac_addr3[] = { 50, 51, 52, 53, 54, 55, };
@@ -51,36 +51,36 @@ int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 	printf("test hash table:\n");
 	test_ops = &odph_hash_table_ops;
 
-	table = test_ops->f_create("test", 2, 4, sizeof(mac_addr1));
+	table = test_ops->f_create("test", 2, sizeof(key1), sizeof(mac_addr1));
 	if (table == NULL) {
 		printf("table create fail\n");
 		return -1;
 	}
-	ret += test_ops->f_put(table, &ip_addr1, mac_addr1);
+	ret += test_ops->f_put(table, &key1, mac_addr1);
 
-	ret += test_ops->f_put(table, &ip_addr2, mac_addr2);
+	ret += test_ops->f_put(table, &key2, mac_addr2);
 
-	ret += test_ops->f_put(table, &ip_addr3, mac_addr3);
+	ret += test_ops->f_put(table, &key3, mac_addr3);
 
 	if (ret != 0) {
 		printf("put value fail\n");
 		return -1;
 	}
 
-	ret = test_ops->f_get(table, &ip_addr1, &tmp, 32);
+	ret = test_ops->f_get(table, &key1, &tmp, 32);
 	if (ret != 0) {
 		printf("get value fail\n");
 		return -1;
 	}
 	printf("\t1  get '123' tmp = %s,\n", tmp);
 
-	ret = test_ops->f_put(table, &ip_addr1, mac_addr4);
+	ret = test_ops->f_put(table, &key1, mac_addr4);
 	if (ret != 0) {
 		printf("repeat put value fail\n");
 		return -1;
 	}
 
-	ret = test_ops->f_get(table, &ip_addr1, &tmp, 32);
+	ret = test_ops->f_get(table, &key1, &tmp, 32);
 	if (ret != 0 || memcmp(tmp, mac_addr4, sizeof(mac_addr4)) != 0) {
 		printf("get value fail\n");
 		return -1;
@@ -88,12 +88,12 @@ int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 
 	printf("\t2  repeat get '123' value = %s\n", tmp);
 
-	ret = test_ops->f_remove(table, &ip_addr1);
+	ret = test_ops->f_remove(table, &key1);
 	if (ret != 0) {
 		printf("remove value fail\n");
 		return -1;
 	}
-	ret = test_ops->f_get(table, &ip_addr1, tmp, 32);
+	ret = test_ops->f_get(table, &key1, tmp, 32);
 	if (ret == 0) {
 		printf("remove value fail actually\n");
 		return -1;
