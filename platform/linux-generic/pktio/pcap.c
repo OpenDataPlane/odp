@@ -199,6 +199,8 @@ static int pcapif_promisc_mode_set(pktio_entry_t *pktio_entry,
 		return -1;
 	}
 
+	pcap_freecode(&bpf);
+
 	pcap->promisc = enable;
 
 	return 0;
