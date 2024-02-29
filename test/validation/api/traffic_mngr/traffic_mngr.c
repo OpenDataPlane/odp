@@ -67,7 +67,8 @@
 
 #define MAX_PKTS                 1000u
 #define PKT_BUF_SIZE             1460
-#define MAX_PAYLOAD              1400
+#define MIN_HDR_LEN              (ODPH_ETHHDR_LEN + ODPH_UDPHDR_LEN + ODPH_IPV4HDR_LEN)
+#define MAX_PAYLOAD              (PKT_BUF_SIZE - MIN_HDR_LEN)
 #define USE_IPV4                 false
 #define USE_IPV6                 true
 #define USE_UDP                  false
