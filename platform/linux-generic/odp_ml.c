@@ -2,23 +2,36 @@
  * Copyright (c) 2023 Nokia
  */
 
-#include <odp/api/ml.h>
-#include <odp/api/queue.h>
-#include <odp/api/plat/event_inline_types.h>
+#include <odp/autoheader_external.h>
 
-#include <odp_global_data.h>
-#include <odp_debug_internal.h>
-#include <odp_init_internal.h>
-#include <odp_pool_internal.h>
+#include <odp/api/atomic.h>
+#include <odp/api/buffer.h>
+#include <odp/api/event.h>
+#include <odp/api/hints.h>
+#include <odp/api/ml.h>
+#include <odp/api/pool.h>
+#include <odp/api/queue.h>
+#include <odp/api/shared_memory.h>
+#include <odp/api/std_types.h>
+#include <odp/api/ticketlock.h>
+
+#include <odp/api/plat/event_inline_types.h>
+#include <odp/api/plat/strong_types.h>
+
+#include <odp_buffer_internal.h>
 #include <odp_config_internal.h>
-#include <odp_macros_internal.h>
+#include <odp_debug_internal.h>
+#include <odp_global_data.h>
+#include <odp_init_internal.h>
 #include <odp_libconfig_internal.h>
+#include <odp_macros_internal.h>
+#include <odp_pool_internal.h>
 
 #include <onnxruntime_c_api.h>
 
+#include <inttypes.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <inttypes.h>
 #include <string.h>
 
 #define ML_MAX_IO_SEGS UINT32_MAX

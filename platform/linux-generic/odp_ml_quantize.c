@@ -2,14 +2,14 @@
  * Copyright (c) 2023 Nokia
  */
 
-#include <stdint.h>
-#include <math.h>
-
 #include <odp/api/ml_quantize.h>
 
-#include <odp_macros_internal.h>
 #include <odp_debug_internal.h>
+#include <odp_macros_internal.h>
 #include <odp_ml_fp16.h>
+
+#include <math.h>
+#include <stdint.h>
 
 void odp_ml_fp32_to_uint8(uint8_t *u8, const float *fp32, uint32_t num, float scale,
 			  uint8_t zerop)

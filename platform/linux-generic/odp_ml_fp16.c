@@ -8,10 +8,10 @@
  * - dpdk/lib/mldev/mldev_utils_scalar_bfloat16.c
  */
 
+#include <odp_ml_fp16.h>
+
 #include <errno.h>
 #include <stdint.h>
-
-#include <odp_ml_fp16.h>
 
 #ifndef BIT
 #define BIT(nr) (1UL << (nr))

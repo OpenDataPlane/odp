@@ -2,9 +2,12 @@
  * Copyright (c) 2023 Nokia
  */
 
+#include <odp/api/hints.h>
 #include <odp/api/ml.h>
+
 #include <odp_init_internal.h>
 
+#include <stdint.h>
 #include <string.h>
 
 /* Dummy ML API implementation, no capability and just return error for
