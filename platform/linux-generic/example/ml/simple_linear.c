@@ -59,9 +59,16 @@ static int run_inference(void *infer_param)
 	output.addr = &y;
 	output.size = sizeof(int32_t);
 
-	if (odp_ml_run(param->ml_model, &data, NULL) != 1) {
-		ODPH_ERR("odp_ml_model_run() failed\n");
-		return -1;
+	while (1) {
+		int ret = odp_ml_run(param->ml_model, &data, NULL);
+
+		if (ret == 1)
+			break;
+
+		if (ret < 0) {
+			ODPH_ERR("odp_ml_model_run() failed: %d\n", ret);
+			return -1;
+		}
 	}
 
 	printf("y = 3 * %d + 4: %d\n", param->x, y);
