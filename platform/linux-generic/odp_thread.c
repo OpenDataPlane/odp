@@ -282,12 +282,22 @@ int odp_thread_worker_count_max(void)
 
 int odp_thrmask_worker(odp_thrmask_t *mask)
 {
+	uint32_t num_worker;
+
+	odp_spinlock_lock(&thread_globals->lock);
 	odp_thrmask_copy(mask, &thread_globals->worker);
-	return thread_globals->num_worker;
+	num_worker = thread_globals->num_worker;
+	odp_spinlock_unlock(&thread_globals->lock);
+	return num_worker;
 }
 
 int odp_thrmask_control(odp_thrmask_t *mask)
 {
+	uint32_t num_control;
+
+	odp_spinlock_lock(&thread_globals->lock);
 	odp_thrmask_copy(mask, &thread_globals->control);
-	return thread_globals->num_control;
+	num_control = thread_globals->num_control;
+	odp_spinlock_unlock(&thread_globals->lock);
+	return num_control;
 }
