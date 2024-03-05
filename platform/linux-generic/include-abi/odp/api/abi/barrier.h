@@ -2,35 +2,4 @@
  * Copyright (c) 2015-2018 Linaro Limited
  */
 
-/**
- * @file
- *
- * ODP barrier
- */
-
-#ifndef ODP_ABI_BARRIER_H_
-#define ODP_ABI_BARRIER_H_
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-#include <odp/api/std_types.h>
-#include <odp/api/atomic.h>
-
-/**
- * @internal
- * ODP thread synchronization barrier
- */
-struct odp_barrier_s {
-	uint32_t         count;  /**< Thread count */
-	odp_atomic_u32_t bar;    /**< Barrier counter */
-};
-
-typedef struct odp_barrier_s odp_barrier_t;
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif
+#include <odp/api/abi-default/barrier.h>
