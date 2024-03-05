@@ -257,6 +257,16 @@ static void sig_handler(int signo ODP_UNUSED)
 	odp_atomic_store_u32(&gbl_args->exit_threads, 1);
 }
 
+static int setup_sig_handler(void)
+{
+	struct sigaction action = { .sa_handler = sig_handler };
+
+	if (sigemptyset(&action.sa_mask) || sigaction(SIGINT, &action, NULL))
+		return -1;
+
+	return 0;
+}
+
 /*
  * Drop packets which input parsing marked as containing errors.
  *
@@ -2205,9 +2215,10 @@ int main(int argc, char *argv[])
 
 	init.mem_model = helper_options.mem_model;
 
-	/* Signal handler has to be registered before global init in case ODP
-	 * implementation creates internal threads/processes. */
-	signal(SIGINT, sig_handler);
+	if (setup_sig_handler()) {
+		ODPH_ERR("Signal handler setup failed\n");
+		exit(EXIT_FAILURE);
+	}
 
 	/* Init ODP before calling anything else */
 	if (odp_init_global(&instance, &init, NULL)) {
