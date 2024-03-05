@@ -488,6 +488,7 @@ static tm_system_t *tm_system_alloc(void)
 			memset(tm_system, 0, sizeof(tm_system_t));
 			tm_system->tm_idx = tm_idx;
 			tm_system->status = TM_STATUS_RESERVED;
+			odp_atomic_init_u32(&tm_system->is_idle, 0);
 			return tm_system;
 		}
 	}
@@ -2535,8 +2536,8 @@ static void *tm_system_thread(void *arg)
 
 		current_ns = odp_time_to_ns(odp_time_local());
 		tm_system->current_time = current_ns;
-		tm_system->is_idle = (timer_cnt == 0) &&
-			(work_queue_cnt == 0);
+		odp_atomic_store_rel_u32(&tm_system->is_idle,
+					 (timer_cnt == 0) && (work_queue_cnt == 0));
 		destroying = odp_atomic_load_u64(&tm_system->destroying);
 
 		/* Advance to the next tm_system in the tm_system_group. */
@@ -2557,7 +2558,7 @@ odp_bool_t odp_tm_is_idle(odp_tm_t odp_tm)
 	tm_system_t *tm_system;
 
 	tm_system = GET_TM_SYSTEM(odp_tm);
-	return tm_system->is_idle;
+	return odp_atomic_load_acq_u32(&tm_system->is_idle);
 }
 
 void odp_tm_requirements_init(odp_tm_requirements_t *requirements)
