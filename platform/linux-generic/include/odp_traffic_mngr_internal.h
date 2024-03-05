@@ -404,7 +404,7 @@ struct tm_system_s {
 	uint64_t   current_time;
 	uint8_t    tm_idx;
 	uint8_t    first_enq;
-	odp_bool_t is_idle;
+	odp_atomic_u32_t is_idle;
 	tm_status_t status;
 
 	uint64_t shaper_green_cnt;
