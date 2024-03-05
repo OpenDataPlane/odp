@@ -150,7 +150,9 @@ typedef struct {
 	int flow_aware;         /* Flow aware scheduling enabled */
 	uint8_t input_ts;       /* Packet input timestamping enabled */
 	int mtu;                /* Interface MTU */
+	int num_om;
 	int num_prio;
+	char *output_map[MAX_PKTIOS]; /* Destination port mappings for interfaces */
 	odp_schedule_prio_t prio[MAX_PKTIOS]; /* Priority of input queues of an interface */
 
 } appl_args_t;
@@ -1068,6 +1070,12 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx, odp_po
 	if (gbl_args->appl.out_mode != PKTOUT_DIRECT)
 		pktio_param.out_mode = ODP_PKTOUT_MODE_QUEUE;
 
+	if (num_rx == 0)
+		pktio_param.in_mode = ODP_PKTIN_MODE_DISABLED;
+
+	if (num_tx == 0)
+		pktio_param.out_mode = ODP_PKTOUT_MODE_DISABLED;
+
 	pktio = odp_pktio_open(dev, pool, &pktio_param);
 	if (pktio == ODP_PKTIO_INVALID) {
 		ODPH_ERR("Pktio open failed: %s\n", dev);
@@ -1221,37 +1229,45 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx, odp_po
 			return -1;
 	}
 
-	if (odp_pktin_queue_config(pktio, &pktin_param)) {
+	if (num_rx > 0 && odp_pktin_queue_config(pktio, &pktin_param)) {
 		ODPH_ERR("Input queue config failed: %s\n", dev);
 		return -1;
 	}
 
-	if (odp_pktout_queue_config(pktio, &pktout_param)) {
+	if (num_tx > 0 && odp_pktout_queue_config(pktio, &pktout_param)) {
 		ODPH_ERR("Output queue config failed: %s\n", dev);
 		return -1;
 	}
 
-	if (gbl_args->appl.in_mode == DIRECT_RECV) {
-		if (odp_pktin_queue(pktio, gbl_args->pktios[idx].pktin, num_rx) != num_rx) {
-			ODPH_ERR("Pktin queue query failed: %s\n", dev);
-			return -1;
-		}
-	} else {
-		if (odp_pktin_event_queue(pktio, gbl_args->pktios[idx].rx_q, num_rx) != num_rx) {
-			ODPH_ERR("Pktin event queue query failed: %s\n", dev);
-			return -1;
+	if (num_rx > 0) {
+		if (gbl_args->appl.in_mode == DIRECT_RECV) {
+			if (odp_pktin_queue(pktio, gbl_args->pktios[idx].pktin, num_rx)
+			    != num_rx) {
+				ODPH_ERR("Pktin queue query failed: %s\n", dev);
+				return -1;
+			}
+		} else {
+			if (odp_pktin_event_queue(pktio, gbl_args->pktios[idx].rx_q, num_rx)
+			    != num_rx) {
+				ODPH_ERR("Pktin event queue query failed: %s\n", dev);
+				return -1;
+			}
 		}
 	}
 
-	if (gbl_args->appl.out_mode == PKTOUT_DIRECT) {
-		if (odp_pktout_queue(pktio, gbl_args->pktios[idx].pktout, num_tx) != num_tx) {
-			ODPH_ERR("Pktout queue query failed: %s\n", dev);
-			return -1;
-		}
-	} else {
-		if (odp_pktout_event_queue(pktio, gbl_args->pktios[idx].tx_q, num_tx) != num_tx) {
-			ODPH_ERR("Event queue query failed: %s\n", dev);
-			return -1;
+	if (num_tx > 0) {
+		if (gbl_args->appl.out_mode == PKTOUT_DIRECT) {
+			if (odp_pktout_queue(pktio, gbl_args->pktios[idx].pktout, num_tx)
+			    != num_tx) {
+				ODPH_ERR("Pktout queue query failed: %s\n", dev);
+				return -1;
+			}
+		} else {
+			if (odp_pktout_event_queue(pktio, gbl_args->pktios[idx].tx_q, num_tx)
+			    != num_tx) {
+				ODPH_ERR("Event queue query failed: %s\n", dev);
+				return -1;
+			}
 		}
 	}
 
@@ -1374,6 +1390,14 @@ static void print_port_mapping(void)
  */
 static int find_dest_port(int port)
 {
+	const char *output = gbl_args->appl.output_map[port];
+
+	/* Check output mappings first */
+	if (output != NULL)
+		for (int i = 0; i < gbl_args->appl.if_count; i++)
+			if (strcmp(output, gbl_args->appl.if_names[i]) == 0)
+				return i;
+
 	/* Even number of ports */
 	if (gbl_args->appl.if_count % 2 == 0)
 		return (port % 2 == 0) ? port + 1 : port - 1;
@@ -1592,6 +1616,11 @@ static void usage(char *progname)
 	       "  -o, --out_mode <arg>    Packet output mode\n"
 	       "                          0: Direct mode: PKTOUT_MODE_DIRECT (default)\n"
 	       "                          1: Queue mode:  PKTOUT_MODE_QUEUE\n"
+	       "  -O, --output_map <list> List of destination ports for passed interfaces\n"
+	       "                          (comma-separated, no spaces). Ordering follows the\n"
+	       "                          '--interface' option, e.g. passing '-i eth0,eth1' and\n"
+	       "                          '-O eth0,eth1' would result in eth0 and eth1 looping\n"
+	       "                          packets back.\n"
 	       "  -c, --count <num>       CPU count, 0=all available, default=1\n"
 	       "  -t, --time <sec>        Time in seconds to run.\n"
 	       "  -a, --accuracy <sec>    Time in seconds get print statistics\n"
@@ -1682,6 +1711,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{"interface", required_argument, NULL, 'i'},
 		{"mode", required_argument, NULL, 'm'},
 		{"out_mode", required_argument, NULL, 'o'},
+		{"output_map", required_argument, NULL, 'O'},
 		{"dst_addr", required_argument, NULL, 'r'},
 		{"dst_change", required_argument, NULL, 'd'},
 		{"src_change", required_argument, NULL, 's'},
@@ -1713,7 +1743,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+c:t:a:i:m:o:r:d:s:e:k:g:G:I:"
+	static const char *shortopts = "+c:t:a:i:m:o:O:r:d:s:e:k:g:G:I:"
 				       "b:q:p:R:y:n:l:L:w:x:z:M:F:uPfTvVh";
 
 	appl_args->time = 0; /* loop forever if time to run is 0 */
@@ -1854,6 +1884,40 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 			if (i != 0)
 				appl_args->out_mode = PKTOUT_QUEUE;
 			break;
+		case 'O':
+			if (strlen(optarg) == 0) {
+				ODPH_ERR("Bad output map string\n");
+				exit(EXIT_FAILURE);
+			}
+
+			tmp_str = strdup(optarg);
+
+			if (tmp_str == NULL) {
+				ODPH_ERR("Output map string duplication failed\n");
+				exit(EXIT_FAILURE);
+			}
+
+			token = strtok(tmp_str, ",");
+
+			while (token) {
+				if (appl_args->num_om >= MAX_PKTIOS) {
+					ODPH_ERR("Bad output map element count\n");
+					exit(EXIT_FAILURE);
+				}
+
+				appl_args->output_map[appl_args->num_om] = strdup(token);
+
+				if (appl_args->output_map[appl_args->num_om] == NULL) {
+					ODPH_ERR("Output map element duplication failed\n");
+					exit(EXIT_FAILURE);
+				}
+
+				appl_args->num_om++;
+				token = strtok(NULL, ",");
+			}
+
+			free(tmp_str);
+			break;
 		case 'd':
 			appl_args->dst_change = atoi(optarg);
 			break;
@@ -1978,6 +2042,11 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		exit(EXIT_FAILURE);
 	}
 
+	if (appl_args->num_om && appl_args->num_om != appl_args->if_count) {
+		ODPH_ERR("Different number of output mappings and pktio interfaces\n");
+		exit(EXIT_FAILURE);
+	}
+
 	if (appl_args->num_prio && appl_args->num_prio != appl_args->if_count) {
 		ODPH_ERR("Different number of priorities and pktio interfaces\n");
 		exit(EXIT_FAILURE);
@@ -2035,6 +2104,15 @@ static void print_options(void)
 		printf("PKTOUT_QUEUE\n");
 	else
 		printf("PKTOUT_DIRECT\n");
+
+	if (appl_args->num_om > 0) {
+		printf("Output mappings:   ");
+
+		for (i = 0; i < appl_args->num_om; ++i)
+			printf(" %s", appl_args->output_map[i]);
+
+		printf("\n");
+	}
 
 	printf("MTU:                ");
 	if (appl_args->mtu)
@@ -2630,6 +2708,10 @@ int main(int argc, char *argv[])
 
 	free(gbl_args->appl.if_names);
 	free(gbl_args->appl.if_str);
+
+	for (i = 0; i < gbl_args->appl.num_om; i++)
+		free(gbl_args->appl.output_map[i]);
+
 	gbl_args = NULL;
 	odp_mb_full();
 
