@@ -157,7 +157,6 @@ typedef struct {
 	int cpu_num;
 
 	/* Service threads */
-	uint64_t         busy_wait_counter;
 	odp_bool_t       main_loop_running;
 	odp_atomic_u64_t atomic_request_cnt;
 	odp_atomic_u64_t currently_serving_cnt;
@@ -2412,14 +2411,6 @@ static int tm_process_expired_timers(tm_system_t *tm_system,
 	return work_done;
 }
 
-static void busy_wait(uint32_t iterations)
-{
-	uint32_t cnt;
-
-	for (cnt = 1; cnt <= iterations; cnt++)
-		tm_glb->busy_wait_counter++;
-}
-
 static void signal_request(void)
 {
 	uint64_t request_num, serving;
@@ -2428,7 +2419,7 @@ static void signal_request(void)
 
 	serving = odp_atomic_load_u64(&tm_glb->currently_serving_cnt);
 	while (serving != request_num) {
-		busy_wait(100);
+		_odp_cpu_pause();
 		serving = odp_atomic_load_u64(&tm_glb->currently_serving_cnt);
 	}
 }
@@ -2445,11 +2436,11 @@ static void check_for_request(void)
 	/* Signal the other requesting thread to proceed and then
 	 * wait for their done indication */
 	odp_atomic_inc_u64(&tm_glb->currently_serving_cnt);
-	busy_wait(100);
+	_odp_cpu_pause();
 
 	done_cnt = odp_atomic_load_u64(&tm_glb->atomic_done_cnt);
 	while (done_cnt != request_num) {
-		busy_wait(100);
+		_odp_cpu_pause();
 		done_cnt = odp_atomic_load_u64(&tm_glb->atomic_done_cnt);
 	}
 }
