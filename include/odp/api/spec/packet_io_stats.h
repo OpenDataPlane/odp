@@ -25,8 +25,8 @@ extern "C" {
 
 /**
  * @def ODP_PKTIO_STATS_EXTRA_NAME_LEN
- * Maximum packet IO extra statistics counter name length in chars including
- * null char
+ * Maximum packet IO extra statistics counter name length, including the null
+ * character
  */
 
 /**

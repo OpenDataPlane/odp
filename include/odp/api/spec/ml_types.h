@@ -47,22 +47,22 @@ extern "C" {
 
 /**
  * @def ODP_ML_MODEL_NAME_LEN
- * Maximum length of model name in chars (including null char)
+ * Maximum length of model name, including the null character
  */
 
 /**
  * @def ODP_ML_MODEL_IO_NAME_LEN
- * Maximum length of model input/output name in chars (including null char)
+ * Maximum length of model input/output name, including the null character
  */
 
 /**
  * @def ODP_ML_SHAPE_NAME_LEN
- * Maximum length of data dimension name in chars (including null char)
+ * Maximum length of data dimension name, including the null character
  */
 
 /**
  * @def ODP_ML_EXTRA_STAT_NAME_LEN
- * Maximum length of extra statistics counter name in chars (including null char)
+ * Maximum length of extra statistics counter name, including the null character
  */
 
 /**

@@ -58,7 +58,7 @@ extern "C" {
 
 /**
  * @def ODP_TIMER_POOL_NAME_LEN
- * Maximum timer pool name length in chars including null char
+ * Maximum timer pool name length, including the null character
  */
 
 /**

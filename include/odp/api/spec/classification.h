@@ -49,7 +49,7 @@ extern "C" {
 
 /**
  * @def ODP_COS_NAME_LEN
- * Maximum class of service name length in chars including null char
+ * Maximum class of service name length, including the null character
  */
 
 /**
@@ -719,7 +719,7 @@ int odp_cls_capability(odp_cls_capability_t *capability);
  * values.
  *
  * @param name         Name of the class-of-service or NULL. Maximum string
- *                     length is ODP_COS_NAME_LEN.
+ *                     length is ODP_COS_NAME_LEN, including the null character.
  * @param param        Class-of-service parameters
  *
  * @retval Class-of-service handle

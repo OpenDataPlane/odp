@@ -36,7 +36,7 @@ extern "C" {
 
 /**
  * @def ODP_SCHED_GROUP_NAME_LEN
- * Maximum schedule group name length in chars including null char
+ * Maximum schedule group name length, including the null character
  */
 
 /**

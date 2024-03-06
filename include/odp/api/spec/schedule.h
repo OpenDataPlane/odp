@@ -329,7 +329,7 @@ int odp_schedule_capability(odp_schedule_capability_t *capa);
  * returns only a single matching group.
  *
  * @param name    Name of the schedule group or NULL. Maximum string length is
- *                ODP_SCHED_GROUP_NAME_LEN.
+ *                ODP_SCHED_GROUP_NAME_LEN, including the null character.
  * @param mask    Thread mask
  *
  * @return Schedule group handle

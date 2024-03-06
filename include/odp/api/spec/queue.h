@@ -36,7 +36,7 @@ extern "C" {
  * 'param' pointer is NULL.
  *
  * @param name    Name of the queue or NULL. Maximum string length is
- *                ODP_QUEUE_NAME_LEN.
+ *                ODP_QUEUE_NAME_LEN, including the null character.
  * @param param   Queue parameters. Uses defaults if NULL.
  *
  * @return Queue handle
