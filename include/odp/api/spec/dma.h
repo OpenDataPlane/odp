@@ -51,7 +51,8 @@ void odp_dma_param_init(odp_dma_param_t *param);
  * names are not required. However, odp_dma_lookup() returns only a single matching named session.
  * Use odp_dma_param_init() to initialize parameters into their default values.
  *
- * @param name		DMA session name or NULL. Maximum string length is ODP_DMA_NAME_LEN.
+ * @param name		DMA session name or NULL. Maximum string length is ODP_DMA_NAME_LEN,
+ *			including the null character.
  * @param param		DMA session parameters
  *
  * @return DMA session handle on success
@@ -349,7 +350,8 @@ void odp_dma_pool_param_init(odp_dma_pool_param_t *pool_param);
  * into their default values. Parameters values must not exceed pool capabilities
  * (odp_dma_pool_capability_t).
  *
- * @param name          Name of the pool or NULL. Maximum string length is ODP_POOL_NAME_LEN.
+ * @param name          Name of the pool or NULL. Maximum string length is ODP_POOL_NAME_LEN,
+ *                      including the null character.
  * @param pool_param    Pool parameters
  *
  * @return Handle of the created pool
