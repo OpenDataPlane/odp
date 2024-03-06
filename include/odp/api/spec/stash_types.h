@@ -34,7 +34,7 @@ extern "C" {
 
 /**
  * @def ODP_STASH_NAME_LEN
- * Maximum stash name length in chars including null char
+ * Maximum stash name length, including the null character
  */
 
 /**

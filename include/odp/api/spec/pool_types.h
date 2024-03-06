@@ -36,7 +36,7 @@ extern "C" {
 
 /**
  * @def ODP_POOL_NAME_LEN
- * Maximum pool name length in chars including null char
+ * Maximum pool name length, including the null character
  */
 
 /**

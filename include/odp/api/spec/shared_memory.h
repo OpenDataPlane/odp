@@ -35,7 +35,7 @@ extern "C" {
 
 /**
  * @def ODP_SHM_NAME_LEN
- * Maximum shared memory block name length in chars including null char
+ * Maximum shared memory block name length, including the null character
  */
 
 /**
@@ -208,7 +208,8 @@ int odp_shm_capability(odp_shm_capability_t *capa);
  * searched with odp_shm_lookup() or odp_shm_import(), a unique name is needed
  * for correct match.
  *
- * @param name   Name of the block or NULL. Maximum string length is ODP_SHM_NAME_LEN.
+ * @param name   Name of the block or NULL. Maximum string length is ODP_SHM_NAME_LEN, including the
+ *               null character.
  * @param size   Block size in bytes
  * @param align  Block alignment in bytes
  * @param flags  Shared memory parameter flags (ODP_SHM_*). Default value is 0.
@@ -257,7 +258,8 @@ odp_shm_t odp_shm_lookup(const char *name);
  * @param odp_inst     Remote ODP instance, as returned by odp_init_global()
  * @param local_name   Name given to the block, in the local ODP instance
  *		       May be NULL, if the application doesn't need a name
- *		       (for a lookup).
+ *		       (for a lookup). Maximum string length is
+ *		       ODP_SHM_NAME_LEN, including the null character.
  *
  * @return A handle to access a block exported by another ODP instance.
  * @retval ODP_SHM_INVALID on failure

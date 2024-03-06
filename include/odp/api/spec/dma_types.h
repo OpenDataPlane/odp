@@ -58,7 +58,7 @@ extern "C" {
 
 /**
  * @def ODP_DMA_NAME_LEN
- * Maximum DMA name length in chars including null char
+ * Maximum DMA name length, including the null character
  */
 
 /**
