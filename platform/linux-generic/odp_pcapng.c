@@ -17,6 +17,7 @@
 
 #include <odp/api/plat/packet_inlines.h>
 #include <odp/api/plat/packet_io_inlines.h>
+#include <odp/api/plat/time_inlines.h>
 
 #include <odp_config_internal.h>
 #include <odp_global_data.h>
@@ -566,9 +567,8 @@ int _odp_pcapng_dump_pkts(pktio_entry_t *entry, int qidx,
 			_ODP_ROUNDUP_ALIGN(seg_len, PCAPNG_DATA_ALIGN) +
 			PCAPNG_DATA_ALIGN;
 		epb[i].interface_idx = 0;
-		epb[i].timestamp_high =
-			(uint32_t)(pkt_hdr->timestamp.u64 >> 32);
-		epb[i].timestamp_low = (uint32_t)(pkt_hdr->timestamp.u64);
+		epb[i].timestamp_high = (uint32_t)(_odp_time_to_u64(pkt_hdr->timestamp) >> 32);
+		epb[i].timestamp_low = (uint32_t)_odp_time_to_u64(pkt_hdr->timestamp);
 		epb[i].captured_len = seg_len;
 		epb[i].packet_len = seg_len;
 

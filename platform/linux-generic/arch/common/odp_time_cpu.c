@@ -28,7 +28,6 @@ _odp_time_global_t _odp_time_glob;
 int _odp_time_init_global(void)
 {
 	uint64_t count, diff, years;
-	odp_time_t time;
 	_odp_time_global_t *global = &_odp_time_glob;
 
 	memset(global, 0, sizeof(_odp_time_global_t));
@@ -43,9 +42,8 @@ int _odp_time_init_global(void)
 	_ODP_PRINT("HW time counter freq: %" PRIu64 " hz\n\n", global->freq_hz);
 
 	count = _odp_time_cpu_global();
-	time.count = count;
-	global->start_time = count;
-	global->start_time_ns = _odp_time_to_ns(time);
+	global->start_time = _odp_time_from_u64(count);
+	global->start_time_ns = _odp_time_to_ns(global->start_time);
 
 	/* Make sure that counters will not wrap */
 	diff = UINT64_MAX - count;

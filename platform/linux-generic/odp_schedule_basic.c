@@ -1663,7 +1663,7 @@ static inline int schedule_loop_sleep(odp_queue_t *out_queue, uint64_t wait,
 				      odp_event_t out_ev[], uint32_t max_num)
 {
 	int ret;
-	odp_time_t start, end, current, start_sleep;
+	odp_time_t start, end = ODP_TIME_NULL, current, start_sleep = ODP_TIME_NULL;
 	int first = 1, sleep = 0;
 
 	while (1) {
