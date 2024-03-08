@@ -1,5 +1,5 @@
 /* Copyright (c) 2014-2018, Linaro Limited
- * Copyright (c) 2019-2022, Nokia
+ * Copyright (c) 2019-2024, Nokia
  * Copyright (c) 2022, Marvell
  * All rights reserved.
  *
@@ -11,6 +11,7 @@
 #include "odp_cunit_common.h"
 
 #define BUF_ALIGN  ODP_CACHE_LINE_SIZE
+#define BUF_MAX_SIZE 65536
 #define BUF_SIZE   1500
 #define BUF_NUM    100
 #define BURST      8
@@ -61,6 +62,7 @@ static void test_pool_alloc_free(const odp_pool_param_t *param)
 	uint32_t num_buf = 0;
 	void *addr;
 	odp_event_subtype_t subtype;
+	const uint32_t max_size = pool_capa.buf.max_size;
 	uint32_t num = param->buf.num;
 	uint32_t size = param->buf.size;
 	uint32_t align = param->buf.align;
@@ -104,7 +106,8 @@ static void test_pool_alloc_free(const odp_pool_param_t *param)
 			wrong_type = true;
 		if (subtype != ODP_EVENT_NO_SUBTYPE)
 			wrong_subtype = true;
-		if (odp_buffer_size(buffer[i]) < size)
+		if (odp_buffer_size(buffer[i]) < size ||
+		    (max_size && odp_buffer_size(buffer[i]) > max_size))
 			wrong_size = true;
 
 		addr = odp_buffer_addr(buffer[i]);
@@ -142,6 +145,7 @@ static void test_pool_alloc_free_multi(const odp_pool_param_t *param)
 	odp_event_t ev;
 	void *addr;
 	odp_event_subtype_t subtype;
+	const uint32_t max_size = pool_capa.buf.max_size;
 	uint32_t num = param->buf.num;
 	uint32_t size = param->buf.size;
 	uint32_t align = param->buf.align;
@@ -193,7 +197,8 @@ static void test_pool_alloc_free_multi(const odp_pool_param_t *param)
 			wrong_type = true;
 		if (subtype != ODP_EVENT_NO_SUBTYPE)
 			wrong_subtype = true;
-		if (odp_buffer_size(buffer[i]) < size)
+		if (odp_buffer_size(buffer[i]) < size ||
+		    (max_size && odp_buffer_size(buffer[i]) > max_size))
 			wrong_size = true;
 
 		addr = odp_buffer_addr(buffer[i]);
@@ -389,6 +394,16 @@ static void buffer_test_pool_alloc_free(void)
 	test_pool_alloc_free(&default_param);
 }
 
+static void buffer_test_pool_alloc_free_max_size(void)
+{
+	odp_pool_param_t param;
+
+	memcpy(&param, &default_param, sizeof(odp_pool_param_t));
+	param.buf.size = pool_capa.buf.max_size ? pool_capa.buf.max_size : BUF_MAX_SIZE;
+
+	test_pool_alloc_free(&param);
+}
+
 static void buffer_test_pool_alloc_free_min_cache(void)
 {
 	odp_pool_param_t param;
@@ -410,6 +425,16 @@ static void buffer_test_pool_alloc_free_max_cache(void)
 static void buffer_test_pool_alloc_free_multi(void)
 {
 	test_pool_alloc_free_multi(&default_param);
+}
+
+static void buffer_test_pool_alloc_free_multi_max_size(void)
+{
+	odp_pool_param_t param;
+
+	memcpy(&param, &default_param, sizeof(odp_pool_param_t));
+	param.buf.size = pool_capa.buf.max_size ? pool_capa.buf.max_size : BUF_MAX_SIZE;
+
+	test_pool_alloc_free_multi(&param);
 }
 
 static void buffer_test_pool_alloc_free_multi_min_cache(void)
@@ -570,9 +595,11 @@ static void buffer_test_user_area(void)
 
 odp_testinfo_t buffer_suite[] = {
 	ODP_TEST_INFO(buffer_test_pool_alloc_free),
+	ODP_TEST_INFO(buffer_test_pool_alloc_free_max_size),
 	ODP_TEST_INFO(buffer_test_pool_alloc_free_min_cache),
 	ODP_TEST_INFO(buffer_test_pool_alloc_free_max_cache),
 	ODP_TEST_INFO(buffer_test_pool_alloc_free_multi),
+	ODP_TEST_INFO(buffer_test_pool_alloc_free_multi_max_size),
 	ODP_TEST_INFO(buffer_test_pool_alloc_free_multi_min_cache),
 	ODP_TEST_INFO(buffer_test_pool_alloc_free_multi_max_cache),
 	ODP_TEST_INFO(buffer_test_pool_single_pool),
