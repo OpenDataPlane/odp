@@ -6,6 +6,7 @@ EXECUTABLES = version \
 	      cuckootable \
 	      macros \
 	      parse\
+	      stress \
 	      table \
 	      iplookuptable
 
@@ -43,6 +44,7 @@ cuckootable_SOURCES = cuckootable.c
 macros_SOURCES = macros.c
 odpthreads_SOURCES = odpthreads.c
 parse_SOURCES = parse.c
+stress_SOURCES = stress.c
 table_SOURCES = table.c
 iplookuptable_SOURCES = iplookuptable.c
 version_SOURCES = version.c
