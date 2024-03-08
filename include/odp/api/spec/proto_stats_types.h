@@ -33,6 +33,11 @@ extern "C" {
  * Invalid proto stats handle
  */
 
+/**
+ * @def ODP_PROTO_STATS_NAME_LEN
+ * Maximum proto stats name length, including the null character
+ */
+
 /** ODP proto stats counters
  *
  * Statistics that can be enabled in proto stats object. For Tx stats counters,

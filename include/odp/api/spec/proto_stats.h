@@ -55,7 +55,8 @@ int odp_proto_stats_capability(odp_pktio_t pktio, odp_proto_stats_capability_t *
  * for that PKTIO associated packets. Same proto stats object can be used with
  * any PKTIO.
  *
- * @param name  Object name
+ * @param name  Object name. Maximum string length is ODP_PROTO_STATS_NAME_LEN,
+ *              including the null character.
  * @param param Proto stats parameters
  *
  * @return Proto stats object handle
