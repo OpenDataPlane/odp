@@ -259,6 +259,20 @@ static void shmem_test_reserve(void)
 	CU_ASSERT(odp_shm_free(shm) == 0);
 }
 
+static void shmem_test_reserve_long_name(void)
+{
+	odp_shm_t shm;
+	char name[ODP_SHM_NAME_LEN];
+
+	memset(name, 'a', sizeof(name));
+	name[sizeof(name) - 1] = 0;
+
+	shm = odp_shm_reserve(name, MEDIUM_MEM, ALIGN_SIZE, 0);
+	CU_ASSERT_FATAL(shm != ODP_SHM_INVALID);
+	CU_ASSERT_FATAL(shm == odp_shm_lookup(name));
+	CU_ASSERT(odp_shm_free(shm) == 0);
+}
+
 static void shmem_test_info(void)
 {
 	odp_shm_t shm;
@@ -1137,6 +1151,7 @@ static int shm_suite_init(void)
 odp_testinfo_t shmem_suite[] = {
 	ODP_TEST_INFO(shmem_test_capability),
 	ODP_TEST_INFO(shmem_test_reserve),
+	ODP_TEST_INFO(shmem_test_reserve_long_name),
 	ODP_TEST_INFO(shmem_test_info),
 	ODP_TEST_INFO_CONDITIONAL(shmem_test_flag_hp, shmem_check_flag_hp),
 	ODP_TEST_INFO_CONDITIONAL(shmem_test_flag_no_hp, shmem_check_flag_no_hp),

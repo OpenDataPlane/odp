@@ -323,6 +323,24 @@ static void test_dma_same_name_named(void)
 	CU_ASSERT(odp_dma_destroy(dma_b) == 0);
 }
 
+static void test_dma_long_name(void)
+{
+	odp_dma_param_t dma_param;
+	odp_dma_t dma;
+	char name[ODP_DMA_NAME_LEN];
+
+	memset(name, 'a', sizeof(name));
+	name[sizeof(name) - 1] = 0;
+
+	odp_dma_param_init(&dma_param);
+	dma_param.compl_mode_mask = ODP_DMA_COMPL_SYNC;
+	dma = odp_dma_create(name, &dma_param);
+
+	CU_ASSERT_FATAL(dma != ODP_DMA_INVALID);
+	CU_ASSERT(odp_dma_to_u64(dma) == odp_dma_to_u64(odp_dma_lookup(name)));
+	CU_ASSERT(odp_dma_destroy(dma) == 0);
+}
+
 static void test_dma_compl_pool(void)
 {
 	odp_pool_t pool;
@@ -393,6 +411,24 @@ static void test_dma_compl_pool_same_name(void)
 	CU_ASSERT(pool == pool_a || pool == pool_b);
 
 	CU_ASSERT_FATAL(odp_pool_destroy(pool_b) == 0);
+}
+
+static void test_dma_compl_pool_long_name(void)
+{
+	odp_dma_pool_param_t dma_pool_param;
+	odp_pool_t pool;
+	char name[ODP_POOL_NAME_LEN];
+
+	memset(name, 'a', sizeof(name));
+	name[sizeof(name) - 1] = 0;
+
+	odp_dma_pool_param_init(&dma_pool_param);
+	dma_pool_param.num = 1;
+	pool = odp_dma_pool_create(name, &dma_pool_param);
+
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+	CU_ASSERT(pool == odp_pool_lookup(name));
+	CU_ASSERT_FATAL(odp_pool_destroy(pool) == 0);
 }
 
 static void test_dma_compl_pool_max_pools(void)
@@ -1634,8 +1670,10 @@ odp_testinfo_t dma_suite[] = {
 	ODP_TEST_INFO_CONDITIONAL(test_dma_debug, check_sync),
 	ODP_TEST_INFO_CONDITIONAL(test_dma_same_name_null, check_session_count),
 	ODP_TEST_INFO_CONDITIONAL(test_dma_same_name_named, check_session_count),
+	ODP_TEST_INFO_CONDITIONAL(test_dma_long_name, check_session_count),
 	ODP_TEST_INFO_CONDITIONAL(test_dma_compl_pool, check_event),
 	ODP_TEST_INFO_CONDITIONAL(test_dma_compl_pool_same_name, check_event),
+	ODP_TEST_INFO_CONDITIONAL(test_dma_compl_pool_long_name, check_event),
 	ODP_TEST_INFO_CONDITIONAL(test_dma_compl_pool_max_pools, check_event),
 	ODP_TEST_INFO_CONDITIONAL(test_dma_compl_user_area, check_event_user_area),
 	ODP_TEST_INFO_CONDITIONAL(test_dma_compl_user_area_init, check_event_user_area_init),

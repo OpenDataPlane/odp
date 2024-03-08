@@ -985,6 +985,26 @@ static void scheduler_test_create_group(void)
 	CU_ASSERT_FATAL(odp_schedule(NULL, wait_time) == ODP_EVENT_INVALID);
 }
 
+static void scheduler_test_group_long_name(void)
+{
+	odp_thrmask_t mask;
+	odp_schedule_group_t group;
+	int thr_id;
+	char name[ODP_SCHED_GROUP_NAME_LEN];
+
+	memset(name, 'a', sizeof(name));
+	name[sizeof(name) - 1] = 0;
+
+	thr_id = odp_thread_id();
+	odp_thrmask_zero(&mask);
+	odp_thrmask_set(&mask, thr_id);
+
+	group = odp_schedule_group_create(name, &mask);
+	CU_ASSERT_FATAL(group != ODP_SCHED_GROUP_INVALID);
+	CU_ASSERT(group == odp_schedule_group_lookup(name));
+	CU_ASSERT_FATAL(odp_schedule_group_destroy(group) == 0);
+}
+
 static void scheduler_test_create_max_groups(void)
 {
 	odp_thrmask_t mask;
@@ -3672,6 +3692,7 @@ odp_testinfo_t scheduler_basic_suite[] = {
 	ODP_TEST_INFO(scheduler_test_order_ignore),
 	ODP_TEST_INFO(scheduler_test_group_info_predef),
 	ODP_TEST_INFO(scheduler_test_create_group),
+	ODP_TEST_INFO(scheduler_test_group_long_name),
 	ODP_TEST_INFO(scheduler_test_create_max_groups),
 	ODP_TEST_INFO(scheduler_test_groups),
 	ODP_TEST_INFO(scheduler_test_pause_resume),
