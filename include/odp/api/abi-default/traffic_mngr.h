@@ -79,6 +79,8 @@ extern "C" {
  */
 #define ODP_TM_INVALID_PRIORITY  255
 
+#define ODP_TM_NAME_LEN 32
+
 /** The odp_tm_percent_t type is used when specifying fields that are
  * percentages.  It is a fixed point integer whose units are 1/100 of a
  * percent.  Hence 100% is represented as the integer value 10000.  Note
