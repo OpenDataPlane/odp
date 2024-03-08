@@ -4965,6 +4965,92 @@ static void traffic_mngr_test_lso_ipv4(void)
 	CU_ASSERT(odp_tm_is_idle(odp_tm_systems[0]));
 }
 
+static void traffic_mngr_test_node_long_name(void)
+{
+	odp_tm_node_params_t node_params;
+	odp_tm_node_t tm_node;
+	char name[ODP_TM_NAME_LEN];
+
+	memset(name, 'a', sizeof(name));
+	name[sizeof(name) - 1] = 0;
+
+	odp_tm_node_params_init(&node_params);
+
+	tm_node = odp_tm_node_create(odp_tm_systems[0], name, &node_params);
+	CU_ASSERT(tm_node != ODP_TM_INVALID);
+	CU_ASSERT(tm_node == odp_tm_node_lookup(odp_tm_systems[0], name));
+	CU_ASSERT(!odp_tm_node_destroy(tm_node));
+}
+
+static void traffic_mngr_test_shaper_long_name(void)
+{
+	odp_tm_shaper_params_t shaper_params;
+	odp_tm_shaper_t profile;
+	char name[ODP_TM_NAME_LEN];
+
+	memset(name, 'a', sizeof(name));
+	name[sizeof(name) - 1] = 0;
+
+	odp_tm_shaper_params_init(&shaper_params);
+	profile = odp_tm_shaper_create(name, &shaper_params);
+
+	CU_ASSERT(profile != ODP_TM_INVALID);
+	CU_ASSERT(profile == odp_tm_shaper_lookup(name));
+	CU_ASSERT(!odp_tm_shaper_destroy(profile));
+}
+
+static void traffic_mngr_test_sched_long_name(void)
+{
+	odp_tm_sched_params_t sched_params;
+	odp_tm_sched_t profile;
+	char name[ODP_TM_NAME_LEN];
+
+	memset(name, 'a', sizeof(name));
+	name[sizeof(name) - 1] = 0;
+
+	odp_tm_sched_params_init(&sched_params);
+	profile = odp_tm_sched_create(name, &sched_params);
+
+	CU_ASSERT(profile != ODP_TM_INVALID);
+	CU_ASSERT(profile == odp_tm_sched_lookup(name));
+	CU_ASSERT(!odp_tm_sched_destroy(profile));
+}
+
+static void traffic_mngr_test_threshold_long_name(void)
+{
+	odp_tm_threshold_params_t threshold_params;
+	odp_tm_threshold_t profile;
+	char name[ODP_TM_NAME_LEN];
+
+	memset(name, 'a', sizeof(name));
+	name[sizeof(name) - 1] = 0;
+
+	odp_tm_threshold_params_init(&threshold_params);
+	threshold_params.enable_max_bytes = true;
+	profile = odp_tm_threshold_create(name, &threshold_params);
+
+	CU_ASSERT(profile != ODP_TM_INVALID);
+	CU_ASSERT(profile == odp_tm_thresholds_lookup(name));
+	CU_ASSERT(!odp_tm_threshold_destroy(profile));
+}
+
+static void traffic_mngr_test_wred_long_name(void)
+{
+	odp_tm_wred_params_t wred_params;
+	odp_tm_wred_t profile;
+	char name[ODP_TM_NAME_LEN];
+
+	memset(name, 'a', sizeof(name));
+	name[sizeof(name) - 1] = 0;
+
+	odp_tm_wred_params_init(&wred_params);
+	profile = odp_tm_wred_create(name, &wred_params);
+
+	CU_ASSERT(profile != ODP_TM_INVALID);
+	CU_ASSERT(profile == odp_tm_wred_lookup(name));
+	CU_ASSERT(!odp_tm_wred_destroy(profile));
+}
+
 static void traffic_mngr_test_destroy(void)
 {
 	CU_ASSERT(destroy_tm_systems() == 0);
@@ -5016,6 +5102,15 @@ odp_testinfo_t traffic_mngr_suite[] = {
 				  traffic_mngr_check_tx_aging),
 	ODP_TEST_INFO(traffic_mngr_test_fanin_info),
 	ODP_TEST_INFO_CONDITIONAL(traffic_mngr_test_lso_ipv4, traffic_mngr_check_lso_ipv4),
+	ODP_TEST_INFO(traffic_mngr_test_node_long_name),
+	ODP_TEST_INFO_CONDITIONAL(traffic_mngr_test_shaper_long_name,
+				  traffic_mngr_check_shaper),
+	ODP_TEST_INFO_CONDITIONAL(traffic_mngr_test_sched_long_name,
+				  traffic_mngr_check_scheduler),
+	ODP_TEST_INFO_CONDITIONAL(traffic_mngr_test_threshold_long_name,
+				  traffic_mngr_check_thresholds_byte),
+	ODP_TEST_INFO_CONDITIONAL(traffic_mngr_test_wred_long_name,
+				  traffic_mngr_check_wred),
 	ODP_TEST_INFO(traffic_mngr_test_destroy),
 	ODP_TEST_INFO_NULL,
 };
