@@ -1,7 +1,5 @@
-/* Copyright (c) 2020, Nokia
- * All rights reserved.
- *
- * SPDX-License-Identifier:     BSD-3-Clause
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2020 Nokia
  */
 
 #include <stdint.h>

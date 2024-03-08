@@ -1,8 +1,6 @@
-/* Copyright (c) 2015, Ilya Maximets <i.maximets@samsung.com>
- * Copyright (c) 2021-2023, Nokia
- * All rights reserved.
- *
- * SPDX-License-Identifier:     BSD-3-Clause
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2015 Ilya Maximets <i.maximets@samsung.com>
+ * Copyright (c) 2021-2023 Nokia
  */
 
 /**

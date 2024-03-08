@@ -1,7 +1,5 @@
-/* Copyright (c) 2022, Nokia
- * All rights reserved.
- *
- * SPDX-License-Identifier:     BSD-3-Clause
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2022 Nokia
  */
 
 #ifndef ODP_PLAT_BUFFER_INLINE_TYPES_H_

@@ -1,8 +1,6 @@
-/* Copyright (c) 2021, ARM Limited
- * Copyright (c) 2021-2022, Nokia
- * All rights reserved.
- *
- * SPDX-License-Identifier:     BSD-3-Clause
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2021 ARM Limited
+ * Copyright (c) 2021-2022 Nokia
  */
 
 #ifndef ODP_API_ABI_ATOMIC_GENERIC_H_

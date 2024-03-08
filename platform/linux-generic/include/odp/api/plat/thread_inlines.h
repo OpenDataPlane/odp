@@ -1,7 +1,5 @@
-/* Copyright (c) 2018-2018, Linaro Limited
- * All rights reserved.
- *
- * SPDX-License-Identifier:     BSD-3-Clause
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2018 Linaro Limited
  */
 
 #ifndef ODP_PLAT_THREAD_INLINES_H_

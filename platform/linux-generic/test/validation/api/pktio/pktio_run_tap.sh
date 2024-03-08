@@ -1,9 +1,7 @@
 #!/bin/sh
 #
-# Copyright (c) 2015, Ilya Maximets <i.maximets@samsung.com>
-# All rights reserved.
-#
-# SPDX-License-Identifier:	BSD-3-Clause
+# SPDX-License-Identifier: BSD-3-Clause
+# Copyright (c) 2015 Ilya Maximets <i.maximets@samsung.com>
 #
 
 

@@ -1,7 +1,5 @@
-/* Copyright (c) 2017-2018, Linaro Limited
- * All rights reserved.
- *
- * SPDX-License-Identifier:     BSD-3-Clause
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2017-2018 Linaro Limited
  */
 
 /* This file gathers the buddy and slab allocation functionality provided

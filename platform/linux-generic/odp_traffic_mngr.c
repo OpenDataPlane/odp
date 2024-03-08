@@ -1,11 +1,8 @@
-/* Copyright 2015 EZchip Semiconductor Ltd. All Rights Reserved.
- *
- * Copyright (c) 2015-2018, Linaro Limited
- * Copyright (c) 2022, Marvell
- * Copyright (c) 2022, Nokia
- * All rights reserved.
- *
- * SPDX-License-Identifier: BSD-3-Clause
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2015 EZchip Semiconductor Ltd.
+ * Copyright (c) 2015-2018 Linaro Limited
+ * Copyright (c) 2022 Marvell
+ * Copyright (c) 2022 Nokia
  */
 
 #include <odp_posix_extensions.h>

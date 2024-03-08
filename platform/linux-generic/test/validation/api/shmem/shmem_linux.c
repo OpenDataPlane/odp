@@ -1,7 +1,5 @@
-/* Copyright (c) 2016-2018, Linaro Limited
- * All rights reserved.
- *
- * SPDX-License-Identifier:     BSD-3-Clause
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2016-2018 Linaro Limited
  */
 
 /* this test makes sure that odp shared memory created with the ODP_SHM_PROC

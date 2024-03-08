@@ -1,7 +1,5 @@
-/* Copyright (c) 2021, ARM Limited
- * All rights reserved.
- *
- * SPDX-License-Identifier:     BSD-3-Clause
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2021 ARM Limited
  */
 
 #ifdef __ARM_FEATURE_ATOMICS

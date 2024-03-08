@@ -1,7 +1,5 @@
-/* Copyright (c) 2021, Nokia
- * All rights reserved.
- *
- * SPDX-License-Identifier:     BSD-3-Clause
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2021 Nokia
  */
 
 #include <odp/api/abi/atomic_generic.h>

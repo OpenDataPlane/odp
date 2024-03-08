@@ -1,7 +1,5 @@
-/* Copyright (c) 2021, Nokia
- * All rights reserved.
- *
- * SPDX-License-Identifier:     BSD-3-Clause
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2021 Nokia
  */
 
 #ifndef ODP_API_ABI_TIME_CPU_H_

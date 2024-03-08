@@ -1,8 +1,6 @@
-/* Copyright (c) 2017-2018, Linaro Limited
- * Copyright (c) 2018-2023, Nokia
- * All rights reserved.
- *
- * SPDX-License-Identifier:     BSD-3-Clause
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2017-2018 Linaro Limited
+ * Copyright (c) 2018-2023 Nokia
  */
 
 #include <odp/api/atomic.h>

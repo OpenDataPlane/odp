@@ -1,7 +1,5 @@
-/* Copyright (c) 2020-2023, Nokia
- * All rights reserved.
- *
- * SPDX-License-Identifier:     BSD-3-Clause
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2020-2023 Nokia
  */
 
 #include <odp/api/align.h>
