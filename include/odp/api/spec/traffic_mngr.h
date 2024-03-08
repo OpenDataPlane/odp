@@ -101,6 +101,11 @@ extern "C" {
  */
 
 /**
+ * @def ODP_TM_NAME_LEN
+ * Maximum traffic manager name length, including the null character
+ */
+
+/**
  * @typedef odp_tm_percent_t
  * Is used when specifying fields that are percentages.  It is a fixed point
  * integer whose units are 1/100 of a percent.  Hence 100% is represented as
@@ -771,7 +776,8 @@ int odp_tm_egress_capabilities(odp_tm_capabilities_t *capabilities,
  *
  * @param name          The name to be assigned to this TM system.  Cannot
  *                      be NULL, and also must be unique amongst all other
- *                      TM system names.
+ *                      TM system names. Maximum string length is
+ *                      ODP_TM_NAME_LEN, including the null character.
  * @param requirements  The minimum required feature set and limits needed
  *                      by the ODP application.
  * @param egress        Describes the single egress "spigot" of this
@@ -1129,7 +1135,8 @@ void odp_tm_shaper_params_init(odp_tm_shaper_params_t *params);
  *
  * @param name    Optional name associated with this shaper profile.  Can
  *                be NULL.  If non-NULL must be unique amongst the set of
- *                all other shaper profiles.
+ *                all other shaper profiles. Maximum string length is
+ *                ODP_TM_NAME_LEN, including the null character.
  * @param params  The profile parameters.  See comments associated with
  *                the odp_tm_shaper_params_t for more details.
  * @return        Returns ODP_TM_INVALID upon failure, or the newly
@@ -1242,7 +1249,8 @@ void odp_tm_sched_params_init(odp_tm_sched_params_t *params);
  *
  * @param name    Optional name associated with this scheduler profile.
  *                Can be NULL.  If non-NULL must be unique amongst the
- *                set of all other scheduler profiles.
+ *                set of all other scheduler profiles. Maximum string length is
+ *                ODP_TM_NAME_LEN, including the null character.
  * @param params  The profile parameters.  See comments associated with
  *                the odp_tm_sched_params_t for more details.
  * @return        Returns ODP_TM_INVALID upon failure, or the newly
@@ -1339,6 +1347,8 @@ void odp_tm_threshold_params_init(odp_tm_threshold_params_t *params);
  * @param name    Optional name associated with this queue threshold
  *                profile.  Can be NULL.  If non-NULL must be unique
  *                amongst the set of all other queue threshold profiles.
+ *                Maximum string length is ODP_TM_NAME_LEN, including the null
+ *                character.
  * @param params  The profile parameters.  See comments associated with
  *                the odp_tm_threshold_params_t for more details.
  * @return        Returns ODP_TM_INVALID upon failure, or the newly
@@ -1477,7 +1487,8 @@ void odp_tm_wred_params_init(odp_tm_wred_params_t *params);
  *
  * @param name    Optional name associated with this WRED profile.  Can
  *                be NULL.  If non-NULL must be unique amongst the set of
- *                all other WRED profiles.
+ *                all other WRED profiles. Maximum string length is
+ *                ODP_TM_NAME_LEN, including the null character.
  * @param params  The profile parameters.  See comments associated with the
  *                odp_tm_wred_params_t for more details.
  * @return        Returns ODP_TM_INVALID upon failure, or the newly
@@ -1616,7 +1627,8 @@ void odp_tm_node_params_init(odp_tm_node_params_t *params);
  *                created.
  * @param name    Optional name that can be used later later to find this
  *                same odp_tm_node_t.  Can be NULL, otherwise must be
- *                unique across all odp_tm_node objects.
+ *                unique across all odp_tm_node objects. Maximum string length
+ *                is ODP_TM_NAME_LEN, including the null character.
  * @param params  TM node parameters.
  *
  * @return        Returns ODP_TM_INVALID upon failure, otherwise returns
