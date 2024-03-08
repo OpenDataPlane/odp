@@ -19,6 +19,7 @@
 #include <sys/prctl.h>
 #include <sys/socket.h>
 #include <sys/wait.h>
+#include <time.h>
 #include <unistd.h>
 
 #include <odp_api.h>
@@ -36,12 +37,17 @@
 
 #define GENERATE_ENUM(ENUM) ENUM,
 #define GENERATE_STRING(STRING) #STRING,
+#define ADDITION 'a'
+#define REMOVAL 'r'
+#define DELAY 'd'
 #define MAX_WORKERS 2
+#define MAX_PATTERN_LEN 32U
 #define ENV_PREFIX "ODP"
 #define ENV_DELIMITER "="
 #define MAX_CMD_LEN 10
 #define UNKNOWN_CMD UINT8_MAX
 #define EXIT_PROG (UNKNOWN_CMD - 1U)
+#define DELAY_PROG (EXIT_PROG - 1U)
 
 enum {
 	FOREACH_CMD(GENERATE_ENUM)
@@ -75,7 +81,15 @@ static const char *const cmdstrs[] = {
 	FOREACH_CMD(GENERATE_STRING)
 };
 
+typedef struct {
+	uint64_t thread_id;
+	uint64_t num_handled;
+	uint64_t enq_errs;
+	uint64_t runtime;
+} summary_t;
+
 typedef struct prog_t {
+	summary_t summary;
 	char *env;
 	char *cpumask;
 	pid_t pid;
@@ -84,17 +98,17 @@ typedef struct prog_t {
 } prog_t;
 
 typedef struct {
+	uint64_t val;
+	uint8_t op;
+} pattern_t;
+
+typedef struct {
+	pattern_t pattern[MAX_PATTERN_LEN];
 	prog_t progs[MAX_PROGS];
+	uint32_t num_p_elems;
 	uint32_t num_progs;
 	odp_bool_t is_running;
 } global_config_t;
-
-typedef struct {
-	uint64_t thread_id;
-	uint64_t num_handled;
-	uint64_t enq_errs;
-	uint64_t runtime;
-} summary_t;
 
 typedef struct worker_config_s worker_config_t;
 
@@ -119,6 +133,7 @@ typedef struct {
 	int socket;
 } prog_config_t;
 
+typedef odp_bool_t (*input_fn_t)(global_config_t *config, uint8_t *cmd, uint32_t *val);
 typedef odp_bool_t (*cmd_fn_t)(prog_config_t *config);
 
 static global_config_t conf;
@@ -170,12 +185,43 @@ static void parse_masks(global_config_t *config, const char *optarg)
 	free(tmp_str);
 }
 
+static void parse_pattern(global_config_t *config, const char *optarg)
+{
+	char *tmp_str = strdup(optarg), *tmp, op;
+	uint8_t num_elems = 0U;
+	pattern_t *pattern;
+	uint64_t val;
+	int ret;
+
+	if (tmp_str == NULL)
+		return;
+
+	tmp = strtok(tmp_str, DELIMITER);
+
+	while (tmp && num_elems < MAX_PATTERN_LEN) {
+		pattern = &config->pattern[num_elems];
+		ret = sscanf(tmp, "%c%" PRIu64 "", &op, &val);
+
+		if (ret == 2 && (op == ADDITION || op == REMOVAL || op == DELAY)) {
+			pattern->val = val;
+			pattern->op = op;
+			++num_elems;
+		}
+
+		tmp = strtok(NULL, DELIMITER);
+	}
+
+	free(tmp_str);
+	config->num_p_elems = num_elems;
+}
+
 static void print_usage(void)
 {
 	printf("\n"
-	       "Simple ODP dynamic worker tester. Can be used to verify ability of an\n"
-	       "implementation to dynamically add and remove workers from one ODP application to\n"
-	       "another. Acts as a frontend and forks ODP applications based on configuration.\n"
+	       "Simple interactive ODP dynamic worker tester. Can be used to verify ability of\n"
+	       "an implementation to dynamically add and remove workers from one ODP application\n"
+	       "to another. Acts as a frontend and forks ODP applications based on\n"
+	       "configuration.\n"
 	       "\n"
 	       "Usage: " PROG_NAME " OPTIONS\n"
 	       "\n"
@@ -185,6 +231,8 @@ static void print_usage(void)
 	       "       > %s 0\n"
 	       "       > %s 1\n"
 	       "       > %s 1\n"
+	       "       ...\n"
+	       "       " PROG_NAME " -c 0x80,0x80 -p %c0%s%c1000000000%s%c0\n"
 	       "\n"
 	       "Mandatory OPTIONS:\n"
 	       "\n"
@@ -200,15 +248,52 @@ static void print_usage(void)
 	       "\n"
 	       "Optional OPTIONS:\n"
 	       "\n"
+	       "  -p, --pattern  Non-interactive mode with a pattern of worker additions,\n"
+	       "                 removals and delays, delimited by '%s', no spaces. Additions\n"
+	       "                 are indicated with '%c' prefix, removals with '%c' prefix, both\n"
+	       "                 followed by process index, starting from 0, and delays with\n"
+	       "                 '%c' prefix, followed by a delay in nanoseconds. Process\n"
+	       "                 indexes are based on the parsed process count of '--cpumasks'\n"
+	       "                 option. Additions and removals should be equal in the aggregate\n"
+	       "                 and removals should never outnumber additions at any instant.\n"
+	       "                 Maximum pattern length is %u.\n"
 	       "  -h, --help     This help.\n"
 	       "\n", cmdstrs[ADD_WORKER], cmdstrs[REM_WORKER], cmdstrs[ADD_WORKER],
-	       cmdstrs[REM_WORKER], MAX_PROGS, MAX_WORKERS);
+	       cmdstrs[REM_WORKER], ADDITION, DELIMITER, DELAY, DELIMITER, REMOVAL, MAX_PROGS,
+	       MAX_WORKERS, DELIMITER, ADDITION, REMOVAL, DELAY, MAX_PATTERN_LEN);
 }
 
 static parse_result_t check_options(const global_config_t *config)
 {
+	const pattern_t *pattern;
+	int64_t num_tot = 0U;
+
 	if (config->num_progs == 0U) {
 		printf("Invalid number of CPU masks: %u\n", config->num_progs);
+		return PRS_NOK;
+	}
+
+	for (uint32_t i = 0U; i < config->num_p_elems; ++i) {
+		pattern = &config->pattern[i];
+
+		if (pattern->op != DELAY && pattern->val >= config->num_progs) {
+			ODPH_ERR("Invalid pattern, invalid process index\n");
+			return PRS_NOK;
+		}
+
+		if (pattern->op == ADDITION)
+			++num_tot;
+		else if (pattern->op == REMOVAL)
+			--num_tot;
+
+		if (num_tot < 0) {
+			ODPH_ERR("Invalid pattern, removals exceed additions instantaneously\n");
+			return PRS_NOK;
+		}
+	}
+
+	if (num_tot > 0) {
+		ODPH_ERR("Invalid pattern, more additions than removals\n");
 		return PRS_NOK;
 	}
 
@@ -221,11 +306,12 @@ static parse_result_t parse_options(int argc, char **argv, global_config_t *conf
 
 	static const struct option longopts[] = {
 		{ "cpumasks", required_argument, NULL, 'c' },
+		{ "pattern", required_argument, NULL, 'p' },
 		{ "help", no_argument, NULL, 'h' },
 		{ NULL, 0, NULL, 0 }
 	};
 
-	static const char *shortopts = "c:h";
+	static const char *shortopts = "c:p:h";
 
 	init_options(config);
 
@@ -238,6 +324,9 @@ static parse_result_t parse_options(int argc, char **argv, global_config_t *conf
 		switch (opt) {
 		case 'c':
 			parse_masks(config, optarg);
+			break;
+		case 'p':
+			parse_pattern(config, optarg);
 			break;
 		case 'h':
 			print_usage();
@@ -715,6 +804,11 @@ static odp_bool_t wait_process_ready(int socket)
 	return true;
 }
 
+static inline odp_bool_t is_interactive(const global_config_t *config)
+{
+	return config->num_p_elems == 0U;
+}
+
 static void print_cli_usage(void)
 {
 	printf("\nValid commands are:\n\n");
@@ -725,13 +819,84 @@ static void print_cli_usage(void)
 	printf("\n");
 }
 
-static uint8_t map_to_command(const char *cmdstr)
+static uint8_t map_str_to_command(const char *cmdstr)
 {
 	for (uint32_t i = 0U; i < ODPH_ARRAY_SIZE(cmdstrs); ++i)
 		if (strncmp(cmdstr, cmdstrs[i], MAX_CMD_LEN - 1U) == 0)
 			return i;
 
 	return UNKNOWN_CMD;
+}
+
+static odp_bool_t get_stdin_command(global_config_t *config ODP_UNUSED, uint8_t *cmd,
+				    uint32_t *index)
+{
+	char *input;
+	char cmdstr[MAX_CMD_LEN + 1U];
+	size_t size;
+	ssize_t ret;
+
+	input = NULL;
+	memset(cmdstr, 0, sizeof(cmdstr));
+	printf("> ");
+	ret = getline(&input, &size, stdin);
+
+	if (ret == -1)
+		return false;
+
+	ret = sscanf(input, "%" S(MAX_CMD_LEN) "s %u", cmdstr, index);
+	free(input);
+
+	if (ret == EOF)
+		return false;
+
+	if (ret != 2) {
+		printf("Unable to parse command\n");
+		return false;
+	}
+
+	*cmd = map_str_to_command(cmdstr);
+	return true;
+}
+
+static uint8_t map_char_to_command(char cmdchar)
+{
+	switch (cmdchar) {
+	case ADDITION:
+		return ADD_WORKER;
+	case REMOVAL:
+		return REM_WORKER;
+	case DELAY:
+		return DELAY_PROG;
+	default:
+		return UNKNOWN_CMD;
+	}
+}
+
+static odp_bool_t get_pattern_command(global_config_t *config, uint8_t *cmd, uint32_t *index)
+{
+	static uint32_t i;
+	const pattern_t *pattern;
+	struct timespec ts;
+
+	if (i == config->num_p_elems) {
+		config->is_running = false;
+		return false;
+	}
+
+	pattern = &config->pattern[i++];
+	*cmd = map_char_to_command(pattern->op);
+
+	if (*cmd == DELAY_PROG) {
+		ts.tv_sec  = pattern->val / ODP_TIME_SEC_IN_NS;
+		ts.tv_nsec = pattern->val % ODP_TIME_SEC_IN_NS;
+		nanosleep(&ts, NULL);
+		return false;
+	}
+
+	*index = pattern->val;
+
+	return true;
 }
 
 static odp_bool_t is_peer_down(int error)
@@ -767,58 +932,61 @@ static int send_command(int socket, uint8_t cmd)
 	return data;
 }
 
-static void dump_summary(int socket, pid_t pid)
+static odp_bool_t recv_summary(int socket, summary_t *summary)
 {
-	summary_t stats;
-	const ssize_t size = sizeof(stats), ret = TEMP_FAILURE_RETRY(recv(socket, &stats, size,
-									  0));
+	const ssize_t size = sizeof(*summary),
+	ret = TEMP_FAILURE_RETRY(recv(socket, summary, size, 0));
 
-	if (ret < size)
-		return;
+	return ret == size;
+}
 
+static void dump_summary(pid_t pid, const summary_t *summary)
+{
 	printf("\nremoved worker summary:\n"
 	       "    ODP process ID: %d\n"
 	       "    thread ID:      %" PRIu64 "\n"
 	       "    events handled: %" PRIu64 "\n"
 	       "    enqueue errors: %" PRIu64 "\n"
-	       "    runtime:        %" PRIu64 " (ns)\n\n", pid, stats.thread_id, stats.num_handled,
-	       stats.enq_errs, stats.runtime);
+	       "    runtime:        %" PRIu64 " (ns)\n\n", pid, summary->thread_id,
+	       summary->num_handled, summary->enq_errs, summary->runtime);
 }
 
-static void run_global(global_config_t *config)
+static odp_bool_t check_summary(const summary_t *summary)
 {
-	char *input;
-	char cmdstr[MAX_CMD_LEN + 1U];
-	size_t size;
+	if (summary->num_handled == 0U) {
+		printf("Summary check failure: no events handled\n");
+		return false;
+	}
+
+	if (summary->enq_errs > 0U) {
+		printf("Summary check failure: enqueue errors\n");
+		return false;
+	}
+
+	if (summary->runtime == 0U) {
+		printf("Summary check failure: no run time recorded\n");
+		return false;
+	}
+
+	return true;
+}
+
+static odp_bool_t run_global(global_config_t *config)
+{
+	input_fn_t input_fn;
 	uint32_t index;
 	uint8_t cmd;
 	prog_t *prog;
 	ssize_t ret;
+	odp_bool_t is_recv, func_ret = true;
 
 	print_cli_usage();
+	input_fn = is_interactive(config) ? get_stdin_command : get_pattern_command;
 	config->is_running = true;
 
 	while (config->is_running) {
-		input = NULL;
-		memset(cmdstr, 0, sizeof(cmdstr));
-		printf("> ");
-		ret = getline(&input, &size, stdin);
-
-		if (ret == -1)
+		if (!input_fn(config, &cmd, &index))
 			continue;
-
-		ret = sscanf(input, "%" S(MAX_CMD_LEN) "s %u", cmdstr, &index);
-		free(input);
-
-		if (ret == EOF)
-			continue;
-
-		if (ret != 2) {
-			printf("Unable to parse command\n");
-			continue;
-		}
-
-		cmd = map_to_command(cmdstr);
 
 		if (cmd == UNKNOWN_CMD) {
 			printf("Unrecognized command\n");
@@ -855,18 +1023,40 @@ static void run_global(global_config_t *config)
 			continue;
 		}
 
-		if (ret == CMD_STATS)
-			dump_summary(prog->socket, prog->pid);
+		if (ret == CMD_STATS) {
+			is_recv = recv_summary(prog->socket, &prog->summary);
+
+			if (is_recv)
+				dump_summary(prog->pid, &prog->summary);
+
+			if (!is_interactive(config) &&
+			    !(is_recv && check_summary(&prog->summary))) {
+				config->is_running = false;
+				func_ret = false;
+			}
+		}
 	}
 
 	for (uint32_t i = 0U; i < config->num_progs; ++i) {
 		prog = &config->progs[i];
 
 		if (prog->state == UP) {
+			while (true) {
+				ret = send_command(prog->socket, REM_WORKER);
+
+				if (ret == CONN_ERR || ret == PEER_ERR || ret == CMD_NOK)
+					break;
+
+				if (recv_summary(prog->socket, &prog->summary))
+					dump_summary(prog->pid, &prog->summary);
+			}
+
 			(void)send_command(prog->socket, EXIT_PROG);
 			(void)TEMP_FAILURE_RETRY(waitpid(prog->pid, NULL, 0));
 		}
 	}
+
+	return func_ret;
 }
 
 static void teardown_global(const global_config_t *config)
@@ -882,7 +1072,7 @@ static void teardown_global(const global_config_t *config)
 int main(int argc, char **argv)
 {
 	parse_result_t res;
-	int ret;
+	int ret, func_ret = EXIT_SUCCESS;
 	prog_t *prog;
 	pid_t pid, ppid;
 	const size_t envsize = strlen(ENV_PREFIX S(MAX_PROGS)) + 1U;
@@ -966,9 +1156,9 @@ int main(int argc, char **argv)
 		}
 	}
 
-	run_global(&conf);
+	func_ret = run_global(&conf) ? EXIT_SUCCESS : EXIT_FAILURE;
 	teardown_global(&conf);
 
 exit:
-	return EXIT_SUCCESS;
+	return func_ret;
 }
