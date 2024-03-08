@@ -1,8 +1,6 @@
-/* Copyright (c) 2016-2018, Linaro Limited
- * Copyright (c) 2019-2022, Nokia
- * All rights reserved.
- *
- * SPDX-License-Identifier:     BSD-3-Clause
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2016-2018 Linaro Limited
+ * Copyright (c) 2019-2022 Nokia
  */
 
 /* This header should NOT be included directly. There are no include guards for

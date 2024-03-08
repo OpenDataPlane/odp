@@ -1,9 +1,6 @@
- /* Copyright 2015 EZchip Semiconductor Ltd. All Rights Reserved.
-
- * Copyright (c) 2015-2018, Linaro Limited
- * All rights reserved.
- *
- * SPDX-License-Identifier: BSD-3-Clause
+ /* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2015 EZchip Semiconductor Ltd.
+ * Copyright (c) 2015-2018 Linaro Limited
  */
 
 #include <odp/api/hash.h>

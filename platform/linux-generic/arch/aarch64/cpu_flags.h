@@ -1,7 +1,5 @@
-/* Copyright (c) 2021, ARM Limited
- * All rights reserved.
- *
- * SPDX-License-Identifier:     BSD-3-Clause
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2021 ARM Limited
  */
 
 #ifndef ODP_PLAT_CPU_FLAGS_H_

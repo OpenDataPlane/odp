@@ -1,8 +1,6 @@
-/* Copyright (c) 2018-2018, Linaro Limited
- * Copyright (c) 2022, Nokia
- * All rights reserved.
- *
- * SPDX-License-Identifier:     BSD-3-Clause
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2018 Linaro Limited
+ * Copyright (c) 2022 Nokia
  */
 
 #ifndef ODP_PLAT_PACKET_IO_INLINES_H_

@@ -1,12 +1,11 @@
-/* Copyright (c) 2017-2018, Linaro Limited
- * Copyright (c) 2023, Nokia
- * All rights reserved.
- *
- * SPDX-License-Identifier:     BSD-3-Clause
- */
-
 /* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2017-2018 Linaro Limited
+ * Copyright (c) 2023 Nokia
+ *
  * Copyright(c) 2010-2015 Intel Corporation
+ *   - lib/eal/x86/include/rte_cpuflags.h
+ *   - lib/eal/x86/rte_cpuflags.c
+ *   - lib/eal/x86/rte_cpuid.h
  */
 
 #include "cpu_flags.h"

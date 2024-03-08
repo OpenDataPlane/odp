@@ -1,9 +1,7 @@
-/* Copyright (c) 2014-2018, Linaro Limited
- * Copyright (c) 2021, ARM Limited
- * Copyright (c) 2022-2023, Nokia
- * All rights reserved.
- *
- * SPDX-License-Identifier:     BSD-3-Clause
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2014-2018 Linaro Limited
+ * Copyright (c) 2021 ARM Limited
+ * Copyright (c) 2022-2023 Nokia
  */
 
 #include <odp_posix_extensions.h>
