@@ -414,6 +414,21 @@ static void test_ml_model_lookup(void)
 	CU_ASSERT(odp_ml_model_destroy(model2) == 0);
 }
 
+static void test_ml_model_long_name(void)
+{
+	odp_ml_model_t model;
+	char name[ODP_ML_MODEL_NAME_LEN];
+
+	memset(name, 'a', sizeof(name));
+	name[sizeof(name) - 1] = 0;
+
+	model = odp_ml_model_create(name, &global.model_param);
+	CU_ASSERT_FATAL(model != ODP_ML_MODEL_INVALID);
+
+	CU_ASSERT(odp_ml_model_to_u64(model) == odp_ml_model_to_u64(odp_ml_model_lookup(name)));
+	CU_ASSERT(odp_ml_model_destroy(model) == 0);
+}
+
 static void test_ml_model_info(void)
 {
 	int ret;
@@ -1130,6 +1145,7 @@ odp_testinfo_t ml_suite[] = {
 	ODP_TEST_INFO_CONDITIONAL(test_ml_debug, check_ml_support),
 	ODP_TEST_INFO_CONDITIONAL(test_ml_model_create, check_ml_support),
 	ODP_TEST_INFO_CONDITIONAL(test_ml_model_lookup, check_ml_support),
+	ODP_TEST_INFO_CONDITIONAL(test_ml_model_long_name, check_ml_support),
 	ODP_TEST_INFO_CONDITIONAL(test_ml_model_info, check_ml_support),
 	ODP_TEST_INFO_CONDITIONAL(test_ml_model_load, check_load_sync),
 	ODP_TEST_INFO_CONDITIONAL(test_ml_model_load_async_poll, check_load_poll),
