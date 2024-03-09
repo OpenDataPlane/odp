@@ -4,11 +4,18 @@ bin_PROGRAMS = odp_dyn_workers
 
 if test_cpp
 bin_PROGRAMS +=  odp_api_from_cpp
-TESTS = odp_api_from_cpp
 endif
 
 odp_dyn_workers_SOURCES = odp_dyn_workers.c
 odp_api_from_cpp_SOURCES = odp_api_from_cpp.cpp
+
+TESTSCRIPTS = odp_dyn_workers_run.sh
+
+TESTS = $(TESTSCRIPTS)
+
+if test_cpp
+TESTS += odp_api_from_cpp
+endif
 
 noinst_PROGRAMS = odp_api_headers
 odp_api_headers_CFLAGS = $(AM_CFLAGS) -Wconversion
@@ -46,3 +53,25 @@ endif
 endif
 
 DISTCLEANFILES = $(PROGRAM_shared) $(PROGRAM_static)
+
+dist_check_SCRIPTS = $(TESTSCRIPTS)
+
+# If building out-of-tree, make check will not copy the scripts and data to the
+# $(builddir) assuming that all commands are run locally. However this prevents
+# running tests on a remote target using LOG_COMPILER.
+# So copy all script and data files explicitly here.
+all-local:
+	if [ "x$(srcdir)" != "x$(builddir)" ]; then \
+		for f in $(dist_check_SCRIPTS) $(dist_check_DATA); do \
+			if [ -e $(srcdir)/$$f ]; then \
+				mkdir -p $(builddir)/$$(dirname $$f); \
+				cp -f $(srcdir)/$$f $(builddir)/$$f; \
+			fi \
+		done \
+	fi
+clean-local:
+	if [ "x$(srcdir)" != "x$(builddir)" ]; then \
+		for f in $(dist_check_SCRIPTS) $(dist_check_DATA); do \
+			rm -f $(builddir)/$$f; \
+		done \
+	fi
