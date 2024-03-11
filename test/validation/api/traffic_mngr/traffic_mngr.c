@@ -102,7 +102,6 @@
 #define ETHERNET_OVHD_LEN        (ETHERNET_IFG + ETHERNET_PREAMBLE)
 #define CRC_LEN                  4
 #define SHAPER_LEN_ADJ           ETHERNET_OVHD_LEN
-#define TM_NAME_LEN              32
 #define BILLION                  1000000000ULL
 #define MS                       1000000  /* Millisecond in units of NS */
 #define MBPS                     1000000
@@ -1575,7 +1574,7 @@ static tm_node_desc_t *create_tm_node(odp_tm_t        odp_tm,
 	odp_tm_wred_t         green_profile, yellow_profile, red_profile;
 	odp_tm_node_t         tm_node, parent_node;
 	uint32_t              node_desc_size, queue_desc_size, priority;
-	char                  node_name[TM_NAME_LEN];
+	char                  node_name[ODP_TM_NAME_LEN];
 	int                   rc;
 
 	odp_tm_node_params_init(&node_params);
@@ -1736,7 +1735,7 @@ static tm_node_desc_t *find_node_desc(uint8_t     tm_system_idx,
 		name_ptr++;
 
 	while (node_desc != NULL) {
-		if (strncmp(node_desc->node_name, node_name, TM_NAME_LEN) == 0)
+		if (strncmp(node_desc->node_name, node_name, ODP_TM_NAME_LEN) == 0)
 			return node_desc;
 
 		if (name_ptr == NULL)
@@ -1871,7 +1870,7 @@ static int create_tm_system(void)
 	tm_node_desc_t              *root_node_desc;
 	uint32_t                     level, max_nodes[ODP_TM_MAX_LEVELS];
 	odp_tm_t                     odp_tm, found_odp_tm;
-	char                         tm_name[TM_NAME_LEN];
+	char                         tm_name[ODP_TM_NAME_LEN];
 	int                          rc;
 
 	odp_tm_requirements_init(&requirements);
@@ -2551,7 +2550,7 @@ static void traffic_mngr_test_shaper_profile(void)
 	odp_tm_shaper_params_t shaper_params;
 	odp_tm_shaper_t        profile;
 	uint32_t               idx, shaper_idx, i;
-	char                   shaper_name[TM_NAME_LEN];
+	char                   shaper_name[ODP_TM_NAME_LEN];
 
 	odp_tm_shaper_params_init(&shaper_params);
 	shaper_params.shaper_len_adjust = SHAPER_LEN_ADJ;
@@ -2615,7 +2614,7 @@ static void traffic_mngr_test_sched_profile(void)
 	odp_tm_sched_params_t sched_params;
 	odp_tm_sched_t        profile;
 	uint32_t              idx, priority, sched_idx, i;
-	char                  sched_name[TM_NAME_LEN];
+	char                  sched_name[ODP_TM_NAME_LEN];
 
 	odp_tm_sched_params_init(&sched_params);
 
@@ -2688,7 +2687,7 @@ static void traffic_mngr_test_threshold_profile(threshold_type_t threshold)
 	odp_tm_threshold_params_t threshold_params;
 	odp_tm_threshold_t        profile;
 	uint32_t                  idx, threshold_idx, i;
-	char                      threshold_name[TM_NAME_LEN];
+	char                      threshold_name[ODP_TM_NAME_LEN];
 
 	odp_tm_threshold_params_init(&threshold_params);
 
@@ -2783,7 +2782,7 @@ static void traffic_mngr_test_wred_profile(void)
 	odp_tm_wred_params_t wred_params;
 	odp_tm_wred_t        profile;
 	uint32_t             idx, color, wred_idx, i, c;
-	char                 wred_name[TM_NAME_LEN];
+	char                 wred_name[ODP_TM_NAME_LEN];
 
 	odp_tm_wred_params_init(&wred_params);
 	wred_params.enable_wred       = 1;
@@ -3073,7 +3072,7 @@ static int set_sched_fanin(const char         *node_name,
 	odp_tm_node_t         tm_node, fanin_node;
 	uint32_t              fanin_cnt, fanin, priority;
 	uint8_t               sched_weight;
-	char                  sched_name[TM_NAME_LEN];
+	char                  sched_name[ODP_TM_NAME_LEN];
 	int                   rc;
 
 	node_desc = find_node_desc(0, node_name);
