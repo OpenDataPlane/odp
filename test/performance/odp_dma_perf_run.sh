@@ -1,9 +1,8 @@
 #!/bin/sh
 #
-# Copyright (c) 2022-2023, Nokia
-# All rights reserved.
+# SPDX-License-Identifier: BSD-3-Clause
+# Copyright (c) 2022-2023 Nokia
 #
-# SPDX-License-Identifier:	BSD-3-Clause
 
 TEST_DIR="${TEST_DIR:-$(dirname $0)}"
 BIN_NAME=odp_dma_perf

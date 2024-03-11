@@ -1,8 +1,7 @@
-/* Copyright (c) 2014-2018, Linaro Limited
- * All rights reserved.
- *
- * SPDX-License-Identifier:     BSD-3-Clause
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2014-2018 Linaro Limited
  */
+
 #ifndef TEST_VECTORS_LEN_
 #define TEST_VECTORS_LEN_
 

@@ -1,9 +1,7 @@
 #!/bin/sh
 #
-# Copyright (c) 2016-2018, Linaro Limited
-# All rights reserved.
-#
-# SPDX-License-Identifier:	BSD-3-Clause
+# SPDX-License-Identifier: BSD-3-Clause
+# Copyright (c) 2016-2018 Linaro Limited
 #
 # Script that passes command line arguments to odp_sched_latency test when
 # launched by 'make check'

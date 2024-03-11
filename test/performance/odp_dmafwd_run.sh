@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright (c) 2023 Nokia
+#
 
 TEST_DIR="${TEST_DIR:-$PWD}"
 TEST_SRC_DIR=$(dirname $0)
