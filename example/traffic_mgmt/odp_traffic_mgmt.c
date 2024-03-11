@@ -343,7 +343,7 @@ static uint32_t create_profile_set(profile_params_set_t *profile_params_set,
 	odp_tm_shaper_params_t    shaper_params, *shaper;
 	odp_tm_wred_params_t      wred_params, *wred;
 	uint32_t                  err_cnt, color;
-	char                      name[64], wred_name[64];
+	char                      name[ODP_TM_NAME_LEN], wred_name[ODP_TM_NAME_LEN];
 
 	err_cnt = 0;
 	if (name_idx == 0)
@@ -477,7 +477,7 @@ static int config_example_user(odp_tm_node_t cos_tm_node,
 	odp_tm_node_t         user_tm_node;
 	profile_set_t        *profile_set;
 	uint32_t              app_idx, queue_idx, svc_class_queue_num;
-	char                  user_name[64];
+	char                  user_name[ODP_TM_NAME_LEN];
 	int                   rc;
 
 	profile_set = &USER_PROFILE_SETS[svc_class];
@@ -538,7 +538,7 @@ static int config_company_node(const char *company_name)
 	profile_set_t       *profile_set;
 	odp_tm_node_t        company_tm_node, cos_tm_node;
 	uint32_t             cos_idx, user_idx;
-	char                 cos_node_name[64];
+	char                 cos_node_name[ODP_TM_NAME_LEN];
 
 	profile_set = &COMPANY_PROFILE_SET;
 	odp_tm_node_params_init(&tm_node_params);
