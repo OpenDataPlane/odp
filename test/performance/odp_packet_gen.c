@@ -127,6 +127,12 @@ typedef struct test_options_t {
 	uint32_t wait_start_sec;
 	uint32_t mtu;
 	uint32_t num_custom_l3;
+	struct {
+		odp_lso_profile_param_t param;
+		uint32_t payload_offset;
+		uint32_t max_payload_len;
+		odp_bool_t enabled;
+	} lso;
 	uint8_t l4_proto;
 	int tx_mode;
 	odp_bool_t promisc_mode;
@@ -162,6 +168,9 @@ typedef struct thread_arg_t {
 
 	/* In direct_rx mode, pktin queue per pktio interface (per thread) */
 	odp_pktin_queue_t pktin[MAX_PKTIOS];
+
+	/* LSO profile per pktio interface */
+	odp_lso_profile_t lso_profile[MAX_PKTIOS];
 
 	/* Pre-built packets for TX thread */
 	odp_packet_t packet[MAX_PKTIOS][MAX_ALLOC_PACKETS];
@@ -208,6 +217,7 @@ typedef struct test_global_t {
 		odph_ethaddr_t eth_src;
 		odph_ethaddr_t eth_dst;
 		odp_pktio_t pktio;
+		odp_lso_profile_t lso_profile;
 		odp_pktout_queue_t pktout[MAX_THREADS];
 		odp_pktin_queue_t pktin[MAX_THREADS];
 		int started;
@@ -238,6 +248,9 @@ typedef struct {
 	uint64_t packets;
 } rx_lat_data_t;
 
+typedef int (*send_fn_t)(odp_pktout_queue_t pktout, odp_packet_t pkt[], uint32_t num,
+			 int tx_mode, uint64_t *drop_bytes, const odp_packet_lso_opt_t *lso_opt);
+
 static test_global_t *test_global;
 
 static void print_usage(void)
@@ -264,6 +277,24 @@ static void print_usage(void)
 	       "                            Double tagged VLANs 1 and 2: 0x88a8:1,0x8100:2\n"
 	       "  -r, --num_rx              Number of receive threads. Default: 1\n"
 	       "  -t, --num_tx              Number of transmit threads. Default: 1\n"
+	       "  -T, --lso <options>       Transmit packets with Large Send Offload (LSO). Specify\n"
+	       "                            LSO options as comma-separated list (no spaces) in\n"
+	       "                            format: protocol,payload_offset(B),max_payload_len(B). E.g.:\n"
+	       "                              0,34,1500\n"
+	       "                            In case of ODP_LSO_PROTO_CUSTOM the list is extended by\n"
+	       "                            up to %d custom modification options in format:\n"
+	       "                            mod_op:offset(B):size(B) separated by commas. E.g.:\n"
+	       "                              2,22,1500,0:19:1\n"
+	       "                            Supported protocols:\n"
+	       "                              0: ODP_LSO_PROTO_IPV4\n"
+	       "                              1: ODP_LSO_PROTO_TCP_IPV4\n"
+	       "                              2: ODP_LSO_PROTO_CUSTOM\n"
+	       "                            Custom modification options:\n"
+	       "                              0: ODP_LSO_ADD_SEGMENT_NUM\n"
+	       "                              1: ODP_LSO_ADD_PAYLOAD_LEN\n"
+	       "                              2: ODP_LSO_ADD_PAYLOAD_OFFSET\n"
+	       "                            Depending on the implementation, all listed LSO options\n"
+	       "                            may not be always supported.\n"
 	       "  -n, --num_pkt             Number of packets in the pool. Default: 1000\n"
 	       "  -l, --len                 Packet length. Default: 512\n"
 	       "  -L, --len_range <min,max,bins>\n"
@@ -276,7 +307,8 @@ static void print_usage(void)
 	       "                            Overrides standard packet length option.\n"
 	       "  -D, --direct_rx           Direct input mode (default: 0)\n"
 	       "                              0: Use scheduler for packet input\n"
-	       "                              1: Poll packet input in direct mode\n", MAX_BINS);
+	       "                              1: Poll packet input in direct mode\n",
+	       ODP_LSO_MAX_CUSTOM, MAX_BINS);
 	printf("  -m, --tx_mode             Transmit mode (default 1):\n"
 	       "                              0: Re-send packets with don't free option\n"
 	       "                              1: Send static packet references. Some features may\n"
@@ -466,6 +498,128 @@ static odp_bool_t parse_custom_fields(const char *optarg, test_options_t *opts)
 	return true;
 }
 
+static odp_bool_t parse_lso_fields(const char *optarg, test_options_t *opts)
+{
+	char *tmp_str = strdup(optarg), *tmp;
+	uint8_t num_custom = 0;
+	uint32_t proto, mod_op, offset, size;
+	int ret;
+	odp_bool_t ret_val = true;
+
+	odp_lso_profile_param_init(&opts->lso.param);
+
+	if (tmp_str == NULL) {
+		ODPH_ERR("Error: strdup() failed\n");
+		return false;
+	}
+
+	/* Format: proto,payload_offset,max_payload_len[,mod_op:offset:size,mod_op:offset...] */
+
+	tmp = strtok(tmp_str, TOKEN_DELIMITER);
+	if (tmp == NULL) {
+		ODPH_ERR("Error: Unable to parse LSO protocol\n");
+		ret_val = false;
+		goto exit;
+	}
+
+	proto = strtoul(tmp, NULL, 0);
+
+	switch (proto) {
+	case 0:
+		opts->lso.param.lso_proto = ODP_LSO_PROTO_IPV4;
+		break;
+	case 1:
+		opts->lso.param.lso_proto = ODP_LSO_PROTO_TCP_IPV4;
+		break;
+	case 2:
+		opts->lso.param.lso_proto = ODP_LSO_PROTO_CUSTOM;
+		break;
+	default:
+		ODPH_ERR("Error: Invalid LSO protocol: %u\n", proto);
+		ret_val = false;
+		goto exit;
+	}
+
+	tmp = strtok(NULL, TOKEN_DELIMITER);
+	if (tmp == NULL) {
+		ODPH_ERR("Error: Unable to parse LSO payload offset\n");
+		ret_val = false;
+		goto exit;
+	}
+	opts->lso.payload_offset = strtoul(tmp, NULL, 0);
+
+	tmp = strtok(NULL, TOKEN_DELIMITER);
+	if (tmp == NULL) {
+		ODPH_ERR("Error: Unable to parse LSO max payload length\n");
+		ret_val = false;
+		goto exit;
+	}
+	opts->lso.max_payload_len = strtoul(tmp, NULL, 0);
+
+	tmp = strtok(NULL, TOKEN_DELIMITER);
+	while (opts->lso.param.lso_proto == ODP_LSO_PROTO_CUSTOM && tmp) {
+		if (num_custom == ODP_LSO_MAX_CUSTOM) {
+			ODPH_ERR("Error: Too many custom LSO operations (max %u)\n",
+				 ODP_LSO_MAX_CUSTOM);
+			ret_val = false;
+			goto exit;
+		}
+
+		ret = sscanf(tmp, "%" PRIu32 "" FIELD_DELIMITER
+			     "%" PRIu32 "" FIELD_DELIMITER "%" PRIu32 "",
+			     &mod_op, &offset, &size);
+
+		if (ret != 3) {
+			ODPH_ERR("Error: Invalid custom LSO operation, bad field format\n");
+			ret_val = false;
+			goto exit;
+		}
+
+		switch (mod_op) {
+		case 0:
+			opts->lso.param.custom.field[num_custom].mod_op = ODP_LSO_ADD_SEGMENT_NUM;
+			break;
+		case 1:
+			opts->lso.param.custom.field[num_custom].mod_op = ODP_LSO_ADD_PAYLOAD_LEN;
+			break;
+		case 2:
+			opts->lso.param.custom.field[num_custom].mod_op =
+				ODP_LSO_ADD_PAYLOAD_OFFSET;
+			break;
+		default:
+			ODPH_ERR("Error: Invalid custom LSO operation: %" PRIu32 "\n", mod_op);
+			ret_val = false;
+			goto exit;
+		}
+
+		opts->lso.param.custom.field[num_custom].offset = offset;
+
+		if (size != 1 && size != 2 && size != 4 && size != 8) {
+			ODPH_ERR("Error: Invalid custom field size: %" PRIu32 "\n", size);
+			ret_val = false;
+			goto exit;
+		}
+		opts->lso.param.custom.field[num_custom].size = size;
+
+		num_custom++;
+		tmp = strtok(NULL, TOKEN_DELIMITER);
+	}
+
+	if (opts->lso.param.lso_proto == ODP_LSO_PROTO_CUSTOM && num_custom == 0) {
+		ODPH_ERR("Error: Custom LSO protocol requires at least one custom field\n");
+		ret_val = false;
+		goto exit;
+	}
+
+	opts->lso.param.custom.num_custom = num_custom;
+	opts->lso.enabled = true;
+
+exit:
+	free(tmp_str);
+
+	return ret_val;
+}
+
 static int init_bins(test_global_t *global)
 {
 	uint32_t i, bin_size;
@@ -516,6 +670,7 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 		{"eth_dst",     required_argument, NULL, 'e'},
 		{"num_rx",      required_argument, NULL, 'r'},
 		{"num_tx",      required_argument, NULL, 't'},
+		{"lso",         required_argument, NULL, 'T'},
 		{"num_pkt",     required_argument, NULL, 'n'},
 		{"proto",       required_argument, NULL, 'N'},
 		{"len",         required_argument, NULL, 'l'},
@@ -546,7 +701,8 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+i:e:r:t:n:N:l:L:D:m:M:b:x:g:v:s:d:o:p:c:CXAq:u:w:W:PaU:h";
+	static const char *shortopts = "+i:e:r:t:T:n:N:l:L:D:m:M:b:x:g:v:s:d:o:"
+				       "p:c:CXAq:u:w:W:PaU:h";
 
 	test_options->num_pktio  = 0;
 	test_options->num_rx     = 1;
@@ -587,6 +743,7 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 	test_options->wait_start_sec = 0;
 	test_options->mtu = 0;
 	test_options->l4_proto = L4_PROTO_UDP;
+	test_options->lso.enabled = false;
 
 	for (i = 0; i < MAX_PKTIOS; i++) {
 		memcpy(global->pktio[i].eth_dst.addr, default_eth_dst, 6);
@@ -686,6 +843,10 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 			break;
 		case 't':
 			test_options->num_tx = atoi(optarg);
+			break;
+		case 'T':
+			if (!parse_lso_fields(optarg, test_options))
+				ret = -1;
 			break;
 		case 'n':
 			test_options->num_pkt = atoi(optarg);
@@ -923,6 +1084,24 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 		return -1;
 	}
 
+	if (test_options->lso.enabled) {
+		if (test_options->tx_mode != TX_MODE_COPY) {
+			ODPH_ERR("Error: LSO supported only with copy transmit mode\n");
+			return -1;
+		}
+
+		if (test_options->num_custom_l3 &&
+		    test_options->lso.param.lso_proto != ODP_LSO_PROTO_CUSTOM) {
+			ODPH_ERR("Error: LSO and L3 protocol mismatch\n");
+			return -1;
+		}
+
+		if (test_options->l4_proto != L4_PROTO_TCP &&
+		    test_options->lso.param.lso_proto == ODP_LSO_PROTO_TCP_IPV4) {
+			ODPH_ERR("Error: LSO and L4 protocol mismatch\n");
+			return -1;
+		}
+	}
 	return 0;
 }
 
@@ -961,6 +1140,106 @@ static int set_num_cpu(test_global_t *global)
 	}
 
 	odp_barrier_init(&global->barrier, num_cpu + 1);
+
+	return 0;
+}
+
+static int check_lso_capa(char *name, odp_pktio_capability_t *pktio_capa,
+			  test_options_t *opt, odp_pool_t pool)
+{
+	odp_packet_t pkt;
+	uint32_t max_segments;
+	uint32_t pkt_payload;
+	const uint32_t max_pkt_len = opt->use_rand_pkt_len ?
+				opt->rand_pkt_len_max : opt->pkt_len;
+
+	if (pktio_capa->lso.max_profiles < opt->num_pktio ||
+	    pktio_capa->lso.max_profiles_per_pktio == 0) {
+		ODPH_ERR("Error (%s): Not enough LSO profiles (max %" PRIu32 ")\n", name,
+			 ODPH_MIN(pktio_capa->lso.max_profiles,
+				  pktio_capa->lso.max_profiles_per_pktio));
+		return -1;
+	}
+
+	if (opt->lso.param.lso_proto == ODP_LSO_PROTO_TCP_IPV4 && !pktio_capa->lso.proto.tcp_ipv4) {
+		ODPH_ERR("Error (%s): ODP_LSO_PROTO_TCP_IPV4 not supported\n", name);
+		return -1;
+	}
+	if (opt->lso.param.lso_proto == ODP_LSO_PROTO_IPV4 && !pktio_capa->lso.proto.ipv4) {
+		ODPH_ERR("Error (%s): ODP_LSO_PROTO_IPV4 not supported\n", name);
+		return -1;
+	}
+	if (opt->lso.param.lso_proto == ODP_LSO_PROTO_CUSTOM && !pktio_capa->lso.proto.custom) {
+		ODPH_ERR("Error (%s): ODP_LSO_PROTO_CUSTOM not supported\n", name);
+		return -1;
+	}
+
+	/* Check number of segments in a max length packet */
+	pkt = odp_packet_alloc(pool, max_pkt_len);
+	if (pkt == ODP_PACKET_INVALID) {
+		ODPH_ERR("Error (%s): Allocating test packet failed\n", name);
+		return -1;
+	}
+
+	max_segments = odp_packet_num_segs(pkt);
+	odp_packet_free(pkt);
+
+	if (max_segments > pktio_capa->lso.max_packet_segments) {
+		ODPH_ERR("Error (%s): Max LSO packet segments: %" PRIu32 "\n", name,
+			 pktio_capa->lso.max_packet_segments);
+		return -1;
+	}
+
+	/* Check max number of LSO segments */
+	pkt_payload = max_pkt_len - opt->lso.payload_offset;
+	max_segments = (pkt_payload + opt->lso.max_payload_len - 1) /
+				opt->lso.max_payload_len;
+	if (max_segments > pktio_capa->lso.max_segments) {
+		ODPH_ERR("Error (%s): Max LSO segments: %" PRIu32 "\n", name,
+			 pktio_capa->lso.max_segments);
+		return -1;
+	}
+
+	if (opt->lso.max_payload_len > pktio_capa->lso.max_payload_len) {
+		ODPH_ERR("Error (%s): Max LSO payload len: %" PRIu32 "\n", name,
+			 pktio_capa->lso.max_payload_len);
+		return -1;
+	}
+
+	if (opt->lso.payload_offset > pktio_capa->lso.max_payload_offset) {
+		ODPH_ERR("Error (%s): Max LSO payload offset: %" PRIu32 "\n", name,
+			 pktio_capa->lso.max_payload_len);
+		return -1;
+	}
+
+	if (opt->lso.param.lso_proto == ODP_LSO_PROTO_CUSTOM) {
+		if (opt->lso.param.custom.num_custom > pktio_capa->lso.max_num_custom) {
+			ODPH_ERR("Error (%s): Max LSO custom fields: %" PRIu32 "\n", name,
+				 pktio_capa->lso.max_num_custom);
+			return -1;
+		}
+
+		for (uint8_t i = 0; i < opt->lso.param.custom.num_custom; i++) {
+			if (opt->lso.param.custom.field[i].mod_op == ODP_LSO_ADD_SEGMENT_NUM &&
+			    !pktio_capa->lso.mod_op.add_segment_num) {
+				ODPH_ERR("Error (%s): ODP_LSO_ADD_SEGMENT_NUM not supported\n",
+					 name);
+				return -1;
+			}
+			if (opt->lso.param.custom.field[i].mod_op == ODP_LSO_ADD_PAYLOAD_LEN &&
+			    !pktio_capa->lso.mod_op.add_payload_len) {
+				ODPH_ERR("Error (%s): ODP_LSO_ADD_PAYLOAD_LEN not supported\n",
+					 name);
+				return -1;
+			}
+			if (opt->lso.param.custom.field[i].mod_op == ODP_LSO_ADD_PAYLOAD_OFFSET &&
+			    !pktio_capa->lso.mod_op.add_payload_offset) {
+				ODPH_ERR("Error (%s): ODP_LSO_ADD_PAYLOAD_OFFSET not supported\n",
+					 name);
+				return -1;
+			}
+		}
+	}
 
 	return 0;
 }
@@ -1016,6 +1295,33 @@ static int open_pktios(test_global_t *global)
 	printf("  tx bursts:         %u\n", test_options->bursts);
 	printf("  tx burst gap:      %" PRIu64 " nsec\n",
 	       test_options->gap_nsec);
+
+	if (test_options->lso.enabled) {
+		printf("  LSO protocol:      %s\n",
+		       test_options->lso.param.lso_proto == ODP_LSO_PROTO_IPV4 ?
+		       "ODP_LSO_PROTO_IPV4" :
+		       test_options->lso.param.lso_proto == ODP_LSO_PROTO_TCP_IPV4 ?
+		       "ODP_LSO_PROTO_TCP_IPV4" : "ODP_LSO_PROTO_CUSTOM");
+		printf("    max payload offset: %" PRIu32 " bytes\n",
+		       test_options->lso.payload_offset);
+		printf("    max payload len:    %" PRIu32 " bytes\n",
+		       test_options->lso.max_payload_len);
+
+		for (i = 0; i < test_options->lso.param.custom.num_custom; i++) {
+			printf("    Custom operation %" PRIu32 ":   %s\n", i + 1,
+			       test_options->lso.param.custom.field[i].mod_op ==
+					ODP_LSO_ADD_SEGMENT_NUM ?
+			       "ODP_LSO_ADD_SEGMENT_NUM" :
+			       test_options->lso.param.custom.field[i].mod_op ==
+					ODP_LSO_ADD_PAYLOAD_LEN ?
+			       "ODP_LSO_ADD_PAYLOAD_LEN" : "ODP_LSO_ADD_PAYLOAD_OFFSET");
+			printf("      offset:             %" PRIu32 " bytes\n",
+			       test_options->lso.param.custom.field[i].offset);
+			printf("      size:               %" PRIu32 " bytes\n",
+			       test_options->lso.param.custom.field[i].size);
+		}
+	}
+
 	printf("  clock resolution:  %" PRIu64 " Hz\n", odp_time_local_res());
 	for (i = 0; i < test_options->num_vlan; i++) {
 		printf("  VLAN[%i]:           %x:%x\n", i,
@@ -1125,8 +1431,10 @@ static int open_pktios(test_global_t *global)
 
 	pktio_param.out_mode = num_tx ? ODP_PKTOUT_MODE_DIRECT : ODP_PKTOUT_MODE_DISABLED;
 
-	for (i = 0; i < num_pktio; i++)
+	for (i = 0; i < num_pktio; i++) {
 		global->pktio[i].pktio = ODP_PKTIO_INVALID;
+		global->pktio[i].lso_profile = ODP_LSO_PROFILE_INVALID;
+	}
 
 	/* Open and configure interfaces */
 	for (i = 0; i < num_pktio; i++) {
@@ -1261,7 +1569,27 @@ static int open_pktios(test_global_t *global)
 
 		pktio_config.parser.layer = ODP_PROTO_LAYER_ALL;
 
-		odp_pktio_config(pktio, &pktio_config);
+		if (test_options->lso.enabled) {
+			if (check_lso_capa(name, &pktio_capa, test_options, pool))
+				return -1;
+
+			pktio_config.enable_lso = true;
+		}
+
+		if (odp_pktio_config(pktio, &pktio_config)) {
+			ODPH_ERR("Error (%s): Pktio config failed.\n", name);
+			return -1;
+		}
+
+		if (test_options->lso.enabled) {
+			const odp_lso_profile_param_t *param = &test_options->lso.param;
+
+			global->pktio[i].lso_profile = odp_lso_profile_create(pktio, param);
+			if (global->pktio[i].lso_profile == ODP_LSO_PROFILE_INVALID) {
+				ODPH_ERR("Error (%s): LSO profile create failed.\n", name);
+				return -1;
+			}
+		}
 
 		if (test_options->promisc_mode && odp_pktio_promisc_mode(pktio) != 1) {
 			if (!pktio_capa.set_op.op.promisc_mode) {
@@ -1444,6 +1772,13 @@ static int close_pktios(test_global_t *global)
 
 		if (pktio == ODP_PKTIO_INVALID)
 			continue;
+
+		if (global->pktio[i].lso_profile != ODP_LSO_PROFILE_INVALID &&
+		    odp_lso_profile_destroy(global->pktio[i].lso_profile)) {
+			ODPH_ERR("Error (%s): LSO profile destroy failed.\n",
+				 test_options->pktio_name[i]);
+			ret = -1;
+		}
 
 		if (odp_pktio_close(pktio)) {
 			ODPH_ERR("Error (%s): Pktio close failed.\n", test_options->pktio_name[i]);
@@ -1991,7 +2326,8 @@ static inline uint32_t form_burst(odp_packet_t out_pkt[], uint32_t burst_size, u
 }
 
 static inline int send_burst(odp_pktout_queue_t pktout, odp_packet_t pkt[],
-			     uint32_t num, int tx_mode, uint64_t *drop_bytes)
+			     uint32_t num, int tx_mode, uint64_t *drop_bytes,
+			     const odp_packet_lso_opt_t *lso_opt ODP_UNUSED)
 {
 	int ret;
 	uint32_t sent;
@@ -2012,6 +2348,35 @@ static inline int send_burst(odp_pktout_queue_t pktout, odp_packet_t pkt[],
 
 		if (tx_mode != TX_MODE_DF)
 			odp_packet_free_multi(&pkt[sent], num_drop);
+	}
+
+	*drop_bytes = bytes;
+
+	return ret;
+}
+
+static inline int send_burst_lso(odp_pktout_queue_t pktout, odp_packet_t pkt[], uint32_t num,
+				 int tx_mode ODP_UNUSED, uint64_t *drop_bytes,
+				 const odp_packet_lso_opt_t *lso_opt)
+{
+	int ret;
+	uint32_t sent;
+	uint64_t bytes = 0;
+
+	ret = odp_pktout_send_lso(pktout, pkt, num, lso_opt);
+
+	sent = ret;
+	if (odp_unlikely(ret < 0))
+		sent = 0;
+
+	if (odp_unlikely(sent != num)) {
+		uint32_t i;
+		uint32_t num_drop = num - sent;
+
+		for (i = sent; i < num; i++)
+			bytes += odp_packet_len(pkt[i]);
+
+		odp_packet_free_multi(&pkt[sent], num_drop);
 	}
 
 	*drop_bytes = bytes;
@@ -2050,8 +2415,10 @@ static int tx_thread(void *arg)
 	const odp_bool_t calc_latency = test_options->calc_latency;
 	int num_pktio = test_options->num_pktio;
 	odp_pktout_queue_t pktout[num_pktio];
+	odp_packet_lso_opt_t lso_opt[num_pktio];
 	uint32_t tot_packets = 0;
 	uint32_t num_bins = global->num_bins;
+	const send_fn_t send_burst_fn = test_options->lso.enabled ? send_burst_lso : send_burst;
 
 	tx_thr = thread_arg->tx_thr;
 	global->stat[thr].thread_type = TX_THREAD;
@@ -2065,6 +2432,10 @@ static int tx_thread(void *arg)
 
 		pktout[i] = thread_arg->pktout[i];
 		pkt_tbl = thread_arg->packet[i];
+
+		lso_opt[i].lso_profile = thread_arg->lso_profile[i];
+		lso_opt[i].payload_offset = test_options->lso.payload_offset;
+		lso_opt[i].max_payload_len = test_options->lso.max_payload_len;
 
 		if (alloc_packets(pool, pkt_tbl, num_alloc, global)) {
 			ret = -1;
@@ -2130,7 +2501,8 @@ static int tx_thread(void *arg)
 					continue;
 				}
 
-				sent = send_burst(pktout[i], pkt, num, tx_mode, &drop_bytes);
+				sent = send_burst_fn(pktout[i], pkt, num, tx_mode, &drop_bytes,
+						     &lso_opt[i]);
 
 				if (odp_unlikely(sent < 0)) {
 					ret = -1;
@@ -2212,6 +2584,8 @@ static int start_workers(test_global_t *global, odp_instance_t instance)
 			 * (per TX thread) */
 			pktout = global->pktio[j].pktout[tx_thr];
 			global->thread_arg[i].pktout[j] = pktout;
+
+			global->thread_arg[i].lso_profile[j] = global->pktio[j].lso_profile;
 		}
 
 		odph_thread_param_init(&thr_param[i]);
