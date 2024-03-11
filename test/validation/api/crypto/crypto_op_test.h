@@ -1,8 +1,5 @@
-/*
- * Copyright (c) 2021-2023, Nokia
- * All rights reserved.
- *
- * SPDX-License-Identifier:	BSD-3-Clause
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2021-2023 Nokia
  */
 
 #ifndef CRYPTO_OP_TEST_H

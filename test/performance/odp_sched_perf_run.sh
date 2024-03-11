@@ -1,9 +1,7 @@
 #!/bin/sh
 #
-# Copyright (c) 2021-2024, Nokia
-# All rights reserved.
-#
-# SPDX-License-Identifier:	BSD-3-Clause
+# SPDX-License-Identifier: BSD-3-Clause
+# Copyright (c) 2021-2024 Nokia
 #
 
 TEST_DIR="${TEST_DIR:-$(dirname $0)}"

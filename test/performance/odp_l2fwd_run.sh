@@ -1,9 +1,7 @@
 #!/bin/bash
 #
-# Copyright (c) 2015-2018, Linaro Limited
-# All rights reserved.
-#
-# SPDX-License-Identifier:	BSD-3-Clause
+# SPDX-License-Identifier: BSD-3-Clause
+# Copyright (c) 2015-2018 Linaro Limited
 #
 
 # TEST_DIR is set by Makefile, when we add a rule to Makefile for odp_l2fwd_run

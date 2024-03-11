@@ -1,9 +1,7 @@
-/* Copyright (c) 2014-2018, Linaro Limited
- * Copyright (c) 2020, Marvell
- * Copyright (c) 2020-2023, Nokia
- * All rights reserved.
- *
- * SPDX-License-Identifier:	BSD-3-Clause
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2014-2018 Linaro Limited
+ * Copyright (c) 2020 Marvell
+ * Copyright (c) 2020-2023 Nokia
  */
 
 #include <odp_api.h>

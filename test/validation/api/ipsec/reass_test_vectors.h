@@ -1,7 +1,5 @@
- /* Copyright (c) 2021, Marvell
- * All rights reserved.
- *
- * SPDX-License-Identifier:     BSD-3-Clause
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2021 Marvell
  */
 
 #ifndef _ODP_REASS_TEST_VECTORS_H_
