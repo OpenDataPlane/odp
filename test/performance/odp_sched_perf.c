@@ -29,6 +29,9 @@
 #define MAX_QUEUES  (256 * 1024)
 #define MAX_GROUPS  256
 
+/* Limit data values to 16 bits. Large data values are costly on square root calculation. */
+#define DATA_MASK   0xffff
+
 /* Max time to wait for new events in nanoseconds */
 #define MAX_SCHED_WAIT_NS (10 * ODP_TIME_SEC_IN_NS)
 
@@ -58,6 +61,7 @@ typedef struct test_options_t {
 	uint32_t tot_queue;
 	uint32_t tot_event;
 	int      touch_data;
+	uint32_t stress;
 	uint32_t rd_words;
 	uint32_t rw_words;
 	uint32_t ctx_size;
@@ -154,8 +158,15 @@ static void print_usage(void)
 	       "  -b, --burst            Maximum number of events per operation. Default: 100.\n"
 	       "  -t, --type             Queue type. 0: parallel, 1: atomic, 2: ordered. Default: 0.\n"
 	       "  -f, --forward          0: Keep event in the original queue, 1: Forward event to the next queue. Default: 0.\n"
-	       "  -a, --fairness         0: Don't count events per queue, 1: Count and report events relative to average. Default: 0.\n"
+	       "  -F, --fairness         0: Don't count events per queue, 1: Count and report events relative to average. Default: 0.\n"
 	       "  -w, --wait_ns          Number of nsec to wait before enqueueing events. Default: 0.\n"
+	       "  -S, --stress           CPU stress function(s) to be called for each event data word (requires -n or -m).\n"
+	       "                         Data is processed as uint32_t words. Multiple flags may be selected.\n"
+	       "                         0:   No extra data processing (default)\n"
+	       "                         0x1: Calculate square of each uint32_t\n"
+	       "                         0x2: Calculate log2 of each uint32_t\n"
+	       "                         0x4: Calculate square root of each uint32_t\n"
+	       "                         0x8: Calculate square root of each uint32_t in floating point\n"
 	       "  -k, --ctx_rd_words     Number of queue context words (uint64_t) to read on every event. Default: 0.\n"
 	       "  -l, --ctx_rw_words     Number of queue context words (uint64_t) to modify on every event. Default: 0.\n"
 	       "  -n, --rd_words         Number of event data words (uint64_t) to read before enqueueing it. Default: 0.\n"
@@ -188,8 +199,9 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 		{"burst",        required_argument, NULL, 'b'},
 		{"type",         required_argument, NULL, 't'},
 		{"forward",      required_argument, NULL, 'f'},
-		{"fairness",     required_argument, NULL, 'a'},
+		{"fairness",     required_argument, NULL, 'F'},
 		{"wait_ns",      required_argument, NULL, 'w'},
+		{"stress",       required_argument, NULL, 'S'},
 		{"ctx_rd_words", required_argument, NULL, 'k'},
 		{"ctx_rw_words", required_argument, NULL, 'l'},
 		{"rd_words",     required_argument, NULL, 'n'},
@@ -202,7 +214,7 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+c:q:L:H:d:e:s:g:j:b:t:f:a:w:k:l:n:m:p:u:U:vh";
+	static const char *shortopts = "+c:q:L:H:d:e:s:g:j:b:t:f:F:w:S:k:l:n:m:p:u:U:vh";
 
 	test_options->num_cpu    = 1;
 	test_options->num_queue  = 1;
@@ -217,6 +229,7 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 	test_options->queue_type = 0;
 	test_options->forward    = 0;
 	test_options->fairness   = 0;
+	test_options->stress     = 0;
 	test_options->ctx_rd_words = 0;
 	test_options->ctx_rw_words = 0;
 	test_options->rd_words   = 0;
@@ -269,8 +282,11 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 		case 'f':
 			test_options->forward = atoi(optarg);
 			break;
-		case 'a':
+		case 'F':
 			test_options->fairness = atoi(optarg);
+			break;
+		case 'S':
+			test_options->stress = strtoul(optarg, NULL, 0);
 			break;
 		case 'k':
 			test_options->ctx_rd_words = atoi(optarg);
@@ -318,6 +334,11 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 
 	test_options->touch_data = test_options->rd_words ||
 				   test_options->rw_words;
+
+	if (test_options->stress && test_options->touch_data == 0) {
+		ODPH_ERR("Use -n or/and -m to select event data size with a stress function\n");
+		ret = -1;
+	}
 
 	if ((test_options->num_queue + test_options->num_dummy) > MAX_QUEUES) {
 		ODPH_ERR("Too many queues. Max supported %i.\n", MAX_QUEUES);
@@ -418,6 +439,19 @@ static int set_num_cpu(test_global_t *global)
 	return 0;
 }
 
+static uint64_t init_data(uint64_t init, uint64_t *data, uint32_t words)
+{
+	uint32_t i;
+	uint64_t val = init;
+
+	for (i = 0; i < words; i++) {
+		data[i] = val;
+		val = (val + 1) & DATA_MASK;
+	}
+
+	return val;
+}
+
 static int create_pool(test_global_t *global)
 {
 	odp_pool_capability_t pool_capa;
@@ -472,6 +506,7 @@ static int create_pool(test_global_t *global)
 	printf("  queue size                %u\n", queue_size);
 	printf("  max burst size            %u\n", max_burst);
 	printf("  total events              %u\n", tot_event);
+	printf("  stress                    0x%x\n", test_options->stress);
 	printf("  event size                %u bytes", event_size);
 	if (touch_data)
 		printf(" (rd: %u, rw: %u)", 8 * test_options->rd_words, 8 * test_options->rw_words);
@@ -610,6 +645,7 @@ static int create_queues(test_global_t *global)
 	odp_pool_t pool = global->pool;
 	uint8_t *ctx = NULL;
 	uint32_t ctx_size = test_options->ctx_size;
+	uint64_t init_val = 0;
 
 	if (type == 0) {
 		type_str = "parallel";
@@ -753,6 +789,8 @@ static int create_queues(test_global_t *global)
 
 		for (j = 0; j < num_event; j++) {
 			odp_event_t ev;
+			uint64_t *data;
+			uint32_t words;
 
 			if (test_options->pool_type == ODP_POOL_BUFFER) {
 				odp_buffer_t buf = odp_buffer_alloc(pool);
@@ -762,6 +800,9 @@ static int create_queues(test_global_t *global)
 					return -1;
 				}
 				ev = odp_buffer_to_event(buf);
+
+				data  = odp_buffer_addr(buf);
+				words = odp_buffer_size(buf) / 8;
 			} else {
 				odp_packet_t pkt = odp_packet_alloc(pool, event_size);
 
@@ -770,7 +811,13 @@ static int create_queues(test_global_t *global)
 					return -1;
 				}
 				ev = odp_packet_to_event(pkt);
+
+				data  = odp_packet_data(pkt);
+				words = odp_packet_seg_len(pkt) / 8;
 			}
+
+			init_val = init_data(init_val, data, words);
+
 			if (odp_queue_enq(queue, ev)) {
 				ODPH_ERR("Error: enqueue failed %u/%u\n", i, j);
 				return -1;
@@ -950,15 +997,14 @@ static inline uint64_t rw_ctx_data(void *ctx, uint32_t offset,
 	return sum;
 }
 
-static uint64_t rw_data(odp_event_t ev[], int num,
-			uint32_t rd_words, uint32_t rw_words, odp_pool_type_t pool_type)
+static uint64_t rw_data(odp_event_t ev[], int num, uint32_t rd_words, uint32_t rw_words,
+			odp_pool_type_t pool_type)
 {
 	uint64_t *data;
-	int i;
 	uint32_t j;
 	uint64_t sum = 0;
 
-	for (i = 0; i < num; i++) {
+	for (int i = 0; i < num; i++) {
 		if (pool_type == ODP_POOL_BUFFER)
 			data = odp_buffer_addr(odp_buffer_from_event(ev[i]));
 		else
@@ -970,6 +1016,40 @@ static uint64_t rw_data(odp_event_t ev[], int num,
 		for (; j < rd_words + rw_words; j++) {
 			sum += data[j];
 			data[j] += 1;
+		}
+	}
+
+	return sum;
+}
+
+static uint64_t rw_data_stress(odp_event_t ev[], int num, uint32_t rd_words, uint32_t rw_words,
+			       uint32_t stress, odp_pool_type_t pool_type)
+{
+	uint64_t *data;
+	uint64_t word;
+	uint32_t j;
+	uint64_t sum = 0;
+
+	for (int i = 0; i < num; i++) {
+		if (pool_type == ODP_POOL_BUFFER)
+			data = odp_buffer_addr(odp_buffer_from_event(ev[i]));
+		else
+			data = odp_packet_data(odp_packet_from_event(ev[i]));
+
+		for (j = 0; j < rd_words + rw_words; j++) {
+			word = data[j];
+
+			if (stress & 0x1)
+				sum += odph_stress_pow2_u32(word);
+			if (stress & 0x2)
+				sum += odph_stress_log2_u32(word);
+			if (stress & 0x4)
+				sum += odph_stress_sqrt_u32(word);
+			if (stress & 0x8)
+				sum += odph_stress_sqrt_f32(word);
+
+			if (j >= rd_words)
+				data[j] = (word + 1) & DATA_MASK;
 		}
 	}
 
@@ -992,16 +1072,17 @@ static int test_sched(void *arg)
 	int num_group = test_options->num_group;
 	int forward = test_options->forward;
 	int fairness = test_options->fairness;
-	int touch_data = test_options->touch_data;
-	uint32_t rd_words = test_options->rd_words;
-	uint32_t rw_words = test_options->rw_words;
+	const int touch_data = test_options->touch_data;
+	const uint32_t stress = test_options->stress;
+	const uint32_t rd_words = test_options->rd_words;
+	const uint32_t rw_words = test_options->rw_words;
 	uint32_t ctx_size = test_options->ctx_size;
 	uint32_t ctx_rd_words = test_options->ctx_rd_words;
 	uint32_t ctx_rw_words = test_options->ctx_rw_words;
 	const uint32_t uarea_size = test_options->uarea_size;
 	const uint32_t uarea_rd = test_options->uarea_rd;
 	const uint32_t uarea_rw = test_options->uarea_rw;
-	odp_pool_type_t pool_type = test_options->pool_type;
+	const odp_pool_type_t pool_type = test_options->pool_type;
 	int touch_ctx = ctx_rd_words || ctx_rw_words;
 	odp_atomic_u32_t *exit_threads = &global->exit_threads;
 	uint32_t ctx_offset = 0;
@@ -1093,9 +1174,14 @@ static int test_sched(void *arg)
 							       ctx_rw_words);
 			}
 
-			if (odp_unlikely(touch_data))
-				data_sum += rw_data(ev, num, rd_words,
-						    rw_words, pool_type);
+			if (odp_unlikely(touch_data)) {
+				if (stress) {
+					data_sum += rw_data_stress(ev, num, rd_words, rw_words,
+								   stress, pool_type);
+				} else {
+					data_sum += rw_data(ev, num, rd_words, rw_words, pool_type);
+				}
+			}
 
 			if (odp_unlikely(wait_ns)) {
 				waits++;
