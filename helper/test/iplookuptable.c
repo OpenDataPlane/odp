@@ -131,6 +131,18 @@ static int test_ip_lookup_table(void)
 	}
 
 	odph_iplookup_table_destroy(table);
+
+	char name[ODPH_TABLE_NAME_LEN];
+
+	memset(name, 'a', sizeof(name));
+	name[sizeof(name) - 1] = 0;
+	table = odph_iplookup_table_create(name, 0, 0, sizeof(uint32_t));
+	if (table == NULL) {
+		printf("IP prefix lookup table creation failed\n");
+		return -1;
+	}
+	odph_iplookup_table_destroy(table);
+
 	return 0;
 }
 
