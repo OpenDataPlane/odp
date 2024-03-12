@@ -89,7 +89,7 @@ extern "C" {
 
 /**
  * @def ODPH_TABLE_NAME_LEN
- * Max length of table name
+ * Maximum length of table name, including the null character.
  */
 #define ODPH_TABLE_NAME_LEN      32
 
@@ -102,7 +102,8 @@ typedef ODPH_HANDLE_T(odph_table_t);
 * Generally, tables only support key-value pair both with fixed size
 *
 * @param name
-*    name of this table, max ODPH_TABLE_NAME_LEN - 1
+*    name of this table. Maximum string length is ODPH_TABLE_NAME_LEN, including
+*    the null character.
 *    May be specified as NULL for anonymous table
 * @param capacity
 *    Max memory usage this table use, in MBytes
