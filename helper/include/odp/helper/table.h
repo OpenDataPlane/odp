@@ -91,7 +91,11 @@ extern "C" {
  * @def ODPH_TABLE_NAME_LEN
  * Maximum length of table name, including the null character.
  */
-#define ODPH_TABLE_NAME_LEN      32
+/*
+ * Minimum of ODP_SHM_NAME_LEN, (ODP_QUEUE_NAME_LEN - 3),
+ * (ODP_POOL_NAME_LEN - 8).
+ */
+#define ODPH_TABLE_NAME_LEN 24
 
 #include <odp/helper/strong_types.h>
 /** @internal ODPH table handle @return */
