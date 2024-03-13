@@ -3181,7 +3181,7 @@ static int create_queues(test_globals_t *globals)
 
 		for (j = 0; j < queues_per_prio; j++) {
 			/* Per sched sync type */
-			char name[32];
+			char name[ODP_QUEUE_NAME_LEN];
 			odp_queue_t q, pq;
 
 			snprintf(name, sizeof(name), "sched_%d_%d_n", i, j);
