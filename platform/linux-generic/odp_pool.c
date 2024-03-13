@@ -431,7 +431,7 @@ static pool_t *reserve_pool(uint32_t shmflags, uint8_t pool_ext, uint32_t num)
 	odp_shm_t shm;
 	uint32_t mem_size;
 	pool_t *pool;
-	char ring_name[ODP_POOL_NAME_LEN];
+	char ring_name[ODP_SHM_NAME_LEN];
 
 	for (i = 0; i < CONFIG_POOLS; i++) {
 		pool = _odp_pool_entry_from_idx(i);
