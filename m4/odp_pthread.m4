@@ -1,8 +1,7 @@
-# Copyright (c) 2018, Linaro Limited
-# All rights reserved.
+# SPDX-License-Identifier: BSD-3-Clause
+# Copyright (c) 2018 Linaro Limited
 #
-# SPDX-License-Identifier:     BSD-3-Clause
-#
+
 # ODP_PTHREAD
 # -----------
 # Check for pthreads availability
