@@ -191,7 +191,7 @@ typedef struct timer_pool_s {
 	pid_t thr_pid; /* gettid() for timer thread */
 	int thr_warm_up; /* number of warm up rounds */
 	odp_atomic_u32_t thr_ready; /* thread ready from warm up */
-	int thr_exit; /* request to exit for timer thread */
+	odp_atomic_u32_t thr_exit; /* request to exit for timer thread */
 	double base_freq;
 	uint64_t max_multiplier;
 	uint8_t periodic;
@@ -340,7 +340,7 @@ static void posix_timer_stop(timer_pool_t *tp)
 
 	/* Stop the thread */
 	_ODP_DBG("stop\n");
-	tp->thr_exit = 1;
+	odp_atomic_store_u32(&tp->thr_exit, 1);
 	ret = pthread_join(tp->thr_pthread, NULL);
 	if (ret != 0)
 		_ODP_ABORT("Unable to join thread, err %d\n", ret);
@@ -949,7 +949,7 @@ static void *timer_thread(void *arg)
 	while (1) {
 		ret = sigtimedwait(&sigset, &si, &tmo);
 
-		if (tp->thr_exit) {
+		if (odp_atomic_load_u32(&tp->thr_exit)) {
 			tp->thr_pid = 0;
 			return NULL;
 		}
@@ -1247,6 +1247,7 @@ static odp_timer_pool_t timer_pool_new(const char *name, const odp_timer_pool_pa
 	tp->num_alloc = 0;
 	odp_atomic_init_u32(&tp->high_wm, 0);
 	odp_atomic_init_u32(&tp->notify_overrun, 0);
+	odp_atomic_init_u32(&tp->thr_exit, 0);
 	tp->first_free = 0;
 	tp->owner = -1;
 
