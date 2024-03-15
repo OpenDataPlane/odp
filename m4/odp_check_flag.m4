@@ -1,7 +1,5 @@
-# Copyright (c) 2018, Linaro Limited
-# All rights reserved.
-#
-# SPDX-License-Identifier:     BSD-3-Clause
+# SPDX-License-Identifier: BSD-3-Clause
+# Copyright (c) 2018 Linaro Limited
 #
 
 dnl Use -Werror in the checks below since Clang emits a warning instead of
