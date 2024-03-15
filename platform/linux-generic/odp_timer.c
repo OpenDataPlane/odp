@@ -188,7 +188,7 @@ typedef struct timer_pool_s {
 	odp_atomic_u32_t notify_overrun;
 	int owner;
 	pthread_t thr_pthread; /* pthread_t of timer thread */
-	pid_t thr_pid; /* gettid() for timer thread */
+	odp_atomic_u64_t thr_pid; /* gettid() for timer thread */
 	int thr_warm_up; /* number of warm up rounds */
 	odp_atomic_u32_t thr_ready; /* thread ready from warm up */
 	odp_atomic_u32_t thr_exit; /* request to exit for timer thread */
@@ -932,6 +932,7 @@ static void *timer_thread(void *arg)
 	siginfo_t si;
 	int warm_up = tp->thr_warm_up;
 	int num = 0;
+	pid_t thr_pid;
 
 	tmo.tv_sec  = 0;
 	tmo.tv_nsec = ODP_TIME_MSEC_IN_NS * 100;
@@ -942,15 +943,18 @@ static void *timer_thread(void *arg)
 	sigaddset(&sigset, SIGALRM);
 
 	/* Signal that this thread has started */
-	odp_mb_full();
-	tp->thr_pid = (pid_t)syscall(SYS_gettid);
-	odp_mb_full();
+	thr_pid = (pid_t)syscall(SYS_gettid);
+	if (thr_pid <= 0) {
+		_ODP_ERR("Invalid tid: %d\n", thr_pid);
+		return NULL;
+	}
+	odp_atomic_store_u64(&tp->thr_pid, thr_pid);
 
 	while (1) {
 		ret = sigtimedwait(&sigset, &si, &tmo);
 
 		if (odp_atomic_load_u32(&tp->thr_exit)) {
-			tp->thr_pid = 0;
+			odp_atomic_store_u64(&tp->thr_pid, 0);
 			return NULL;
 		}
 
@@ -1059,7 +1063,7 @@ static void posix_timer_start(timer_pool_t *tp)
 	sec  = res / ODP_TIME_SEC_IN_NS;
 	nsec = res - sec * ODP_TIME_SEC_IN_NS;
 
-	tp->thr_pid = 0;
+	odp_atomic_init_u64(&tp->thr_pid, 0);
 	tp->thr_warm_up = 1;
 
 	/* 20ms warm up */
@@ -1072,13 +1076,13 @@ static void posix_timer_start(timer_pool_t *tp)
 		_ODP_ABORT("Unable to create timer thread: %d\n", ret);
 
 	/* wait thread set tp->thr_pid */
-	while (tp->thr_pid == 0)
+	while (!odp_atomic_load_u64(&tp->thr_pid))
 		sched_yield();
 
 	memset(&sigev, 0, sizeof(sigev));
 	sigev.sigev_notify          = SIGEV_THREAD_ID;
 	sigev.sigev_value.sival_ptr = tp;
-	sigev._sigev_un._tid = tp->thr_pid;
+	sigev._sigev_un._tid = odp_atomic_load_u64(&tp->thr_pid);
 	sigev.sigev_signo = SIGALRM;
 
 	if (timer_create(CLOCK_MONOTONIC, &sigev, &tp->timerid))
