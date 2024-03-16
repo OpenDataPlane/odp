@@ -95,6 +95,9 @@ typedef struct {
 	/* Some extra features (e.g. error checks) have been enabled */
 	uint8_t extra_feat;
 
+	/* Has some state that needs to be maintained across tx and/or rx */
+	uint8_t has_state;
+
 	/* Prefetch packet data */
 	uint8_t prefetch;
 
@@ -150,6 +153,14 @@ typedef struct {
 	int mtu;                /* Interface MTU */
 	int num_om;
 	int num_prio;
+
+	struct {
+		odp_packet_tx_compl_mode_t mode;
+		uint32_t nth;
+		uint32_t thr_compl_id;
+		uint32_t tot_compl_id;
+	} tx_compl;
+
 	char *output_map[MAX_PKTIOS]; /* Destination port mappings for interfaces */
 	odp_schedule_prio_t prio[MAX_PKTIOS]; /* Priority of input queues of an interface */
 
@@ -164,6 +175,10 @@ typedef union ODP_ALIGNED_CACHE {
 		uint64_t rx_drops;
 		/* Packets dropped due to transmit error */
 		uint64_t tx_drops;
+		/* Number of transmit completion start misses (previous incomplete) */
+		uint64_t tx_c_misses;
+		/* Number of transmit completion start failures */
+		uint64_t tx_c_fails;
 		/* Number of failed packet copies */
 		uint64_t copy_fails;
 		/* Dummy sum of packet data */
@@ -173,9 +188,37 @@ typedef union ODP_ALIGNED_CACHE {
 	uint8_t padding[ODP_CACHE_LINE_SIZE];
 } stats_t;
 
+/* Transmit completion specific state data */
+typedef struct {
+	/* Options that are passed to transmit completion requests */
+	odp_packet_tx_compl_opt_t opt;
+	/* Thread specific initial value for transmit completion IDs */
+	uint32_t init;
+	/* Thread specific maximum value for transmit completion IDs */
+	uint32_t max;
+	/* Next free completion ID to be used for a transmit completion request */
+	uint32_t free_head;
+	/* Next completion ID to be polled for transmit completion readiness */
+	uint32_t poll_head;
+	/* Number of active requests */
+	uint32_t num_act;
+	/* Maximum number of active requests */
+	uint32_t max_act;
+	/* Transmit completion request interval for packets */
+	int interval;
+	/* Next packet in a send burst for which to request transmit completion */
+	int next_req;
+} tx_compl_t;
+
+/* Thread specific state data */
+typedef struct {
+	tx_compl_t tx_compl;
+} state_t;
+
 /* Thread specific data */
 typedef struct thread_args_t {
 	stats_t stats;
+	state_t state;
 
 	struct {
 		odp_pktin_queue_t pktin;
@@ -223,6 +266,7 @@ typedef struct {
 		odp_pktout_queue_t pktout[MAX_QUEUES];
 		odp_queue_t rx_q[MAX_QUEUES];
 		odp_queue_t tx_q[MAX_QUEUES];
+		odp_queue_t compl_q;
 		int num_rx_thr;
 		int num_tx_thr;
 		int num_rx_queue;
@@ -487,16 +531,122 @@ static inline int process_extra_features(const appl_args_t *appl_args, odp_packe
 	return pkts;
 }
 
+static inline void handle_tx_event_compl(tx_compl_t *tx_c, odp_packet_t pkts[], int num,
+					 int tx_idx, stats_t *stats)
+{
+	odp_packet_t pkt;
+	int next_req = tx_c->next_req;
+	const int interval = tx_c->interval;
+
+	tx_c->opt.queue = gbl_args->pktios[tx_idx].compl_q;
+
+	while (next_req <= num) {
+		pkt = pkts[next_req - 1];
+
+		if (odp_packet_tx_compl_request(pkt, &tx_c->opt) < 0) {
+			stats->s.tx_c_fails++;
+			/* Missed one, try requesting for the first packet of next burst. */
+			next_req = num + 1;
+			break;
+		}
+
+		next_req += interval;
+	}
+
+	tx_c->next_req = next_req - num;
+}
+
+static inline void handle_tx_poll_compl(tx_compl_t *tx_c, odp_packet_t pkts[], int num, int tx_idx,
+					stats_t *stats)
+{
+	uint32_t num_act = tx_c->num_act, poll_head = tx_c->poll_head, free_head = tx_c->free_head;
+	const uint32_t max = tx_c->max, init = tx_c->init, max_act = tx_c->max_act;
+	odp_pktio_t pktio = gbl_args->pktios[tx_idx].pktio;
+	int next_req = tx_c->next_req;
+	odp_packet_t pkt;
+	const int interval = tx_c->interval;
+
+	while (num_act > 0) {
+		if (odp_packet_tx_compl_done(pktio, poll_head) < 1)
+			break;
+
+		--num_act;
+
+		if (++poll_head > max)
+			poll_head = init;
+	}
+
+	while (next_req <= num) {
+		pkt = pkts[next_req - 1];
+
+		if (num_act == max_act) {
+			stats->s.tx_c_misses++;
+			/* Missed one, try requesting for the first packet of next burst. */
+			next_req = num + 1;
+			break;
+		}
+
+		tx_c->opt.compl_id = free_head;
+
+		if (odp_packet_tx_compl_request(pkt, &tx_c->opt) < 0) {
+			stats->s.tx_c_fails++;
+			/* Missed one, try requesting for the first packet of next burst. */
+			next_req = num + 1;
+			break;
+		}
+
+		if (++free_head > max)
+			free_head = init;
+
+		++num_act;
+		next_req += interval;
+	}
+
+	tx_c->free_head = free_head;
+	tx_c->poll_head = poll_head;
+	tx_c->num_act = num_act;
+	tx_c->next_req = next_req - num;
+}
+
+static inline void handle_tx_state(state_t *state, odp_packet_t pkts[], int num, int tx_idx,
+				   stats_t *stats)
+{
+	tx_compl_t *tx_c = &state->tx_compl;
+
+	if (tx_c->opt.mode == ODP_PACKET_TX_COMPL_EVENT)
+		handle_tx_event_compl(tx_c, pkts, num, tx_idx, stats);
+	else if (tx_c->opt.mode == ODP_PACKET_TX_COMPL_POLL)
+		handle_tx_poll_compl(tx_c, pkts, num, tx_idx, stats);
+}
+
+static inline void handle_state_failure(state_t *state, odp_packet_t packet)
+{
+	if (odp_packet_has_tx_compl_request(packet) != 0) {
+		--state->tx_compl.num_act;
+		--state->tx_compl.free_head;
+
+		if (state->tx_compl.free_head == UINT32_MAX ||
+		    state->tx_compl.free_head < state->tx_compl.init)
+			state->tx_compl.free_head = state->tx_compl.max;
+	}
+}
+
 static inline void send_packets(odp_packet_t *pkt_tbl,
 				int pkts,
 				int use_event_queue,
+				int tx_idx,
 				odp_queue_t tx_queue,
 				odp_pktout_queue_t pktout_queue,
+				state_t *state,
 				stats_t *stats)
 {
 	int sent;
 	unsigned int tx_drops;
 	int i;
+	odp_packet_t pkt;
+
+	if (odp_unlikely(state != NULL))
+		handle_tx_state(state, pkt_tbl, pkts, tx_idx, stats);
 
 	if (odp_unlikely(use_event_queue))
 		sent = event_queue_send(tx_queue, pkt_tbl, pkts);
@@ -510,11 +660,25 @@ static inline void send_packets(odp_packet_t *pkt_tbl,
 		stats->s.tx_drops += tx_drops;
 
 		/* Drop rejected packets */
-		for (i = sent; i < pkts; i++)
-			odp_packet_free(pkt_tbl[i]);
+		for (i = sent; i < pkts; i++) {
+			pkt = pkt_tbl[i];
+			handle_state_failure(state, pkt);
+			odp_packet_free(pkt);
+		}
 	}
 
 	stats->s.packets += pkts;
+}
+
+static int handle_rx_state(state_t *state, odp_event_t evs[], int num)
+{
+	if (state->tx_compl.opt.mode != ODP_PACKET_TX_COMPL_EVENT ||
+	    odp_event_type(evs[0]) != ODP_EVENT_PACKET_TX_COMPL)
+		return num;
+
+	odp_event_free_multi(evs, num);
+
+	return 0;
 }
 
 /*
@@ -534,6 +698,7 @@ static int run_worker_sched_mode_vector(void *arg)
 	thread_args_t *thr_args = arg;
 	stats_t *stats = &thr_args->stats;
 	const appl_args_t *appl_args = &gbl_args->appl;
+	state_t *state = appl_args->has_state ? &thr_args->state : NULL;
 	int use_event_queue = gbl_args->appl.out_mode;
 	pktin_mode_t in_mode = gbl_args->appl.in_mode;
 
@@ -582,19 +747,23 @@ static int run_worker_sched_mode_vector(void *arg)
 
 		for (i = 0; i < events; i++) {
 			odp_packet_vector_t pkt_vec = ODP_PACKET_VECTOR_INVALID;
-			odp_packet_t *pkt_tbl;
+			odp_packet_t *pkt_tbl = NULL;
 			odp_packet_t pkt;
 			int src_idx, dst_idx;
-			int pkts;
+			int pkts = 0;
 
 			if (odp_event_type(ev_tbl[i]) == ODP_EVENT_PACKET) {
 				pkt = odp_packet_from_event(ev_tbl[i]);
 				pkt_tbl = &pkt;
 				pkts = 1;
-			} else {
-				ODPH_ASSERT(odp_event_type(ev_tbl[i]) == ODP_EVENT_PACKET_VECTOR);
+			} else if (odp_event_type(ev_tbl[i]) == ODP_EVENT_PACKET_VECTOR) {
 				pkt_vec = odp_packet_vector_from_event(ev_tbl[i]);
 				pkts = odp_packet_vector_tbl(pkt_vec, &pkt_tbl);
+			} else if (state != NULL) {
+				pkts = handle_rx_state(state, ev_tbl, events);
+
+				if (pkts <= 0)
+					continue;
 			}
 
 			prefetch_data(appl_args->prefetch, pkt_tbl, pkts);
@@ -613,11 +782,8 @@ static int run_worker_sched_mode_vector(void *arg)
 			dst_idx = gbl_args->dst_port_from_idx[src_idx];
 			fill_eth_addrs(pkt_tbl, pkts, dst_idx);
 
-			send_packets(pkt_tbl, pkts,
-				     use_event_queue,
-				     tx_queue[dst_idx],
-				     pktout[dst_idx],
-				     stats);
+			send_packets(pkt_tbl, pkts, use_event_queue, dst_idx, tx_queue[dst_idx],
+				     pktout[dst_idx], state, stats);
 
 			if (pkt_vec != ODP_PACKET_VECTOR_INVALID)
 				odp_packet_vector_free(pkt_vec);
@@ -684,6 +850,7 @@ static int run_worker_sched_mode(void *arg)
 	thread_args_t *thr_args = arg;
 	stats_t *stats = &thr_args->stats;
 	const appl_args_t *appl_args = &gbl_args->appl;
+	state_t *state = appl_args->has_state ? &thr_args->state : NULL;
 	int use_event_queue = gbl_args->appl.out_mode;
 	pktin_mode_t in_mode = gbl_args->appl.in_mode;
 
@@ -745,6 +912,13 @@ static int run_worker_sched_mode(void *arg)
 		if (pkts <= 0)
 			continue;
 
+		if (odp_unlikely(state != NULL)) {
+			pkts = handle_rx_state(state, ev_tbl, pkts);
+
+			if (pkts <= 0)
+				continue;
+		}
+
 		odp_packet_from_event_multi(pkt_tbl, ev_tbl, pkts);
 
 		prefetch_data(appl_args->prefetch, pkt_tbl, pkts);
@@ -760,11 +934,8 @@ static int run_worker_sched_mode(void *arg)
 		dst_idx = gbl_args->dst_port_from_idx[src_idx];
 		fill_eth_addrs(pkt_tbl, pkts, dst_idx);
 
-		send_packets(pkt_tbl, pkts,
-			     use_event_queue,
-			     tx_queue[dst_idx],
-			     pktout[dst_idx],
-			     stats);
+		send_packets(pkt_tbl, pkts, use_event_queue, dst_idx, tx_queue[dst_idx],
+			     pktout[dst_idx], state, stats);
 	}
 
 	/*
@@ -825,6 +996,7 @@ static int run_worker_plain_queue_mode(void *arg)
 	thread_args_t *thr_args = arg;
 	stats_t *stats = &thr_args->stats;
 	const appl_args_t *appl_args = &gbl_args->appl;
+	state_t *state = appl_args->has_state ? &thr_args->state : NULL;
 	int use_event_queue = gbl_args->appl.out_mode;
 	int i;
 
@@ -873,10 +1045,7 @@ static int run_worker_plain_queue_mode(void *arg)
 
 		fill_eth_addrs(pkt_tbl, pkts, dst_idx);
 
-		send_packets(pkt_tbl, pkts,
-			     use_event_queue,
-			     tx_queue,
-			     pktout,
+		send_packets(pkt_tbl, pkts, use_event_queue, dst_idx, tx_queue, pktout, state,
 			     stats);
 	}
 
@@ -926,6 +1095,7 @@ static int run_worker_direct_mode(void *arg)
 	thread_args_t *thr_args = arg;
 	stats_t *stats = &thr_args->stats;
 	const appl_args_t *appl_args = &gbl_args->appl;
+	state_t *state = appl_args->has_state ? &thr_args->state : NULL;
 	int use_event_queue = gbl_args->appl.out_mode;
 
 	thr = odp_thread_id();
@@ -969,10 +1139,7 @@ static int run_worker_direct_mode(void *arg)
 
 		fill_eth_addrs(pkt_tbl, pkts, dst_idx);
 
-		send_packets(pkt_tbl, pkts,
-			     use_event_queue,
-			     tx_queue,
-			     pktout,
+		send_packets(pkt_tbl, pkts, use_event_queue, dst_idx, tx_queue, pktout, state,
 			     stats);
 	}
 
@@ -1052,6 +1219,7 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx, odp_po
 	odp_pktio_config_t config;
 	odp_pktin_queue_param_t pktin_param;
 	odp_pktout_queue_param_t pktout_param;
+	odp_queue_param_t compl_queue;
 	odp_pktio_op_mode_t mode_rx;
 	odp_pktio_op_mode_t mode_tx;
 	pktin_mode_t in_mode = gbl_args->appl.in_mode;
@@ -1108,6 +1276,29 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx, odp_po
 		config.pktout.bit.ipv4_chksum_ena = 1;
 		config.pktout.bit.udp_chksum_ena  = 1;
 		config.pktout.bit.tcp_chksum_ena  = 1;
+	}
+
+	if (gbl_args->appl.tx_compl.mode != ODP_PACKET_TX_COMPL_DISABLED) {
+		if (gbl_args->appl.tx_compl.mode == ODP_PACKET_TX_COMPL_EVENT &&
+		    !(pktio_capa.tx_compl.mode_event && pktio_capa.tx_compl.queue_type_sched)) {
+			ODPH_ERR("Transmit event completion not supported: %s\n", dev);
+			return -1;
+		}
+
+		if (gbl_args->appl.tx_compl.mode == ODP_PACKET_TX_COMPL_POLL &&
+		    !(pktio_capa.tx_compl.mode_poll &&
+		      pktio_capa.tx_compl.max_compl_id >= gbl_args->appl.tx_compl.tot_compl_id)) {
+			ODPH_ERR("Transmit poll completion not supported: %s\n", dev);
+			return -1;
+		}
+
+		if (gbl_args->appl.tx_compl.mode == ODP_PACKET_TX_COMPL_EVENT)
+			config.tx_compl.mode_event = 1;
+
+		if (gbl_args->appl.tx_compl.mode == ODP_PACKET_TX_COMPL_POLL) {
+			config.tx_compl.mode_poll = 1;
+			config.tx_compl.max_compl_id = gbl_args->appl.tx_compl.tot_compl_id;
+		}
 	}
 
 	/* Provide hint to pktio that packet references are not used */
@@ -1188,6 +1379,20 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx, odp_po
 		pktin_param.queue_param.sched.prio  = prio;
 		pktin_param.queue_param.sched.sync  = sync_mode;
 		pktin_param.queue_param.sched.group = group;
+
+		if (gbl_args->appl.tx_compl.mode == ODP_PACKET_TX_COMPL_EVENT) {
+			odp_queue_param_init(&compl_queue);
+			compl_queue.type = ODP_QUEUE_TYPE_SCHED;
+			compl_queue.sched.prio = prio;
+			compl_queue.sched.sync = ODP_SCHED_SYNC_PARALLEL;
+			compl_queue.sched.group = group;
+			gbl_args->pktios[idx].compl_q = odp_queue_create(NULL, &compl_queue);
+
+			if (gbl_args->pktios[idx].compl_q == ODP_QUEUE_INVALID) {
+				ODPH_ERR("Creating completion queue failed: %s\n", dev);
+				return -1;
+			}
+		}
 	}
 
 	if (num_rx > (int)pktio_capa.max_input_queues) {
@@ -1301,7 +1506,7 @@ static int print_speed_stats(int num_workers, stats_t **thr_stats,
 	uint64_t pkts = 0;
 	uint64_t pkts_prev = 0;
 	uint64_t pps;
-	uint64_t rx_drops, tx_drops, copy_fails;
+	uint64_t rx_drops, tx_drops, tx_c_misses, tx_c_fails, copy_fails;
 	uint64_t maximum_pps = 0;
 	int i;
 	int elapsed = 0;
@@ -1319,6 +1524,8 @@ static int print_speed_stats(int num_workers, stats_t **thr_stats,
 		pkts = 0;
 		rx_drops = 0;
 		tx_drops = 0;
+		tx_c_misses = 0;
+		tx_c_fails = 0;
 		copy_fails = 0;
 
 		sleep(timeout);
@@ -1327,6 +1534,8 @@ static int print_speed_stats(int num_workers, stats_t **thr_stats,
 			pkts += thr_stats[i]->s.packets;
 			rx_drops += thr_stats[i]->s.rx_drops;
 			tx_drops += thr_stats[i]->s.tx_drops;
+			tx_c_misses += thr_stats[i]->s.tx_c_misses;
+			tx_c_fails += thr_stats[i]->s.tx_c_fails;
 			copy_fails += thr_stats[i]->s.copy_fails;
 		}
 		if (stats_enabled) {
@@ -1338,6 +1547,10 @@ static int print_speed_stats(int num_workers, stats_t **thr_stats,
 
 			if (gbl_args->appl.packet_copy)
 				printf("%" PRIu64 " copy fails, ", copy_fails);
+
+			if (gbl_args->appl.tx_compl.mode != ODP_PACKET_TX_COMPL_DISABLED)
+				printf("%" PRIu64 " tx compl misses, %" PRIu64 " tx compl fails, ",
+				       tx_c_misses, tx_c_fails);
 
 			printf("%" PRIu64 " rx drops, %" PRIu64 " tx drops\n",
 			       rx_drops, tx_drops);
@@ -1560,6 +1773,21 @@ static void bind_queues(void)
 	printf("\n");
 }
 
+static void init_state(const appl_args_t *args, state_t *state, int thr_idx)
+{
+	const uint32_t cnt = args->tx_compl.thr_compl_id + 1;
+
+	state->tx_compl.opt.mode = args->tx_compl.mode;
+	state->tx_compl.init = thr_idx * cnt;
+	state->tx_compl.max = state->tx_compl.init + cnt - 1;
+	state->tx_compl.free_head = state->tx_compl.init;
+	state->tx_compl.poll_head = state->tx_compl.init;
+	state->tx_compl.num_act = 0;
+	state->tx_compl.max_act = state->tx_compl.max - state->tx_compl.init + 1;
+	state->tx_compl.interval = args->tx_compl.nth;
+	state->tx_compl.next_req = state->tx_compl.interval;
+}
+
 static void init_port_lookup_tbl(void)
 {
 	int rx_idx, if_count;
@@ -1598,93 +1826,113 @@ static void usage(char *progname)
 	       "  eth2 will send pkts to eth3 and vice versa\n"
 	       "\n"
 	       "Mandatory OPTIONS:\n"
-	       "  -i, --interface <name>  Eth interfaces (comma-separated, no spaces)\n"
-	       "                          Interface count min 1, max %i\n"
+	       "  -i, --interface <name>         Eth interfaces (comma-separated, no spaces)\n"
+	       "                                 Interface count min 1, max %i\n"
 	       "\n"
 	       "Optional OPTIONS:\n"
-	       "  -m, --mode <arg>        Packet input mode\n"
-	       "                          0: Direct mode: PKTIN_MODE_DIRECT (default)\n"
-	       "                          1: Scheduler mode with parallel queues:\n"
-	       "                             PKTIN_MODE_SCHED + SCHED_SYNC_PARALLEL\n"
-	       "                          2: Scheduler mode with atomic queues:\n"
-	       "                             PKTIN_MODE_SCHED + SCHED_SYNC_ATOMIC\n"
-	       "                          3: Scheduler mode with ordered queues:\n"
-	       "                             PKTIN_MODE_SCHED + SCHED_SYNC_ORDERED\n"
-	       "                          4: Plain queue mode: PKTIN_MODE_QUEUE\n"
-	       "  -o, --out_mode <arg>    Packet output mode\n"
-	       "                          0: Direct mode: PKTOUT_MODE_DIRECT (default)\n"
-	       "                          1: Queue mode:  PKTOUT_MODE_QUEUE\n"
-	       "  -O, --output_map <list> List of destination ports for passed interfaces\n"
-	       "                          (comma-separated, no spaces). Ordering follows the\n"
-	       "                          '--interface' option, e.g. passing '-i eth0,eth1' and\n"
-	       "                          '-O eth0,eth1' would result in eth0 and eth1 looping\n"
-	       "                          packets back.\n"
-	       "  -c, --count <num>       CPU count, 0=all available, default=1\n"
-	       "  -t, --time <sec>        Time in seconds to run.\n"
-	       "  -a, --accuracy <sec>    Time in seconds get print statistics\n"
-	       "                          (default is 1 second).\n"
-	       "  -d, --dst_change <arg>  0: Don't change packets' dst eth addresses\n"
-	       "                          1: Change packets' dst eth addresses (default)\n"
-	       "  -s, --src_change <arg>  0: Don't change packets' src eth addresses\n"
-	       "                          1: Change packets' src eth addresses (default)\n"
-	       "  -r, --dst_addr <addr>   Destination addresses (comma-separated, no spaces)\n"
-	       "                          Requires also the -d flag to be set\n"
-	       "  -e, --error_check <arg> 0: Don't check packet errors (default)\n"
-	       "                          1: Check packet errors\n"
-	       "  -k, --chksum <arg>      0: Don't use checksum offload (default)\n"
-	       "                          1: Use checksum offload\n",
+	       "  -m, --mode <arg>               Packet input mode\n"
+	       "                                 0: Direct mode: PKTIN_MODE_DIRECT (default)\n"
+	       "                                 1: Scheduler mode with parallel queues:\n"
+	       "                                    PKTIN_MODE_SCHED + SCHED_SYNC_PARALLEL\n"
+	       "                                 2: Scheduler mode with atomic queues:\n"
+	       "                                    PKTIN_MODE_SCHED + SCHED_SYNC_ATOMIC\n"
+	       "                                 3: Scheduler mode with ordered queues:\n"
+	       "                                    PKTIN_MODE_SCHED + SCHED_SYNC_ORDERED\n"
+	       "                                 4: Plain queue mode: PKTIN_MODE_QUEUE\n"
+	       "  -o, --out_mode <arg>           Packet output mode\n"
+	       "                                 0: Direct mode: PKTOUT_MODE_DIRECT (default)\n"
+	       "                                 1: Queue mode:  PKTOUT_MODE_QUEUE\n"
+	       "  -O, --output_map <list>        List of destination ports for passed interfaces\n"
+	       "                                 (comma-separated, no spaces). Ordering follows\n"
+	       "                                 the '--interface' option, e.g. passing\n"
+	       "                                 '-i eth0,eth1' and '-O eth0,eth1' would result\n"
+	       "                                 in eth0 and eth1 looping packets back.\n"
+	       "  -c, --count <num>              CPU count, 0=all available, default=1\n"
+	       "  -t, --time <sec>               Time in seconds to run.\n"
+	       "  -a, --accuracy <sec>           Time in seconds get print statistics\n"
+	       "                                 (default is 1 second).\n"
+	       "  -d, --dst_change <arg>         0: Don't change packets' dst eth addresses\n"
+	       "                                 1: Change packets' dst eth addresses (default)\n"
+	       "  -s, --src_change <arg>         0: Don't change packets' src eth addresses\n"
+	       "                                 1: Change packets' src eth addresses (default)\n"
+	       "  -r, --dst_addr <addr>          Destination addresses (comma-separated, no\n"
+	       "                                 spaces) Requires also the -d flag to be set\n"
+	       "  -e, --error_check <arg>        0: Don't check packet errors (default)\n"
+	       "                                 1: Check packet errors\n"
+	       "  -k, --chksum <arg>             0: Don't use checksum offload (default)\n"
+	       "                                 1: Use checksum offload\n",
 	       NO_PATH(progname), NO_PATH(progname), MAX_PKTIOS);
 
-	printf("  -g, --groups <num>      Number of new groups to create (1 ... num). Interfaces\n"
-	       "                          are placed into the groups in round robin.\n"
-	       "                           0: Use SCHED_GROUP_ALL (default)\n"
-	       "                          -1: Use SCHED_GROUP_WORKER\n"
-	       "  -G, --group_mode <arg>  Select how threads join new groups (when -g > 0)\n"
-	       "                          0: All threads join all created groups (default)\n"
-	       "                          1: All threads join first N created groups.\n"
-	       "                             N is number of interfaces (== active groups).\n"
-	       "                          2: Each thread joins a part of the first N groups\n"
-	       "                             (in round robin).\n"
-	       "  -I, --prio <prio list>  Schedule priority of packet input queues.\n"
-	       "                          Comma separated list of priorities (no spaces). A value\n"
-	       "                          per interface. All queues of an interface have the same\n"
-	       "                          priority. Values must be between odp_schedule_min_prio\n"
-	       "                          and odp_schedule_max_prio. odp_schedule_default_prio is\n"
-	       "                          used by default.\n"
-	       "  -b, --burst_rx <num>    0:   Use max burst size (default)\n"
-	       "                          num: Max number of packets per receive call\n"
-	       "  -q, --rx_queues <num>   Number of RX queues per interface in scheduler mode\n"
-	       "                          0: RX queue per worker CPU (default)\n"
-	       "  -p, --packet_copy       0: Don't copy packet (default)\n"
-	       "                          1: Create and send copy of the received packet.\n"
-	       "                             Free the original packet.\n"
-	       "  -R, --data_rd <num>     Number of packet data words (uint64_t) to read from\n"
-	       "                          every received packet. Number of words is rounded down\n"
-	       "                          to fit into the first segment of a packet. Default\n"
-	       "                          is 0.\n"
-	       "  -y, --pool_per_if       Create a packet (and packet vector) pool per interface.\n"
-	       "                          0: Share a single pool between all interfaces (default)\n"
-	       "                          1: Create a pool per interface\n"
-	       "  -n, --num_pkt <num>     Number of packets per pool. Default is 16k or\n"
-	       "                          the maximum capability. Use 0 for the default.\n"
-	       "  -u, --vector_mode       Enable vector mode.\n"
-	       "                          Supported only with scheduler packet input modes (1-3).\n"
-	       "  -w, --num_vec <num>     Number of vectors per pool.\n"
-	       "                          Default is num_pkts divided by vec_size.\n"
-	       "  -x, --vec_size <num>    Vector size (default %i).\n"
-	       "  -z, --vec_tmo_ns <ns>   Vector timeout in ns (default %llu ns).\n"
-	       "  -M, --mtu <len>         Interface MTU in bytes.\n"
-	       "  -P, --promisc_mode      Enable promiscuous mode.\n"
-	       "  -l, --packet_len <len>  Maximum length of packets supported (default %d).\n"
-	       "  -L, --seg_len <len>     Packet pool segment length\n"
-	       "                          (default equal to packet length).\n"
-	       "  -F, --prefetch <num>    Prefetch packet data in 64 byte multiples (default 1).\n"
-	       "  -f, --flow_aware        Enable flow aware scheduling.\n"
-	       "  -T, --input_ts          Enable packet input timestamping.\n"
-	       "  -v, --verbose           Verbose output.\n"
-	       "  -V, --verbose_pkt       Print debug information on every received packet.\n"
-	       "  -h, --help              Display help and exit.\n\n"
-	       "\n", DEFAULT_VEC_SIZE, DEFAULT_VEC_TMO, POOL_PKT_LEN);
+	printf("  -g, --groups <num>             Number of new groups to create (1 ... num).\n"
+	       "                                 Interfaces are placed into the groups in round\n"
+	       "                                 robin.\n"
+	       "                                  0: Use SCHED_GROUP_ALL (default)\n"
+	       "                                 -1: Use SCHED_GROUP_WORKER\n"
+	       "  -G, --group_mode <arg>         Select how threads join new groups\n"
+	       "                                 (when -g > 0)\n"
+	       "                                 0: All threads join all created groups\n"
+	       "                                    (default)\n"
+	       "                                 1: All threads join first N created groups.\n"
+	       "                                    N is number of interfaces (== active\n"
+	       "                                    groups).\n"
+	       "                                 2: Each thread joins a part of the first N\n"
+	       "                                    groups (in round robin).\n"
+	       "  -I, --prio <prio list>         Schedule priority of packet input queues.\n"
+	       "                                 Comma separated list of priorities (no spaces).\n"
+	       "                                 A value per interface. All queues of an\n"
+	       "                                 interface have the same priority. Values must\n"
+	       "                                 be between odp_schedule_min_prio and\n"
+	       "                                 odp_schedule_max_prio.\n"
+	       "                                 odp_schedule_default_prio is used by default.\n"
+	       "  -b, --burst_rx <num>           0:   Use max burst size (default)\n"
+	       "                                 num: Max number of packets per receive call\n"
+	       "  -q, --rx_queues <num>          Number of RX queues per interface in scheduler\n"
+	       "                                 mode\n"
+	       "                                 0: RX queue per worker CPU (default)\n"
+	       "  -p, --packet_copy              0: Don't copy packet (default)\n"
+	       "                                 1: Create and send copy of the received packet.\n"
+	       "                                    Free the original packet.\n"
+	       "  -R, --data_rd <num>            Number of packet data words (uint64_t) to read\n"
+	       "                                 from every received packet. Number of words is\n"
+	       "                                 rounded down to fit into the first segment of a\n"
+	       "                                 packet. Default is 0.\n"
+	       "  -y, --pool_per_if              Create a packet (and packet vector) pool per\n"
+	       "                                 interface.\n"
+	       "                                 0: Share a single pool between all interfaces\n"
+	       "                                    (default)\n"
+	       "                                 1: Create a pool per interface\n"
+	       "  -n, --num_pkt <num>            Number of packets per pool. Default is 16k or\n"
+	       "                                 the maximum capability. Use 0 for the default.\n"
+	       "  -u, --vector_mode              Enable vector mode.\n"
+	       "                                 Supported only with scheduler packet input\n"
+	       "                                 modes (1-3).\n"
+	       "  -w, --num_vec <num>            Number of vectors per pool.\n"
+	       "                                 Default is num_pkts divided by vec_size.\n"
+	       "  -x, --vec_size <num>           Vector size (default %i).\n"
+	       "  -z, --vec_tmo_ns <ns>          Vector timeout in ns (default %llu ns).\n"
+	       "  -M, --mtu <len>                Interface MTU in bytes.\n"
+	       "  -P, --promisc_mode             Enable promiscuous mode.\n"
+	       "  -l, --packet_len <len>         Maximum length of packets supported\n"
+	       "                                 (default %d).\n"
+	       "  -L, --seg_len <len>            Packet pool segment length\n"
+	       "                                 (default equal to packet length).\n"
+	       "  -F, --prefetch <num>           Prefetch packet data in 64 byte multiples\n"
+	       "                                 (default 1).\n"
+	       "  -f, --flow_aware               Enable flow aware scheduling.\n"
+	       "  -T, --input_ts                 Enable packet input timestamping.\n",
+	       DEFAULT_VEC_SIZE, DEFAULT_VEC_TMO, POOL_PKT_LEN);
+
+	printf("  -C, --tx_compl <mode,n,max_id> Enable transmit completion with a specified\n"
+	       "                                 completion mode for nth packet, with maximum\n"
+	       "                                 completion ID per worker thread in case of poll\n"
+	       "                                 completion (comma-separated, no spaces).\n"
+	       "                                 0: Event completion mode\n"
+	       "                                 1: Poll completion mode\n"
+	       "  -v, --verbose                  Verbose output.\n"
+	       "  -V, --verbose_pkt              Print debug information on every received\n"
+	       "                                 packet.\n"
+	       "  -h, --help                     Display help and exit.\n\n"
+	       "\n");
 }
 
 /*
@@ -1699,7 +1947,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	int opt;
 	int long_index;
 	char *token;
-	char *tmp_str;
+	char *tmp_str, *tmp;
 	size_t str_len, len;
 	int i;
 	static const struct option longopts[] = {
@@ -1735,6 +1983,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{"prefetch", required_argument, NULL, 'F'},
 		{"flow_aware", no_argument, NULL, 'f'},
 		{"input_ts", no_argument, NULL, 'T'},
+		{"tx_compl", required_argument, NULL, 'C'},
 		{"verbose", no_argument, NULL, 'v'},
 		{"verbose_pkt", no_argument, NULL, 'V'},
 		{"help", no_argument, NULL, 'h'},
@@ -1742,7 +1991,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	};
 
 	static const char *shortopts = "+c:t:a:i:m:o:O:r:d:s:e:k:g:G:I:"
-				       "b:q:p:R:y:n:l:L:w:x:z:M:F:uPfTvVh";
+				       "b:q:p:R:y:n:l:L:w:x:z:M:F:uPfTC:vVh";
 
 	appl_args->time = 0; /* loop forever if time to run is 0 */
 	appl_args->accuracy = 1; /* get and print pps stats second */
@@ -2020,6 +2269,56 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		case 'T':
 			appl_args->input_ts = 1;
 			break;
+		case 'C':
+			if (strlen(optarg) == 0) {
+				ODPH_ERR("Bad transmit completion parameter string\n");
+				exit(EXIT_FAILURE);
+			}
+
+			tmp_str = strdup(optarg);
+
+			if (tmp_str == NULL) {
+				ODPH_ERR("Transmit completion parameter string duplication"
+					 " failed\n");
+				exit(EXIT_FAILURE);
+			}
+
+			tmp = strtok(tmp_str, ",");
+
+			if (tmp == NULL) {
+				ODPH_ERR("Invalid transmit completion parameter format\n");
+				exit(EXIT_FAILURE);
+			}
+
+			i = atoi(tmp);
+
+			if (i == 0)
+				appl_args->tx_compl.mode = ODP_PACKET_TX_COMPL_EVENT;
+			else if (i == 1)
+				appl_args->tx_compl.mode = ODP_PACKET_TX_COMPL_POLL;
+
+			tmp = strtok(NULL, ",");
+
+			if (tmp == NULL) {
+				ODPH_ERR("Invalid transmit completion parameter format\n");
+				exit(EXIT_FAILURE);
+			}
+
+			appl_args->tx_compl.nth = atoi(tmp);
+
+			if (appl_args->tx_compl.mode == ODP_PACKET_TX_COMPL_POLL) {
+				tmp = strtok(NULL, ",");
+
+				if (tmp == NULL) {
+					ODPH_ERR("Invalid transmit completion parameter format\n");
+					exit(EXIT_FAILURE);
+				}
+
+				appl_args->tx_compl.thr_compl_id = atoi(tmp);
+			}
+
+			free(tmp_str);
+			break;
 		case 'v':
 			appl_args->verbose = 1;
 			break;
@@ -2061,6 +2360,23 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		exit(EXIT_FAILURE);
 	}
 
+	if (appl_args->tx_compl.mode != ODP_PACKET_TX_COMPL_DISABLED &&
+	    appl_args->tx_compl.nth == 0) {
+		ODPH_ERR("Invalid packet interval for transmit completion: %u\n",
+			 appl_args->tx_compl.nth);
+		exit(EXIT_FAILURE);
+	}
+
+	if (appl_args->tx_compl.mode == ODP_PACKET_TX_COMPL_EVENT &&
+	    (appl_args->in_mode == PLAIN_QUEUE || appl_args->in_mode == DIRECT_RECV)) {
+		ODPH_ERR("Transmit event completion mode not supported with plain queue or direct "
+			 "input modes\n");
+		exit(EXIT_FAILURE);
+	}
+
+	appl_args->tx_compl.tot_compl_id = (appl_args->tx_compl.thr_compl_id + 1) *
+					   appl_args->cpu_count - 1;
+
 	if (appl_args->burst_rx == 0)
 		appl_args->burst_rx = MAX_PKT_BURST;
 
@@ -2068,6 +2384,10 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	if (appl_args->error_check || appl_args->chksum ||
 	    appl_args->packet_copy || appl_args->data_rd || appl_args->verbose_pkt)
 		appl_args->extra_feat = 1;
+
+	appl_args->has_state = 0;
+	if (appl_args->tx_compl.mode != ODP_PACKET_TX_COMPL_DISABLED)
+		appl_args->has_state = 1;
 
 	optind = 1;		/* reset 'extern optind' from the getopt lib */
 }
@@ -2127,12 +2447,13 @@ static void print_options(void)
 	printf("Number of pools:    %i\n", appl_args->pool_per_if ?
 					   appl_args->if_count : 1);
 
-	if (appl_args->extra_feat) {
-		printf("Extra features:     %s%s%s%s%s\n",
+	if (appl_args->extra_feat || appl_args->has_state) {
+		printf("Extra features:     %s%s%s%s%s%s\n",
 		       appl_args->error_check ? "error_check " : "",
 		       appl_args->chksum ? "chksum " : "",
 		       appl_args->packet_copy ? "packet_copy " : "",
 		       appl_args->data_rd ? "data_rd" : "",
+		       appl_args->tx_compl.mode != ODP_PACKET_TX_COMPL_DISABLED ? "tx_compl" : "",
 		       appl_args->verbose_pkt ? "verbose_pkt" : "");
 	}
 
@@ -2174,7 +2495,11 @@ static void gbl_args_init(args_t *args)
 
 		for (queue = 0; queue < MAX_QUEUES; queue++)
 			args->pktios[pktio].rx_q[queue] = ODP_QUEUE_INVALID;
+
+		args->pktios[pktio].compl_q = ODP_QUEUE_INVALID;
 	}
+
+	args->appl.tx_compl.mode = ODP_PACKET_TX_COMPL_DISABLED;
 }
 
 static void create_groups(int num, odp_schedule_group_t *group)
@@ -2605,6 +2930,7 @@ int main(int argc, char *argv[])
 		int num_join;
 		int mode = gbl_args->appl.group_mode;
 
+		init_state(&gbl_args->appl, &gbl_args->thread_args[i].state, i);
 		odph_thread_param_init(&thr_param[i]);
 		thr_param[i].start    = thr_run_func;
 		thr_param[i].arg      = &gbl_args->thread_args[i];
@@ -2697,6 +3023,9 @@ int main(int argc, char *argv[])
 			printf("Pktio %s extra statistics:\n", gbl_args->appl.if_names[i]);
 			odp_pktio_extra_stats_print(pktio);
 		}
+
+		if (gbl_args->pktios[i].compl_q != ODP_QUEUE_INVALID)
+			(void)odp_queue_destroy(gbl_args->pktios[i].compl_q);
 
 		if (odp_pktio_close(pktio)) {
 			ODPH_ERR("Pktio close failed: %s\n", gbl_args->appl.if_names[i]);
