@@ -25,7 +25,6 @@ helperinclude_HEADERS = \
 		  include/odp/helper/ipsec.h\
 		  include/odp/helper/macros.h\
 		  include/odp/helper/odph_api.h\
-		  include/odp/helper/odph_hashtable.h\
 		  include/odp/helper/odph_iplookuptable.h\
 		  include/odp/helper/odph_lineartable.h\
 		  include/odp/helper/sctp.h \
@@ -60,7 +59,6 @@ __LIB__libodphelper_la_SOURCES = \
 					eth.c \
 					ip.c \
 					chksum.c \
-					hashtable.c \
 					lineartable.c \
 					iplookuptable.c \
 					ipsec.c \
