@@ -44,7 +44,6 @@
 #define MAX_PATTERN_LEN 32U
 #define ENV_PREFIX "ODP"
 #define ENV_DELIMITER "="
-#define MAX_CMD_LEN 10
 #define UNKNOWN_CMD UINT8_MAX
 #define EXIT_PROG (UNKNOWN_CMD - 1U)
 #define DELAY_PROG (EXIT_PROG - 1U)
@@ -107,6 +106,7 @@ typedef struct {
 	prog_t progs[MAX_PROGS];
 	uint32_t num_p_elems;
 	uint32_t num_progs;
+	uint32_t max_cmd_len;
 	odp_bool_t is_running;
 } global_config_t;
 
@@ -159,7 +159,18 @@ static odp_bool_t setup_signals(void)
 
 static void init_options(global_config_t *config)
 {
+	uint32_t max_len = 0U, str_len;
+
 	memset(config, 0, sizeof(*config));
+
+	for (uint32_t i = 0U; i < ODPH_ARRAY_SIZE(cmdstrs); ++i) {
+		str_len = strlen(cmdstrs[i]);
+
+		if (str_len > max_len)
+			max_len = str_len;
+	}
+
+	config->max_cmd_len = max_len;
 }
 
 static void parse_masks(global_config_t *config, const char *optarg)
@@ -819,20 +830,35 @@ static void print_cli_usage(void)
 	printf("\n");
 }
 
-static uint8_t map_str_to_command(const char *cmdstr)
+static char *get_format_str(uint32_t max_cmd_len)
+{
+	const int cmd_len = snprintf(NULL, 0U, "%u", max_cmd_len);
+	uint32_t str_len;
+
+	if (cmd_len <= 0)
+		return NULL;
+
+	str_len = strlen("%s %u") + cmd_len + 1U;
+
+	char fmt[str_len];
+
+	snprintf(fmt, str_len, "%%%ds %%u", max_cmd_len);
+
+	return strdup(fmt);
+}
+
+static uint8_t map_str_to_command(const char *cmdstr, uint32_t len)
 {
 	for (uint32_t i = 0U; i < ODPH_ARRAY_SIZE(cmdstrs); ++i)
-		if (strncmp(cmdstr, cmdstrs[i], MAX_CMD_LEN - 1U) == 0)
+		if (strncmp(cmdstr, cmdstrs[i], len) == 0)
 			return i;
 
 	return UNKNOWN_CMD;
 }
 
-static odp_bool_t get_stdin_command(global_config_t *config ODP_UNUSED, uint8_t *cmd,
-				    uint32_t *index)
+static odp_bool_t get_stdin_command(global_config_t *config, uint8_t *cmd, uint32_t *index)
 {
-	char *input;
-	char cmdstr[MAX_CMD_LEN + 1U];
+	char *input, cmdstr[config->max_cmd_len + 1U], *fmt;
 	size_t size;
 	ssize_t ret;
 
@@ -844,8 +870,16 @@ static odp_bool_t get_stdin_command(global_config_t *config ODP_UNUSED, uint8_t 
 	if (ret == -1)
 		return false;
 
-	ret = sscanf(input, "%" S(MAX_CMD_LEN) "s %u", cmdstr, index);
+	fmt = get_format_str(config->max_cmd_len);
+
+	if (fmt == NULL) {
+		printf("Unable to parse command\n");
+		return false;
+	}
+
+	ret = sscanf(input, fmt, cmdstr, index);
 	free(input);
+	free(fmt);
 
 	if (ret == EOF)
 		return false;
@@ -855,7 +889,7 @@ static odp_bool_t get_stdin_command(global_config_t *config ODP_UNUSED, uint8_t 
 		return false;
 	}
 
-	*cmd = map_str_to_command(cmdstr);
+	*cmd = map_str_to_command(cmdstr, config->max_cmd_len);
 	return true;
 }
 
