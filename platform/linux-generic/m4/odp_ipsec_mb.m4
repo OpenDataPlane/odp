@@ -1,3 +1,7 @@
+# SPDX-License-Identifier: BSD-3-Clause
+# Copyright (c) 2022 ARM Limited
+#
+
 #########################################################################
 # Check for libIPSec_MB availability
 #########################################################################

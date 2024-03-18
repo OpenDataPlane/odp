@@ -1,3 +1,7 @@
+# SPDX-License-Identifier: BSD-3-Clause
+# Copyright (c) 2015 Linaro Limited
+#
+
 # ODP_PCAP([ACTION-IF-FOUND], [ACTION-IF-NOT-FOUND])
 # --------------------------------------------------
 AC_DEFUN([ODP_PCAP],

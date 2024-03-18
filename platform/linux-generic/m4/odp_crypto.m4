@@ -1,3 +1,8 @@
+# SPDX-License-Identifier: BSD-3-Clause
+# Copyright (c) 2022 ARM Limited
+# Copyright (c) 2022 Nokia
+#
+
 # ODP_CRYPTO
 # ----------
 # Select default crypto implementation
