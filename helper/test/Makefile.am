@@ -6,8 +6,7 @@ EXECUTABLES = version \
 	      macros \
 	      parse\
 	      stress \
-	      table \
-	      iplookuptable
+	      table
 
 #These are platform specific extensions that are not portable
 #They are a convenience to app writers who have chosen to
@@ -44,7 +43,6 @@ odpthreads_SOURCES = odpthreads.c
 parse_SOURCES = parse.c
 stress_SOURCES = stress.c
 table_SOURCES = table.c
-iplookuptable_SOURCES = iplookuptable.c
 version_SOURCES = version.c
 debug_SOURCES = debug.c
 
