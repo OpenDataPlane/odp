@@ -7,7 +7,6 @@ odpthreads
 parse
 process
 stress
-table
 thread
 pthread
 version
