@@ -1,3 +1,7 @@
+# SPDX-License-Identifier: BSD-3-Clause
+# Copyright (c) 2018 Linaro Limited
+#
+
 # ODP_LIBCONFIG(PLATFORM, CONFIG-FILE-PATH)
 # -----------------------------------------
 AC_DEFUN([ODP_LIBCONFIG],

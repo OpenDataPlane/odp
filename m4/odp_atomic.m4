@@ -1,3 +1,7 @@
+# SPDX-License-Identifier: BSD-3-Clause
+# Copyright (c) 2017 Linaro Limited
+#
+
 # ODP_ATOMIC
 # ----------
 # Run different atomic-related checks
