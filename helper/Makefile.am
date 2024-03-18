@@ -25,7 +25,6 @@ helperinclude_HEADERS = \
 		  include/odp/helper/ipsec.h\
 		  include/odp/helper/macros.h\
 		  include/odp/helper/odph_api.h\
-		  include/odp/helper/odph_iplookuptable.h\
 		  include/odp/helper/sctp.h \
 		  include/odp/helper/stress.h\
 		  include/odp/helper/string.h\
@@ -51,14 +50,10 @@ helperinclude_HEADERS += \
 		  include/odp/helper/cli.h
 endif
 
-noinst_HEADERS = \
-		 include/odph_list_internal.h
-
 __LIB__libodphelper_la_SOURCES = \
 					eth.c \
 					ip.c \
 					chksum.c \
-					iplookuptable.c \
 					ipsec.c \
 					threads.c \
 					version.c

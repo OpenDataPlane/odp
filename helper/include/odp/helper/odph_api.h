@@ -28,7 +28,6 @@ extern "C" {
 #include <odp/helper/ipsec.h>
 #include <odp/helper/macros.h>
 #include <odp/helper/stress.h>
-#include <odp/helper/odph_iplookuptable.h>
 #include <odp/helper/sctp.h>
 #include <odp/helper/string.h>
 #include <odp/helper/strong_types.h>

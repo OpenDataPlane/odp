@@ -2,7 +2,6 @@
 *.log
 chksum
 cli
-iplookuptable
 macros
 odpthreads
 parse
