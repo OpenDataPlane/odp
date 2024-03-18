@@ -16,7 +16,7 @@ helperinclude_HEADERS = \
 		  include/odp/helper/autoheader_external.h\
 		  include/odp/helper/deprecated.h\
 		  include/odp/helper/chksum.h\
-		  include/odp/helper/odph_debug.h \
+		  include/odp/helper/debug.h \
 		  include/odp/helper/eth.h\
 		  include/odp/helper/gtp.h\
 		  include/odp/helper/icmp.h\
