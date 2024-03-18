@@ -18,9 +18,9 @@
 #include <stdbool.h>
 
 #include <odp_api.h>
+#include <odp/helper/debug.h>
 #include <odp/helper/linux/pthread.h>
 #include <odp/helper/linux/process.h>
-#include <odp/helper/odph_debug.h>
 
 static void *_odph_run_start_routine(void *arg)
 {

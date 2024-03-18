@@ -4,8 +4,8 @@
  * Copyright (c) 2021 Nokia
  */
 
+#include <odp/helper/debug.h>
 #include <odp/helper/ipsec.h>
-#include <odp/helper/odph_debug.h>
 
 uint32_t odph_ipsec_auth_icv_len_default(odp_auth_alg_t auth_alg)
 {
