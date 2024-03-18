@@ -1,3 +1,7 @@
+# SPDX-License-Identifier: BSD-3-Clause
+# Copyright (c) 2017 Linaro Limited
+#
+
 # ODP_DPDK_PMDS(DPDK_DRIVER_PATH)
 # -------------------------------
 # Update DPDK_LIBS to include dependencies.

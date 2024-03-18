@@ -1,3 +1,7 @@
+# SPDX-License-Identifier: BSD-3-Clause
+# Copyright (c) 2017 Linaro Limited
+#
+
 # ODP_TIMER([ACTION-IF-FOUND], [ACTION-IF-NOT-FOUND])
 ##########################################################################
 # Check for POSIX timer functions

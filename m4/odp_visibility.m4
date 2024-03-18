@@ -1,3 +1,7 @@
+# SPDX-License-Identifier: BSD-3-Clause
+# Copyright (c) 2017 Linaro Limited
+#
+
 # ODP_VISIBILITY
 # --------------
 # Enable -fvisibility=hidden if using a gcc that supports it
