@@ -2,7 +2,6 @@
 *.log
 chksum
 cli
-cuckootable
 iplookuptable
 macros
 odpthreads
