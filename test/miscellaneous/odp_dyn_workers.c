@@ -394,8 +394,15 @@ int log_fn(odp_log_level_t level, const char *fmt, ...)
 static odp_bool_t disable_stream(int fd, odp_bool_t read)
 {
 	const int null = open("/dev/null", read ? O_RDONLY : O_WRONLY);
+	odp_bool_t ret = false;
 
-	return null != -1 && dup2(null, fd) != -1;
+	if (null == -1)
+		return ret;
+
+	ret = dup2(null, fd) != -1;
+	close(null);
+
+	return ret;
 }
 
 static odp_bool_t set_odp_env(char *env)
