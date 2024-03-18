@@ -1,3 +1,7 @@
+# SPDX-License-Identifier: BSD-3-Clause
+# Copyright (c) 2015 Linaro Limited
+#
+
 ##########################################################################
 # Enable/disable usage of OpenSSL library
 ##########################################################################

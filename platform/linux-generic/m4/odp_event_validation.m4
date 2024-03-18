@@ -1,3 +1,7 @@
+# SPDX-License-Identifier: BSD-3-Clause
+# Copyright (c) 2022 Nokia
+#
+
 # ODP_EVENT_VALIDATION
 # --------------------
 # Select event validation level

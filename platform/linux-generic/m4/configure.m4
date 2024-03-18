@@ -1,3 +1,7 @@
+# SPDX-License-Identifier: BSD-3-Clause
+# Copyright (c) 2014 Linaro Limited
+#
+
 ODP_IMPLEMENTATION_NAME="odp-linux"
 ODP_LIB_NAME="odp-linux"
 
