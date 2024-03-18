@@ -3,7 +3,6 @@ include $(top_srcdir)/test/Makefile.inc
 EXECUTABLES = version \
 	      debug \
 	      chksum \
-	      cuckootable \
 	      macros \
 	      parse\
 	      stress \
@@ -40,7 +39,6 @@ test_PROGRAMS = $(EXECUTABLES) $(COMPILE_ONLY)
 dist_check_SCRIPTS = odpthreads_as_processes odpthreads_as_pthreads
 
 chksum_SOURCES = chksum.c
-cuckootable_SOURCES = cuckootable.c
 macros_SOURCES = macros.c
 odpthreads_SOURCES = odpthreads.c
 parse_SOURCES = parse.c
