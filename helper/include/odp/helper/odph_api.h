@@ -27,7 +27,6 @@ extern "C" {
 #include <odp/helper/ip.h>
 #include <odp/helper/ipsec.h>
 #include <odp/helper/macros.h>
-#include <odp/helper/odph_iplookuptable.h>
 #include <odp/helper/sctp.h>
 #include <odp/helper/strong_types.h>
 #include <odp/helper/tcp.h>

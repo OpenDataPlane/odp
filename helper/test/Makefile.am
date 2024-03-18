@@ -5,8 +5,7 @@ EXECUTABLES = version \
 	      chksum \
 	      macros \
 	      parse\
-	      table \
-	      iplookuptable
+	      table
 
 #These are platform specific extensions that are not portable
 #They are a convenience to app writers who have chosen to
@@ -42,7 +41,6 @@ macros_SOURCES = macros.c
 odpthreads_SOURCES = odpthreads.c
 parse_SOURCES = parse.c
 table_SOURCES = table.c
-iplookuptable_SOURCES = iplookuptable.c
 version_SOURCES = version.c
 debug_SOURCES = debug.c
 
