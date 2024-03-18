@@ -4,9 +4,8 @@ EXECUTABLES = version \
 	      debug \
 	      chksum \
 	      macros \
-	      parse\
-	      stress \
-	      table
+	      parse \
+	      stress
 
 #These are platform specific extensions that are not portable
 #They are a convenience to app writers who have chosen to
@@ -42,7 +41,6 @@ macros_SOURCES = macros.c
 odpthreads_SOURCES = odpthreads.c
 parse_SOURCES = parse.c
 stress_SOURCES = stress.c
-table_SOURCES = table.c
 version_SOURCES = version.c
 debug_SOURCES = debug.c
 
