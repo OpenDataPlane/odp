@@ -73,7 +73,7 @@ enum {
 	CONN_ERR = -1,
 	PEER_ERR,
 	CMD_NOK,
-	CMD_STATS,
+	CMD_SUMMARY,
 	CMD_OK
 };
 
@@ -451,11 +451,11 @@ static void run_command(cmd_fn_t cmd_fn, prog_config_t *config, int socket)
 {
 	const odp_bool_t is_ok = cmd_fn(config);
 	const summary_t *summary = config->pending_summary;
-	uint8_t rep = !is_ok ? CMD_NOK : summary != NULL ? CMD_STATS : CMD_OK;
+	uint8_t rep = !is_ok ? CMD_NOK : summary != NULL ? CMD_SUMMARY : CMD_OK;
 
 	(void)TEMP_FAILURE_RETRY(send(socket, &rep, sizeof(rep), MSG_NOSIGNAL));
 
-	if (rep == CMD_STATS) {
+	if (rep == CMD_SUMMARY) {
 		/* Same machine, no internet in-between, just send the struct as is. */
 		(void)TEMP_FAILURE_RETRY(send(socket, (const void *)summary, sizeof(*summary),
 					      MSG_NOSIGNAL));
@@ -1023,7 +1023,7 @@ static odp_bool_t run_global(global_config_t *config)
 			continue;
 		}
 
-		if (ret == CMD_STATS) {
+		if (ret == CMD_SUMMARY) {
 			is_recv = recv_summary(prog->socket, &prog->summary);
 
 			if (is_recv)
