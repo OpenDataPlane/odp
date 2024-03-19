@@ -162,6 +162,10 @@ static void write_header_and_trailer(odp_packet_t pkt,
 {
 	uint32_t trailer_offset = odp_packet_len(pkt) - trailer_len;
 	uint32_t max_len = header_len > trailer_len ? header_len : trailer_len;
+
+	if (!max_len)
+		return;
+
 	uint8_t buffer[max_len];
 	int rc;
 
