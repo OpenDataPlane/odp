@@ -87,7 +87,7 @@ static inline uint32_t reflect_u32(uint32_t u32)
 	u8[2] = reflect_u8((u32 & 0x0000ff00u) >> 8);
 	u8[3] = reflect_u8(u32 & 0xffu);
 
-	return (u8[3] << 24) | (u8[2] << 16) | (u8[1] << 8) | u8[0];
+	return ((uint32_t)u8[3] << 24) | (u8[2] << 16) | (u8[1] << 8) | u8[0];
 }
 
 /* Reflect 24 bits */
