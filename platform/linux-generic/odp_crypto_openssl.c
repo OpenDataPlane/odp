@@ -1908,7 +1908,8 @@ int odp_crypto_cipher_capability(odp_cipher_alg_t cipher,
 	if (num < num_copy)
 		num_copy = num;
 
-	memcpy(dst, src, num_copy * size);
+	if (dst)
+		memcpy(dst, src, num_copy * size);
 
 	return num;
 }
@@ -2010,7 +2011,8 @@ int odp_crypto_auth_capability(odp_auth_alg_t auth,
 	if (num < num_copy)
 		num_copy = num;
 
-	memcpy(dst, src, num_copy * size);
+	if (dst)
+		memcpy(dst, src, num_copy * size);
 
 	return num;
 }
