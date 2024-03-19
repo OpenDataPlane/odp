@@ -135,6 +135,9 @@ static void cache_flush(pool_cache_t *cache, pool_t *pool)
 	ring_ptr_t *ring;
 	uint32_t mask;
 
+	if (!pool->ring)
+		return;
+
 	ring = &pool->ring->hdr;
 	mask = pool->ring_mask;
 
