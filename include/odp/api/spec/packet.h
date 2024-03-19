@@ -2414,7 +2414,7 @@ odp_event_t odp_packet_tx_compl_to_event(odp_packet_tx_compl_t tx_compl);
  *
  * @param tx_compl Packet Tx completion handle
  *
- * @see odp_packet_tx_completion_request()
+ * @see odp_packet_tx_compl_request()
  */
 void odp_packet_tx_compl_free(odp_packet_tx_compl_t tx_compl);
 
