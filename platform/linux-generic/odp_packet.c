@@ -699,6 +699,9 @@ void odp_packet_free(odp_packet_t pkt)
 
 static inline void packet_free_multi_ev(const odp_packet_t pkt[], int num, _odp_ev_id_t id)
 {
+	if (odp_unlikely(!num))
+		return;
+
 	odp_packet_hdr_t *pkt_hdrs[num];
 	int i;
 	int num_freed = 0;
