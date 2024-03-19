@@ -80,37 +80,37 @@ static inline uint8_t reflect_u8(uint8_t byte)
 /* Reflect 32 bits */
 static inline uint32_t reflect_u32(uint32_t u32)
 {
-	uint8_t u8[4];
+	uint32_t r[4];
 
-	u8[0] = reflect_u8((u32 & 0xff000000u) >> 24);
-	u8[1] = reflect_u8((u32 & 0x00ff0000u) >> 16);
-	u8[2] = reflect_u8((u32 & 0x0000ff00u) >> 8);
-	u8[3] = reflect_u8(u32 & 0xffu);
+	r[0] = reflect_u8((u32 & 0xff000000u) >> 24);
+	r[1] = reflect_u8((u32 & 0x00ff0000u) >> 16);
+	r[2] = reflect_u8((u32 & 0x0000ff00u) >> 8);
+	r[3] = reflect_u8(u32 & 0xffu);
 
-	return (u8[3] << 24) | (u8[2] << 16) | (u8[1] << 8) | u8[0];
+	return (r[3] << 24) | (r[2] << 16) | (r[1] << 8) | r[0];
 }
 
 /* Reflect 24 bits */
 static inline uint32_t reflect_u24(uint32_t u32)
 {
-	uint8_t u8[4];
+	uint32_t r[4];
 
-	u8[0] = reflect_u8((u32 & 0xff0000u) >> 16);
-	u8[1] = reflect_u8((u32 & 0x00ff00u) >> 8);
-	u8[2] = reflect_u8(u32 & 0xffu);
+	r[0] = reflect_u8((u32 & 0xff0000u) >> 16);
+	r[1] = reflect_u8((u32 & 0x00ff00u) >> 8);
+	r[2] = reflect_u8(u32 & 0xffu);
 
-	return (u8[2] << 16) | (u8[1] << 8) | u8[0];
+	return (r[2] << 16) | (r[1] << 8) | r[0];
 }
 
 /* Reflect 16 bits */
 static inline uint32_t reflect_u16(uint32_t u32)
 {
-	uint8_t u8[4];
+	uint32_t r[4];
 
-	u8[0] = reflect_u8((u32 & 0xff00u) >> 8);
-	u8[1] = reflect_u8(u32 & 0xffu);
+	r[0] = reflect_u8((u32 & 0xff00u) >> 8);
+	r[1] = reflect_u8(u32 & 0xffu);
 
-	return (u8[1] << 8) | u8[0];
+	return (r[1] << 8) | r[0];
 }
 
 /* Generate table for a 32/24/16 bit CRCs.
