@@ -8,6 +8,7 @@
 
 #include <odp/helper/odph_lineartable.h>
 #include <odp/helper/odph_debug.h>
+#include <odp/helper/string.h>
 #include <odp_api.h>
 
 #define     ODPH_SUCCESS	0
@@ -71,7 +72,7 @@ odph_table_t odph_linear_table_create(const char *name, uint32_t capacity,
 
 	tbl->init_cap = capacity < 20;
 
-	strncpy(tbl->name, name, ODPH_TABLE_NAME_LEN - 1);
+	odph_strcpy(tbl->name, name, ODPH_TABLE_NAME_LEN);
 
 	/* for linear table, the key is just the index, without conflict
 	 * so we just need to record the value content
