@@ -188,13 +188,13 @@ typedef union ODP_ALIGNED_CACHE {
  * IPv4 5-tuple
  */
 typedef struct {
-	int32_t src_ip;
-	int32_t dst_ip;
-	int16_t src_port;
-	int16_t dst_port;
-	int8_t  proto;
-	int8_t  pad0;
-	int16_t pad1;
+	uint32_t src_ip;
+	uint32_t dst_ip;
+	uint16_t src_port;
+	uint16_t dst_port;
+	uint8_t  proto;
+	uint8_t  pad0;
+	uint16_t pad1;
 } ipv4_tuple5_t;
 
 /**
@@ -333,7 +333,7 @@ static inline uint64_t calc_ipv4_5tuple_hash(ipv4_tuple5_t *tuple)
 
 	mix(a, b, c);
 
-	a += (tuple->src_port << 16) +  tuple->dst_port + JHASH_GOLDEN_RATIO;
+	a += ((uint32_t)tuple->src_port << 16) + tuple->dst_port + JHASH_GOLDEN_RATIO;
 	final(a, b, c);
 
 	return c;
