@@ -89,7 +89,7 @@ static inline uint32_t hash(odph_ipv4hdr_t *hdr)
 {
 	uint32_t a = hdr->src_addr;
 	uint32_t b = hdr->dst_addr;
-	uint32_t c = hdr->id << 16 | hdr->proto;
+	uint32_t c = (uint32_t)hdr->id << 16 | hdr->proto;
 
 	/* A degenerate 3x32-bit Jenkins hash */
 	c ^= b;
