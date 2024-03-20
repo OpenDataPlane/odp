@@ -58,7 +58,7 @@ static int32_t _random_data(uint8_t *buf, uint32_t len, uint64_t *seed)
 	}
 
 	for (uint32_t i = 0; i < len / 4; i++) {
-		*(uint32_t *)(uintptr_t)buf = xorshift64s32(seed);
+		*(odp_una_u32_t *)(uintptr_t)buf = xorshift64s32(seed);
 		buf += 4;
 	}
 
@@ -66,7 +66,7 @@ static int32_t _random_data(uint8_t *buf, uint32_t len, uint64_t *seed)
 		uint32_t r = xorshift64s32(seed);
 
 		if (len & 2) {
-			*(uint16_t *)(uintptr_t)buf = r & 0xffff;
+			*(odp_una_u16_t *)(uintptr_t)buf = r & 0xffff;
 			r >>= 16;
 			buf += 2;
 		}
