@@ -9,6 +9,7 @@
 extern "C" {
 #endif
 
+#include <odp/api/std_types.h>
 #include <stdint.h>
 
 uint32_t _odp_hash_crc32_generic(const void *data, uint32_t data_len,
@@ -32,23 +33,23 @@ static inline uint32_t _odp_hash_crc32c(const void *data, uint32_t data_len,
 
 #ifdef __x86_64__
 	for (i = 0; i < data_len / 8; i++) {
-		init_val = (uint32_t)__builtin_ia32_crc32di(init_val, *(const uint64_t *)pd);
+		init_val = (uint32_t)__builtin_ia32_crc32di(init_val, *(const odp_una_u64_t *)pd);
 		pd += 8;
 	}
 
 	if (data_len & 0x4) {
-		init_val = __builtin_ia32_crc32si(init_val, *(const uint32_t *)pd);
+		init_val = __builtin_ia32_crc32si(init_val, *(const odp_una_u32_t *)pd);
 		pd += 4;
 	}
 #else
 	for (i = 0; i < data_len / 4; i++) {
-		init_val = __builtin_ia32_crc32si(init_val, *(const uint32_t *)pd);
+		init_val = __builtin_ia32_crc32si(init_val, *(const odp_una_u32_t *)pd);
 		pd += 4;
 	}
 #endif
 
 	if (data_len & 0x2) {
-		init_val = __builtin_ia32_crc32hi(init_val, *(const uint16_t *)pd);
+		init_val = __builtin_ia32_crc32hi(init_val, *(const odp_una_u16_t *)pd);
 		pd += 2;
 	}
 
