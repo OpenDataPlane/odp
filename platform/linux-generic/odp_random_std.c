@@ -40,11 +40,11 @@ static int32_t _random_data(uint8_t *buf, uint32_t len, uint64_t *seed)
 {
 	const uint32_t ret = len;
 
-	if (!_ODP_UNALIGNED && ((uintptr_t)buf & 3) && len) {
+	if (!_ODP_UNALIGNED) {
 		uint32_t r = xorshift64s32(seed);
 
-		if ((uintptr_t)buf & 1) {
-			*(uint8_t *)(uintptr_t)buf = r & 0xff;
+		if (((uintptr_t)buf & 1) && len) {
+			*(uint8_t *)buf = r & 0xff;
 			r >>= 8;
 			buf += 1;
 			len -= 1;
@@ -55,24 +55,29 @@ static int32_t _random_data(uint8_t *buf, uint32_t len, uint64_t *seed)
 			buf += 2;
 			len -= 2;
 		}
-	}
 
-	for (uint32_t i = 0; i < len / 4; i++) {
-		*(uint32_t *)(uintptr_t)buf = xorshift64s32(seed);
-		buf += 4;
+		for (uint32_t i = 0; i < len / 4; i++) {
+			*(uint32_t *)(uintptr_t)buf = xorshift64s32(seed);
+			buf += 4;
+		}
+	} else {
+		for (uint32_t i = 0; i < len / 4; i++) {
+			*(odp_una_u32_t *)buf = xorshift64s32(seed);
+			buf += 4;
+		}
 	}
 
 	if (len & 3) {
 		uint32_t r = xorshift64s32(seed);
 
 		if (len & 2) {
-			*(uint16_t *)(uintptr_t)buf = r & 0xffff;
+			*(odp_una_u16_t *)buf = r & 0xffff;
 			r >>= 16;
 			buf += 2;
 		}
 
 		if (len & 1)
-			*(uint8_t *)(uintptr_t)buf = r & 0xff;
+			*(uint8_t *)buf = r & 0xff;
 	}
 
 	return ret;
