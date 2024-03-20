@@ -190,7 +190,7 @@ static void sig_handler(int signo ODP_UNUSED)
 
 static inline void init_packet(odp_packet_t pkt, uint32_t seq, uint16_t group)
 {
-	uint32_t *payload;
+	odp_una_u32_t *payload;
 	test_hdr_t *hdr;
 	odp_packet_parse_param_t param;
 
@@ -222,7 +222,7 @@ static inline odp_queue_t work_on_event(odp_event_t event)
 	odph_udphdr_t *udp_hdr;
 	test_hdr_t *hdr;
 	lookup_entry_t *lookup_entry;
-	uint32_t *payload;
+	odp_una_u32_t *payload;
 	uint32_t crc;
 	uint32_t pkt_len;
 	uint8_t *data;
