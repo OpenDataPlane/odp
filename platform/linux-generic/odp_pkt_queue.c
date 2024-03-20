@@ -15,6 +15,7 @@
 #include <malloc.h>
 #include <stdio.h>
 #include <inttypes.h>
+#include <stdalign.h>
 
 #define NUM_PKTS     7
 
@@ -106,7 +107,7 @@ static int pkt_queue_free_list_add(queue_pool_t *pool,
 		queue_blks = region_desc->queue_blks;
 		if (!queue_blks) {
 			malloc_len = num_blks * sizeof(queue_blk_t);
-			queue_blks = malloc(malloc_len);
+			queue_blks = aligned_alloc(alignof(queue_blk_t), malloc_len);
 			if (!queue_blks) {
 				free_alloced_queue_blks(alloc_cnt,
 							alloced_queue_blks);
