@@ -167,18 +167,18 @@ char *ipv4_addr_str(char *b, uint32_t addr)
 static inline
 int parse_ipv4_string(char *ipaddress, uint32_t *addr, uint32_t *mask)
 {
-	int b[4];
+	uint32_t b[4];
 	int qualifier = 32;
 	int converted;
 
 	if (strchr(ipaddress, '/')) {
-		converted = sscanf(ipaddress, "%d.%d.%d.%d/%d",
+		converted = sscanf(ipaddress, "%u.%u.%u.%u/%d",
 				   &b[3], &b[2], &b[1], &b[0],
 				   &qualifier);
 		if (5 != converted)
 			return -1;
 	} else {
-		converted = sscanf(ipaddress, "%d.%d.%d.%d",
+		converted = sscanf(ipaddress, "%u.%u.%u.%u",
 				   &b[3], &b[2], &b[1], &b[0]);
 		if (4 != converted)
 			return -1;
