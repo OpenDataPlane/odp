@@ -5093,7 +5093,7 @@ static void pktio_test_pktin_event_queue(odp_pktin_mode_t pktin_mode)
 	odp_pktin_queue_param_t in_queue_param;
 	odp_pktout_queue_param_t out_queue_param;
 	odp_pktout_queue_t pktout_queue;
-	odp_queue_t queue, from;
+	odp_queue_t queue, from = ODP_QUEUE_INVALID;
 	odp_pool_t buf_pool;
 	odp_pool_param_t pool_param;
 	odp_packet_t pkt_tbl[TX_BATCH_LEN];
@@ -5187,8 +5187,6 @@ static void pktio_test_pktin_event_queue(odp_pktin_mode_t pktin_mode)
 
 			if (ev == ODP_EVENT_INVALID)
 				break;
-
-			CU_ASSERT(from == queue);
 		} else {
 			ev = odp_queue_deq(queue);
 
@@ -5212,9 +5210,12 @@ static void pktio_test_pktin_event_queue(odp_pktin_mode_t pktin_mode)
 		if (odp_event_type(ev) == ODP_EVENT_PACKET) {
 			pkt = odp_packet_from_event(ev);
 
-			if (pktio_pkt_seq(pkt) != TEST_SEQ_INVALID)
+			if (pktio_pkt_seq(pkt) != TEST_SEQ_INVALID) {
 				num_pkt++;
 
+				if (pktin_mode == ODP_PKTIN_MODE_SCHED)
+					CU_ASSERT(from == queue);
+			}
 		} else if (odp_event_type(ev) == ODP_EVENT_BUFFER) {
 			num_buf++;
 		} else {
