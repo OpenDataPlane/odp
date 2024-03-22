@@ -56,8 +56,8 @@ static int read_digit_csv(const char *file_name, uint8_t *expected_digit, float 
 	size = ftell(digit_file);
 	rewind(digit_file);
 
-	tmp = malloc(size);
-	memset(tmp, 0, size);
+	tmp = malloc(size + 1);
+	memset(tmp, 0, size + 1);
 	num_elem = fread(tmp, size, 1, digit_file);
 
 	fclose(digit_file);
