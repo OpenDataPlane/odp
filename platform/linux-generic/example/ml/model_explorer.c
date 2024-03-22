@@ -73,6 +73,11 @@ int main(int argc, char *argv[])
 
 	odp_ml_model_print(ml_model);
 
+	if (odp_ml_model_destroy(ml_model)) {
+		printf("odp_ml_model_destroy failed.\n");
+		ret = -1;
+	}
+
 odp_term:
 	if (odp_term_local()) {
 		printf("Local term failed.\n");
