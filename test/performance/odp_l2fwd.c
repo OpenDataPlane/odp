@@ -1085,9 +1085,6 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx, odp_po
 		return -1;
 	}
 
-	if (gbl_args->appl.verbose)
-		odp_pktio_print(pktio);
-
 	if (odp_pktio_capability(pktio, &pktio_capa)) {
 		ODPH_ERR("Pktio capability query failed: %s\n", dev);
 		return -1;
@@ -1279,6 +1276,9 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx, odp_po
 	printf("  dev: %s, drv: %s, rx_queues: %i, tx_queues: %i, mac: "
 	       "%02x:%02x:%02x:%02x:%02x:%02x\n", dev, info.drv_name, num_rx, num_tx,
 	       addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
+
+	if (gbl_args->appl.verbose)
+		odp_pktio_print(pktio);
 
 	gbl_args->pktios[idx].num_rx_queue = num_rx;
 	gbl_args->pktios[idx].num_tx_queue = num_tx;
