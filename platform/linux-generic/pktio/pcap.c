@@ -193,10 +193,12 @@ static int pcapif_promisc_mode_set(pktio_entry_t *pktio_entry,
 	}
 
 	if (pcap_setfilter(pcap->rx, &bpf) != 0) {
+		pcap_freecode(&bpf);
 		_ODP_ERR("failed to set promisc mode filter: %s\n", pcap_geterr(pcap->rx));
 		return -1;
 	}
 
+	pcap_freecode(&bpf);
 	pcap->promisc = enable;
 
 	return 0;
