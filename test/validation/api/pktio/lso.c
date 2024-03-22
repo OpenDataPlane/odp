@@ -655,7 +655,7 @@ static void test_lso_request_clear(odp_lso_profile_t lso_profile, const uint8_t 
 static void lso_send_custom_eth(const uint8_t *test_packet, uint32_t pkt_len, uint32_t max_payload,
 				int use_opt)
 {
-	int i, ret, num;
+	int i, ret, num, num_rcv;
 	odp_lso_profile_param_t param;
 	odp_lso_profile_t profile;
 	uint32_t offset, len, payload_len, payload_sum;
@@ -696,6 +696,7 @@ static void lso_send_custom_eth(const uint8_t *test_packet, uint32_t pkt_len, ui
 	offset = hdr_len;
 	payload_sum = 0;
 	segnum = 0xffff;
+	num_rcv = 0;
 	for (i = 0; i < num; i++) {
 		odph_ethhdr_t *eth = (odph_ethhdr_t *)odp_packet_l2_ptr(pkt_out[i], NULL);
 
@@ -710,7 +711,7 @@ static void lso_send_custom_eth(const uint8_t *test_packet, uint32_t pkt_len, ui
 
 		if (ret == 0) {
 			segnum = odp_be_to_cpu_16(segnum);
-			CU_ASSERT(segnum == i);
+			CU_ASSERT(segnum == num_rcv);
 		} else {
 			CU_FAIL("Seg num field read failed\n");
 		}
@@ -727,6 +728,7 @@ static void lso_send_custom_eth(const uint8_t *test_packet, uint32_t pkt_len, ui
 
 		offset      += payload_len;
 		payload_sum += payload_len;
+		num_rcv++;
 	}
 
 	ODPH_DBG("    Received payload length: %u bytes\n", payload_sum);
