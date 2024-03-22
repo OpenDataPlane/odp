@@ -42,11 +42,11 @@ to manipulate its structure.
 To support packet manipulation, predefined _headroom_ and _tailroom_
 areas are logically associated with a packet. Packets can be adjusted by
 _pulling_ and _pushing_ these areas. Typical packet processing might consist
-of stripping headers from a packet via `odp_pull_head()` calls as part of
+of stripping headers from a packet via `odp_packet_pull_head()` calls as part of
 receive processing and then replacing them with new headers via
-`odp_push_head()` calls as the packet is being prepared for transmit. Note that
-while headroom and tailroom represent reserved areas of memory, these areas
-not not addressable or directly usable by ODP applications until they are
+`odp_packet_push_head()` calls as the packet is being prepared for transmit.
+Note that while headroom and tailroom represent reserved areas of memory, these
+areas are not addressable or directly usable by ODP applications until they are
 made part of the packet via associated push operations. Similarly, bytes
 removed via pull operations become part of a packet's headroom or tailroom
 and are again no longer accessible to the application.
