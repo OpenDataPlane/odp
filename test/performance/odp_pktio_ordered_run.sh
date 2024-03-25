@@ -19,15 +19,7 @@ if [ ! -f ${PCAP_IN} ]; then
 	exit 1
 fi
 
-# This just turns off output buffering so that you still get periodic
-# output while piping to tee, as long as stdbuf is available.
-if [ "$(which stdbuf)" != "" ]; then
-	STDBUF="stdbuf -o 0"
-else
-	STDBUF=
-fi
-
-$STDBUF ${TEST_DIR}/odp_pktio_ordered${EXEEXT} \
+${TEST_DIR}/odp_pktio_ordered${EXEEXT} \
 	-i pcap:in=${PCAP_IN}:loops=$LOOPS,pcap:out=${PCAP_OUT} \
 	-t $DURATION | tee $LOG
 ret=${PIPESTATUS[0]}
