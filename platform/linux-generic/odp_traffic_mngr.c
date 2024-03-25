@@ -2495,7 +2495,7 @@ static void *tm_system_thread(void *arg)
 	odp_barrier_wait(&tm_group->tm_group_barrier);
 	tm_glb->main_loop_running = true;
 
-	destroying = odp_atomic_load_u64(&tm_system->destroying);
+	destroying = odp_atomic_load_acq_u64(&tm_system->destroying);
 
 	current_ns = odp_time_to_ns(odp_time_local());
 	_odp_timer_wheel_start(_odp_int_timer_wheel, current_ns);
@@ -2538,7 +2538,7 @@ static void *tm_system_thread(void *arg)
 		tm_system->current_time = current_ns;
 		odp_atomic_store_rel_u32(&tm_system->is_idle,
 					 (timer_cnt == 0) && (work_queue_cnt == 0));
-		destroying = odp_atomic_load_u64(&tm_system->destroying);
+		destroying = odp_atomic_load_acq_u64(&tm_system->destroying);
 
 		/* Advance to the next tm_system in the tm_system_group. */
 		tm_system = tm_system->next;
@@ -3203,7 +3203,7 @@ int odp_tm_destroy(odp_tm_t odp_tm)
 	 * all new pkts are prevented from coming in.
 	 */
 	odp_barrier_init(&tm_system->tm_system_destroy_barrier, 2);
-	odp_atomic_inc_u64(&tm_system->destroying);
+	odp_atomic_store_rel_u64(&tm_system->destroying, 1);
 	odp_barrier_wait(&tm_system->tm_system_destroy_barrier);
 
 	/* Remove ourselves from the group.  If we are the last tm_system in
@@ -4514,7 +4514,7 @@ int odp_tm_enq(odp_tm_queue_t tm_queue, odp_packet_t pkt)
 	if (!tm_system)
 		return -1;
 
-	if (odp_atomic_load_u64(&tm_system->destroying))
+	if (odp_atomic_load_acq_u64(&tm_system->destroying))
 		return -1;
 
 	rc = tm_enqueue(tm_system, tm_queue_obj, pkt);
@@ -4538,7 +4538,7 @@ int odp_tm_enq_with_cnt(odp_tm_queue_t tm_queue, odp_packet_t pkt)
 	if (!tm_system)
 		return -1;
 
-	if (odp_atomic_load_u64(&tm_system->destroying))
+	if (odp_atomic_load_acq_u64(&tm_system->destroying))
 		return -1;
 
 	rc = tm_enqueue(tm_system, tm_queue_obj, pkt);
@@ -4564,7 +4564,7 @@ int odp_tm_enq_multi(odp_tm_queue_t tm_queue, const odp_packet_t packets[],
 	if (!tm_system)
 		return -1;
 
-	if (odp_atomic_load_u64(&tm_system->destroying))
+	if (odp_atomic_load_acq_u64(&tm_system->destroying))
 		return -1;
 
 	for (i = 0; i < num; i++) {
