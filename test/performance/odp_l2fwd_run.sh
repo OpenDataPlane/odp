@@ -71,17 +71,10 @@ run_l2fwd()
 
 	GEN_PID=$!
 
-	# this just turns off output buffering so that you still get periodic
-	# output while piping to tee, as long as stdbuf is available.
-	if [ "$(which stdbuf)" != "" ]; then
-		STDBUF="stdbuf -o 0"
-	else
-		STDBUF=
-	fi
 	LOG=odp_l2fwd_tmp.log
 
 	# Max 2 workers
-	$STDBUF odp_l2fwd${EXEEXT} -i $IF1,$IF2 -m 0 -t 5 -c 2 | tee $LOG
+	odp_l2fwd${EXEEXT} -i $IF1,$IF2 -m 0 -t 5 -c 2 | tee $LOG
 	ret=${PIPESTATUS[0]}
 
 	kill -2 ${GEN_PID}
