@@ -445,3 +445,21 @@ jobs:
                -e CONF="${CONF}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-dpdk_21.11 /odp/scripts/ci/check.sh
       - if: ${{ failure() }}
         uses: ./.github/actions/run-failure-log
+
+  Run_sanitizer:
+    runs-on: ubuntu-20.04
+    env:
+      OS: ubuntu_22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        flags: ['-fsanitize=address']
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}" -e ARCH="${ARCH}"
+               -e CFLAGS="-O0 -g -Wno-error ${{matrix.flags}}"
+               -e CXXFLAGS="-O0 -g -Wno-error ${{matrix.flags}}"
+               -e LDFLAGS="-g ${{matrix.flags}}"
+               $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/check.sh
+      - if: ${{ failure() }}
+        uses: ./.github/actions/run-failure-log
