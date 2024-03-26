@@ -125,7 +125,7 @@ void odp_timer_pool_param_init(odp_timer_pool_param_t *param);
  * The call returns failure when requested parameter values are not supported.
  *
  * @param name       Name of the timer pool or NULL. Maximum string length is
- *                   ODP_TIMER_POOL_NAME_LEN.
+ *                   ODP_TIMER_POOL_NAME_LEN, including the null character.
  * @param params     Timer pool parameters. The content will be copied.
  *
  * @return Timer pool handle on success

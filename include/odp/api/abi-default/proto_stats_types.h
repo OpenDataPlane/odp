@@ -23,6 +23,8 @@ typedef _odp_abi_proto_stats_t *odp_proto_stats_t;
 
 #define ODP_PROTO_STATS_INVALID ((odp_proto_stats_t)0)
 
+#define ODP_PROTO_STATS_NAME_LEN 64
+
 /**
  * @}
  */

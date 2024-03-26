@@ -746,6 +746,32 @@ static void timer_pool_create_destroy(void)
 	CU_ASSERT(odp_queue_destroy(queue) == 0);
 }
 
+static void timer_pool_long_name(void)
+{
+	odp_timer_pool_param_t tparam;
+	odp_timer_pool_info_t info;
+	odp_timer_pool_t pool;
+	odp_timer_clk_src_t clk_src = test_global->clk_src;
+	char name[ODP_TIMER_POOL_NAME_LEN];
+
+	memset(name, 'a', sizeof(name));
+	name[sizeof(name) - 1] = 0;
+
+	odp_timer_pool_param_init(&tparam);
+	tparam.res_ns     = global_mem->param.res_ns;
+	tparam.min_tmo    = global_mem->param.min_tmo;
+	tparam.max_tmo    = global_mem->param.max_tmo;
+	tparam.num_timers = 100;
+	tparam.priv       = 0;
+	tparam.clk_src    = clk_src;
+
+	pool = odp_timer_pool_create(name, &tparam);
+	CU_ASSERT(pool != ODP_TIMER_POOL_INVALID);
+	CU_ASSERT(odp_timer_pool_info(pool, &info) == 0);
+	CU_ASSERT(!strcmp(name, info.name));
+	odp_timer_pool_destroy(pool);
+}
+
 static void timer_pool_create_max(void)
 {
 	odp_timer_capability_t capa;
@@ -3158,6 +3184,7 @@ odp_suiteinfo_t timer_general_suites[] = {
 odp_testinfo_t timer_suite[] = {
 	ODP_TEST_INFO(timer_test_capa),
 	ODP_TEST_INFO(timer_pool_create_destroy),
+	ODP_TEST_INFO(timer_pool_long_name),
 	ODP_TEST_INFO(timer_pool_create_max),
 	ODP_TEST_INFO(timer_pool_max_res),
 	ODP_TEST_INFO(timer_pool_current_tick),

@@ -400,6 +400,35 @@ static void pool_test_lookup_info_print(void)
 	CU_ASSERT(odp_pool_destroy(pool) == 0);
 }
 
+static void pool_test_long_name(void)
+{
+	odp_pool_t pool;
+	odp_pool_info_t info;
+	odp_pool_param_t param;
+	char name[ODP_POOL_NAME_LEN];
+
+	memset(name, 'a', sizeof(name));
+	name[sizeof(name) - 1] = 0;
+
+	memset(&info, 0, sizeof(info));
+	odp_pool_param_init(&param);
+
+	param.type = ODP_POOL_BUFFER;
+	param.buf.size = BUF_SIZE;
+	param.buf.num = BUF_NUM;
+	param.buf.uarea_size = 64;
+
+	pool = odp_pool_create(name, &param);
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+
+	pool = odp_pool_lookup(name);
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+
+	CU_ASSERT_FATAL(odp_pool_info(pool, &info) == 0);
+	CU_ASSERT(strncmp(name, info.name, sizeof(name)) == 0);
+	CU_ASSERT(odp_pool_destroy(pool) == 0);
+}
+
 static void pool_test_same_name(const odp_pool_param_t *param)
 {
 	odp_pool_t pool, pool_a, pool_b;
@@ -1830,6 +1859,31 @@ static void test_packet_pool_ext_info(void)
 	CU_ASSERT(odp_pool_destroy(pool) == 0);
 }
 
+static void test_packet_pool_ext_long_name(void)
+{
+	odp_pool_t pool;
+	odp_pool_ext_param_t param;
+	odp_pool_info_t info;
+	char name[ODP_POOL_NAME_LEN];
+
+	memset(name, 'a', sizeof(name));
+	name[sizeof(name) - 1] = 0;
+
+	pool_ext_init_packet_pool_param(&param);
+	pool = odp_pool_ext_create(name, &param);
+
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+	CU_ASSERT_FATAL(pool == odp_pool_lookup(name));
+
+	memset(&info, 0, sizeof(odp_pool_info_t));
+	CU_ASSERT_FATAL(odp_pool_info(pool, &info) == 0);
+
+	CU_ASSERT(info.pool_ext);
+	CU_ASSERT(strncmp(name, info.name, strlen(name)) == 0);
+
+	CU_ASSERT(odp_pool_destroy(pool) == 0);
+}
+
 static odp_shm_t populate_pool(odp_pool_t pool, odp_pool_ext_capability_t *capa,
 			       void *buf[], uint32_t num, uint32_t buf_size)
 {
@@ -2301,6 +2355,7 @@ odp_testinfo_t pool_suite[] = {
 	ODP_TEST_INFO_CONDITIONAL(pool_test_vector_uarea_init, pool_check_vector_uarea_init),
 	ODP_TEST_INFO_CONDITIONAL(pool_test_timeout_uarea_init, pool_check_timeout_uarea_init),
 	ODP_TEST_INFO(pool_test_lookup_info_print),
+	ODP_TEST_INFO(pool_test_long_name),
 	ODP_TEST_INFO(pool_test_same_name_buf),
 	ODP_TEST_INFO(pool_test_same_name_pkt),
 	ODP_TEST_INFO(pool_test_same_name_tmo),
@@ -2345,6 +2400,7 @@ odp_testinfo_t pool_ext_suite[] = {
 	ODP_TEST_INFO_CONDITIONAL(test_packet_pool_ext_create, check_pool_ext_support),
 	ODP_TEST_INFO_CONDITIONAL(test_packet_pool_ext_lookup, check_pool_ext_support),
 	ODP_TEST_INFO_CONDITIONAL(test_packet_pool_ext_info, check_pool_ext_support),
+	ODP_TEST_INFO_CONDITIONAL(test_packet_pool_ext_long_name, check_pool_ext_support),
 	ODP_TEST_INFO_CONDITIONAL(test_packet_pool_ext_populate, check_pool_ext_support),
 	ODP_TEST_INFO_CONDITIONAL(test_packet_pool_ext_alloc, check_pool_ext_support),
 	ODP_TEST_INFO_CONDITIONAL(test_packet_pool_ext_uarea_init,

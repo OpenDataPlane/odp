@@ -841,6 +841,37 @@ static void queue_test_same_name_sched(void)
 	queue_test_same_name(1);
 }
 
+static void queue_test_long_name(int sched)
+{
+	odp_queue_t queue;
+	odp_queue_param_t param;
+	char name[ODP_QUEUE_NAME_LEN];
+
+	memset(name, 'a', sizeof(name));
+	name[sizeof(name) - 1] = 0;
+
+	odp_queue_param_init(&param);
+
+	if (sched)
+		param.type = ODP_QUEUE_TYPE_SCHED;
+
+	queue = odp_queue_create(name, &param);
+	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
+	CU_ASSERT(queue == odp_queue_lookup(name));
+
+	CU_ASSERT_FATAL(odp_queue_destroy(queue) == 0);
+}
+
+static void queue_test_long_name_plain(void)
+{
+	queue_test_long_name(0);
+}
+
+static void queue_test_long_name_sched(void)
+{
+	queue_test_long_name(1);
+}
+
 static void queue_test_info(void)
 {
 	odp_queue_t q_plain, q_order;
@@ -1146,6 +1177,8 @@ odp_testinfo_t queue_suite[] = {
 	ODP_TEST_INFO(queue_test_param),
 	ODP_TEST_INFO(queue_test_same_name_plain),
 	ODP_TEST_INFO(queue_test_same_name_sched),
+	ODP_TEST_INFO(queue_test_long_name_plain),
+	ODP_TEST_INFO(queue_test_long_name_sched),
 	ODP_TEST_INFO(queue_test_info),
 	ODP_TEST_INFO(queue_test_mt_plain_block),
 	ODP_TEST_INFO(queue_test_mt_plain_nonblock_lf),

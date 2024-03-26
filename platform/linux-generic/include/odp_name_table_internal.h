@@ -10,6 +10,7 @@
 extern "C" {
 #endif
 
+#include <odp/api/traffic_mngr.h>
 #include <stdint.h>
 
 typedef enum {
@@ -31,7 +32,7 @@ typedef enum {
 typedef uint32_t _odp_int_name_t;
 #define ODP_INVALID_NAME   0
 
-#define _ODP_INT_NAME_LEN 32
+#define _ODP_INT_NAME_LEN (ODP_TM_NAME_LEN - 1)
 
 _odp_int_name_t _odp_int_name_tbl_add(const char *name,
 				      uint8_t     name_kind,

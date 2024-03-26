@@ -61,7 +61,7 @@ void odp_stash_param_init(odp_stash_param_t *param);
  * odp_stash_lookup() returns only a single matching stash.
  *
  * @param name     Name of the stash or NULL. Maximum string length is
- *                 ODP_STASH_NAME_LEN.
+ *                 ODP_STASH_NAME_LEN, including the null character.
  * @param param    Stash creation parameters
  *
  * @return Handle of the created stash

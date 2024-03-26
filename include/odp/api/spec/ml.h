@@ -111,8 +111,7 @@ void odp_ml_model_param_init(odp_ml_model_param_t *param);
  *
  * Creates an ML model according to the parameters. Use odp_ml_model_param_init() to initialize
  * parameters into their default values. The use of model name is optional. Unique names are not
- * required. However, odp_ml_model_lookup() returns only a single matching model. Maximum name
- * string length is #ODP_ML_MODEL_NAME_LEN.
+ * required. However, odp_ml_model_lookup() returns only a single matching model.
  *
  * The call copies the model binary and prepares it for loading. Application may free memory
  * buffers pointed by the parameters when the call returns. Use odp_ml_model_load()
@@ -124,7 +123,8 @@ void odp_ml_model_param_init(odp_ml_model_param_t *param);
  * implementation specific extra parameters (e.g. hints about HW resource usage), user can pass
  * those with odp_ml_model_param_t.extra_param when applicable.
  *
- * @param name          Name of the model, or NULL
+ * @param name          Name of the model, or NULL. Maximum string length is ODP_ML_MODEL_NAME_LEN,
+ *                      including the null character.
  * @param param         ML model parameters
  *
  * @return ML model handle on success
@@ -454,7 +454,8 @@ void odp_ml_compl_pool_param_init(odp_ml_compl_pool_param_t *param);
  * parameters into their default values. Parameters values must not exceed pool capabilities
  * (see odp_ml_compl_pool_capability_t).
  *
- * @param name          Name of the pool or NULL. Maximum string length is #ODP_POOL_NAME_LEN.
+ * @param name          Name of the pool or NULL. Maximum string length is ODP_POOL_NAME_LEN,
+ *                      including the null character.
  * @param param         Pool parameters
  *
  * @return Pool handle on success

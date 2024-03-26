@@ -46,7 +46,7 @@ int odp_pool_capability(odp_pool_capability_t *capa);
  * into their default values.
  *
  * @param name     Name of the pool or NULL. Maximum string length is
- *                 ODP_POOL_NAME_LEN.
+ *                 ODP_POOL_NAME_LEN, including the null character.
  * @param param    Pool parameters.
  *
  * @return Handle of the created pool
@@ -246,7 +246,8 @@ void odp_pool_ext_param_init(odp_pool_type_t type, odp_pool_ext_param_t *param);
  * single matching pool. Use odp_pool_ext_param_init() to initialize parameters
  * into their default values.
  *
- * @param name     Name of the pool or NULL. Maximum string length is ODP_POOL_NAME_LEN.
+ * @param name     Name of the pool or NULL. Maximum string length is
+ *                 ODP_POOL_NAME_LEN, including the null character.
  * @param param    Pool parameters
  *
  * @return Pool handle on success

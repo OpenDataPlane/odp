@@ -235,6 +235,30 @@ static void stash_create_u32(void)
 	CU_ASSERT_FATAL(odp_stash_destroy(stash) == 0);
 }
 
+static void stash_create_u32_long_name(void)
+{
+	odp_stash_t stash;
+	odp_stash_param_t param;
+	uint32_t num = global.num_default.u32;
+	char name[ODP_STASH_NAME_LEN];
+
+	memset(name, 'a', sizeof(name));
+	name[sizeof(name) - 1] = 0;
+
+	odp_stash_param_init(&param);
+	param.num_obj  = num;
+	param.obj_size = sizeof(uint32_t);
+
+	stash = odp_stash_create(name, &param);
+
+	CU_ASSERT_FATAL(stash != ODP_STASH_INVALID);
+
+	printf("\n    Stash handle: 0x%" PRIx64 "\n", odp_stash_to_u64(stash));
+
+	CU_ASSERT(stash == odp_stash_lookup(name));
+	CU_ASSERT_FATAL(odp_stash_destroy(stash) == 0);
+}
+
 static void stash_create_u64_all(void)
 {
 	odp_stash_param_t param;
@@ -1307,6 +1331,7 @@ odp_testinfo_t stash_suite[] = {
 	ODP_TEST_INFO(stash_param_defaults),
 	ODP_TEST_INFO_CONDITIONAL(stash_create_u64, check_support_64),
 	ODP_TEST_INFO(stash_create_u32),
+	ODP_TEST_INFO(stash_create_u32_long_name),
 	ODP_TEST_INFO_CONDITIONAL(stash_default_put_u64_1, check_support_64),
 	ODP_TEST_INFO_CONDITIONAL(stash_default_put_u64_n, check_support_64),
 	ODP_TEST_INFO_CONDITIONAL(stash_default_u64_put_u64_1, check_support_64),
