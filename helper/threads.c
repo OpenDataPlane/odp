@@ -21,8 +21,8 @@
 #include <inttypes.h>
 
 #include <odp_api.h>
+#include <odp/helper/debug.h>
 #include <odp/helper/threads.h>
-#include <odp/helper/odph_debug.h>
 
 #define FAILED_CPU -1
 

@@ -18,23 +18,18 @@ extern "C" {
 
 #include <odp/helper/autoheader_external.h>
 
-#include <odp/helper/odph_debug.h>
 #include <odp/helper/chksum.h>
-#include <odp/helper/odph_cuckootable.h>
+#include <odp/helper/debug.h>
 #include <odp/helper/eth.h>
 #include <odp/helper/gtp.h>
-#include <odp/helper/odph_hashtable.h>
 #include <odp/helper/icmp.h>
 #include <odp/helper/igmp.h>
 #include <odp/helper/ip.h>
 #include <odp/helper/ipsec.h>
 #include <odp/helper/macros.h>
-#include <odp/helper/odph_lineartable.h>
-#include <odp/helper/odph_iplookuptable.h>
 #include <odp/helper/sctp.h>
 #include <odp/helper/strong_types.h>
 #include <odp/helper/tcp.h>
-#include <odp/helper/table.h>
 #include <odp/helper/threads.h>
 #include <odp/helper/udp.h>
 #include <odp/helper/version.h>

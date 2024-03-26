@@ -5,7 +5,7 @@
  */
 
 #include <odp_api.h>
-#include <odp/helper/odph_debug.h>
+#include <odp/helper/odph_api.h>
 #include "odp_cunit_common.h"
 
 #define BUF_ALIGN  ODP_CACHE_LINE_SIZE

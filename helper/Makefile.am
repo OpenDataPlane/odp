@@ -16,7 +16,7 @@ helperinclude_HEADERS = \
 		  include/odp/helper/autoheader_external.h\
 		  include/odp/helper/deprecated.h\
 		  include/odp/helper/chksum.h\
-		  include/odp/helper/odph_debug.h \
+		  include/odp/helper/debug.h \
 		  include/odp/helper/eth.h\
 		  include/odp/helper/gtp.h\
 		  include/odp/helper/icmp.h\
@@ -25,14 +25,9 @@ helperinclude_HEADERS = \
 		  include/odp/helper/ipsec.h\
 		  include/odp/helper/macros.h\
 		  include/odp/helper/odph_api.h\
-		  include/odp/helper/odph_cuckootable.h\
-		  include/odp/helper/odph_hashtable.h\
-		  include/odp/helper/odph_iplookuptable.h\
-		  include/odp/helper/odph_lineartable.h\
 		  include/odp/helper/sctp.h \
 		  include/odp/helper/strong_types.h\
 		  include/odp/helper/tcp.h\
-		  include/odp/helper/table.h\
 		  include/odp/helper/threads.h \
 		  include/odp/helper/udp.h \
 		  include/odp/helper/version.h
@@ -52,17 +47,10 @@ helperinclude_HEADERS += \
 		  include/odp/helper/cli.h
 endif
 
-noinst_HEADERS = \
-		 include/odph_list_internal.h
-
 __LIB__libodphelper_la_SOURCES = \
 					eth.c \
 					ip.c \
 					chksum.c \
-					hashtable.c \
-					lineartable.c \
-					cuckootable.c \
-					iplookuptable.c \
 					ipsec.c \
 					threads.c \
 					version.c

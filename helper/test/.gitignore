@@ -2,13 +2,10 @@
 *.log
 chksum
 cli
-cuckootable
-iplookuptable
 macros
 odpthreads
 parse
 process
-table
 thread
 pthread
 version
