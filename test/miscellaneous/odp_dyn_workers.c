@@ -44,7 +44,6 @@
 #define MAX_PATTERN_LEN 32U
 #define ENV_PREFIX "ODP"
 #define ENV_DELIMITER "="
-#define MAX_CMD_LEN 10
 #define UNKNOWN_CMD UINT8_MAX
 #define EXIT_PROG (UNKNOWN_CMD - 1U)
 #define DELAY_PROG (EXIT_PROG - 1U)
@@ -73,7 +72,7 @@ enum {
 	CONN_ERR = -1,
 	PEER_ERR,
 	CMD_NOK,
-	CMD_STATS,
+	CMD_SUMMARY,
 	CMD_OK
 };
 
@@ -107,6 +106,7 @@ typedef struct {
 	prog_t progs[MAX_PROGS];
 	uint32_t num_p_elems;
 	uint32_t num_progs;
+	uint32_t max_cmd_len;
 	odp_bool_t is_running;
 } global_config_t;
 
@@ -159,7 +159,18 @@ static odp_bool_t setup_signals(void)
 
 static void init_options(global_config_t *config)
 {
+	uint32_t max_len = 0U, str_len;
+
 	memset(config, 0, sizeof(*config));
+
+	for (uint32_t i = 0U; i < ODPH_ARRAY_SIZE(cmdstrs); ++i) {
+		str_len = strlen(cmdstrs[i]);
+
+		if (str_len > max_len)
+			max_len = str_len;
+	}
+
+	config->max_cmd_len = max_len;
 }
 
 static void parse_masks(global_config_t *config, const char *optarg)
@@ -383,8 +394,15 @@ int log_fn(odp_log_level_t level, const char *fmt, ...)
 static odp_bool_t disable_stream(int fd, odp_bool_t read)
 {
 	const int null = open("/dev/null", read ? O_RDONLY : O_WRONLY);
+	odp_bool_t ret = false;
 
-	return null != -1 && dup2(null, fd) != -1;
+	if (null == -1)
+		return ret;
+
+	ret = dup2(null, fd) != -1;
+	close(null);
+
+	return ret;
 }
 
 static odp_bool_t set_odp_env(char *env)
@@ -451,11 +469,11 @@ static void run_command(cmd_fn_t cmd_fn, prog_config_t *config, int socket)
 {
 	const odp_bool_t is_ok = cmd_fn(config);
 	const summary_t *summary = config->pending_summary;
-	uint8_t rep = !is_ok ? CMD_NOK : summary != NULL ? CMD_STATS : CMD_OK;
+	uint8_t rep = !is_ok ? CMD_NOK : summary != NULL ? CMD_SUMMARY : CMD_OK;
 
 	(void)TEMP_FAILURE_RETRY(send(socket, &rep, sizeof(rep), MSG_NOSIGNAL));
 
-	if (rep == CMD_STATS) {
+	if (rep == CMD_SUMMARY) {
 		/* Same machine, no internet in-between, just send the struct as is. */
 		(void)TEMP_FAILURE_RETRY(send(socket, (const void *)summary, sizeof(*summary),
 					      MSG_NOSIGNAL));
@@ -819,20 +837,35 @@ static void print_cli_usage(void)
 	printf("\n");
 }
 
-static uint8_t map_str_to_command(const char *cmdstr)
+static char *get_format_str(uint32_t max_cmd_len)
+{
+	const int cmd_len = snprintf(NULL, 0U, "%u", max_cmd_len);
+	uint32_t str_len;
+
+	if (cmd_len <= 0)
+		return NULL;
+
+	str_len = strlen("%s %u") + cmd_len + 1U;
+
+	char fmt[str_len];
+
+	snprintf(fmt, str_len, "%%%ds %%u", max_cmd_len);
+
+	return strdup(fmt);
+}
+
+static uint8_t map_str_to_command(const char *cmdstr, uint32_t len)
 {
 	for (uint32_t i = 0U; i < ODPH_ARRAY_SIZE(cmdstrs); ++i)
-		if (strncmp(cmdstr, cmdstrs[i], MAX_CMD_LEN - 1U) == 0)
+		if (strncmp(cmdstr, cmdstrs[i], len) == 0)
 			return i;
 
 	return UNKNOWN_CMD;
 }
 
-static odp_bool_t get_stdin_command(global_config_t *config ODP_UNUSED, uint8_t *cmd,
-				    uint32_t *index)
+static odp_bool_t get_stdin_command(global_config_t *config, uint8_t *cmd, uint32_t *index)
 {
-	char *input;
-	char cmdstr[MAX_CMD_LEN + 1U];
+	char *input, cmdstr[config->max_cmd_len + 1U], *fmt;
 	size_t size;
 	ssize_t ret;
 
@@ -844,8 +877,16 @@ static odp_bool_t get_stdin_command(global_config_t *config ODP_UNUSED, uint8_t 
 	if (ret == -1)
 		return false;
 
-	ret = sscanf(input, "%" S(MAX_CMD_LEN) "s %u", cmdstr, index);
+	fmt = get_format_str(config->max_cmd_len);
+
+	if (fmt == NULL) {
+		printf("Unable to parse command\n");
+		return false;
+	}
+
+	ret = sscanf(input, fmt, cmdstr, index);
 	free(input);
+	free(fmt);
 
 	if (ret == EOF)
 		return false;
@@ -855,7 +896,7 @@ static odp_bool_t get_stdin_command(global_config_t *config ODP_UNUSED, uint8_t 
 		return false;
 	}
 
-	*cmd = map_str_to_command(cmdstr);
+	*cmd = map_str_to_command(cmdstr, config->max_cmd_len);
 	return true;
 }
 
@@ -1023,7 +1064,7 @@ static odp_bool_t run_global(global_config_t *config)
 			continue;
 		}
 
-		if (ret == CMD_STATS) {
+		if (ret == CMD_SUMMARY) {
 			is_recv = recv_summary(prog->socket, &prog->summary);
 
 			if (is_recv)

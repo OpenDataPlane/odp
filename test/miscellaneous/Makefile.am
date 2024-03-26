@@ -6,6 +6,7 @@ if test_cpp
 bin_PROGRAMS +=  odp_api_from_cpp
 endif
 
+odp_dyn_workers_CFLAGS = $(AM_CFLAGS) -Wno-format-nonliteral
 odp_dyn_workers_SOURCES = odp_dyn_workers.c
 odp_api_from_cpp_SOURCES = odp_api_from_cpp.cpp
 
