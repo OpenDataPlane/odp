@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <malloc.h>
+#include <stdalign.h>
 
 #include <odp/helper/odph_hashtable.h>
 #include <odp/helper/odph_debug.h>
@@ -60,6 +61,14 @@ typedef struct {
 	char name[ODPH_TABLE_NAME_LEN]; /**< table name */
 } odph_hash_table_imp;
 
+static uint32_t node_size(const odph_hash_table_imp *tbl)
+{
+	const uint32_t mask = alignof(odph_hash_node) - 1;
+
+	/* Round node size up so that pointers in the hash nodes are aligned. */
+	return (sizeof(odph_hash_node) + tbl->key_size + tbl->value_size + mask) & ~mask;
+}
+
 odph_table_t odph_hash_table_create(const char *name, uint32_t capacity,
 				    uint32_t key_size,
 				    uint32_t value_size)
@@ -108,7 +117,7 @@ odph_table_t odph_hash_table_create(const char *name, uint32_t capacity,
 		- ODPH_MAX_BUCKET_NUM * sizeof(odph_list_head)
 		- ODPH_MAX_BUCKET_NUM * sizeof(odp_rwlock_t);
 
-	node_num = node_mem / (sizeof(odph_hash_node) + key_size + value_size);
+	node_num = node_mem / node_size(tbl);
 	tbl->hash_node_num = node_num;
 	tbl->hash_node_pool =
 		(odph_hash_node *)(void *)((char *)tbl->list_head_pool
@@ -197,9 +206,7 @@ static odph_hash_node *hashnode_take(odph_table_t table)
 		 * should add the size of Flexible Array
 		 */
 		node = (odph_hash_node *)(void *)((char *)tbl->hash_node_pool
-				+ idx * (sizeof(odph_hash_node)
-						+ tbl->key_size
-						+ tbl->value_size));
+				+ idx * node_size(tbl));
 		if (node->list_node.next == NULL &&
 		    node->list_node.prev == NULL) {
 			ODPH_INIT_LIST_HEAD(&node->list_node);
@@ -222,8 +229,7 @@ static void hashnode_give(odph_table_t table, odph_hash_node *node)
 	tbl = (odph_hash_table_imp *)(void *)table;
 
 	odph_list_del(&node->list_node);
-	memset(node, 0,
-	       (sizeof(odph_hash_node) + tbl->key_size + tbl->value_size));
+	memset(node, 0, node_size(tbl));
 }
 
 /* should make sure the input table exists and is available */
