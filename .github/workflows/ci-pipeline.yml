@@ -453,7 +453,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        flags: ['-fsanitize=address']
+        flags: ['-fsanitize=address,undefined -fno-sanitize-recover=all']
     steps:
       - uses: actions/checkout@v4
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}" -e ARCH="${ARCH}"
