@@ -810,8 +810,8 @@ static int open_pktios(test_global_t *global)
 	uint32_t num_pkt = test_options->num_pkt;
 	uint32_t pkt_len = test_options->use_rand_pkt_len ?
 				test_options->rand_pkt_len_max : test_options->pkt_len;
-	odp_pktout_queue_t pktout[num_tx];
-	odp_pktin_queue_t pktin[num_rx];
+	odp_pktout_queue_t pktout[MAX_THREADS];
+	odp_pktin_queue_t pktin[MAX_THREADS];
 
 	printf("\nODP packet generator\n");
 	printf("  quit test after     %" PRIu64 " rounds\n",

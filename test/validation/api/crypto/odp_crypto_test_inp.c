@@ -188,8 +188,8 @@ static int session_create(crypto_session_t *session,
 	int rc;
 	odp_crypto_ses_create_err_t status;
 	odp_crypto_session_param_t ses_params;
-	uint8_t cipher_key_data[ref->cipher_key_length];
-	uint8_t auth_key_data[ref->auth_key_length];
+	uint8_t cipher_key_data[MAX_KEY_LEN];
+	uint8_t auth_key_data[MAX_KEY_LEN];
 	odp_crypto_key_t cipher_key = {
 		.data = cipher_key_data,
 		.length = ref->cipher_key_length

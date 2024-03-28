@@ -922,6 +922,9 @@ int main(int argc, char **argv)
 
 	odph_thread_join(thr_tbl, num_threads);
 
+	free(global->appl.if_names);
+	free(global->appl.if_str);
+
 	if (odp_pktio_close(global->if0)) {
 		printf("Error: failed to close interface %s\n", argv[1]);
 		exit(EXIT_FAILURE);

@@ -1919,7 +1919,7 @@ static odp_schedule_group_t schedule_group_create(const char *name,
 		return ODP_SCHED_GROUP_INVALID;
 	}
 
-	int thr_tbl[count];
+	int thr_tbl[ODP_THREAD_COUNT_MAX];
 
 	if (count && threads_from_mask(thr_tbl, count, mask))
 		return ODP_SCHED_GROUP_INVALID;
