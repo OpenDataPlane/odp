@@ -810,8 +810,6 @@ static int open_pktios(test_global_t *global)
 	uint32_t num_pkt = test_options->num_pkt;
 	uint32_t pkt_len = test_options->use_rand_pkt_len ?
 				test_options->rand_pkt_len_max : test_options->pkt_len;
-	odp_pktout_queue_t pktout[num_tx];
-	odp_pktin_queue_t pktin[num_rx];
 
 	printf("\nODP packet generator\n");
 	printf("  quit test after     %" PRIu64 " rounds\n",
@@ -1062,6 +1060,8 @@ static int open_pktios(test_global_t *global)
 		}
 
 		if (num_tx > 0) {
+			odp_pktout_queue_t pktout[MAX_THREADS];
+
 			if (odp_pktout_queue(pktio, pktout, num_tx) != num_tx) {
 				ODPH_ERR("Error (%s): Pktout queue request failed.\n", name);
 				return -1;
@@ -1072,6 +1072,8 @@ static int open_pktios(test_global_t *global)
 		}
 
 		if (num_rx > 0 && test_options->direct_rx) {
+			odp_pktin_queue_t pktin[MAX_THREADS];
+
 			if (odp_pktin_queue(pktio, pktin, num_rx) != num_rx) {
 				ODPH_ERR("Error (%s): Pktin queue request failed.\n", name);
 				return -1;
