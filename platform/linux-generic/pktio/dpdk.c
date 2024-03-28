@@ -1435,7 +1435,7 @@ static int dpdk_pktio_init(void)
 	if (numa_nodes <= 0)
 		numa_nodes = 1;
 
-	char mem_str[mem_str_len * numa_nodes];
+	char mem_str[mem_str_len * numa_nodes + 1];
 
 	for (i = 0; i < numa_nodes; i++)
 		sprintf(&mem_str[i * mem_str_len], "%d,", DPDK_MEMORY_MB);
