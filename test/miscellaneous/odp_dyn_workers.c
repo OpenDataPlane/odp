@@ -27,8 +27,8 @@
 
 #define S_(x) #x
 #define S(x) S_(x)
-#define MAX_PROGS 4
-#define DELIMITER ","
+#define MAX_PROGS 8
+#define CMD_DELIMITER ","
 #define PROG_NAME "odp_dyn_workers"
 
 #define FOREACH_CMD(CMD) \
@@ -40,13 +40,17 @@
 #define ADDITION 'a'
 #define REMOVAL 'r'
 #define DELAY 'd'
-#define MAX_WORKERS 2
+#define IDX_DELIMITER ":"
+#define MAX_NIBBLE 15
+#define MAX_WORKERS MAX_NIBBLE
 #define MAX_PATTERN_LEN 32U
 #define ENV_PREFIX "ODP"
 #define ENV_DELIMITER "="
-#define UNKNOWN_CMD UINT8_MAX
+#define UNKNOWN_CMD MAX_NIBBLE
 #define EXIT_PROG (UNKNOWN_CMD - 1U)
 #define DELAY_PROG (EXIT_PROG - 1U)
+
+ODP_STATIC_ASSERT(MAX_WORKERS <= MAX_NIBBLE, "Too many workers");
 
 enum {
 	FOREACH_CMD(GENERATE_ENUM)
@@ -80,6 +84,8 @@ static const char *const cmdstrs[] = {
 	FOREACH_CMD(GENERATE_STRING)
 };
 
+ODP_STATIC_ASSERT(ODPH_ARRAY_SIZE(cmdstrs) < DELAY_PROG, "Too many commands");
+
 typedef struct {
 	uint64_t thread_id;
 	uint64_t num_handled;
@@ -97,7 +103,8 @@ typedef struct prog_t {
 } prog_t;
 
 typedef struct {
-	uint64_t val;
+	uint64_t val1;
+	uint8_t val2;
 	uint8_t op;
 } pattern_t;
 
@@ -120,7 +127,7 @@ typedef struct worker_config_s {
 	odp_queue_t queue;
 	worker_config_t *configs;
 	odp_atomic_u32_t is_running;
-	int cpu;
+	uint8_t idx;
 } worker_config_t;
 
 typedef struct {
@@ -133,8 +140,9 @@ typedef struct {
 	int socket;
 } prog_config_t;
 
-typedef odp_bool_t (*input_fn_t)(global_config_t *config, uint8_t *cmd, uint32_t *val);
-typedef odp_bool_t (*cmd_fn_t)(prog_config_t *config);
+typedef odp_bool_t (*input_fn_t)(global_config_t *config, uint8_t *cmd, uint32_t *prog_idx,
+				 uint32_t *worker_idx);
+typedef odp_bool_t (*cmd_fn_t)(prog_config_t *config, uint8_t aux);
 
 static global_config_t conf;
 static prog_config_t *prog_conf;
@@ -181,7 +189,7 @@ static void parse_masks(global_config_t *config, const char *optarg)
 	if (tmp_str == NULL)
 		return;
 
-	tmp = strtok(tmp_str, DELIMITER);
+	tmp = strtok(tmp_str, CMD_DELIMITER);
 
 	while (tmp && config->num_progs < MAX_PROGS) {
 		prog = &config->progs[config->num_progs];
@@ -190,7 +198,7 @@ static void parse_masks(global_config_t *config, const char *optarg)
 		if (prog->cpumask != NULL)
 			++config->num_progs;
 
-		tmp = strtok(NULL, DELIMITER);
+		tmp = strtok(NULL, CMD_DELIMITER);
 	}
 
 	free(tmp_str);
@@ -201,25 +209,30 @@ static void parse_pattern(global_config_t *config, const char *optarg)
 	char *tmp_str = strdup(optarg), *tmp, op;
 	uint8_t num_elems = 0U;
 	pattern_t *pattern;
-	uint64_t val;
+	uint64_t val1;
+	uint32_t val2;
 	int ret;
 
 	if (tmp_str == NULL)
 		return;
 
-	tmp = strtok(tmp_str, DELIMITER);
+	tmp = strtok(tmp_str, CMD_DELIMITER);
 
 	while (tmp && num_elems < MAX_PATTERN_LEN) {
 		pattern = &config->pattern[num_elems];
-		ret = sscanf(tmp, "%c%" PRIu64 "", &op, &val);
+		/* Use invalid values to prevent correct values by chance. */
+		val1 = -1;
+		val2 = -1;
+		ret = sscanf(tmp, "%c%" PRIu64 IDX_DELIMITER "%u", &op, &val1, &val2);
 
-		if (ret == 2 && (op == ADDITION || op == REMOVAL || op == DELAY)) {
-			pattern->val = val;
+		if ((ret == 2 || ret == 3) && (op == ADDITION || op == REMOVAL || op == DELAY)) {
+			pattern->val1 = val1;
+			pattern->val2 = val2;
 			pattern->op = op;
 			++num_elems;
 		}
 
-		tmp = strtok(NULL, DELIMITER);
+		tmp = strtok(NULL, CMD_DELIMITER);
 	}
 
 	free(tmp_str);
@@ -238,21 +251,22 @@ static void print_usage(void)
 	       "\n"
 	       "  E.g. ODP0=MY_ENV=MY_VAL ODP1=MY_ENV=MY_VAL " PROG_NAME " -c 0x80,0x80\n"
 	       "       ...\n"
-	       "       > %s 0\n"
-	       "       > %s 0\n"
-	       "       > %s 1\n"
-	       "       > %s 1\n"
+	       "       > %s 0 0\n"
+	       "       > %s 0 0\n"
+	       "       > %s 1 0\n"
+	       "       > %s 1 0\n"
 	       "       ...\n"
-	       "       " PROG_NAME " -c 0x80,0x80 -p %c0%s%c1000000000%s%c0\n"
+	       "       " PROG_NAME " -c 0x80,0x80 -p %c0%s0%s%c1000000000%s%c0%s0\n"
 	       "\n"
 	       "Mandatory OPTIONS:\n"
 	       "\n"
 	       "  -c, --cpumasks CPU masks for to-be-created ODP processes, comma-separated, no\n"
 	       "                 spaces. CPU mask format should be as expected by\n"
 	       "                 'odp_cpumask_from_str()'. Parsed amount of CPU masks will be\n"
-	       "                 the number of ODP processes to be created. Maximum number of\n"
-	       "                 CPU mask entries (and to-be-created ODP processes) is %u.\n"
-	       "                 Maximum number of workers per ODP process is %u.\n\n"
+	       "                 the number of ODP processes to be created. Theoretical maximum\n"
+	       "                 number of CPU mask entries (and to-be-created ODP processes) is\n"
+	       "                 %u. Theoretical maximum number of workers per ODP process is\n"
+	       "                 %u. These might be further limited by the implementation.\n\n"
 	       "                 A single environment variable can be passed to the processes.\n"
 	       "                 The format should be: 'ODP<x>=<name>=<value>', where <x> is\n"
 	       "                 process index, starting from 0.\n"
@@ -262,7 +276,8 @@ static void print_usage(void)
 	       "  -p, --pattern  Non-interactive mode with a pattern of worker additions,\n"
 	       "                 removals and delays, delimited by '%s', no spaces. Additions\n"
 	       "                 are indicated with '%c' prefix, removals with '%c' prefix, both\n"
-	       "                 followed by process index, starting from 0, and delays with\n"
+	       "                 followed by process index, starting from 0 and worker thread\n"
+	       "                 index within given cpumask delimited by '%s', and delays with\n"
 	       "                 '%c' prefix, followed by a delay in nanoseconds. Process\n"
 	       "                 indexes are based on the parsed process count of '--cpumasks'\n"
 	       "                 option. Additions and removals should be equal in the aggregate\n"
@@ -270,8 +285,9 @@ static void print_usage(void)
 	       "                 Maximum pattern length is %u.\n"
 	       "  -h, --help     This help.\n"
 	       "\n", cmdstrs[ADD_WORKER], cmdstrs[REM_WORKER], cmdstrs[ADD_WORKER],
-	       cmdstrs[REM_WORKER], ADDITION, DELIMITER, DELAY, DELIMITER, REMOVAL, MAX_PROGS,
-	       MAX_WORKERS, DELIMITER, ADDITION, REMOVAL, DELAY, MAX_PATTERN_LEN);
+	       cmdstrs[REM_WORKER], ADDITION, IDX_DELIMITER, CMD_DELIMITER, DELAY, CMD_DELIMITER,
+	       REMOVAL, IDX_DELIMITER, MAX_PROGS, MAX_WORKERS, CMD_DELIMITER, ADDITION, REMOVAL,
+	       IDX_DELIMITER, DELAY, MAX_PATTERN_LEN);
 }
 
 static parse_result_t check_options(const global_config_t *config)
@@ -279,7 +295,7 @@ static parse_result_t check_options(const global_config_t *config)
 	const pattern_t *pattern;
 	int64_t num_tot = 0U;
 
-	if (config->num_progs == 0U) {
+	if (config->num_progs == 0U || config->num_progs > MAX_PROGS) {
 		printf("Invalid number of CPU masks: %u\n", config->num_progs);
 		return PRS_NOK;
 	}
@@ -287,9 +303,18 @@ static parse_result_t check_options(const global_config_t *config)
 	for (uint32_t i = 0U; i < config->num_p_elems; ++i) {
 		pattern = &config->pattern[i];
 
-		if (pattern->op != DELAY && pattern->val >= config->num_progs) {
-			ODPH_ERR("Invalid pattern, invalid process index\n");
-			return PRS_NOK;
+		if (pattern->op != DELAY) {
+			if (pattern->val1 >= config->num_progs) {
+				ODPH_ERR("Invalid pattern, invalid process index: %" PRIu64 "\n",
+					 pattern->val1);
+				return PRS_NOK;
+			}
+
+			if (pattern->val2 > MAX_WORKERS - 1) {
+				ODPH_ERR("Invalid pattern, invalid worker index: %u\n",
+					 pattern->val2);
+				return PRS_NOK;
+			}
 		}
 
 		if (pattern->op == ADDITION)
@@ -441,6 +466,7 @@ static odp_bool_t setup_prog_config(prog_config_t *config, odp_instance_t odp_in
 
 	for (uint32_t i = 0U; i < MAX_WORKERS; ++i) {
 		worker_config = &config->worker_config[i];
+		worker_config->thread.cpu = -1;
 		odp_ticketlock_init(&worker_config->lock);
 		worker_config->queue = ODP_QUEUE_INVALID;
 		odp_atomic_init_u32(&worker_config->is_running, 0U);
@@ -455,7 +481,7 @@ static odp_bool_t setup_prog_config(prog_config_t *config, odp_instance_t odp_in
 	pool = odp_pool_create(NULL, &param);
 
 	if (pool == ODP_POOL_INVALID) {
-		log_fn(ODP_LOG_ERR, "Error creating program buffer pool\n");
+		log_fn(ODP_LOG_ERR, "Error creating process buffer pool\n");
 		return false;
 	}
 
@@ -465,9 +491,16 @@ static odp_bool_t setup_prog_config(prog_config_t *config, odp_instance_t odp_in
 	return true;
 }
 
-static void run_command(cmd_fn_t cmd_fn, prog_config_t *config, int socket)
+static inline void decode_cmd(uint8_t data, uint8_t *cmd, uint8_t *aux)
 {
-	const odp_bool_t is_ok = cmd_fn(config);
+	/* Actual command will be in the high nibble and worker index in the low nibble. */
+	*cmd = data >> 4U;
+	*aux = data & 0xF;
+}
+
+static void run_command(cmd_fn_t cmd_fn, uint8_t aux, prog_config_t *config, int socket)
+{
+	const odp_bool_t is_ok = cmd_fn(config, aux);
 	const summary_t *summary = config->pending_summary;
 	uint8_t rep = !is_ok ? CMD_NOK : summary != NULL ? CMD_SUMMARY : CMD_OK;
 
@@ -515,6 +548,20 @@ static odp_bool_t setup_worker_config(worker_config_t *config)
 	return true;
 }
 
+static inline int get_cpu(odp_cpumask_t *mask, int idx)
+{
+	int cpu = odp_cpumask_first(mask);
+
+	while (idx--) {
+		cpu = odp_cpumask_next(mask, cpu);
+
+		if (cpu < 0)
+			break;
+	}
+
+	return cpu;
+}
+
 static odp_bool_t signal_ready(int socket)
 {
 	uint8_t cmd = CMD_OK;
@@ -530,14 +577,13 @@ static odp_bool_t signal_ready(int socket)
 	return true;
 }
 
-static void enq_to_next_queue(worker_config_t *config, int thread_id, odp_event_t ev,
-			      summary_t *summary)
+static void enq_to_next_queue(worker_config_t *config, int idx, odp_event_t ev, summary_t *summary)
 {
 	worker_config_t *worker_config;
 	int ret;
 
-	for (uint32_t i = 0U; i < MAX_WORKERS; ++i) {
-		worker_config = &config[(thread_id + i) % MAX_WORKERS];
+	for (uint32_t i = 1U; i <= MAX_WORKERS; ++i) {
+		worker_config = &config[(idx + i) % MAX_WORKERS];
 		odp_ticketlock_lock(&worker_config->lock);
 
 		if (worker_config->queue == ODP_QUEUE_INVALID) {
@@ -567,6 +613,7 @@ static int run_worker(void *args)
 	odp_event_t ev;
 	worker_config_t *configs = config->configs;
 	summary_t *summary = &config->summary;
+	const uint8_t idx = config->idx;
 
 	summary->thread_id = thread_id;
 	tm = odp_time_local_strict();
@@ -583,7 +630,7 @@ static int run_worker(void *args)
 		if (ev == ODP_EVENT_INVALID)
 			continue;
 
-		enq_to_next_queue(configs, thread_id, ev, summary);
+		enq_to_next_queue(configs, idx, ev, summary);
 	}
 
 	while (true) {
@@ -592,7 +639,7 @@ static int run_worker(void *args)
 		if (ev == ODP_EVENT_INVALID)
 			break;
 
-		enq_to_next_queue(configs, thread_id, ev, summary);
+		enq_to_next_queue(configs, idx, ev, summary);
 	}
 
 	summary->runtime = odp_time_diff_ns(odp_time_local_strict(), tm);
@@ -633,7 +680,7 @@ static odp_bool_t bootstrap_scheduling(worker_config_t *config, odp_pool_t pool)
 	return true;
 }
 
-static odp_bool_t add_worker(prog_config_t *config)
+static odp_bool_t add_worker(prog_config_t *config, uint8_t idx)
 {
 	worker_config_t *worker_config;
 	odph_thread_common_param_t thr_common;
@@ -646,7 +693,25 @@ static odp_bool_t add_worker(prog_config_t *config)
 		return false;
 	}
 
-	worker_config = &config->worker_config[config->num_workers];
+	if (idx >= MAX_WORKERS) {
+		log_fn(ODP_LOG_ERR, "Worker index out of bounds: %u\n", idx);
+		return false;
+	}
+
+	worker_config = &config->worker_config[idx];
+
+	if (worker_config->thread.cpu != -1) {
+		log_fn(ODP_LOG_WARN, "Worker already created: %u\n", idx);
+		return false;
+	}
+
+	set_cpu = get_cpu(&config->cpumask, idx);
+
+	if (set_cpu < 0) {
+		log_fn(ODP_LOG_ERR, "No CPU found for index: %u\n", idx);
+		return false;
+	}
+
 	memset(&worker_config->summary, 0, sizeof(worker_config->summary));
 
 	if (!setup_worker_config(worker_config))
@@ -655,7 +720,7 @@ static odp_bool_t add_worker(prog_config_t *config)
 	worker_config->configs = config->worker_config;
 	odph_thread_common_param_init(&thr_common);
 	thr_common.instance = config->instance;
-	set_cpu = odp_cpumask_first(&config->cpumask);
+
 	odp_cpumask_zero(&cpumask);
 	odp_cpumask_set(&cpumask, set_cpu);
 	thr_common.cpumask = &cpumask;
@@ -673,10 +738,7 @@ static odp_bool_t add_worker(prog_config_t *config)
 	}
 
 	++config->num_workers;
-	/* Remove newly created worker from the CPU set so that new ones don't get pinned to the
-	   same CPU. */
-	odp_cpumask_clr(&config->cpumask, set_cpu);
-	worker_config->cpu = set_cpu;
+	worker_config->idx = idx;
 
 	if (config->num_workers == 1U && !bootstrap_scheduling(worker_config, config->pool))
 		return false;
@@ -684,7 +746,7 @@ static odp_bool_t add_worker(prog_config_t *config)
 	return true;
 }
 
-static odp_bool_t remove_worker(prog_config_t *config)
+static odp_bool_t remove_worker(prog_config_t *config, uint8_t idx)
 {
 	worker_config_t *worker_config;
 
@@ -693,20 +755,30 @@ static odp_bool_t remove_worker(prog_config_t *config)
 		return false;
 	}
 
-	worker_config = &config->worker_config[config->num_workers - 1U];
+	if (idx >= MAX_WORKERS) {
+		log_fn(ODP_LOG_ERR, "Worker index out of bounds: %u\n", idx);
+		return false;
+	}
+
+	worker_config = &config->worker_config[idx];
+
+	if (worker_config->thread.cpu == -1) {
+		log_fn(ODP_LOG_WARN, "Worker already removed: %u\n", idx);
+		return false;
+	}
+
 	shutdown_worker(worker_config);
 	--config->num_workers;
-	/* Add CPU back to the available-set. */
-	odp_cpumask_set(&config->cpumask, worker_config->cpu);
+	worker_config->thread.cpu = -1;
 	config->pending_summary = &worker_config->summary;
 
 	return true;
 }
 
-static odp_bool_t do_exit(prog_config_t *config)
+static odp_bool_t do_exit(prog_config_t *config, uint8_t aux ODP_UNUSED)
 {
-	for (uint32_t i = 0U; i < config->num_workers; ++i)
-		shutdown_worker(&config->worker_config[i]);
+	for (uint32_t i = 0U; i < MAX_WORKERS; ++i)
+		remove_worker(config, i);
 
 	return true;
 }
@@ -716,23 +788,25 @@ static void run_prog(prog_config_t *config)
 	odp_bool_t is_running = true;
 	int socket = config->socket;
 	ssize_t ret;
-	uint8_t cmd;
+	uint8_t data, cmd, aux;
 
 	while (is_running) {
-		ret = TEMP_FAILURE_RETRY(recv(socket, &cmd, sizeof(cmd), 0));
+		ret = TEMP_FAILURE_RETRY(recv(socket, &data, sizeof(data), 0));
 
 		if (ret != 1)
 			continue;
 
+		decode_cmd(data, &cmd, &aux);
+
 		switch (cmd) {
 		case ADD_WORKER:
-			run_command(add_worker, config, socket);
+			run_command(add_worker, aux, config, socket);
 			break;
 		case REM_WORKER:
-			run_command(remove_worker, config, socket);
+			run_command(remove_worker, aux, config, socket);
 			break;
 		case EXIT_PROG:
-			run_command(do_exit, config, socket);
+			run_command(do_exit, aux, config, socket);
 			is_running = false;
 			break;
 		default:
@@ -832,7 +906,7 @@ static void print_cli_usage(void)
 	printf("\nValid commands are:\n\n");
 
 	for (uint32_t i = 0U; i < ODPH_ARRAY_SIZE(cmdstrs); ++i)
-		printf("    %s <process index>\n", cmdstrs[i]);
+		printf("    %s <process index> <worker index>\n", cmdstrs[i]);
 
 	printf("\n");
 }
@@ -845,11 +919,11 @@ static char *get_format_str(uint32_t max_cmd_len)
 	if (cmd_len <= 0)
 		return NULL;
 
-	str_len = strlen("%s %u") + cmd_len + 1U;
+	str_len = strlen("%s %u %u") + cmd_len + 1U;
 
 	char fmt[str_len];
 
-	snprintf(fmt, str_len, "%%%ds %%u", max_cmd_len);
+	snprintf(fmt, str_len, "%%%ds %%u %%u", max_cmd_len);
 
 	return strdup(fmt);
 }
@@ -863,7 +937,8 @@ static uint8_t map_str_to_command(const char *cmdstr, uint32_t len)
 	return UNKNOWN_CMD;
 }
 
-static odp_bool_t get_stdin_command(global_config_t *config, uint8_t *cmd, uint32_t *index)
+static odp_bool_t get_stdin_command(global_config_t *config, uint8_t *cmd, uint32_t *prog_idx,
+				    uint32_t *worker_idx)
 {
 	char *input, cmdstr[config->max_cmd_len + 1U], *fmt;
 	size_t size;
@@ -884,14 +959,14 @@ static odp_bool_t get_stdin_command(global_config_t *config, uint8_t *cmd, uint3
 		return false;
 	}
 
-	ret = sscanf(input, fmt, cmdstr, index);
+	ret = sscanf(input, fmt, cmdstr, prog_idx, worker_idx);
 	free(input);
 	free(fmt);
 
 	if (ret == EOF)
 		return false;
 
-	if (ret != 2) {
+	if (ret != 3) {
 		printf("Unable to parse command\n");
 		return false;
 	}
@@ -914,7 +989,8 @@ static uint8_t map_char_to_command(char cmdchar)
 	}
 }
 
-static odp_bool_t get_pattern_command(global_config_t *config, uint8_t *cmd, uint32_t *index)
+static odp_bool_t get_pattern_command(global_config_t *config, uint8_t *cmd, uint32_t *prog_idx,
+				      uint32_t *worker_idx)
 {
 	static uint32_t i;
 	const pattern_t *pattern;
@@ -929,15 +1005,25 @@ static odp_bool_t get_pattern_command(global_config_t *config, uint8_t *cmd, uin
 	*cmd = map_char_to_command(pattern->op);
 
 	if (*cmd == DELAY_PROG) {
-		ts.tv_sec  = pattern->val / ODP_TIME_SEC_IN_NS;
-		ts.tv_nsec = pattern->val % ODP_TIME_SEC_IN_NS;
+		ts.tv_sec  = pattern->val1 / ODP_TIME_SEC_IN_NS;
+		ts.tv_nsec = pattern->val1 % ODP_TIME_SEC_IN_NS;
 		nanosleep(&ts, NULL);
 		return false;
 	}
 
-	*index = pattern->val;
+	*prog_idx = pattern->val1;
+	*worker_idx = pattern->val2;
 
 	return true;
+}
+
+static inline uint8_t encode_cmd(uint8_t cmd, uint8_t worker_idx)
+{
+	/* Actual command will be in the high nibble and worker index in the low nibble. */
+	cmd <<= 4U;
+	cmd |= worker_idx;
+
+	return cmd;
 }
 
 static odp_bool_t is_peer_down(int error)
@@ -1015,7 +1101,7 @@ static odp_bool_t check_summary(const summary_t *summary)
 static odp_bool_t run_global(global_config_t *config)
 {
 	input_fn_t input_fn;
-	uint32_t index;
+	uint32_t prog_idx, worker_idx;
 	uint8_t cmd;
 	prog_t *prog;
 	ssize_t ret;
@@ -1026,7 +1112,7 @@ static odp_bool_t run_global(global_config_t *config)
 	config->is_running = true;
 
 	while (config->is_running) {
-		if (!input_fn(config, &cmd, &index))
+		if (!input_fn(config, &cmd, &prog_idx, &worker_idx))
 			continue;
 
 		if (cmd == UNKNOWN_CMD) {
@@ -1034,19 +1120,19 @@ static odp_bool_t run_global(global_config_t *config)
 			continue;
 		}
 
-		if (index >= config->num_progs) {
-			printf("Invalid application index: %u\n", index);
+		if (prog_idx >= config->num_progs) {
+			printf("Invalid process index: %u\n", prog_idx);
 			continue;
 		}
 
-		prog = &config->progs[index];
+		prog = &config->progs[prog_idx];
 
 		if (prog->state == DOWN) {
-			printf("ODP process index %u has already exited\n", index);
+			printf("ODP process index %u has already exited\n", prog_idx);
 			continue;
 		}
 
-		ret = send_command(prog->socket, cmd);
+		ret = send_command(prog->socket, encode_cmd(cmd, worker_idx));
 
 		if (ret == CONN_ERR) {
 			printf("Fatal connection error, aborting\n");
@@ -1054,13 +1140,14 @@ static odp_bool_t run_global(global_config_t *config)
 		}
 
 		if (ret == PEER_ERR) {
-			printf("ODP process index %u has exited\n", index);
+			printf("ODP process index %u has exited\n", prog_idx);
 			prog->state = DOWN;
 			continue;
 		}
 
 		if (ret == CMD_NOK) {
-			printf("ODP process index %u was unable to execute the command\n", index);
+			printf("ODP process index %u was unable to execute the command\n",
+			       prog_idx);
 			continue;
 		}
 
@@ -1082,17 +1169,20 @@ static odp_bool_t run_global(global_config_t *config)
 		prog = &config->progs[i];
 
 		if (prog->state == UP) {
-			while (true) {
-				ret = send_command(prog->socket, REM_WORKER);
+			for (uint32_t j = 0U; j < MAX_WORKERS; ++j) {
+				ret = send_command(prog->socket, encode_cmd(REM_WORKER, j));
 
-				if (ret == CONN_ERR || ret == PEER_ERR || ret == CMD_NOK)
+				if (ret == CONN_ERR || ret == PEER_ERR)
 					break;
+
+				if (ret != CMD_SUMMARY)
+					continue;
 
 				if (recv_summary(prog->socket, &prog->summary))
 					dump_summary(prog->pid, &prog->summary);
 			}
 
-			(void)send_command(prog->socket, EXIT_PROG);
+			(void)send_command(prog->socket, encode_cmd(EXIT_PROG, 0));
 			(void)TEMP_FAILURE_RETRY(waitpid(prog->pid, NULL, 0));
 		}
 	}
