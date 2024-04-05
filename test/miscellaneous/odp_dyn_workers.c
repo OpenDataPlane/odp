@@ -121,6 +121,7 @@ typedef struct worker_config_s worker_config_t;
 
 typedef struct worker_config_s {
 	odph_thread_t thread;
+	odp_barrier_t barrier;
 	summary_t summary;
 	odp_ticketlock_t lock;
 	odp_schedule_group_t grp;
@@ -139,6 +140,14 @@ typedef struct {
 	uint32_t num_workers;
 	int socket;
 } prog_config_t;
+
+typedef struct {
+	struct {
+		uint16_t is_active;
+		uint16_t cpu;
+		uint32_t thread_id;
+	} workers[MAX_WORKERS];
+} result_t;
 
 typedef odp_bool_t (*input_fn_t)(global_config_t *config, uint8_t *cmd, uint32_t *prog_idx,
 				 uint32_t *worker_idx);
@@ -498,16 +507,39 @@ static inline void decode_cmd(uint8_t data, uint8_t *cmd, uint8_t *aux)
 	*aux = data & 0xF;
 }
 
+static void build_result(const prog_config_t *config, result_t *result)
+{
+	uint32_t num = 0U;
+	const worker_config_t *worker_config;
+
+	for (uint32_t i = 0U; i < MAX_WORKERS; ++i) {
+		worker_config = &config->worker_config[i];
+
+		if (worker_config->thread.cpu != -1) {
+			result->workers[num].is_active = 1;
+			result->workers[num].thread_id = worker_config->summary.thread_id;
+			result->workers[num].cpu = worker_config->thread.cpu;
+			++num;
+		}
+	}
+}
+
 static void run_command(cmd_fn_t cmd_fn, uint8_t aux, prog_config_t *config, int socket)
 {
 	const odp_bool_t is_ok = cmd_fn(config, aux);
 	const summary_t *summary = config->pending_summary;
 	uint8_t rep = !is_ok ? CMD_NOK : summary != NULL ? CMD_SUMMARY : CMD_OK;
+	result_t result;
 
 	(void)TEMP_FAILURE_RETRY(send(socket, &rep, sizeof(rep), MSG_NOSIGNAL));
 
-	if (rep == CMD_SUMMARY) {
-		/* Same machine, no internet in-between, just send the struct as is. */
+	/* Same machine, no internet in-between, just send the structs as is. */
+	if (rep == CMD_OK) {
+		memset(&result, 0, sizeof(result));
+		build_result(config, &result);
+		(void)TEMP_FAILURE_RETRY(send(socket, (const void *)&result, sizeof(result),
+					      MSG_NOSIGNAL));
+	} else if (rep == CMD_SUMMARY) {
 		(void)TEMP_FAILURE_RETRY(send(socket, (const void *)summary, sizeof(*summary),
 					      MSG_NOSIGNAL));
 		config->pending_summary = NULL;
@@ -624,6 +656,8 @@ static int run_worker(void *args)
 		/* Log but still continue. */
 		log_fn(ODP_LOG_ERR, "Error joining scheduler group\n");
 
+	odp_barrier_wait(&config->barrier);
+
 	while (odp_atomic_load_u32(&config->is_running)) {
 		ev = odp_schedule(NULL, ODP_SCHED_NO_WAIT);
 
@@ -718,6 +752,7 @@ static odp_bool_t add_worker(prog_config_t *config, uint8_t idx)
 		return false;
 
 	worker_config->configs = config->worker_config;
+	worker_config->idx = idx;
 	odph_thread_common_param_init(&thr_common);
 	thr_common.instance = config->instance;
 
@@ -729,6 +764,8 @@ static odp_bool_t add_worker(prog_config_t *config, uint8_t idx)
 	thr_param.thr_type = ODP_THREAD_WORKER;
 	thr_param.arg = worker_config;
 	odp_atomic_store_u32(&worker_config->is_running, 1U);
+	/* Control thread + worker thread = barrier count */
+	odp_barrier_init(&worker_config->barrier, 2);
 
 	if (odph_thread_create(&worker_config->thread, &thr_common, &thr_param, 1) != 1) {
 		log_fn(ODP_LOG_ERR, "Error creating worker\n");
@@ -737,8 +774,8 @@ static odp_bool_t add_worker(prog_config_t *config, uint8_t idx)
 		return false;
 	}
 
+	odp_barrier_wait(&worker_config->barrier);
 	++config->num_workers;
-	worker_config->idx = idx;
 
 	if (config->num_workers == 1U && !bootstrap_scheduling(worker_config, config->pool))
 		return false;
@@ -1098,6 +1135,26 @@ static odp_bool_t check_summary(const summary_t *summary)
 	return true;
 }
 
+static void dump_result(int socket, pid_t pid)
+{
+	result_t result;
+	const ssize_t size = sizeof(result),
+	ret = TEMP_FAILURE_RETRY(recv(socket, &result, size, 0));
+
+	if (ret != size)
+		return;
+
+	printf("\nODP process %d:\n"
+	       "|\n", pid);
+
+	for (uint32_t i = 0U; i < MAX_WORKERS; i++)
+		if (result.workers[i].is_active)
+			printf("|--- Worker thread ID %u on CPU %u\n",
+			       result.workers[i].thread_id, result.workers[i].cpu);
+
+	printf("\n");
+}
+
 static odp_bool_t run_global(global_config_t *config)
 {
 	input_fn_t input_fn;
@@ -1162,7 +1219,12 @@ static odp_bool_t run_global(global_config_t *config)
 				config->is_running = false;
 				func_ret = false;
 			}
+
+			continue;
 		}
+
+		if (ret == CMD_OK)
+			dump_result(prog->socket, prog->pid);
 	}
 
 	for (uint32_t i = 0U; i < config->num_progs; ++i) {
