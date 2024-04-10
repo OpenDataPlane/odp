@@ -887,7 +887,7 @@ odp_pool_t _odp_pool_create(const char *name, const odp_pool_param_t *params,
 
 			if (!adj_size) {
 				_ODP_ERR("Calculating adjusted block size failed\n");
-				return ODP_POOL_INVALID;
+				goto error;
 			}
 		}
 
@@ -991,6 +991,11 @@ error:
 
 	if (pool->uarea_shm != ODP_SHM_INVALID)
 		odp_shm_free(pool->uarea_shm);
+
+	if (pool->ring_shm != ODP_SHM_INVALID)
+		odp_shm_free(pool->ring_shm);
+
+	pool->ring = NULL;
 
 	LOCK(&pool->lock);
 	pool->reserved = 0;
@@ -2043,6 +2048,8 @@ odp_pool_t odp_pool_ext_create(const char *name, const odp_pool_ext_param_t *par
 error:
 	if (pool->ring_shm != ODP_SHM_INVALID)
 		odp_shm_free(pool->ring_shm);
+
+	pool->ring = NULL;
 
 	LOCK(&pool->lock);
 	pool->reserved = 0;
