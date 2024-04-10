@@ -140,6 +140,9 @@ typedef struct {
 	int rx_queues;          /* RX queues per interface */
 	int pool_per_if;        /* Create pool per interface */
 	uint32_t num_pkt;       /* Number of packets per pool */
+	int flow_control;       /* Flow control mode */
+	bool pause_rx;          /* Reception of pause frames enabled */
+	bool pause_tx;          /* Transmission of pause frames enabled */
 	bool vector_mode;       /* Vector mode enabled */
 	uint32_t num_vec;       /* Number of vectors per pool */
 	uint64_t vec_tmo_ns;    /* Vector formation timeout in ns */
@@ -1304,6 +1307,22 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx, odp_po
 	/* Provide hint to pktio that packet references are not used */
 	config.pktout.bit.no_packet_refs = 1;
 
+	if (gbl_args->appl.pause_rx) {
+		if (!pktio_capa.flow_control.pause_rx) {
+			ODPH_ERR("Reception of pause frames not supported: %s\n", dev);
+			return -1;
+		}
+		config.flow_control.pause_rx = ODP_PKTIO_LINK_PAUSE_ON;
+	}
+
+	if (gbl_args->appl.pause_tx) {
+		if (!pktio_capa.flow_control.pause_tx) {
+			ODPH_ERR("Transmission of pause frames not supported: %s\n", dev);
+			return -1;
+		}
+		config.flow_control.pause_tx = ODP_PKTIO_LINK_PAUSE_ON;
+	}
+
 	odp_pktio_config(pktio, &config);
 
 	if (gbl_args->appl.promisc_mode && odp_pktio_promisc_mode(pktio) != 1) {
@@ -1928,6 +1947,12 @@ static void usage(char *progname)
 	       "                                 completion (comma-separated, no spaces).\n"
 	       "                                 0: Event completion mode\n"
 	       "                                 1: Poll completion mode\n"
+	       "  -X, --flow_control <mode>      Ethernet flow control mode.\n"
+	       "                                 0: Flow control disabled (default)\n"
+	       "                                 1: Enable reception of pause frames\n"
+	       "                                 2: Enable transmission of pause frames\n"
+	       "                                 3: Enable reception and transmission of pause\n"
+	       "                                    frames\n"
 	       "  -v, --verbose                  Verbose output.\n"
 	       "  -V, --verbose_pkt              Print debug information on every received\n"
 	       "                                 packet.\n"
@@ -1984,6 +2009,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{"flow_aware", no_argument, NULL, 'f'},
 		{"input_ts", no_argument, NULL, 'T'},
 		{"tx_compl", required_argument, NULL, 'C'},
+		{"flow_control", required_argument, NULL, 'X'},
 		{"verbose", no_argument, NULL, 'v'},
 		{"verbose_pkt", no_argument, NULL, 'V'},
 		{"help", no_argument, NULL, 'h'},
@@ -1991,7 +2017,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	};
 
 	static const char *shortopts = "+c:t:a:i:m:o:O:r:d:s:e:k:g:G:I:"
-				       "b:q:p:R:y:n:l:L:w:x:z:M:F:uPfTC:vVh";
+				       "b:q:p:R:y:n:l:L:w:x:X:z:M:F:uPfTC:vVh";
 
 	appl_args->time = 0; /* loop forever if time to run is 0 */
 	appl_args->accuracy = 1; /* get and print pps stats second */
@@ -2022,6 +2048,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	appl_args->num_prio = 0;
 	appl_args->prefetch = 1;
 	appl_args->data_rd = 0;
+	appl_args->flow_control = 0;
 
 	while (1) {
 		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
@@ -2257,6 +2284,13 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		case 'x':
 			appl_args->vec_size = atoi(optarg);
 			break;
+		case 'X':
+			appl_args->flow_control = atoi(optarg);
+			if (appl_args->flow_control == 1 || appl_args->flow_control == 3)
+				appl_args->pause_rx = true;
+			if (appl_args->flow_control == 2 || appl_args->flow_control == 3)
+				appl_args->pause_tx = true;
+			break;
 		case 'z':
 			appl_args->vec_tmo_ns = atoi(optarg);
 			break;
@@ -2439,6 +2473,10 @@ static void print_options(void)
 		printf("interface default\n");
 	printf("Promisc mode:       %s\n", appl_args->promisc_mode ?
 					   "enabled" : "disabled");
+	if (appl_args->flow_control)
+		printf("Flow control:       %s%s\n",
+		       appl_args->pause_rx ? "rx " : "",
+		       appl_args->pause_tx ? "tx" : "");
 	printf("Flow aware:         %s\n", appl_args->flow_aware ?
 					   "yes" : "no");
 	printf("Input TS:           %s\n", appl_args->input_ts ? "yes" : "no");
