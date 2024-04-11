@@ -259,7 +259,10 @@ int odph_thread_create(odph_thread_t thread[],
  * Function waits for threads launched with odph_thread_create() to exit.
  * Threads may be waited to exit in a different order than those were created.
  * A function call may be used to wait any number of launched threads to exit.
- * A particular thread may be waited only once.
+ * A particular thread may be waited only once. Join is attempted for every
+ * thread, operation is interrupted only if the actual join operation fails for
+ * some thread. Applications may need a separate mechanism to resolve
+ * individual thread exit statuses.
  *
  * @param thread        Table of threads to exit
  * @param num           Number of threads to exit

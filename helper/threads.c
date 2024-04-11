@@ -158,18 +158,15 @@ static int wait_process(odph_thread_t *thread)
 
 	/* Examine the child process' termination status */
 	if (WIFEXITED(status) &&
-	    WEXITSTATUS(status) != EXIT_SUCCESS) {
+	    WEXITSTATUS(status) != EXIT_SUCCESS)
 		ODPH_ERR("Child exit status:%d (pid:%d)\n",
 			 WEXITSTATUS(status), (int)pid);
-		return -1;
-	}
 
 	if (WIFSIGNALED(status)) {
 		int signo = WTERMSIG(status);
 
 		ODPH_ERR("Child term signo:%d - %s (pid:%d)\n",
 			 signo, strsignal(signo), (int)pid);
-		return -1;
 	}
 
 	return 0;
@@ -243,19 +240,15 @@ static int wait_pthread(odph_thread_t *thread)
 		return -1;
 	}
 
-	if (thread_ret) {
+	if (thread_ret)
 		ODPH_ERR("Bad exit status cpu #%i %p\n",
 			 thread->cpu, thread_ret);
-		return -1;
-	}
 
 	ret = pthread_attr_destroy(&thread->thread.attr);
 
-	if (ret) {
+	if (ret)
 		ODPH_ERR("pthread_attr_destroy failed (%i) from cpu #%i\n",
 			 ret, thread->cpu);
-		return -1;
-	}
 
 	return 0;
 }
@@ -383,28 +376,29 @@ int odph_thread_create(odph_thread_t thread[],
 int odph_thread_join(odph_thread_t thread[], int num)
 {
 	odph_thread_start_args_t *start_args;
-	int i;
+	int num_exited = 0;
 
-	for (i = 0; i < num; i++) {
+	for (int i = 0; i < num; i++) {
 		start_args = &thread[i].start_args;
 
 		if (start_args->status != STARTED) {
 			ODPH_DBG("Thread (i:%i) not started.\n", i);
-			break;
+			continue;
 		}
 
 		if (thread[i].start_args.mem_model == ODP_MEM_MODEL_THREAD) {
 			if (wait_pthread(&thread[i]))
-				break;
+				return -1;
 		} else {
 			if (wait_process(&thread[i]))
-				break;
+				return -1;
 		}
 
 		start_args->status = NOT_STARTED;
+		num_exited++;
 	}
 
-	return i;
+	return num_exited;
 }
 
 /* man gettid() notes:
