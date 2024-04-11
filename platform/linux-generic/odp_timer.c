@@ -1077,7 +1077,7 @@ static void posix_timer_start(timer_pool_t *tp)
 
 	/* wait thread set tp->thr_pid */
 	while (!odp_atomic_load_u64(&tp->thr_pid))
-		sched_yield();
+		odp_cpu_pause();
 
 	memset(&sigev, 0, sizeof(sigev));
 	sigev.sigev_notify          = SIGEV_THREAD_ID;
@@ -1100,7 +1100,7 @@ static void posix_timer_start(timer_pool_t *tp)
 	/* Wait response from timer thread that warm up signals have been
 	 * processed. Warm up helps avoiding overrun on the first timeout. */
 	while (odp_atomic_load_acq_u32(&tp->thr_ready) == 0)
-		sched_yield();
+		odp_cpu_pause();
 
 	if (ODP_DEBUG_PRINT) {
 		uint32_t old_val = 0;
