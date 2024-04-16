@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2013-2018 Linaro Limited
- * Copyright (c) 2019-2022 Nokia
+ * Copyright (c) 2019-2024 Nokia
  */
 
 #ifndef _GNU_SOURCE
@@ -144,10 +144,10 @@ static int create_process(odph_thread_t *thread, int cpu, uint64_t stack_size)
 /*
  * Wait single process to exit
  */
-static int wait_process(odph_thread_t *thread)
+static int wait_process(odph_thread_t *thread, odph_thread_join_result_t *res)
 {
 	pid_t pid;
-	int status = 0;
+	int status = 0, estatus;
 
 	pid = waitpid(thread->proc.pid, &status, 0);
 
@@ -157,19 +157,27 @@ static int wait_process(odph_thread_t *thread)
 	}
 
 	/* Examine the child process' termination status */
-	if (WIFEXITED(status) &&
-	    WEXITSTATUS(status) != EXIT_SUCCESS) {
-		ODPH_ERR("Child exit status:%d (pid:%d)\n",
-			 WEXITSTATUS(status), (int)pid);
-		return -1;
-	}
+	if (WIFEXITED(status)) {
+		estatus = WEXITSTATUS(status);
 
-	if (WIFSIGNALED(status)) {
+		if (res != NULL) {
+			res->is_sig = false;
+			res->ret = estatus;
+		} else if (estatus != EXIT_SUCCESS) {
+			ODPH_ERR("Child exit status:%d (pid:%d)\n", estatus, (int)pid);
+			return -1;
+		}
+	} else {
 		int signo = WTERMSIG(status);
 
-		ODPH_ERR("Child term signo:%d - %s (pid:%d)\n",
-			 signo, strsignal(signo), (int)pid);
-		return -1;
+		if (res != NULL) {
+			res->is_sig = true;
+			res->ret = signo;
+		} else {
+			ODPH_ERR("Child term signo:%d - %s (pid:%d)\n", signo, strsignal(signo),
+				 (int)pid);
+			return -1;
+		}
 	}
 
 	return 0;
@@ -229,7 +237,7 @@ static int create_pthread(odph_thread_t *thread, int cpu, uint64_t stack_size)
 /*
  * Wait single pthread to exit
  */
-static int wait_pthread(odph_thread_t *thread)
+static int wait_pthread(odph_thread_t *thread, odph_thread_join_result_t *res)
 {
 	int ret;
 	void *thread_ret = NULL;
@@ -243,9 +251,11 @@ static int wait_pthread(odph_thread_t *thread)
 		return -1;
 	}
 
-	if (thread_ret) {
-		ODPH_ERR("Bad exit status cpu #%i %p\n",
-			 thread->cpu, thread_ret);
+	if (res != NULL) {
+		res->is_sig = false;
+		res->ret = (int)(intptr_t)thread_ret;
+	} else if (thread_ret) {
+		ODPH_ERR("Bad exit status cpu #%i %p\n", thread->cpu, thread_ret);
 		return -1;
 	}
 
@@ -254,7 +264,9 @@ static int wait_pthread(odph_thread_t *thread)
 	if (ret) {
 		ODPH_ERR("pthread_attr_destroy failed (%i) from cpu #%i\n",
 			 ret, thread->cpu);
-		return -1;
+
+		if (res == NULL)
+			return -1;
 	}
 
 	return 0;
@@ -380,7 +392,7 @@ int odph_thread_create(odph_thread_t thread[],
 	return i;
 }
 
-int odph_thread_join(odph_thread_t thread[], int num)
+static int join_threads(odph_thread_t thread[], odph_thread_join_result_t res[], int num)
 {
 	odph_thread_start_args_t *start_args;
 	int i;
@@ -389,15 +401,15 @@ int odph_thread_join(odph_thread_t thread[], int num)
 		start_args = &thread[i].start_args;
 
 		if (start_args->status != STARTED) {
-			ODPH_DBG("Thread (i:%i) not started.\n", i);
+			ODPH_ERR("Thread (i:%i) not started.\n", i);
 			break;
 		}
 
 		if (thread[i].start_args.mem_model == ODP_MEM_MODEL_THREAD) {
-			if (wait_pthread(&thread[i]))
+			if (wait_pthread(&thread[i], res != NULL ? &res[i] : NULL))
 				break;
 		} else {
-			if (wait_process(&thread[i]))
+			if (wait_process(&thread[i], res != NULL ? &res[i] : NULL))
 				break;
 		}
 
@@ -405,6 +417,31 @@ int odph_thread_join(odph_thread_t thread[], int num)
 	}
 
 	return i;
+}
+
+int odph_thread_join(odph_thread_t thread[], int num)
+{
+	if (thread == NULL) {
+		ODPH_ERR("Bad thread table pointer\n");
+		return -1;
+	}
+
+	return join_threads(thread, NULL, num);
+}
+
+int odph_thread_join_result(odph_thread_t thread[], odph_thread_join_result_t res[], int num)
+{
+	if (thread == NULL) {
+		ODPH_ERR("Bad thread table pointer\n");
+		return -1;
+	}
+
+	if (res == NULL) {
+		ODPH_ERR("Bad result table pointer\n");
+		return -1;
+	}
+
+	return join_threads(thread, res, num);
 }
 
 /* man gettid() notes:
