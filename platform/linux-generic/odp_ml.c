@@ -783,23 +783,31 @@ static int check_io_shape(ml_model_t *mdl)
 	odp_ml_shape_info_t *shape;
 
 	for (uint32_t i = 0; i < mdl->info.num_inputs; i++) {
+		int num_dyn = 0;
+
 		shape = &mdl->input_info[i].shape;
 
-		if (shape->type == ODP_ML_SHAPE_NONE) {
-			_ODP_ERR("Undefined shape type for model input[%u]\n", i);
-			return -1;
-		}
+		switch (shape->type) {
+		case ODP_ML_SHAPE_STATIC:
+			break;
 
-		if (shape->type == ODP_ML_SHAPE_STATIC)
-			continue;
+		case ODP_ML_SHAPE_BATCH:
+			for (uint32_t j = 0; j < shape->num_dim; j++)
+				if (shape->dim[j] == ODP_ML_DIM_DYNAMIC)
+					num_dyn++;
 
-		/* shape->type == ODP_ML_SHAPE_BATCH */
-		for (uint32_t j = 0; j < shape->num_dim; j++) {
-			if (shape->dim[j] == ODP_ML_DIM_DYNAMIC && !shape->dim_max[j]) {
-				_ODP_ERR("Missing dim_max[%u] for dynamic sized input[%u], please"
-					 " provide via the extra_info of model param\n", j, i);
+			if (num_dyn != 1) {
+				_ODP_ERR("Incorrect number (%d) of dynamic dimensions "
+					 "for model input[%u]\n",
+					 num_dyn, i);
 				return -1;
 			}
+
+			break;
+
+		default:
+			_ODP_ERR("Undefined shape type for model input[%u]\n", i);
+			return -1;
 		}
 	}
 
