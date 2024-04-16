@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2013-2018 Linaro Limited
- * Copyright (c) 2019-2021 Nokia
+ * Copyright (c) 2019-2024 Nokia
  */
 
 
@@ -191,6 +191,20 @@ typedef struct {
 
 } odph_thread_common_param_t;
 
+/** Thread join result */
+typedef struct {
+	/** Exit caused by signal */
+	odp_bool_t is_sig;
+
+	/**
+	 * Exit status of the joined thread/process
+	 *
+	 * If 'is_sig' is true, then this is the signal number that caused
+	 * process exit. Otherwise status of the exited thread/process.
+	 */
+	int ret;
+} odph_thread_join_result_t;
+
 /**
  * Initialize thread params
  *
@@ -261,15 +275,39 @@ int odph_thread_create(odph_thread_t thread[],
  * A function call may be used to wait any number of launched threads to exit.
  * A particular thread may be waited only once.
  *
+ * Threads are joined in the order they are in 'thread' table. Returns on the
+ * first non-zero exit status or other failure.
+ *
  * @param thread        Table of threads to exit
  * @param num           Number of threads to exit
  *
- * @return Number of threads exited
+ * @return Number of threads successfully joined with zero exit status
+ *         (0 ... num)
  * @retval -1  On failure
  *
  * @see odph_thread_create()
  */
 int odph_thread_join(odph_thread_t thread[], int num);
+
+/**
+ * Wait previously launched threads to exit
+ *
+ * Similar to odph_thread_join() but outputs results of joined threads and
+ * stops only if the actual join operation fails for some thread. Threads are
+ * joined in the order they are in 'thread' table. Returns number of threads
+ * successfully joined and writes respective exit statuses into the 'res'
+ * table.
+ *
+ * @param thread        Table of threads to exit
+ * @param[out] res      Table for result output
+ * @param num           Number of threads to exit and results to output
+ *
+ * @return Number of threads successfully joined (0 ... num)
+ * @retval -1  On failure
+ *
+ * @see odph_thread_create()
+ */
+int odph_thread_join_result(odph_thread_t thread[], odph_thread_join_result_t res[], int num);
 
 /**
  * Set CPU affinity of the current odp thread
