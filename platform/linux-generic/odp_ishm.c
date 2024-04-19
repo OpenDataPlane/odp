@@ -651,6 +651,7 @@ static int create_file(int block_index, huge_flag_t huge, uint64_t len,
 	int  oflag = O_RDWR | O_CREAT | O_TRUNC; /* flags for open	      */
 	char dir[ISHM_FILENAME_MAXLEN];
 	int ret;
+	const odp_bool_t use_huge = huge == HUGE;
 
 	/* No ishm_block_t for the master single VA memory file */
 	if (single_va) {
@@ -664,11 +665,10 @@ static int create_file(int block_index, huge_flag_t huge, uint64_t len,
 	}
 
 	/* huge dir must be known to create files there!: */
-	if ((huge == HUGE) &&
-	    (!odp_global_ro.hugepage_info.default_huge_page_dir))
+	if (use_huge && !odp_global_ro.hugepage_info.default_huge_page_dir)
 		return -1;
 
-	if (huge == HUGE)
+	if (use_huge)
 		snprintf(dir, ISHM_FILENAME_MAXLEN, "%s/%s",
 			 odp_global_ro.hugepage_info.default_huge_page_dir,
 			 odp_global_ro.uid);
@@ -684,7 +684,7 @@ static int create_file(int block_index, huge_flag_t huge, uint64_t len,
 
 	fd = open(filename, oflag, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 	if (fd < 0) {
-		if (huge != HUGE)
+		if (!use_huge)
 			_ODP_ERR("Normal page open failed: file=%s, "
 				"err=\"%s\"\n", filename, strerror(errno));
 		return -1;
@@ -698,9 +698,10 @@ static int create_file(int block_index, huge_flag_t huge, uint64_t len,
 		}
 
 		if (ret == -1) {
-			_ODP_ERR("%s memory allocation failed: fd=%d, file=%s, "
-				"err=\"%s\"\n", (huge == HUGE) ? "Huge page" :
-				"Normal page", fd, filename, strerror(errno));
+			_ODP_LOG(use_huge ? ODP_LOG_WARN : ODP_LOG_ERR,
+				 use_huge ? "WARN" : "ERR",
+				 "%s page memory allocation failed: fd=%d, file=%s, err=\"%s\"\n",
+				 use_huge ? "Huge" : "Normal", fd, filename, strerror(errno));
 			close(fd);
 			unlink(filename);
 			return -1;
