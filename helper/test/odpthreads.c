@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2016-2018 Linaro Limited
- * Copyright (c) 2021 Nokia
+ * Copyright (c) 2021-2024 Nokia
  */
 
 /*
@@ -73,7 +73,6 @@ int main(int argc, char *argv[])
 	odp_init_t init_param;
 	int num_workers;
 	int cpu, affinity;
-	int ret;
 	char cpumaskstr[ODP_CPUMASK_STR_SIZE];
 	struct rlimit rlimit;
 	pthread_attr_t attr;
@@ -161,11 +160,25 @@ int main(int argc, char *argv[])
 	thr_param.arg = NULL;
 	thr_param.thr_type = ODP_THREAD_WORKER;
 
-	odph_thread_create(thread_tbl, &thr_common, &thr_param, num_workers);
-
-	ret = odph_thread_join(thread_tbl, num_workers);
-	if (ret < 0)
+	if (odph_thread_create(thread_tbl, &thr_common, &thr_param, num_workers) != num_workers) {
+		ODPH_ERR("Error: failed to create worker threads.\n");
 		exit(EXIT_FAILURE);
+	}
+
+	odph_thread_join_result_t res[num_workers];
+
+	if (odph_thread_join_result(thread_tbl, res, num_workers) != num_workers) {
+		ODPH_ERR("Error: failed to join worker threads.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	for (int i = 0; i < num_workers; i++) {
+		if (res[i].is_sig || res[i].ret != 0) {
+			ODPH_ERR("Error: worker thread failure%s: %d.\n", res[i].is_sig ?
+					" (signaled)" : "", res[i].ret);
+			exit(EXIT_FAILURE);
+		}
+	}
 
 	/* Test threads with non-default stack size and sync timeout. */
 
@@ -195,11 +208,23 @@ int main(int argc, char *argv[])
 	printf("use sync timeout:                 %" PRIu64 "\n", thr_common.sync_timeout);
 	printf("\n");
 
-	if (odph_thread_create(thread_tbl, &thr_common, &thr_param, num_workers) != num_workers)
+	if (odph_thread_create(thread_tbl, &thr_common, &thr_param, num_workers) != num_workers) {
+		ODPH_ERR("Error: failed to create worker threads.\n");
 		exit(EXIT_FAILURE);
+	}
 
-	if (odph_thread_join(thread_tbl, num_workers) != num_workers)
+	if (odph_thread_join_result(thread_tbl, res, num_workers) != num_workers) {
+		ODPH_ERR("Error: failed to join worker threads.\n");
 		exit(EXIT_FAILURE);
+	}
+
+	for (int i = 0; i < num_workers; i++) {
+		if (res[i].is_sig || res[i].ret != 0) {
+			ODPH_ERR("Error: worker thread failure%s: %d.\n", res[i].is_sig ?
+					" (signaled)" : "", res[i].ret);
+			exit(EXIT_FAILURE);
+		}
+	}
 
 	return 0;
 }
