@@ -3047,11 +3047,20 @@ int main(int argc, char *argv[])
 	if (gbl_args->appl.in_mode != DIRECT_RECV)
 		odp_barrier_wait(&gbl_args->term_barrier);
 
+	odph_thread_join_result_t res[num_workers];
+
 	/* Master thread waits for other threads to exit */
-	num_thr = odph_thread_join(gbl_args->thread_tbl, num_workers);
-	if (num_thr != num_workers) {
-		ODPH_ERR("Worker join failed: %i\n", num_thr);
-			 exit(EXIT_FAILURE);
+	if (odph_thread_join_result(gbl_args->thread_tbl, res, num_workers) != num_workers) {
+		ODPH_ERR("Worker join failed\n");
+		exit(EXIT_FAILURE);
+	}
+
+	for (i = 0; i < num_workers; i++) {
+		if (res[i].is_sig || res[i].ret != 0) {
+			ODPH_ERR("Worker thread failure%s: %d\n", res[i].is_sig ?
+					" (signaled)" : "", res[i].ret);
+			exit(EXIT_FAILURE);
+		}
 	}
 
 	for (i = 0; i < if_count; ++i) {
