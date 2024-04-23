@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2016-2018 Linaro Limited
+ * Copyright (c) 2024 Nokia
  */
 
 /**
@@ -101,12 +102,12 @@ static int run_worker(void *arg ODP_UNUSED)
 
 	if (odp_pktio_start(global->if0)) {
 		printf("unable to start input interface\n");
-		exit(1);
+		return -1;
 	}
 	printf("started input interface\n");
 	if (odp_pktio_start(global->if1)) {
 		printf("unable to start output interface\n");
-		exit(1);
+		return -1;
 	}
 	printf("started output interface\n");
 	printf("started all\n");
@@ -159,6 +160,7 @@ int main(int argc, char **argv)
 	odph_ethaddr_t correct_src;
 	uint32_t mtu1, mtu2;
 	odp_shm_t shm;
+	odph_thread_join_result_t res[MAX_WORKERS];
 
 	/* Let helper collect its own arguments (e.g. --odph_proc) */
 	argc = odph_parse_options(argc, argv);
@@ -271,9 +273,17 @@ int main(int argc, char **argv)
 		exit(EXIT_FAILURE);
 	}
 
-	if (odph_thread_join(thd, MAX_WORKERS) != MAX_WORKERS) {
+	if (odph_thread_join_result(thd, res, MAX_WORKERS) != MAX_WORKERS) {
 		printf("Error: failed to join threads\n");
 		exit(EXIT_FAILURE);
+	}
+
+	for (int i = 0; i < MAX_WORKERS; i++) {
+		if (res[i].is_sig || res[i].ret != 0) {
+			printf("Error: thread failure%s: %d\n", res[i].is_sig ?
+				" (signaled)" : "", res[i].ret);
+			exit(EXIT_FAILURE);
+		}
 	}
 
 	if (odp_pktio_stop(global->if0) || odp_pktio_close(global->if0)) {
