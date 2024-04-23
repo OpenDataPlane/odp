@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright (c) 2021 Nokia
+ * Copyright (c) 2021-2024 Nokia
  */
 
 #include <odp_api.h>
@@ -9,7 +9,7 @@ static int cli_server(void *arg ODP_UNUSED)
 {
 	if (odph_cli_run()) {
 		ODPH_ERR("odph_cli_run() failed.\n");
-		exit(EXIT_FAILURE);
+		return -1;
 	}
 
 	return 0;
@@ -55,6 +55,7 @@ int main(int argc, char *argv[])
 	odph_thread_common_param_t thr_common;
 	odph_thread_param_t thr_param;
 	odph_thread_t thr_server;
+	odph_thread_join_result_t res;
 
 	if (odp_cpumask_default_control(&cpumask, 1) != 1) {
 		ODPH_ERR("Failed to get default CPU mask.\n");
@@ -86,8 +87,14 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
-	if (odph_thread_join(&thr_server, 1) != 1) {
-		ODPH_ERR("Failed to join server thread.\n");
+	if (odph_thread_join_result(&thr_server, &res, 1) != 1) {
+		ODPH_ERR("Error: failed to join server thread.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	if (res.is_sig || res.ret != 0) {
+		ODPH_ERR("Error: worker thread failure%s: %d.\n", res.is_sig ? " (signaled)" : "",
+			 res.ret);
 		exit(EXIT_FAILURE);
 	}
 
