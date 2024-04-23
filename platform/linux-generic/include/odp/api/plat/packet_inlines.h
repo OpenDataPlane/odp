@@ -12,6 +12,7 @@
 #ifndef _ODP_PLAT_PACKET_INLINES_H_
 #define _ODP_PLAT_PACKET_INLINES_H_
 
+#include <odp/api/cpu.h>
 #include <odp/api/event.h>
 #include <odp/api/hints.h>
 #include <odp/api/packet_types.h>

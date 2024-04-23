@@ -176,6 +176,100 @@ uint64_t odp_cpu_cycles_resolution(void);
 void odp_cpu_pause(void);
 
 /**
+ * Prefetch into data cache
+ *
+ * Hints CPU to prefetch data into all data cache levels. Depending on implementation, this
+ * function may be equal to odp_prefetch_l1().
+ *
+ * @param addr  Data address to be prefetched (may be invalid)
+ */
+void odp_prefetch(const void *addr);
+
+/**
+ * Prefetch into L1 data cache
+ *
+ * Hints CPU to prefetch data into L1 data cache.
+ *
+ * @param addr  Data address to be prefetched (may be invalid)
+ */
+void odp_prefetch_l1(const void *addr);
+
+/**
+ * Prefetch into L2 data cache
+ *
+ * Hints CPU to prefetch data into L2 data cache.
+ *
+ * @param addr  Data address to be prefetched (may be invalid)
+ */
+void odp_prefetch_l2(const void *addr);
+
+/**
+ * Prefetch into L3 data cache
+ *
+ * Hints CPU to prefetch data into L3 data cache.
+ *
+ * @param addr  Data address to be prefetched (may be invalid)
+ */
+void odp_prefetch_l3(const void *addr);
+
+/**
+ * Prefetch into data cache for storing
+ *
+ * Hints CPU to prefetch data into all data cache levels for storing. Depending on implementation,
+ * this function may be equal to odp_prefetch_store_l1().
+ *
+ * @param addr  Data address to be prefetched (may be invalid)
+ */
+void odp_prefetch_store(const void *addr);
+
+/**
+ * Prefetch into L1 data cache for storing
+ *
+ * Hints CPU to prefetch data into L1 data cache for storing.
+ *
+ * @param addr  Data address to be prefetched (may be invalid)
+ */
+void odp_prefetch_store_l1(const void *addr);
+
+/**
+ * Prefetch into L2 data cache for storing
+ *
+ * Hints CPU to prefetch data into L2 data cache for storing.
+ *
+ * @param addr  Data address to be prefetched (may be invalid)
+ */
+void odp_prefetch_store_l2(const void *addr);
+
+/**
+ * Prefetch into L3 data cache for storing
+ *
+ * Hints CPU to prefetch data into L3 data cache for storing.
+ *
+ * @param addr  Data address to be prefetched (may be invalid)
+ */
+void odp_prefetch_store_l3(const void *addr);
+
+/**
+ * Streaming prefetch into L1 data cache
+ *
+ * Hints CPU to prefetch data of low temporal locality into L1 data cache. Streaming prefetch is
+ * optimal for data that will be used only once.
+ *
+ * @param addr  Data address to be prefetched (may be invalid)
+ */
+void odp_prefetch_strm_l1(const void *addr);
+
+/**
+ * Streaming prefetch into L1 data cache for storing
+ *
+ * Hints CPU to prefetch data of low temporal locality into L1 data cache for storing. Streaming
+ * prefetch is optimal for data that will be used only once.
+ *
+ * @param addr  Data address to be prefetched (may be invalid)
+ */
+void odp_prefetch_store_strm_l1(const void *addr);
+
+/**
  * @}
  */
 

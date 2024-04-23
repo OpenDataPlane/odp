@@ -63,23 +63,6 @@ extern "C" {
  */
 #define odp_unlikely(x) __builtin_expect(!!(x), 0)
 
-/*
- * __builtin_prefetch (const void *addr, rw, locality)
- *
- * rw 0..1       (0: read, 1: write)
- * locality 0..3 (0: don't leave to cache, 3: leave on all cache levels)
- */
-
-/**
- * Cache prefetch address
- */
-#define odp_prefetch(x)         __builtin_prefetch((x), 0, 3)
-
-/**
- * Cache prefetch address for storing
- */
-#define odp_prefetch_store(x)   __builtin_prefetch((x), 1, 3)
-
 #else
 
 #define ODP_WEAK_SYMBOL
@@ -88,8 +71,6 @@ extern "C" {
 #define ODP_UNUSED
 #define odp_likely(x)
 #define odp_unlikely(x)
-#define odp_prefetch(x)
-#define odp_prefetch_store(x)
 
 #endif
 
