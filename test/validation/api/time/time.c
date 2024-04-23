@@ -926,7 +926,14 @@ static void time_test_global_sync(const int ctrl)
 		cpu = odp_cpumask_next(&cpumask, cpu);
 	}
 
-	CU_ASSERT(odph_thread_join(thread_tbl, num) == num);
+	odph_thread_join_result_t res[num];
+
+	int ret = odph_thread_join_result(thread_tbl, res, num);
+
+	CU_ASSERT(ret == num);
+
+	for (int i = 0; i < num; i++)
+		CU_ASSERT(!res[i].is_sig && res[i].ret == 0);
 
 	for (int s = 0; s < TIME_SAMPLES; s++) {
 		int min_idx = 0, max_idx = 0;
@@ -1115,7 +1122,14 @@ static void time_test_global_mt(void)
 	CU_ASSERT_FATAL(odph_thread_create(thread_tbl, &thr_common, &thr_param, num_workers) ==
 			num_workers);
 
-	CU_ASSERT(odph_thread_join(thread_tbl, num_workers) == num_workers);
+	odph_thread_join_result_t res[num_workers];
+
+	int ret = odph_thread_join_result(thread_tbl, res, num_workers);
+
+	CU_ASSERT(ret == num_workers);
+
+	for (i = 0; i < (uint32_t)num_workers; i++)
+		CU_ASSERT(!res[i].is_sig && res[i].ret == 0);
 
 	cur_time = odp_time_global_strict();
 
