@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright (c) 2021-2022 Nokia
+ * Copyright (c) 2021-2024 Nokia
  */
 
 /**
@@ -376,9 +376,18 @@ static void test_type(odp_instance_t instance, test_global_t *global, odp_random
 		exit(EXIT_FAILURE);
 	}
 
-	if (odph_thread_join(thr_worker, num_threads) != num_threads) {
+	odph_thread_join_result_t res[num_threads];
+
+	if (odph_thread_join_result(thr_worker, res, num_threads) != num_threads) {
 		ODPH_ERR("Failed to join worker threads.\n");
 		exit(EXIT_FAILURE);
+	}
+
+	for (i = 0; i < num_threads; i++) {
+		if (res[i].ret != 0) {
+			ODPH_ERR("Worker thread failure: %d.\n", res[i].ret);
+			exit(EXIT_FAILURE);
+		}
 	}
 
 	double mb, seconds, nsec = 0;
