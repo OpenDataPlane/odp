@@ -17,6 +17,9 @@
 /* 10 usec wait time assumes >100kHz resolution on CPU cycles counter */
 #define WAIT_TIME (10 * ODP_TIME_USEC_IN_NS)
 
+/* Data for cache prefetch test cases */
+static uint8_t global_data[8 * ODP_CACHE_LINE_SIZE] ODP_ALIGNED_CACHE;
+
 static int check_cycle_counter(void)
 {
 	if (odp_cpu_cycles_max() == 0) {
@@ -356,6 +359,65 @@ static void cpu_cycles_long_period(void)
 	printf("wrap was not detected.\n");
 }
 
+static void cpu_pause(void)
+{
+	odp_cpu_pause();
+}
+
+static void cpu_prefetch(void)
+{
+	/* Cacheline aligned address */
+	odp_prefetch(&global_data[0]);
+
+	/* Not cacheline aligned address */
+	odp_prefetch(&global_data[ODP_CACHE_LINE_SIZE + 11]);
+
+	/* An invalid address */
+	odp_prefetch(NULL);
+
+	odp_prefetch_l1(&global_data[0]);
+	odp_prefetch_l1(&global_data[ODP_CACHE_LINE_SIZE + 11]);
+	odp_prefetch_l1(NULL);
+
+	odp_prefetch_l2(&global_data[0]);
+	odp_prefetch_l2(&global_data[ODP_CACHE_LINE_SIZE + 11]);
+	odp_prefetch_l2(NULL);
+
+	odp_prefetch_l3(&global_data[0]);
+	odp_prefetch_l3(&global_data[ODP_CACHE_LINE_SIZE + 11]);
+	odp_prefetch_l3(NULL);
+}
+
+static void cpu_prefetch_store(void)
+{
+	odp_prefetch_store(&global_data[0]);
+	odp_prefetch_store(&global_data[ODP_CACHE_LINE_SIZE + 11]);
+	odp_prefetch_store(NULL);
+
+	odp_prefetch_store_l1(&global_data[0]);
+	odp_prefetch_store_l1(&global_data[ODP_CACHE_LINE_SIZE + 11]);
+	odp_prefetch_store_l1(NULL);
+
+	odp_prefetch_store_l2(&global_data[0]);
+	odp_prefetch_store_l2(&global_data[ODP_CACHE_LINE_SIZE + 11]);
+	odp_prefetch_store_l2(NULL);
+
+	odp_prefetch_store_l3(&global_data[0]);
+	odp_prefetch_store_l3(&global_data[ODP_CACHE_LINE_SIZE + 11]);
+	odp_prefetch_store_l3(NULL);
+}
+
+static void cpu_prefetch_strm(void)
+{
+	odp_prefetch_strm_l1(&global_data[0]);
+	odp_prefetch_strm_l1(&global_data[ODP_CACHE_LINE_SIZE + 11]);
+	odp_prefetch_strm_l1(NULL);
+
+	odp_prefetch_store_strm_l1(&global_data[0]);
+	odp_prefetch_store_strm_l1(&global_data[ODP_CACHE_LINE_SIZE + 11]);
+	odp_prefetch_store_strm_l1(NULL);
+}
+
 odp_testinfo_t cpu_suite[] = {
 	ODP_TEST_INFO(cpu_id),
 	ODP_TEST_INFO(cpu_count),
@@ -370,6 +432,10 @@ odp_testinfo_t cpu_suite[] = {
 	ODP_TEST_INFO_CONDITIONAL(cpu_cycles_max, check_cycle_counter),
 	ODP_TEST_INFO_CONDITIONAL(cpu_cycles_resolution, check_cycle_counter),
 	ODP_TEST_INFO_CONDITIONAL(cpu_cycles_long_period, check_cycle_counter),
+	ODP_TEST_INFO(cpu_pause),
+	ODP_TEST_INFO(cpu_prefetch),
+	ODP_TEST_INFO(cpu_prefetch_store),
+	ODP_TEST_INFO(cpu_prefetch_strm),
 	ODP_TEST_INFO_NULL,
 };
 
