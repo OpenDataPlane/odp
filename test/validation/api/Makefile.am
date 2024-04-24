@@ -6,6 +6,7 @@ ODP_MODULES = align \
 	      chksum \
 	      classification \
 	      comp \
+	      cpu \
 	      cpumask \
 	      crypto \
 	      dma \
@@ -46,6 +47,7 @@ TESTS = \
 	chksum/chksum_main$(EXEEXT) \
 	classification/classification_main$(EXEEXT) \
 	comp/comp_main$(EXEEXT) \
+	cpu/cpu_main$(EXEEXT) \
 	cpumask/cpumask_main$(EXEEXT) \
 	crypto/crypto_main$(EXEEXT) \
 	dma/dma_main$(EXEEXT) \
