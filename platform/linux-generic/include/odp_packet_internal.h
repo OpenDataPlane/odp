@@ -217,6 +217,25 @@ static inline void packet_subtype_set(odp_packet_t pkt, int subtype)
 }
 
 /**
+ * Reset packet metadata
+ */
+static inline void _odp_packet_reset_md(odp_packet_hdr_t *pkt_hdr)
+{
+	/* Clear all flags. Resets also return value of cls_mark, user_ptr, etc. */
+	pkt_hdr->p.input_flags.all = 0;
+	pkt_hdr->p.flags.all_flags = 0;
+
+	pkt_hdr->p.l2_offset = 0;
+	pkt_hdr->p.l3_offset = ODP_PACKET_OFFSET_INVALID;
+	pkt_hdr->p.l4_offset = ODP_PACKET_OFFSET_INVALID;
+
+	if (odp_unlikely(pkt_hdr->event_hdr.subtype != ODP_EVENT_PACKET_BASIC))
+		pkt_hdr->event_hdr.subtype = ODP_EVENT_PACKET_BASIC;
+
+	pkt_hdr->input = ODP_PKTIO_INVALID;
+}
+
+/**
  * Initialize packet
  */
 static inline void packet_init(odp_packet_hdr_t *pkt_hdr, uint32_t len)
@@ -238,14 +257,6 @@ static inline void packet_init(odp_packet_hdr_t *pkt_hdr, uint32_t len)
 		last->seg_len = seg_len;
 	}
 
-	/* Clear all flags. Resets also return value of cls_mark, user_ptr, etc. */
-	pkt_hdr->p.input_flags.all = 0;
-	pkt_hdr->p.flags.all_flags = 0;
-
-	pkt_hdr->p.l2_offset = 0;
-	pkt_hdr->p.l3_offset = ODP_PACKET_OFFSET_INVALID;
-	pkt_hdr->p.l4_offset = ODP_PACKET_OFFSET_INVALID;
-
        /*
 	* Packet headroom is set from the pool's headroom
 	* Packet tailroom is rounded up to fill the last
@@ -255,10 +266,7 @@ static inline void packet_init(odp_packet_hdr_t *pkt_hdr, uint32_t len)
 	pkt_hdr->headroom  = pool->headroom;
 	pkt_hdr->tailroom  = pool->seg_len - seg_len + pool->tailroom;
 
-	if (odp_unlikely(pkt_hdr->event_hdr.subtype != ODP_EVENT_PACKET_BASIC))
-		pkt_hdr->event_hdr.subtype = ODP_EVENT_PACKET_BASIC;
-
-	pkt_hdr->input = ODP_PKTIO_INVALID;
+	_odp_packet_reset_md(pkt_hdr);
 }
 
 /**

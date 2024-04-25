@@ -766,6 +766,13 @@ int odp_packet_reset(odp_packet_t pkt, uint32_t len)
 	return 0;
 }
 
+void odp_packet_reset_meta(odp_packet_t pkt)
+{
+	_ODP_ASSERT(pkt != ODP_PACKET_INVALID);
+
+	_odp_packet_reset_md(packet_hdr(pkt));
+}
+
 int odp_event_filter_packet(const odp_event_t event[],
 			    odp_packet_t packet[],
 			    odp_event_t remain[], int num)
