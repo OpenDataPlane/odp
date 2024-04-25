@@ -250,7 +250,8 @@ void odph_thread_common_param_init(odph_thread_common_param_t *param);
  * thread goes to the smallest CPU number of the mask, etc.
  *
  * Launched threads may be waited for exit with odph_thread_join(), or with
- * direct Linux system calls.
+ * direct Linux system calls. If odph_thread_join() is used, the output thread
+ * table elements must not be modified during the life time of the threads.
  *
  * @param[out] thread        Thread table for output
  * @param      param         Common parameters for all threads to be created
