@@ -123,20 +123,39 @@ void odp_packet_free_sp(const odp_packet_t pkt[], int num);
 /**
  * Reset packet
  *
- * Resets all packet metadata to their default values. Packet length is used
- * to initialize pointers and lengths. It must be less than the total buffer
- * length of the packet. Packet is not modified on failure.
+ * Resets all packet metadata and adjusts packet data to start according to pool
+ * parameters (align, seg_len, headroom). Packet data length is set to 'len'.
+ * Maximum value for 'len' can be queried with odp_packet_reset_max_len()
+ * function. Passing larger 'len' than the maximum value is allowed, but will
+ * cause failure to be returned.
+ *
+ * Packet reset maintains the original user area content. The operation may
+ * change data layout in packet segments and free possible extra segments. Data
+ * content may not be preserved. Packet is not modified on failure.
+ *
+ * This function must not be called for packets with references or incomplete
+ * reassembly status (ODP_PACKET_REASS_INCOMPLETE).
  *
  * @param pkt           Packet handle
- * @param len           Packet data length (1 ... odp_packet_buf_len())
+ * @param len           Packet data length (1 ... odp_packet_reset_max_len())
  *
  * @retval 0 on success
  * @retval <0 on failure
- *
- * @see odp_packet_buf_len()
  */
 int odp_packet_reset(odp_packet_t pkt, uint32_t len);
 
+/**
+ * Maximum packet data reset length
+ *
+ * Returns the maximum packet data reset length for odp_packet_reset() based
+ * on current packet buffer space and pool parameters (align, seg_len,
+ * headroom).
+ *
+ * @param pkt           Packet handle
+ *
+ * @return Maximum packet data length for odp_packet_reset()
+ */
+uint32_t odp_packet_reset_max_len(odp_packet_t pkt);
 /**
  * Get packet handle from event
  *
@@ -249,8 +268,6 @@ void *odp_packet_head(odp_packet_t pkt);
  * @param pkt  Packet handle
  *
  * @return  Total packet buffer length in bytes
- *
- * @see odp_packet_reset()
  */
 uint32_t odp_packet_buf_len(odp_packet_t pkt);
 
