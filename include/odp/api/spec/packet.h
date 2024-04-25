@@ -243,7 +243,8 @@ void *odp_packet_head(odp_packet_t pkt);
 /**
  * Total packet buffer length
  *
- * Returns sum of buffer lengths over all packet segments.
+ * Returns sum of buffer lengths over all packet segments. Buffer length
+ * includes headroom, data, and tailroom lengths.
  *
  * @param pkt  Packet handle
  *
