@@ -156,6 +156,25 @@ int odp_packet_reset(odp_packet_t pkt, uint32_t len);
  * @return Maximum packet data length for odp_packet_reset()
  */
 uint32_t odp_packet_reset_max_len(odp_packet_t pkt);
+
+/**
+ * Reset packet metadata
+ *
+ * Resets all packet metadata to their default values, except the ones listed
+ * below which are not modified:
+ *	- Data pointer and length
+ *	- Headroom and tailroom pointers and lengths
+ *	- Packet segmentation
+ *	- User area content
+ *	- Dynamic reference count
+ *
+ * This function must not be called for packets with static references or
+ * incomplete reassembly status (ODP_PACKET_REASS_INCOMPLETE).
+ *
+ * @param pkt           Packet handle
+ */
+void odp_packet_reset_meta(odp_packet_t pkt);
+
 /**
  * Get packet handle from event
  *
