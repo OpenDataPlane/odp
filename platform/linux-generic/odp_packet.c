@@ -737,6 +737,14 @@ void odp_packet_free_sp(const odp_packet_t pkt[], int num)
 	packet_free_multi_ev(pkt, num, _ODP_EV_PACKET_FREE_SP);
 }
 
+uint32_t odp_packet_reset_max_len(odp_packet_t pkt)
+{
+	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
+	pool_t *pool = _odp_pool_entry(pkt_hdr->event_hdr.pool);
+
+	return pool->seg_len * pkt_hdr->seg_count;
+}
+
 int odp_packet_reset(odp_packet_t pkt, uint32_t len)
 {
 	odp_packet_hdr_t *const pkt_hdr = packet_hdr(pkt);
