@@ -974,6 +974,73 @@ static void packet_test_reset(void)
 	odp_packet_free(pkt);
 }
 
+static void packet_test_reset_meta(void)
+{
+	uint32_t data_len, seg_len, headroom, tailroom;
+	uint32_t uarea_size = default_param.pkt.uarea_size;
+	void *data, *head, *tail;
+	struct udata_struct *udat;
+	odp_packet_t pkt;
+	int num_segs;
+
+	pkt = odp_packet_alloc(default_pool, segmented_packet_len);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+
+	if (uarea_size) {
+		udat = odp_packet_user_area(pkt);
+
+		CU_ASSERT_FATAL(udat != NULL);
+		CU_ASSERT_FATAL(odp_packet_user_area_size(pkt) >= uarea_size);
+		memcpy(udat, &test_packet_udata, uarea_size);
+	}
+
+	data_len = odp_packet_len(pkt);
+	CU_ASSERT(data_len == segmented_packet_len);
+
+	odp_packet_pull_head(pkt, 1);
+	head = odp_packet_head(pkt);
+	CU_ASSERT(head != NULL);
+
+	odp_packet_pull_tail(pkt, 1);
+	tail = odp_packet_tail(pkt);
+	CU_ASSERT(tail != NULL);
+
+	headroom = odp_packet_headroom(pkt);
+	tailroom = odp_packet_tailroom(pkt);
+
+	data = odp_packet_data(pkt);
+	data_len = odp_packet_len(pkt);
+
+	seg_len = odp_packet_seg_len(pkt);
+	num_segs = odp_packet_num_segs(pkt);
+
+	odp_packet_reset_meta(pkt);
+
+	CU_ASSERT(odp_packet_data(pkt) == data);
+	CU_ASSERT(odp_packet_len(pkt) == data_len);
+	CU_ASSERT(odp_packet_seg_len(pkt) == seg_len);
+	CU_ASSERT(odp_packet_num_segs(pkt) == num_segs);
+	CU_ASSERT(odp_packet_headroom(pkt) == headroom);
+	CU_ASSERT(odp_packet_tailroom(pkt) == tailroom);
+	CU_ASSERT(odp_packet_head(pkt) == head);
+	CU_ASSERT(odp_packet_tail(pkt) == tail);
+
+	packet_set_inflags_common(pkt, 1);
+	packet_check_inflags_common(pkt, 1);
+	odp_packet_reset_meta(pkt);
+	packet_check_inflags_all(pkt, 0);
+
+	if (uarea_size) {
+		udat = odp_packet_user_area(pkt);
+
+		CU_ASSERT_FATAL(udat != NULL);
+		CU_ASSERT_FATAL(odp_packet_user_area_size(pkt) >= uarea_size);
+		CU_ASSERT(memcmp(udat, &test_packet_udata, uarea_size) == 0);
+	}
+
+	odp_packet_free(pkt);
+}
+
 static void packet_test_prefetch(void)
 {
 	odp_packet_prefetch(test_packet, 0, odp_packet_len(test_packet));
@@ -4488,6 +4555,7 @@ odp_testinfo_t packet_suite[] = {
 	ODP_TEST_INFO(packet_test_segments),
 	ODP_TEST_INFO(packet_test_length),
 	ODP_TEST_INFO(packet_test_reset),
+	ODP_TEST_INFO(packet_test_reset_meta),
 	ODP_TEST_INFO(packet_test_prefetch),
 	ODP_TEST_INFO(packet_test_headroom),
 	ODP_TEST_INFO(packet_test_tailroom),
