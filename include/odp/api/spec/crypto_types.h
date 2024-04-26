@@ -208,6 +208,18 @@ typedef enum {
 	 */
 	ODP_AUTH_ALG_SHA512_HMAC,
 
+	/** HMAC using SHA3-224 */
+	ODP_AUTH_ALG_SHA3_224_HMAC,
+
+	/** HMAC using SHA3-256 */
+	ODP_AUTH_ALG_SHA3_256_HMAC,
+
+	/** HMAC using SHA3-384 */
+	ODP_AUTH_ALG_SHA3_384_HMAC,
+
+	/** HMAC using SHA3-512 */
+	ODP_AUTH_ALG_SHA3_512_HMAC,
+
 	/** AES-GCM
 	 *
 	 *  AES in Galois/Counter Mode (GCM) algorithm. GCM provides both
@@ -340,6 +352,18 @@ typedef enum {
 	/** 512 bit SHA2 algorithm */
 	ODP_AUTH_ALG_SHA512,
 
+	/** SHA-3 hash function producing 224-bit digests */
+	ODP_AUTH_ALG_SHA3_224,
+
+	/** SHA-3 hash function producing 256-bit digests */
+	ODP_AUTH_ALG_SHA3_256,
+
+	/** SHA-3 hash function producing 384-bit digests */
+	ODP_AUTH_ALG_SHA3_384,
+
+	/** SHA-3 hash function producing 512-bit digests */
+	ODP_AUTH_ALG_SHA3_512,
+
 } odp_auth_alg_t;
 
 /**
@@ -432,6 +456,18 @@ typedef union odp_crypto_auth_algos_t {
 		/** ODP_AUTH_ALG_SHA512_HMAC */
 		uint32_t sha512_hmac : 1;
 
+		/** ODP_AUTH_ALG_SHA3_224_HMAC */
+		uint32_t sha3_224_hmac : 1;
+
+		/** ODP_AUTH_ALG_SHA3_256_HMAC */
+		uint32_t sha3_256_hmac : 1;
+
+		/** ODP_AUTH_ALG_SHA3_384_HMAC */
+		uint32_t sha3_384_hmac : 1;
+
+		/** ODP_AUTH_ALG_SHA3_512_HMAC */
+		uint32_t sha3_512_hmac : 1;
+
 		/** ODP_AUTH_ALG_AES_GCM */
 		uint32_t aes_gcm     : 1;
 
@@ -480,6 +516,17 @@ typedef union odp_crypto_auth_algos_t {
 		/** ODP_AUTH_ALG_SHA512 */
 		uint32_t sha512 : 1;
 
+		/** ODP_AUTH_ALG_SHA3_224 */
+		uint32_t sha3_224 : 1;
+
+		/** ODP_AUTH_ALG_SHA3_256 */
+		uint32_t sha3_256 : 1;
+
+		/** ODP_AUTH_ALG_SHA3_384 */
+		uint32_t sha3_384 : 1;
+
+		/** ODP_AUTH_ALG_SHA3_512 */
+		uint32_t sha3_512 : 1;
 	} bit;
 
 	/** All bits of the bit field structure
