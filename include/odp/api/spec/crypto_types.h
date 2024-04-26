@@ -368,6 +368,9 @@ typedef enum {
 	 */
 	ODP_AUTH_ALG_SNOW_V_GMAC,
 
+	/** HMAC using SM3 */
+	ODP_AUTH_ALG_SM3_HMAC,
+
 	/** MD5 algorithm */
 	ODP_AUTH_ALG_MD5,
 
@@ -397,6 +400,9 @@ typedef enum {
 
 	/** SHA-3 hash function producing 512-bit digests */
 	ODP_AUTH_ALG_SHA3_512,
+
+	/** SM3 hash function */
+	ODP_AUTH_ALG_SM3,
 
 } odp_auth_alg_t;
 
@@ -543,6 +549,9 @@ typedef union odp_crypto_auth_algos_t {
 		/** ODP_AUTH_ALG_SNOW_V_GMAC */
 		uint32_t snow_v_gmac : 1;
 
+		/** ODP_AUTH_ALG_SM3_HMAC */
+		uint32_t sm3_hmac : 1;
+
 		/** ODP_AUTH_ALG_MD5 */
 		uint32_t md5 : 1;
 
@@ -572,6 +581,10 @@ typedef union odp_crypto_auth_algos_t {
 
 		/** ODP_AUTH_ALG_SHA3_512 */
 		uint32_t sha3_512 : 1;
+
+		/** ODP_AUTH_ALG_SM3 */
+		uint32_t sm3 : 1;
+
 	} bit;
 
 	/** All bits of the bit field structure
