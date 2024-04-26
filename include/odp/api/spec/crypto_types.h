@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2014-2018 Linaro Limited
- * Copyright (c) 2021-2023 Nokia
+ * Copyright (c) 2021-2024 Nokia
  */
 
 /**
@@ -402,7 +402,7 @@ typedef union odp_crypto_cipher_algos_t {
 	  *
 	  * This field can be used to set/clear all flags, or bitwise
 	  * operations over the entire structure. */
-	uint32_t all_bits;
+	uint64_t all_bits;
 } odp_crypto_cipher_algos_t;
 
 /**
@@ -486,7 +486,7 @@ typedef union odp_crypto_auth_algos_t {
 	  *
 	  * This field can be used to set/clear all flags, or bitwise
 	  * operations over the entire structure. */
-	uint32_t all_bits;
+	uint64_t all_bits;
 } odp_crypto_auth_algos_t;
 
 /**
