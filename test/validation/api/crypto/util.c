@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2014-2018 Linaro Limited
- * Copyright (c) 2021-2023 Nokia
+ * Copyright (c) 2021-2024 Nokia
  */
 
 #include <string.h>
@@ -30,8 +30,14 @@ const char *auth_alg_name(odp_auth_alg_t auth)
 		return "ODP_AUTH_ALG_SHA384_HMAC";
 	case ODP_AUTH_ALG_SHA512_HMAC:
 		return "ODP_AUTH_ALG_SHA512_HMAC";
-	case ODP_AUTH_ALG_AES_XCBC_MAC:
-		return "ODP_AUTH_ALG_AES_XCBC_MAC";
+	case ODP_AUTH_ALG_SHA3_224_HMAC:
+		return "ODP_AUTH_ALG_SHA3_224_HMAC";
+	case ODP_AUTH_ALG_SHA3_256_HMAC:
+		return "ODP_AUTH_ALG_SHA3_256_HMAC";
+	case ODP_AUTH_ALG_SHA3_384_HMAC:
+		return "ODP_AUTH_ALG_SHA3_384_HMAC";
+	case ODP_AUTH_ALG_SHA3_512_HMAC:
+		return "ODP_AUTH_ALG_SHA3_512_HMAC";
 	case ODP_AUTH_ALG_AES_GCM:
 		return "ODP_AUTH_ALG_AES_GCM";
 	case ODP_AUTH_ALG_AES_GMAC:
@@ -40,6 +46,8 @@ const char *auth_alg_name(odp_auth_alg_t auth)
 		return "ODP_AUTH_ALG_AES_CCM";
 	case ODP_AUTH_ALG_AES_CMAC:
 		return "ODP_AUTH_ALG_AES_CMAC";
+	case ODP_AUTH_ALG_AES_XCBC_MAC:
+		return "ODP_AUTH_ALG_AES_XCBC_MAC";
 	case ODP_AUTH_ALG_CHACHA20_POLY1305:
 		return "ODP_AUTH_ALG_CHACHA20_POLY1305";
 	case ODP_AUTH_ALG_KASUMI_F9:
@@ -50,6 +58,18 @@ const char *auth_alg_name(odp_auth_alg_t auth)
 		return "ODP_AUTH_ALG_AES_EIA2";
 	case ODP_AUTH_ALG_ZUC_EIA3:
 		return "ODP_AUTH_ALG_ZUC_EIA3";
+	case ODP_AUTH_ALG_SNOW_V_GCM:
+		return "ODP_AUTH_ALG_SNOW_V_GCM";
+	case ODP_AUTH_ALG_SNOW_V_GMAC:
+		return "ODP_AUTH_ALG_SNOW_V_GMAC";
+	case ODP_AUTH_ALG_SM3_HMAC:
+		return "ODP_AUTH_ALG_SM3_HMAC";
+	case ODP_AUTH_ALG_SM4_GCM:
+		return "ODP_AUTH_ALG_SM4_GCM";
+	case ODP_AUTH_ALG_SM4_GMAC:
+		return "ODP_AUTH_ALG_SM4_GMAC";
+	case ODP_AUTH_ALG_SM4_CCM:
+		return "ODP_AUTH_ALG_SM4_CCM";
 	case ODP_AUTH_ALG_MD5:
 		return "ODP_AUTH_ALG_MD5";
 	case ODP_AUTH_ALG_SHA1:
@@ -62,6 +82,8 @@ const char *auth_alg_name(odp_auth_alg_t auth)
 		return "ODP_AUTH_ALG_SHA384";
 	case ODP_AUTH_ALG_SHA512:
 		return "ODP_AUTH_ALG_SHA512";
+	case ODP_AUTH_ALG_SM3:
+		return "ODP_AUTH_ALG_SM3";
 	default:
 		return "Unknown";
 	}
@@ -102,6 +124,20 @@ const char *cipher_alg_name(odp_cipher_alg_t cipher)
 		return "ODP_CIPHER_ALG_AES_EEA2";
 	case ODP_CIPHER_ALG_ZUC_EEA3:
 		return "ODP_CIPHER_ALG_ZUC_EEA3";
+	case ODP_CIPHER_ALG_SNOW_V:
+		return "ODP_CIPHER_ALG_SNOW_V";
+	case ODP_CIPHER_ALG_SNOW_V_GCM:
+		return "ODP_CIPHER_ALG_SNOW_V_GCM";
+	case ODP_CIPHER_ALG_SM4_ECB:
+		return "ODP_CIPHER_ALG_SM4_ECB";
+	case ODP_CIPHER_ALG_SM4_CBC:
+		return "ODP_CIPHER_ALG_SM4_CBC";
+	case ODP_CIPHER_ALG_SM4_CTR:
+		return "ODP_CIPHER_ALG_SM4_CTR";
+	case ODP_CIPHER_ALG_SM4_GCM:
+		return "ODP_CIPHER_ALG_SM4_GCM";
+	case ODP_CIPHER_ALG_SM4_CCM:
+		return "ODP_CIPHER_ALG_SM4_CCM";
 	default:
 		return "Unknown";
 	}
@@ -199,6 +235,34 @@ int check_alg_support(odp_cipher_alg_t cipher, odp_auth_alg_t auth)
 		if (!capability.ciphers.bit.zuc_eea3)
 			return ODP_TEST_INACTIVE;
 		break;
+	case ODP_CIPHER_ALG_SNOW_V:
+		if (!capability.ciphers.bit.snow_v)
+			return ODP_TEST_INACTIVE;
+		break;
+	case ODP_CIPHER_ALG_SNOW_V_GCM:
+		if (!capability.ciphers.bit.snow_v_gcm)
+			return ODP_TEST_INACTIVE;
+		break;
+	case ODP_CIPHER_ALG_SM4_ECB:
+		if (!capability.ciphers.bit.sm4_ecb)
+			return ODP_TEST_INACTIVE;
+		break;
+	case ODP_CIPHER_ALG_SM4_CBC:
+		if (!capability.ciphers.bit.sm4_cbc)
+			return ODP_TEST_INACTIVE;
+		break;
+	case ODP_CIPHER_ALG_SM4_CTR:
+		if (!capability.ciphers.bit.sm4_ctr)
+			return ODP_TEST_INACTIVE;
+		break;
+	case ODP_CIPHER_ALG_SM4_GCM:
+		if (!capability.ciphers.bit.sm4_gcm)
+			return ODP_TEST_INACTIVE;
+		break;
+	case ODP_CIPHER_ALG_SM4_CCM:
+		if (!capability.ciphers.bit.sm4_ccm)
+			return ODP_TEST_INACTIVE;
+		break;
 	default:
 		ODPH_ERR("Unsupported cipher algorithm\n");
 		return ODP_TEST_INACTIVE;
@@ -234,8 +298,20 @@ int check_alg_support(odp_cipher_alg_t cipher, odp_auth_alg_t auth)
 		if (!capability.auths.bit.sha512_hmac)
 			return ODP_TEST_INACTIVE;
 		break;
-	case ODP_AUTH_ALG_AES_XCBC_MAC:
-		if (!capability.auths.bit.aes_xcbc_mac)
+	case ODP_AUTH_ALG_SHA3_224_HMAC:
+		if (!capability.auths.bit.sha3_224_hmac)
+			return ODP_TEST_INACTIVE;
+		break;
+	case ODP_AUTH_ALG_SHA3_256_HMAC:
+		if (!capability.auths.bit.sha3_256_hmac)
+			return ODP_TEST_INACTIVE;
+		break;
+	case ODP_AUTH_ALG_SHA3_384_HMAC:
+		if (!capability.auths.bit.sha3_384_hmac)
+			return ODP_TEST_INACTIVE;
+		break;
+	case ODP_AUTH_ALG_SHA3_512_HMAC:
+		if (!capability.auths.bit.sha3_512_hmac)
 			return ODP_TEST_INACTIVE;
 		break;
 	case ODP_AUTH_ALG_AES_GCM:
@@ -252,6 +328,10 @@ int check_alg_support(odp_cipher_alg_t cipher, odp_auth_alg_t auth)
 		break;
 	case ODP_AUTH_ALG_AES_CMAC:
 		if (!capability.auths.bit.aes_cmac)
+			return ODP_TEST_INACTIVE;
+		break;
+	case ODP_AUTH_ALG_AES_XCBC_MAC:
+		if (!capability.auths.bit.aes_xcbc_mac)
 			return ODP_TEST_INACTIVE;
 		break;
 	case ODP_AUTH_ALG_CHACHA20_POLY1305:
@@ -272,6 +352,30 @@ int check_alg_support(odp_cipher_alg_t cipher, odp_auth_alg_t auth)
 		break;
 	case ODP_AUTH_ALG_ZUC_EIA3:
 		if (!capability.auths.bit.zuc_eia3)
+			return ODP_TEST_INACTIVE;
+		break;
+	case ODP_AUTH_ALG_SNOW_V_GCM:
+		if (!capability.auths.bit.snow_v_gcm)
+			return ODP_TEST_INACTIVE;
+		break;
+	case ODP_AUTH_ALG_SNOW_V_GMAC:
+		if (!capability.auths.bit.snow_v_gmac)
+			return ODP_TEST_INACTIVE;
+		break;
+	case ODP_AUTH_ALG_SM3_HMAC:
+		if (!capability.auths.bit.sm3_hmac)
+			return ODP_TEST_INACTIVE;
+		break;
+	case ODP_AUTH_ALG_SM4_GCM:
+		if (!capability.auths.bit.sm4_gcm)
+			return ODP_TEST_INACTIVE;
+		break;
+	case ODP_AUTH_ALG_SM4_GMAC:
+		if (!capability.auths.bit.sm4_gmac)
+			return ODP_TEST_INACTIVE;
+		break;
+	case ODP_AUTH_ALG_SM4_CCM:
+		if (!capability.auths.bit.sm4_ccm)
 			return ODP_TEST_INACTIVE;
 		break;
 	case ODP_AUTH_ALG_MD5:
@@ -296,6 +400,26 @@ int check_alg_support(odp_cipher_alg_t cipher, odp_auth_alg_t auth)
 		break;
 	case ODP_AUTH_ALG_SHA512:
 		if (!capability.auths.bit.sha512)
+			return ODP_TEST_INACTIVE;
+		break;
+	case ODP_AUTH_ALG_SHA3_224:
+		if (!capability.auths.bit.sha3_224)
+			return ODP_TEST_INACTIVE;
+		break;
+	case ODP_AUTH_ALG_SHA3_256:
+		if (!capability.auths.bit.sha3_256)
+			return ODP_TEST_INACTIVE;
+		break;
+	case ODP_AUTH_ALG_SHA3_384:
+		if (!capability.auths.bit.sha3_384)
+			return ODP_TEST_INACTIVE;
+		break;
+	case ODP_AUTH_ALG_SHA3_512:
+		if (!capability.auths.bit.sha3_512)
+			return ODP_TEST_INACTIVE;
+		break;
+	case ODP_AUTH_ALG_SM3:
+		if (!capability.auths.bit.sm3)
 			return ODP_TEST_INACTIVE;
 		break;
 	default:
