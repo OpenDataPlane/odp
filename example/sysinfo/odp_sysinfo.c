@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2018 Linaro Limited
- * Copyright (c) 2022-2023 Nokia
+ * Copyright (c) 2022-2024 Nokia
  */
 
  /**
@@ -169,6 +169,8 @@ static const char *cipher_alg_name(odp_cipher_alg_t cipher)
 		return "des";
 	case ODP_CIPHER_ALG_3DES_CBC:
 		return "3des_cbc";
+	case ODP_CIPHER_ALG_3DES_ECB:
+		return "3des_ecb";
 	case ODP_CIPHER_ALG_AES_CBC:
 		return "aes_cbc";
 	case ODP_CIPHER_ALG_AES_CTR:
@@ -193,6 +195,20 @@ static const char *cipher_alg_name(odp_cipher_alg_t cipher)
 		return "aes_eea2";
 	case ODP_CIPHER_ALG_ZUC_EEA3:
 		return "zuc_eea3";
+	case ODP_CIPHER_ALG_SNOW_V:
+		return "snow_v";
+	case ODP_CIPHER_ALG_SNOW_V_GCM:
+		return "snow_v_gcm";
+	case ODP_CIPHER_ALG_SM4_ECB:
+		return "sm4_ecb";
+	case ODP_CIPHER_ALG_SM4_CBC:
+		return "sm4_cbc";
+	case ODP_CIPHER_ALG_SM4_CTR:
+		return "sm4_ctr";
+	case ODP_CIPHER_ALG_SM4_GCM:
+		return "sm4_gcm";
+	case ODP_CIPHER_ALG_SM4_CCM:
+		return "sm4_ccm";
 	default:
 		return "Unknown";
 	}
@@ -215,6 +231,14 @@ static const char *auth_alg_name(odp_auth_alg_t auth)
 		return "sha384_hmac";
 	case ODP_AUTH_ALG_SHA512_HMAC:
 		return "sha512_hmac";
+	case ODP_AUTH_ALG_SHA3_224_HMAC:
+		return "sha3_224_hmac";
+	case ODP_AUTH_ALG_SHA3_256_HMAC:
+		return "sha3_256_hmac";
+	case ODP_AUTH_ALG_SHA3_384_HMAC:
+		return "sha3_384_hmac";
+	case ODP_AUTH_ALG_SHA3_512_HMAC:
+		return "sha3_512_hmac";
 	case ODP_AUTH_ALG_AES_GCM:
 		return "aes_gcm";
 	case ODP_AUTH_ALG_AES_GMAC:
@@ -235,6 +259,18 @@ static const char *auth_alg_name(odp_auth_alg_t auth)
 		return "aes_eia2";
 	case ODP_AUTH_ALG_ZUC_EIA3:
 		return "zuc_eia3";
+	case ODP_AUTH_ALG_SNOW_V_GCM:
+		return "snow_v_gcm";
+	case ODP_AUTH_ALG_SNOW_V_GMAC:
+		return "snow_v_gmac";
+	case ODP_AUTH_ALG_SM3_HMAC:
+		return "sm3_hmac";
+	case ODP_AUTH_ALG_SM4_GCM:
+		return "sm4_gcm";
+	case ODP_AUTH_ALG_SM4_GMAC:
+		return "sm4_gmac";
+	case ODP_AUTH_ALG_SM4_CCM:
+		return "sm4_ccm";
 	case ODP_AUTH_ALG_MD5:
 		return "md5";
 	case ODP_AUTH_ALG_SHA1:
@@ -247,6 +283,16 @@ static const char *auth_alg_name(odp_auth_alg_t auth)
 		return "sha384";
 	case ODP_AUTH_ALG_SHA512:
 		return "sha512";
+	case ODP_AUTH_ALG_SHA3_224:
+		return "sha3_224";
+	case ODP_AUTH_ALG_SHA3_256:
+		return "sha3_256";
+	case ODP_AUTH_ALG_SHA3_384:
+		return "sha3_384";
+	case ODP_AUTH_ALG_SHA3_512:
+		return "sha3_512";
+	case ODP_AUTH_ALG_SM3:
+		return "sm3";
 	default:
 		return "Unknown";
 	}
@@ -289,6 +335,20 @@ static void foreach_cipher(odp_crypto_cipher_algos_t ciphers, cipher_op_t op)
 		op(ODP_CIPHER_ALG_AES_EEA2);
 	if (ciphers.bit.zuc_eea3)
 		op(ODP_CIPHER_ALG_ZUC_EEA3);
+	if (ciphers.bit.snow_v)
+		op(ODP_CIPHER_ALG_SNOW_V);
+	if (ciphers.bit.snow_v_gcm)
+		op(ODP_CIPHER_ALG_SNOW_V_GCM);
+	if (ciphers.bit.sm4_ecb)
+		op(ODP_CIPHER_ALG_SM4_ECB);
+	if (ciphers.bit.sm4_cbc)
+		op(ODP_CIPHER_ALG_SM4_CBC);
+	if (ciphers.bit.sm4_ctr)
+		op(ODP_CIPHER_ALG_SM4_CTR);
+	if (ciphers.bit.sm4_gcm)
+		op(ODP_CIPHER_ALG_SM4_GCM);
+	if (ciphers.bit.sm4_ccm)
+		op(ODP_CIPHER_ALG_SM4_CCM);
 }
 
 static void foreach_auth(odp_crypto_auth_algos_t auths, auth_op_t op)
@@ -307,6 +367,14 @@ static void foreach_auth(odp_crypto_auth_algos_t auths, auth_op_t op)
 		op(ODP_AUTH_ALG_SHA384_HMAC);
 	if (auths.bit.sha512_hmac)
 		op(ODP_AUTH_ALG_SHA512_HMAC);
+	if (auths.bit.sha3_224_hmac)
+		op(ODP_AUTH_ALG_SHA3_224_HMAC);
+	if (auths.bit.sha3_256_hmac)
+		op(ODP_AUTH_ALG_SHA3_256_HMAC);
+	if (auths.bit.sha3_384_hmac)
+		op(ODP_AUTH_ALG_SHA3_384_HMAC);
+	if (auths.bit.sha3_512_hmac)
+		op(ODP_AUTH_ALG_SHA3_512_HMAC);
 	if (auths.bit.aes_gcm)
 		op(ODP_AUTH_ALG_AES_GCM);
 	if (auths.bit.aes_gmac)
@@ -327,6 +395,18 @@ static void foreach_auth(odp_crypto_auth_algos_t auths, auth_op_t op)
 		op(ODP_AUTH_ALG_AES_EIA2);
 	if (auths.bit.zuc_eia3)
 		op(ODP_AUTH_ALG_ZUC_EIA3);
+	if (auths.bit.snow_v_gcm)
+		op(ODP_AUTH_ALG_SNOW_V_GCM);
+	if (auths.bit.snow_v_gmac)
+		op(ODP_AUTH_ALG_SNOW_V_GMAC);
+	if (auths.bit.sm3_hmac)
+		op(ODP_AUTH_ALG_SM3_HMAC);
+	if (auths.bit.sm4_gcm)
+		op(ODP_AUTH_ALG_SM4_GCM);
+	if (auths.bit.sm4_gmac)
+		op(ODP_AUTH_ALG_SM4_GMAC);
+	if (auths.bit.sm4_ccm)
+		op(ODP_AUTH_ALG_SM4_CCM);
 	if (auths.bit.md5)
 		op(ODP_AUTH_ALG_MD5);
 	if (auths.bit.sha1)
@@ -339,6 +419,16 @@ static void foreach_auth(odp_crypto_auth_algos_t auths, auth_op_t op)
 		op(ODP_AUTH_ALG_SHA384);
 	if (auths.bit.sha512)
 		op(ODP_AUTH_ALG_SHA512);
+	if (auths.bit.sha3_224)
+		op(ODP_AUTH_ALG_SHA3_224);
+	if (auths.bit.sha3_256)
+		op(ODP_AUTH_ALG_SHA3_256);
+	if (auths.bit.sha3_384)
+		op(ODP_AUTH_ALG_SHA3_384);
+	if (auths.bit.sha3_512)
+		op(ODP_AUTH_ALG_SHA3_512);
+	if (auths.bit.sm3)
+		op(ODP_AUTH_ALG_SM3);
 }
 
 static void print_cipher_capa(odp_cipher_alg_t cipher)
