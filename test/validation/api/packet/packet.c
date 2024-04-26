@@ -1,10 +1,8 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2014-2018 Linaro Limited
- * Copyright (c) 2019-2023 Nokia
+ * Copyright (c) 2019-2024 Nokia
  * Copyright (c) 2020 Marvell
  */
-
-#include <stdlib.h>
 
 #include <odp_api.h>
 #include <odp_cunit_common.h>
@@ -13,6 +11,9 @@
 #include <test_packet_ipv6.h>
 
 #include <odp/helper/odph_api.h>
+
+#include <stdint.h>
+#include <stdlib.h>
 
 /* Reserve some tailroom for tests */
 #define TAILROOM_RESERVE  4
@@ -906,13 +907,23 @@ static void packet_test_length(void)
 
 static void packet_test_reset(void)
 {
-	uint32_t len, headroom;
+	uint32_t len, max_len, headroom;
+	uint32_t uarea_size = default_param.pkt.uarea_size;
 	uintptr_t ptr_len;
 	void *data, *new_data, *tail, *new_tail;
+	struct udata_struct *udat;
 	odp_packet_t pkt;
 
 	pkt = odp_packet_alloc(default_pool, packet_len);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+
+	if (uarea_size) {
+		udat = odp_packet_user_area(pkt);
+
+		CU_ASSERT_FATAL(udat != NULL);
+		CU_ASSERT_FATAL(odp_packet_user_area_size(pkt) >= uarea_size);
+		memcpy(udat, &test_packet_udata, uarea_size);
+	}
 
 	len = odp_packet_len(pkt);
 	CU_ASSERT(len == packet_len);
@@ -944,8 +955,10 @@ static void packet_test_reset(void)
 	ptr_len = (uintptr_t)odp_packet_data(pkt) -
 		  (uintptr_t)odp_packet_head(pkt);
 	CU_ASSERT(ptr_len == (headroom + 1));
-	CU_ASSERT(odp_packet_reset(pkt, len) == 0);
-	CU_ASSERT(odp_packet_len(pkt) == len);
+	max_len = odp_packet_reset_max_len(pkt);
+	CU_ASSERT(max_len >= len);
+	CU_ASSERT(odp_packet_reset(pkt, max_len) == 0);
+	CU_ASSERT(odp_packet_len(pkt) == max_len);
 	CU_ASSERT(odp_packet_headroom(pkt) == headroom);
 	ptr_len = (uintptr_t)odp_packet_data(pkt) -
 		  (uintptr_t)odp_packet_head(pkt);
@@ -954,7 +967,7 @@ static void packet_test_reset(void)
 
 	tail = odp_packet_tail(pkt);
 	new_tail = odp_packet_pull_tail(pkt, 1);
-	CU_ASSERT(odp_packet_len(pkt) == len - 1);
+	CU_ASSERT(odp_packet_len(pkt) == max_len - 1);
 	CU_ASSERT((uintptr_t)new_tail == ((uintptr_t)tail - 1));
 	CU_ASSERT(odp_packet_reset(pkt, len) == 0);
 	CU_ASSERT(odp_packet_len(pkt) == len);
@@ -970,6 +983,19 @@ static void packet_test_reset(void)
 	len = len - len / 2;
 	CU_ASSERT(odp_packet_reset(pkt, len) == 0);
 	CU_ASSERT(odp_packet_len(pkt) == len);
+
+	if (odp_packet_reset_max_len(pkt) < UINT32_MAX) {
+		CU_ASSERT(odp_packet_reset(pkt, odp_packet_reset_max_len(pkt) + 1) < 0);
+		CU_ASSERT(odp_packet_len(pkt) == len);
+	}
+
+	if (uarea_size) {
+		udat = odp_packet_user_area(pkt);
+
+		CU_ASSERT_FATAL(udat != NULL);
+		CU_ASSERT_FATAL(odp_packet_user_area_size(pkt) >= uarea_size);
+		CU_ASSERT(memcmp(udat, &test_packet_udata, uarea_size) == 0);
+	}
 
 	odp_packet_free(pkt);
 }
