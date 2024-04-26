@@ -174,6 +174,31 @@ typedef enum {
 	 */
 	ODP_CIPHER_ALG_SNOW_V_GCM,
 
+	/** SM4 block cipher in ECB mode */
+	ODP_CIPHER_ALG_SM4_ECB,
+
+	/** SM4 block cipher in CBC mode */
+	ODP_CIPHER_ALG_SM4_CBC,
+
+	/** SM4 block cipher in CTR mode */
+	ODP_CIPHER_ALG_SM4_CTR,
+
+	/** SM4-GCM AEAD algorithm
+	 *
+	 *  SM4-GCM provides both authentication and encryption. This cipher
+	 *  algorithm must always be paired with ODP_AUTH_ALG_SM4_GCM auth
+	 *  algorithm in crypto session creation.
+	 */
+	ODP_CIPHER_ALG_SM4_GCM,
+
+	/** SM4-CCM AEAD algorithm
+	 *
+	 *  SM4-CCM provides both authentication and encryption. This cipher
+	 *  algorithm must always be paired with ODP_AUTH_ALG_SM4_CCM auth
+	 *  algorithm in crypto session creation.
+	 */
+	ODP_CIPHER_ALG_SM4_CCM,
+
 } odp_cipher_alg_t;
 
 /**
@@ -371,6 +396,37 @@ typedef enum {
 	/** HMAC using SM3 */
 	ODP_AUTH_ALG_SM3_HMAC,
 
+	/** SM4-GCM AEAD algorithm
+	 *
+	 *  SM4-GCM provides both authentication and encryption. This auth
+	 *  algorithm must always be paired with ODP_CIPHER_ALG_SM4_GCM cipher
+	 *  algorithm in crypto session creation.
+	 */
+	ODP_AUTH_ALG_SM4_GCM,
+
+	/** SM4-GMAC
+	 *
+	 *  SM4-GMAC is similar to SM4-GCM without any ciphered data.
+	 *  This algorithm can be paired only with ODP_CIPHER_ALG_NULL.
+	 *
+	 *  Unlike with SM4-GCM, authenticated data is not provided as
+	 *  AAD in ODP but as packet data indicated by the auth_range.
+	 *  The auth_aad_len session parameter and the aad_ptr operation
+	 *  parameter are ignored.
+	 *
+	 *  GMAC needs an initialization vector, which must be passed via
+	 *  operation parameters (auth_iv_ptr).
+	 */
+	ODP_AUTH_ALG_SM4_GMAC,
+
+	/** SM4-CCM AEAD algorithm
+	 *
+	 *  SM4-CCM provides both authentication and encryption. This auth
+	 *  algorithm must always be paired with ODP_CIPHER_ALG_SM4_CCM cipher
+	 *  algorithm in crypto session creation.
+	 */
+	ODP_AUTH_ALG_SM4_CCM,
+
 	/** MD5 algorithm */
 	ODP_AUTH_ALG_MD5,
 
@@ -465,6 +521,22 @@ typedef union odp_crypto_cipher_algos_t {
 
 		/** ODP_CIPHER_ALG_SNOW_V_GCM */
 		uint32_t snow_v_gcm  : 1;
+
+		/** ODP_CIPHER_ALG_SM4_ECB */
+		uint32_t sm4_ecb  : 1;
+
+		/** ODP_CIPHER_ALG_SM4_CBC */
+		uint32_t sm4_cbc  : 1;
+
+		/** ODP_CIPHER_ALG_SM4_CTR */
+		uint32_t sm4_ctr  : 1;
+
+		/** ODP_CIPHER_ALG_SM4_GCM */
+		uint32_t sm4_gcm  : 1;
+
+		/** ODP_CIPHER_ALG_SM4_CCM */
+		uint32_t sm4_ccm  : 1;
+
 	} bit;
 
 	/** All bits of the bit field structure
@@ -551,6 +623,15 @@ typedef union odp_crypto_auth_algos_t {
 
 		/** ODP_AUTH_ALG_SM3_HMAC */
 		uint32_t sm3_hmac : 1;
+
+		/** ODP_AUTH_ALG_SM4_GCM */
+		uint32_t sm4_gcm : 1;
+
+		/** ODP_AUTH_ALG_SM4_GMAC */
+		uint32_t sm4_gmac : 1;
+
+		/** ODP_AUTH_ALG_SM4_CCM */
+		uint32_t sm4_ccm : 1;
 
 		/** ODP_AUTH_ALG_MD5 */
 		uint32_t md5 : 1;
