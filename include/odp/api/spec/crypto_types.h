@@ -163,6 +163,17 @@ typedef enum {
 	 */
 	ODP_CIPHER_ALG_ZUC_EEA3,
 
+	/** SNOW-V stream cipher */
+	ODP_CIPHER_ALG_SNOW_V,
+
+	/** SNOW-V-GCM AEAD algorithm
+	 *
+	 *  SNOW-V-GCM provides both authentication and encryption. This cipher
+	 *  algorithm must always be paired with ODP_AUTH_ALG_SNOW_V_GCM auth
+	 *  algorithm in crypto session creation.
+	 */
+	ODP_CIPHER_ALG_SNOW_V_GCM,
+
 } odp_cipher_alg_t;
 
 /**
@@ -334,6 +345,29 @@ typedef enum {
 	 */
 	ODP_AUTH_ALG_ZUC_EIA3,
 
+	/** SNOW-V-GCM AEAD algorithm
+	 *
+	 *  SNOW-V-GCM provides both authentication and encryption. This auth
+	 *  algorithm must always be paired with ODP_CIPHER_ALG_SNOW_V_GCM
+	 *  cipher algorithm in crypto session creation.
+	 */
+	ODP_AUTH_ALG_SNOW_V_GCM,
+
+	/** SNOW-V-GMAC
+	 *
+	 *  SNOW-V-GMAC is similar to SNOW-V-GCM without any ciphered data.
+	 *  This algorithm can be paired only with ODP_CIPHER_ALG_NULL.
+	 *
+	 *  Unlike with SNOW-V-GCM, authenticated data is not provided as
+	 *  AAD in ODP but as packet data indicated by the auth_range.
+	 *  The auth_aad_len session parameter and the aad_ptr operation
+	 *  parameter are ignored.
+	 *
+	 *  GMAC needs an initialization vector, which must be passed via
+	 *  operation parameters (auth_iv_ptr).
+	 */
+	ODP_AUTH_ALG_SNOW_V_GMAC,
+
 	/** MD5 algorithm */
 	ODP_AUTH_ALG_MD5,
 
@@ -420,6 +454,11 @@ typedef union odp_crypto_cipher_algos_t {
 		/** ODP_CIPHER_ALG_ZUC_EEA3 */
 		uint32_t zuc_eea3    : 1;
 
+		/** ODP_CIPHER_ALG_SNOW_V */
+		uint32_t snow_v      : 1;
+
+		/** ODP_CIPHER_ALG_SNOW_V_GCM */
+		uint32_t snow_v_gcm  : 1;
 	} bit;
 
 	/** All bits of the bit field structure
@@ -497,6 +536,12 @@ typedef union odp_crypto_auth_algos_t {
 
 		/** ODP_AUTH_ALG_ZUC_EIA3 */
 		uint32_t zuc_eia3    : 1;
+
+		/** ODP_AUTH_ALG_SNOW_V_GCM */
+		uint32_t snow_v_gcm : 1;
+
+		/** ODP_AUTH_ALG_SNOW_V_GMAC */
+		uint32_t snow_v_gmac : 1;
 
 		/** ODP_AUTH_ALG_MD5 */
 		uint32_t md5 : 1;
@@ -720,19 +765,18 @@ typedef struct odp_crypto_session_param_t {
 	 *  Select authentication algorithm to be used. ODP_AUTH_ALG_NULL
 	 *  indicates that authentication is disabled. Use
 	 *  odp_crypto_capability() for supported algorithms. Note that some
-	 *  algorithms restrict choice of the pairing cipher algorithm. When
-	 *  single algorithm provides both ciphering and authentication
-	 *  (i.e. Authenticated Encryption), authentication side key
-	 *  (auth_key) and IV (auth_iv) are ignored, and cipher side values are
-	 *  used instead. These algorithms ignore authentication side key
-	 *  and IV: ODP_AUTH_ALG_AES_GCM, ODP_AUTH_ALG_AES_CCM and
-	 *  ODP_AUTH_ALG_CHACHA20_POLY1305. Otherwise, all authentication side
-	 *  parameters must be set when authentication is enabled. The default
-	 *  value is ODP_AUTH_ALG_NULL.
+	 *  algorithms restrict choice of the pairing cipher algorithm.
+	 *
+	 *  When single algorithm provides both ciphering and authentication
+	 *  (i.e. authenticated encryption), authentication side key (auth_key)
+	 *  and IV (auth_iv) are ignored, and cipher side parameters are used
+	 *  instead.
 	 *
 	 *  When authentication is disabled, i.e. auth_alg is
 	 *  ODP_AUTH_ALG_NULL, auth_key, auth_iv_len, auth_digest_len,
 	 *  auth_aad_len and hash_result_in_auth_range parameters are ignored.
+	 *
+	 *  The default value is ODP_AUTH_ALG_NULL.
 	 */
 	odp_auth_alg_t auth_alg;
 
@@ -858,7 +902,7 @@ typedef struct odp_crypto_packet_op_param_t {
 	 *  odp_crypto_result() or through a negative return value of
 	 *  odp_crypto_op()/odp_crypto_op_enq().
 	 *
-	 *  As a special case AES-GMAC uses this field instead of aad_ptr
+	 *  Algorithms in GMAC mode use this field instead of aad_ptr
 	 *  for the data bytes to be authenticated.
 	 */
 	odp_packet_data_range_t auth_range;
