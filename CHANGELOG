@@ -1,3 +1,127 @@
+== OpenDataPlane (1.45.0.0)
+
+=== Backward incompatible API changes
+==== Crypto
+* Increase size of `all_bits` fields of `odp_crypto_cipher_algos_t` and
+`odp_crypto_auth_algos_t` algorithm capability unions.
+
+==== Packet
+* Change `odp_packet_reset()` specification to use new
+`odp_packet_reset_max_len()` function for maximum packet data length value.
+
+==== Protocol Stats
+* Limit length of `odp_proto_stats_create()` object name parameter to a new
+`ODP_PROTO_STATS_NAME_LEN` define.
+
+==== Traffic Manager
+* Limit lengths of traffic manager object names to a new `ODP_TM_NAME_LEN`
+define.
+
+=== Backward compatible API changes
+==== Common
+* Make mentions of maximum string lengths clear and consistent and always state
+that the null character is included.
+
+==== CPU
+* Add more specific data prefetch variants: `odp_prefetch_l1()`,
+`odp_prefetch_l2()`, and `odp_prefetch_l3()`.
+* Add more specific data prefetch variants for store: `odp_prefetch_store_l1()`,
+`odp_prefetch_store_l2()`, and `odp_prefetch_store_l3()`.
+* Add streaming prefetch functions `odp_prefetch_strm_l1()` and
+`odp_prefetch_store_strm_l1()`.
+
+==== Crypto
+* Add SHA-3 based cryptographic hash functions and HMACs based on them.
+* Add SNOW-V cipher algorithm and SNOW-V-GCM AEAD algorithm.
+* Add SM3 cryptographic hash function and a HMAC based on it.
+* Add SM4 cipher in ECB, CBC, CTR, GCM, CCM and GMAC modes.
+
+==== Event
+* Add `odp_event_user_flag_set()` function for setting/clearing event's user
+flag value.
+
+==== Packet
+* Clarify `odp_packet_buf_len()` specification to state that total packet buffer
+length includes also headroom and tailroom lengths.
+* Clarify `odp_packet_reset()` specification to state that packet data start is
+adjusted according to pool parameters, user area content is maintained, and
+packet data persistence is not guaranteed.
+* Add `odp_packet_reset_meta()` function for resetting only packet metadata
+without modifying packet data.
+
+==== Pool
+* Clarify in `odp_pool_param_t.buf.size` specification that the actual buffer
+size may be rounded up by the implementation. Also, remove the limitation that
+an application will never store more than 'size' bytes in each buffer, which
+conflicted with `odp_buffer_size()` API.
+
+=== Helper (1.6.0)
+==== Backward incompatible changes
+* Remove unused cuckoo table API.
+* Remove unused hash table API.
+* Remove unused linear table API.
+* Remove unused IP lookup table API.
+* Remove unused table interface API.
+
+==== Backward compatible changes
+===== Stress
+* Add CPU stress functions (`odph_stress_pow2_u32()`, `odph_stress_log2_u32()`,
+`odph_stress_sqrt_u32()`, `odph_stress_sqrt_f32()`) which may be used in test
+applications to create dummy CPU load. Functions are not highly optimized but
+try to stress various parts of CPU instruction set.
+
+===== String
+* Add `odph_strcpy()` function, which guarantees termination of the destination
+string.
+
+===== Thread
+* Add `odph_thread_join_result()` function which is similar to the existing
+`odph_thread_join()` but outputs results of joined threads.
+* Clarify in `odph_thread_create()` specification that the output thread table
+elements must not be modified during the lifetime of the threads if
+`odph_thread_join()` is used to wait for thread exit.
+
+=== Example Applications
+* Remove `odp_generator` application which has been made redundant by
+`odp_packet_gen`.
+* Remove `odp_timer_test` application which has been made redundant by
+`odp_timer_accuracy`.
+
+=== Miscellaneous Tests
+==== dyn_workers
+* Add a simple dynamic worker tester that can be used to verify the ability of
+an ODP implementation to dynamically add and remove workers from one ODP
+application to another.
+
+=== Performance Tests
+==== l2fwd
+* Add `-O, --output_map` option for changing the default output port mappings
+for interfaces.
+* Add `-C, --tx_compl` option for configuring packet transmit completion.
+* Add `-X, --flow_control` option for enabling reception and/or transmission of
+Ethernet pause frames.
+
+==== packet_gen
+* Enable running the application with only RX or TX threads.
+* Add support for transmitting TCP packets (`-N, --proto`). The application
+doesn't implement actual TCP protocol, but simply transmits packets with valid
+TCP headers at a selected rate.
+
+==== pool_latency
+* Enable running the application indefinitely with special round count (`-r`)
+value `0`.
+
+==== sched_perf
+* Add `-S, --stress` option for selecting stress function(s) to be used on event
+data. Functions add various amount of CPU load to each event to simulate
+application data processing.
+* Rename `-a` option (`--fairness`) to `-F` for better match of short and long
+option names.
+
+==== stress
+* Add simple memory copy loop and square root calculation test modes
+(`-m, --mode`) to generate CPU load.
+
 == OpenDataPlane (1.44.0.0)
 
 === Backward compatible API changes
