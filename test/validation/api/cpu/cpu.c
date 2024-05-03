@@ -418,6 +418,17 @@ static void cpu_prefetch_strm(void)
 	odp_prefetch_store_strm_l1(NULL);
 }
 
+static void cpu_prefetch_instr(void)
+{
+	/* Prefetch a function that is likely not inlined. Extra casts avoid -pedantic
+	 * warning about passing function pointer as ‘void *' argument */
+	const void *addr = (void *)(uintptr_t)odp_init_global;
+
+	printf("\n        Prefetching odp_init_global: %p\n", addr);
+	odp_prefetch_l1i(addr);
+	odp_prefetch_l1i(NULL);
+}
+
 odp_testinfo_t cpu_suite[] = {
 	ODP_TEST_INFO(cpu_id),
 	ODP_TEST_INFO(cpu_count),
@@ -436,6 +447,7 @@ odp_testinfo_t cpu_suite[] = {
 	ODP_TEST_INFO(cpu_prefetch),
 	ODP_TEST_INFO(cpu_prefetch_store),
 	ODP_TEST_INFO(cpu_prefetch_strm),
+	ODP_TEST_INFO(cpu_prefetch_instr),
 	ODP_TEST_INFO_NULL,
 };
 
