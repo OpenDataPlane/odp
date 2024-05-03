@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2015-2018 Linaro Limited
+ * Copyright (c) 2024 Nokia
  */
 
 /**
@@ -268,6 +269,15 @@ void odp_prefetch_strm_l1(const void *addr);
  * @param addr  Data address to be prefetched (may be invalid)
  */
 void odp_prefetch_store_strm_l1(const void *addr);
+
+/**
+ * Prefetch into L1 instruction cache
+ *
+ * Hints CPU to prefetch code into L1 instruction cache.
+ *
+ * @param addr  Instruction address to be prefetched (may be invalid)
+ */
+void odp_prefetch_l1i(const void *addr);
 
 /**
  * @}
