@@ -7,6 +7,7 @@
 
 #include <odp_posix_extensions.h>
 
+#include <odp/api/cpu.h>
 #include <odp/api/packet.h>
 #include <odp/api/packet_flags.h>
 #include <odp/api/std_types.h>
@@ -2420,7 +2421,7 @@ static void signal_request(void)
 
 	serving = odp_atomic_load_u64(&tm_glb->currently_serving_cnt);
 	while (serving != request_num) {
-		_odp_cpu_pause();
+		odp_cpu_pause();
 		serving = odp_atomic_load_u64(&tm_glb->currently_serving_cnt);
 	}
 }
@@ -2437,11 +2438,11 @@ static void check_for_request(void)
 	/* Signal the other requesting thread to proceed and then
 	 * wait for their done indication */
 	odp_atomic_inc_u64(&tm_glb->currently_serving_cnt);
-	_odp_cpu_pause();
+	odp_cpu_pause();
 
 	done_cnt = odp_atomic_load_u64(&tm_glb->atomic_done_cnt);
 	while (done_cnt != request_num) {
-		_odp_cpu_pause();
+		odp_cpu_pause();
 		done_cnt = odp_atomic_load_u64(&tm_glb->atomic_done_cnt);
 	}
 }
