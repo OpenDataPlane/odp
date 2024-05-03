@@ -51,6 +51,11 @@ static inline  uint64_t _odp_cpu_cycles_max(void)
 	return _odp_cpu_cycles_glob.max;
 }
 
+static inline void _odp_prefetch_l1i(const void *addr)
+{
+	__asm__ volatile("prfm plil1keep, [%[addr]]" : : [addr] "r" (addr));
+}
+
 #ifdef __cplusplus
 }
 #endif

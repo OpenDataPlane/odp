@@ -37,6 +37,11 @@ static inline uint64_t _odp_cpu_cycles_resolution(void)
 	return 1;
 }
 
+static inline void _odp_prefetch_l1i(const void *addr)
+{
+	(void)addr;
+}
+
 #ifdef __cplusplus
 }
 #endif

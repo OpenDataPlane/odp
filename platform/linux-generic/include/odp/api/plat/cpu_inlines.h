@@ -32,6 +32,7 @@
 	#define odp_prefetch_store_l3       __odp_prefetch_store_l3
 	#define odp_prefetch_strm_l1        __odp_prefetch_strm_l1
 	#define odp_prefetch_store_strm_l1  __odp_prefetch_store_strm_l1
+	#define odp_prefetch_l1i            __odp_prefetch_l1i
 #else
 	#define _ODP_INLINE
 #endif
@@ -118,6 +119,11 @@ _ODP_INLINE void odp_prefetch_strm_l1(const void *ptr)
 _ODP_INLINE void odp_prefetch_store_strm_l1(const void *ptr)
 {
 	__builtin_prefetch(ptr, 1, 0);
+}
+
+_ODP_INLINE void odp_prefetch_l1i(const void *addr)
+{
+	_odp_prefetch_l1i(addr);
 }
 
 /** @endcond */

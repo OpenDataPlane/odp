@@ -20,6 +20,11 @@ static inline void _odp_cpu_pause(void)
 	__asm volatile("isb" ::: "memory");
 }
 
+static inline void _odp_prefetch_l1i(const void *addr)
+{
+	(void)addr;
+}
+
 /* Use generic implementations for the rest of the functions */
 #include <odp/api/abi/cpu_generic.h>
 
