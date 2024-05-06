@@ -451,7 +451,7 @@ static odp_bool_t set_odp_env(char *env)
 	tmp = strtok(tmp_str, ENV_DELIMITER);
 
 	if (tmp != NULL) {
-		ret = setenv(tmp, strstr(env, ENV_DELIMITER) + 1U, 0);
+		ret = setenv(tmp, strstr(env, ENV_DELIMITER) + 1U, 1);
 
 		if (ret == -1)
 			perror("setenv");
