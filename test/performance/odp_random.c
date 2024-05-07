@@ -384,8 +384,9 @@ static void test_type(odp_instance_t instance, test_global_t *global, odp_random
 	}
 
 	for (i = 0; i < num_threads; i++) {
-		if (res[i].ret != 0) {
-			ODPH_ERR("Worker thread failure: %d.\n", res[i].ret);
+		if (res[i].is_sig || res[i].ret != 0) {
+			ODPH_ERR("Worker thread failure%s: %d\n", res[i].is_sig ?
+					" (signaled)" : "", res[i].ret);
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -451,6 +452,7 @@ static void test_type(odp_instance_t instance, test_global_t *global, odp_random
 
 int main(int argc, char **argv)
 {
+	odph_helper_options_t helper_options;
 	odp_instance_t instance;
 	odp_init_t init;
 	odp_shm_t shm_glb, shm_data;
@@ -458,6 +460,14 @@ int main(int argc, char **argv)
 	int num_threads, i;
 	uint64_t tot_size, size;
 	uint8_t *addr;
+
+	/* Let helper collect its own arguments (e.g. --odph_proc) */
+	argc = odph_parse_options(argc, argv);
+
+	if (odph_options(&helper_options)) {
+		ODPH_ERR("Failed to read ODP helper options.\n");
+		exit(EXIT_FAILURE);
+	}
 
 	if (parse_options(argc, argv))
 		exit(EXIT_FAILURE);
@@ -472,6 +482,7 @@ int main(int argc, char **argv)
 	init.not_used.feat.stash = 1;
 	init.not_used.feat.timer = 1;
 	init.not_used.feat.tm = 1;
+	init.mem_model = helper_options.mem_model;
 
 	/* Init ODP before calling anything else */
 	if (odp_init_global(&instance, &init, NULL)) {
