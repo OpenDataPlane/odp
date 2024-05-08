@@ -9,6 +9,7 @@ EXECUTABLES = odp_atomic_perf \
 	      odp_bench_pktio_sp \
 	      odp_bench_timer \
 	      odp_crc \
+	      odp_icache_perf \
 	      odp_lock_perf \
 	      odp_mem_perf \
 	      odp_pktio_perf \
@@ -73,6 +74,7 @@ odp_crc_SOURCES = odp_crc.c
 odp_crypto_SOURCES = odp_crypto.c
 odp_dmafwd_SOURCES = odp_dmafwd.c
 odp_dma_perf_SOURCES = odp_dma_perf.c
+odp_icache_perf_SOURCES = odp_icache_perf.c
 odp_ipsec_SOURCES = odp_ipsec.c
 odp_lock_perf_SOURCES = odp_lock_perf.c
 odp_mem_perf_SOURCES = odp_mem_perf.c
