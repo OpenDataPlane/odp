@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2014-2018 Linaro Limited
- * Copyright (c) 2019-2023 Nokia
+ * Copyright (c) 2019-2024 Nokia
  */
 
 #include <odp/api/classification.h>
@@ -15,8 +15,10 @@
 
 #include <odp_init_internal.h>
 #include <odp_debug_internal.h>
+#include <odp_macros_internal.h>
 #include <odp_packet_internal.h>
 #include <odp_packet_io_internal.h>
+#include <odp_parse_internal.h>
 #include <odp_classification_datamodel.h>
 #include <odp_classification_internal.h>
 #include <odp_string_internal.h>
@@ -362,6 +364,53 @@ int odp_cls_cos_create_multi(const char *name[], const odp_cls_cos_param_t param
 		cos[i] = new_cos;
 	}
 	return i;
+}
+
+static uint32_t packet_rss_hash(odp_packet_hdr_t *pkt_hdr, odp_cls_hash_proto_t hash_proto,
+				const uint8_t *base);
+
+static inline odp_queue_t get_dest_queue(const cos_t *cos, odp_packet_hdr_t *pkt_hdr,
+					 const uint8_t *base)
+{
+	uint32_t hash = packet_rss_hash(pkt_hdr, cos->hash_proto, base), tbl_index;
+
+	/* CLS_COS_QUEUE_MAX is a power of 2 */
+	hash = hash & (CLS_COS_QUEUE_MAX - 1);
+	tbl_index = (cos->index * CLS_COS_QUEUE_MAX) + (hash % cos->num_queue);
+
+	return queue_grp_tbl->queue[tbl_index];
+}
+
+odp_queue_t odp_cls_hash_result(odp_cos_t cos_id, odp_packet_t packet)
+{
+	const cos_t *cos;
+	odp_packet_hdr_t *hdr;
+	uint32_t seg_len, len;
+	uint8_t data[PARSE_BYTES], *base;
+
+	_ODP_ASSERT(cos_id != ODP_COS_INVALID);
+	_ODP_ASSERT(packet != ODP_PACKET_INVALID);
+
+	cos = get_cos_entry_internal(cos_id);
+
+	if (cos->num_queue == 1)
+		return cos->queue;
+
+	hdr = packet_hdr(packet);
+	seg_len = packet_first_seg_len(hdr);
+	len = packet_len(hdr);
+
+	if (odp_unlikely(seg_len < PARSE_BYTES && len > seg_len)) {
+		if (odp_unlikely(odp_packet_copy_to_mem(packet, 0, _ODP_MIN(len, PARSE_BYTES),
+							data) < 0))
+			return ODP_QUEUE_INVALID;
+
+		base = data;
+	} else {
+		base = odp_packet_data(packet);
+	}
+
+	return get_dest_queue(cos, hdr, base);
 }
 
 /*
@@ -1651,10 +1700,6 @@ done:
 	return cos;
 }
 
-static uint32_t packet_rss_hash(odp_packet_hdr_t *pkt_hdr,
-				odp_cls_hash_proto_t hash_proto,
-				const uint8_t *base);
-
 /**
  * Classify packet
  *
@@ -1675,8 +1720,6 @@ int _odp_cls_classify_packet(pktio_entry_t *entry, const uint8_t *base,
 			     odp_pool_t *pool, odp_packet_hdr_t *pkt_hdr)
 {
 	cos_t *cos;
-	uint32_t tbl_index;
-	uint32_t hash;
 
 	ODP_DBG_LVL(CLS_DBG, "Classify packet from %s\n", entry->full_name);
 
@@ -1700,12 +1743,8 @@ int _odp_cls_classify_packet(pktio_entry_t *entry, const uint8_t *base,
 		return 0;
 	}
 
-	hash = packet_rss_hash(pkt_hdr, cos->hash_proto, base);
-	/* CLS_COS_QUEUE_MAX is a power of 2 */
-	hash = hash & (CLS_COS_QUEUE_MAX - 1);
-	tbl_index = (cos->index * CLS_COS_QUEUE_MAX) + (hash %
-							  cos->num_queue);
-	pkt_hdr->dst_queue = queue_grp_tbl->queue[tbl_index];
+	pkt_hdr->dst_queue = get_dest_queue(cos, pkt_hdr, base);
+
 	return 0;
 }
 
