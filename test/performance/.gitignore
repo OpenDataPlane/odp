@@ -12,6 +12,7 @@ odp_crc
 odp_crypto
 odp_dmafwd
 odp_dma_perf
+odp_icache_perf
 odp_ipsec
 odp_ipsecfwd
 odp_l2fwd
