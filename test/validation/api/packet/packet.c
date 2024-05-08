@@ -907,14 +907,21 @@ static void packet_test_length(void)
 
 static void packet_test_reset(void)
 {
-	uint32_t len, max_len, headroom;
+	uint32_t len, max_len, headroom = 128, tailroom;
 	uint32_t uarea_size = default_param.pkt.uarea_size;
 	uintptr_t ptr_len;
-	void *data, *new_data, *tail, *new_tail;
+	void *data, *new_data, *head, *tail, *new_tail;
 	struct udata_struct *udat;
 	odp_packet_t pkt;
+	odp_pool_t pool;
+	odp_pool_param_t pool_param = default_param;
 
-	pkt = odp_packet_alloc(default_pool, packet_len);
+	pool_param.pkt.headroom = ODPH_MIN(pool_capa.pkt.max_headroom, headroom);
+
+	pool = odp_pool_create("packet reset", &pool_param);
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+
+	pkt = odp_packet_alloc(pool, packet_len);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 
 	if (uarea_size) {
@@ -929,6 +936,7 @@ static void packet_test_reset(void)
 	CU_ASSERT(len == packet_len);
 
 	headroom = odp_packet_headroom(pkt);
+	CU_ASSERT(headroom >= pool_param.pkt.headroom);
 
 	if (headroom) {
 		data = odp_packet_data(pkt);
@@ -945,6 +953,25 @@ static void packet_test_reset(void)
 		ptr_len = (uintptr_t)odp_packet_data(pkt) -
 			  (uintptr_t)odp_packet_head(pkt);
 		CU_ASSERT(ptr_len == headroom);
+	}
+
+	tailroom = odp_packet_tailroom(pkt);
+
+	if (tailroom) {
+		data = odp_packet_data(pkt);
+		head = odp_packet_head(pkt);
+		tail = odp_packet_tail(pkt);
+		headroom = odp_packet_headroom(pkt);
+
+		CU_ASSERT(odp_packet_push_tail(pkt, tailroom) == tail);
+		CU_ASSERT(odp_packet_pull_head(pkt, tailroom) != NULL);
+
+		odp_packet_reset(pkt, len);
+		CU_ASSERT(odp_packet_data(pkt) == data);
+		CU_ASSERT(odp_packet_head(pkt) == head);
+		CU_ASSERT(odp_packet_tail(pkt) == tail);
+		CU_ASSERT(odp_packet_headroom(pkt) == headroom);
+		CU_ASSERT(odp_packet_tailroom(pkt) == tailroom);
 	}
 
 	data = odp_packet_data(pkt);
@@ -998,6 +1025,8 @@ static void packet_test_reset(void)
 	}
 
 	odp_packet_free(pkt);
+
+	CU_ASSERT(odp_pool_destroy(pool) == 0);
 }
 
 static void packet_test_reset_meta(void)
