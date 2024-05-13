@@ -86,7 +86,7 @@ uint32_t thash_softrss(uint32_t *tuple, uint8_t len,
 
 	for (j = 0; j < len; j++) {
 		for (i = 0; i < 32; i++) {
-			if (tuple[j] & (1 << (31 - i))) {
+			if (tuple[j] & (1U << (31 - i))) {
 				ret ^= odp_cpu_to_be_32(((const uint32_t *)
 				key.u32)[j]) << i | (uint32_t)((uint64_t)
 				(odp_cpu_to_be_32(((const uint32_t *)key.u32)
