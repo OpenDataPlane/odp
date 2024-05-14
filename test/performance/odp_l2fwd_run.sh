@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright (c) 2015-2018 Linaro Limited
+# Copyright (c) 2024 Nokia
 #
 
 # TEST_DIR is set by Makefile, when we add a rule to Makefile for odp_l2fwd_run
@@ -64,10 +65,11 @@ run_l2fwd()
 	fi
 
 	# Run odp_packet_gen with one tx thread
+	GEN_LOG=odp_packet_gen_tmp.log
 	(odp_packet_gen${EXEEXT} --gap 0 -i $IF0 \
 			--ipv4_src 192.168.0.1 --ipv4_dst 192.168.0.2 \
-			-r 0 -t 1 2>&1 > /dev/null) \
-			2>&1 > /dev/null &
+			-r 0 -t 1 2>&1 > $GEN_LOG) \
+			2>&1 > $GEN_LOG &
 
 	GEN_PID=$!
 
@@ -78,6 +80,7 @@ run_l2fwd()
 	ret=${PIPESTATUS[0]}
 
 	kill -2 ${GEN_PID}
+	wait ${GEN_PID}
 
 	if [ ! -f $LOG ]; then
 		echo "FAIL: $LOG not found"
@@ -89,12 +92,17 @@ run_l2fwd()
 		fi
 		MAX_PPS=$(awk '/TEST RESULT/ {print $3}' $LOG)
 		if [ "$MAX_PPS" -lt "$PASS_PPS" ]; then
-			echo "FAIL: pps below threshold $MAX_PPS < $PASS_PPS"
+			echo -e "\nodp_packet_gen"
+			echo "=============="
+			cat $GEN_LOG
+			echo -e "\nFAIL: pps below threshold $MAX_PPS < $PASS_PPS"
 			ret=1
 		fi
 	fi
 
+	rm -f $GEN_LOG
 	rm -f $LOG
+
 	cleanup_pktio_env
 
 	exit $ret
