@@ -429,7 +429,7 @@ static void timer_test_timeout_pool_alloc(void)
 
 	/* Try to allocate num items from the pool */
 	for (index = 0; index < num; index++) {
-		odp_event_subtype_t subtype;
+		odp_event_subtype_t subtype = ODP_EVENT_PACKET_BASIC;
 
 		tmo[index] = odp_timeout_alloc(pool);
 
@@ -2208,7 +2208,7 @@ static void timer_test_max_tmo_max_tmo_sched(void)
 /* Handle a received (timeout) event */
 static void handle_tmo(odp_event_t ev, bool stale, uint64_t prev_tick)
 {
-	odp_event_subtype_t subtype;
+	odp_event_subtype_t subtype = ODP_EVENT_PACKET_BASIC;
 	odp_timeout_t tmo;
 	odp_timer_t tim;
 	uint64_t tick;

@@ -683,7 +683,7 @@ static int recv_pkts_inline(const ipsec_test_part *part,
 
 	for (i = 0; i < part->num_pkt;) {
 		odp_event_t ev;
-		odp_event_subtype_t subtype;
+		odp_event_subtype_t subtype = ODP_EVENT_NO_SUBTYPE;
 
 		ev = recv_event(queue, 0);
 		if (ODP_EVENT_INVALID != ev) {
@@ -787,7 +787,7 @@ static int ipsec_process_in(const ipsec_test_part *part,
 
 		for (i = 0; i < num_out; i++) {
 			odp_event_t event;
-			odp_event_subtype_t subtype;
+			odp_event_subtype_t subtype = ODP_EVENT_NO_SUBTYPE;
 
 			event = recv_pkt_async_inbound(part->out[i].status);
 
@@ -877,7 +877,7 @@ static int ipsec_send_out_one(const ipsec_test_part *part,
 
 		for (i = 0; i < num_out; i++) {
 			odp_event_t event;
-			odp_event_subtype_t subtype;
+			odp_event_subtype_t subtype = ODP_EVENT_NO_SUBTYPE;
 
 			event = recv_event(suite_context.queue, EVENT_WAIT_TIME);
 
@@ -954,7 +954,7 @@ static int ipsec_send_out_one(const ipsec_test_part *part,
 
 		for (i = 0; i < num_out;) {
 			odp_event_t ev;
-			odp_event_subtype_t subtype;
+			odp_event_subtype_t subtype = ODP_EVENT_NO_SUBTYPE;
 
 			ev = recv_event(queue, 0);
 			if (ODP_EVENT_INVALID != ev) {

@@ -400,7 +400,7 @@ static void packet_test_alloc_free(void)
 	odp_pool_t pool;
 	odp_packet_t packet;
 	odp_pool_param_t params;
-	odp_event_subtype_t subtype;
+	odp_event_subtype_t subtype = ODP_EVENT_NO_SUBTYPE;
 	odp_event_t ev;
 
 	odp_pool_param_init(&params);
@@ -501,7 +501,7 @@ static void packet_test_alloc_free_multi(void)
 	CU_ASSERT_FATAL(ret == num_pkt);
 
 	for (i = 0; i < 2 * num_pkt; ++i) {
-		odp_event_subtype_t subtype;
+		odp_event_subtype_t subtype = ODP_EVENT_NO_SUBTYPE;
 
 		CU_ASSERT(odp_packet_len(packet[i]) == packet_len);
 		CU_ASSERT(odp_event_type(odp_packet_to_event(packet[i])) ==
@@ -809,7 +809,7 @@ static void packet_test_event_conversion(void)
 	odp_packet_t pkt1 = segmented_test_packet;
 	odp_packet_t tmp_pkt;
 	odp_event_t event;
-	odp_event_subtype_t subtype;
+	odp_event_subtype_t subtype = ODP_EVENT_NO_SUBTYPE;
 	odp_packet_t pkt[2] = {pkt0, pkt1};
 	odp_event_t ev[2];
 	int i;
@@ -3395,7 +3395,7 @@ static void packet_vector_test_user_area(void)
 
 	for (i = 0; i < num; i++) {
 		odp_event_t ev;
-		int flag;
+		int flag = -1;
 
 		pktv[i] = odp_packet_vector_alloc(pool);
 
@@ -3588,7 +3588,7 @@ static void packet_test_user_area(void)
 	odp_packet_t pkt;
 	odp_pool_t pool;
 	odp_event_t ev;
-	int flag;
+	int flag = -1;
 
 	memcpy(&param, &default_param, sizeof(odp_pool_param_t));
 

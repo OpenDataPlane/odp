@@ -50,7 +50,7 @@ int crypto_op(odp_packet_t pkt_in,
 	int rc;
 	odp_event_t event, event2;
 	odp_crypto_packet_result_t result;
-	odp_event_subtype_t subtype;
+	odp_event_subtype_t subtype = ODP_EVENT_NO_SUBTYPE;
 	odp_packet_t orig_pkt_out;
 
 	if (op_type == ODP_CRYPTO_OP_TYPE_LEGACY)

@@ -59,7 +59,7 @@ static void test_pool_alloc_free(const odp_pool_param_t *param)
 	uint32_t i;
 	uint32_t num_buf = 0;
 	void *addr;
-	odp_event_subtype_t subtype;
+	odp_event_subtype_t subtype = ODP_EVENT_PACKET_BASIC;
 	const uint32_t max_size = pool_capa.buf.max_size;
 	uint32_t num = param->buf.num;
 	uint32_t size = param->buf.size;
@@ -142,7 +142,7 @@ static void test_pool_alloc_free_multi(const odp_pool_param_t *param)
 	int ret;
 	odp_event_t ev;
 	void *addr;
-	odp_event_subtype_t subtype;
+	odp_event_subtype_t subtype = ODP_EVENT_PACKET_BASIC;
 	const uint32_t max_size = pool_capa.buf.max_size;
 	uint32_t num = param->buf.num;
 	uint32_t size = param->buf.size;
