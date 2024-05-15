@@ -18,7 +18,7 @@ static void event_test_free(void)
 	odp_buffer_t buf;
 	odp_packet_t pkt;
 	odp_timeout_t tmo;
-	odp_event_subtype_t subtype;
+	odp_event_subtype_t subtype = ODP_EVENT_PACKET_BASIC;
 	odp_event_t event[EVENT_BURST];
 
 	/* Buffer events */
@@ -309,7 +309,7 @@ static void type_test_init(odp_pool_t *buf_pool, odp_pool_t *pkt_pool,
 static void event_test_type_multi(void)
 {
 	odp_pool_t buf_pool, pkt_pool;
-	odp_event_type_t type;
+	odp_event_type_t type = ODP_EVENT_PACKET;
 	int num;
 	odp_event_t buf_event[NUM_TYPE_TEST];
 	odp_event_t pkt_event[NUM_TYPE_TEST];
@@ -354,7 +354,7 @@ static void event_test_types_multi(void)
 	odp_event_t buf_event[NUM_TYPE_TEST];
 	odp_event_t pkt_event[NUM_TYPE_TEST];
 	odp_event_t event[2 * NUM_TYPE_TEST];
-	odp_event_type_t event_types[2 * NUM_TYPE_TEST];
+	odp_event_type_t event_types[2 * NUM_TYPE_TEST] = {ODP_EVENT_PACKET};
 	odp_event_subtype_t event_subtypes[2 * NUM_TYPE_TEST];
 	int i;
 
