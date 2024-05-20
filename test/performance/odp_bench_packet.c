@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2017-2018 Linaro Limited
- * Copyright (c) 2022-2023 Nokia
+ * Copyright (c) 2022-2024 Nokia
  */
 
 /**
@@ -501,6 +501,27 @@ static int packet_reset(void)
 		ret += odp_packet_reset(gbl_args->pkt_tbl[i],
 					gbl_args->pkt.len);
 	return !ret;
+}
+
+static int packet_reset_meta(void)
+{
+	int i;
+
+	for (i = 0; i < TEST_REPEAT_COUNT; i++)
+		odp_packet_reset_meta(gbl_args->pkt_tbl[i]);
+
+	return i;
+}
+
+static int packet_reset_max_len(void)
+{
+	int i;
+	uint32_t ret = 0;
+
+	for (i = 0; i < TEST_REPEAT_COUNT; i++)
+		ret += odp_packet_reset_max_len(gbl_args->pkt_tbl[i]);
+
+	return ret;
 }
 
 static int packet_from_event(void)
@@ -1484,6 +1505,8 @@ bench_info_t test_suite[] = {
 	BENCH_INFO(packet_alloc_free, NULL, NULL, NULL),
 	BENCH_INFO(packet_alloc_free_multi, NULL, NULL, NULL),
 	BENCH_INFO(packet_reset, create_packets, free_packets, NULL),
+	BENCH_INFO(packet_reset_meta, create_packets, free_packets, NULL),
+	BENCH_INFO(packet_reset_max_len, create_packets, free_packets, NULL),
 	BENCH_INFO(packet_from_event, create_events, free_packets, NULL),
 	BENCH_INFO(packet_from_event_multi, create_events_multi, free_packets_multi, NULL),
 	BENCH_INFO(packet_to_event, create_packets, free_packets, NULL),
