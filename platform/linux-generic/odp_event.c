@@ -1,7 +1,9 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2015-2018 Linaro Limited
- * Copyright (c) 2020-2023 Nokia
+ * Copyright (c) 2020-2024 Nokia
  */
+
+#include <odp/autoheader_external.h>
 
 #include <odp/api/event.h>
 #include <odp/api/buffer.h>
@@ -42,15 +44,15 @@ _odp_event_inline_offset ODP_ALIGNED_CACHE = {
 
 #include <odp/visibility_end.h>
 
-static inline void event_free(odp_event_t event, _odp_ev_id_t id)
+void odp_event_free(odp_event_t event)
 {
 	switch (odp_event_type(event)) {
 	case ODP_EVENT_BUFFER:
-		_odp_buffer_validate(odp_buffer_from_event(event), id);
+		_odp_buffer_validate(odp_buffer_from_event(event), _ODP_EV_EVENT_FREE);
 		odp_buffer_free(odp_buffer_from_event(event));
 		break;
 	case ODP_EVENT_PACKET:
-		_odp_packet_validate(odp_packet_from_event(event), id);
+		_odp_packet_validate(odp_packet_from_event(event), _ODP_EV_EVENT_FREE);
 		odp_packet_free(odp_packet_from_event(event));
 		break;
 	case ODP_EVENT_PACKET_VECTOR:
@@ -76,21 +78,115 @@ static inline void event_free(odp_event_t event, _odp_ev_id_t id)
 	}
 }
 
-void odp_event_free(odp_event_t event)
+static inline void packet_vector_free_full_multi(const odp_packet_vector_t pktv[], int num)
 {
-	event_free(event, _ODP_EV_EVENT_FREE);
+	for (int i = 0; i < num; i++)
+		_odp_packet_vector_free_full(pktv[i]);
+}
+
+static inline void ipsec_status_free_multi(const ipsec_status_t status[], int num)
+{
+	for (int i = 0; i < num; i++)
+		_odp_ipsec_status_free(status[i]);
+}
+
+static inline void packet_tx_compl_free_multi(const odp_packet_tx_compl_t tx_compl[], int num)
+{
+	for (int i = 0; i < num; i++)
+		odp_packet_tx_compl_free(tx_compl[i]);
+}
+
+static inline void dma_compl_free_multi(const odp_dma_compl_t dma_compl[], int num)
+{
+	for (int i = 0; i < num; i++)
+		odp_dma_compl_free(dma_compl[i]);
+}
+
+static inline void ml_compl_free_multi(const odp_ml_compl_t ml_compl[], int num)
+{
+	for (int i = 0; i < num; i++)
+		odp_ml_compl_free(ml_compl[i]);
+}
+
+static inline void event_free_multi(const odp_event_t event[], int num, odp_event_type_t type,
+				    _odp_ev_id_t id)
+{
+	switch (type) {
+	case ODP_EVENT_BUFFER:
+		_odp_buffer_validate_multi((odp_buffer_t *)(uintptr_t)event, num, id);
+		odp_buffer_free_multi((odp_buffer_t *)(uintptr_t)event, num);
+		break;
+	case ODP_EVENT_PACKET:
+		_odp_packet_validate_multi((odp_packet_t *)(uintptr_t)event, num, id);
+		odp_packet_free_multi((odp_packet_t *)(uintptr_t)event, num);
+		break;
+	case ODP_EVENT_PACKET_VECTOR:
+		packet_vector_free_full_multi((odp_packet_vector_t *)(uintptr_t)event, num);
+		break;
+	case ODP_EVENT_TIMEOUT:
+		odp_timeout_free_multi((odp_timeout_t *)(uintptr_t)event, num);
+		break;
+	case ODP_EVENT_IPSEC_STATUS:
+		ipsec_status_free_multi((ipsec_status_t *)(uintptr_t)event, num);
+		break;
+	case ODP_EVENT_PACKET_TX_COMPL:
+		packet_tx_compl_free_multi((odp_packet_tx_compl_t *)(uintptr_t)event, num);
+		break;
+	case ODP_EVENT_DMA_COMPL:
+		dma_compl_free_multi((odp_dma_compl_t *)(uintptr_t)event, num);
+		break;
+	case ODP_EVENT_ML_COMPL:
+		ml_compl_free_multi((odp_ml_compl_t *)(uintptr_t)event, num);
+		break;
+	default:
+		_ODP_ABORT("Invalid event type: %d\n", type);
+	}
 }
 
 void odp_event_free_multi(const odp_event_t event[], int num)
 {
-	for (int i = 0; i < num; i++)
-		event_free(event[i], _ODP_EV_EVENT_FREE_MULTI);
+	const odp_event_t *burst_start;
+	odp_event_type_t burst_type;
+	int burst_size;
+
+	if (odp_unlikely(num <= 0))
+		return;
+
+	burst_type = odp_event_type(event[0]);
+	burst_start = &event[0];
+	burst_size = 1;
+
+	for (int i = 1; i < num; i++) {
+		const odp_event_type_t cur_type = odp_event_type(event[i]);
+
+		if (cur_type == burst_type) {
+			burst_size++;
+			continue;
+		}
+
+		event_free_multi(burst_start, burst_size, burst_type, _ODP_EV_EVENT_FREE_MULTI);
+
+		burst_type = cur_type;
+		burst_start = &event[i];
+		burst_size = 1;
+	}
+
+	event_free_multi(burst_start, burst_size, burst_type, _ODP_EV_EVENT_FREE_MULTI);
 }
 
 void odp_event_free_sp(const odp_event_t event[], int num)
 {
-	for (int i = 0; i < num; i++)
-		event_free(event[i], _ODP_EV_EVENT_FREE_SP);
+	if (odp_unlikely(num <= 0))
+		return;
+
+	if (ODP_DEBUG) {
+		const odp_pool_t pool = _odp_event_pool(event[0]);
+
+		for (int i = 1; i < num; i++)
+			_ODP_ASSERT(_odp_event_pool(event[i]) == pool);
+	}
+
+	event_free_multi(event, num, odp_event_type(event[0]), _ODP_EV_EVENT_FREE_SP);
 }
 
 uint64_t odp_event_to_u64(odp_event_t hdl)
