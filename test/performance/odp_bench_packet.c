@@ -434,6 +434,16 @@ static int packet_free(void)
 	return i;
 }
 
+static int event_free(void)
+{
+	int i;
+
+	for (i = 0; i < TEST_REPEAT_COUNT; i++)
+		odp_event_free(gbl_args->event_tbl[i]);
+
+	return i;
+}
+
 static int packet_free_multi(void)
 {
 	int i;
@@ -447,6 +457,19 @@ static int packet_free_multi(void)
 	return i;
 }
 
+static int event_free_multi(void)
+{
+	int i;
+
+	for (i = 0; i < TEST_REPEAT_COUNT; i++) {
+		int pkt_idx = i * gbl_args->appl.burst_size;
+
+		odp_event_free_multi(&gbl_args->event_tbl[pkt_idx],
+				     gbl_args->appl.burst_size);
+	}
+	return i;
+}
+
 static int packet_free_sp(void)
 {
 	int i;
@@ -456,6 +479,19 @@ static int packet_free_sp(void)
 
 		odp_packet_free_sp(&gbl_args->pkt_tbl[pkt_idx],
 				   gbl_args->appl.burst_size);
+	}
+	return i;
+}
+
+static int event_free_sp(void)
+{
+	int i;
+
+	for (i = 0; i < TEST_REPEAT_COUNT; i++) {
+		int pkt_idx = i * gbl_args->appl.burst_size;
+
+		odp_event_free_sp(&gbl_args->event_tbl[pkt_idx],
+				  gbl_args->appl.burst_size);
 	}
 	return i;
 }
@@ -1050,6 +1086,16 @@ static int packet_pool(void)
 	return i;
 }
 
+static int event_pool(void)
+{
+	int i;
+
+	for (i = 0; i < TEST_REPEAT_COUNT; i++)
+		gbl_args->pool_tbl[i] = odp_event_pool(gbl_args->event_tbl[i]);
+
+	return i;
+}
+
 static int packet_input(void)
 {
 	int i;
@@ -1104,6 +1150,17 @@ static int packet_user_area(void)
 	return i;
 }
 
+static int event_user_area(void)
+{
+	int i;
+	odp_event_t *event_tbl = gbl_args->event_tbl;
+
+	for (i = 0; i < TEST_REPEAT_COUNT; i++)
+		gbl_args->ptr_tbl[i] = odp_event_user_area(event_tbl[i]);
+
+	return i;
+}
+
 static int packet_user_area_size(void)
 {
 	int i;
@@ -1126,12 +1183,37 @@ static int packet_user_flag(void)
 	return ret;
 }
 
+static int event_user_area_and_flag(void)
+{
+	odp_event_t *event_tbl = gbl_args->event_tbl;
+	void **ptr_tbl = gbl_args->ptr_tbl;
+	int ret = 0;
+	int flag;
+
+	for (int i = 0; i < TEST_REPEAT_COUNT; i++) {
+		ptr_tbl[i] = odp_event_user_area_and_flag(event_tbl[i], &flag);
+		ret += !flag;
+	}
+
+	return ret;
+}
+
 static int packet_user_flag_set(void)
 {
 	int i;
 
 	for (i = 0; i < TEST_REPEAT_COUNT; i++)
 		odp_packet_user_flag_set(gbl_args->pkt_tbl[i], 1);
+
+	return i;
+}
+
+static int event_user_flag_set(void)
+{
+	int i;
+
+	for (i = 0; i < TEST_REPEAT_COUNT; i++)
+		odp_event_user_flag_set(gbl_args->event_tbl[i], 1);
 
 	return i;
 }
@@ -1338,6 +1420,17 @@ static int packet_subtype(void)
 	return i;
 }
 
+static int event_subtype(void)
+{
+	int i;
+	odp_event_t *event_tbl = gbl_args->event_tbl;
+
+	for (i = 0; i < TEST_REPEAT_COUNT; i++)
+		gbl_args->output_tbl[i] = odp_event_subtype(event_tbl[i]);
+
+	return i;
+}
+
 static int packet_parse(void)
 {
 	odp_packet_parse_param_t param;
@@ -1500,8 +1593,11 @@ bench_info_t test_suite[] = {
 	BENCH_INFO(packet_alloc, NULL, free_packets, NULL),
 	BENCH_INFO(packet_alloc_multi, NULL, free_packets_multi, NULL),
 	BENCH_INFO(packet_free, create_packets, NULL, NULL),
+	BENCH_INFO(event_free, create_events, NULL, NULL),
 	BENCH_INFO(packet_free_multi, alloc_packets_multi, NULL, NULL),
+	BENCH_INFO(event_free_multi, create_events_multi, NULL, NULL),
 	BENCH_INFO(packet_free_sp, alloc_packets_multi, NULL, NULL),
+	BENCH_INFO(event_free_sp, create_events_multi, NULL, NULL),
 	BENCH_INFO(packet_alloc_free, NULL, NULL, NULL),
 	BENCH_INFO(packet_alloc_free_multi, NULL, NULL, NULL),
 	BENCH_INFO(packet_reset, create_packets, free_packets, NULL),
@@ -1550,14 +1646,18 @@ bench_info_t test_suite[] = {
 	BENCH_INFO(packet_copy_data, create_packets, free_packets, NULL),
 	BENCH_INFO(packet_move_data, create_packets, free_packets, NULL),
 	BENCH_INFO(packet_pool, create_packets, free_packets, NULL),
+	BENCH_INFO(event_pool, create_events, free_packets, NULL),
 	BENCH_INFO(packet_input, create_packets, free_packets, NULL),
 	BENCH_INFO(packet_input_index, create_packets, free_packets, NULL),
 	BENCH_INFO(packet_user_ptr, create_packets, free_packets, NULL),
 	BENCH_INFO(packet_user_ptr_set, create_packets, free_packets, NULL),
 	BENCH_INFO(packet_user_area, create_packets, free_packets, NULL),
+	BENCH_INFO(event_user_area, create_events, free_packets, NULL),
 	BENCH_INFO(packet_user_area_size, create_packets, free_packets, NULL),
 	BENCH_INFO(packet_user_flag, create_packets, free_packets, NULL),
+	BENCH_INFO(event_user_area_and_flag, create_events, free_packets, NULL),
 	BENCH_INFO(packet_user_flag_set, create_packets, free_packets, NULL),
+	BENCH_INFO(event_user_flag_set, create_events, free_packets, NULL),
 	BENCH_INFO(packet_l2_ptr, create_packets, free_packets, NULL),
 	BENCH_INFO(packet_l2_offset, create_packets, free_packets, NULL),
 	BENCH_INFO(packet_l2_offset_set, create_packets, free_packets, NULL),
@@ -1576,6 +1676,7 @@ bench_info_t test_suite[] = {
 	BENCH_INFO(packet_ref_pkt, alloc_packets_twice, free_packets_twice, NULL),
 	BENCH_INFO(packet_has_ref, alloc_ref_packets, free_packets_twice, NULL),
 	BENCH_INFO(packet_subtype, create_packets, free_packets, NULL),
+	BENCH_INFO(event_subtype, create_events, free_packets, NULL),
 	BENCH_INFO(packet_parse, alloc_parse_packets_ipv4_tcp, free_packets,
 		   "packet_parse ipv4/tcp"),
 	BENCH_INFO(packet_parse, alloc_parse_packets_ipv4_udp, free_packets,
