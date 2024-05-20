@@ -91,6 +91,11 @@ static inline uint64_t *_odp_event_endmark_get_ptr(odp_event_t event)
 	return (uint64_t *)(uintptr_t)_odp_event_hdr(event)->buf_end;
 }
 
+static inline odp_pool_t _odp_event_pool(odp_event_t event)
+{
+	return _odp_event_hdr(event)->pool;
+}
+
 #ifdef __cplusplus
 }
 #endif
