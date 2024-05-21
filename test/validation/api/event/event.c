@@ -233,11 +233,7 @@ static void event_test_free_multi_mixed(void)
 			event[i] = odp_timeout_to_event(tmo);
 			i++;
 		}
-
-		if (j == 0)
-			odp_event_free_multi(event, 3 * EVENT_BURST);
-		else
-			odp_event_free_sp(event, 3 * EVENT_BURST);
+		odp_event_free_multi(event, 3 * EVENT_BURST);
 	}
 
 	CU_ASSERT(odp_pool_destroy(pool1) == 0);
