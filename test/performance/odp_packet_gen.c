@@ -1563,7 +1563,12 @@ static int rx_thread(void *arg)
 static void drain_scheduler(test_global_t *global)
 {
 	odp_event_t ev;
-	uint64_t wait_time = odp_schedule_wait_time(100 * ODP_TIME_MSEC_IN_NS);
+	uint64_t wait_time;
+
+	if (!global->test_options.num_rx)
+		return;
+
+	wait_time = odp_schedule_wait_time(100 * ODP_TIME_MSEC_IN_NS);
 
 	while ((ev = odp_schedule(NULL, wait_time)) != ODP_EVENT_INVALID) {
 		global->drained++;
