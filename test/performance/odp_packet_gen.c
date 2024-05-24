@@ -50,10 +50,16 @@ ODP_STATIC_ASSERT(MAX_WORKERS >= 1, "Too few threads");
 #define RX_THREAD         1
 #define TX_THREAD         2
 #define MAX_VLANS         4
+#define ETH_TYPE_QINQ     0x88a8
 /* Number of random 16-bit words used to generate random length packets */
 #define RAND_16BIT_WORDS  128
 /* Max retries to generate random data */
 #define MAX_RAND_RETRIES  1000
+#define MAX_HDR_NAME_LEN  32
+#define MAX_HDR_FIELDS    16
+#define MAX_HDR_VALUE_SZ  8
+#define TOKEN_DELIMITER   ","
+#define FIELD_DELIMITER   ":"
 
 /* Use don't free */
 #define TX_MODE_DF        0
@@ -68,12 +74,28 @@ ODP_STATIC_ASSERT(MAX_WORKERS >= 1, "Too few threads");
 /* Identifier for payload-timestamped packets */
 #define TS_MAGIC 0xff88ee99ddaaccbb
 
+#define S_(x) #x
+#define S(x) S_(x)
+
 enum {
 	L4_PROTO_UDP = 0,
 	L4_PROTO_TCP
 };
 
 ODP_STATIC_ASSERT(MAX_PKTIOS <= UINT8_MAX, "Interface index must fit into uint8_t\n");
+
+typedef struct {
+	char name[MAX_HDR_NAME_LEN + 2];
+	uint64_t value;
+	int64_t diff;
+	uint32_t len;
+} hdr_field_t;
+
+typedef struct {
+	hdr_field_t fields[MAX_HDR_FIELDS];
+	uint32_t tot_len;
+	uint16_t eth_type;
+} hdr_t;
 
 typedef struct test_options_t {
 	uint64_t gap_nsec;
@@ -93,7 +115,9 @@ typedef struct test_options_t {
 	uint32_t hdr_len;
 	uint32_t burst_size;
 	uint32_t bursts;
+	uint16_t eth_type;
 	uint32_t num_vlan;
+	uint32_t l3_len;
 	uint32_t ipv4_src;
 	uint32_t ipv4_dst;
 	uint16_t src_port;
@@ -101,6 +125,7 @@ typedef struct test_options_t {
 	uint32_t wait_sec;
 	uint32_t wait_start_sec;
 	uint32_t mtu;
+	uint32_t num_custom_l3;
 	uint8_t l4_proto;
 	int tx_mode;
 	odp_bool_t promisc_mode;
@@ -121,6 +146,8 @@ typedef struct test_options_t {
 	char     pktio_name[MAX_PKTIOS][MAX_PKTIO_NAME + 1];
 	char     ipv4_src_s[24];
 	char     ipv4_dst_s[24];
+
+	hdr_t custom_l3;
 
 } test_options_t;
 
@@ -228,8 +255,8 @@ static void print_usage(void)
 	       "  -v, --vlan <tpid:tci>     VLAN configuration. Comma-separated list of VLAN TPID:TCI\n"
 	       "                            values in hexadecimal, starting from the outer most VLAN.\n"
 	       "                            For example:\n"
-	       "                            VLAN 200 (decimal):          8100:c8\n"
-	       "                            Double tagged VLANs 1 and 2: 88a8:1,8100:2\n"
+	       "                            VLAN 200 (decimal):          0x8100:c8\n"
+	       "                            Double tagged VLANs 1 and 2: 0x88a8:1,0x8100:2\n"
 	       "  -r, --num_rx              Number of receive threads. Default: 1\n"
 	       "  -t, --num_tx              Number of transmit threads. Default: 1\n"
 	       "  -n, --num_pkt             Number of packets in the pool. Default: 1000\n"
@@ -282,9 +309,34 @@ static void print_usage(void)
 	       "                            0: Don't print statistics periodically (default)\n"
 	       "  -h, --help                This help\n"
 	       "  -w, --wait <sec>          Wait up to <sec> seconds for network links to be up.\n"
-	       "                            Default: 0 (don't check link status)\n"
+	       "                            Default: 0 (don't check link status)\n");
+	printf("  -U, --custom_l3 <definition>\n"
+	       "                            Define a custom L3 header for packets. This\n"
+	       "                            overrides the default IP header and any related\n"
+	       "                            options. Elements should be comma-separated (no\n"
+	       "                            spaces). Definition should begin with an EtherType\n"
+	       "                            value, followed by field definitions. Each field\n"
+	       "                            should be in the format\n"
+	       "                            <name>:<length(B)>:<value>:<diff>, i.e.\n"
+	       "                            colon-separated (no spaces). Name/length/value\n"
+	       "                            elements are self-explanatory, the 'diff' element\n"
+	       "                            defines a value that's added (subtracted if\n"
+	       "                            negative) to the 'value' element in successive\n"
+	       "                            packets. Fields are used in the order they are\n"
+	       "                            defined in the string. E.g.:\n\n"
+	       "                                0x900,a:4:0xaaaaaaaa:1,b:1:0xff:-2\n\n"
+	       "                            would result in a header of EtherType 0x900 with\n"
+	       "                            fields 'a' and 'b' of values and lengths\n"
+	       "                            '0xaaaaaaaa' (4 bytes) and '0xff' (1 byte)\n"
+	       "                            respectively. Value 1 is added to '0xaaaaaaaa' and\n"
+	       "                            -2 to '0xff' in successive packets. EtherType and\n"
+	       "                            'value' elements should be given in hexadecimals.\n"
+	       "                            Field names are only for information and debugging\n"
+	       "                            purposes. Maximum amount of fields supported is %u,\n"
+	       "                            maximum name length of a field is %u and maximum\n"
+	       "                            value size is %u bytes.\n"
 	       "  -W, --wait_start <sec>    Wait <sec> seconds before starting traffic. Default: 0\n"
-	       "\n");
+	       "\n", MAX_HDR_FIELDS, MAX_HDR_NAME_LEN, MAX_HDR_VALUE_SZ);
 }
 
 static int parse_vlan(const char *str, test_global_t *global)
@@ -324,6 +376,87 @@ static int parse_vlan(const char *str, test_global_t *global)
 	}
 
 	return num_vlan;
+}
+
+static inline uint64_t bswap(uint64_t in, uint32_t len)
+{
+	uint8_t byte;
+	uint64_t result = 0;
+
+	if (ODP_BIG_ENDIAN || len == sizeof(uint8_t))
+		return in;
+
+	for (uint32_t i = 0; i < len; i++) {
+		byte = (in >> (8 * i)) & 0xff;
+		result |= ((uint64_t)byte << (8 * (len - 1 - i)));
+	}
+
+	return result;
+}
+
+static odp_bool_t parse_custom_fields(const char *optarg, test_options_t *opts)
+{
+	char *tmp_str = strdup(optarg), *tmp;
+	uint32_t num_fields = 0;
+	char name[MAX_HDR_NAME_LEN + 1];
+	uint32_t len;
+	uint64_t value;
+	int64_t diff;
+	hdr_field_t *hdr;
+	int ret;
+
+	if (tmp_str == NULL)
+		return false;
+
+	tmp = strtok(tmp_str, TOKEN_DELIMITER);
+
+	if (tmp == NULL) {
+		free(tmp_str);
+		return false;
+	}
+
+	opts->custom_l3.eth_type = strtoul(tmp, NULL, 16);
+	tmp = strtok(NULL, TOKEN_DELIMITER);
+
+	while (tmp) {
+		if (num_fields == MAX_HDR_FIELDS) {
+			ODPH_ERR("Invalid custom header, too many fields: %u\n", num_fields + 1);
+			free(tmp_str);
+			return false;
+		}
+
+		ret = sscanf(tmp, "%" S(MAX_HDR_NAME_LEN) "[^" FIELD_DELIMITER "]" FIELD_DELIMITER
+			     "%u" FIELD_DELIMITER "%" PRIx64 FIELD_DELIMITER "%" PRIi64 "", name,
+			     &len, &value, &diff);
+
+		if (ret != 4) {
+			ODPH_ERR("Invalid custom header, bad field format\n");
+			free(tmp_str);
+			return false;
+		}
+
+		if (len > MAX_HDR_VALUE_SZ) {
+			ODPH_ERR("Invalid custom header, field length too long: %u\n", len);
+			free(tmp_str);
+			return false;
+		}
+
+		hdr = &opts->custom_l3.fields[num_fields];
+		/* Need to have +2 to size as does not compile due to truncation errors even though
+		   destination has ample room. */
+		odph_strcpy(hdr->name, name, MAX_HDR_NAME_LEN + 2);
+		hdr->value = value;
+		hdr->diff = diff;
+		hdr->len = len;
+		opts->custom_l3.tot_len += len;
+		++num_fields;
+		tmp = strtok(NULL, TOKEN_DELIMITER);
+	}
+
+	opts->num_custom_l3 = num_fields;
+	free(tmp_str);
+
+	return true;
 }
 
 static int init_bins(test_global_t *global)
@@ -400,11 +533,12 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 		{"wait",        required_argument, NULL, 'w'},
 		{"wait_start",  required_argument, NULL, 'W'},
 		{"update_stat", required_argument, NULL, 'u'},
+		{"custom_l3",   required_argument, NULL, 'U'},
 		{"help",        no_argument,       NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+i:e:r:t:n:N:l:L:D:m:M:b:x:g:v:s:d:o:p:c:CAq:u:w:W:Pah";
+	static const char *shortopts = "+i:e:r:t:n:N:l:L:D:m:M:b:x:g:v:s:d:o:p:c:CAq:u:w:W:PaU:h";
 
 	test_options->num_pktio  = 0;
 	test_options->num_rx     = 1;
@@ -633,6 +767,11 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 		case 'W':
 			test_options->wait_start_sec = atoi(optarg);
 			break;
+		case 'U':
+			if (!parse_custom_fields(optarg, test_options))
+				ret = -1;
+
+			break;
 		case 'h':
 			/* fall through */
 		default:
@@ -735,8 +874,12 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 		return -1;
 	}
 
+	test_options->eth_type = test_options->num_custom_l3 ?
+		test_options->custom_l3.eth_type : ODPH_ETHTYPE_IPV4;
+	test_options->l3_len = test_options->num_custom_l3 ?
+		test_options->custom_l3.tot_len : ODPH_IPV4HDR_LEN;
 	test_options->hdr_len = ODPH_ETHHDR_LEN + (test_options->num_vlan * ODPH_VLANHDR_LEN) +
-				ODPH_IPV4HDR_LEN;
+				test_options->l3_len;
 	test_options->hdr_len += test_options->l4_proto == L4_PROTO_UDP ?
 					ODPH_UDPHDR_LEN : ODPH_TCPHDR_LEN;
 
@@ -844,8 +987,32 @@ static int open_pktios(test_global_t *global)
 		printf("  VLAN[%i]             %x:%x\n", i,
 		       test_options->vlan[i].tpid, test_options->vlan[i].tci);
 	}
-	printf("  IPv4 source         %s\n", test_options->ipv4_src_s);
-	printf("  IPv4 destination    %s\n", test_options->ipv4_dst_s);
+
+	printf("  L3 protocol:        ");
+
+	if (test_options->num_custom_l3) {
+		printf("custom\n"
+		       "    ether type:   %x\n"
+		       "    total length: %u\n"
+		       "    fields:\n", test_options->custom_l3.eth_type,
+		       test_options->custom_l3.tot_len);
+
+		for (i = 0; i < test_options->num_custom_l3; i++) {
+			printf("      name:   %s\n"
+			       "      length: %u\n"
+			       "      value:  %" PRIx64 "\n"
+			       "      diff:   %" PRIi64 "\n\n",
+			       test_options->custom_l3.fields[i].name,
+			       test_options->custom_l3.fields[i].len,
+			       test_options->custom_l3.fields[i].value,
+			       test_options->custom_l3.fields[i].diff);
+		}
+	} else {
+		printf("IPv4\n");
+		printf("    IPv4 source:      %s\n", test_options->ipv4_src_s);
+		printf("    IPv4 destination: %s\n\n", test_options->ipv4_dst_s);
+	}
+
 	printf("  L4 protocol:        %s\n",
 	       test_options->l4_proto == L4_PROTO_UDP ? "UDP" : "TCP");
 	printf("  source port         %u\n", test_options->src_port);
@@ -1409,6 +1576,11 @@ static void drain_direct_input(test_global_t *global)
 	}
 }
 
+static inline uint8_t *copy_field(uint8_t *dst, uint8_t *src, uint32_t len)
+{
+	return (uint8_t *)memcpy(dst, src, len) + len;
+}
+
 static int init_packets(test_global_t *global, int pktio,
 			odp_packet_t packet[], uint32_t num, uint16_t seq)
 {
@@ -1422,13 +1594,16 @@ static int init_packets(test_global_t *global, int pktio,
 	test_options_t *test_options = &global->test_options;
 	const odp_bool_t use_tcp = test_options->l4_proto == L4_PROTO_TCP;
 	uint32_t num_vlan = test_options->num_vlan;
+	uint32_t num_custom_l3 = test_options->num_custom_l3;
 	uint32_t hdr_len = test_options->hdr_len;
 	uint16_t src_port = test_options->src_port;
 	uint16_t dst_port = test_options->dst_port;
 	uint32_t src_cnt = 0;
 	uint32_t dst_cnt = 0;
 	uint32_t tcp_seqnum = 0x1234;
+	uint64_t value;
 	odph_vlanhdr_t *vlan = NULL; /* Fixes bogus compiler warning */
+	hdr_field_t *c_hdr = NULL;
 
 	if (num_vlan > MAX_VLANS)
 		num_vlan = MAX_VLANS;
@@ -1449,13 +1624,19 @@ static int init_packets(test_global_t *global, int pktio,
 		eth = data;
 		memcpy(eth->dst.addr, global->pktio[pktio].eth_dst.addr, 6);
 		memcpy(eth->src.addr, global->pktio[pktio].eth_src.addr, 6);
-		eth->type = odp_cpu_to_be_16(ODPH_ETHTYPE_IPV4);
+		eth->type = odp_cpu_to_be_16(test_options->eth_type);
 		l2_len = ODPH_ETHHDR_LEN;
+		odp_packet_has_eth_set(pkt, 1);
 
 		/* VLAN(s) */
 		if (num_vlan) {
 			tpid = test_options->vlan[0].tpid;
 			eth->type = odp_cpu_to_be_16(tpid);
+
+			if (tpid == ETH_TYPE_QINQ)
+				odp_packet_has_vlan_qinq_set(pkt, 1);
+			else
+				odp_packet_has_vlan_set(pkt, 1);
 		}
 
 		for (j = 0; j < num_vlan; j++) {
@@ -1470,21 +1651,39 @@ static int init_packets(test_global_t *global, int pktio,
 		}
 
 		if (num_vlan)
-			vlan->type = odp_cpu_to_be_16(ODPH_ETHTYPE_IPV4);
+			vlan->type = odp_cpu_to_be_16(test_options->eth_type);
 
-		/* IPv4 */
-		ip = (odph_ipv4hdr_t *)((uint8_t *)data + l2_len);
-		memset(ip, 0, ODPH_IPV4HDR_LEN);
-		ip->ver_ihl = ODPH_IPV4 << 4 | ODPH_IPV4HDR_IHL_MIN;
-		ip->tot_len = odp_cpu_to_be_16(pkt_len - l2_len);
-		ip->id = odp_cpu_to_be_16(seq + i);
-		ip->ttl = 64;
-		ip->proto = use_tcp ? ODPH_IPPROTO_TCP : ODPH_IPPROTO_UDP;
-		ip->src_addr = odp_cpu_to_be_32(test_options->ipv4_src);
-		ip->dst_addr = odp_cpu_to_be_32(test_options->ipv4_dst);
-		ip->chksum = ~odp_chksum_ones_comp16(ip, ODPH_IPV4HDR_LEN);
+		odp_packet_l3_offset_set(pkt, l2_len);
 
-		u8 = ((uint8_t *)data + l2_len + ODPH_IPV4HDR_LEN);
+		/* L3 */
+		if (num_custom_l3) {
+			/* Custom */
+			u8 = (uint8_t *)data + l2_len;
+
+			for (j = 0; j < num_custom_l3; j++) {
+				c_hdr = &test_options->custom_l3.fields[j];
+				value = bswap(c_hdr->value, c_hdr->len);
+				u8 = copy_field(u8, (uint8_t *)&value, c_hdr->len);
+				c_hdr->value += c_hdr->diff;
+			}
+		} else {
+			/* IPv4 */
+			ip = (odph_ipv4hdr_t *)((uint8_t *)data + l2_len);
+			memset(ip, 0, ODPH_IPV4HDR_LEN);
+			ip->ver_ihl = ODPH_IPV4 << 4 | ODPH_IPV4HDR_IHL_MIN;
+			ip->tot_len = odp_cpu_to_be_16(pkt_len - l2_len);
+			ip->id = odp_cpu_to_be_16(seq + i);
+			ip->ttl = 64;
+			ip->proto = use_tcp ? ODPH_IPPROTO_TCP : ODPH_IPPROTO_UDP;
+			ip->src_addr = odp_cpu_to_be_32(test_options->ipv4_src);
+			ip->dst_addr = odp_cpu_to_be_32(test_options->ipv4_dst);
+			ip->chksum = ~odp_chksum_ones_comp16(ip, ODPH_IPV4HDR_LEN);
+			odp_packet_has_ipv4_set(pkt, 1);
+
+			u8 = ((uint8_t *)data + l2_len + ODPH_IPV4HDR_LEN);
+		}
+
+		odp_packet_l4_offset_set(pkt, l2_len + test_options->l3_len);
 
 		if (use_tcp) {
 			odph_tcphdr_t *tcp = (odph_tcphdr_t *)u8;
@@ -1498,6 +1697,7 @@ static int init_packets(test_global_t *global, int pktio,
 			tcp->hl       = 5;
 			tcp->ack      = 1;
 			tcp_seqnum   += payload_len;
+			odp_packet_has_tcp_set(pkt, 1);
 		} else {
 			odph_udphdr_t *udp = (odph_udphdr_t *)u8;
 
@@ -1506,6 +1706,7 @@ static int init_packets(test_global_t *global, int pktio,
 			udp->dst_port = odp_cpu_to_be_16(dst_port);
 			udp->length   = odp_cpu_to_be_16(payload_len + ODPH_UDPHDR_LEN);
 			udp->chksum   = 0;
+			odp_packet_has_udp_set(pkt, 1);
 		}
 
 		u8  = data;
@@ -1518,15 +1719,8 @@ static int init_packets(test_global_t *global, int pktio,
 		}
 
 		/* Insert checksum */
-		odp_packet_l3_offset_set(pkt, l2_len);
-		odp_packet_l4_offset_set(pkt, l2_len + ODPH_IPV4HDR_LEN);
-		odp_packet_has_eth_set(pkt, 1);
-		odp_packet_has_ipv4_set(pkt, 1);
-		if (use_tcp) {
-			odp_packet_has_tcp_set(pkt, 1);
+		if (!use_tcp) {
 			/* TCP checksum is always updated before TX */
-		} else {
-			odp_packet_has_udp_set(pkt, 1);
 			if (!test_options->calc_latency && test_options->calc_cs)
 				odph_udp_chksum_set(pkt);
 		}
