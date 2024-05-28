@@ -955,40 +955,40 @@ static int open_pktios(test_global_t *global)
 				test_options->rand_pkt_len_max : test_options->pkt_len;
 
 	printf("\nODP packet generator\n");
-	printf("  quit test after     %" PRIu64 " rounds\n",
+	printf("  quit test after:   %" PRIu64 " rounds\n",
 	       test_options->quit);
-	printf("  num rx threads      %i\n", num_rx);
-	printf("  num tx threads      %i\n", num_tx);
-	printf("  num packets         %u\n", num_pkt);
+	printf("  num rx threads:    %i\n", num_rx);
+	printf("  num tx threads:    %i\n", num_tx);
+	printf("  num packets:       %u\n", num_pkt);
 	if (test_options->use_rand_pkt_len)
-		printf("  packet length       %u-%u bytes, %u bins\n",
+		printf("  packet length:     %u-%u bytes, %u bins\n",
 		       test_options->rand_pkt_len_min,
 		       test_options->rand_pkt_len_max,
 		       test_options->rand_pkt_len_bins);
 	else
-		printf("  packet length       %u bytes\n", pkt_len);
-	printf("  MTU:                ");
+		printf("  packet length:     %u bytes\n", pkt_len);
+	printf("  MTU:               ");
 	if (test_options->mtu)
 		printf("%u bytes\n", test_options->mtu);
 	else
 		printf("interface default\n");
-	printf("  packet input mode:  %s\n", test_options->direct_rx ? "direct" : "scheduler");
-	printf("  promisc mode:       %s\n", test_options->promisc_mode ? "enabled" : "disabled");
-	printf("  transmit mode:      %i\n", test_options->tx_mode);
-	printf("  measure latency:    %s\n", test_options->calc_latency ? "enabled" : "disabled");
-	printf("  UDP checksum:       %s\n", test_options->calc_cs ? "enabled" : "disabled");
-	printf("  payload filling:    %s\n", test_options->fill_pl ? "enabled" : "disabled");
-	printf("  tx burst size       %u\n", test_options->burst_size);
-	printf("  tx bursts           %u\n", test_options->bursts);
-	printf("  tx burst gap        %" PRIu64 " nsec\n",
+	printf("  packet input mode: %s\n", test_options->direct_rx ? "direct" : "scheduler");
+	printf("  promisc mode:      %s\n", test_options->promisc_mode ? "enabled" : "disabled");
+	printf("  transmit mode:     %i\n", test_options->tx_mode);
+	printf("  measure latency:   %s\n", test_options->calc_latency ? "enabled" : "disabled");
+	printf("  UDP checksum:      %s\n", test_options->calc_cs ? "enabled" : "disabled");
+	printf("  payload filling:   %s\n", test_options->fill_pl ? "enabled" : "disabled");
+	printf("  tx burst size:     %u\n", test_options->burst_size);
+	printf("  tx bursts:         %u\n", test_options->bursts);
+	printf("  tx burst gap:      %" PRIu64 " nsec\n",
 	       test_options->gap_nsec);
-	printf("  clock resolution    %" PRIu64 " Hz\n", odp_time_local_res());
+	printf("  clock resolution:  %" PRIu64 " Hz\n", odp_time_local_res());
 	for (i = 0; i < test_options->num_vlan; i++) {
-		printf("  VLAN[%i]             %x:%x\n", i,
+		printf("  VLAN[%i]:           %x:%x\n", i,
 		       test_options->vlan[i].tpid, test_options->vlan[i].tci);
 	}
 
-	printf("  L3 protocol:        ");
+	printf("  L3 protocol:       ");
 
 	if (test_options->num_custom_l3) {
 		printf("custom\n"
@@ -1013,22 +1013,22 @@ static int open_pktios(test_global_t *global)
 		printf("    IPv4 destination: %s\n\n", test_options->ipv4_dst_s);
 	}
 
-	printf("  L4 protocol:        %s\n",
+	printf("  L4 protocol:       %s\n",
 	       test_options->l4_proto == L4_PROTO_UDP ? "UDP" : "TCP");
-	printf("  source port         %u\n", test_options->src_port);
-	printf("  destination port    %u\n", test_options->dst_port);
-	printf("  src port count      %u\n", test_options->c_mode.src_port);
-	printf("  dst port count      %u\n", test_options->c_mode.dst_port);
-	printf("  num pktio           %u\n", num_pktio);
+	printf("  source port:       %u\n", test_options->src_port);
+	printf("  destination port:  %u\n", test_options->dst_port);
+	printf("  src port count:    %u\n", test_options->c_mode.src_port);
+	printf("  dst port count:    %u\n", test_options->c_mode.dst_port);
+	printf("  num pktio:         %u\n", num_pktio);
 
-	printf("  interfaces names:   ");
+	printf("  interfaces names:  ");
 	for (i = 0; i < num_pktio; i++) {
 		if (i > 0)
 			printf("                      ");
 		printf("%s\n", test_options->pktio_name[i]);
 	}
 
-	printf("  destination MACs:   ");
+	printf("  destination MACs:  ");
 	for (i = 0; i < num_pktio; i++) {
 		uint8_t *eth_dst = global->pktio[i].eth_dst.addr;
 
