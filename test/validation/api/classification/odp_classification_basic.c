@@ -136,7 +136,7 @@ static void cos_destroy_multi(odp_cos_t cos[], uint32_t num)
 static void cls_create_cos_multi(void)
 {
 	odp_cls_cos_param_t param_single;
-	odp_cls_cos_param_t param[MAX_HANDLES];
+	odp_cls_cos_param_t *param;
 	odp_cls_capability_t capa;
 	odp_cos_t cos[MAX_HANDLES];
 	const char *name[MAX_HANDLES] = {NULL, "aaa", NULL, "bbb", "ccc", NULL, "ddd"};
@@ -146,6 +146,9 @@ static void cls_create_cos_multi(void)
 	CU_ASSERT_FATAL(capa.max_cos);
 
 	num = capa.max_cos < MAX_HANDLES ? capa.max_cos : MAX_HANDLES;
+
+	param = calloc(num, sizeof(odp_cls_cos_param_t));
+	CU_ASSERT_FATAL(param != NULL);
 
 	for (uint32_t i = 0; i < num; i++) {
 		odp_cls_cos_param_init(&param[i]);
@@ -165,6 +168,7 @@ static void cls_create_cos_multi(void)
 	num_created = cos_create_multi(NULL, param, cos, num);
 	CU_ASSERT(num_created == num)
 	cos_destroy_multi(cos, num_created);
+	free(param);
 }
 
 static void cls_create_cos_max(void)
