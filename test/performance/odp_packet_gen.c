@@ -224,7 +224,7 @@ typedef struct test_global_t {
 
 typedef struct ODP_PACKED {
 	uint64_t magic;
-	uint64_t tx_ts;
+	odp_time_t tx_ts;
 } ts_data_t;
 
 typedef struct {
@@ -500,7 +500,7 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 {
 	int opt, i, len, str_len, long_index, port;
 	unsigned long int count;
-	uint32_t min_packets, num_tx_pkt, num_tx_alloc, pkt_len, val, bins;
+	uint32_t min_packets, num_tx_pkt, num_tx_alloc, pkt_len, req_len, val, bins;
 	char *name, *str, *end;
 	test_options_t *test_options = &global->test_options;
 	int ret = 0;
@@ -890,8 +890,14 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 
 	pkt_len = test_options->use_rand_pkt_len ?
 			test_options->rand_pkt_len_min : test_options->pkt_len;
-	if (test_options->hdr_len >= pkt_len) {
-		ODPH_ERR("Error: Headers do not fit into packet length %" PRIu32 "\n", pkt_len);
+
+	req_len = test_options->hdr_len;
+	if (test_options->calc_latency)
+		req_len += sizeof(ts_data_t);
+
+	if (req_len > pkt_len) {
+		ODPH_ERR("Error: Headers do not fit into packet length of %" PRIu32 " bytes "
+			 "(min %" PRIu32 " bytes required)\n", pkt_len, req_len);
 		return -1;
 	}
 
@@ -1387,7 +1393,7 @@ static int close_pktios(test_global_t *global)
 }
 
 static inline void get_timestamp(odp_packet_t pkt, uint32_t ts_off, rx_lat_data_t *lat_data,
-				 uint64_t rx_ts)
+				 odp_time_t rx_ts)
 {
 	ts_data_t ts_data;
 	uint64_t nsec;
@@ -1396,7 +1402,7 @@ static inline void get_timestamp(odp_packet_t pkt, uint32_t ts_off, rx_lat_data_
 			 ts_data.magic != TS_MAGIC))
 		return;
 
-	nsec = rx_ts - ts_data.tx_ts;
+	nsec = odp_time_diff_ns(rx_ts, ts_data.tx_ts);
 
 	if (nsec < lat_data->min)
 		lat_data->min = nsec;
@@ -1432,7 +1438,7 @@ static int rx_thread(void *arg)
 	odp_pktin_queue_t pktin_queue[num_pktio];
 	odp_packet_t pkt[max_num];
 	uint32_t ts_off = global->test_options.calc_latency ? global->test_options.hdr_len : 0;
-	uint64_t rx_ts = 0;
+	odp_time_t rx_ts = ODP_TIME_NULL;
 	rx_lat_data_t rx_lat_data = { .nsec = 0, .min = UINT64_MAX, .max = 0, .packets = 0 };
 
 	thr = odp_thread_id();
@@ -1470,7 +1476,7 @@ static int rx_thread(void *arg)
 		}
 
 		if (ts_off && num)
-			rx_ts = odp_time_global_ns();
+			rx_ts = odp_time_global();
 
 		exit_test = odp_atomic_load_u32(&global->exit_test);
 		if (exit_test) {
@@ -1796,7 +1802,7 @@ static inline int update_rand_data(uint8_t *data, uint32_t data_len)
 
 static inline void set_timestamp(odp_packet_t pkt, uint32_t ts_off)
 {
-	const ts_data_t ts_data = { .magic = TS_MAGIC, .tx_ts = odp_time_global_ns() };
+	const ts_data_t ts_data = { .magic = TS_MAGIC, .tx_ts = odp_time_global() };
 
 	(void)odp_packet_copy_from_mem(pkt, ts_off, sizeof(ts_data), &ts_data);
 }
