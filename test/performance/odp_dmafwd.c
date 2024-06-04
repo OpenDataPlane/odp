@@ -84,6 +84,7 @@ typedef struct {
 	uint64_t sched_cc;
 	uint64_t tot_cc;
 	uint64_t sched_rounds;
+	uint64_t pkt_cleanup;
 } stats_t;
 
 typedef struct ODP_ALIGNED_CACHE {
@@ -1122,10 +1123,12 @@ static inline void pop_packets(pkt_vec_t *pkt_vec, int num_procd)
 		pkt_vec->pkts[i] = pkt_vec->pkts[j];
 }
 
-static void free_pending_packets(pkt_vec_t pkt_vecs[], uint32_t num_ifs)
+static void free_pending_packets(pkt_vec_t pkt_vecs[], uint32_t num_ifs, stats_t *stats)
 {
-	for (uint32_t i = 0U; i < num_ifs; ++i)
+	for (uint32_t i = 0U; i < num_ifs; ++i) {
+		stats->pkt_cleanup += pkt_vecs[i].num;
 		odp_packet_free_multi(pkt_vecs[i].pkts, pkt_vecs[i].num);
+	}
 }
 
 static int process_packets(void *args)
@@ -1198,7 +1201,7 @@ static int process_packets(void *args)
 	stats->sched_cc = cdiff;
 	stats->tot_cc = odp_cpu_cycles_diff(c2, c1);
 	stats->sched_rounds = rounds;
-	free_pending_packets(pkt_vecs, num_ifs);
+	free_pending_packets(pkt_vecs, num_ifs, stats);
 	odp_barrier_wait(&config->prog_config->term_barrier);
 
 	if (config->prog_config->drain_fn)
@@ -1351,12 +1354,14 @@ static void print_stats(const prog_config_t *config)
 
 		printf("        packets forwarded:%s%" PRIu64 "\n"
 		       "        packets dropped:  %s%" PRIu64 "\n"
+		       "        packets cleanup:  %s%" PRIu64 "\n"
 		       "        call cycles per schedule round:\n"
 		       "            total:    %" PRIu64 "\n"
 		       "            schedule: %" PRIu64 "\n"
 		       "            rounds:   %" PRIu64 "\n", align2, stats->fwd_pkts, align2,
-		       stats->discards, DIV_IF(stats->tot_cc, stats->sched_rounds),
-		       DIV_IF(stats->sched_cc, stats->sched_rounds), stats->sched_rounds);
+		       stats->discards, align2, stats->pkt_cleanup, DIV_IF(stats->tot_cc,
+		       stats->sched_rounds), DIV_IF(stats->sched_cc, stats->sched_rounds),
+		       stats->sched_rounds);
 	}
 
 	printf("\n==================\n");
