@@ -1476,7 +1476,7 @@ static int rx_thread(void *arg)
 		}
 
 		if (ts_off && num)
-			rx_ts = odp_time_global();
+			rx_ts = odp_time_global_strict();
 
 		exit_test = odp_atomic_load_u32(&global->exit_test);
 		if (exit_test) {
@@ -1802,7 +1802,7 @@ static inline int update_rand_data(uint8_t *data, uint32_t data_len)
 
 static inline void set_timestamp(odp_packet_t pkt, uint32_t ts_off)
 {
-	const ts_data_t ts_data = { .magic = TS_MAGIC, .tx_ts = odp_time_global() };
+	const ts_data_t ts_data = { .magic = TS_MAGIC, .tx_ts = odp_time_global_strict() };
 
 	(void)odp_packet_copy_from_mem(pkt, ts_off, sizeof(ts_data), &ts_data);
 }
