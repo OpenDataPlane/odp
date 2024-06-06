@@ -95,7 +95,7 @@ odp_ipsecfwd_SOURCES = odp_ipsecfwd.c
 AM_CFLAGS += $(LIBCONFIG_CFLAGS)
 endif
 
-PRELDADD += $(LIBBENCH_COMMON)
+PRELDADD += $(LIBBENCH_COMMON) $(LIBTEST_COMMON)
 
 dist_check_SCRIPTS = $(TESTSCRIPTS)
 
