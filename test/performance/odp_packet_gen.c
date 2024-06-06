@@ -52,7 +52,7 @@ ODP_STATIC_ASSERT(MAX_WORKERS >= 1, "Too few threads");
 #define MAX_VLANS         4
 #define ETH_TYPE_QINQ     0x88a8
 /* Number of random 16-bit words used to generate random length packets */
-#define RAND_16BIT_WORDS  128
+#define RAND_16BIT_WORDS  MAX_BINS
 /* Max retries to generate random data */
 #define MAX_RAND_RETRIES  1000
 #define MAX_HDR_NAME_LEN  32
@@ -219,6 +219,9 @@ typedef struct test_global_t {
 	uint32_t num_tx_pkt;
 	uint32_t num_bins;
 	uint32_t len_bin[MAX_BINS];
+
+	/* Per thread random data */
+	uint16_t rand_data[MAX_THREADS][RAND_16BIT_WORDS];
 
 } test_global_t;
 
@@ -1800,6 +1803,22 @@ static inline int update_rand_data(uint8_t *data, uint32_t data_len)
 	return 0;
 }
 
+static int init_global_data(test_global_t *global)
+{
+	memset(global, 0, sizeof(test_global_t));
+	odp_atomic_init_u32(&global->exit_test, 0);
+
+	for (int i = 0; i < MAX_THREADS; i++) {
+		uint8_t *rand_data = (uint8_t *)global->rand_data[i];
+
+		if (odp_unlikely(update_rand_data(rand_data, RAND_16BIT_WORDS * 2)))
+			return -1;
+
+		global->thread_arg[i].global = global;
+	}
+	return 0;
+}
+
 static inline void set_timestamp(odp_packet_t pkt, uint32_t ts_off)
 {
 	const ts_data_t ts_data = { .magic = TS_MAGIC, .tx_ts = odp_time_global_strict() };
@@ -1841,12 +1860,12 @@ static int alloc_packets(odp_pool_t pool, odp_packet_t *pkt_tbl, uint32_t num,
 static inline uint32_t form_burst(odp_packet_t out_pkt[], uint32_t burst_size, uint32_t num_bins,
 				  uint32_t burst, odp_packet_t *pkt_tbl, odp_pool_t pool,
 				  int tx_mode, odp_bool_t calc_latency, uint32_t hdr_len,
-				  odp_bool_t calc_udp_cs, uint64_t *total_bytes, uint8_t l4_proto)
+				  odp_bool_t calc_udp_cs, uint64_t *total_bytes, uint8_t l4_proto,
+				  const uint16_t *rand_data)
 {
 	uint32_t i, idx;
 	odp_packet_t pkt;
-	static __thread int rand_idx = RAND_16BIT_WORDS;
-	static __thread uint16_t rand_data[RAND_16BIT_WORDS];
+	static __thread int rand_idx;
 	uint64_t bytes = 0;
 
 	idx = burst * burst_size;
@@ -1857,12 +1876,9 @@ static inline uint32_t form_burst(odp_packet_t out_pkt[], uint32_t burst_size, u
 		if (num_bins) {
 			uint32_t bin;
 
-			if (rand_idx >= RAND_16BIT_WORDS) {
-				if (odp_unlikely(update_rand_data((uint8_t *)rand_data,
-								  RAND_16BIT_WORDS * 2)))
-					break;
+			if (odp_unlikely(rand_idx >= RAND_16BIT_WORDS))
 				rand_idx = 0;
-			}
+
 			/* Select random length bin */
 			bin = rand_data[rand_idx++] % num_bins;
 			pkt = pkt_tbl[idx + bin];
@@ -1933,7 +1949,7 @@ static inline int send_burst(odp_pktout_queue_t pktout, odp_packet_t pkt[],
 
 static int tx_thread(void *arg)
 {
-	int i, thr, tx_thr;
+	int i, tx_thr;
 	uint32_t exit_test, num_alloc, j;
 	odp_time_t t1, t2, next_tmo;
 	uint64_t diff_ns, t1_nsec;
@@ -1950,10 +1966,12 @@ static int tx_thread(void *arg)
 	uint64_t tx_packets = 0;
 	uint64_t tx_drops = 0;
 	int ret = 0;
+	const int thr = odp_thread_id();
 	const uint32_t hdr_len = test_options->hdr_len;
 	const uint32_t burst_size = test_options->burst_size;
 	const uint32_t bursts = test_options->bursts;
 	const uint32_t num_tx = test_options->num_tx;
+	const uint16_t *rand_data = global->rand_data[thr];
 	const uint8_t l4_proto = test_options->l4_proto;
 	const int tx_mode = test_options->tx_mode;
 	const odp_bool_t calc_cs = test_options->calc_cs;
@@ -1963,7 +1981,6 @@ static int tx_thread(void *arg)
 	uint32_t tot_packets = 0;
 	uint32_t num_bins = global->num_bins;
 
-	thr = odp_thread_id();
 	tx_thr = thread_arg->tx_thr;
 	global->stat[thr].thread_type = TX_THREAD;
 
@@ -2034,12 +2051,11 @@ static int tx_thread(void *arg)
 			for (j = 0; j < bursts; j++) {
 				num = form_burst(pkt, burst_size, num_bins, j, pkt_tbl, pool,
 						 tx_mode, calc_latency, hdr_len, calc_cs,
-						 &total_bytes, l4_proto);
+						 &total_bytes, l4_proto, rand_data);
 
 				if (odp_unlikely(num == 0)) {
-					ret = -1;
 					tx_drops += burst_size;
-					break;
+					continue;
 				}
 
 				sent = send_burst(pktout[i], pkt, num, tx_mode, &drop_bytes);
@@ -2400,7 +2416,6 @@ int main(int argc, char **argv)
 	odp_init_t init;
 	test_global_t *global;
 	odp_shm_t shm;
-	int i;
 	int ret = 0;
 
 	signal(SIGINT, sig_handler);
@@ -2446,11 +2461,10 @@ int main(int argc, char **argv)
 	global = odp_shm_addr(shm);
 	test_global = global;
 
-	memset(global, 0, sizeof(test_global_t));
-	odp_atomic_init_u32(&global->exit_test, 0);
-
-	for (i = 0; i < MAX_THREADS; i++)
-		global->thread_arg[i].global = global;
+	if (init_global_data(global)) {
+		ret = 1;
+		goto term;
+	}
 
 	if (parse_options(argc, argv, global)) {
 		ret = 1;
