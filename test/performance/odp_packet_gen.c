@@ -1902,8 +1902,8 @@ static inline uint32_t form_burst(odp_packet_t out_pkt[], uint32_t burst_size, u
 	return i;
 }
 
-static inline uint32_t send_burst(odp_pktout_queue_t pktout, odp_packet_t pkt[],
-				  uint32_t num, int tx_mode, uint64_t *drop_bytes)
+static inline int send_burst(odp_pktout_queue_t pktout, odp_packet_t pkt[],
+			     uint32_t num, int tx_mode, uint64_t *drop_bytes)
 {
 	int ret;
 	uint32_t sent;
@@ -1928,7 +1928,7 @@ static inline uint32_t send_burst(odp_pktout_queue_t pktout, odp_packet_t pkt[],
 
 	*drop_bytes = bytes;
 
-	return sent;
+	return ret;
 }
 
 static int tx_thread(void *arg)
@@ -2024,7 +2024,8 @@ static int tx_thread(void *arg)
 
 		/* Send bursts to each pktio */
 		for (i = 0; i < num_pktio; i++) {
-			uint32_t num, sent;
+			uint32_t num;
+			int sent;
 			uint64_t total_bytes, drop_bytes;
 			odp_packet_t pkt[burst_size];
 
@@ -2043,7 +2044,7 @@ static int tx_thread(void *arg)
 
 				sent = send_burst(pktout[i], pkt, num, tx_mode, &drop_bytes);
 
-				if (odp_unlikely(sent == 0)) {
+				if (odp_unlikely(sent < 0)) {
 					ret = -1;
 					tx_drops += burst_size;
 					break;
@@ -2051,7 +2052,7 @@ static int tx_thread(void *arg)
 
 				tx_bytes   += total_bytes - drop_bytes;
 				tx_packets += sent;
-				if (odp_unlikely(sent < burst_size))
+				if (odp_unlikely(sent < (int)burst_size))
 					tx_drops += burst_size - sent;
 
 				if (odp_unlikely(periodic_stat))
