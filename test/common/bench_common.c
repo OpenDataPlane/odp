@@ -240,6 +240,9 @@ int bench_tm_run(void *arg)
 		}
 		printf("[%02d] %-26s\n", j + 1, bench->name);
 		print_results(&res);
+
+		if (suite->result)
+			suite->result[j] = res;
 	}
 	printf("\n");
 
