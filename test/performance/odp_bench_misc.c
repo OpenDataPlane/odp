@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright (c) 2022-2023 Nokia
+ * Copyright (c) 2022-2024 Nokia
  */
 
 /**
@@ -18,6 +18,7 @@
 #include <odp/helper/odph_api.h>
 
 #include <bench_common.h>
+#include <export_results.h>
 
 #include <getopt.h>
 #include <inttypes.h>
@@ -30,6 +31,9 @@
 
 /* Default number of rounds per test case */
 #define ROUNDS 1000u
+
+/* Maximum number of results to be held */
+#define TEST_MAX_BENCH 60
 
 #define BENCH_INFO(run_fn, init_fn, max, alt_name) \
 	{.name = #run_fn, .run = run_fn, .init = init_fn, .max_rounds = max, .desc = alt_name}
@@ -73,6 +77,9 @@ typedef struct {
 
 	/* CPU mask as string */
 	char cpumask_str[ODP_CPUMASK_STR_SIZE];
+
+	/* Array for storing results */
+	double result[TEST_MAX_BENCH];
 
 } gbl_args_t;
 
@@ -775,6 +782,33 @@ static int prefetch_store(void)
 	return i;
 }
 
+static int bench_misc_export(void *data)
+{
+	gbl_args_t *gbl_args = data;
+	int ret = 0;
+
+	if (test_common_write("%s", gbl_args->appl.time ?
+			      "Function name,Average nsec per function call\n" :
+			      "Function name,Average CPU cycles per function call\n")) {
+		ret = -1;
+		goto exit;
+	}
+
+	for (int i = 0; i < gbl_args->suite.num_bench; i++) {
+		if (test_common_write("odp_%s,%f\n",
+				      gbl_args->suite.bench[i].name,
+				      gbl_args->suite.result[i])) {
+			ret = -1;
+			goto exit;
+		}
+	}
+
+exit:
+	test_common_write_term();
+
+	return ret;
+}
+
 bench_info_t test_suite[] = {
 	BENCH_INFO(time_local, NULL, 0, NULL),
 	BENCH_INFO(time_local_strict, NULL, 0, NULL),
@@ -830,6 +864,9 @@ bench_info_t test_suite[] = {
 	BENCH_INFO(prefetch, NULL, 0, NULL),
 	BENCH_INFO(prefetch_store, NULL, 0, NULL),
 };
+
+ODP_STATIC_ASSERT(ODPH_ARRAY_SIZE(test_suite) < TEST_MAX_BENCH,
+		  "Result array is too small to hold all the results");
 
 /* Print usage information */
 static void usage(void)
@@ -923,6 +960,7 @@ static void print_info(void)
 int main(int argc, char *argv[])
 {
 	odph_helper_options_t helper_options;
+	test_common_options_t common_options;
 	odph_thread_t worker_thread;
 	odph_thread_common_param_t thr_common;
 	odph_thread_param_t thr_param;
@@ -937,6 +975,12 @@ int main(int argc, char *argv[])
 	argc = odph_parse_options(argc, argv);
 	if (odph_options(&helper_options)) {
 		ODPH_ERR("Reading ODP helper options failed\n");
+		exit(EXIT_FAILURE);
+	}
+
+	argc = test_common_parse_options(argc, argv);
+	if (test_common_options(&common_options)) {
+		ODPH_ERR("Error: reading test helper options failed\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -1001,6 +1045,8 @@ int main(int argc, char *argv[])
 	gbl_args->suite.indef_idx = gbl_args->appl.bench_idx;
 	gbl_args->suite.rounds = gbl_args->appl.rounds;
 	gbl_args->suite.repeat_count = REPEAT_COUNT;
+	if (common_options.is_export)
+		gbl_args->suite.result = gbl_args->result;
 
 	/* Get default worker cpumask */
 	if (odp_cpumask_default_worker(&default_mask, 1) != 1) {
@@ -1037,6 +1083,13 @@ int main(int argc, char *argv[])
 	odph_thread_join(&worker_thread, 1);
 
 	ret = gbl_args->suite.retval;
+
+	if (ret == 0 && common_options.is_export) {
+		if (bench_misc_export(gbl_args)) {
+			ODPH_ERR("Error: Export failed\n");
+			ret = -1;
+		}
+	}
 
 exit:
 	if (odp_shm_free(shm)) {
