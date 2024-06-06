@@ -25,6 +25,7 @@
 #include <odp/helper/odph_api.h>
 
 #include <bench_common.h>
+#include <export_results.h>
 
 /** Packet user area size in bytes */
 #define PKT_POOL_UAREA_SIZE 8
@@ -61,6 +62,11 @@
 /** Default burst size for *_multi operations */
 #define TEST_DEF_BURST 8
 
+/** Maximum number of results to be held */
+#define TEST_MAX_BENCH 100
+
+#define TEST_MAX_SIZES 7
+
 /** Get rid of path in filename - only for unix-type paths using '/' */
 #define NO_PATH(file_name) (strrchr((file_name), '/') ? \
 			    strrchr((file_name), '/') + 1 : (file_name))
@@ -74,6 +80,9 @@ ODP_STATIC_ASSERT((TEST_ALIGN_OFFSET + TEST_ALIGN_LEN) <= TEST_MIN_PKT_SIZE,
 /** Test packet sizes */
 const uint32_t test_packet_len[] = {TEST_MIN_PKT_SIZE, 128, 256, 512,
 				    1024, 1518, TEST_MAX_PKT_SIZE};
+
+ODP_STATIC_ASSERT(ODPH_ARRAY_SIZE(test_packet_len) <= TEST_MAX_SIZES,
+		  "Result array is too small to hold all the results");
 
 /**
  * Parsed command line arguments
@@ -126,6 +135,10 @@ typedef struct {
 	odp_time_t ts_tbl[TEST_REPEAT_COUNT];
 	/** Array for storing test data */
 	uint8_t data_tbl[TEST_REPEAT_COUNT][TEST_MAX_PKT_SIZE];
+	/** Options for exporting results */
+	test_common_options_t common_options;
+	/** Array for storing results */
+	double result[TEST_MAX_SIZES][TEST_MAX_BENCH];
 } args_t;
 
 /** Global pointer to args */
@@ -138,6 +151,35 @@ static void sig_handler(int signo ODP_UNUSED)
 	odp_atomic_store_u32(&gbl_args->suite.exit_worker, 1);
 }
 
+static int bench_packet_export(void *data)
+{
+	args_t *gbl_args = data;
+	int ret = 0;
+
+	if (test_common_write("%s", "Function name,64B,128B,256B,512B,1024B,1518B,2048B\n")) {
+		ret = -1;
+		goto exit;
+	}
+
+	for (int i = 0; i < gbl_args->suite.num_bench; i++) {
+		if (test_common_write("odp_%s,%f,%f,%f,%f,%f,%f,%f\n",
+				      gbl_args->suite.bench[i].desc != NULL ?
+				      gbl_args->suite.bench[i].desc : gbl_args->suite.bench[i].name,
+				      gbl_args->result[0][i], gbl_args->result[1][i],
+				      gbl_args->result[2][i], gbl_args->result[3][i],
+				      gbl_args->result[4][i], gbl_args->result[5][i],
+				      gbl_args->result[6][i])) {
+			ret = -1;
+			goto exit;
+		}
+	}
+
+exit:
+	test_common_write_term();
+
+	return ret;
+}
+
 /**
  * Master function for running the microbenchmarks
  */
@@ -147,16 +189,13 @@ static int run_benchmarks(void *arg)
 	args_t *args = arg;
 	bench_suite_t *suite = &args->suite;
 	int num_sizes = ODPH_ARRAY_SIZE(test_packet_len);
-	double results[num_sizes][suite->num_bench];
-
-	memset(results, 0, sizeof(results));
 
 	for (i = 0; i < num_sizes; i++) {
 		printf("Packet length: %6d bytes", test_packet_len[i]);
 
 		gbl_args->pkt.len = test_packet_len[i];
 
-		suite->result = results[i];
+		suite->result = args->result[i];
 
 		bench_run(suite);
 	}
@@ -174,9 +213,17 @@ static int run_benchmarks(void *arg)
 		       suite->bench[i].desc : suite->bench[i].name);
 
 		for (int j = 0; j < num_sizes; j++)
-			printf("%8.1f  ", results[j][i]);
+			printf("%8.1f  ", args->result[j][i]);
 	}
 	printf("\n\n");
+
+	if (args->common_options.is_export) {
+		if (bench_packet_export(args)) {
+			ODPH_ERR("Error: Export failed\n");
+			return -1;
+		}
+	}
+
 	return 0;
 }
 
@@ -1695,12 +1742,16 @@ bench_info_t test_suite[] = {
 		   "packet_parse_multi ipv6/udp"),
 };
 
+ODP_STATIC_ASSERT(ODPH_ARRAY_SIZE(test_suite) < TEST_MAX_BENCH,
+		  "Result array is too small to hold all the results");
+
 /**
  * ODP packet microbenchmark application
  */
 int main(int argc, char *argv[])
 {
 	odph_helper_options_t helper_options;
+	test_common_options_t common_options;
 	odph_thread_t worker_thread;
 	odph_thread_common_param_t thr_common;
 	odph_thread_param_t thr_param;
@@ -1719,6 +1770,12 @@ int main(int argc, char *argv[])
 	argc = odph_parse_options(argc, argv);
 	if (odph_options(&helper_options)) {
 		ODPH_ERR("Error: reading ODP helper options failed.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	argc = test_common_parse_options(argc, argv);
+	if (test_common_options(&common_options)) {
+		ODPH_ERR("Error: reading test helper options failed\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -1754,6 +1811,8 @@ int main(int argc, char *argv[])
 	}
 
 	memset(gbl_args, 0, sizeof(args_t));
+
+	gbl_args->common_options = common_options;
 
 	/* Parse and store the application arguments */
 	parse_args(argc, argv, &gbl_args->appl);
