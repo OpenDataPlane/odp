@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright (c) 2023 Nokia
+ * Copyright (c) 2023-2024 Nokia
  */
 
 /**
@@ -18,6 +18,7 @@
 #include <odp/helper/odph_api.h>
 
 #include <bench_common.h>
+#include <export_results.h>
 
 #include <getopt.h>
 #include <inttypes.h>
@@ -30,6 +31,9 @@
 
 /* Maximum interface name length */
 #define MAX_NAME_LEN 128
+
+/* Number of functions originally in test_suite */
+#define TEST_MAX_BENCH_NUM 10
 
 #define BENCH_INFO(run_fn, init_fn, term_fn, cond_fn, rounds) \
 	{.name = #run_fn, .run = run_fn, .init = init_fn, .term = term_fn, .cond = cond_fn,\
@@ -96,6 +100,9 @@ typedef struct {
 
 	/* CPU mask as string */
 	char cpumask_str[ODP_CPUMASK_STR_SIZE];
+
+	/* Array for storing results */
+	bench_tm_result_t result[TEST_MAX_BENCH_NUM];
 
 } appl_args_t;
 
@@ -781,6 +788,39 @@ destroy_cos:
 	return ret;
 }
 
+static int bench_pktio_sp_export(void *data)
+{
+	appl_args_t *gbl_args = data;
+	uint64_t num;
+	int ret = 0;
+
+	if (test_common_write("%s", "Function name,Latency (nsec) per function call (min),"
+				"Latency (nsec) per function call (avg),"
+				"Latency (nsec) per function call (max)\n")) {
+		ret = -1;
+		goto exit;
+	}
+
+	for (uint32_t i = 0; i < gbl_args->suite.num_bench; i++) {
+		for (int j = 0; j < gbl_args->result[i].num; j++) {
+			num = gbl_args->result[i].func[j].num ? gbl_args->result[i].func[j].num : 1;
+			if (test_common_write("%s,%i,%i,%i\n",
+					      gbl_args->result[i].func[j].name,
+					      odp_time_to_ns(gbl_args->result[i].func[j].min),
+					      odp_time_to_ns(gbl_args->result[i].func[j].tot) / num,
+					      odp_time_to_ns(gbl_args->result[i].func[j].max))) {
+				ret = -1;
+				goto exit;
+			}
+		}
+	}
+
+exit:
+	test_common_write_term();
+
+	return ret;
+}
+
 bench_tm_info_t test_suite[] = {
 	BENCH_INFO(pktio_capability, pktio_setup, pktio_clean, NULL, 0),
 	BENCH_INFO(pktio_lookup, pktio_setup, pktio_clean, NULL, 0),
@@ -793,6 +833,9 @@ bench_tm_info_t test_suite[] = {
 	BENCH_INFO(pktio_stats_reset, pktio_setup, pktio_clean, NULL, 0),
 	BENCH_INFO(cls_pmr_create, pktio_setup_cls, pktio_clean_sched_rx, check_cls_cond, 0)
 };
+
+ODP_STATIC_ASSERT(ODPH_ARRAY_SIZE(test_suite) <= TEST_MAX_BENCH_NUM,
+		  "Result array is too small to hold all the results");
 
 /* Print usage information */
 static void usage(void)
@@ -1009,6 +1052,7 @@ static void print_info(appl_args_t *appl_args)
 int main(int argc, char *argv[])
 {
 	odph_helper_options_t helper_options;
+	test_common_options_t common_options;
 	odph_thread_t worker_thread;
 	odph_thread_common_param_t thr_common;
 	odph_thread_param_t thr_param;
@@ -1023,6 +1067,12 @@ int main(int argc, char *argv[])
 	argc = odph_parse_options(argc, argv);
 	if (odph_options(&helper_options)) {
 		ODPH_ERR("Reading ODP helper options failed\n");
+		exit(EXIT_FAILURE);
+	}
+
+	argc = test_common_parse_options(argc, argv);
+	if (test_common_options(&common_options)) {
+		ODPH_ERR("Error: reading test helper options failed\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -1080,7 +1130,8 @@ int main(int argc, char *argv[])
 	gbl_args->suite.num_bench = ODPH_ARRAY_SIZE(test_suite);
 	gbl_args->suite.rounds = gbl_args->opt.rounds;
 	gbl_args->suite.bench_idx = gbl_args->opt.case_idx;
-
+	if (common_options.is_export)
+		gbl_args->suite.result = gbl_args->result;
 	/* Get default worker cpumask */
 	if (odp_cpumask_default_worker(&default_mask, 1) != 1) {
 		ODPH_ERR("Unable to allocate worker thread\n");
@@ -1116,6 +1167,13 @@ int main(int argc, char *argv[])
 	odph_thread_join(&worker_thread, 1);
 
 	ret = gbl_args->suite.retval;
+
+	if (ret == 0 && common_options.is_export) {
+		if (bench_pktio_sp_export(gbl_args)) {
+			ODPH_ERR("Error: Export failed\n");
+			ret = -1;
+		}
+	}
 
 exit:
 	if (odp_shm_free(shm)) {

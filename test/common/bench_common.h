@@ -201,6 +201,9 @@ typedef struct {
 	/* Break worker loop if set to 1 */
 	odp_atomic_u32_t exit_worker;
 
+	/* Optional test result output array */
+	bench_tm_result_t *result;
+
 } bench_tm_suite_t;
 
 /**
