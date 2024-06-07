@@ -14,7 +14,7 @@
 #include <odp_api.h>
 #include <odp/helper/odph_api.h>
 
-#include "bench_common.h"
+#include <bench_common.h>
 
 #include <getopt.h>
 #include <inttypes.h>
