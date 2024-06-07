@@ -1,8 +1,13 @@
 include $(top_srcdir)/test/Makefile.inc
 
+noinst_LTLIBRARIES = \
+	libbench_common.la
+
+libbench_common_la_SOURCES = bench_common.c bench_common.h
+
 if cunit_support
 
-noinst_LTLIBRARIES = \
+noinst_LTLIBRARIES += \
 	libcunit_common.la \
 	libcpumask_common.la \
 	libpacket_common.la \

@@ -24,7 +24,7 @@
 #include <odp_api.h>
 #include <odp/helper/odph_api.h>
 
-#include "bench_common.h"
+#include <bench_common.h>
 
 /** Packet user area size in bytes */
 #define PKT_POOL_UAREA_SIZE 8
