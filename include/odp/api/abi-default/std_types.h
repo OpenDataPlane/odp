@@ -22,7 +22,7 @@ extern "C" {
  *  @{
  */
 
-typedef int odp_bool_t;
+typedef bool odp_bool_t;
 
 /**
  * @}
