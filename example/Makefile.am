@@ -20,3 +20,7 @@ endif
 if helper_cli
 SUBDIRS += cli
 endif
+
+if WITH_ML
+SUBDIRS += ml
+endif

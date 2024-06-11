@@ -28,6 +28,7 @@ AC_CONFIG_FILES([example/classifier/Makefile
 		 example/ipfragreass/Makefile
 		 example/l2fwd_simple/Makefile
 		 example/l3fwd/Makefile
+		 example/ml/Makefile
 		 example/packet/Makefile
 		 example/ping/Makefile
 		 example/simple_pipeline/Makefile
