@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2013-2018 Linaro Limited
  * Copyright (c) 2021 ARM Limited
- * Copyright (c) 2021 Nokia
+ * Copyright (c) 2021-2024 Nokia
  */
 
 /**
@@ -28,13 +28,17 @@ extern "C" {
 
 /**
  * @typedef odp_bool_t
- * Use odp boolean type to have it well-defined and known size,
- * regardless which compiler is used as this facilities interoperability
- * between e.g. different compilers.
+ * Boolean type
+ *
+ * odp_bool_t type is provided for backward compatibility and is compliant with the C standard
+ * booleans. When assigning values to odp_bool_t variables, any non-zero value is considered true
+ * and zero is considered false. C standard 'true' and 'false' macros (C99) / predefined constants
+ * (C23) can be used with odp_bool_t variables.
  */
 
 /**
  * Percentage type
+ *
  * Use odp_percent_t for specifying fields that are percentages. It is a fixed
  * point integer whose units are expressed as one-hundredth of a percent.
  * Hence 100% is represented as integer value 10000.
