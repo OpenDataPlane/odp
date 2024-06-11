@@ -79,7 +79,8 @@ ODP_STATIC_ASSERT(MAX_WORKERS >= 1, "Too few threads");
 
 enum {
 	L4_PROTO_UDP = 0,
-	L4_PROTO_TCP
+	L4_PROTO_TCP,
+	L4_PROTO_NONE
 };
 
 ODP_STATIC_ASSERT(MAX_PKTIOS <= UINT8_MAX, "Interface index must fit into uint8_t\n");
@@ -290,6 +291,7 @@ static void print_usage(void)
 	       "  -N, --proto               L4 protocol. Default: 0\n"
 	       "                              0: UDP\n"
 	       "                              1: TCP\n"
+	       "                              2: none\n"
 	       "  -P, --promisc_mode        Enable promiscuous mode.\n"
 	       "  -a, --latency             Calculate latency. Cannot be used with packet\n"
 	       "                            references (see \"--tx_mode\").\n"
@@ -865,7 +867,8 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 	if (test_options->c_mode.src_port && num_tx_pkt % test_options->c_mode.src_port)
 		ODPH_ERR("\nWARNING: Transmit packet count is not evenly divisible by source port count.\n\n");
 
-	if (test_options->l4_proto != L4_PROTO_TCP && test_options->l4_proto != L4_PROTO_UDP) {
+	if (test_options->l4_proto != L4_PROTO_TCP && test_options->l4_proto != L4_PROTO_UDP &&
+	    test_options->l4_proto != L4_PROTO_NONE) {
 		ODPH_ERR("Error: Invalid L4 protocol: %" PRIu8 "\n", test_options->l4_proto);
 		return -1;
 	}
@@ -880,8 +883,10 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 		test_options->custom_l3.tot_len : ODPH_IPV4HDR_LEN;
 	test_options->hdr_len = ODPH_ETHHDR_LEN + (test_options->num_vlan * ODPH_VLANHDR_LEN) +
 				test_options->l3_len;
-	test_options->hdr_len += test_options->l4_proto == L4_PROTO_UDP ?
-					ODPH_UDPHDR_LEN : ODPH_TCPHDR_LEN;
+
+	if (test_options->l4_proto != L4_PROTO_NONE)
+		test_options->hdr_len += test_options->l4_proto == L4_PROTO_UDP ?
+						ODPH_UDPHDR_LEN : ODPH_TCPHDR_LEN;
 
 	pkt_len = test_options->use_rand_pkt_len ?
 			test_options->rand_pkt_len_min : test_options->pkt_len;
@@ -1014,7 +1019,8 @@ static int open_pktios(test_global_t *global)
 	}
 
 	printf("  L4 protocol:       %s\n",
-	       test_options->l4_proto == L4_PROTO_UDP ? "UDP" : "TCP");
+	       test_options->l4_proto == L4_PROTO_UDP ?
+			"UDP" : test_options->l4_proto == L4_PROTO_TCP ? "TCP" : "none");
 	printf("  source port:       %u\n", test_options->src_port);
 	printf("  destination port:  %u\n", test_options->dst_port);
 	printf("  src port count:    %u\n", test_options->c_mode.src_port);
@@ -1592,7 +1598,7 @@ static int init_packets(test_global_t *global, int pktio,
 	odph_ipv4hdr_t *ip;
 	uint16_t tpid;
 	test_options_t *test_options = &global->test_options;
-	const odp_bool_t use_tcp = test_options->l4_proto == L4_PROTO_TCP;
+	const int proto = test_options->l4_proto;
 	uint32_t num_vlan = test_options->num_vlan;
 	uint32_t num_custom_l3 = test_options->num_custom_l3;
 	uint32_t hdr_len = test_options->hdr_len;
@@ -1674,7 +1680,10 @@ static int init_packets(test_global_t *global, int pktio,
 			ip->tot_len = odp_cpu_to_be_16(pkt_len - l2_len);
 			ip->id = odp_cpu_to_be_16(seq + i);
 			ip->ttl = 64;
-			ip->proto = use_tcp ? ODPH_IPPROTO_TCP : ODPH_IPPROTO_UDP;
+			/* Use experimental protocol number if L4 proto is none. */
+			ip->proto = proto == L4_PROTO_UDP ?
+						ODPH_IPPROTO_UDP : proto == L4_PROTO_TCP ?
+							ODPH_IPPROTO_TCP : 0xFE;
 			ip->src_addr = odp_cpu_to_be_32(test_options->ipv4_src);
 			ip->dst_addr = odp_cpu_to_be_32(test_options->ipv4_dst);
 			ip->chksum = ~odp_chksum_ones_comp16(ip, ODPH_IPV4HDR_LEN);
@@ -1685,7 +1694,7 @@ static int init_packets(test_global_t *global, int pktio,
 
 		odp_packet_l4_offset_set(pkt, l2_len + test_options->l3_len);
 
-		if (use_tcp) {
+		if (proto == L4_PROTO_TCP) {
 			odph_tcphdr_t *tcp = (odph_tcphdr_t *)u8;
 
 			memset(tcp, 0, ODPH_TCPHDR_LEN);
@@ -1698,7 +1707,7 @@ static int init_packets(test_global_t *global, int pktio,
 			tcp->ack      = 1;
 			tcp_seqnum   += payload_len;
 			odp_packet_has_tcp_set(pkt, 1);
-		} else {
+		} else if (proto == L4_PROTO_UDP) {
 			odph_udphdr_t *udp = (odph_udphdr_t *)u8;
 
 			memset(udp, 0, ODPH_UDPHDR_LEN);
@@ -1718,12 +1727,9 @@ static int init_packets(test_global_t *global, int pktio,
 				u8[j] = j;
 		}
 
-		/* Insert checksum */
-		if (!use_tcp) {
-			/* TCP checksum is always updated before TX */
-			if (!test_options->calc_latency && test_options->calc_cs)
-				odph_udp_chksum_set(pkt);
-		}
+		/* Insert checksum (TCP checksum is updated before TX) */
+		if (proto == L4_PROTO_UDP && !test_options->calc_latency && test_options->calc_cs)
+			odph_udp_chksum_set(pkt);
 
 		/* Increment port numbers */
 		if (test_options->c_mode.src_port) {
@@ -1878,7 +1884,7 @@ static inline uint32_t form_burst(odp_packet_t out_pkt[], uint32_t burst_size, u
 
 			if (l4_proto == L4_PROTO_TCP)
 				update_tcp_hdr(out_pkt[i], pkt, hdr_len);
-			else if (calc_latency && calc_udp_cs)
+			else if (l4_proto == L4_PROTO_UDP && calc_latency && calc_udp_cs)
 				odph_udp_chksum_set(out_pkt[i]);
 		}
 
