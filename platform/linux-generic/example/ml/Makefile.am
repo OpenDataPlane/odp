@@ -15,13 +15,19 @@ EXTRA_DIST = \
 	odp_ml_run_model_explorer.sh \
 	odp_ml_run_simple_linear.sh \
 	simple_linear.onnx \
+	odp_ml_run_conv.sh \
+	conv.onnx \
+	conv_gen.py \
+	conv-input.bin \
+	conv-output.bin \
 	README.md
 
 if test_example
 TESTS = \
 	odp_ml_run_mnist.sh \
 	odp_ml_run_model_explorer.sh \
-	odp_ml_run_simple_linear.sh
+	odp_ml_run_simple_linear.sh \
+	odp_ml_run_conv.sh
 endif
 
 # If building out-of-tree, make check will not copy the scripts and data to the
