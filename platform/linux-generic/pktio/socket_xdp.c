@@ -1040,7 +1040,7 @@ static int sock_xdp_mtu_set(pktio_entry_t *pktio_entry, uint32_t maxlen_input,
 	return 0;
 }
 
-static int sock_xdp_promisc_mode_set(pktio_entry_t *pktio_entry,  int enable)
+static int sock_xdp_promisc_mode_set(pktio_entry_t *pktio_entry, odp_bool_t enable)
 {
 	return _odp_promisc_mode_set_fd(pkt_priv(pktio_entry)->helper_sock,
 					pktio_entry->name, enable);
