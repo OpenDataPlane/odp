@@ -1695,7 +1695,7 @@ static int init_packets(test_global_t *global, int pktio,
 							ODPH_IPPROTO_TCP : 0xFE;
 			ip->src_addr = odp_cpu_to_be_32(test_options->ipv4_src);
 			ip->dst_addr = odp_cpu_to_be_32(test_options->ipv4_dst);
-			ip->chksum = ~odp_chksum_ones_comp16(ip, ODPH_IPV4HDR_LEN);
+			odph_ipv4_csum_update(pkt);
 			odp_packet_has_ipv4_set(pkt, 1);
 
 			u8 = ((uint8_t *)data + l2_len + ODPH_IPV4HDR_LEN);
