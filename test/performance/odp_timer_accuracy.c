@@ -23,6 +23,8 @@
 #include <odp_api.h>
 #include <odp/helper/odph_api.h>
 
+#include <export_results.h>
+
 #define MAX_WORKERS (ODP_THREAD_COUNT_MAX - 1)
 #define MAX_QUEUES 1024
 #define MAX_FILENAME 128
@@ -123,7 +125,7 @@ typedef struct test_global_t {
 	odp_barrier_t    barrier;
 	odp_atomic_u64_t events;
 	odp_atomic_u64_t last_events;
-
+	test_common_options_t common_options;
 } test_global_t;
 
 static void print_usage(void)
@@ -1008,6 +1010,39 @@ static void print_stat(test_global_t *test_global)
 	print_nsec_error("max", max, res_ns, -1, -1);
 
 	printf("\n");
+
+	if (test_global->common_options.is_export) {
+		if (test_common_write("parameters,num after,num before,num exact,num retry,"
+				      "error after min (nsec),error after min resolution,"
+				      "error after max (nsec),error after max resolution,"
+				      "error after ave (nsec),error after ave resolution,"
+				      "error before min (nsec),error before min resolution,"
+				      "error before max (nsec),error before max resolution,"
+				      "error before ave (nsec),error before ave resolution,"
+				      "final timeout error max (nsec),"
+				      "final timeout error max resolution\n"))
+			goto exit;
+
+		if (test_common_write_args())
+			goto exit;
+
+		if (test_common_write(",%i,%i,%i,%i,%i,%f,%i,%f,%i,%f,%i,%f,%i,%f,%i,%f,%i,%f\n",
+				      stat->num_after,stat->num_before,
+				      stat->num_exact,stat->num_too_near,
+				      stat->nsec_after_min,(double)stat->nsec_after_min / res_ns,
+				      stat->nsec_after_max, (double)stat->nsec_after_max / res_ns,
+				      ave_after, (double)ave_after / res_ns,
+				      stat->nsec_before_min, (double)stat->nsec_before_min / res_ns,
+				      stat->nsec_before_max, (double)stat->nsec_before_max / res_ns,
+				      ave_before, (double)ave_before / res_ns,
+				      max, (double)max / res_ns
+				      ))
+			goto exit;
+
+		exit:
+			test_common_write_term();
+			return;
+	}
 }
 
 static void cancel_periodic_timers(test_global_t *test_global)
@@ -1258,6 +1293,7 @@ int main(int argc, char *argv[])
 	test_opt_t test_opt;
 	test_global_t *test_global;
 	odph_helper_options_t helper_options;
+	test_common_options_t common_options;
 	odp_init_t *init_ptr = NULL;
 	int ret = 0;
 
@@ -1265,6 +1301,12 @@ int main(int argc, char *argv[])
 	argc = odph_parse_options(argc, argv);
 	if (odph_options(&helper_options)) {
 		ODPH_ERR("Reading ODP helper options failed.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	argc = test_common_parse_options(argc, argv);
+	if (test_common_options(&common_options)) {
+		ODPH_ERR("Error: reading test helper options failed\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -1406,6 +1448,9 @@ int main(int argc, char *argv[])
 	}
 
 	odph_thread_join(thread_tbl, num_workers);
+
+	test_global->common_options = common_options;
+
 	print_stat(test_global);
 
 quit:

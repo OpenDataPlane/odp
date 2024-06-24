@@ -68,6 +68,17 @@ int test_common_options(test_common_options_t *options);
 int test_common_write(const char *fmt, ...);
 
 /**
+ * Export test parameters
+ *
+ * Only call this function after test_common_options() returns is_export = true.
+ *
+ * Writes used options / parameters into the export file without a newline.
+ *
+ * Returns 0 on success, -1 on failure
+ */
+int test_common_write_args(void);
+
+/**
  * Terminate writing
  *
  * Called after last write. Do not call test_common_write after calling this.

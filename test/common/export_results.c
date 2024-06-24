@@ -18,12 +18,17 @@
 /** Maximum length of output path/name */
 #define MAX_FILENAME_LEN 192
 
+/** Maximum length of args string */
+#define MAX_ARGS_LEN 128
+
 typedef struct {
 	test_common_options_t common_options;
 
 	char filename[MAX_FILENAME_LEN];
 
 	FILE *file;
+
+	char args[MAX_ARGS_LEN];
 
 } test_export_gbl_t;
 
@@ -116,6 +121,22 @@ int test_common_write(const char *fmt, ...)
 
 	va_end(args);
 	va_end(args_copy);
+
+	if (len != ret) {
+		ODPH_ERR("Expected %i characters to be written, actually wrote: %i", len, ret);
+		return -1;
+	}
+
+	return 0;
+}
+
+int test_common_write_args(void)
+{
+	int len, ret;
+
+	len = snprintf(NULL, 0, "%s", gbl_data.args);
+
+	ret = fprintf(gbl_data.file, "%s", gbl_data.args);
 
 	if (len != ret) {
 		ODPH_ERR("Expected %i characters to be written, actually wrote: %i", len, ret);
