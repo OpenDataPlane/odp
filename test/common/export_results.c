@@ -25,9 +25,40 @@ typedef struct {
 
 	FILE *file;
 
+	char *args;
+
+	int init_done;
+
 } test_export_gbl_t;
 
 static test_export_gbl_t gbl_data;
+
+static void extract_options(int argc, char *argv[])
+{
+	int total_len = 1;
+	int len = 0;
+	int i, ret;
+
+	for (i = 1; i < argc; i++)
+		total_len += strlen(argv[i]) + 1;
+
+	gbl_data.args = (char *)calloc(total_len, sizeof(char));
+	if (!gbl_data.args) {
+		ODPH_ERR("Memory allocation failed\n");
+		return;
+	}
+
+	for (i = 1; i < argc; i++) {
+		ret = snprintf(gbl_data.args + len, total_len - len, " %s", argv[i]);
+		if (ret >= total_len - len || ret < 0) {
+			ODPH_ERR("snprintf() error.\n");
+			free(gbl_data.args);
+			gbl_data.args = NULL;
+			return;
+		}
+		len += ret;
+	}
+}
 
 int test_common_parse_options(int argc, char *argv[])
 {
@@ -52,6 +83,8 @@ int test_common_parse_options(int argc, char *argv[])
 				argc -= 2;
 				continue;
 			} else {
+				odph_strcpy(gbl_data.filename, argv[0],
+					    MAX_FILENAME_LEN);
 				for (j = i; j < argc - 1; j++)
 					argv[j] = argv[j + 1];
 				argc--;
@@ -60,9 +93,11 @@ int test_common_parse_options(int argc, char *argv[])
 		i++;
 	}
 
-	/* Use default path if no path provided */
-	if (gbl_data.common_options.is_export && strlen(gbl_data.filename) == 0)
-		odph_strcpy(gbl_data.filename, argv[0], MAX_FILENAME_LEN);
+	if (gbl_data.common_options.is_export) {
+		if (strlen(gbl_data.filename) == 0)
+			odph_strcpy(gbl_data.filename, argv[0], MAX_FILENAME_LEN);
+		extract_options(argc, argv);
+	}
 
 	return argc;
 }
@@ -77,8 +112,10 @@ int test_common_options(test_common_options_t *options)
 
 	options->is_export = gbl_data.common_options.is_export;
 
-	if (!options->is_export)
+	if (!options->is_export || gbl_data.init_done)
 		return 0;
+
+	gbl_data.init_done = 1;
 
 	/* Add extension if needed */
 	if (filename_len < ext_len ||
@@ -98,6 +135,16 @@ int test_common_options(test_common_options_t *options)
 		return -1;
 	}
 
+	if (gbl_data.args) {
+		if (fprintf(gbl_data.file, "#%.*s;%s\n", (int)filename_len,
+			    gbl_data.filename, gbl_data.args) < 0) {
+			ODPH_ERR("Writing filename and args failed\n");
+			return -1;
+		}
+		fflush(gbl_data.file);
+		free(gbl_data.args);
+	}
+
 	return 0;
 }
 
@@ -111,7 +158,6 @@ int test_common_write(const char *fmt, ...)
 	va_copy(args_copy, args);
 
 	len = vsnprintf(NULL, 0, fmt, args);
-
 	ret = vfprintf(gbl_data.file, fmt, args_copy);
 
 	va_end(args);
@@ -131,5 +177,6 @@ void test_common_write_term(void)
 		ODPH_ERR("Warning: there is no open file to be closed\n");
 		return;
 	}
+
 	(void)fclose(gbl_data.file);
 }
