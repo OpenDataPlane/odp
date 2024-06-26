@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2018 Linaro Limited
- * Copyright (c) 2019-2023 Nokia
+ * Copyright (c) 2019-2024 Nokia
  */
 
 /**
@@ -22,6 +22,8 @@
 
 #include <odp_api.h>
 #include <odp/helper/odph_api.h>
+
+#include <export_results.h>
 
 #define MAX_WORKERS (ODP_THREAD_COUNT_MAX - 1)
 #define MAX_QUEUES 1024
@@ -123,7 +125,7 @@ typedef struct test_global_t {
 	odp_barrier_t    barrier;
 	odp_atomic_u64_t events;
 	odp_atomic_u64_t last_events;
-
+	test_common_options_t common_options;
 } test_global_t;
 
 static void print_usage(void)
@@ -876,7 +878,7 @@ static void print_nsec_error(const char *str, int64_t nsec, double res_ns,
 	printf("\n");
 }
 
-static void print_stat(test_global_t *test_global)
+static int print_stat(test_global_t *test_global)
 {
 	test_stat_t test_stat;
 	test_stat_t *stat = &test_stat;
@@ -1008,6 +1010,40 @@ static void print_stat(test_global_t *test_global)
 	print_nsec_error("max", max, res_ns, -1, -1);
 
 	printf("\n");
+
+	if (test_global->common_options.is_export) {
+		if (test_common_write("num after,num before,num exact,num retry,"
+				      "error after min (nsec),error after min resolution,"
+				      "error after max (nsec),error after max resolution,"
+				      "error after ave (nsec),error after ave resolution,"
+				      "error before min (nsec),error before min resolution,"
+				      "error before max (nsec),error before max resolution,"
+				      "error before ave (nsec),error before ave resolution,"
+				      "final timeout error max (nsec),"
+				      "final timeout error max resolution\n")) {
+			ODPH_ERR("Export failed\n");
+			test_common_write_term();
+			return -1;
+		}
+
+		if (test_common_write("%i,%i,%i,%i,%i,%f,%i,%f,%i,%f,%i,%f,%i,%f,%i,%f,%i,%f\n",
+				      stat->num_after, stat->num_before,
+				      stat->num_exact, stat->num_too_near,
+				      stat->nsec_after_min, (double)stat->nsec_after_min / res_ns,
+				      stat->nsec_after_max, (double)stat->nsec_after_max / res_ns,
+				      ave_after, (double)ave_after / res_ns,
+				      stat->nsec_before_min, (double)stat->nsec_before_min / res_ns,
+				      stat->nsec_before_max, (double)stat->nsec_before_max / res_ns,
+				      ave_before, (double)ave_before / res_ns,
+				      max, (double)max / res_ns
+				      )) {
+			ODPH_ERR("Export failed\n");
+			test_common_write_term();
+			return -1;
+		}
+	}
+
+	return 0;
 }
 
 static void cancel_periodic_timers(test_global_t *test_global)
@@ -1258,6 +1294,7 @@ int main(int argc, char *argv[])
 	test_opt_t test_opt;
 	test_global_t *test_global;
 	odph_helper_options_t helper_options;
+	test_common_options_t common_options;
 	odp_init_t *init_ptr = NULL;
 	int ret = 0;
 
@@ -1265,6 +1302,12 @@ int main(int argc, char *argv[])
 	argc = odph_parse_options(argc, argv);
 	if (odph_options(&helper_options)) {
 		ODPH_ERR("Reading ODP helper options failed.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	argc = test_common_parse_options(argc, argv);
+	if (test_common_options(&common_options)) {
+		ODPH_ERR("Reading test options failed\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -1315,6 +1358,8 @@ int main(int argc, char *argv[])
 	test_global = odp_shm_addr(shm);
 	memset(test_global, 0, size);
 	memcpy(&test_global->opt, &test_opt, sizeof(test_opt_t));
+
+	test_global->common_options = common_options;
 
 	size = test_global->opt.alloc_timers * sizeof(timer_ctx_t);
 	shm_ctx = odp_shm_reserve("timer_accuracy_ctx", size,
@@ -1406,7 +1451,10 @@ int main(int argc, char *argv[])
 	}
 
 	odph_thread_join(thread_tbl, num_workers);
-	print_stat(test_global);
+
+	ret = print_stat(test_global);
+	if (ret)
+		goto quit;
 
 quit:
 	if (test_global->file)
