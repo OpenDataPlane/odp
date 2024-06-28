@@ -204,6 +204,20 @@ uint32_t odp_atomic_fetch_max_u32(odp_atomic_u32_t *atom, uint32_t new_max);
 void odp_atomic_min_u32(odp_atomic_u32_t *atom, uint32_t new_min);
 
 /**
+ * Fetch and update minimum value of atomic uint32 variable
+ *
+ * Compares value of atomic variable to the new minimum value. If the new value
+ * is less than the current value, writes the new value into the variable.
+ * Always returns the original value of the atomic variable.
+ *
+ * @param atom    Pointer to atomic variable
+ * @param new_min New minimum value to be written into the atomic variable
+ *
+ * @return Original value of the atomic variable
+ */
+uint32_t odp_atomic_fetch_min_u32(odp_atomic_u32_t *atom, uint32_t new_min);
+
+/**
  * Compare and swap atomic uint32 variable
  *
  * Compares value of atomic variable to the value pointed by 'old_val'.
@@ -371,6 +385,20 @@ uint64_t odp_atomic_fetch_max_u64(odp_atomic_u64_t *atom, uint64_t new_max);
  * @param new_min New minimum value to be written into the atomic variable
  */
 void odp_atomic_min_u64(odp_atomic_u64_t *atom, uint64_t new_min);
+
+/**
+ * Fetch and update minimum value of atomic uint64_t variable
+ *
+ * Compares value of atomic variable to the new minimum value. If the new value
+ * is less than the current value, writes the new value into the variable.
+ * Always returns the original value of the atomic variable.
+ *
+ * @param atom    Pointer to atomic variable
+ * @param new_min New minimum value to be written into the atomic variable
+ *
+ * @return Original value of the atomic variable
+ */
+uint64_t odp_atomic_fetch_min_u64(odp_atomic_u64_t *atom, uint64_t new_min);
 
 /**
  * Compare and swap atomic uint64 variable
@@ -673,6 +701,7 @@ typedef union odp_atomic_op_t {
 		uint32_t fetch_dec : 1;  /**< Atomic fetch and decrement */
 		uint32_t dec       : 1;  /**< Atomic decrement */
 		uint32_t min       : 1;  /**< Atomic minimum */
+		uint32_t fetch_min : 1;  /**< Atomic fetch and minimum */
 		uint32_t max       : 1;  /**< Atomic maximum */
 		uint32_t fetch_max : 1;  /**< Atomic fetch and maximum */
 		uint32_t cas       : 1;  /**< Atomic compare and swap */
