@@ -773,7 +773,7 @@ int main(int argc, char *argv[])
 
 	argc = test_common_parse_options(argc, argv);
 	if (test_common_options(&common_options)) {
-		ODPH_ERR("Error: reading test helper options failed\n");
+		ODPH_ERR("Error: reading test options failed\n");
 		exit(EXIT_FAILURE);
 	}
 
