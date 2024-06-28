@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2018 Linaro Limited
- * Copyright (c) 2019-2022 Nokia
+ * Copyright (c) 2019-2024 Nokia
  */
 
 /**
@@ -20,6 +20,8 @@
 
 #include <odp_api.h>
 #include <odp/helper/odph_api.h>
+
+#include <export_results.h>
 
 #define STAT_AVAILABLE  0x1
 #define STAT_CACHE      0x2
@@ -58,6 +60,7 @@ typedef struct test_global_t {
 	odp_cpumask_t cpumask;
 	odph_thread_t thread_tbl[ODP_THREAD_COUNT_MAX];
 	test_stat_t stat[ODP_THREAD_COUNT_MAX];
+	test_common_options_t common_options;
 
 } test_global_t;
 
@@ -575,7 +578,7 @@ static void test_stats_perf(test_global_t *global)
 	printf("\n");
 }
 
-static void print_stat(test_global_t *global)
+static int output_results(test_global_t *global)
 {
 	int i, num;
 	double rounds_ave, allocs_ave, frees_ave;
@@ -600,7 +603,7 @@ static void print_stat(test_global_t *global)
 
 	if (rounds_sum == 0) {
 		printf("No results.\n");
-		return;
+		return 0;
 	}
 
 	rounds_ave = rounds_sum / num_cpu;
@@ -645,6 +648,35 @@ static void print_stat(test_global_t *global)
 	       (1000.0 * frees_ave) / nsec_ave);
 	printf("  events per sec:       %.3f M\n\n",
 	       (1000.0 * events_ave) / nsec_ave);
+
+	printf("TOTAL events per sec:	%.3f M\n\n",
+	       (1000.0 * events_sum) / nsec_ave);
+
+	if (global->common_options.is_export) {
+		if (test_common_write("alloc calls,free calls,duration (msec),"
+				      "num cycles (M),cycles per round,cycles per event,"
+				      "ave events allocated,allocs per sec (M),frees per sec (M),"
+				      "events per sec (M),TOTAL events per sec (M)\n")) {
+			ODPH_ERR("Export failed\n");
+			test_common_write_term();
+			return -1;
+		}
+
+		if (test_common_write("%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f\n",
+				      allocs_ave, frees_ave, nsec_ave / 1000000,
+				      cycles_ave / 1000000, cycles_ave / rounds_ave,
+				      cycles_ave / events_ave, events_ave / allocs_ave,
+				      (1000.0 * allocs_ave) / nsec_ave,
+				      (1000.0 * frees_ave) / nsec_ave,
+				      (1000.0 * events_ave) / nsec_ave,
+				      (1000.0 * events_sum) / nsec_ave)) {
+			ODPH_ERR("Export failed\n");
+			test_common_write_term();
+			return -1;
+		}
+	}
+
+	return 0;
 }
 
 int main(int argc, char **argv)
@@ -654,11 +686,18 @@ int main(int argc, char **argv)
 	odp_init_t init;
 	odp_shm_t shm;
 	test_global_t *global;
+	test_common_options_t common_options;
 
 	/* Let helper collect its own arguments (e.g. --odph_proc) */
 	argc = odph_parse_options(argc, argv);
 	if (odph_options(&helper_options)) {
 		ODPH_ERR("Error: Reading ODP helper options failed.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	argc = test_common_parse_options(argc, argv);
+	if (test_common_options(&common_options)) {
+		ODPH_ERR("Error: Reading test options failed\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -701,6 +740,8 @@ int main(int argc, char **argv)
 	memset(global, 0, sizeof(test_global_t));
 	global->pool = ODP_POOL_INVALID;
 
+	global->common_options = common_options;
+
 	if (parse_options(argc, argv, &global->test_options))
 		return -1;
 
@@ -721,7 +762,8 @@ int main(int argc, char **argv)
 	if (global->test_options.stats_mode)
 		test_stats_perf(global);
 
-	print_stat(global);
+	if (output_results(global))
+		return -1;
 
 	if (odp_pool_destroy(global->pool)) {
 		printf("Error: Pool destroy failed.\n");
