@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2018 Linaro Limited
- * Copyright (c) 2021 Nokia
+ * Copyright (c) 2021-2024 Nokia
  * Copyright (c) 2023 Arm
  */
 
@@ -21,6 +21,8 @@
 
 #include <odp_api.h>
 #include <odp/helper/odph_api.h>
+
+#include <export_results.h>
 
 #define MAX_STASHES (32)
 
@@ -52,6 +54,7 @@ typedef struct test_global_t {
 	odp_stash_t stash[MAX_STASHES];
 	odph_thread_t thread_tbl[ODP_THREAD_COUNT_MAX];
 	test_stat_t stat[ODP_THREAD_COUNT_MAX];
+	test_common_options_t common_options;
 
 } test_global_t;
 
@@ -358,7 +361,7 @@ static int start_workers(test_global_t *global)
 	return 0;
 }
 
-static void print_stat(test_global_t *global)
+static int output_results(test_global_t *global)
 {
 	int i, num;
 	double rounds_ave, ops_ave, nsec_ave, cycles_ave, retry_ave;
@@ -381,7 +384,7 @@ static void print_stat(test_global_t *global)
 
 	if (rounds_sum == 0) {
 		printf("No results.\n");
-		return;
+		return 0;
 	}
 
 	rounds_ave = rounds_sum / num_cpu;
@@ -420,6 +423,29 @@ static void print_stat(test_global_t *global)
 
 	printf("TOTAL ops per sec:          %.3f M\n\n",
 	       (1000.0 * ops_sum) / nsec_ave);
+
+	if (global->common_options.is_export) {
+		if (test_common_write("duration (msec),num cycles (M),ops per get,"
+				      "cycles per ops,retries per sec (k),ops per sec (M),"
+				      "TOTAL ops per sec (M)\n")) {
+			ODPH_ERR("Export failed\n");
+			test_common_write_term();
+			return -1;
+		}
+
+		if (test_common_write("%f,%f,%f,%f,%f,%f,%f\n",
+				      nsec_ave / 1000000, cycles_ave / 1000000,
+				      ops_ave / rounds_ave, cycles_ave / ops_ave,
+				      (1000000.0 * retry_ave) / nsec_ave,
+				      (1000.0 * ops_ave) / nsec_ave,
+				      (1000.0 * ops_sum) / nsec_ave)) {
+			ODPH_ERR("Export failed\n");
+			test_common_write_term();
+			return -1;
+		}
+	}
+
+	return 0;
 }
 
 int main(int argc, char **argv)
@@ -429,11 +455,19 @@ int main(int argc, char **argv)
 	odp_init_t init;
 	odp_shm_t shm;
 	test_global_t *global;
+	test_common_options_t common_options;
+	int ret = 0;
 
 	/* Let helper collect its own arguments (e.g. --odph_proc) */
 	argc = odph_parse_options(argc, argv);
 	if (odph_options(&helper_options)) {
 		ODPH_ERR("Error: Reading ODP helper options failed.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	argc = test_common_parse_options(argc, argv);
+	if (test_common_options(&common_options)) {
+		ODPH_ERR("Error: Reading test options failed\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -476,6 +510,8 @@ int main(int argc, char **argv)
 
 	memset(global, 0, sizeof(test_global_t));
 
+	global->common_options = common_options;
+
 	if (parse_options(argc, argv, &global->options))
 		exit(EXIT_FAILURE);
 
@@ -485,18 +521,23 @@ int main(int argc, char **argv)
 
 	if (create_stashes(global)) {
 		ODPH_ERR("Error: Create stashes failed.\n");
+		ret = -1;
 		goto destroy;
 	}
 
 	if (start_workers(global)) {
 		ODPH_ERR("Error: Test start failed.\n");
-		exit(EXIT_FAILURE);
+		ret = -1;
+		goto destroy;
 	}
 
 	/* Wait workers to exit */
 	odph_thread_join(global->thread_tbl, global->options.num_cpu);
 
-	print_stat(global);
+	if (output_results(global)) {
+		ret = -1;
+		goto destroy;
+	}
 
 destroy:
 	if (destroy_stashes(global)) {
@@ -519,5 +560,5 @@ destroy:
 		exit(EXIT_FAILURE);
 	}
 
-	return 0;
+	return ret;
 }
