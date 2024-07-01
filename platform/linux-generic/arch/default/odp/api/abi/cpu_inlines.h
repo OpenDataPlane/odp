@@ -13,6 +13,11 @@ static inline void _odp_cpu_pause(void)
 {
 }
 
+static inline void _odp_prefetch_l1i(const void *addr)
+{
+	(void)addr;
+}
+
 #include <odp/api/abi/cpu_generic.h>
 
 #ifdef __cplusplus
