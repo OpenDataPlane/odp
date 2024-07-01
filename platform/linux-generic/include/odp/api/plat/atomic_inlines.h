@@ -42,6 +42,7 @@
 	#define odp_atomic_max_u32 __odp_atomic_max_u32
 	#define odp_atomic_fetch_max_u32 __odp_atomic_fetch_max_u32
 	#define odp_atomic_min_u32 __odp_atomic_min_u32
+	#define odp_atomic_fetch_min_u32 __odp_atomic_fetch_min_u32
 	#define odp_atomic_init_u64 __odp_atomic_init_u64
 	#define odp_atomic_load_u64 __odp_atomic_load_u64
 	#define odp_atomic_store_u64 __odp_atomic_store_u64
@@ -65,6 +66,7 @@
 	#define odp_atomic_max_u64 __odp_atomic_max_u64
 	#define odp_atomic_fetch_max_u64 __odp_atomic_fetch_max_u64
 	#define odp_atomic_min_u64 __odp_atomic_min_u64
+	#define odp_atomic_fetch_min_u64 __odp_atomic_fetch_min_u64
 	#define odp_atomic_init_u128 __odp_atomic_init_u128
 	#define odp_atomic_load_u128 __odp_atomic_load_u128
 	#define odp_atomic_store_u128 __odp_atomic_store_u128
@@ -162,6 +164,11 @@ _ODP_INLINE uint32_t odp_atomic_fetch_max_u32(odp_atomic_u32_t *atom, uint32_t v
 _ODP_INLINE void odp_atomic_min_u32(odp_atomic_u32_t *atom, uint32_t val)
 {
 	_odp_atomic_min_u32(atom, val);
+}
+
+_ODP_INLINE uint32_t odp_atomic_fetch_min_u32(odp_atomic_u32_t *atom, uint32_t val)
+{
+	return _odp_atomic_fetch_min_u32(atom, val);
 }
 
 #ifdef ODP_ATOMIC_U64_LOCK
@@ -331,6 +338,11 @@ _ODP_INLINE void odp_atomic_min_u64(odp_atomic_u64_t *atom, uint64_t new_val)
 	(void)_ODP_ATOMIC_OP(atom, atom->v = atom->v > new_val ? new_val : atom->v);
 }
 
+_ODP_INLINE uint64_t odp_atomic_fetch_min_u64(odp_atomic_u64_t *atom, uint64_t new_val)
+{
+	return _ODP_ATOMIC_OP(atom, atom->v = atom->v > new_val ? new_val : atom->v);
+}
+
 #else /* !ODP_ATOMIC_U64_LOCK */
 
 _ODP_INLINE void odp_atomic_init_u64(odp_atomic_u64_t *atom, uint64_t val)
@@ -466,6 +478,11 @@ _ODP_INLINE uint64_t odp_atomic_fetch_max_u64(odp_atomic_u64_t *atom, uint64_t v
 _ODP_INLINE void odp_atomic_min_u64(odp_atomic_u64_t *atom, uint64_t val)
 {
 	_odp_atomic_min_u64(atom, val);
+}
+
+_ODP_INLINE uint64_t odp_atomic_fetch_min_u64(odp_atomic_u64_t *atom, uint64_t val)
+{
+	return _odp_atomic_fetch_min_u64(atom, val);
 }
 
 #endif /* !ODP_ATOMIC_U64_LOCK */
