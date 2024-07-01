@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright (c) 2021 Nokia
+ * Copyright (c) 2021-2024 Nokia
  */
 
 /**
@@ -481,6 +481,52 @@ static inline int validate_atomic_max_u64(void *val, void *out ODP_UNUSED, uint3
 	return (result != ((uint64_t)INIT_VAL + num_round)) && (result != UINT64_MAX);
 }
 
+static inline void test_atomic_fetch_max_u32(void *val, void *out, uint32_t num_round)
+{
+	odp_atomic_u32_t *atomic_val = val;
+	uint32_t *result = out;
+	uint32_t new_max = INIT_VAL + 1, old_max = INIT_VAL;
+
+	for (uint32_t i = 0; i < num_round; i++)
+		old_max = odp_atomic_fetch_max_u32(atomic_val, new_max++);
+
+	*result = old_max;
+}
+
+static inline void test_atomic_fetch_max_u64(void *val, void *out, uint32_t num_round)
+{
+	odp_atomic_u64_t *atomic_val = val;
+	uint64_t *result = out;
+	uint64_t new_max = INIT_VAL + 1, old_max = INIT_VAL;
+
+	for (uint32_t i = 0; i < num_round; i++)
+		old_max = odp_atomic_fetch_max_u64(atomic_val, new_max++);
+
+	*result = old_max;
+}
+
+static inline int validate_atomic_fetch_max_u32(void *val, void *out, uint32_t num_round,
+						uint32_t num_worker ODP_UNUSED,
+						int private ODP_UNUSED)
+{
+	uint32_t result = odp_atomic_load_u32((odp_atomic_u32_t *)val);
+	uint32_t *output = out;
+
+	return (result != ((uint32_t)INIT_VAL + num_round) && result != UINT32_MAX) ||
+	       (*output != result - 1 && *output != result);
+}
+
+static inline int validate_atomic_fetch_max_u64(void *val, void *out, uint32_t num_round,
+						uint32_t num_worker ODP_UNUSED,
+						int private ODP_UNUSED)
+{
+	uint64_t result = odp_atomic_load_u64((odp_atomic_u64_t *)val);
+	uint64_t *output = out;
+
+	return (result != ((uint64_t)INIT_VAL + num_round) && result != UINT64_MAX) ||
+	       (*output != result - 1 && *output != result);
+}
+
 static inline void test_atomic_min_u32(void *val, void *out ODP_UNUSED, uint32_t num_round)
 {
 	odp_atomic_u32_t *atomic_val = val;
@@ -513,6 +559,52 @@ static inline int validate_atomic_min_u64(void *val, void *out ODP_UNUSED, uint3
 	uint64_t result = odp_atomic_load_u64((odp_atomic_u64_t *)val);
 
 	return result != ((uint64_t)INIT_VAL - num_round) && result != 0;
+}
+
+static inline void test_atomic_fetch_min_u32(void *val, void *out, uint32_t num_round)
+{
+	odp_atomic_u32_t *atomic_val = val;
+	uint32_t *result = out;
+	uint32_t new_min = INIT_VAL - 1, old_min = INIT_VAL;
+
+	for (uint32_t i = 0; i < num_round; i++)
+		old_min = odp_atomic_fetch_min_u32(atomic_val, new_min--);
+
+	*result = old_min;
+}
+
+static inline void test_atomic_fetch_min_u64(void *val, void *out, uint32_t num_round)
+{
+	odp_atomic_u64_t *atomic_val = val;
+	uint64_t *result = out;
+	uint64_t new_min = INIT_VAL - 1, old_min = INIT_VAL;
+
+	for (uint32_t i = 0; i < num_round; i++)
+		old_min = odp_atomic_fetch_min_u64(atomic_val, new_min--);
+
+	*result = old_min;
+}
+
+static inline int validate_atomic_fetch_min_u32(void *val, void *out, uint32_t num_round,
+						uint32_t num_worker ODP_UNUSED,
+						int private ODP_UNUSED)
+{
+	uint32_t result = odp_atomic_load_u32((odp_atomic_u32_t *)val);
+	uint32_t *output = out;
+
+	return (result != ((uint32_t)INIT_VAL - num_round) && result != 0) ||
+	       (*output != result + 1 && *output != result);
+}
+
+static inline int validate_atomic_fetch_min_u64(void *val, void *out, uint32_t num_round,
+						uint32_t num_worker ODP_UNUSED,
+						int private ODP_UNUSED)
+{
+	uint64_t result = odp_atomic_load_u64((odp_atomic_u64_t *)val);
+	uint64_t *output = out;
+
+	return (result != ((uint64_t)INIT_VAL - num_round) && result != 0) ||
+	       (*output != result + 1 && *output != result);
 }
 
 static inline void test_atomic_cas_u32(void *val, void *out ODP_UNUSED, uint32_t num_round)
@@ -866,7 +958,9 @@ static void print_info(test_options_t *test_options)
 	printf("  odp_atomic_fetch_dec_u64: %" PRIu32 "\n", atomic_ops.op.fetch_dec);
 	printf("  odp_atomic_dec_u64:       %" PRIu32 "\n", atomic_ops.op.dec);
 	printf("  odp_atomic_min_u64:       %" PRIu32 "\n", atomic_ops.op.min);
+	printf("  odp_atomic_fetch_min_u64: %" PRIu32 "\n", atomic_ops.op.fetch_min);
 	printf("  odp_atomic_max_u64:       %" PRIu32 "\n", atomic_ops.op.max);
+	printf("  odp_atomic_fetch_max_u64: %" PRIu32 "\n", atomic_ops.op.fetch_max);
 	printf("  odp_atomic_cas_u64:       %" PRIu32 "\n", atomic_ops.op.cas);
 	printf("  odp_atomic_xchg_u64:      %" PRIu32 "\n", atomic_ops.op.xchg);
 
@@ -1214,8 +1308,12 @@ static test_case_t test_suite[] = {
 		  validate_atomic_sub_round_u32, OP_32BIT),
 	TEST_INFO("odp_atomic_max_u32", test_atomic_max_u32,
 		  validate_atomic_max_u32, OP_32BIT),
+	TEST_INFO("odp_atomic_fetch_max_u32", test_atomic_fetch_max_u32,
+		  validate_atomic_fetch_max_u32, OP_32BIT),
 	TEST_INFO("odp_atomic_min_u32", test_atomic_min_u32,
 		  validate_atomic_min_u32, OP_32BIT),
+	TEST_INFO("odp_atomic_fetch_min_u32", test_atomic_fetch_min_u32,
+		  validate_atomic_fetch_min_u32, OP_32BIT),
 	TEST_INFO("odp_atomic_cas_u32", test_atomic_cas_u32,
 		  validate_atomic_cas_u32, OP_32BIT),
 	TEST_INFO("odp_atomic_xchg_u32", test_atomic_xchg_u32,
@@ -1256,8 +1354,12 @@ static test_case_t test_suite[] = {
 		  validate_atomic_sub_round_u64, OP_64BIT),
 	TEST_INFO("odp_atomic_max_u64", test_atomic_max_u64,
 		  validate_atomic_max_u64, OP_64BIT),
+	TEST_INFO("odp_atomic_fetch_max_u64", test_atomic_fetch_max_u64,
+		  validate_atomic_fetch_max_u64, OP_64BIT),
 	TEST_INFO("odp_atomic_min_u64", test_atomic_min_u64,
 		  validate_atomic_min_u64, OP_64BIT),
+	TEST_INFO("odp_atomic_fetch_min_u64", test_atomic_fetch_min_u64,
+		  validate_atomic_fetch_min_u64, OP_64BIT),
 	TEST_INFO("odp_atomic_cas_u64", test_atomic_cas_u64,
 		  validate_atomic_cas_u64, OP_64BIT),
 	TEST_INFO("odp_atomic_xchg_u64", test_atomic_xchg_u64,
