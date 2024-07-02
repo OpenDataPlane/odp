@@ -92,3 +92,27 @@ Model info
 .
 .
 ```
+
+## Convolution (conv)
+
+This model accepts as input a two element vector (more accurately shape
+[1 1 1 2]), and multiplies each input element by 2 using a convolution filter,
+e.g. the input [2 3] results in output [4 6]. The model is run using the
+odp_ml_run example, which can run inference using an arbitrary model and
+arbitrary input.
+
+### Generate model
+
+```bash
+python3 <odp_directory>/platform/linux-generic/example/ml/conv_gen.py
+```
+
+### Run convolution
+
+```bash
+$ ./odp_ml_conv.sh
+.
+.
+.
+Output matches reference
+```
