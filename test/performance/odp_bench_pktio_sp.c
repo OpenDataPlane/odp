@@ -804,7 +804,7 @@ static int bench_pktio_sp_export(void *data)
 	for (uint32_t i = 0; i < gbl_args->suite.num_bench; i++) {
 		for (int j = 0; j < gbl_args->result[i].num; j++) {
 			num = gbl_args->result[i].func[j].num ? gbl_args->result[i].func[j].num : 1;
-			if (test_common_write("%s,%i,%i,%i\n",
+			if (test_common_write("%s,%" PRIu64 ",%" PRIu64 ",%" PRIu64 "\n",
 					      gbl_args->result[i].func[j].name,
 					      odp_time_to_ns(gbl_args->result[i].func[j].min),
 					      odp_time_to_ns(gbl_args->result[i].func[j].tot) / num,
@@ -1072,7 +1072,7 @@ int main(int argc, char *argv[])
 
 	argc = test_common_parse_options(argc, argv);
 	if (test_common_options(&common_options)) {
-		ODPH_ERR("Error: reading test helper options failed\n");
+		ODPH_ERR("Reading test options failed\n");
 		exit(EXIT_FAILURE);
 	}
 
