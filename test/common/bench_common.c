@@ -58,10 +58,10 @@ int bench_run(void *arg)
 	printf("\nAverage %s per function call\n", meas_time ? "time (nsec)" : "CPU cycles");
 	printf("-------------------------------------------------\n");
 
-	for (int j = 0; j < suite->num_bench; j++) {
+	for (int i = 0; i < suite->num_bench; i++) {
 		int ret;
 		const char *desc;
-		const bench_info_t *bench = &suite->bench[j];
+		const bench_info_t *bench = &suite->bench[i];
 		uint64_t max_rounds = suite->rounds;
 		uint64_t total = 0;
 
@@ -70,11 +70,10 @@ int bench_run(void *arg)
 
 		/* Run selected test indefinitely */
 		if (suite->indef_idx) {
-			if ((j + 1) != suite->indef_idx) {
-				j++;
+			if ((i + 1) != suite->indef_idx)
 				continue;
-			}
-			bench_run_indef(&suite->bench[j], &suite->exit_worker);
+
+			bench_run_indef(&suite->bench[i], &suite->exit_worker);
 			return 0;
 		}
 
@@ -117,9 +116,9 @@ int bench_run(void *arg)
 		/* Each benchmark runs internally 'repeat_count' times. */
 		result = ((double)total) / (max_rounds * repeat_count);
 
-		printf("[%02d] odp_%-26s: %12.2f\n", j + 1, desc, result);
+		printf("[%02d] odp_%-26s: %12.2f\n", i + 1, desc, result);
 		if (suite->result)
-			suite->result[j] = result;
+			suite->result[i] = result;
 	}
 	printf("\n");
 	/* Print dummy result to prevent compiler to optimize it away*/
