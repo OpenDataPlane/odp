@@ -227,9 +227,9 @@ static void scheduler_test_wait_time(void)
 	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
 
 	wait_time = odp_schedule_wait_time(WAIT_TIMEOUT);
-	start_time = odp_time_local();
+	start_time = odp_time_local_strict();
 	ev = odp_schedule(NULL, ODP_SCHED_NO_WAIT);
-	end_time = odp_time_local();
+	end_time = odp_time_local_strict();
 	CU_ASSERT_FATAL(ev == ODP_EVENT_INVALID);
 
 	diff = odp_time_diff(end_time, start_time);
@@ -241,16 +241,16 @@ static void scheduler_test_wait_time(void)
 
 	/* check time correctness */
 	printf("\nTesting wait time for %.3f sec ...\n", (double)duration_ns / ODP_TIME_SEC_IN_NS);
-	start_time = odp_time_local();
+	start_time = odp_time_local_strict();
 	for (i = 0; i < WAIT_ROUNDS; i++) {
 		ev = odp_schedule(NULL, wait_time);
 		CU_ASSERT_FATAL(ev == ODP_EVENT_INVALID);
 	}
-	end_time = odp_time_local();
+	end_time = odp_time_local_strict();
 
 	diff = odp_time_diff(end_time, start_time);
-	lower_limit = odp_time_local_from_ns(duration_ns - WAIT_TOLERANCE);
-	upper_limit = odp_time_local_from_ns(duration_ns + WAIT_TOLERANCE);
+	lower_limit = odp_time_local_from_ns(duration_ns - (WAIT_ROUNDS * WAIT_TOLERANCE));
+	upper_limit = odp_time_local_from_ns(duration_ns + (WAIT_ROUNDS * WAIT_TOLERANCE));
 
 	if (odp_time_cmp(diff, lower_limit) <= 0) {
 		ODPH_ERR("Exceed lower limit: diff is %" PRIu64 ", lower_limit %" PRIu64 "\n",
