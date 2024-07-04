@@ -15398,7 +15398,8 @@ static void print_stat(test_global_t *global)
 	printf("TOTAL (%i workers)\n", num_cpu);
 	printf("  ave loops per sec:       %.1f k/sec\n", ave_loops / kilo);
 	printf("  ave test run time:       %.3f msec\n", 1000 * (sum_sec / num_cpu));
-	printf("  ave CPU cycles per loop: %.1f\n", sum_cycles / (double)sum_loops);
+	printf("  ave CPU cycles per loop: %.1f\n",
+	       sum_loops > 0 ? sum_cycles / (double)sum_loops : 0);
 	printf("\n");
 }
 
