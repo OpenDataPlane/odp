@@ -1026,7 +1026,9 @@ static int print_stat(test_global_t *test_global)
 			return -1;
 		}
 
-		if (test_common_write("%i,%i,%i,%i,%i,%f,%i,%f,%i,%f,%i,%f,%i,%f,%i,%f,%i,%f\n",
+		if (test_common_write("%" PRIu64 ",%" PRIu64 ",%" PRIu64 ",%" PRIu64 ",%" PRIu64 ","
+				      "%f,%" PRIu64 ",%f,%" PRIu64 ",%f,%" PRIu64 ",%f,%" PRIu64 ","
+				      "%f,%" PRIu64 ",%f,%" PRId64 ",%f\n",
 				      stat->num_after, stat->num_before,
 				      stat->num_exact, stat->num_too_near,
 				      stat->nsec_after_min, (double)stat->nsec_after_min / res_ns,
