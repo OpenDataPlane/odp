@@ -65,6 +65,7 @@ int test_common_options(test_common_options_t *options);
 *
 * Returns 0 on success, -1 on failure
 */
+ODP_PRINTF_FORMAT(1, 2)
 int test_common_write(const char *fmt, ...);
 
 /**
