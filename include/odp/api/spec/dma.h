@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright (c) 2021-2023 Nokia
+ * Copyright (c) 2021-2024 Nokia
  */
 
 /**
@@ -225,11 +225,20 @@ odp_dma_transfer_id_t odp_dma_transfer_id_alloc(odp_dma_t dma);
 void odp_dma_transfer_id_free(odp_dma_t dma, odp_dma_transfer_id_t transfer_id);
 
 /**
+ * Get printable value for DMA transfer identifier handle
+ *
+ * @param transfer_id  Handle to be converted for debugging
+ *
+ * @return uint64_t value that can be used to print/display this handle
+ */
+uint64_t odp_dma_transfer_id_to_u64(odp_dma_transfer_id_t transfer_id);
+
+/**
  * Get printable value for DMA session handle
  *
  * @param dma   Handle to be converted for debugging
  *
- * @return      uint64_t value that can be used to print/display this handle
+ * @return uint64_t value that can be used to print/display this handle
  */
 uint64_t odp_dma_to_u64(odp_dma_t dma);
 
@@ -283,7 +292,7 @@ odp_event_t odp_dma_compl_to_event(odp_dma_compl_t dma_compl);
  *
  * @param dma_compl    Handle to be converted for debugging
  *
- * @return	uint64_t value that can be used to print/display this handle
+ * @return uint64_t value that can be used to print/display this handle
  */
 uint64_t odp_dma_compl_to_u64(odp_dma_compl_t dma_compl);
 
