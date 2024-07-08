@@ -148,7 +148,6 @@ int test_common_options(test_common_options_t *options)
 	return 0;
 }
 
-ODP_WEAK_SYMBOL ODP_PRINTF_FORMAT(1, 2)
 int test_common_write(const char *fmt, ...)
 {
 	va_list args, args_copy;
