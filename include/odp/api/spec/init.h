@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2013-2018 Linaro Limited
- * Copyright (c) 2019-2023 Nokia
+ * Copyright (c) 2019-2024 Nokia
  */
 
 /**
@@ -415,6 +415,15 @@ void odp_log_thread_fn_set(odp_log_func_t func);
  * @see odp_init_global(), odp_init_local()
  */
 int odp_instance(odp_instance_t *instance);
+
+/**
+ * Get printable value for ODP instance handle
+ *
+ * @param instance        Handle to be converted for debugging
+ *
+ * @return uint64_t value that can be used to print/display this handle
+ */
+uint64_t odp_instance_to_u64(odp_instance_t instance);
 
 /**
  * @}
