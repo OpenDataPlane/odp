@@ -21,8 +21,6 @@
 
 #define GLOBAL_SHM_NAME		"GlobalLockTest"
 
-#define UNUSED			__attribute__((__unused__))
-
 typedef __volatile uint32_t volatile_u32_t;
 typedef __volatile uint64_t volatile_u64_t;
 
@@ -1043,7 +1041,7 @@ static int atomic_term(odp_instance_t inst)
 
 /* Atomic tests */
 
-static int test_atomic_inc_thread(void *arg UNUSED)
+static int test_atomic_inc_thread(void *arg ODP_UNUSED)
 {
 	thread_init();
 	test_atomic_inc_32();
@@ -1052,7 +1050,7 @@ static int test_atomic_inc_thread(void *arg UNUSED)
 	return CU_get_number_of_failures();
 }
 
-static int test_atomic_dec_thread(void *arg UNUSED)
+static int test_atomic_dec_thread(void *arg ODP_UNUSED)
 {
 	thread_init();
 	test_atomic_dec_32();
@@ -1061,7 +1059,7 @@ static int test_atomic_dec_thread(void *arg UNUSED)
 	return CU_get_number_of_failures();
 }
 
-static int test_atomic_add_thread(void *arg UNUSED)
+static int test_atomic_add_thread(void *arg ODP_UNUSED)
 {
 	thread_init();
 	test_atomic_add_32();
@@ -1070,7 +1068,7 @@ static int test_atomic_add_thread(void *arg UNUSED)
 	return CU_get_number_of_failures();
 }
 
-static int test_atomic_sub_thread(void *arg UNUSED)
+static int test_atomic_sub_thread(void *arg ODP_UNUSED)
 {
 	thread_init();
 	test_atomic_sub_32();
@@ -1079,7 +1077,7 @@ static int test_atomic_sub_thread(void *arg UNUSED)
 	return CU_get_number_of_failures();
 }
 
-static int test_atomic_fetch_inc_thread(void *arg UNUSED)
+static int test_atomic_fetch_inc_thread(void *arg ODP_UNUSED)
 {
 	thread_init();
 	test_atomic_fetch_inc_32();
@@ -1088,7 +1086,7 @@ static int test_atomic_fetch_inc_thread(void *arg UNUSED)
 	return CU_get_number_of_failures();
 }
 
-static int test_atomic_fetch_dec_thread(void *arg UNUSED)
+static int test_atomic_fetch_dec_thread(void *arg ODP_UNUSED)
 {
 	thread_init();
 	test_atomic_fetch_dec_32();
@@ -1097,7 +1095,7 @@ static int test_atomic_fetch_dec_thread(void *arg UNUSED)
 	return CU_get_number_of_failures();
 }
 
-static int test_atomic_fetch_add_thread(void *arg UNUSED)
+static int test_atomic_fetch_add_thread(void *arg ODP_UNUSED)
 {
 	thread_init();
 	test_atomic_fetch_add_32();
@@ -1106,7 +1104,7 @@ static int test_atomic_fetch_add_thread(void *arg UNUSED)
 	return CU_get_number_of_failures();
 }
 
-static int test_atomic_fetch_sub_thread(void *arg UNUSED)
+static int test_atomic_fetch_sub_thread(void *arg ODP_UNUSED)
 {
 	thread_init();
 	test_atomic_fetch_sub_32();
@@ -1115,7 +1113,7 @@ static int test_atomic_fetch_sub_thread(void *arg UNUSED)
 	return CU_get_number_of_failures();
 }
 
-static int test_atomic_max_thread(void *arg UNUSED)
+static int test_atomic_max_thread(void *arg ODP_UNUSED)
 {
 	thread_init();
 	test_atomic_max_32();
@@ -1124,7 +1122,7 @@ static int test_atomic_max_thread(void *arg UNUSED)
 	return CU_get_number_of_failures();
 }
 
-static int test_atomic_min_thread(void *arg UNUSED)
+static int test_atomic_min_thread(void *arg ODP_UNUSED)
 {
 	thread_init();
 	test_atomic_min_32();
@@ -1133,7 +1131,7 @@ static int test_atomic_min_thread(void *arg UNUSED)
 	return CU_get_number_of_failures();
 }
 
-static int test_atomic_cas_thread(void *arg UNUSED)
+static int test_atomic_cas_thread(void *arg ODP_UNUSED)
 {
 	thread_init();
 	test_atomic_cas_inc_32();
@@ -1143,7 +1141,7 @@ static int test_atomic_cas_thread(void *arg UNUSED)
 	return CU_get_number_of_failures();
 }
 
-static int test_atomic_cas_acq_thread(void *arg UNUSED)
+static int test_atomic_cas_acq_thread(void *arg ODP_UNUSED)
 {
 	thread_init();
 	test_atomic_cas_acq_inc_32();
@@ -1153,7 +1151,7 @@ static int test_atomic_cas_acq_thread(void *arg UNUSED)
 	return CU_get_number_of_failures();
 }
 
-static int test_atomic_cas_rel_thread(void *arg UNUSED)
+static int test_atomic_cas_rel_thread(void *arg ODP_UNUSED)
 {
 	thread_init();
 	test_atomic_cas_rel_inc_32();
@@ -1163,7 +1161,7 @@ static int test_atomic_cas_rel_thread(void *arg UNUSED)
 	return CU_get_number_of_failures();
 }
 
-static int test_atomic_cas_acq_rel_thread(void *arg UNUSED)
+static int test_atomic_cas_acq_rel_thread(void *arg ODP_UNUSED)
 {
 	thread_init();
 	test_atomic_cas_acq_rel_inc_32();
@@ -1173,7 +1171,7 @@ static int test_atomic_cas_acq_rel_thread(void *arg UNUSED)
 	return CU_get_number_of_failures();
 }
 
-static int test_atomic_inc_dec_thread(void *arg UNUSED)
+static int test_atomic_inc_dec_thread(void *arg ODP_UNUSED)
 {
 	thread_init();
 	test_atomic_inc_dec_32();
@@ -1182,7 +1180,7 @@ static int test_atomic_inc_dec_thread(void *arg UNUSED)
 	return CU_get_number_of_failures();
 }
 
-static int test_atomic_add_sub_thread(void *arg UNUSED)
+static int test_atomic_add_sub_thread(void *arg ODP_UNUSED)
 {
 	thread_init();
 	test_atomic_add_sub_32();
@@ -1191,7 +1189,7 @@ static int test_atomic_add_sub_thread(void *arg UNUSED)
 	return CU_get_number_of_failures();
 }
 
-static int test_atomic_fetch_inc_dec_thread(void *arg UNUSED)
+static int test_atomic_fetch_inc_dec_thread(void *arg ODP_UNUSED)
 {
 	thread_init();
 	test_atomic_fetch_inc_dec_32();
@@ -1200,7 +1198,7 @@ static int test_atomic_fetch_inc_dec_thread(void *arg UNUSED)
 	return CU_get_number_of_failures();
 }
 
-static int test_atomic_fetch_add_sub_thread(void *arg UNUSED)
+static int test_atomic_fetch_add_sub_thread(void *arg ODP_UNUSED)
 {
 	thread_init();
 	test_atomic_fetch_add_sub_32();
@@ -1209,7 +1207,7 @@ static int test_atomic_fetch_add_sub_thread(void *arg UNUSED)
 	return CU_get_number_of_failures();
 }
 
-static int test_atomic_inc_add_thread(void *arg UNUSED)
+static int test_atomic_inc_add_thread(void *arg ODP_UNUSED)
 {
 	thread_init();
 	test_atomic_inc_add_32();
@@ -1218,7 +1216,7 @@ static int test_atomic_inc_add_thread(void *arg UNUSED)
 	return CU_get_number_of_failures();
 }
 
-static int test_atomic_dec_sub_thread(void *arg UNUSED)
+static int test_atomic_dec_sub_thread(void *arg ODP_UNUSED)
 {
 	thread_init();
 	test_atomic_dec_sub_32();
@@ -1227,7 +1225,7 @@ static int test_atomic_dec_sub_thread(void *arg UNUSED)
 	return CU_get_number_of_failures();
 }
 
-static int test_atomic_max_min_thread(void *arg UNUSED)
+static int test_atomic_max_min_thread(void *arg ODP_UNUSED)
 {
 	thread_init();
 	test_atomic_max_min_32();
@@ -1236,7 +1234,7 @@ static int test_atomic_max_min_thread(void *arg UNUSED)
 	return CU_get_number_of_failures();
 }
 
-static int test_atomic_cas_inc_dec_thread(void *arg UNUSED)
+static int test_atomic_cas_inc_dec_thread(void *arg ODP_UNUSED)
 {
 	thread_init();
 	test_atomic_cas_inc_dec_32();
@@ -1246,7 +1244,7 @@ static int test_atomic_cas_inc_dec_thread(void *arg UNUSED)
 	return CU_get_number_of_failures();
 }
 
-static int test_atomic_xchg_thread(void *arg UNUSED)
+static int test_atomic_xchg_thread(void *arg ODP_UNUSED)
 {
 	thread_init();
 	test_atomic_xchg_32();
@@ -1255,7 +1253,7 @@ static int test_atomic_xchg_thread(void *arg UNUSED)
 	return CU_get_number_of_failures();
 }
 
-static int test_atomic_non_relaxed_thread(void *arg UNUSED)
+static int test_atomic_non_relaxed_thread(void *arg ODP_UNUSED)
 {
 	thread_init();
 	test_atomic_non_relaxed_32();
