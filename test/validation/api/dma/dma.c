@@ -630,6 +630,7 @@ static int do_transfer_async(odp_dma_t dma, odp_dma_transfer_param_t *trs_param,
 	odp_event_t ev;
 	odp_dma_compl_t compl;
 	int i, j, ret, done;
+	uint64_t u64;
 	uint32_t user_data = USER_DATA;
 	odp_dma_result_t result;
 	uint64_t wait_ns = 500 * ODP_TIME_MSEC_IN_NS;
@@ -655,6 +656,10 @@ static int do_transfer_async(odp_dma_t dma, odp_dma_transfer_param_t *trs_param,
 			CU_ASSERT(compl_param[i].transfer_id != ODP_DMA_TRANSFER_ID_INVALID);
 			if (compl_param[i].transfer_id == ODP_DMA_TRANSFER_ID_INVALID)
 				return -1;
+
+			u64 = odp_dma_transfer_id_to_u64(compl_param[i].transfer_id);
+			CU_ASSERT(u64 != odp_dma_transfer_id_to_u64(ODP_DMA_TRANSFER_ID_INVALID));
+
 		} else if (compl_mode != ODP_DMA_COMPL_NONE) {
 			ODPH_ERR("Wrong compl mode: %u\n", compl_mode);
 			return -1;
