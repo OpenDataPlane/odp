@@ -290,11 +290,11 @@ void odp_schedule_config_init(odp_schedule_config_t *config);
  * have the same result as filling the structure with
  * odp_schedule_config_init() and then passing it to odp_schedule_config().
  *
- * The initialization sequeunce should be,
- * odp_schedule_capability()
- * odp_schedule_config_init()
- * odp_schedule_config()
- * odp_schedule()
+ * The initialization sequence should be:
+ *   * odp_schedule_capability()
+ *   * odp_schedule_config_init()
+ *   * odp_schedule_config()
+ *   * odp_schedule()
  *
  * @param config   Pointer to scheduler configuration structure or NULL for the
  *                 default configuration
