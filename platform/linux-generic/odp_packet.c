@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2013-2018 Linaro Limited
- * Copyright (c) 2019-2023 Nokia
+ * Copyright (c) 2019-2024 Nokia
  */
 
 #include <odp/autoheader_external.h>
@@ -2102,6 +2102,11 @@ uint64_t odp_packet_to_u64(odp_packet_t hdl)
 uint64_t odp_packet_seg_to_u64(odp_packet_seg_t hdl)
 {
 	return _odp_pri(hdl);
+}
+
+uint64_t odp_packet_tx_compl_to_u64(odp_packet_tx_compl_t tx_compl)
+{
+	return _odp_pri(tx_compl);
 }
 
 odp_packet_t odp_packet_ref_static(odp_packet_t pkt)
