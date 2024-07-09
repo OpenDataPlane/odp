@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2013-2018 Linaro Limited
- * Copyright (c) 2021-2023 Nokia
+ * Copyright (c) 2021-2024 Nokia
  */
 
 #include <odp_posix_extensions.h>
@@ -8,6 +8,7 @@
 #include <odp/api/init.h>
 #include <odp/api/shared_memory.h>
 
+#include <odp/api/plat/strong_types.h>
 #include <odp/api/plat/thread_inlines.h>
 
 #include <odp_debug_internal.h>
@@ -734,4 +735,9 @@ int odp_instance(odp_instance_t *instance)
 	*instance = (odp_instance_t)odp_global_ro.main_pid;
 
 	return 0;
+}
+
+uint64_t odp_instance_to_u64(odp_instance_t instance)
+{
+	return _odp_pri(instance);
 }
