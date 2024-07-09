@@ -934,7 +934,7 @@ static void scheduler_test_create_group(void)
 	odp_queue_param_t qp;
 	odp_buffer_t buf;
 	odp_event_t ev;
-	uint64_t wait_time;
+	uint64_t wait_time, u64;
 
 	thr_id = odp_thread_id();
 	odp_thrmask_zero(&mask);
@@ -942,6 +942,9 @@ static void scheduler_test_create_group(void)
 
 	group = odp_schedule_group_create("create_group", &mask);
 	CU_ASSERT_FATAL(group != ODP_SCHED_GROUP_INVALID);
+
+	u64 = odp_schedule_group_to_u64(group);
+	CU_ASSERT(u64 != odp_schedule_group_to_u64(ODP_SCHED_GROUP_INVALID));
 
 	odp_pool_param_init(&pool_params);
 	pool_params.buf.size  = 100;
