@@ -2394,17 +2394,13 @@ odp_pool_t odp_packet_vector_pool(odp_packet_vector_t pktv);
 void odp_packet_vector_print(odp_packet_vector_t pktv);
 
 /**
- * Get printable value for an odp_packet_vector_t
+ * Get printable value for packet vector handle
  *
- * @param hdl  odp_packet_vector_t handle to be printed
+ * @param pktv Handle to be converted for debugging
  *
  * @return uint64_t value that can be used to print/display this handle
- *
- * @note This routine is intended to be used for diagnostic purposes to enable
- * applications to generate a printable value that represents an
- * odp_packet_vector_t handle.
  */
-uint64_t odp_packet_vector_to_u64(odp_packet_vector_t hdl);
+uint64_t odp_packet_vector_to_u64(odp_packet_vector_t pktv);
 
 /**
  * Check reassembly status of the packet
@@ -2538,30 +2534,22 @@ void odp_packet_print_data(odp_packet_t pkt, uint32_t offset, uint32_t len);
 int odp_packet_is_valid(odp_packet_t pkt);
 
 /**
- * Get printable value for an odp_packet_t
+ * Get printable value for packet handle
  *
- * @param hdl  odp_packet_t handle to be printed
- * @return     uint64_t value that can be used to print/display this
- *             handle
+ * @param pkt       Handle to be converted for debugging
  *
- * @note This routine is intended to be used for diagnostic purposes
- * to enable applications to generate a printable value that represents
- * an odp_packet_t handle.
+ * @return uint64_t value that can be used to print/display this handle
  */
-uint64_t odp_packet_to_u64(odp_packet_t hdl);
+uint64_t odp_packet_to_u64(odp_packet_t pkt);
 
 /**
- * Get printable value for an odp_packet_seg_t
+ * Get printable value for packet segment handle
  *
- * @param hdl  odp_packet_seg_t handle to be printed
- * @return     uint64_t value that can be used to print/display this
- *             handle
+ * @param seg       Handle to be converted for debugging
  *
- * @note This routine is intended to be used for diagnostic purposes
- * to enable applications to generate a printable value that represents
- * an odp_packet_seg_t handle.
+ * @return uint64_t value that can be used to print/display this handle
  */
-uint64_t odp_packet_seg_to_u64(odp_packet_seg_t hdl);
+uint64_t odp_packet_seg_to_u64(odp_packet_seg_t seg);
 
 /**
  * Get printable value for packet Tx completion handle
