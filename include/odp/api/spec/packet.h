@@ -2564,6 +2564,15 @@ uint64_t odp_packet_to_u64(odp_packet_t hdl);
 uint64_t odp_packet_seg_to_u64(odp_packet_seg_t hdl);
 
 /**
+ * Get printable value for packet Tx completion handle
+ *
+ * @param tx_compl  Handle to be converted for debugging
+ *
+ * @return uint64_t value that can be used to print/display this handle
+ */
+uint64_t odp_packet_tx_compl_to_u64(odp_packet_tx_compl_t tx_compl);
+
+/**
  * @}
  */
 
