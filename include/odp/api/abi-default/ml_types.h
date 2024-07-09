@@ -15,6 +15,24 @@ typedef struct { char dummy; /**< @internal Dummy */ } _odp_abi_ml_model_t;
 /** @internal Dummy type for strong typing */
 typedef struct { char dummy; /**< @internal Dummy */ } _odp_abi_ml_compl_t;
 
+/** @internal Implementation specific ML input info */
+struct _odp_ml_input_extra_info_t {
+	/** @internal Dummy field to avoid empty struct */
+	char dummy;
+};
+
+/** @internal Implementation specific ML output info */
+struct _odp_ml_output_extra_info_t {
+	/** @internal Dummy field to avoid empty struct */
+	char dummy;
+};
+
+/** @internal Implementation specific ML model info */
+struct _odp_ml_model_extra_info_t {
+	/** @internal Dummy field to avoid empty struct */
+	char dummy;
+};
+
 /** @internal Implementation specific ML parameters */
 struct _odp_ml_model_extra_param_t {
 	/** @internal Dummy field to avoid empty struct */
@@ -27,6 +45,9 @@ struct _odp_ml_model_extra_param_t {
 
 typedef _odp_abi_ml_model_t *odp_ml_model_t;
 typedef _odp_abi_ml_compl_t *odp_ml_compl_t;
+typedef struct _odp_ml_input_extra_info_t odp_ml_input_extra_info_t;
+typedef struct _odp_ml_output_extra_info_t odp_ml_output_extra_info_t;
+typedef struct _odp_ml_model_extra_info_t odp_ml_model_extra_info_t;
 typedef struct _odp_ml_model_extra_param_t odp_ml_model_extra_param_t;
 
 #define ODP_ML_MODEL_INVALID ((odp_ml_model_t)0)
