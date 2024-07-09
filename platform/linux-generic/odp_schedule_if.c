@@ -1,11 +1,12 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2016-2018 Linaro Limited
- * Copyright (c) 2021-2022 Nokia
+ * Copyright (c) 2021-2024 Nokia
  */
 
 #include <odp/autoheader_internal.h>
 
 #include <odp/api/plat/schedule_inline_types.h>
+#include <odp/api/plat/strong_types.h>
 
 #include <odp_schedule_if.h>
 #include <odp_init_internal.h>
@@ -126,6 +127,11 @@ int odp_schedule_group_info(odp_schedule_group_t group,
 			    odp_schedule_group_info_t *info)
 {
 	return _odp_sched_api->schedule_group_info(group, info);
+}
+
+uint64_t odp_schedule_group_to_u64(odp_schedule_group_t group)
+{
+	return _odp_pri(group);
 }
 
 void odp_schedule_print(void)
