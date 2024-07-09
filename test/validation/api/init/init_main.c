@@ -7,6 +7,7 @@
 #include <odp/helper/odph_api.h>
 #include <odp_cunit_common.h>
 
+#include <inttypes.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -74,6 +75,8 @@ static void init_test_defaults(void)
 
 	ret = odp_init_global(&instance, &param, NULL);
 	CU_ASSERT_FATAL(ret == 0);
+
+	printf("ODP instance: %" PRIu64 "\n", odp_instance_to_u64(instance));
 
 	ret = odp_init_local(instance, ODP_THREAD_WORKER);
 	CU_ASSERT_FATAL(ret == 0);
