@@ -142,7 +142,7 @@ static int thread_func(void *arg)
 	/* Wait for indication that we can exit */
 	odp_barrier_wait(&global_mem->bar_exit);
 
-	return CU_get_number_of_failures();
+	return 0;
 }
 
 static void thread_test_odp_thrmask_worker(void)

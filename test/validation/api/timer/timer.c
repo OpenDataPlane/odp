@@ -2548,7 +2548,7 @@ sleep:
 
 	free(tt);
 	ODPH_DBG("Thread %u: exiting\n", thr);
-	return CU_get_number_of_failures();
+	return 0;
 }
 
 static void timer_test_all(odp_queue_type_t queue_type)

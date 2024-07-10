@@ -126,7 +126,7 @@ static int run_test_basic_thread(void *arg ODP_UNUSED)
 	odp_shm_print_all();
 
 	fflush(stdout);
-	return CU_get_number_of_failures();
+	return 0;
 }
 
 /*
@@ -656,7 +656,7 @@ static int run_test_reserve_after_fork(void *arg ODP_UNUSED)
 	odp_barrier_wait(&glob_data->test_barrier2);
 
 	fflush(stdout);
-	return CU_get_number_of_failures();
+	return 0;
 }
 
 /*
@@ -838,7 +838,7 @@ static int run_test_singleva_after_fork(void *arg ODP_UNUSED)
 	CU_ASSERT(ret == 0);
 
 	fflush(stdout);
-	return CU_get_number_of_failures();
+	return 0;
 }
 
 static int shmem_check_flag_single_va(void)
@@ -1085,7 +1085,7 @@ static int run_test_stress(void *arg ODP_UNUSED)
 	}
 
 	fflush(stdout);
-	return CU_get_number_of_failures();
+	return 0;
 }
 
 /*

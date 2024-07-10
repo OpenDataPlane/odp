@@ -1151,7 +1151,7 @@ static int run_pool_test_create_after_fork(void *arg ODP_UNUSED)
 
 	buffer_alloc_loop(global_mem->pool, BUF_NUM, BUF_SIZE);
 
-	return CU_get_number_of_failures();
+	return 0;
 }
 
 static void pool_test_create_after_fork(void)
