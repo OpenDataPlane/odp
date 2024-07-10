@@ -236,7 +236,7 @@ static int no_barrier_functional_test(void *arg ODP_UNUSED)
 	CU_ASSERT(barrier_errs != 0 || global_mem->g_num_threads == 1);
 	thread_finalize(per_thread_mem);
 
-	return CU_get_number_of_failures();
+	return 0;
 }
 
 static int barrier_functional_test(void *arg ODP_UNUSED)
@@ -250,7 +250,7 @@ static int barrier_functional_test(void *arg ODP_UNUSED)
 	CU_ASSERT(barrier_errs == 0);
 	thread_finalize(per_thread_mem);
 
-	return CU_get_number_of_failures();
+	return 0;
 }
 
 static void barrier_test_init(void)

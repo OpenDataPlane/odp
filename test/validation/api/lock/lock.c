@@ -160,7 +160,7 @@ static int spinlock_api_tests(void *arg ODP_UNUSED)
 
 	thread_finalize(per_thread_mem);
 
-	return CU_get_number_of_failures();
+	return 0;
 }
 
 static void spinlock_recursive_api_test(odp_spinlock_recursive_t *spinlock)
@@ -210,7 +210,7 @@ static int spinlock_recursive_api_tests(void *arg ODP_UNUSED)
 
 	thread_finalize(per_thread_mem);
 
-	return CU_get_number_of_failures();
+	return 0;
 }
 
 static void ticketlock_api_test(odp_ticketlock_t *ticketlock)
@@ -248,7 +248,7 @@ static int ticketlock_api_tests(void *arg ODP_UNUSED)
 
 	thread_finalize(per_thread_mem);
 
-	return CU_get_number_of_failures();
+	return 0;
 }
 
 static void rwlock_api_test(odp_rwlock_t *rw_lock)
@@ -315,7 +315,7 @@ static int rwlock_api_tests(void *arg ODP_UNUSED)
 
 	thread_finalize(per_thread_mem);
 
-	return CU_get_number_of_failures();
+	return 0;
 }
 
 static void rwlock_recursive_api_test(odp_rwlock_recursive_t *rw_lock)
@@ -366,7 +366,7 @@ static int rwlock_recursive_api_tests(void *arg ODP_UNUSED)
 
 	thread_finalize(per_thread_mem);
 
-	return CU_get_number_of_failures();
+	return 0;
 }
 
 /*
@@ -410,7 +410,7 @@ static int no_lock_functional_test(void *arg ODP_UNUSED)
 	* is likely proven.
 	* If we reach "MAX_ITERATIONS", and "iteration" remains zero,
 	* it means that we cannot see any race condition between the different
-	* running theads (e.g. the OS is not preemptive) and all other tests
+	* running threads (e.g. the OS is not preemptive) and all other tests
 	* being passed won't tell much about the functionality of the
 	* tested synchro mechanism.
 	*/
@@ -492,7 +492,7 @@ static int no_lock_functional_test(void *arg ODP_UNUSED)
 
 	thread_finalize(per_thread_mem);
 
-	return CU_get_number_of_failures();
+	return 0;
 }
 
 static int spinlock_functional_test(void *arg ODP_UNUSED)
@@ -577,7 +577,7 @@ static int spinlock_functional_test(void *arg ODP_UNUSED)
 
 	thread_finalize(per_thread_mem);
 
-	return CU_get_number_of_failures();
+	return 0;
 }
 
 static int spinlock_recursive_functional_test(void *arg ODP_UNUSED)
@@ -686,7 +686,7 @@ static int spinlock_recursive_functional_test(void *arg ODP_UNUSED)
 
 	thread_finalize(per_thread_mem);
 
-	return CU_get_number_of_failures();
+	return 0;
 }
 
 static int ticketlock_functional_test(void *arg ODP_UNUSED)
@@ -773,7 +773,7 @@ static int ticketlock_functional_test(void *arg ODP_UNUSED)
 
 	thread_finalize(per_thread_mem);
 
-	return CU_get_number_of_failures();
+	return 0;
 }
 
 static int rwlock_functional_test(void *arg ODP_UNUSED)
@@ -864,7 +864,7 @@ static int rwlock_functional_test(void *arg ODP_UNUSED)
 
 	thread_finalize(per_thread_mem);
 
-	return CU_get_number_of_failures();
+	return 0;
 }
 
 static int rwlock_recursive_functional_test(void *arg ODP_UNUSED)
@@ -994,7 +994,7 @@ static int rwlock_recursive_functional_test(void *arg ODP_UNUSED)
 
 	thread_finalize(per_thread_mem);
 
-	return CU_get_number_of_failures();
+	return 0;
 }
 
 /* Thread-unsafe tests */
