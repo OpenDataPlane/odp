@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2018 Linaro Limited
+ * Copyright (c) 2024 Nokia
  */
 
 #ifndef ODP_PLAT_THREAD_INLINES_H_
@@ -37,7 +38,10 @@ _ODP_INLINE odp_thread_type_t odp_thread_type(void)
 
 _ODP_INLINE int odp_cpu_id(void)
 {
-	return _odp_this_thread->cpu;
+	if (_odp_this_thread->cpu >= 0)
+		return _odp_this_thread->cpu;
+
+	return _odp_this_thread->cpu_id_fn();
 }
 
 /** @endcond */

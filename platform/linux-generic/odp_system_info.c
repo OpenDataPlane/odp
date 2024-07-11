@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2013-2018 Linaro Limited
- * Copyright (c) 2020-2022 Nokia
+ * Copyright (c) 2020-2024 Nokia
  *
  * Copyright(c) 2010-2014 Intel Corporation
  *   - lib/eal/common/eal_common_string_fns.c
@@ -336,6 +336,23 @@ static int read_config_file(void)
 		return -1;
 	}
 	odp_global_ro.system_info.cpu_hz_static = !!val;
+
+	str = "system.cpu_id_static";
+	if (!_odp_libconfig_lookup_int(str, &val)) {
+		_ODP_ERR("Config option '%s' not found.\n", str);
+		return -1;
+	}
+	odp_global_ro.system_info.cpu_id_static = !!val;
+
+	_ODP_PRINT("System config:\n");
+	_ODP_PRINT("  system.cpu_mhz: %" PRIu64 "\n",
+		   odp_global_ro.system_info.default_cpu_hz);
+	_ODP_PRINT("  system.cpu_mhz_max: %" PRIu64 "\n",
+		   odp_global_ro.system_info.default_cpu_hz_max);
+	_ODP_PRINT("  system.cpu_hz_static: %" PRIu8 "\n",
+		   odp_global_ro.system_info.cpu_hz_static);
+	_ODP_PRINT("  system.cpu_id_static: %" PRIu8 "\n\n",
+		   odp_global_ro.system_info.cpu_id_static);
 
 	return 0;
 }
