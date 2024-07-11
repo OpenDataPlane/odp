@@ -1,28 +1,32 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2013-2018 Linaro Limited
- * Copyright (c) 2021 Nokia
+ * Copyright (c) 2021-2024 Nokia
  */
 
 #include <odp_posix_extensions.h>
 
-#include <sched.h>
+#include <odp/api/align.h>
 #include <odp/api/atomic.h>
+#include <odp/api/hints.h>
+#include <odp/api/shared_memory.h>
+#include <odp/api/spinlock.h>
 #include <odp/api/thread.h>
 #include <odp/api/thrmask.h>
-#include <odp/api/spinlock.h>
-#include <odp_init_internal.h>
+
+#include <odp/api/plat/thread_inlines.h>
+
 #include <odp_config_internal.h>
 #include <odp_debug_internal.h>
-#include <odp/api/shared_memory.h>
-#include <odp/api/align.h>
-#include <odp/api/cpu.h>
-#include <odp_schedule_if.h>
-#include <odp/api/plat/thread_inlines.h>
+#include <odp_global_data.h>
+#include <odp_init_internal.h>
 #include <odp_libconfig_internal.h>
+#include <odp_schedule_if.h>
 
-#include <string.h>
+#include <errno.h>
+#include <sched.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 typedef struct {
 	_odp_thread_state_t thr[ODP_THREAD_COUNT_MAX];
@@ -154,6 +158,17 @@ static int free_id(int thr)
 	return odp_atomic_fetch_dec_u32(&thread_globals->num) - 1;
 }
 
+static int cpu_id(void)
+{
+	int cpu = sched_getcpu();
+
+	if (odp_unlikely(cpu < 0)) {
+		_ODP_ERR("sched_getcpu() failed: %s\n", strerror(errno));
+		return -1;
+	}
+	return cpu;
+}
+
 int _odp_thread_init_local(odp_thread_type_t type)
 {
 	int id;
@@ -182,15 +197,13 @@ int _odp_thread_init_local(odp_thread_type_t type)
 		return -1;
 	}
 
-	cpu = sched_getcpu();
-
-	if (cpu < 0) {
-		_ODP_ERR("getcpu failed\n");
+	cpu = cpu_id();
+	if (cpu < 0)
 		return -1;
-	}
 
 	thread_globals->thr[id].thr  = id;
-	thread_globals->thr[id].cpu  = cpu;
+	thread_globals->thr[id].cpu  = odp_global_ro.system_info.cpu_id_static ? cpu : -1;
+	thread_globals->thr[id].cpu_id_fn = cpu_id;
 	thread_globals->thr[id].type = type;
 
 	_odp_this_thread = &thread_globals->thr[id];

@@ -7,7 +7,7 @@
 ##########################################################################
 m4_define([_odp_config_version_generation], [0])
 m4_define([_odp_config_version_major], [1])
-m4_define([_odp_config_version_minor], [28])
+m4_define([_odp_config_version_minor], [29])
 
 m4_define([_odp_config_version],
           [_odp_config_version_generation._odp_config_version_major._odp_config_version_minor])
