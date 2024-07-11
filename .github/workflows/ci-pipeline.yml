@@ -221,7 +221,7 @@ jobs:
       fail-fast: false
       matrix:
         cc: [gcc, clang]
-        os: ['centos_7', 'rocky_linux_8']
+        os: ['rocky_linux_8']
         conf: ['--enable-abi-compat']
     steps:
       - uses: actions/checkout@v4

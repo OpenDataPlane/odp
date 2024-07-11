@@ -1,8 +1,8 @@
 Prerequisites for building the OpenDataPlane (ODP) API
 
 1. Linux
-   CentOS 7 (kernel v3.10) is the oldest Linux distributions tested by the ODP
-   CI. Earlier versions may or may not work.
+   Rocky Linux 8 (kernel v4.18) is the oldest Linux distribution tested by the
+   ODP CI. Earlier versions may or may not work.
 
    For CentOS/RedHat distros, configure the system to use Fedora EPEL repos and
    third-party packages:
