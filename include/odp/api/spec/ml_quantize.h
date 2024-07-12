@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2023 Nokia
+ * Copyright (c) 2024 Marvell
  */
 
 /**
@@ -89,6 +90,74 @@ void odp_ml_fp32_to_int8(int8_t *dst_i8, const float *src_fp32, uint32_t num, fl
  */
 void odp_ml_fp32_from_int8(float *dst_fp32, const int8_t *src_i8, uint32_t num, float scale,
 			   int8_t zerop);
+
+/**
+ * Quantize 32-bit float to uint16_t
+ *
+ * Quantizes 'num' 32-bit floating point values to uint16_t values using the provided scale and
+ * zero point.
+ *
+ *   dst_u16 = (src_fp32 / scale) + zerop
+ *
+ * @param[out] dst_u16   Destination address for quantized values
+ * @param src_fp32       Source address of values to be quantized
+ * @param num            Number of values
+ * @param scale          Scale for quantization
+ * @param zerop          Zero point for quantization
+ */
+void odp_ml_fp32_to_uint16(uint16_t *dst_u16, const float *src_fp32, uint32_t num, float scale,
+			   uint16_t zerop);
+
+/**
+ * De-quantize 32-bit float from uint16_t
+ *
+ * De-quantizes 'num' 32-bit floating point values from uint16_t values using the provided scale and
+ * zero point.
+ *
+ *   dst_fp32 = (src_u16 - zerop) * scale
+ *
+ * @param[out] dst_fp32  Destination address for de-quantized values
+ * @param src_u16        Source address of values to be de-quantized
+ * @param num            Number of values
+ * @param scale          Scale for de-quantization
+ * @param zerop          Zero point for de-quantization
+ */
+void odp_ml_fp32_from_uint16(float *dst_fp32, const uint16_t *src_u16, uint32_t num, float scale,
+			     uint16_t zerop);
+
+/**
+ * Quantize 32-bit float to int16_t
+ *
+ * Quantizes 'num' 32-bit floating point values to int16_t values using the provided scale and
+ * zero point.
+ *
+ *   dst_i16 = (src_fp32 / scale) + zerop
+ *
+ * @param[out] dst_i16   Destination address for quantized values
+ * @param src_fp32       Source address of values to be quantized
+ * @param num            Number of values
+ * @param scale          Scale for quantization
+ * @param zerop          Zero point for quantization
+ */
+void odp_ml_fp32_to_int16(int16_t *dst_i16, const float *src_fp32, uint32_t num, float scale,
+			  int16_t zerop);
+
+/**
+ * De-quantize 32-bit float from int16_t
+ *
+ * De-quantizes 'num' 32-bit floating point values from int16_t values using the provided scale and
+ * zero point.
+ *
+ *   dst_fp32 = (src_i16 - zerop) * scale
+ *
+ * @param[out] dst_fp32  Destination address for de-quantized values
+ * @param src_i16        Source address of values to be de-quantized
+ * @param num            Number of values
+ * @param scale          Scale for de-quantization
+ * @param zerop          Zero point for de-quantization
+ */
+void odp_ml_fp32_from_int16(float *dst_fp32, const int16_t *src_i16, uint32_t num, float scale,
+			    int16_t zerop);
 
 /**
  * Quantize 32-bit float to 16-bit float
