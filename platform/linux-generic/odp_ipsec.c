@@ -2483,8 +2483,7 @@ static void ipsec_out_inline_finish_packet_proc(odp_packet_t *pkt,
 	if (!op->op.status.error.all) {
 		if (odp_pktout_queue(param->pktio, &pkqueue, 1) <= 0)
 			op->op.status.error.alg = 1;
-
-		if (odp_pktout_send(pkqueue, pkt, 1) < 0)
+		else if (odp_pktout_send(pkqueue, pkt, 1) < 0)
 			op->op.status.error.alg = 1;
 	}
 }
