@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2013-2018 Linaro Limited
+ * Copyright (c) 2024 Nokia
  */
 
 /**
@@ -289,11 +290,11 @@ void odp_schedule_config_init(odp_schedule_config_t *config);
  * have the same result as filling the structure with
  * odp_schedule_config_init() and then passing it to odp_schedule_config().
  *
- * The initialization sequeunce should be,
- * odp_schedule_capability()
- * odp_schedule_config_init()
- * odp_schedule_config()
- * odp_schedule()
+ * The initialization sequence should be:
+ *   * odp_schedule_capability()
+ *   * odp_schedule_config_init()
+ *   * odp_schedule_config()
+ *   * odp_schedule()
  *
  * @param config   Pointer to scheduler configuration structure or NULL for the
  *                 default configuration
@@ -426,6 +427,15 @@ int odp_schedule_group_thrmask(odp_schedule_group_t group,
  */
 int odp_schedule_group_info(odp_schedule_group_t group,
 			    odp_schedule_group_info_t *info);
+
+/**
+ * Get printable value for schedule group handle
+ *
+ * @param group        Handle to be converted for debugging
+ *
+ * @return uint64_t value that can be used to print/display this handle
+ */
+uint64_t odp_schedule_group_to_u64(odp_schedule_group_t group);
 
 /**
  * Acquire ordered context lock

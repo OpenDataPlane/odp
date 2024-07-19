@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright (c) 2021-2023 Nokia
+ * Copyright (c) 2021-2024 Nokia
  */
 
 #include <odp/api/dma.h>
@@ -762,6 +762,11 @@ uint64_t odp_dma_to_u64(odp_dma_t dma)
 uint64_t odp_dma_compl_to_u64(odp_dma_compl_t dma_compl)
 {
 	return _odp_pri(dma_compl);
+}
+
+uint64_t odp_dma_transfer_id_to_u64(odp_dma_transfer_id_t transfer_id)
+{
+	return _odp_pri(transfer_id);
 }
 
 void odp_dma_print(odp_dma_t dma)
