@@ -23,7 +23,7 @@ int _odp_cpuinfo_parser(FILE *file, system_info_t *sysinfo)
 
 	strcpy(sysinfo->cpu_arch_str, "powerpc");
 	while (fgets(str, sizeof(str), file) != NULL && id < CONFIG_NUM_CPU_IDS) {
-		if (!mhz) {
+		if (!(mhz > 0.0)) {
 			pos = strstr(str, "clock");
 
 			if (pos)
