@@ -747,7 +747,7 @@ static void print_stat(test_global_t *global)
 		num++;
 	}
 
-	if (sec_ave != 0.0) {
+	if (sec_ave > 0.0) {
 		round_ave = (double)sum->rounds / num_cpu;
 		cpu_load  = 100.0 * (work_ave / sec_ave);
 
