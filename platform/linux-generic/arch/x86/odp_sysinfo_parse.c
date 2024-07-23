@@ -119,7 +119,7 @@ uint64_t odp_cpu_arch_hz_current(int id)
 	}
 
 	fclose(file);
-	if (mhz)
+	if (mhz > 0.0)
 		return (uint64_t)(mhz * 1000000.0);
 
 	return 0;
