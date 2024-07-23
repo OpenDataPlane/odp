@@ -469,7 +469,7 @@ int main(int argc, char *argv[])
 	memset(thread_tbl, 0, sizeof(thread_tbl));
 	odph_thread_create(thread_tbl, &thr_common, thr_param, num_workers);
 
-	if (args->appl.time) {
+	if (args->appl.time > 0.0) {
 		odp_time_wait_ns(args->appl.time *
 				 ODP_TIME_SEC_IN_NS);
 		for (i = 0; i < args->appl.if_count; ++i) {
