@@ -4,6 +4,7 @@
 
 #include <odp_api.h>
 #include <odp/helper/odph_api.h>
+#include <float.h>
 #include "odp_cunit_common.h"
 
 #define UAREA     0xaa
@@ -406,6 +407,11 @@ static void test_ml_fp32_to_uint8(void)
 		CU_ASSERT(u8[i] == expected[i]);
 }
 
+static odp_bool_t are_floats_eq(float a, float b)
+{
+	return ODPH_ABS(a - b) <= FLT_EPSILON * ODPH_MAX(ODPH_ABS(a), ODPH_ABS(b));
+}
+
 static void test_ml_fp32_from_uint8(void)
 {
 	float fp[4];
@@ -416,7 +422,7 @@ static void test_ml_fp32_from_uint8(void)
 
 	odp_ml_fp32_from_uint8(fp, u8, 4, scale, zero_point);
 	for (uint32_t i = 0; i < 4; i++)
-		CU_ASSERT(fp[i] == expected[i]);
+		CU_ASSERT(are_floats_eq(fp[i], expected[i]));
 }
 
 static void test_ml_fp32_to_int8(void)
@@ -472,7 +478,7 @@ static void test_ml_fp32_from_int8(void)
 	odp_ml_fp32_from_int8(fp32, i8, 6, scale, zero_point);
 
 	for (uint32_t i = 0; i < 6; i++)
-		CU_ASSERT(fp32[i] == fp32_expected[i]);
+		CU_ASSERT(are_floats_eq(fp32[i], fp32_expected[i]));
 }
 
 static int approx_equal(double a, double b)
@@ -507,8 +513,8 @@ static void test_ml_fp32_fp16(void)
 	odp_ml_fp32_to_fp16(fp16, fp32, 2);
 	memset(fp32, 1, sizeof(fp32));
 	odp_ml_fp32_from_fp16(fp32, fp16, 2);
-	CU_ASSERT(fp32[0] == 0);
-	CU_ASSERT(fp32[1] == 0);
+	CU_ASSERT(are_floats_eq(fp32[0], 0.0));
+	CU_ASSERT(are_floats_eq(fp32[1], 0.0));
 
 	/*
 	 * 65504 is the largest normal number for fp16 with 5 exponent bits (IEEE 754-2008).
