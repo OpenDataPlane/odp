@@ -8,15 +8,21 @@
 #include <odp_macros_internal.h>
 #include <odp_ml_fp16.h>
 
+#include <float.h>
 #include <math.h>
 #include <stdint.h>
+
+static odp_bool_t are_floats_eq(float a, float b)
+{
+	return _ODP_ABS(a - b) <= FLT_EPSILON * _ODP_MAX(_ODP_ABS(a), _ODP_ABS(b));
+}
 
 void odp_ml_fp32_to_uint8(uint8_t *u8, const float *fp32, uint32_t num, float scale,
 			  uint8_t zerop)
 {
 	float fval;
 
-	_ODP_ASSERT(scale != 0);
+	_ODP_ASSERT(!are_floats_eq(scale, 0.0));
 
 	for (uint32_t i = 0; i < num; i++) {
 		/* Range mapping: map real values to signed integer */
@@ -40,7 +46,7 @@ void odp_ml_fp32_to_int8(int8_t *i8, const float *fp32, uint32_t num, float scal
 {
 	float fval;
 
-	_ODP_ASSERT(scale != 0);
+	_ODP_ASSERT(!are_floats_eq(scale, 0.0));
 
 	for (uint32_t i = 0; i < num; i++) {
 		/* Range mapping: map real values to signed integer */

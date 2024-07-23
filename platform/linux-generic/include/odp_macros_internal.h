@@ -36,6 +36,12 @@ extern "C" {
 		max_a > max_b ? max_a : max_b;	\
 	})
 
+#define _ODP_ABS(v)				\
+	__extension__ ({			\
+		__typeof__(v) abs_v = (v);	\
+		abs_v < 0 ? -abs_v : abs_v;	\
+	})
+
 #define _ODP_MIN3(a, b, c)		\
 __extension__ ({			\
 	__typeof__(a) min3_a = (a);	\
