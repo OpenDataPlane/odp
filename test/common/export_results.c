@@ -16,12 +16,14 @@
 #include <unistd.h>
 
 /** Maximum length of output path/name */
-#define MAX_FILENAME_LEN 192
+#define MAX_PATH_LEN 192
 
 typedef struct {
 	test_common_options_t common_options;
 
-	char filename[MAX_FILENAME_LEN];
+	char filename[MAX_PATH_LEN];
+
+	char command[MAX_PATH_LEN];
 
 	FILE *file;
 
@@ -68,7 +70,7 @@ int test_common_parse_options(int argc, char *argv[])
 	env = getenv("TEST_COMMON_EXPORT");
 	if (env) {
 		gbl_data.common_options.is_export = true;
-		odph_strcpy(gbl_data.filename, env, MAX_FILENAME_LEN);
+		odph_strcpy(gbl_data.filename, env, MAX_PATH_LEN);
 	}
 
 	/* Find and remove option */
@@ -77,14 +79,12 @@ int test_common_parse_options(int argc, char *argv[])
 			gbl_data.common_options.is_export = true;
 			if (i + 1 < argc && argv[i + 1][0] != '-') {
 				odph_strcpy(gbl_data.filename, argv[i + 1],
-					    MAX_FILENAME_LEN);
+					    MAX_PATH_LEN);
 				for (j = i; j < argc - 2; j++)
 					argv[j] = argv[j + 2];
 				argc -= 2;
 				continue;
 			} else {
-				odph_strcpy(gbl_data.filename, argv[0],
-					    MAX_FILENAME_LEN);
 				for (j = i; j < argc - 1; j++)
 					argv[j] = argv[j + 1];
 				argc--;
@@ -94,8 +94,9 @@ int test_common_parse_options(int argc, char *argv[])
 	}
 
 	if (gbl_data.common_options.is_export) {
+		odph_strcpy(gbl_data.command, argv[0], MAX_PATH_LEN);
 		if (strlen(gbl_data.filename) == 0)
-			odph_strcpy(gbl_data.filename, argv[0], MAX_FILENAME_LEN);
+			odph_strcpy(gbl_data.filename, argv[0], MAX_PATH_LEN);
 		extract_options(argc, argv);
 	}
 
@@ -107,6 +108,7 @@ int test_common_options(test_common_options_t *options)
 	const char *extension = ".csv";
 	size_t ext_len = strlen(extension);
 	size_t filename_len = strlen(gbl_data.filename);
+	size_t command_len = strlen(gbl_data.command);
 
 	memset(options, 0, sizeof(*options));
 
@@ -120,7 +122,7 @@ int test_common_options(test_common_options_t *options)
 	/* Add extension if needed */
 	if (filename_len < ext_len ||
 	    strcmp(gbl_data.filename + filename_len - ext_len, extension) != 0) {
-		if (filename_len + ext_len >= MAX_FILENAME_LEN) {
+		if (filename_len + ext_len >= MAX_PATH_LEN) {
 			ODPH_ERR("Not enough space to add '%s' to %s\n",
 				 extension, gbl_data.filename);
 			return -1;
@@ -136,8 +138,8 @@ int test_common_options(test_common_options_t *options)
 	}
 
 	if (gbl_data.args) {
-		if (fprintf(gbl_data.file, "#%.*s;%s\n", (int)filename_len,
-			    gbl_data.filename, gbl_data.args) < 0) {
+		if (fprintf(gbl_data.file, "#%.*s;%s\n", (int)command_len,
+			    gbl_data.command, gbl_data.args) < 0) {
 			ODPH_ERR("Writing filename and args failed\n");
 			return -1;
 		}
