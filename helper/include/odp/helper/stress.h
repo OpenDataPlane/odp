@@ -147,7 +147,7 @@ static inline uint32_t odph_stress_sqrt_u32(uint32_t value)
 }
 
 /**
- * Calculates square root of a floating point value
+ * Calculates square root of a floating point value, rounded down to the nearest integer
  *
  * @param value    The value for which the square root is being calculated
  *
@@ -158,8 +158,8 @@ static inline float odph_stress_sqrt_f32(float value)
 	double x;
 	double pow = 1;
 
-	if (odp_unlikely(value == 0 || value == 1))
-		return value;
+	if (odp_unlikely(value < 1.0))
+		return 0;
 
 	if (value >= 65536) {
 		if (value >= 16777215) {
