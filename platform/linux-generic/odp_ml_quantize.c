@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2023 Nokia
+ * Copyright (c) 2024 Marvell
  */
 
 #include <odp/api/ml_quantize.h>
@@ -60,6 +61,59 @@ void odp_ml_fp32_from_int8(float *fp32, const int8_t *i8, uint32_t num, float sc
 {
 	for (uint32_t i = 0; i < num; i++)
 		fp32[i] = (float)(i8[i] - zerop) * scale;
+}
+
+void odp_ml_fp32_to_uint16(uint16_t *u16, const float *fp32, uint32_t num, float scale,
+			   uint16_t zerop)
+{
+	float fval;
+
+	_ODP_ASSERT(scale < 0.0 || scale > 0.0);
+
+	for (uint32_t i = 0; i < num; i++) {
+		/* Range mapping: map real values to signed integer */
+		fval = nearbyintf(fp32[i] / scale) + (float)zerop;
+
+		/* clip */
+		fval = _ODP_MAX(fval, 0.f);
+		fval = _ODP_MIN(fval, 65535.f);
+		u16[i] = (uint16_t)(int32_t)fval;
+	}
+}
+
+void odp_ml_fp32_from_uint16(float *fp32, const uint16_t *u16, uint32_t num, float scale,
+			     uint16_t zerop)
+{
+	for (uint32_t i = 0; i < num; i++)
+		fp32[i] = (float)(u16[i] - zerop) * scale;
+}
+
+void odp_ml_fp32_to_int16(int16_t *i16, const float *fp32, uint32_t num, float scale,
+			  int16_t zerop)
+{
+	float fval;
+
+	_ODP_ASSERT(scale < 0.0 || scale > 0.0);
+
+	for (uint32_t i = 0; i < num; i++) {
+		/* Range mapping: map real values to signed integer */
+		fval = nearbyintf(fp32[i] / scale) + (float)zerop;
+
+		/* NOTE: Clamps signed quantization values to [-32767,32767] instead of
+		 * [-32768,32767]. This is to ensure that symmetric quantization results
+		 * in a zero point of exactly 0 for signed 16 bit ints.
+		 */
+		fval = _ODP_MAX(fval, -32767.f);
+		fval = _ODP_MIN(fval, 32767.f);
+		i16[i] = (int16_t)(int32_t)fval;
+	}
+}
+
+void odp_ml_fp32_from_int16(float *fp32, const int16_t *i16, uint32_t num, float scale,
+			    int16_t zerop)
+{
+	for (uint32_t i = 0; i < num; i++)
+		fp32[i] = (float)(i16[i] - zerop) * scale;
 }
 
 void odp_ml_fp32_to_fp16(uint16_t *fp16, const float *fp32, uint32_t num)
