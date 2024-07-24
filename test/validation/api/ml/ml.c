@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2023 Nokia
+ * Copyright (c) 2024 Marvell
  */
 
 #include <odp_api.h>
@@ -475,6 +476,100 @@ static void test_ml_fp32_from_int8(void)
 		CU_ASSERT(fp32[i] == fp32_expected[i]);
 }
 
+static void
+test_ml_fp32_to_uint16(void)
+{
+	uint16_t u16[12];
+	float fp[12] = {-763.5f, -204.7f, -67.2f, -43.4f,  -16.6f,  -3.2f,
+			0,	 36.f,	  497.3f, 1038.1f, 2968.8f, 8593.3f};
+	uint16_t expected[12] = {0,    317,  1336, 1512, 1711,  1810,
+				 1834, 2101, 5520, 9529, 23841, 65535};
+	float scale = 0.1349f;
+	uint16_t zero_point = 1834;
+
+	odp_ml_fp32_to_uint16(u16, fp, 12, scale, zero_point);
+	for (uint32_t i = 0; i < 12; i++)
+		CU_ASSERT(u16[i] == expected[i]);
+}
+
+static void
+test_ml_fp32_from_uint16(void)
+{
+	float fp[6];
+	float scale = 0.3f;
+	uint16_t zero_point = 1834;
+	uint16_t u16[6] = {0, 580, 1834, 6347, 28341, 65535};
+	float expected[6] = {-550.2f, -376.2f, 0.0f, 1353.9f, 7952.1f, 19110.3f};
+
+	odp_ml_fp32_from_uint16(fp, u16, 6, scale, zero_point);
+	for (uint32_t i = 0; i < 6; i++)
+		CU_ASSERT(fp[i] == expected[i]);
+}
+
+static void
+test_ml_fp32_to_int16(void)
+{
+	int16_t i16[10];
+	float scale = 0.0387f;
+	int16_t zero_point = 0;
+	float fp32[10] = {-1268.2f, -182.4f, -32.4f, -7.9, -0.7, 0.0, 1.4f, 12.9f, 360.3f, 1268.4f};
+	int16_t i16_expected[10] = {-32767, -4713, -837, -204, -18, 0, 36, 333, 9310, 32767};
+
+	odp_ml_fp32_to_int16(i16, fp32, 10, scale, zero_point);
+
+	for (uint32_t i = 0; i < 10; i++)
+		CU_ASSERT(i16[i] == i16_expected[i]);
+}
+
+static void
+test_ml_fp32_to_int16_positive_zp(void)
+{
+	int16_t i16[10];
+	float scale = 0.0387f;
+	int16_t zero_point = 683;
+	float fp32[10] = {-1294.5f, -363.7f, -73.6f, -16.4f, -3.4f,
+			  0,	    7.5f,    28.6f,  189.3f, 1241.7f};
+	int16_t i16_expected[10] = {-32767, -8715, -1219, 259, 595, 683, 877, 1422, 5574, 32767};
+
+	odp_ml_fp32_to_int16(i16, fp32, 10, scale, zero_point);
+
+	for (uint32_t i = 0; i < 10; i++)
+		CU_ASSERT(i16[i] == i16_expected[i]);
+}
+
+static void
+test_ml_fp32_to_int16_negative_zp(void)
+{
+	int16_t i16[10];
+	float scale = 0.0387f;
+	int16_t zero_point = -683;
+	float fp32[10] = {-1241.7f, -363.7f, -73.6f, -16.4f, -3.4f,
+			  0,	    7.5f,    28.6f,  189.3f, 1294.6f};
+	int16_t i16_expected[10] = {-32767, -10081, -2585, -1107, -771,
+				    -683,   -489,   56,	   4208,  32767};
+
+	odp_ml_fp32_to_int16(i16, fp32, 10, scale, zero_point);
+
+	for (uint32_t i = 0; i < 10; i++)
+		CU_ASSERT(i16[i] == i16_expected[i]);
+}
+
+static void
+test_ml_fp32_from_int16(void)
+{
+	float fp32[12];
+	float scale = 0.05f;
+	int16_t zero_point = 327;
+	int16_t i16[12] = {-32768, -12168, -3425, -322, -21, 0, 62, 327, 1287, 3496, 23957, 32767};
+	float fp32_expected[12] = {-1654.75f, -624.75f, -187.6f, -32.45f, -17.4f,  -16.35f,
+				   -13.25f,   0.0f,	48.0f,	 158.45f, 1181.5f, 1622.0f};
+
+	odp_ml_fp32_from_int16(fp32, i16, 12, scale, zero_point);
+
+	for (uint32_t i = 0; i < 12; i++)
+		CU_ASSERT(fp32[i] == fp32_expected[i]);
+}
+
 static int approx_equal(double a, double b)
 {
 	const double tolerance = .01;
@@ -547,6 +642,12 @@ odp_testinfo_t ml_suite[] = {
 	ODP_TEST_INFO_CONDITIONAL(test_ml_fp32_to_int8_positive_zp, check_ml_support),
 	ODP_TEST_INFO_CONDITIONAL(test_ml_fp32_to_int8_negative_zp, check_ml_support),
 	ODP_TEST_INFO_CONDITIONAL(test_ml_fp32_from_int8, check_ml_support),
+	ODP_TEST_INFO_CONDITIONAL(test_ml_fp32_to_uint16, check_ml_support),
+	ODP_TEST_INFO_CONDITIONAL(test_ml_fp32_from_uint16, check_ml_support),
+	ODP_TEST_INFO_CONDITIONAL(test_ml_fp32_to_int16, check_ml_support),
+	ODP_TEST_INFO_CONDITIONAL(test_ml_fp32_to_int16_positive_zp, check_ml_support),
+	ODP_TEST_INFO_CONDITIONAL(test_ml_fp32_to_int16_negative_zp, check_ml_support),
+	ODP_TEST_INFO_CONDITIONAL(test_ml_fp32_from_int16, check_ml_support),
 	ODP_TEST_INFO_CONDITIONAL(test_ml_fp32_fp16, check_ml_support),
 	ODP_TEST_INFO_NULL
 };
