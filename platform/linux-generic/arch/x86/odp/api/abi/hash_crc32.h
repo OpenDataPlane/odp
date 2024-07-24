@@ -25,36 +25,43 @@ static inline uint32_t _odp_hash_crc32(const void *data, uint32_t data_len,
 
 #ifdef __SSE4_2__
 
+#include <odp/api/align.h>
+
 static inline uint32_t _odp_hash_crc32c(const void *data, uint32_t data_len,
 					uint32_t init_val)
 {
 	uint32_t i;
-	uintptr_t pd = (uintptr_t)data;
+	const uint8_t *pd = (const uint8_t *)data;
 
 #ifdef __x86_64__
 	for (i = 0; i < data_len / 8; i++) {
-		init_val = (uint32_t)__builtin_ia32_crc32di(init_val, *(const odp_una_u64_t *)pd);
+		typedef uint64_t ODP_ALIGNED(1) __attribute__((__may_alias__)) una_ma_u64_t;
+		init_val =
+			(uint32_t)__builtin_ia32_crc32di(init_val, *(const una_ma_u64_t *)pd);
 		pd += 8;
 	}
 
 	if (data_len & 0x4) {
-		init_val = __builtin_ia32_crc32si(init_val, *(const odp_una_u32_t *)pd);
+		typedef uint32_t ODP_ALIGNED(1) __attribute__((__may_alias__)) una_ma_u32_t;
+		init_val = __builtin_ia32_crc32si(init_val, *(const una_ma_u32_t *)pd);
 		pd += 4;
 	}
 #else
 	for (i = 0; i < data_len / 4; i++) {
-		init_val = __builtin_ia32_crc32si(init_val, *(const odp_una_u32_t *)pd);
+		typedef uint32_t ODP_ALIGNED(1) __attribute__((__may_alias__)) una_ma_u32_t;
+		init_val = __builtin_ia32_crc32si(init_val, *(const una_ma_u32_t *)pd);
 		pd += 4;
 	}
 #endif
 
 	if (data_len & 0x2) {
-		init_val = __builtin_ia32_crc32hi(init_val, *(const odp_una_u16_t *)pd);
+		typedef uint16_t ODP_ALIGNED(1) __attribute__((__may_alias__)) una_ma_u16_t;
+		init_val = __builtin_ia32_crc32hi(init_val, *(const una_ma_u16_t *)pd);
 		pd += 2;
 	}
 
 	if (data_len & 0x1)
-		init_val = __builtin_ia32_crc32qi(init_val, *(const uint8_t *)pd);
+		init_val = __builtin_ia32_crc32qi(init_val, *pd);
 
 	return init_val;
 }
