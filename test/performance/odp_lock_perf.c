@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright (c) 2021 Nokia
+ * Copyright (c) 2021-2024 Nokia
  */
 
 /**
@@ -20,6 +20,8 @@
 #include <odp_api.h>
 #include <odp/helper/odph_api.h>
 
+#include <export_results.h>
+
 /* Max number of workers if num_cpu=0 */
 #define DEFAULT_MAX_WORKERS 10
 
@@ -27,6 +29,9 @@
 #define MAX_COUNTERS 8
 
 #define TEST_INFO(name, test, validate) { name, test, validate }
+
+/* Maximum number of results to be held */
+#define TEST_MAX_BENCH 50
 
 typedef enum repeat_t {
 	REPEAT_NO,
@@ -74,8 +79,17 @@ typedef struct test_thread_ctx_t {
 	test_global_t *global;
 	test_fn_t func;
 	uint64_t nsec;
+	uint64_t cycles;
 	uint32_t idx;
 } test_thread_ctx_t;
+
+typedef struct results_t {
+	const char *test_name;
+	double cycles_per_round;
+	double nsec_per_op;
+	double rounds_per_cpu;
+	double total_rounds;
+} results_t;
 
 /* Global data */
 struct test_global_t {
@@ -85,6 +99,8 @@ struct test_global_t {
 	odp_cpumask_t cpumask;
 	odph_thread_t thread_tbl[ODP_THREAD_COUNT_MAX];
 	test_thread_ctx_t thread_ctx[ODP_THREAD_COUNT_MAX];
+	test_common_options_t common_options;
+	results_t results[TEST_MAX_BENCH];
 	struct {
 		struct ODP_ALIGNED_CACHE {
 			odp_spinlock_t lock;
@@ -271,6 +287,41 @@ static void print_info(test_options_t *test_options)
 	printf("\n\n");
 }
 
+static int output_summary(test_global_t *global)
+{
+	int results_size = ODPH_ARRAY_SIZE(global->results);
+	results_t res;
+
+	if (global->common_options.is_export) {
+		if (test_common_write("function name,rounds/cpu (M/s),"
+			"total rounds (M/s),cycles/op,nsec/op\n")) {
+			test_common_write_term();
+			return -1;
+		}
+	}
+
+	printf("Average results over %i threads:\n", global->test_options.num_cpu);
+	printf("%-33s %-18s %-20s %-14s %-12s\n", "function name", "rounds/cpu (M/s)",
+	       "total rounds (M/s)", "cycles/round", "nsec/round");
+	printf("----------------------------------------------------------------------------"
+		"---------------------\n");
+	for (int i = 0; i < results_size && global->results[i].test_name; i++) {
+		res = global->results[i];
+		printf("[%02d] %-28s %-18.2f %-20.2f %-14.2f %-12.2f\n", i + 1,
+		       res.test_name, res.rounds_per_cpu, res.total_rounds,
+		       res.cycles_per_round, res.nsec_per_op);
+		if (global->common_options.is_export) {
+			if (test_common_write("%s,%f,%f,%f,%f\n", res.test_name, res.rounds_per_cpu,
+					      res.total_rounds, res.cycles_per_round,
+					      res.nsec_per_op)){
+				test_common_write_term();
+				return -1;
+			}
+		}
+	}
+	return 0;
+}
+
 static int parse_options(int argc, char *argv[], test_options_t *test_options)
 {
 	int opt;
@@ -441,6 +492,8 @@ static int run_test(void *arg)
 {
 	uint64_t nsec;
 	odp_time_t t1, t2;
+	uint64_t cycles;
+	uint64_t c1, c2;
 	test_thread_ctx_t *thread_ctx = arg;
 	test_global_t *global = thread_ctx->global;
 	test_options_t *test_options = &global->test_options;
@@ -452,13 +505,20 @@ static int run_test(void *arg)
 	/* Start all workers at the same time */
 	odp_barrier_wait(&global->barrier);
 
-	t1 = odp_time_local();
+	t1 = odp_time_local_strict();
+	c1 = odp_cpu_cycles();
+
 	test_func(global, counter, test_options->num_counter);
-	t2 = odp_time_local();
+
+	c2 = odp_cpu_cycles();
+	t2 = odp_time_local_strict();
+
 	nsec = odp_time_diff_ns(t2, t1);
+	cycles = odp_cpu_cycles_diff(c2, c1);
 
 	/* Update stats */
 	thread_ctx->nsec = nsec;
+	thread_ctx->cycles = cycles;
 
 	return 0;
 }
@@ -512,25 +572,54 @@ static int validate_results(test_global_t *global, validate_fn_t validate)
 	return 0;
 }
 
-static void print_stat(test_global_t *global)
+/**
+ * Test functions
+ */
+static test_case_t test_suite[] = {
+	TEST_INFO("odp_spinlock", test_spinlock, validate_generic),
+	TEST_INFO("odp_spinlock_recursive", test_spinlock_recursive, validate_generic),
+	TEST_INFO("odp_rwlock", test_rwlock, validate_generic),
+	TEST_INFO("odp_rwlock_recursive", test_rwlock_recursive, validate_generic),
+	TEST_INFO("odp_ticketlock", test_ticketlock, validate_generic),
+};
+
+ODP_STATIC_ASSERT(ODPH_ARRAY_SIZE(test_suite) < TEST_MAX_BENCH,
+		  "Result array is too small to hold all the results");
+
+static void output_results(test_global_t *global, int idx)
 {
 	int i, num;
-	double nsec_ave;
+	double cycles_per_round, nsec_ave, nsec_per_round, rounds_per_cpu, total_rounds;
 	test_options_t *test_options = &global->test_options;
 	int num_cpu = test_options->num_cpu;
 	uint64_t num_round = test_options->num_round;
 	uint64_t nsec_sum = 0;
+	uint64_t cycles_sum = 0;
 
-	for (i = 0; i < ODP_THREAD_COUNT_MAX; i++)
+	global->results[idx].test_name = test_suite[idx].name;
+
+	for (i = 0; i < ODP_THREAD_COUNT_MAX; i++) {
 		nsec_sum += global->thread_ctx[i].nsec;
+		cycles_sum += global->thread_ctx[i].cycles;
+	}
 
 	if (nsec_sum == 0) {
 		printf("No results.\n");
 		return;
 	}
 
-	nsec_ave = nsec_sum / num_cpu;
+	nsec_ave = (double)nsec_sum / num_cpu;
+	nsec_per_round = (double)nsec_sum / (num_cpu * num_round);
+	cycles_per_round = (double)cycles_sum / (num_cpu * num_round);
 	num = 0;
+
+	rounds_per_cpu = num_round / (nsec_ave / 1000.0);
+	total_rounds = ((uint64_t)num_cpu * num_round) / (nsec_ave / 1000.0);
+
+	global->results[idx].cycles_per_round = cycles_per_round;
+	global->results[idx].rounds_per_cpu = rounds_per_cpu;
+	global->results[idx].nsec_per_op = nsec_per_round;
+	global->results[idx].total_rounds = total_rounds;
 
 	printf("------------------------------------------------\n");
 	printf("Per thread results (Millions of rounds per sec):\n");
@@ -550,25 +639,13 @@ static void print_stat(test_global_t *global)
 
 	printf("Average results over %i threads:\n", num_cpu);
 	printf("------------------------------------------\n");
-	printf("  duration:           %8.3f  sec\n",
-	       nsec_ave / ODP_TIME_SEC_IN_NS);
-	printf("  rounds per cpu:     %8.3fM rounds/sec\n",
-	       num_round / (nsec_ave / 1000.0));
-	printf("  total rounds:       %8.3fM rounds/sec\n",
-	       ((uint64_t)num_cpu * num_round) / (nsec_ave / 1000.0));
+	printf("  duration:	      %8.4f  sec\n", nsec_ave / ODP_TIME_SEC_IN_NS);
+	printf("  cycles per round    %8.2f\n", cycles_per_round);
+	printf("  nsec per round:     %8.2f\n", nsec_per_round);
+	printf("  rounds per cpu:     %8.3fM rounds/sec\n", rounds_per_cpu);
+	printf("  total rounds:       %8.3fM rounds/sec\n", total_rounds);
 	printf("\n\n");
 }
-
-/**
- * Test functions
- */
-static test_case_t test_suite[] = {
-	TEST_INFO("odp_spinlock", test_spinlock, validate_generic),
-	TEST_INFO("odp_spinlock_recursive", test_spinlock_recursive, validate_generic),
-	TEST_INFO("odp_rwlock", test_rwlock, validate_generic),
-	TEST_INFO("odp_rwlock_recursive", test_rwlock_recursive, validate_generic),
-	TEST_INFO("odp_ticketlock", test_ticketlock, validate_generic),
-};
 
 int main(int argc, char **argv)
 {
@@ -578,11 +655,18 @@ int main(int argc, char **argv)
 	odp_shm_t shm;
 	test_options_t test_options;
 	int num_tests, i;
+	test_common_options_t common_options;
 
 	/* Let helper collect its own arguments (e.g. --odph_proc) */
 	argc = odph_parse_options(argc, argv);
 	if (odph_options(&helper_options)) {
 		ODPH_ERR("Error: reading ODP helper options failed.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	argc = test_common_parse_options(argc, argv);
+	if (test_common_options(&common_options)) {
+		ODPH_ERR("Error: reading test common options failed\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -630,6 +714,7 @@ int main(int argc, char **argv)
 	}
 	memset(test_global, 0, sizeof(test_global_t));
 	test_global->test_options = test_options;
+	test_global->common_options = common_options;
 
 	odp_sys_info_print();
 
@@ -662,7 +747,7 @@ int main(int argc, char **argv)
 			odph_thread_join(test_global->thread_tbl,
 					 test_global->test_options.num_cpu);
 
-			print_stat(test_global);
+			output_results(test_global, i);
 
 			/* Validate test results */
 			if (validate_results(test_global, test_suite[i].validate_fn)) {
@@ -675,6 +760,11 @@ int main(int argc, char **argv)
 
 		if (test_options.repeat == REPEAT_NO)
 			break;
+	}
+
+	if (output_summary(test_global)) {
+		ODPH_ERR("Outputting summary failed.\n");
+		exit(EXIT_FAILURE);
 	}
 
 	if (odp_shm_free(shm)) {
