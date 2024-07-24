@@ -38,7 +38,8 @@ static uint32_t data_seg_sum(uint8_t   *data8_ptr,
 	swap_buf_t swap_buf;
 	uint32_t   sum, len_in_16_byte_chunks, idx, data0, data1, data2, data3;
 	uint32_t   data4, data5, data6, data7;
-	uint16_t  *data16_ptr;
+	typedef uint16_t ODP_ALIGNED(1) __attribute((__may_alias__)) una_ma_u16_t;
+	una_ma_u16_t *data16_ptr;
 
 	sum = 0;
 	if (has_odd_byte_in) {
@@ -48,7 +49,7 @@ static uint32_t data_seg_sum(uint8_t   *data8_ptr,
 		data_len--;
 	}
 
-	data16_ptr = (uint16_t *)(void *)data8_ptr;
+	data16_ptr = (una_ma_u16_t *)data8_ptr;
 
 	/* The following code tries to gain a modest performance enhancement by
 	 * unrolling the normal 16 bits at a time loop eight times.  Even
@@ -184,7 +185,8 @@ static inline int odph_process_l3_hdr(odp_packet_t odp_pkt,
 	swap_buf_t      swap_buf;
 	uint32_t        l3_offset, l4_offset, l3_hdrs_len, addrs_len;
 	uint32_t        protocol, l3_len, l4_len, idx, ipv6_payload_len, sum;
-	odp_una_u16_t  *addrs_ptr;
+	typedef uint16_t ODP_ALIGNED(1) __attribute((__may_alias__)) una_ma_u16_t;
+	una_ma_u16_t *addrs_ptr;
 	uint32_t hdr_len = 0;
 
 	/* The following computation using the l3 and l4 offsets handles both
@@ -204,7 +206,7 @@ static inline int odph_process_l3_hdr(odp_packet_t odp_pkt,
 			ipv4_hdr_ptr = &ipv4_hdr;
 		}
 
-		addrs_ptr = (odp_una_u16_t *)&ipv4_hdr_ptr->src_addr;
+		addrs_ptr = (una_ma_u16_t *)&ipv4_hdr_ptr->src_addr;
 		addrs_len = 2 * ODPH_IPV4ADDR_LEN;
 		protocol  = ipv4_hdr_ptr->proto;
 		l3_len    = odp_be_to_cpu_16(ipv4_hdr_ptr->tot_len);
@@ -217,7 +219,7 @@ static inline int odph_process_l3_hdr(odp_packet_t odp_pkt,
 			ipv6_hdr_ptr = &ipv6_hdr;
 		}
 
-		addrs_ptr        = (odp_una_u16_t *)&ipv6_hdr_ptr->src_addr;
+		addrs_ptr        = (una_ma_u16_t *)&ipv6_hdr_ptr->src_addr;
 		addrs_len        = 2 * ODPH_IPV6ADDR_LEN;
 		protocol         = ipv6_hdr_ptr->next_hdr;
 		ipv6_payload_len = odp_be_to_cpu_16(ipv6_hdr_ptr->payload_len);
