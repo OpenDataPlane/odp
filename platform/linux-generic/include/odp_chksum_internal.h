@@ -11,6 +11,7 @@ extern "C" {
 
 #include <odp/api/hints.h>
 #include <odp/api/byteorder.h>
+#include <odp_types_internal.h>
 #include <odp_cpu.h>
 #include <stdint.h>
 
@@ -67,13 +68,20 @@ static uint64_t chksum_partial(const void *addr, uint32_t len, uint32_t offset)
 	 * of the possible unalignment so that it does not generate
 	 * instructions (such as LDM of AArch32) that require higher
 	 * alignment than one byte.
+	 *
+	 * Due to the type-punning in this function, may_alias types
+	 * are needed to prevent the compiler from making assumptions
+	 * about aliasing.
 	 */
-	typedef uint32_t x_uint32_t ODP_ALIGNED(1);
-	typedef uint16_t x_uint16_t ODP_ALIGNED(1);
+	typedef _odp_una_ma_u32_t x_uint32_t;
+	typedef _odp_una_ma_u16_t x_uint16_t;
 #else
-	/* In this case we can use normal types as we align manually. */
-	typedef uint32_t x_uint32_t;
-	typedef uint16_t x_uint16_t;
+	/*
+	 * In this case alignment is not a problem, since we align
+	 * manually, but may_alias types are still needed.
+	 */
+	typedef _odp_ma_u32_t x_uint32_t;
+	typedef _odp_ma_u16_t x_uint16_t;
 #endif
 	const x_uint16_t *w;
 	const x_uint32_t *d;
