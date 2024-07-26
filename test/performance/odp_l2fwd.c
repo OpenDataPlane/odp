@@ -773,7 +773,7 @@ static int run_worker_sched_mode_vector(void *arg)
 
 			pkts = process_extra_features(appl_args, pkt_tbl, pkts, stats);
 
-			if (odp_unlikely(pkts) == 0) {
+			if (odp_unlikely(pkts == 0)) {
 				if (pkt_vec != ODP_PACKET_VECTOR_INVALID)
 					odp_packet_vector_free(pkt_vec);
 				continue;
@@ -928,7 +928,7 @@ static int run_worker_sched_mode(void *arg)
 
 		pkts = process_extra_features(appl_args, pkt_tbl, pkts, stats);
 
-		if (odp_unlikely(pkts) == 0)
+		if (odp_unlikely(pkts == 0))
 			continue;
 
 		/* packets from the same queue are from the same interface */
@@ -1043,7 +1043,7 @@ static int run_worker_plain_queue_mode(void *arg)
 
 		pkts = process_extra_features(appl_args, pkt_tbl, pkts, stats);
 
-		if (odp_unlikely(pkts) == 0)
+		if (odp_unlikely(pkts == 0))
 			continue;
 
 		fill_eth_addrs(pkt_tbl, pkts, dst_idx);
@@ -1137,7 +1137,7 @@ static int run_worker_direct_mode(void *arg)
 
 		pkts = process_extra_features(appl_args, pkt_tbl, pkts, stats);
 
-		if (odp_unlikely(pkts) == 0)
+		if (odp_unlikely(pkts == 0))
 			continue;
 
 		fill_eth_addrs(pkt_tbl, pkts, dst_idx);
