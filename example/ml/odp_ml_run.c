@@ -450,8 +450,8 @@ int main(int argc, char *argv[])
 
 	calc_io_size();
 
-	if ((glb.opt.scale_q && input_file_size != glb.inp_size_d) ||
-	    (!glb.opt.scale_q && input_file_size != glb.inp_size_q)) {
+	if ((glb.opt.scale_q > 0.0 && input_file_size != glb.inp_size_d) ||
+	    (!(glb.opt.scale_q > 0.0) && input_file_size != glb.inp_size_q)) {
 		ODPH_ERR("Input file size mismatch\n");
 		ret = -1;
 		goto odp_term;
@@ -460,7 +460,7 @@ int main(int argc, char *argv[])
 	odp_ml_data_seg_t inp_seg[MAX_IO];
 	uint8_t *inp_addr = input_file;
 
-	if (glb.opt.scale_q) {
+	if (glb.opt.scale_q > 0.0) {
 		input = malloc(glb.inp_size_q);
 		if (!input) {
 			ODPH_ERR("Allocating %" PRIu64 " bytes failed\n", glb.inp_size_q);
@@ -519,7 +519,7 @@ int main(int argc, char *argv[])
 	void *output_final = output;
 	uint64_t out_size_final = glb.out_size_q;
 
-	if (glb.opt.scale_d) {
+	if (glb.opt.scale_d > 0.0) {
 		output_file = malloc(glb.out_size_d);
 		if (!output_file) {
 			ODPH_ERR("Allocating %" PRIu64 " bytes failed\n", glb.out_size_d);
