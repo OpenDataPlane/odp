@@ -114,6 +114,7 @@ ODP_CHECK_CFLAG([-Wwrite-strings])
 ODP_CHECK_CFLAG([-Wformat-truncation=0])
 ODP_CHECK_CFLAG([-Wformat-overflow=0])
 ODP_CHECK_CFLAG([-Wshadow=local])
+ODP_CHECK_CFLAG([-Wfloat-equal])
 
 # GCC 10 sometimes gets confused about object sizes and gives bogus warnings.
 # Make the affected warnings generate only warnings, not errors.

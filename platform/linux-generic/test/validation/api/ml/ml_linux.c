@@ -8,6 +8,7 @@
 
 #include <unistd.h>
 #include <string.h>
+#include <float.h>
 #include <libgen.h>
 #include <odp_api.h>
 #include <odp/helper/odph_api.h>
@@ -680,6 +681,11 @@ static void test_ml_model_load_async_event(void)
 		CU_ASSERT(*(int *)result.user_ptr == dummy);
 }
 
+static odp_bool_t are_doubles_eq(double a, double b)
+{
+	return ODPH_ABS(a - b) <= DBL_EPSILON * ODPH_MAX(ODPH_ABS(a), ODPH_ABS(b));
+}
+
 /* About model batch_add.onnx being tested in this function
  *
  * Model info:
@@ -785,7 +791,7 @@ static void run_model_batch_add(void)
 			goto fail;
 
 		for (uint32_t j = 0; j < batch_size * NUM_COLUMN; j++)
-			CU_ASSERT(y[j] == y_expected[j]);
+			CU_ASSERT(are_doubles_eq(y[j], y_expected[j]));
 
 		batch_size--;
 	}
@@ -834,7 +840,7 @@ static void run_model_batch_add(void)
 			goto fail;
 
 		for (uint32_t j = 0; j < batch_size * NUM_COLUMN; j++)
-			CU_ASSERT(y[j] == y_expected[j]);
+			CU_ASSERT(are_doubles_eq(y[j], y_expected[j]));
 	}
 
 fail:

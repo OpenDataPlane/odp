@@ -7,6 +7,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <float.h>
 
 static int test_pow2(void)
 {
@@ -74,6 +75,11 @@ static int test_sqrt_u32(void)
 	return ret;
 }
 
+static odp_bool_t are_floats_eq(float a, float b)
+{
+	return ODPH_ABS(a - b) <= FLT_EPSILON * ODPH_MAX(ODPH_ABS(a), ODPH_ABS(b));
+}
+
 /*
  * 32-bit floating point can represent integers between 0 and 16777216 exactly, and integers
  * between 16777216 and 33554432 in multiples of 2, etc.
@@ -90,7 +96,7 @@ static int test_sqrt_f32(void)
 	printf("  odph_stress_sqrt_f32() ... ");
 
 	for (uint32_t i = 0; i < num; i++)
-		if (odph_stress_sqrt_f32(in[i]) != out[i])
+		if (!are_floats_eq(odph_stress_sqrt_f32(in[i]), out[i]))
 			ret++;
 
 	if (ret)
