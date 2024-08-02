@@ -44,6 +44,12 @@ typedef struct test_options_t {
 	uint32_t num_func;
 	uint64_t rounds;
 	int      pattern;
+	uint32_t pref_0;
+	uint32_t pref_1;
+	uint32_t pref_2;
+	uint32_t pref_3;
+	uint32_t pref_4;
+	uint32_t pref_before;
 
 } test_options_t;
 
@@ -15241,6 +15247,12 @@ static uint16_t work_4_rnd[] = {
 	284, 398, 510, 554, 540, 261, 249, 544, 256, 326,  97, 480, 146, 369, 553, 158
 };
 
+static inline void prefetch_code(uintptr_t addr, int num)
+{
+	for (int i = 0; i < num; i++)
+		odp_prefetch_l1i((const void *)(addr + i * 64));
+}
+
 static int worker_thread(void *arg)
 {
 	int thr;
@@ -15253,6 +15265,12 @@ static int worker_thread(void *arg)
 	test_options_t *test_options = &global->test_options;
 	const uint32_t num_func = test_options->num_func;
 	const int pattern = test_options->pattern;
+	const uint32_t pref_before = test_options->pref_before;
+	const uint32_t pref_0 = test_options->pref_0;
+	const uint32_t pref_1 = test_options->pref_1;
+	const uint32_t pref_2 = test_options->pref_2;
+	const uint32_t pref_3 = test_options->pref_3;
+	const uint32_t pref_4 = test_options->pref_4;
 	uint64_t rounds = test_options->rounds;
 	uint64_t dummy_sum = 0;
 	uint32_t *b = global->worker_mem;
@@ -15281,6 +15299,16 @@ static int worker_thread(void *arg)
 			uint32_t i2 = i;
 			uint32_t i3 = i;
 			uint32_t i4 = i;
+			uint32_t pref_i = i + pref_before;
+
+			if (pref_i >= num_func)
+				pref_i = pref_i - num_func;
+
+			uint32_t p0 = pref_i;
+			uint32_t p1 = pref_i;
+			uint32_t p2 = pref_i;
+			uint32_t p3 = pref_i;
+			uint32_t p4 = pref_i;
 
 			if (pattern == PATTERN_RANDOM) {
 				i0 = work_0_rnd[i];
@@ -15288,16 +15316,27 @@ static int worker_thread(void *arg)
 				i2 = work_2_rnd[i];
 				i3 = work_3_rnd[i];
 				i4 = work_4_rnd[i];
+
+				p0 = work_0_rnd[pref_i];
+				p1 = work_1_rnd[pref_i];
+				p2 = work_2_rnd[pref_i];
+				p3 = work_3_rnd[pref_i];
+				p4 = work_4_rnd[pref_i];
 			}
 
+			prefetch_code((uintptr_t)work_0[p0], pref_0);
 			dummy_sum += work_0[i0](dummy_sum, b, c);
 
+			prefetch_code((uintptr_t)work_1[p1], pref_1);
 			dummy_sum += work_1[i1](dummy_sum, b, c);
 
+			prefetch_code((uintptr_t)work_2[p2], pref_2);
 			dummy_sum += work_2[i2](dummy_sum, b, c);
 
+			prefetch_code((uintptr_t)work_3[p3], pref_3);
 			dummy_sum += work_3[i3](dummy_sum, b);
 
+			prefetch_code((uintptr_t)work_4[p4], pref_4);
 			dummy_sum += work_4[i4](dummy_sum, b);
 		}
 
@@ -15408,14 +15447,21 @@ static void print_usage(void)
 	printf("\n"
 	       "Instruction cache performance test options:\n"
 	       "\n"
-	       "  -c, --num_cpu          Number of CPUs (worker threads). 0: all available CPUs. Default: 1\n"
-	       "  -r, --rounds           Number of rounds. Default: 10000\n"
-	       "  -p, --pattern          Function call pattern:\n"
-	       "                           0: Linear\n"
-	       "                           1: Random (default)\n"
-	       "  -n, --num_func         Number of functions to call per function type.\n"
-	       "                           0: all functions (default)\n"
-	       "  -h, --help             This help\n"
+	       "  -c, --num_cpu <num>     Number of CPUs (worker threads). 0: all available CPUs. Default: 1\n"
+	       "  -r, --rounds <num>      Number of rounds. Default: 10000\n"
+	       "  -p, --pattern <p>       Function call pattern:\n"
+	       "                            0: Linear\n"
+	       "                            1: Random (default)\n"
+	       "  -n, --num_func <num>    Number of functions to call per function type.\n"
+	       "                            0: all functions (default)\n"
+	       "  -0, --pref_0 <num>      Number of 64B cache lines to prefetch of function type 0\n"
+	       "  -1, --pref_1 <num>      Number of 64B cache lines to prefetch of function type 1\n"
+	       "  -2, --pref_2 <num>      Number of 64B cache lines to prefetch of function type 2\n"
+	       "  -3, --pref_3 <num>      Number of 64B cache lines to prefetch of function type 3\n"
+	       "  -4, --pref_4 <num>      Number of 64B cache lines to prefetch of function type 4\n"
+	       "  -b, --pref_before <num> Perform prefetches <num> function calls behorehand.\n"
+	       "                          Must be less than --num_func.\n"
+	       "  -h, --help              This help\n"
 	       "\n");
 }
 
@@ -15432,11 +15478,17 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 		{"rounds",       required_argument, NULL, 'r'},
 		{"pattern",      required_argument, NULL, 'p'},
 		{"num_func",     required_argument, NULL, 'n'},
+		{"pref_0",       required_argument, NULL, '0'},
+		{"pref_1",       required_argument, NULL, '1'},
+		{"pref_2",       required_argument, NULL, '2'},
+		{"pref_3",       required_argument, NULL, '3'},
+		{"pref_4",       required_argument, NULL, '4'},
+		{"pref_before",  required_argument, NULL, 'b'},
 		{"help",         no_argument,       NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+c:r:p:n:h";
+	static const char *shortopts = "+c:r:p:n:0:1:2:3:4:b:h";
 
 	global->max_func = max_func;
 
@@ -15444,6 +15496,12 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 	test_options->rounds      = 10000;
 	test_options->pattern     = PATTERN_RANDOM;
 	test_options->num_func    = max_func;
+	test_options->pref_0      = 0;
+	test_options->pref_1      = 0;
+	test_options->pref_2      = 0;
+	test_options->pref_3      = 0;
+	test_options->pref_4      = 0;
+	test_options->pref_before = 0;
 
 	while (1) {
 		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
@@ -15463,6 +15521,24 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 			break;
 		case 'n':
 			test_options->num_func = atoi(optarg);
+			break;
+		case '0':
+			test_options->pref_0 = atoi(optarg);
+			break;
+		case '1':
+			test_options->pref_1 = atoi(optarg);
+			break;
+		case '2':
+			test_options->pref_2 = atoi(optarg);
+			break;
+		case '3':
+			test_options->pref_3 = atoi(optarg);
+			break;
+		case '4':
+			test_options->pref_4 = atoi(optarg);
+			break;
+		case 'b':
+			test_options->pref_before = atoi(optarg);
 			break;
 		case 'h':
 			/* fall through */
@@ -15485,6 +15561,12 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 	/* Check that there is large enough data buffer */
 	if (test_options->num_func + MAX_WORDS > DATA_SIZE_WORDS) {
 		ODPH_ERR("Not enough data, %u words needed\n", test_options->num_func + MAX_WORDS);
+		return -1;
+	}
+
+	if (test_options->pref_before >= test_options->num_func) {
+		ODPH_ERR("Too large --pref_before value, must be less than --num_func (%u)\n",
+			 test_options->num_func);
 		return -1;
 	}
 
@@ -15661,6 +15743,10 @@ int main(int argc, char **argv)
 	printf("  rounds              %" PRIu64 "\n", test_options->rounds);
 	printf("  call pattern        %s\n", test_options->pattern == 0 ? "linear" : "random");
 	printf("  func calls          %u\n", test_options->num_func);
+	printf("  num prefetch        %u, %u, %u, %u, %u\n", test_options->pref_0,
+	       test_options->pref_1, test_options->pref_2, test_options->pref_3,
+	       test_options->pref_4);
+	printf("  prefetch before     %u\n", test_options->pref_before);
 	printf("  min data size       %.1f kB\n", (data_size + table_size) / 1024.0);
 	printf("  max data size       %.1f kB\n\n", (data_size + max_table_size) / 1024.0);
 
