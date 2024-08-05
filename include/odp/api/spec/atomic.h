@@ -248,6 +248,42 @@ int odp_atomic_cas_u32(odp_atomic_u32_t *atom, uint32_t *old_val, uint32_t new_v
  */
 uint32_t odp_atomic_xchg_u32(odp_atomic_u32_t *atom, uint32_t new_val);
 
+/**
+ * Set bits in atomic uint32 variable
+ *
+ * @param atom    Pointer to atomic variable
+ * @param bits    Bits to set
+ */
+void odp_atomic_bit_set_u32(odp_atomic_u32_t *atom, uint32_t bits);
+
+/**
+ * Fetch value and set bits in atomic uint32 variable
+ *
+ * @param atom    Pointer to atomic variable
+ * @param bits    Bits to set
+ *
+ * @return Value of the variable before modification
+ */
+uint32_t odp_atomic_bit_fetch_set_u32(odp_atomic_u32_t *atom, uint32_t bits);
+
+/**
+ * Clear bits in atomic uint32 variable
+ *
+ * @param atom    Pointer to atomic variable
+ * @param bits    Bits to clear
+ */
+void odp_atomic_bit_clr_u32(odp_atomic_u32_t *atom, uint32_t bits);
+
+/**
+ * Fetch value and clear bits in atomic uint32 variable
+ *
+ * @param atom    Pointer to atomic variable
+ * @param bits    Bits to clear
+ *
+ * @return Value of the variable before modification
+ */
+uint32_t odp_atomic_bit_fetch_clr_u32(odp_atomic_u32_t *atom, uint32_t bits);
+
 /*
  * 64-bit operations in RELAXED memory ordering
  * --------------------------------------------
@@ -431,6 +467,42 @@ int odp_atomic_cas_u64(odp_atomic_u64_t *atom, uint64_t *old_val, uint64_t new_v
  */
 uint64_t odp_atomic_xchg_u64(odp_atomic_u64_t *atom, uint64_t new_val);
 
+/**
+ * Set bits in atomic uint64 variable
+ *
+ * @param atom    Pointer to atomic variable
+ * @param bits    Bits to set
+ */
+void odp_atomic_bit_set_u64(odp_atomic_u64_t *atom, uint64_t bits);
+
+/**
+ * Fetch value and set bits in atomic uint64 variable
+ *
+ * @param atom    Pointer to atomic variable
+ * @param bits    Bits to set
+ *
+ * @return Value of the variable before modification
+ */
+uint64_t odp_atomic_bit_fetch_set_u64(odp_atomic_u64_t *atom, uint64_t bits);
+
+/**
+ * Clear bits in atomic uint64 variable
+ *
+ * @param atom    Pointer to atomic variable
+ * @param bits    Bits to clear
+ */
+void odp_atomic_bit_clr_u64(odp_atomic_u64_t *atom, uint64_t bits);
+
+/**
+ * Fetch value and clear bits in atomic uint64 variable
+ *
+ * @param atom    Pointer to atomic variable
+ * @param bits    Bits to clear
+ *
+ * @return Value of the variable before modification
+ */
+uint64_t odp_atomic_bit_fetch_clr_u64(odp_atomic_u64_t *atom, uint64_t bits);
+
 /*
  * 128-bit operations in RELAXED memory ordering
  * --------------------------------------------
@@ -582,6 +654,28 @@ int odp_atomic_cas_rel_u32(odp_atomic_u32_t *atom, uint32_t *old_val,
 int odp_atomic_cas_acq_rel_u32(odp_atomic_u32_t *atom, uint32_t *old_val,
 			       uint32_t new_val);
 
+/**
+ * Set bits in atomic uint32 variable using RELEASE memory ordering
+ *
+ * Otherwise identical to odp_atomic_bit_set_u32() but ensures RELEASE memory
+ * ordering.
+ *
+ * @param atom    Pointer to atomic variable
+ * @param bits    Bits to set
+ */
+void odp_atomic_bit_set_rel_u32(odp_atomic_u32_t *atom, uint32_t bits);
+
+/**
+ * Clear bits in atomic uint32 variable using RELEASE memory ordering
+ *
+ * Otherwise identical to odp_atomic_bit_clr_u32() but ensures RELEASE memory
+ * ordering.
+ *
+ * @param atom    Pointer to atomic variable
+ * @param bits    Bits to clear
+ */
+void odp_atomic_bit_clr_rel_u32(odp_atomic_u32_t *atom, uint32_t bits);
+
 /*
  * 64-bit operations in non-RELAXED memory ordering
  * ------------------------------------------------
@@ -682,6 +776,28 @@ int odp_atomic_cas_acq_rel_u64(odp_atomic_u64_t *atom, uint64_t *old_val,
 			       uint64_t new_val);
 
 /**
+ * Set bits in atomic uint64 variable using RELEASE memory ordering
+ *
+ * Otherwise identical to odp_atomic_bit_set_u64() but ensures RELEASE memory
+ * ordering.
+ *
+ * @param atom    Pointer to atomic variable
+ * @param bits    Bits to set
+ */
+void odp_atomic_bit_set_rel_u64(odp_atomic_u64_t *atom, uint64_t bits);
+
+/**
+ * Clear bits in atomic uint64 variable using RELEASE memory ordering
+ *
+ * Otherwise identical to odp_atomic_bit_clr_u64() but ensures RELEASE memory
+ * ordering.
+ *
+ * @param atom    Pointer to atomic variable
+ * @param bits    Bits to clear
+ */
+void odp_atomic_bit_clr_rel_u64(odp_atomic_u64_t *atom, uint64_t bits);
+
+/**
  * Atomic operations
  *
  * Atomic operations listed in a bit field structure.
@@ -689,23 +805,27 @@ int odp_atomic_cas_acq_rel_u64(odp_atomic_u64_t *atom, uint64_t *old_val,
 typedef union odp_atomic_op_t {
 	/** Operation flags */
 	struct {
-		uint32_t init      : 1;  /**< Init atomic variable */
-		uint32_t load      : 1;  /**< Atomic load */
-		uint32_t store     : 1;  /**< Atomic store */
-		uint32_t fetch_add : 1;  /**< Atomic fetch and add */
-		uint32_t add       : 1;  /**< Atomic add */
-		uint32_t fetch_sub : 1;  /**< Atomic fetch and subtract */
-		uint32_t sub       : 1;  /**< Atomic subtract */
-		uint32_t fetch_inc : 1;  /**< Atomic fetch and increment */
-		uint32_t inc       : 1;  /**< Atomic increment */
-		uint32_t fetch_dec : 1;  /**< Atomic fetch and decrement */
-		uint32_t dec       : 1;  /**< Atomic decrement */
-		uint32_t min       : 1;  /**< Atomic minimum */
-		uint32_t fetch_min : 1;  /**< Atomic fetch and minimum */
-		uint32_t max       : 1;  /**< Atomic maximum */
-		uint32_t fetch_max : 1;  /**< Atomic fetch and maximum */
-		uint32_t cas       : 1;  /**< Atomic compare and swap */
-		uint32_t xchg      : 1;  /**< Atomic exchange */
+		uint32_t init          : 1;  /**< Init atomic variable */
+		uint32_t load          : 1;  /**< Atomic load */
+		uint32_t store         : 1;  /**< Atomic store */
+		uint32_t fetch_add     : 1;  /**< Atomic fetch and add */
+		uint32_t add           : 1;  /**< Atomic add */
+		uint32_t fetch_sub     : 1;  /**< Atomic fetch and subtract */
+		uint32_t sub           : 1;  /**< Atomic subtract */
+		uint32_t fetch_inc     : 1;  /**< Atomic fetch and increment */
+		uint32_t inc           : 1;  /**< Atomic increment */
+		uint32_t fetch_dec     : 1;  /**< Atomic fetch and decrement */
+		uint32_t dec           : 1;  /**< Atomic decrement */
+		uint32_t min           : 1;  /**< Atomic minimum */
+		uint32_t fetch_min     : 1;  /**< Atomic fetch and minimum */
+		uint32_t max           : 1;  /**< Atomic maximum */
+		uint32_t fetch_max     : 1;  /**< Atomic fetch and maximum */
+		uint32_t cas           : 1;  /**< Atomic compare and swap */
+		uint32_t xchg          : 1;  /**< Atomic exchange */
+		uint32_t bit_fetch_set : 1;  /**< Atomic bit fetch and set */
+		uint32_t bit_set       : 1;  /**< Atomic bit set */
+		uint32_t bit_fetch_clr : 1;  /**< Atomic bit fetch and clear */
+		uint32_t bit_clr       : 1;  /**< Atomic bit clear */
 	} op;
 
 	/** All bits of the bit field structure.
