@@ -210,11 +210,31 @@ static inline void _odp_atomic_max_u32(odp_atomic_u32_t *atom, uint32_t val)
 			 : [val] "r" (val));
 }
 
+static inline uint32_t _odp_atomic_fetch_max_u32(odp_atomic_u32_t *atom, uint32_t val)
+{
+	uint32_t old;
+
+	__asm__ volatile("ldumax   %w[val], %w[old], %[atom]"
+			 : [old] "=&r"(old), [atom] "+Q" (atom->v)
+			 : [val] "r" (val));
+	return old;
+}
+
 static inline void _odp_atomic_min_u32(odp_atomic_u32_t *atom, uint32_t val)
 {
 	__asm__ volatile("stumin   %w[val], %[atom]"
 			 : [atom] "+Q" (atom->v)
 			 : [val] "r" (val));
+}
+
+static inline uint32_t _odp_atomic_fetch_min_u32(odp_atomic_u32_t *atom, uint32_t val)
+{
+	uint32_t old;
+
+	__asm__ volatile("ldumin   %w[val], %w[old], %[atom]"
+			 : [old] "=&r"(old), [atom] "+Q" (atom->v)
+			 : [val] "r" (val));
+	return old;
 }
 
 static inline void _odp_atomic_max_u64(odp_atomic_u64_t *atom, uint64_t val)
@@ -224,11 +244,31 @@ static inline void _odp_atomic_max_u64(odp_atomic_u64_t *atom, uint64_t val)
 			 : [val] "r" (val));
 }
 
+static inline uint64_t _odp_atomic_fetch_max_u64(odp_atomic_u64_t *atom, uint64_t val)
+{
+	uint64_t old;
+
+	__asm__ volatile("ldumax   %[val], %[old], %[atom]"
+			 : [old] "=&r"(old), [atom] "+Q" (atom->v)
+			 : [val] "r" (val));
+	return old;
+}
+
 static inline void _odp_atomic_min_u64(odp_atomic_u64_t *atom, uint64_t val)
 {
 	__asm__ volatile("stumin   %[val], %[atom]"
 			 : [atom] "+Q" (atom->v)
 			 : [val] "r" (val));
+}
+
+static inline uint64_t _odp_atomic_fetch_min_u64(odp_atomic_u64_t *atom, uint64_t val)
+{
+	uint64_t old;
+
+	__asm__ volatile("ldumin   %[val], %[old], %[atom]"
+			 : [old] "=&r"(old), [atom] "+Q" (atom->v)
+			 : [val] "r" (val));
+	return old;
 }
 
 static inline void _odp_atomic_add_rel_u32(odp_atomic_u32_t *atom, uint32_t val)

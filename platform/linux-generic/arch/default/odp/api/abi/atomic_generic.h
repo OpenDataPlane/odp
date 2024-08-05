@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2021 ARM Limited
- * Copyright (c) 2021-2022 Nokia
+ * Copyright (c) 2021-2024 Nokia
  */
 
 #ifndef ODP_API_ABI_ATOMIC_GENERIC_H_
@@ -41,6 +41,20 @@ static inline void _odp_atomic_max_u32(odp_atomic_u32_t *atom, uint32_t new_val)
 	}
 }
 
+static inline uint32_t _odp_atomic_fetch_max_u32(odp_atomic_u32_t *atom, uint32_t new_val)
+{
+	uint32_t old_val;
+
+	old_val = __atomic_load_n(&atom->v, __ATOMIC_RELAXED);
+
+	while (new_val > old_val) {
+		if (__atomic_compare_exchange_n(&atom->v, &old_val, new_val, 0 /* strong */,
+						__ATOMIC_RELAXED, __ATOMIC_RELAXED))
+			break;
+	}
+	return old_val;
+}
+
 static inline void _odp_atomic_min_u32(odp_atomic_u32_t *atom, uint32_t new_val)
 {
 	uint32_t old_val;
@@ -52,6 +66,20 @@ static inline void _odp_atomic_min_u32(odp_atomic_u32_t *atom, uint32_t new_val)
 						__ATOMIC_RELAXED, __ATOMIC_RELAXED))
 			break;
 	}
+}
+
+static inline uint32_t _odp_atomic_fetch_min_u32(odp_atomic_u32_t *atom, uint32_t new_val)
+{
+	uint32_t old_val;
+
+	old_val = __atomic_load_n(&atom->v, __ATOMIC_RELAXED);
+
+	while (new_val < old_val) {
+		if (__atomic_compare_exchange_n(&atom->v, &old_val, new_val, 0 /* strong */,
+						__ATOMIC_RELAXED, __ATOMIC_RELAXED))
+			break;
+	}
+	return old_val;
 }
 
 static inline void _odp_atomic_add_rel_u32(odp_atomic_u32_t *atom, uint32_t val)
@@ -97,6 +125,20 @@ static inline void _odp_atomic_max_u64(odp_atomic_u64_t *atom, uint64_t new_val)
 	}
 }
 
+static inline uint64_t _odp_atomic_fetch_max_u64(odp_atomic_u64_t *atom, uint64_t new_val)
+{
+	uint64_t old_val;
+
+	old_val = __atomic_load_n(&atom->v, __ATOMIC_RELAXED);
+
+	while (new_val > old_val) {
+		if (__atomic_compare_exchange_n(&atom->v, &old_val, new_val, 0 /* strong */,
+						__ATOMIC_RELAXED, __ATOMIC_RELAXED))
+			break;
+	}
+	return old_val;
+}
+
 static inline void _odp_atomic_min_u64(odp_atomic_u64_t *atom, uint64_t new_val)
 {
 	uint64_t old_val;
@@ -108,6 +150,20 @@ static inline void _odp_atomic_min_u64(odp_atomic_u64_t *atom, uint64_t new_val)
 						__ATOMIC_RELAXED, __ATOMIC_RELAXED))
 			break;
 	}
+}
+
+static inline uint64_t _odp_atomic_fetch_min_u64(odp_atomic_u64_t *atom, uint64_t new_val)
+{
+	uint64_t old_val;
+
+	old_val = __atomic_load_n(&atom->v, __ATOMIC_RELAXED);
+
+	while (new_val < old_val) {
+		if (__atomic_compare_exchange_n(&atom->v, &old_val, new_val, 0 /* strong */,
+						__ATOMIC_RELAXED, __ATOMIC_RELAXED))
+			break;
+	}
+	return old_val;
 }
 
 #ifndef ODP_ATOMIC_U64_LOCK

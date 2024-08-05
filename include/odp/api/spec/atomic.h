@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2013-2018 Linaro Limited
  * Copyright (c) 2021 ARM Limited
+ * Copyright (c) 2024 Nokia
  */
 
 /**
@@ -26,11 +27,12 @@ extern "C" {
  *
  * Atomic integer types (odp_atomic_u32_t, odp_atomic_u64_t and
  * odp_atomic_u128_t) can be used to implement e.g. shared counters. If not
- * otherwise documented, operations in this API are implemented using
- * <b> RELAXED memory ordering </b> (see memory order descriptions in
- * the C11 specification). Relaxed operations do not provide synchronization or
- * ordering for other memory accesses (initiated before or after the operation),
- * only atomicity of the operation itself is guaranteed.
+ * otherwise documented, all functions in this API perform their operations
+ * atomically and are implemented using <b> RELAXED memory ordering </b> (see
+ * memory order descriptions in the C11 specification). Relaxed operations do
+ * not provide synchronization or ordering for other memory accesses (initiated
+ * before or after the operation), only atomicity of the operation itself is
+ * guaranteed.
  *
  * <b> Operations with non-relaxed memory ordering </b>
  *
@@ -177,6 +179,20 @@ void odp_atomic_dec_u32(odp_atomic_u32_t *atom);
 void odp_atomic_max_u32(odp_atomic_u32_t *atom, uint32_t new_max);
 
 /**
+ * Fetch and update maximum value of atomic uint32 variable
+ *
+ * Compares value of atomic variable to the new maximum value. If the new value
+ * is greater than the current value, writes the new value into the variable.
+ * Returns the value of the variable before update operation.
+ *
+ * @param atom    Pointer to atomic variable
+ * @param new_max New maximum value to be written into the atomic variable
+ *
+ * @return Value of the variable before the update
+ */
+uint32_t odp_atomic_fetch_max_u32(odp_atomic_u32_t *atom, uint32_t new_max);
+
+/**
  * Update minimum value of atomic uint32 variable
  *
  * Compares value of atomic variable to the new minimum value. If the new value
@@ -186,6 +202,20 @@ void odp_atomic_max_u32(odp_atomic_u32_t *atom, uint32_t new_max);
  * @param new_min New minimum value to be written into the atomic variable
  */
 void odp_atomic_min_u32(odp_atomic_u32_t *atom, uint32_t new_min);
+
+/**
+ * Fetch and update minimum value of atomic uint32 variable
+ *
+ * Compares value of atomic variable to the new minimum value. If the new value
+ * is less than the current value, writes the new value into the variable.
+ * Returns the value of the variable before update operation.
+ *
+ * @param atom    Pointer to atomic variable
+ * @param new_min New minimum value to be written into the atomic variable
+ *
+ * @return Value of the variable before the update
+ */
+uint32_t odp_atomic_fetch_min_u32(odp_atomic_u32_t *atom, uint32_t new_min);
 
 /**
  * Compare and swap atomic uint32 variable
@@ -332,6 +362,20 @@ void odp_atomic_dec_u64(odp_atomic_u64_t *atom);
 void odp_atomic_max_u64(odp_atomic_u64_t *atom, uint64_t new_max);
 
 /**
+ * Fetch and update maximum value of atomic uint64 variable
+ *
+ * Compares value of atomic variable to the new maximum value. If the new value
+ * is greater than the current value, writes the new value into the variable.
+ * Returns the value of the variable before update operation.
+ *
+ * @param atom    Pointer to atomic variable
+ * @param new_max New maximum value to be written into the atomic variable
+ *
+ * @return Value of the variable before the update
+ */
+uint64_t odp_atomic_fetch_max_u64(odp_atomic_u64_t *atom, uint64_t new_max);
+
+/**
  * Update minimum value of atomic uint64 variable
  *
  * Compares value of atomic variable to the new minimum value. If the new value
@@ -341,6 +385,20 @@ void odp_atomic_max_u64(odp_atomic_u64_t *atom, uint64_t new_max);
  * @param new_min New minimum value to be written into the atomic variable
  */
 void odp_atomic_min_u64(odp_atomic_u64_t *atom, uint64_t new_min);
+
+/**
+ * Fetch and update minimum value of atomic uint64_t variable
+ *
+ * Compares value of atomic variable to the new minimum value. If the new value
+ * is less than the current value, writes the new value into the variable.
+ * Returns the value of the variable before update operation.
+ *
+ * @param atom    Pointer to atomic variable
+ * @param new_min New minimum value to be written into the atomic variable
+ *
+ * @return Value of the variable before the update
+ */
+uint64_t odp_atomic_fetch_min_u64(odp_atomic_u64_t *atom, uint64_t new_min);
 
 /**
  * Compare and swap atomic uint64 variable
@@ -643,7 +701,9 @@ typedef union odp_atomic_op_t {
 		uint32_t fetch_dec : 1;  /**< Atomic fetch and decrement */
 		uint32_t dec       : 1;  /**< Atomic decrement */
 		uint32_t min       : 1;  /**< Atomic minimum */
+		uint32_t fetch_min : 1;  /**< Atomic fetch and minimum */
 		uint32_t max       : 1;  /**< Atomic maximum */
+		uint32_t fetch_max : 1;  /**< Atomic fetch and maximum */
 		uint32_t cas       : 1;  /**< Atomic compare and swap */
 		uint32_t xchg      : 1;  /**< Atomic exchange */
 	} op;
