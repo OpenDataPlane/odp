@@ -33,7 +33,7 @@
 #define DEFAULT_MAX_WORKERS 10
 
 /* Maximum number of results to be held */
-#define TEST_MAX_BENCH 60
+#define TEST_MAX_BENCH 70
 
 #define TEST_INFO(name, test, validate, op_type) \
 	{name, test, validate, op_type}
@@ -728,7 +728,87 @@ static inline void test_atomic_xchg_u64(void *val, void *out, uint32_t num_round
 	*result = ret;
 }
 
-static inline void test_atomic_load_acq_u32(void *val, void *out, uint32_t num_round)
+static inline void test_atomic_bit_set_u32(void *val, void *out ODP_UNUSED, uint32_t num_round)
+{
+	odp_atomic_u32_t *atomic_val = val;
+
+	for (uint32_t i = 0; i < num_round; i++)
+		odp_atomic_bit_set_u32(atomic_val, 0x1);
+}
+
+static inline void test_atomic_bit_fetch_set_u32(void *val, void *out, uint32_t num_round)
+{
+	odp_atomic_u32_t *atomic_val = val;
+	uint32_t *result = out;
+	uint32_t ret = 0;
+
+	for (uint32_t i = 0; i < num_round; i++)
+		ret += odp_atomic_bit_fetch_set_u32(atomic_val, 0x1);
+
+	*result = ret;
+}
+
+static inline void test_atomic_bit_clr_u32(void *val, void *out ODP_UNUSED, uint32_t num_round)
+{
+	odp_atomic_u32_t *atomic_val = val;
+
+	for (uint32_t i = 0; i < num_round; i++)
+		odp_atomic_bit_clr_u32(atomic_val, 0x1);
+}
+
+static inline void test_atomic_bit_fetch_clr_u32(void *val, void *out, uint32_t num_round)
+{
+	odp_atomic_u32_t *atomic_val = val;
+	uint32_t *result = out;
+	uint32_t ret = 0;
+
+	for (uint32_t i = 0; i < num_round; i++)
+		ret += odp_atomic_bit_fetch_clr_u32(atomic_val, 0x1);
+
+	*result = ret;
+}
+
+static inline void test_atomic_bit_set_u64(void *val, void *out ODP_UNUSED, uint32_t num_round)
+{
+	odp_atomic_u64_t *atomic_val = val;
+
+	for (uint32_t i = 0; i < num_round; i++)
+		odp_atomic_bit_set_u64(atomic_val, 0x1);
+}
+
+static inline void test_atomic_bit_fetch_set_u64(void *val, void *out, uint32_t num_round)
+{
+	odp_atomic_u64_t *atomic_val = val;
+	uint64_t *result = out;
+	uint64_t ret = 0;
+
+	for (uint32_t i = 0; i < num_round; i++)
+		ret += odp_atomic_bit_fetch_set_u64(atomic_val, 0x1);
+
+	*result = ret;
+}
+
+static inline void test_atomic_bit_clr_u64(void *val, void *out ODP_UNUSED, uint32_t num_round)
+{
+	odp_atomic_u64_t *atomic_val = val;
+
+	for (uint32_t i = 0; i < num_round; i++)
+		odp_atomic_bit_clr_u64(atomic_val, 0x1);
+}
+
+static inline void test_atomic_bit_fetch_clr_u64(void *val, void *out, uint32_t num_round)
+{
+	odp_atomic_u64_t *atomic_val = val;
+	uint64_t *result = out;
+	uint64_t ret = 0;
+
+	for (uint32_t i = 0; i < num_round; i++)
+		ret += odp_atomic_bit_fetch_clr_u64(atomic_val, 0x1);
+
+	*result = ret;
+}
+
+static inline void test_atomic_load_acq_u32(void *val, void *out ODP_UNUSED, uint32_t num_round)
 {
 	odp_atomic_u32_t *atomic_val = val;
 	uint32_t *result = out;
@@ -934,6 +1014,38 @@ static inline void test_atomic_cas_acq_rel_u128(void *val, void *out ODP_UNUSED,
 	}
 }
 
+static inline void test_atomic_bit_set_rel_u32(void *val, void *out ODP_UNUSED, uint32_t num_round)
+{
+	odp_atomic_u32_t *atomic_val = val;
+
+	for (uint32_t i = 0; i < num_round; i++)
+		odp_atomic_bit_set_rel_u32(atomic_val, 0x1);
+}
+
+static inline void test_atomic_bit_clr_rel_u32(void *val, void *out ODP_UNUSED, uint32_t num_round)
+{
+	odp_atomic_u32_t *atomic_val = val;
+
+	for (uint32_t i = 0; i < num_round; i++)
+		odp_atomic_bit_clr_rel_u32(atomic_val, 0x1);
+}
+
+static inline void test_atomic_bit_set_rel_u64(void *val, void *out ODP_UNUSED, uint32_t num_round)
+{
+	odp_atomic_u64_t *atomic_val = val;
+
+	for (uint32_t i = 0; i < num_round; i++)
+		odp_atomic_bit_set_rel_u64(atomic_val, 0x1);
+}
+
+static inline void test_atomic_bit_clr_rel_u64(void *val, void *out ODP_UNUSED, uint32_t num_round)
+{
+	odp_atomic_u64_t *atomic_val = val;
+
+	for (uint32_t i = 0; i < num_round; i++)
+		odp_atomic_bit_clr_rel_u64(atomic_val, 0x1);
+}
+
 static void print_usage(void)
 {
 	printf("\n"
@@ -963,22 +1075,26 @@ static void print_info(test_options_t *test_options)
 	odp_atomic_lock_free_u64(&atomic_ops);
 
 	printf("\nAtomic operations lock-free:\n");
-	printf("  odp_atomic_load_u64:      %" PRIu32 "\n", atomic_ops.op.load);
-	printf("  odp_atomic_store_u64:     %" PRIu32 "\n", atomic_ops.op.store);
-	printf("  odp_atomic_fetch_add_u64: %" PRIu32 "\n", atomic_ops.op.fetch_add);
-	printf("  odp_atomic_add_u64:       %" PRIu32 "\n", atomic_ops.op.add);
-	printf("  odp_atomic_fetch_sub_u64: %" PRIu32 "\n", atomic_ops.op.fetch_sub);
-	printf("  odp_atomic_sub_u64:       %" PRIu32 "\n", atomic_ops.op.sub);
-	printf("  odp_atomic_fetch_inc_u64: %" PRIu32 "\n", atomic_ops.op.fetch_inc);
-	printf("  odp_atomic_inc_u64:       %" PRIu32 "\n", atomic_ops.op.inc);
-	printf("  odp_atomic_fetch_dec_u64: %" PRIu32 "\n", atomic_ops.op.fetch_dec);
-	printf("  odp_atomic_dec_u64:       %" PRIu32 "\n", atomic_ops.op.dec);
-	printf("  odp_atomic_min_u64:       %" PRIu32 "\n", atomic_ops.op.min);
-	printf("  odp_atomic_fetch_min_u64: %" PRIu32 "\n", atomic_ops.op.fetch_min);
-	printf("  odp_atomic_max_u64:       %" PRIu32 "\n", atomic_ops.op.max);
-	printf("  odp_atomic_fetch_max_u64: %" PRIu32 "\n", atomic_ops.op.fetch_max);
-	printf("  odp_atomic_cas_u64:       %" PRIu32 "\n", atomic_ops.op.cas);
-	printf("  odp_atomic_xchg_u64:      %" PRIu32 "\n", atomic_ops.op.xchg);
+	printf("  odp_atomic_load_u64:          %" PRIu32 "\n", atomic_ops.op.load);
+	printf("  odp_atomic_store_u64:         %" PRIu32 "\n", atomic_ops.op.store);
+	printf("  odp_atomic_fetch_add_u64:     %" PRIu32 "\n", atomic_ops.op.fetch_add);
+	printf("  odp_atomic_add_u64:           %" PRIu32 "\n", atomic_ops.op.add);
+	printf("  odp_atomic_fetch_sub_u64:     %" PRIu32 "\n", atomic_ops.op.fetch_sub);
+	printf("  odp_atomic_sub_u64:           %" PRIu32 "\n", atomic_ops.op.sub);
+	printf("  odp_atomic_fetch_inc_u64:     %" PRIu32 "\n", atomic_ops.op.fetch_inc);
+	printf("  odp_atomic_inc_u64:           %" PRIu32 "\n", atomic_ops.op.inc);
+	printf("  odp_atomic_fetch_dec_u64:     %" PRIu32 "\n", atomic_ops.op.fetch_dec);
+	printf("  odp_atomic_dec_u64:           %" PRIu32 "\n", atomic_ops.op.dec);
+	printf("  odp_atomic_min_u64:           %" PRIu32 "\n", atomic_ops.op.min);
+	printf("  odp_atomic_fetch_min_u64:     %" PRIu32 "\n", atomic_ops.op.fetch_min);
+	printf("  odp_atomic_max_u64:           %" PRIu32 "\n", atomic_ops.op.max);
+	printf("  odp_atomic_fetch_max_u64:     %" PRIu32 "\n", atomic_ops.op.fetch_max);
+	printf("  odp_atomic_cas_u64:           %" PRIu32 "\n", atomic_ops.op.cas);
+	printf("  odp_atomic_xchg_u64:          %" PRIu32 "\n", atomic_ops.op.xchg);
+	printf("  odp_atomic_bit_fetch_set_u64: %" PRIu32 "\n", atomic_ops.op.bit_fetch_set);
+	printf("  odp_atomic_bit_set_u64:       %" PRIu32 "\n", atomic_ops.op.bit_set);
+	printf("  odp_atomic_bit_fetch_clr_u64: %" PRIu32 "\n", atomic_ops.op.bit_fetch_clr);
+	printf("  odp_atomic_bit_clr_u64:       %" PRIu32 "\n", atomic_ops.op.bit_clr);
 
 	atomic_ops.all_bits = 0;
 	odp_atomic_lock_free_u128(&atomic_ops);
@@ -1289,7 +1405,7 @@ static int validate_results(test_global_t *global, validate_fn_t validate, op_bi
 				val = &global->atomic_private[i].u128;
 		}
 
-		if (validate(val, out, num_round, num_cpu, private))
+		if (validate != NULL && validate(val, out, num_round, num_cpu, private))
 			return -1;
 	}
 	return 0;
@@ -1331,6 +1447,14 @@ static test_case_t test_suite[] = {
 		  validate_atomic_cas_u32, OP_32BIT),
 	TEST_INFO("odp_atomic_xchg_u32", test_atomic_xchg_u32,
 		  validate_atomic_num_round_u32, OP_32BIT),
+	TEST_INFO("odp_atomic_bit_set_u32", test_atomic_bit_set_u32,
+		  NULL, OP_32BIT),
+	TEST_INFO("odp_atomic_bit_fetch_set_u32", test_atomic_bit_fetch_set_u32,
+		  NULL, OP_32BIT),
+	TEST_INFO("odp_atomic_bit_clr_u32", test_atomic_bit_clr_u32,
+		  NULL, OP_32BIT),
+	TEST_INFO("odp_atomic_bit_fetch_clr_u32", test_atomic_bit_fetch_clr_u32,
+		  NULL, OP_32BIT),
 	TEST_INFO("odp_atomic_load_acq_u32", test_atomic_load_acq_u32,
 		  validate_atomic_init_val_u32, OP_32BIT),
 	TEST_INFO("odp_atomic_store_rel_u32", test_atomic_store_rel_u32,
@@ -1345,6 +1469,10 @@ static test_case_t test_suite[] = {
 		  validate_atomic_cas_u32, OP_32BIT),
 	TEST_INFO("odp_atomic_cas_acq_rel_u32", test_atomic_cas_acq_rel_u32,
 		  validate_atomic_cas_u32, OP_32BIT),
+	TEST_INFO("odp_atomic_bit_set_rel_u32", test_atomic_bit_set_rel_u32,
+		  NULL, OP_32BIT),
+	TEST_INFO("odp_atomic_bit_clr_rel_u32", test_atomic_bit_clr_rel_u32,
+		  NULL, OP_32BIT),
 	TEST_INFO("odp_atomic_load_u64", test_atomic_load_u64,
 		  validate_atomic_init_val_u64, OP_64BIT),
 	TEST_INFO("odp_atomic_store_u64", test_atomic_store_u64,
@@ -1377,6 +1505,14 @@ static test_case_t test_suite[] = {
 		  validate_atomic_cas_u64, OP_64BIT),
 	TEST_INFO("odp_atomic_xchg_u64", test_atomic_xchg_u64,
 		  validate_atomic_num_round_u64, OP_64BIT),
+	TEST_INFO("odp_atomic_bit_set_u64", test_atomic_bit_set_u64,
+		  NULL, OP_64BIT),
+	TEST_INFO("odp_atomic_bit_fetch_set_u64", test_atomic_bit_fetch_set_u64,
+		  NULL, OP_64BIT),
+	TEST_INFO("odp_atomic_bit_clr_u64", test_atomic_bit_clr_u64,
+		  NULL, OP_64BIT),
+	TEST_INFO("odp_atomic_bit_fetch_clr_u64", test_atomic_bit_fetch_clr_u64,
+		  NULL, OP_64BIT),
 	TEST_INFO("odp_atomic_load_acq_u64", test_atomic_load_acq_u64,
 		  validate_atomic_init_val_u64, OP_64BIT),
 	TEST_INFO("odp_atomic_store_rel_u64", test_atomic_store_rel_u64,
@@ -1391,6 +1527,10 @@ static test_case_t test_suite[] = {
 		  validate_atomic_cas_u64, OP_64BIT),
 	TEST_INFO("odp_atomic_cas_acq_rel_u64", test_atomic_cas_acq_rel_u64,
 		  validate_atomic_cas_u64, OP_64BIT),
+	TEST_INFO("odp_atomic_bit_set_rel_u64", test_atomic_bit_set_rel_u64,
+		  NULL, OP_64BIT),
+	TEST_INFO("odp_atomic_bit_clr_rel_u64", test_atomic_bit_clr_rel_u64,
+		  NULL, OP_64BIT),
 	TEST_INFO("odp_atomic_load_u128", test_atomic_load_u128,
 		  validate_atomic_init_val_u128, OP_128BIT),
 	TEST_INFO("odp_atomic_store_u128", test_atomic_store_u128,
