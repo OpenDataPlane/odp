@@ -187,49 +187,46 @@ static inline void _odp_atomic_init_u128(odp_atomic_u128_t *atom, odp_u128_t val
 
 static inline odp_u128_t _odp_atomic_load_u128(odp_atomic_u128_t *atom)
 {
-	union {
-		odp_u128_t val;
-		__int128_t i;
-	} u;
+	odp_u128_t val;
 
-	u.i = __atomic_load_n((__int128_t *)&atom->v, __ATOMIC_RELAXED);
-	return u.val;
+	val.u128 = __atomic_load_n(&atom->v.u128, __ATOMIC_RELAXED);
+	return val;
 }
 
 static inline void _odp_atomic_store_u128(odp_atomic_u128_t *atom, odp_u128_t val)
 {
-	__atomic_store_n((__int128_t *)&atom->v, *(__int128_t *)&val, __ATOMIC_RELAXED);
+	__atomic_store_n(&atom->v.u128, val.u128, __ATOMIC_RELAXED);
 }
 
 static inline int _odp_atomic_cas_u128(odp_atomic_u128_t *atom, odp_u128_t *old_val,
 				       odp_u128_t new_val)
 {
-	return __atomic_compare_exchange_n((__int128_t *)&atom->v, (__int128_t *)old_val,
-					   *(__int128_t *)&new_val, 0 /* strong */,
+	return __atomic_compare_exchange_n(&atom->v.u128, &old_val->u128,
+					   new_val.u128, 0 /* strong */,
 					   __ATOMIC_RELAXED, __ATOMIC_RELAXED);
 }
 
 static inline int _odp_atomic_cas_acq_u128(odp_atomic_u128_t *atom, odp_u128_t *old_val,
 					   odp_u128_t new_val)
 {
-	return __atomic_compare_exchange_n((__int128_t *)&atom->v, (__int128_t *)old_val,
-					   *(__int128_t *)&new_val, 0 /* strong */,
+	return __atomic_compare_exchange_n(&atom->v.u128, &old_val->u128,
+					   new_val.u128, 0 /* strong */,
 					   __ATOMIC_ACQUIRE, __ATOMIC_RELAXED);
 }
 
 static inline int _odp_atomic_cas_rel_u128(odp_atomic_u128_t *atom, odp_u128_t *old_val,
 					   odp_u128_t new_val)
 {
-	return __atomic_compare_exchange_n((__int128_t *)&atom->v, (__int128_t *)old_val,
-					   *(__int128_t *)&new_val, 0 /* strong */,
+	return __atomic_compare_exchange_n(&atom->v.u128, &old_val->u128,
+					   new_val.u128, 0 /* strong */,
 					   __ATOMIC_RELEASE, __ATOMIC_RELAXED);
 }
 
 static inline int _odp_atomic_cas_acq_rel_u128(odp_atomic_u128_t *atom, odp_u128_t *old_val,
 					       odp_u128_t new_val)
 {
-	return __atomic_compare_exchange_n((__int128_t *)&atom->v, (__int128_t *)old_val,
-					   *(__int128_t *)&new_val, 0 /* strong */,
+	return __atomic_compare_exchange_n(&atom->v.u128, &old_val->u128,
+					   new_val.u128, 0 /* strong */,
 					   __ATOMIC_ACQ_REL, __ATOMIC_RELAXED);
 }
 
