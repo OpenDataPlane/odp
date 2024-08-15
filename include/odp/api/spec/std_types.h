@@ -65,6 +65,10 @@ typedef uint64_t odp_una_u64_t ODP_ALIGNED(1);
 typedef struct ODP_ALIGNED(16) odp_u128_s {
 	/** 128 bits in various sizes */
 	union {
+	  #ifdef __SIZEOF_INT128__
+		/** 128 bits as an integer type when available */
+		__uint128_t u128;
+	  #endif
 		/** 128 bits as uint64_t words */
 		uint64_t u64[2];
 		/** 128 bits as uint32_t words */
