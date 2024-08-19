@@ -311,26 +311,12 @@ _ODP_INLINE int odp_atomic_cas_acq_rel_u64(odp_atomic_u64_t *atom,
 
 _ODP_INLINE void odp_atomic_max_u64(odp_atomic_u64_t *atom, uint64_t new_val)
 {
-	uint64_t old_val;
-
-	old_val = odp_atomic_load_u64(atom);
-
-	while (new_val > old_val) {
-		if (odp_atomic_cas_u64(atom, &old_val, new_val))
-			break;
-	}
+	(void)_ODP_ATOMIC_OP(atom, atom->v = atom->v < new_val ? new_val : atom->v);
 }
 
 _ODP_INLINE void odp_atomic_min_u64(odp_atomic_u64_t *atom, uint64_t new_val)
 {
-	uint64_t old_val;
-
-	old_val = odp_atomic_load_u64(atom);
-
-	while (new_val < old_val) {
-		if (odp_atomic_cas_u64(atom, &old_val, new_val))
-			break;
-	}
+	(void)_ODP_ATOMIC_OP(atom, atom->v = atom->v > new_val ? new_val : atom->v);
 }
 
 #else /* !ODP_ATOMIC_U64_LOCK */
