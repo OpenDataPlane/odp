@@ -232,6 +232,7 @@ if test "x$abi_compat" = "xno" ; then
 
 	if test $? -ne 0; then
 		ODP_CHECK_CFLAG([-march=native])
+		ODP_CHECK_CXXFLAG([-march=native])
 	fi
 fi
 AM_CONDITIONAL(ODP_ABI_COMPAT, [test "x$ODP_ABI_COMPAT" = "x1"])
