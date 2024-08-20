@@ -28,11 +28,11 @@ int read_model_from_file(const char *file_name, odp_ml_model_param_t *model_para
 
 	/* Allocate memory for model buffer */
 	model_param->model = malloc(model_param->size);
-	memset(model_param->model, 0, model_param->size);
 	if (!model_param->model) {
 		printf("Allocating memory for model buffer failed\n");
 		return -1;
 	}
+	memset(model_param->model, 0, model_param->size);
 
 	/* Read the model file */
 	num_elem = fread(model_param->model, model_param->size, 1, model_file);
