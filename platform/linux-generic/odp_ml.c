@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright (c) 2023 Nokia
+ * Copyright (c) 2023-2024 Nokia
  */
 
 #include <odp/autoheader_external.h>
@@ -2603,25 +2603,25 @@ int _odp_ml_init_global(void)
 
 	if (odp_ml_capability(&_odp_ml_glb->capa)) {
 		_ODP_ERR("ML capability failed\n");
-		return -1;
+		goto error;
 	}
 
 	odp_pool_param_init(&_odp_ml_glb->pool_param);
 
 	if (read_config_file(&_odp_ml_glb->ort_run_opts))
-		return -1;
+		goto error;
 
 	ort_api = OrtGetApiBase()->GetApi(ORT_API_VERSION);
 	if (!ort_api) {
 		_ODP_ERR("Failed to init ONNX Runtime engine.\n");
-		return -1;
+		goto error;
 	}
 	_odp_ml_glb->ort_api = ort_api;
 
 	status = ort_api->CreateEnv(ORT_LOGGING_LEVEL_WARNING, "Default", &env);
 	if (check_ortstatus(status) || !env) {
 		_ODP_ERR("ort_api->CreateEnv() failed.\n");
-		return -1;
+		goto error;
 	}
 	_odp_ml_glb->env = env;
 
@@ -2629,6 +2629,12 @@ int _odp_ml_init_global(void)
 		odp_ticketlock_init(&_odp_ml_glb->models[i].lock);
 
 	return 0;
+
+error:
+	if (odp_shm_free(_odp_ml_glb->shm))
+		_ODP_ERR("Shm free failed for odp_ml\n");
+
+	return -1;
 }
 
 int _odp_ml_term_global(void)
