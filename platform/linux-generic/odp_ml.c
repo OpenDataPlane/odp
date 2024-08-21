@@ -1999,14 +1999,14 @@ static int input_data_to_tensor(const odp_ml_input_info_t *input_info, uint32_t 
 						 input_info->shape.num_dim,
 						 onnx_dtype,
 						 input_tensor);
-	if (check_ortstatus(status) || !input_tensor[0]) {
+	if (check_ortstatus(status) || !*input_tensor) {
 		_ODP_ERR("CreateTensorWithDataAsOrtValue() failed\n");
 		return -1;
 	}
 
 	input_size = input_info->data_type_size * get_num_elem(batch_size, &input_info->shape);
 
-	status = ort_api->GetTensorMutableData(input_tensor[0], &data);
+	status = ort_api->GetTensorMutableData(*input_tensor, &data);
 	if (check_ortstatus(status) || !data) {
 		_ODP_ERR("GetTensorMutableData() failed\n");
 		return -1;
@@ -2032,14 +2032,14 @@ static int input_data_to_tensor(const odp_ml_input_info_t *input_info, uint32_t 
 	if (!ODP_DEBUG)
 		return 0;
 
-	status = ort_api->IsTensor(input_tensor[0], &is_tensor);
+	status = ort_api->IsTensor(*input_tensor, &is_tensor);
 	if (check_ortstatus(status) || !is_tensor) {
 		_ODP_ERR("input_tensor IsTensor failed\n");
 		return -1;
 	}
 
 	/* Make sure tensor shape matches input_shape */
-	if (verify_tensor(input_tensor[0], input_info->data_type,
+	if (verify_tensor(*input_tensor, input_info->data_type,
 			  &input_info->shape, batch_size)) {
 		_ODP_ERR("Verify input_tensor failed\n");
 		return -1;
