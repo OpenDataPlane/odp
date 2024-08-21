@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2013-2018 Linaro Limited
- * Copyright (c) 2021-2023 Nokia
+ * Copyright (c) 2021-2024 Nokia
  */
 
 /**
@@ -149,7 +149,8 @@ int odp_packet_reset(odp_packet_t pkt, uint32_t len);
  *
  * Returns the maximum packet data reset length for odp_packet_reset() based
  * on current packet buffer space and pool parameters (align, seg_len,
- * headroom).
+ * headroom). Note that the returned length may be less than the current packet
+ * data length if data length has been increased by utilizing head- or tailroom.
  *
  * @param pkt           Packet handle
  *
