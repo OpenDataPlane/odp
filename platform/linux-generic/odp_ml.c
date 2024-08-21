@@ -105,7 +105,6 @@ typedef struct ml_model_t {
 	OrtSession		*session;
 	OrtSessionOptions	*session_opts;
 	uint32_t		max_compl_id;
-	odp_atomic_u32_t	compl_status[ML_MAX_COMPL_ID];
 
 	odp_ml_model_info_t	info;
 	odp_ml_input_info_t	input_info[CONFIG_ML_MAX_INPUTS];
@@ -928,8 +927,6 @@ odp_ml_model_t odp_ml_model_create(const char *name, const odp_ml_model_param_t 
 		_odp_strcpy(info->name, name, ODP_ML_MODEL_NAME_LEN);
 
 	mdl->max_compl_id = param->max_compl_id;
-	for (uint32_t j = 0; j < ML_MAX_COMPL_ID; j++)
-		odp_atomic_init_u32(&mdl->compl_status[j], 1);
 
 	odp_ticketlock_unlock(&mdl->lock);
 	return (odp_ml_model_t)mdl;
@@ -1521,9 +1518,6 @@ int odp_ml_model_load_start(odp_ml_model_t model, const odp_ml_compl_param_t *co
 	if (odp_unlikely(check_compl_param(compl_param, mdl->max_compl_id, true)))
 		return -1;
 
-	if (compl_param->mode == ODP_ML_COMPL_MODE_POLL)
-		odp_atomic_store_rel_u32(&mdl->compl_status[compl_param->compl_id], 0);
-
 	ret = odp_ml_model_load(model, NULL);
 
 	if (odp_unlikely(ret))
@@ -1552,13 +1546,11 @@ int odp_ml_model_load_start(odp_ml_model_t model, const odp_ml_compl_param_t *co
 	}
 
 	mdl->result[compl_param->compl_id].user_ptr = compl_param->user_ptr;
-	odp_atomic_store_rel_u32(&mdl->compl_status[compl_param->compl_id], 1);
 	return 0;
 }
 
 int odp_ml_model_load_status(odp_ml_model_t model, uint32_t compl_id, odp_ml_load_result_t *result)
 {
-	int ret;
 	ml_model_t *mdl = ml_model_from_handle(model);
 
 	if (odp_unlikely(model == ODP_ML_MODEL_INVALID || compl_id > mdl->max_compl_id)) {
@@ -1566,14 +1558,12 @@ int odp_ml_model_load_status(odp_ml_model_t model, uint32_t compl_id, odp_ml_loa
 		return -2;
 	}
 
-	ret = odp_atomic_load_acq_u32(&mdl->compl_status[compl_id]);
-
-	if (ret && result) {
+	if (result) {
 		result->error_code = 0;
 		result->user_ptr = mdl->result[compl_id].user_ptr;
 	}
 
-	return ret;
+	return 1;
 }
 
 int odp_ml_model_unload(odp_ml_model_t model, odp_ml_load_result_t *result)
@@ -1624,9 +1614,6 @@ int odp_ml_model_unload_start(odp_ml_model_t model, const odp_ml_compl_param_t *
 	if (odp_unlikely(check_compl_param(compl_param, mdl->max_compl_id, true)))
 		return -1;
 
-	if (compl_param->mode == ODP_ML_COMPL_MODE_POLL)
-		odp_atomic_store_rel_u32(&mdl->compl_status[compl_param->compl_id], 0);
-
 	ret = odp_ml_model_unload(model, NULL);
 
 	if (odp_unlikely(ret))
@@ -1653,7 +1640,6 @@ int odp_ml_model_unload_start(odp_ml_model_t model, const odp_ml_compl_param_t *
 	}
 
 	mdl->result[compl_param->compl_id].user_ptr = compl_param->user_ptr;
-	odp_atomic_store_rel_u32(&mdl->compl_status[compl_param->compl_id], 1);
 	return 0;
 }
 
@@ -2400,9 +2386,6 @@ int odp_ml_run_start(odp_ml_model_t model, const odp_ml_data_t *data,
 		return -1;
 	}
 
-	if (compl_param->mode == ODP_ML_COMPL_MODE_POLL)
-		odp_atomic_store_rel_u32(&mdl->compl_status[compl_param->compl_id], 0);
-
 	ret = odp_ml_run(model, data, run_param);
 
 	if (odp_unlikely(ret < 1))
@@ -2430,7 +2413,6 @@ int odp_ml_run_start(odp_ml_model_t model, const odp_ml_data_t *data,
 
 	/* compl_param->mode == ODP_ML_COMPL_MODE_POLL */
 	mdl->result[compl_param->compl_id].user_ptr = compl_param->user_ptr;
-	odp_atomic_store_rel_u32(&mdl->compl_status[compl_param->compl_id], 1);
 
 	return 1;
 }
@@ -2465,7 +2447,6 @@ int odp_ml_run_start_multi(odp_ml_model_t model, const odp_ml_data_t data[],
 
 int odp_ml_run_status(odp_ml_model_t model, uint32_t compl_id, odp_ml_run_result_t *result)
 {
-	int ret;
 	ml_model_t *mdl = ml_model_from_handle(model);
 
 	if (odp_unlikely(model == ODP_ML_MODEL_INVALID ||
@@ -2474,14 +2455,12 @@ int odp_ml_run_status(odp_ml_model_t model, uint32_t compl_id, odp_ml_run_result
 		return -2;
 	}
 
-	ret = odp_atomic_load_acq_u32(&mdl->compl_status[compl_id]);
-
 	if (result) {
 		result->error_code = 0;
 		result->user_ptr = mdl->result[compl_id].user_ptr;
 	}
 
-	return ret;
+	return 1;
 }
 
 static int opt_level_from_str(const char *level_str, GraphOptimizationLevel *level)
