@@ -2256,7 +2256,7 @@ int odp_ml_run(odp_ml_model_t model, const odp_ml_data_t *data, const odp_ml_run
 
 	if (ODP_DEBUG && verify_run_params(model, data, param)) {
 		result_local.error_code = ML_BAD_INPUT;
-		goto init_fail;
+		goto error;
 	}
 
 	if (param && param->batch_size)
@@ -2275,7 +2275,7 @@ int odp_ml_run(odp_ml_model_t model, const odp_ml_data_t *data, const odp_ml_run
 		if (ret) {
 			_ODP_ERR("%uth input data to tensor failed\n", i);
 			result_local.error_code = ML_LIB_FAILED;
-			goto release_input_tensors;
+			goto error;
 		}
 
 		_ODP_DBG("input_tensor[%u]: %p\n", i, input_tensor[i]);
@@ -2305,27 +2305,27 @@ int odp_ml_run(odp_ml_model_t model, const odp_ml_data_t *data, const odp_ml_run
 	if (check_ortstatus(status)) {
 		_ODP_ERR("Run inference failed\n");
 		result_local.error_code = ML_LIB_FAILED;
-		goto release_all_tensors;
+		goto error;
 	}
 
 	/* Verify output tensors and store them to output */
 	if (output_tensors_to_data(output_tensors, ml_info->num_outputs, param,
 				   output_info, data, &result_local)) {
 		_ODP_ERR("Output tensors to data failed\n");
-		goto release_all_tensors;
+		goto error;
 	}
 
 	retval = 1;
 
-release_all_tensors:
+error:
 	for (uint32_t i = 0; i < ml_info->num_outputs; i++)
-		ort_api->ReleaseValue(output_tensors[i]);
+		if (output_tensors[i])
+			ort_api->ReleaseValue(output_tensors[i]);
 
-release_input_tensors:
 	for (uint32_t i = 0; i < ml_info->num_inputs; i++)
-		ort_api->ReleaseValue(input_tensor[i]);
+		if (input_tensor[i])
+			ort_api->ReleaseValue(input_tensor[i]);
 
-init_fail:
 	if (param && param->result)
 		*param->result = result_local;
 
