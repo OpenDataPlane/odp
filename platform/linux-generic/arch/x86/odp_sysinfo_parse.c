@@ -24,7 +24,7 @@ int _odp_cpuinfo_parser(FILE *file, system_info_t *sysinfo)
 
 	#if defined __x86_64 || defined __x86_64__
 	sysinfo->cpu_isa_sw.x86 = ODP_CPU_ARCH_X86_64;
-	#elif defined __i686 || defined __i686__
+	#elif defined __i386 || defined __i386__
 	sysinfo->cpu_isa_sw.x86 = ODP_CPU_ARCH_X86_I686;
 	#endif
 
