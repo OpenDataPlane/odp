@@ -125,8 +125,8 @@ AS_IF([test "$GCC" == yes],
       )
 )
 
-ODP_CFLAGS="$ODP_CFLAGS -std=c11"
-ODP_CXXFLAGS="$ODP_CXXFLAGS -std=c++11"
+ODP_CFLAGS="$ODP_CFLAGS -std=c11 -fno-strict-aliasing"
+ODP_CXXFLAGS="$ODP_CXXFLAGS -std=c++11 -fno-strict-aliasing"
 
 # Extra flags for example to suppress certain warning types
 ODP_CFLAGS="$ODP_CFLAGS $ODP_CFLAGS_EXTRA"

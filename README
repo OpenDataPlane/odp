@@ -15,6 +15,9 @@ How to build:
     See DEPENDENCIES file about system requirements and dependencies to external
     libraries/packages. It contains also some more detailed build instructions.
 
+    ODP requires the -fno-strict-aliasing (or equivalent) compiler option. This
+    option is enabled by default in ODP.
+
     Generally, ODP and test applications are built with these three steps:
         ./bootstrap
         ./configure
