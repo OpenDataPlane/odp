@@ -1911,6 +1911,7 @@ static int verify_tensor(const OrtValue *tensor, odp_ml_data_type_t expected_typ
 	OrtTensorTypeAndShapeInfo *tensor_info;
 	ONNXTensorElementDataType tensor_type;
 	size_t dim_count;
+	int ret = -1;
 	OrtStatus *status = NULL;
 	int64_t dims[ODP_ML_MAX_DIMS] = {0};
 	int64_t shape_arr[ODP_ML_MAX_DIMS] = {0};
@@ -1924,50 +1925,47 @@ static int verify_tensor(const OrtValue *tensor, odp_ml_data_type_t expected_typ
 
 	status = ort_api->GetTensorElementType(tensor_info, &tensor_type);
 	if (check_ortstatus(status)) {
-		ort_api->ReleaseTensorTypeAndShapeInfo(tensor_info);
 		_ODP_ERR("GetTensorElementType() failed\n");
-		return -1;
+		goto error;
 	}
 
 	if (onnx_dtype_to_odp_dtype(tensor_type) != expected_type) {
-		ort_api->ReleaseTensorTypeAndShapeInfo(tensor_info);
 		_ODP_ERR("Tensor type does not match model type\n");
-		return -1;
+		goto error;
 	}
 
 	status = ort_api->GetDimensionsCount(tensor_info, &dim_count);
 	if (check_ortstatus(status)) {
-		ort_api->ReleaseTensorTypeAndShapeInfo(tensor_info);
 		_ODP_ERR("GetDimensionsCount() failed\n");
-		return -1;
+		goto error;
 	}
 
 	if (dim_count != expected_shape->num_dim) {
-		ort_api->ReleaseTensorTypeAndShapeInfo(tensor_info);
 		_ODP_ERR("Tensor dimension does not match shape_dim\n");
-		return -1;
+		goto error;
 	}
 
 	status = ort_api->GetDimensions(tensor_info, dims, dim_count);
 	if (check_ortstatus(status)) {
-		ort_api->ReleaseTensorTypeAndShapeInfo(tensor_info);
 		_ODP_ERR("GetDimensions() failed\n");
-		return -1;
+		goto error;
 	}
 
 	ml_shape_to_int64(expected_shape, batch_size, shape_arr);
 
 	for (uint32_t i = 0; i < dim_count; i++) {
 		if (dims[i] != shape_arr[i]) {
-			ort_api->ReleaseTensorTypeAndShapeInfo(tensor_info);
 			_ODP_ERR("Shape[%u]: %" PRIu64 " does not match expected: %" PRIu64 "\n",
 				 i, dims[i], shape_arr[i]);
-			return -1;
+			goto error;
 		}
 	}
 
+	ret = 0;
+
+error:
 	ort_api->ReleaseTensorTypeAndShapeInfo(tensor_info);
-	return 0;
+	return ret;
 }
 
 static int input_data_to_tensor(const odp_ml_input_info_t *input_info, uint32_t num_seg,
