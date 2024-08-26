@@ -2,12 +2,9 @@
  * Copyright (c) 2014-2018 Linaro Limited
  */
 
-#include <odp/api/byteorder.h>
 #include <odp/api/cpu.h>
-#include <odp/api/debug.h>
-#include <odp_init_internal.h>
+#include <odp/api/std_types.h>
 #include <odp_random_std_internal.h>
-#include <odp_cpu.h>
 
 #include <stdint.h>
 #include <time.h>
@@ -38,33 +35,9 @@ static inline uint32_t xorshift64s32(uint64_t *x)
 
 static int32_t _random_data(uint8_t *buf, uint32_t len, uint64_t *seed)
 {
-	const uint32_t ret = len;
-
-	if (!_ODP_UNALIGNED) {
-		uint32_t r = xorshift64s32(seed);
-
-		if (((uintptr_t)buf & 1) && len) {
-			*(uint8_t *)buf = r & 0xff;
-			r >>= 8;
-			buf += 1;
-			len -= 1;
-		}
-
-		if (((uintptr_t)buf & 2) && len >= 2) {
-			*(uint16_t *)(uintptr_t)buf = r & 0xffff;
-			buf += 2;
-			len -= 2;
-		}
-
-		for (uint32_t i = 0; i < len / 4; i++) {
-			*(uint32_t *)(uintptr_t)buf = xorshift64s32(seed);
-			buf += 4;
-		}
-	} else {
-		for (uint32_t i = 0; i < len / 4; i++) {
-			*(odp_una_u32_t *)buf = xorshift64s32(seed);
-			buf += 4;
-		}
+	for (uint32_t i = 0; i < len / 4; i++) {
+		*(odp_una_u32_t *)buf = xorshift64s32(seed);
+		buf += 4;
 	}
 
 	if (len & 3) {
@@ -80,7 +53,7 @@ static int32_t _random_data(uint8_t *buf, uint32_t len, uint64_t *seed)
 			*(uint8_t *)buf = r & 0xff;
 	}
 
-	return ret;
+	return len;
 }
 
 int32_t _odp_random_std_test_data(uint8_t *buf, uint32_t len, uint64_t *seed)
