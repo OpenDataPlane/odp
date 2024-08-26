@@ -7,6 +7,7 @@
 
 #include <odp/api/align.h>
 #include <odp/api/std_types.h>
+#include <odp_types_internal.h>
 
 #include <odp/api/abi/hash_crc32.h>
 
@@ -438,25 +439,25 @@ uint32_t _odp_hash_crc32c_generic(const void *data, uint32_t data_len,
 				  uint32_t init_val)
 {
 	uint32_t i;
-	uintptr_t pd = (uintptr_t)data;
+	const uint8_t *pd = (const uint8_t *)data;
 
 	for (i = 0; i < data_len / 8; i++) {
-		init_val = crc32c_u64(*(const uint64_t *)pd, init_val);
+		init_val = crc32c_u64(*(const _odp_una_ma_u64_t *)pd, init_val);
 		pd += 8;
 	}
 
 	if (data_len & 0x4) {
-		init_val = crc32c_u32(*(const uint32_t *)pd, init_val);
+		init_val = crc32c_u32(*(const _odp_una_ma_u32_t *)pd, init_val);
 		pd += 4;
 	}
 
 	if (data_len & 0x2) {
-		init_val = crc32c_u16(*(const uint16_t *)pd, init_val);
+		init_val = crc32c_u16(*(const _odp_una_ma_u16_t *)pd, init_val);
 		pd += 2;
 	}
 
 	if (data_len & 0x1)
-		init_val = crc32c_u8(*(const uint8_t *)pd, init_val);
+		init_val = crc32c_u8(*pd, init_val);
 
 	return init_val;
 }
