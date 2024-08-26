@@ -70,7 +70,7 @@ jobs:
                'CFLAGS=-pedantic',
                '--enable-lto',
                '--enable-lto --enable-abi-compat',
-               '--enable-pcapng-support']
+               '--enable-pcapng-support --enable-icache-perf-test']
     steps:
       - uses: actions/checkout@v4
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC=gcc

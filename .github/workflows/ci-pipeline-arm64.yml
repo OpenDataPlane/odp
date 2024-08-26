@@ -25,7 +25,7 @@ jobs:
                'CFLAGS=-pedantic',
                '--enable-lto',
                '--enable-lto --enable-abi-compat',
-               '--enable-pcapng-support']
+               '--enable-pcapng-support --enable-icache-perf-test']
     steps:
       - uses: OpenDataPlane/action-clean-up@main
       - uses: actions/checkout@v4
