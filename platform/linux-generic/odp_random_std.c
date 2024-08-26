@@ -7,6 +7,7 @@
 #include <odp/api/debug.h>
 #include <odp_init_internal.h>
 #include <odp_random_std_internal.h>
+#include <odp_types_internal.h>
 #include <odp_cpu.h>
 
 #include <stdint.h>
@@ -61,7 +62,7 @@ static int32_t _random_data(uint8_t *buf, uint32_t len, uint64_t *seed)
 	}
 
 	for (uint32_t i = 0; i < len / 4; i++) {
-		*(odp_una_u32_t *)buf = xorshift64s32(seed);
+		*(_odp_una_ma_u32_t *)buf = xorshift64s32(seed);
 		buf += 4;
 	}
 
@@ -69,7 +70,7 @@ static int32_t _random_data(uint8_t *buf, uint32_t len, uint64_t *seed)
 		uint32_t r = odp_cpu_to_le_32(xorshift64s32(seed));
 
 		if (len & 2) {
-			*(odp_una_u16_t *)buf = odp_cpu_to_le_16(r & 0xffff);
+			*(_odp_una_ma_u16_t *)buf = odp_cpu_to_le_16(r & 0xffff);
 			r >>= 16;
 			buf += 2;
 		}
