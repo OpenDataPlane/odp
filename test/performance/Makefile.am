@@ -9,7 +9,6 @@ EXECUTABLES = odp_atomic_perf \
 	      odp_bench_pktio_sp \
 	      odp_bench_timer \
 	      odp_crc \
-	      odp_icache_perf \
 	      odp_lock_perf \
 	      odp_mem_perf \
 	      odp_pktio_perf \
@@ -33,6 +32,10 @@ COMPILE_ONLY = odp_cpu_bench \
 	       odp_sched_pktio \
 	       odp_timer_accuracy \
 	       odp_timer_perf
+
+if icache_perf_test
+EXECUTABLES += odp_icache_perf
+endif
 
 if LIBCONFIG
 COMPILE_ONLY += odp_ipsecfwd
