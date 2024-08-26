@@ -19,30 +19,34 @@ uint32_t _odp_hash_crc32c_generic(const void *data, uint32_t data_len,
 #ifdef __ARM_FEATURE_CRC32
 
 #include <arm_acle.h>
+#include <odp/api/align.h>
 
 static inline uint32_t _odp_hash_crc32(const void *data_ptr, uint32_t data_len,
 				       uint32_t init_val)
 {
 	uint32_t i;
-	uintptr_t pd = (uintptr_t)data_ptr;
+	const uint8_t *pd = (const uint8_t *)data_ptr;
 
 	for (i = 0; i < data_len / 8; i++) {
-		init_val = __crc32d(init_val, *(const uint64_t *)pd);
+		typedef uint64_t ODP_ALIGNED(1) __attribute__((__may_alias__)) una_ma_u64_t;
+		init_val = __crc32d(init_val, *(const una_ma_u64_t *)pd);
 		pd += 8;
 	}
 
 	if (data_len & 0x4) {
-		init_val = __crc32w(init_val, *(const uint32_t *)pd);
+		typedef uint32_t ODP_ALIGNED(1) __attribute__((__may_alias__)) una_ma_u32_t;
+		init_val = __crc32w(init_val, *(const una_ma_u32_t *)pd);
 		pd += 4;
 	}
 
 	if (data_len & 0x2) {
-		init_val = __crc32h(init_val, *(const uint16_t *)pd);
+		typedef uint16_t ODP_ALIGNED(1) __attribute__((__may_alias__)) una_ma_u16_t;
+		init_val = __crc32h(init_val, *(const una_ma_u16_t *)pd);
 		pd += 2;
 	}
 
 	if (data_len & 0x1)
-		init_val = __crc32b(init_val, *(const uint8_t *)pd);
+		init_val = __crc32b(init_val, *pd);
 
 	return init_val;
 }
@@ -51,25 +55,28 @@ static inline uint32_t _odp_hash_crc32c(const void *data, uint32_t data_len,
 					uint32_t init_val)
 {
 	uint32_t i;
-	uintptr_t pd = (uintptr_t)data;
+	const uint8_t *pd = (const uint8_t *)data;
 
 	for (i = 0; i < data_len / 8; i++) {
-		init_val = __crc32cd(init_val, *(const uint64_t *)pd);
+		typedef uint64_t ODP_ALIGNED(1) __attribute__((__may_alias__)) una_ma_u64_t;
+		init_val = __crc32cd(init_val, *(const una_ma_u64_t *)pd);
 		pd += 8;
 	}
 
 	if (data_len & 0x4) {
-		init_val = __crc32cw(init_val, *(const uint32_t *)pd);
+		typedef uint32_t ODP_ALIGNED(1) __attribute__((__may_alias__)) una_ma_u32_t;
+		init_val = __crc32cw(init_val, *(const una_ma_u32_t *)pd);
 		pd += 4;
 	}
 
 	if (data_len & 0x2) {
-		init_val = __crc32ch(init_val, *(const uint16_t *)pd);
+		typedef uint16_t ODP_ALIGNED(1) __attribute__((__may_alias__)) una_ma_u16_t;
+		init_val = __crc32ch(init_val, *(const una_ma_u16_t *)pd);
 		pd += 2;
 	}
 
 	if (data_len & 0x1)
-		init_val = __crc32cb(init_val, *(const uint8_t *)pd);
+		init_val = __crc32cb(init_val, *pd);
 
 	return init_val;
 }
