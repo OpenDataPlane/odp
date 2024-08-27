@@ -149,6 +149,26 @@ static void random_test_align_and_overflow_true(void)
 	random_test_align_and_overflow(ODP_RANDOM_TRUE);
 }
 
+static void random_test_align_and_len_test(void)
+{
+	static const int size = 64;
+
+	uint8_t ODP_ALIGNED_CACHE buf[size], buf_ref[size];
+	const uint64_t seed_c = 123;
+	uint64_t seed = seed_c;
+
+	CU_ASSERT_FATAL(odp_random_test_data(buf_ref, size, &seed) == size);
+
+	for (int align = 0; align < size / 2; align++) {
+		for (int len = 1; len <= size / 2; len++) {
+			seed = seed_c;
+			CU_ASSERT_FATAL(odp_random_test_data(buf + align, len, &seed) ==
+					(int32_t)len);
+			CU_ASSERT(memcmp(buf + align, buf_ref, len) == 0);
+		}
+	}
+}
+
 /*
  * Randomness tests
  *
@@ -501,6 +521,7 @@ odp_testinfo_t random_suite[] = {
 	ODP_TEST_INFO(random_test_kind),
 	ODP_TEST_INFO(random_test_repeat),
 	ODP_TEST_INFO(random_test_align_and_overflow_test),
+	ODP_TEST_INFO(random_test_align_and_len_test),
 	ODP_TEST_INFO_CONDITIONAL(random_test_align_and_overflow_basic, check_kind_basic),
 	ODP_TEST_INFO_CONDITIONAL(random_test_align_and_overflow_crypto, check_kind_crypto),
 	ODP_TEST_INFO_CONDITIONAL(random_test_align_and_overflow_true, check_kind_true),
