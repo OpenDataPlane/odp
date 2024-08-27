@@ -1,26 +1,26 @@
 include $(top_srcdir)/test/Makefile.inc
 
-EXECUTABLES = version \
-	      debug \
-	      chksum \
-	      macros \
-	      parse \
-	      stress
+EXECUTABLES = odph_version \
+	      odph_debug \
+	      odph_chksum \
+	      odph_macros \
+	      odph_parse \
+	      odph_stress
 
 #These are platform specific extensions that are not portable
 #They are a convenience to app writers who have chosen to
 #restrict their application to Linux.
 
 if helper_linux
-EXECUTABLES += linux/pthread \
-	       linux/process
-linux_pthread_SOURCES = linux/pthread.c
-linux_process_SOURCES = linux/process.c
+EXECUTABLES += linux/odph_pthread \
+	       linux/odph_process
+linux_odph_pthread_SOURCES = linux/pthread.c
+linux_odph_process_SOURCES = linux/process.c
 endif
 
 if helper_cli
-EXECUTABLES += cli
-cli_SOURCES = cli.c
+EXECUTABLES += odph_cli
+odph_cli_SOURCES = cli.c
 endif
 
 COMPILE_ONLY = odpthreads
@@ -36,13 +36,13 @@ test_PROGRAMS = $(EXECUTABLES) $(COMPILE_ONLY)
 
 dist_check_SCRIPTS = odpthreads_as_processes odpthreads_as_pthreads
 
-chksum_SOURCES = chksum.c
-macros_SOURCES = macros.c
+odph_chksum_SOURCES = chksum.c
+odph_macros_SOURCES = macros.c
 odpthreads_SOURCES = odpthreads.c
-parse_SOURCES = parse.c
-stress_SOURCES = stress.c
-version_SOURCES = version.c
-debug_SOURCES = debug.c
+odph_parse_SOURCES = parse.c
+odph_stress_SOURCES = stress.c
+odph_version_SOURCES = version.c
+odph_debug_SOURCES = debug.c
 
 # If building out-of-tree, make check will not copy the scripts and data to the
 # $(builddir) assuming that all commands are run locally. However this prevents
