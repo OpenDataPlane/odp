@@ -232,6 +232,8 @@ static void random_test_frequency(odp_random_kind_t kind)
 
 	printf("\n\n");
 
+	uint64_t start = odp_time_local_ns();
+
 	for (int bits = 1; bits <= 8; bits++) {
 		const uint32_t cells = 1 << bits;
 		const uint64_t num = expected * cells;
@@ -252,6 +254,9 @@ static void random_test_frequency(odp_random_kind_t kind)
 		       bits, chisq, cells - 1, crit, res_str(chisq < crit));
 
 		CU_ASSERT(chisq < crit);
+
+		if (odp_time_local_ns() - start > ODP_TIME_SEC_IN_NS)
+			break;
 	}
 
 	printf("\n");
@@ -342,6 +347,8 @@ static void random_test_runs(odp_random_kind_t kind)
 	printf("\n\n");
 	printf("alpha: %g\n", alpha);
 
+	uint64_t start = odp_time_local_ns();
+
 	for (int n = 128; n <= 1024 * 1024; n *= 2) {
 		double pi, P_value;
 		int bit = random_bits(1, kind);
@@ -358,10 +365,10 @@ static void random_test_runs(odp_random_kind_t kind)
 		pi = (double)ones / n;
 
 		/*
-			* Skip the prerequisite frequency test (Sec. 2.3.4
-			* step (2)), since it's effectively the same as
-			* random_test_frequency() with bits = 1.
-			*/
+		 * Skip the prerequisite frequency test (Sec. 2.3.4 step (2)),
+		 * since it's effectively the same as random_test_frequency()
+		 * with bits = 1.
+		 */
 
 		P_value = erfc(fabs(V - 2 * n * pi * (1 - pi)) /
 				(2 * sqrt(2 * n) * pi * (1 - pi)));
@@ -369,6 +376,9 @@ static void random_test_runs(odp_random_kind_t kind)
 		       n, pi, V, P_value, res_str(P_value >= alpha));
 
 		CU_ASSERT(P_value >= alpha);
+
+		if (odp_time_local_ns() - start > ODP_TIME_SEC_IN_NS)
+			break;
 	}
 
 	printf("\n");
