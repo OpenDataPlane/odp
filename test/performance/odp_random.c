@@ -531,8 +531,6 @@ int main(int argc, char **argv)
 		global->thread_arg[i].data = addr + i * size;
 	}
 
-	odp_shm_print_all();
-
 	switch (odp_random_max_kind()) {
 	case ODP_RANDOM_TRUE:
 		test_type(instance, global, ODP_RANDOM_TRUE);
