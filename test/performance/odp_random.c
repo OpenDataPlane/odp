@@ -77,15 +77,15 @@ static void print_usage(void)
 	       "  -m, --mode    Test mode select (default: 0):\n"
 	       "                  0: Data throughput\n"
 	       "                  1: Data generation latency (size: 8B by default)\n"
-	       "  -t, --threads Number of worker threads (default %u)\n"
-	       "  -s, --size    Size of buffer in bytes (default %u)\n"
-	       "  -r, --rounds  Number of test rounds (default %u)\n"
-	       "                Divided by 100 for ODP_RANDOM_TRUE\n"
-	       "  -d, --delay   Delay (nsec) between buffer fills (default %" PRIu64 ").\n"
+	       "  -c, --num_cpu Number of CPUs (worker threads). 0: all available CPUs. Default 1.\n"
+	       "  -s, --size    Size of buffer in bytes. Default %u.\n"
+	       "  -r, --rounds  Number of test rounds. Default %u.\n"
+	       "                Divided by 100 for ODP_RANDOM_TRUE.\n"
+	       "  -d, --delay   Delay (nsec) between buffer fills. Default %" PRIu64 ".\n"
 	       "                Affects only latency mode.\n"
-	       "  -h, --help    This help\n"
+	       "  -h, --help    This help.\n"
 	       "\n",
-	       options_def.num_threads, options_def.size, options_def.rounds, options_def.delay);
+	       options_def.size, options_def.rounds, options_def.delay);
 }
 
 static int parse_options(int argc, char *argv[])
@@ -96,7 +96,7 @@ static int parse_options(int argc, char *argv[])
 
 	static const struct option longopts[] = {
 		{ "mode", required_argument, NULL, 'm' },
-		{ "threads", required_argument, NULL, 't' },
+		{ "num_cpu", required_argument, NULL, 'c' },
 		{ "size", required_argument, NULL, 's' },
 		{ "rounds", required_argument, NULL, 'r' },
 		{ "delay", required_argument, NULL, 'd' },
@@ -104,7 +104,7 @@ static int parse_options(int argc, char *argv[])
 		{ NULL, 0, NULL, 0 }
 	};
 
-	static const char *shortopts = "+m:t:s:r:d:h";
+	static const char *shortopts = "+m:c:s:r:d:h";
 
 	options = options_def;
 	options.size = 0;
@@ -119,7 +119,7 @@ static int parse_options(int argc, char *argv[])
 		case 'm':
 			options.mode = atoi(optarg);
 			break;
-		case 't':
+		case 'c':
 			options.num_threads = atol(optarg);
 			break;
 		case 's':
@@ -155,7 +155,7 @@ static int parse_options(int argc, char *argv[])
 	printf("\nOptions:\n");
 	printf("------------------------\n");
 	printf("  mode:      %i\n", options.mode);
-	printf("  threads:   %i\n", options.num_threads);
+	printf("  num_cpu:   %i\n", options.num_threads);
 	printf("  size:      %u\n", options.size);
 	printf("  rounds:    %u\n", options.rounds);
 	printf("  delay:     %" PRIu64 "\n", options.delay);
