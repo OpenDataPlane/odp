@@ -294,7 +294,7 @@ static int output_summary(test_global_t *global)
 
 	if (global->common_options.is_export) {
 		if (test_common_write("function name,rounds/cpu (M/s),"
-			"total rounds (M/s),cycles/op,nsec/op\n")) {
+			"total rounds (M/s),cycles/round,nsec/round\n")) {
 			test_common_write_term();
 			return -1;
 		}
