@@ -1,3 +1,96 @@
+== OpenDataPlane (1.45.1.0)
+
+=== Backward compatible API changes
+==== Atomic
+* Add new `odp_atomic_fetch_min_u32()` and `odp_atomic_fetch_min_u64()`
+functions for fetching and updating minimum values of atomic `uint32_t` or
+`uint64_t` variables.
+* Add new `odp_atomic_fetch_max_u32()` and `odp_atomic_fetch_max_u64()`
+functions for fetching and updating maximum values of atomic `uint32_t` or
+`uint64_t` variables.
+* Add functions for atomically setting and clearing bits in 32-bit atomic
+variables: `odp_atomic_bit_set_u32()`, `odp_atomic_bit_fetch_set_u32()`,
+`odp_atomic_bit_clr_u32()`, `odp_atomic_bit_fetch_clr_u32()`,
+`odp_atomic_bit_set_rel_u32()`, `odp_atomic_bit_clr_rel_u32()`
+* Add functions for atomically setting and clearing bits in 64-bit atomic
+variables:  `odp_atomic_bit_set_u64()`, `odp_atomic_bit_fetch_set_u64()`,
+`odp_atomic_bit_clr_u64()`, `odp_atomic_bit_fetch_clr_u64()`,
+`odp_atomic_bit_set_rel_u64()`, `odp_atomic_bit_clr_rel_u64()`
+* Add flags for the new atomic functions into `odp_atomic_op_t`.
+
+==== CPU
+* Add instruction prefetch function `odp_prefetch_l1i()`.
+
+==== DMA
+* Add debug function `odp_dma_transfer_id_to_u64()` for getting a printable
+value for a DMA transfer identifier.
+
+==== Init
+* Add debug function `odp_instance_to_u64()` for getting a printable value for
+an ODP instance handle.
+
+==== ML
+* Add functions for supporting quantization of `int16_t` and `uint16_t` data
+types: `odp_ml_fp32_to_uint16()`, `odp_ml_fp32_from_uint16()`,
+`odp_ml_fp32_to_int16()`, `odp_ml_fp32_from_int16()`
+
+==== Packet
+* Add debug function `odp_packet_tx_compl_to_u64()` for getting a printable
+value for a Tx completion handle.
+* Clarify `odp_packet_reset_max_len()` documentation to state that the returned
+length may be less than the current packet data length if data length has been
+increased by utilizing head- or tailroom.
+
+==== Scheduler
+* Add debug function `odp_schedule_group_to_u64()` for getting a printable
+value for a schedule group handle.
+
+==== Std
+* Clarify `odp_bool_t` documentation by stating how the data type can by used
+with standard C booleans and what is considered true/false.
+* Add a field of type `\__uint128_t` in the union in `odp_u128_t` when the
+type is available, so that users that use `__uint128_t` or a compatible type do
+not need to type pun.
+
+=== ABI changes
+* Change ABI type for `odp_bool_t` from `int` to `bool` to comply with the
+clarified API documentation.
+
+=== Implementation
+* Add new config file option `system:cpu_id_static` for selecting whether the
+implementation reads CPU identifier value from OS during every `odp_cpu_id()`
+call or only once during thread initialization (default).
+* Enable the `-fno-strict-aliasing` compiler option. Some sections of code in
+ODP deliberately access the same data via pointers to different types, which is
+undefined behavior in C. The `-fno-strict-aliasing` option prevents the compiler
+from making assumptions about aliasing in these instances.
+
+=== Example Applications
+==== ml_run
+* Add new example application, which loads a given ML model file, runs inference
+using a given input file and compares the output to a given reference file.
+
+=== Performance Tests
+* Add the possibility to export test results into a .csv file by using
+`--test-common-export` option or `TEST_COMMON_EXPORT` environment variable.
+Exporting results is supported by the following applications: `atomic_perf`,
+`bench_buffer`, `bench_misc`, `bench_timer`, `bench_packet`, `bench_pktio_sp`,
+`dma_perf`, `lock_perf`, `pool_perf`, `sched_latency`, `sched_perf`,
+`stash_perf`, `timer_accuracy`
+
+==== bench_packet
+* Add tests for new `odp_packet_reset_meta()` and `odp_packet_reset_max_len()`
+functions.
+* Add tests for event API fast path functions on packets.
+
+==== icache_perf
+* Add new performance test application to measure CPU performance when
+application code size exceeds L1 instruction cache size.
+
+==== packet_gen
+* Add new `-U` option to define custom L3 headers.
+* Add new `none` selection to the L4 protocol -N option.
+
 == OpenDataPlane (1.45.0.0)
 
 === Backward incompatible API changes
