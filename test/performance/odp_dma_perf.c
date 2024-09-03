@@ -65,7 +65,7 @@ enum {
 #define DEF_POLICY SINGLE
 
 #define MAX_SEGS 1024U
-#define MAX_WORKERS 24
+#define MAX_WORKERS 32
 #define MAX_MEMORY (256U * 1024U * 1024U)
 
 #define GIGAS 1000000000
