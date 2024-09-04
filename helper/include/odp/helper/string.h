@@ -46,7 +46,12 @@ ODP_UNUSED static char *odph_strcpy(char *restrict dst, const char *restrict src
 	if (!sz)
 		return dst;
 
+#pragma GCC diagnostic push
+#if __GNUC__ >= 8
+#pragma GCC diagnostic ignored "-Wstringop-truncation"
+#endif
 	strncpy(dst, src, sz - 1);
+#pragma GCC diagnostic pop
 	dst[sz - 1] = 0;
 	return dst;
 }
