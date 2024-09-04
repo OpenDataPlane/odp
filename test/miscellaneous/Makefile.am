@@ -19,7 +19,7 @@ TESTS += odp_api_from_cpp
 endif
 
 noinst_PROGRAMS = odp_api_headers
-odp_api_headers_CFLAGS = $(AM_CFLAGS) -Wconversion
+odp_api_headers_CFLAGS = $(AM_CFLAGS) -Wconversion -fstrict-aliasing
 odp_api_headers_SOURCES = odp_api_headers.c
 
 PKGCONFIG = PKG_CONFIG_PATH=$(libdir)/pkgconfig:$$PKG_CONFIG_PATH pkg-config --cflags --libs
