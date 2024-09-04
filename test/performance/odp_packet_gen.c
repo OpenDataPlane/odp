@@ -86,7 +86,7 @@ enum {
 ODP_STATIC_ASSERT(MAX_PKTIOS <= UINT8_MAX, "Interface index must fit into uint8_t\n");
 
 typedef struct {
-	char name[MAX_HDR_NAME_LEN + 2];
+	char name[MAX_HDR_NAME_LEN + 1];
 	uint64_t value;
 	int64_t diff;
 	uint32_t len;
@@ -447,9 +447,7 @@ static odp_bool_t parse_custom_fields(const char *optarg, test_options_t *opts)
 		}
 
 		hdr = &opts->custom_l3.fields[num_fields];
-		/* Need to have +2 to size as does not compile due to truncation errors even though
-		   destination has ample room. */
-		odph_strcpy(hdr->name, name, MAX_HDR_NAME_LEN + 2);
+		odph_strcpy(hdr->name, name, MAX_HDR_NAME_LEN + 1);
 		hdr->value = value;
 		hdr->diff = diff;
 		hdr->len = len;
