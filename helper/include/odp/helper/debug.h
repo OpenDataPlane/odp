@@ -35,21 +35,6 @@ extern "C" {
  */
 
 /**
- * Assert macro for applications and helper code
- *
- * No code is generated when ODPH_DEBUG=0. Prints error message and aborts when
- * ODPH_DEBUG=1 and 'cond' is false.
- */
-#define ODPH_ASSERT(cond) \
-	do { \
-		if ((ODPH_DEBUG == 1) && (!(cond))) { \
-			fprintf(stderr, "%s:%d:%s(): %s\n", __FILE__, __LINE__,\
-				__func__, #cond); \
-			abort(); \
-		} \
-	} while (0)
-
-/**
  * log level.
  */
 typedef enum odph_log_level {
@@ -69,6 +54,18 @@ do { \
 	if (level == ODPH_LOG_ABORT) \
 		abort(); \
 } while (0)
+
+/**
+ * Assert macro for applications and helper code
+ *
+ * No code is generated when ODPH_DEBUG=0. Prints error message and aborts when
+ * ODPH_DEBUG=1 and 'cond' is false.
+ */
+#define ODPH_ASSERT(cond) \
+	do { \
+		if ((ODPH_DEBUG == 1) && (!(cond))) \
+			ODPH_LOG(ODPH_LOG_ABORT, "%s\n", #cond); \
+	} while (0)
 
 /**
  * Debug printing macro, which prints output when DEBUG flag is set.
