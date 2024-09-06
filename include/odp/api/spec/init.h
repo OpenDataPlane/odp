@@ -403,6 +403,21 @@ int odp_term_abnormal(odp_instance_t instance, uint64_t flags, void *data);
 void odp_log_thread_fn_set(odp_log_func_t func);
 
 /**
+ * Get current log function
+ *
+ * May be called even if ODP is not initialized.
+ *
+ * Returns the function previously set by the calling thread via
+ * odp_log_thread_fn_set(). If no thread specific log function has been set,
+ * returns the log function specified in odp_init_global(). If no log function
+ * was specified in odp_init_global(), returns the default or override log
+ * function (see odp_override_log()). Returns NULL if ODP is not initialized.
+ *
+ * @return Log function
+ */
+odp_log_func_t odp_log_fn_get(void);
+
+/**
  * Get instance handle
  *
  * A successful call outputs the calling thread's ODP instance handle.
