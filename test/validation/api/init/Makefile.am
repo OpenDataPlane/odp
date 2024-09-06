@@ -12,7 +12,8 @@ EXTRA_DIST = \
 	init_feature_disabled.sh \
 	init_log_thread.sh \
 	init_test_param_init.sh \
-	init_test_term_abnormal.sh
+	init_test_term_abnormal.sh \
+	init_log_get_fn.sh
 
 dist_check_SCRIPTS = $(EXTRA_DIST)
 
