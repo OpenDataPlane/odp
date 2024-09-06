@@ -61,7 +61,7 @@ odp_global_data_rw_t *odp_global_rw;
  * during odp_init_global() (enables process mode support). */
 #include <odp/visibility_begin.h>
 
-odp_log_func_t ODP_PRINTF_FORMAT(2, 3) _odp_log_fn;
+odp_log_func_t _odp_log_fn;
 odp_abort_func_t _odp_abort_fn;
 
 #include <odp/visibility_end.h>
@@ -728,6 +728,11 @@ int odp_term_abnormal(odp_instance_t instance, uint64_t flags, void *data ODP_UN
 void odp_log_thread_fn_set(odp_log_func_t func)
 {
 	_odp_this_thread->log_fn = func;
+}
+
+odp_log_func_t odp_log_fn_get(void)
+{
+	return _odp_log_fn_get();
 }
 
 int odp_instance(odp_instance_t *instance)
