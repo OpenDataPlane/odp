@@ -48,9 +48,18 @@ typedef enum odph_log_level {
  */
 #define ODPH_LOG(level, fmt, ...) \
 do { \
-	if (level != ODPH_LOG_DBG || ODPH_DEBUG_PRINT == 1) \
-		fprintf(stderr, "%s:%d:%s(): " fmt, __FILE__, \
-		__LINE__, __func__, ##__VA_ARGS__); \
+	if (level != ODPH_LOG_DBG || ODPH_DEBUG_PRINT == 1) { \
+		const odp_log_func_t fn = odp_log_fn_get(); \
+		if (fn) { \
+			const odp_log_level_t lv = level == ODPH_LOG_ABORT ? ODP_LOG_ABORT : \
+						   level == ODPH_LOG_ERR ? ODP_LOG_ERR : \
+						   ODP_LOG_DBG; \
+			fn(lv, "%s:%d:%s(): " fmt, __FILE__, __LINE__, __func__, ##__VA_ARGS__); \
+		} else { \
+			fprintf(stderr, "%s:%d:%s(): " fmt, __FILE__, __LINE__, __func__, \
+				##__VA_ARGS__); \
+		} \
+	} \
 	if (level == ODPH_LOG_ABORT) \
 		abort(); \
 } while (0)
