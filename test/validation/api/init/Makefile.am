@@ -7,6 +7,7 @@ EXTRA_DIST = \
 	init_defaults.sh \
 	init_abort.sh \
 	init_log.sh \
+	init_log_fn_get.sh \
 	init_num_thr.sh \
 	init_feature_enabled.sh \
 	init_feature_disabled.sh \
