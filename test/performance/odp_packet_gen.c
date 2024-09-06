@@ -132,6 +132,7 @@ typedef struct test_options_t {
 	odp_bool_t promisc_mode;
 	odp_bool_t calc_latency;
 	odp_bool_t calc_cs;
+	odp_bool_t cs_offload;
 	odp_bool_t fill_pl;
 
 	struct vlan_hdr {
@@ -303,8 +304,11 @@ static void print_usage(void)
 	       "                            src_port/dst_port. Comma-separated (no spaces) list of\n"
 	       "                            count values: <src_port count>,<dst_port count>\n"
 	       "                            Default value: 0,0\n"
-	       "  -C, --no_udp_checksum     Do not calculate UDP checksum. Instead, set it to\n"
-	       "                            zero in every packet.\n"
+	       "  -C, --no_udp_checksum     Do not calculate UDP SW checksum. Instead, set it to\n"
+	       "                            zero in every packet, this may be overridden by\n"
+	       "                            '--checksum_offload' option.\n"
+	       "  -X, --checksum_offload    Enable L4 checksum offloads: checksums are checked\n"
+	       "                            at input and inserted at output.\n"
 	       "  -A, --no_payload_fill     Do not fill payload. By default, payload is filled\n"
 	       "                            with a pattern until the end of first packet\n"
 	       "                            segment.\n"
@@ -530,6 +534,7 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 		{"latency",     no_argument,       NULL, 'a'},
 		{"c_mode",      required_argument, NULL, 'c'},
 		{"no_udp_checksum", no_argument,   NULL, 'C'},
+		{"checksum_offload", no_argument,  NULL, 'X'},
 		{"no_payload_fill", no_argument,   NULL, 'A'},
 		{"mtu",         required_argument, NULL, 'M'},
 		{"quit",        required_argument, NULL, 'q'},
@@ -541,7 +546,7 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+i:e:r:t:n:N:l:L:D:m:M:b:x:g:v:s:d:o:p:c:CAq:u:w:W:PaU:h";
+	static const char *shortopts = "+i:e:r:t:n:N:l:L:D:m:M:b:x:g:v:s:d:o:p:c:CXAq:u:w:W:PaU:h";
 
 	test_options->num_pktio  = 0;
 	test_options->num_rx     = 1;
@@ -558,6 +563,7 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 	test_options->promisc_mode = 0;
 	test_options->calc_latency = 0;
 	test_options->calc_cs    = 1;
+	test_options->cs_offload = 0;
 	test_options->fill_pl    = 1;
 	odph_strcpy(test_options->ipv4_src_s, "192.168.0.1",
 		    sizeof(test_options->ipv4_src_s));
@@ -755,6 +761,9 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 		case 'C':
 			test_options->calc_cs = 0;
 			break;
+		case 'X':
+			test_options->cs_offload = 1;
+			break;
 		case 'A':
 			test_options->fill_pl = 0;
 			break;
@@ -896,6 +905,18 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 	if (test_options->calc_latency)
 		req_len += sizeof(ts_data_t);
 
+	if (test_options->num_custom_l3 && test_options->cs_offload) {
+		ODPH_ERR("Error: Checksum offloading supported only with IP\n");
+		return -1;
+	}
+
+	/* Keep '--no_udp_checksum' only if UDP is the L4 protocol */
+	if (test_options->l4_proto != L4_PROTO_UDP)
+		test_options->calc_cs = 1;
+
+	if (test_options->cs_offload)
+		test_options->calc_cs = 0;
+
 	if (req_len > pkt_len) {
 		ODPH_ERR("Error: Headers do not fit into packet length of %" PRIu32 " bytes "
 			 "(min %" PRIu32 " bytes required)\n", pkt_len, req_len);
@@ -988,7 +1009,8 @@ static int open_pktios(test_global_t *global)
 	printf("  promisc mode:      %s\n", test_options->promisc_mode ? "enabled" : "disabled");
 	printf("  transmit mode:     %i\n", test_options->tx_mode);
 	printf("  measure latency:   %s\n", test_options->calc_latency ? "enabled" : "disabled");
-	printf("  UDP checksum:      %s\n", test_options->calc_cs ? "enabled" : "disabled");
+	printf("  UDP SW checksum:   %s\n", test_options->calc_cs ? "enabled" : "disabled");
+	printf("  Checksum offload:  %s\n", test_options->cs_offload ? "enabled" : "disabled");
 	printf("  payload filling:   %s\n", test_options->fill_pl ? "enabled" : "disabled");
 	printf("  tx burst size:     %u\n", test_options->burst_size);
 	printf("  tx bursts:         %u\n", test_options->bursts);
@@ -1192,6 +1214,51 @@ static int open_pktios(test_global_t *global)
 		}
 
 		odp_pktio_config_init(&pktio_config);
+
+		if (test_options->cs_offload) {
+			if (test_options->l4_proto == L4_PROTO_UDP) {
+				if (pktio_capa.config.pktin.bit.udp_chksum &&
+				    pktio_capa.config.pktin.bit.drop_udp_err) {
+					pktio_config.pktin.bit.udp_chksum = 1;
+					pktio_config.pktin.bit.drop_udp_err = 1;
+				} else {
+					ODPH_ERR("Warning (%s): UDP checksum offload at RX not "
+						 "properly supported, leaving it disabled.\n",
+						 name);
+				}
+
+				if (!pktio_capa.config.pktout.bit.udp_chksum) {
+					ODPH_ERR("Error (%s): UDP checksum offload at TX not "
+						 "properly supported.\n", name);
+					return -1;
+				}
+
+				pktio_config.pktout.bit.udp_chksum_ena = 1;
+				pktio_config.pktout.bit.udp_chksum = 1;
+			}
+
+			if (test_options->l4_proto == L4_PROTO_TCP) {
+				if (pktio_capa.config.pktin.bit.tcp_chksum &&
+				    pktio_capa.config.pktin.bit.drop_tcp_err) {
+					pktio_config.pktin.bit.tcp_chksum = 1;
+					pktio_config.pktin.bit.drop_tcp_err = 1;
+				} else {
+					ODPH_ERR("Warning (%s): TCP checksum offload at RX not "
+						 "properly supported, leaving it disabled.\n",
+						 name);
+				}
+
+				if (!pktio_capa.config.pktout.bit.tcp_chksum) {
+					ODPH_ERR("Error (%s): TCP checksum offload at TX not "
+						 "properly supported.\n", name);
+					return -1;
+				}
+
+				pktio_config.pktout.bit.tcp_chksum_ena = 1;
+				pktio_config.pktout.bit.tcp_chksum = 1;
+			}
+		}
+
 		pktio_config.parser.layer = ODP_PROTO_LAYER_ALL;
 
 		odp_pktio_config(pktio, &pktio_config);
@@ -1767,7 +1834,8 @@ static int init_packets(test_global_t *global, int pktio,
 	return 0;
 }
 
-static inline void update_tcp_hdr(odp_packet_t pkt, odp_packet_t base_pkt, uint32_t hdr_len)
+static inline void update_tcp_hdr(odp_packet_t pkt, odp_packet_t base_pkt, uint32_t hdr_len,
+				  odp_bool_t calc_cs)
 {
 	odph_tcphdr_t *tcp = odp_packet_l4_ptr(pkt, NULL);
 	odph_tcphdr_t *tcp_base = odp_packet_l4_ptr(base_pkt, NULL);
@@ -1778,7 +1846,8 @@ static inline void update_tcp_hdr(odp_packet_t pkt, odp_packet_t base_pkt, uint3
 	/* Last used sequence number is stored in the base packet */
 	tcp_base->seq_no = tcp->seq_no;
 
-	odph_tcp_chksum_set(pkt);
+	if (calc_cs)
+		odph_tcp_chksum_set(pkt);
 }
 
 static inline int update_rand_data(uint8_t *data, uint32_t data_len)
@@ -1863,7 +1932,7 @@ static int alloc_packets(odp_pool_t pool, odp_packet_t *pkt_tbl, uint32_t num,
 static inline uint32_t form_burst(odp_packet_t out_pkt[], uint32_t burst_size, uint32_t num_bins,
 				  uint32_t burst, odp_packet_t *pkt_tbl, odp_pool_t pool,
 				  int tx_mode, odp_bool_t calc_latency, uint32_t hdr_len,
-				  odp_bool_t calc_udp_cs, uint64_t *total_bytes, uint8_t l4_proto,
+				  odp_bool_t calc_cs, uint64_t *total_bytes, uint8_t l4_proto,
 				  const uint16_t *rand_data)
 {
 	uint32_t i, idx;
@@ -1908,8 +1977,8 @@ static inline uint32_t form_burst(odp_packet_t out_pkt[], uint32_t burst_size, u
 				set_timestamp(out_pkt[i], hdr_len);
 
 			if (l4_proto == L4_PROTO_TCP)
-				update_tcp_hdr(out_pkt[i], pkt, hdr_len);
-			else if (l4_proto == L4_PROTO_UDP && calc_latency && calc_udp_cs)
+				update_tcp_hdr(out_pkt[i], pkt, hdr_len, calc_cs);
+			else if (l4_proto == L4_PROTO_UDP && calc_latency && calc_cs)
 				odph_udp_chksum_set(out_pkt[i]);
 		}
 
