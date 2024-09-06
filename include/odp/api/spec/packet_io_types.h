@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2013-2018 Linaro Limited
- * Copyright (c) 2020-2023 Nokia
+ * Copyright (c) 2020-2024 Nokia
  */
 
 /**
@@ -777,7 +777,10 @@ typedef enum odp_lso_modify_t {
 	ODP_LSO_ADD_PAYLOAD_LEN = 0x2,
 
 	/** Add number of payload bytes in all previous segments */
-	ODP_LSO_ADD_PAYLOAD_OFFSET = 0x4
+	ODP_LSO_ADD_PAYLOAD_OFFSET = 0x4,
+
+	/** Write bits in the first, middle and last segment */
+	ODP_LSO_WRITE_BITS,
 
 } odp_lso_modify_t;
 
@@ -856,6 +859,9 @@ typedef struct odp_lso_capability_t {
 
 		/** ODP_LSO_ADD_PAYLOAD_OFFSET support */
 		uint16_t add_payload_offset:1;
+
+		/** ODP_LSO_WRITE_BITS support */
+		uint16_t write_bits:1;
 
 	} mod_op;
 
@@ -1080,6 +1086,18 @@ typedef struct odp_pktio_capability_t {
 
 } odp_pktio_capability_t;
 
+/** Parameters for ODP_LSO_WRITE_BITS custom operation */
+typedef struct odp_lso_write_bits_t {
+	/** Bitmask to select which bits to write */
+	uint8_t mask[1];
+
+	/** Value to be written using the mask:
+	 *  new_value[n] = (old_value[n] & ~mask[n]) | (value[n] & mask[n])
+	 */
+	uint8_t value[1];
+
+} odp_lso_write_bits_t;
+
 /**
  * LSO profile parameters
  */
@@ -1089,8 +1107,10 @@ typedef struct odp_lso_profile_param_t {
 	 *
 	 * Selects on which protocol LSO operation performs segmentation (e.g. IP fragmentation vs.
 	 * TCP segmentation). When ODP_LSO_PROTO_CUSTOM is selected, only custom field
-	 * modifications are performed. The default value is ODP_LSO_PROTO_NONE. Check LSO
-	 * capability for supported protocols.
+	 * modifications are performed. Packet content is not modified when a packet is not
+	 * segmented.
+	 *
+	 * The default value is ODP_LSO_PROTO_NONE. Check LSO capability for supported protocols.
 	 */
 	odp_lso_protocol_t lso_proto;
 
@@ -1099,6 +1119,12 @@ typedef struct odp_lso_profile_param_t {
 	 *
 	 * Set lso_proto to ODP_LSO_PROTO_CUSTOM when using custom fields. Fields are defined
 	 * in the same order they appear in the packet.
+	 *
+	 * Fields may not modify overlapping packet bytes except as follows:
+	 * - An ODP_LSO_WRITE_BITS operation may modify the same byte as an ODP_LSO_ADD_* operation.
+	 *   In that case the write-bits operation is done after the add operation, overwriting
+	 *   some of the bits written by the add operation. Such write-bits field must appear
+	 *   after the overlapping add field.
 	 */
 	struct {
 		/** Custom field to be modified by LSO */
@@ -1111,9 +1137,23 @@ typedef struct odp_lso_profile_param_t {
 			/** Field offset in bytes from packet start */
 			uint32_t offset;
 
-			/** Field size in bytes. Valid values are 1, 2, 4, and 8 bytes. */
+			/** Field size in bytes. Valid values are 1, 2, 4, and 8 bytes.
+			 *  Must be set to 1 in ODP_LSO_WRITE_BITS operation.
+			 */
 			uint8_t size;
 
+			/** Operation specific parameters */
+			union {
+				/** Parameters for ODP_LSO_WRITE_BITS operation */
+				struct {
+					/** bits to write in the first segment */
+					odp_lso_write_bits_t first_seg;
+					/** bits to write in middle segments */
+					odp_lso_write_bits_t middle_seg;
+					/** bits to write in the last segment */
+					odp_lso_write_bits_t last_seg;
+				} write_bits;
+			};
 		} field[ODP_LSO_MAX_CUSTOM];
 
 		/** Number of custom fields specified. The default value is 0. */
