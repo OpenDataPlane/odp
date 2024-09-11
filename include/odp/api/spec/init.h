@@ -89,7 +89,7 @@ typedef enum {
  * @return The number of characters logged on success
  * @retval <0 on failure
  */
-int odp_override_log(odp_log_level_t level, const char *fmt, ...);
+int odp_override_log(odp_log_level_t level, const char *fmt, ...) ODP_PRINTF_FORMAT(2, 3);
 
 /**
  * ODP abort function
@@ -114,7 +114,7 @@ int odp_override_log(odp_log_level_t level, const char *fmt, ...);
 void odp_override_abort(void) ODP_NORETURN;
 
 /** Replaceable logging function */
-typedef int (*odp_log_func_t)(odp_log_level_t level, const char *fmt, ...);
+typedef int (*odp_log_func_t)(odp_log_level_t level, const char *fmt, ...) ODP_PRINTF_FORMAT(2, 3);
 
 /** Replaceable abort function */
 typedef void (*odp_abort_func_t)(void) ODP_NORETURN;
