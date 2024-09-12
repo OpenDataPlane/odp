@@ -51,6 +51,7 @@ extern "C" {
 #include <odp/api/classification.h>
 #include <odp/api/rwlock.h>
 #include <odp/api/event.h>
+#include <odp/api/event_vector.h>
 #include <odp/api/random.h>
 #include <odp/api/errno.h>
 #include <odp/api/thrmask.h>
