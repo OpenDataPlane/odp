@@ -462,6 +462,11 @@ typedef struct odp_ipsec_config_t {
 	 * the application through the default queue and the SA destination
 	 * queues. It does not affect packets delivered through pktio
 	 * input queues.
+	 *
+	 * Generating vectors of packets can be enabled either through this
+	 * configuration or by using a destination queue(s) which has event
+	 * vector generation enabled. Both options cannot be enabled
+	 * simultaneously for the same pktio device.
 	 */
 	odp_pktin_vector_config_t vector;
 

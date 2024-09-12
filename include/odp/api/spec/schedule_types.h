@@ -13,6 +13,7 @@
 #define ODP_API_SPEC_SCHEDULE_TYPES_H_
 #include <odp/visibility_begin.h>
 
+#include <odp/api/event_vector_types.h>
 #include <odp/api/std_types.h>
 #include <odp/api/thrmask.h>
 
@@ -241,6 +242,9 @@ typedef struct odp_schedule_capability_t {
 	/** Order wait support. If not supported, odp_schedule_order_wait()
 	 *  does nothing. */
 	odp_support_t order_wait;
+
+	/** Event vector generation capabilities */
+	odp_event_vector_capability_t vector;
 
 } odp_schedule_capability_t;
 
