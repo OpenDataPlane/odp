@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright (c) 2021-2024 Nokia
+ * Copyright (c) 2021-2025 Nokia
  */
 
 /**
@@ -382,6 +382,38 @@ typedef struct odp_pool_capability_t {
 		odp_pool_stats_opt_t stats;
 	} vector;
 
+	/** Event vector pool capabilities */
+	struct {
+		/** Maximum number of event vector pools */
+		uint32_t max_pools;
+
+		/** Maximum number of vector events in a pool
+		 *
+		 * The value of zero means that limited only by the available
+		 * memory size for the pool. */
+		uint32_t max_num;
+
+		/** Maximum number of handles (such as odp_packet_t) in a vector. */
+		uint32_t max_size;
+
+		/** Maximum user area size in bytes */
+		uint32_t max_uarea_size;
+
+		/** Pool user area persistence
+		 *
+		 * See buf.uarea_persistence for details. */
+		odp_bool_t uarea_persistence;
+
+		/** Minimum size of thread local cache */
+		uint32_t min_cache_size;
+
+		/** Maximum size of thread local cache */
+		uint32_t max_cache_size;
+
+		/** Supported statistics counters */
+		odp_pool_stats_opt_t stats;
+	} event_vector;
+
 } odp_pool_capability_t;
 
 /**
@@ -400,7 +432,7 @@ typedef struct odp_pool_pkt_subparam_t {
  * Pool types
  */
 typedef enum odp_pool_type_t {
-	/** Packet pool*/
+	/** Packet pool */
 	ODP_POOL_PACKET = ODP_EVENT_PACKET,
 
 	/** Buffer pool */
@@ -416,6 +448,9 @@ typedef enum odp_pool_type_t {
 	 * @see ODP_EVENT_PACKET_VECTOR
 	 */
 	ODP_POOL_VECTOR,
+
+	/** Event vector pool */
+	ODP_POOL_EVENT_VECTOR,
 
 	/** DMA completion event pool */
 	ODP_POOL_DMA_COMPL,
@@ -612,6 +647,27 @@ typedef struct odp_pool_param_t {
 		 */
 		uint32_t cache_size;
 	} vector;
+
+	/** Parameters for event vector pools */
+	struct {
+		/** Number of vectors in the pool */
+		uint32_t num;
+
+		/** Maximum number of handles (such as odp_packet_t) in a vector. */
+		uint32_t max_size;
+
+		/** Minimum user area size in bytes. The maximum value is defined by
+		 *  pool capability event_vector.max_uarea_size. Specify as 0 if no
+		 *  user area is needed. The default value is 0.
+		 */
+		uint32_t uarea_size;
+
+		/** Maximum number of vectors cached locally per thread
+		 *
+		 *  See buf.cache_size documentation for details.
+		 */
+		uint32_t cache_size;
+	} event_vector;
 
 	/** Parameters for user area initialization */
 	struct {
