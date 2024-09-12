@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2013-2018 Linaro Limited
- * Copyright (c) 2019-2021 Nokia
+ * Copyright (c) 2019-2024 Nokia
  */
 
 /**
@@ -27,7 +27,9 @@ extern "C" {
 #include <odp/api/thread.h>
 #include <odp/api/event.h>
 #include <odp_event_internal.h>
+
 #include <stddef.h>
+#include <stdint.h>
 
 /* Internal buffer header */
 typedef struct ODP_ALIGNED_CACHE odp_buffer_hdr_t {
@@ -56,6 +58,11 @@ static inline void _odp_buffer_subtype_set(odp_buffer_t buffer, int subtype)
 	odp_buffer_hdr_t *buf_hdr = _odp_buf_hdr(buffer);
 
 	buf_hdr->event_hdr.subtype = subtype;
+}
+
+static inline uint32_t _odp_buffer_index(odp_buffer_t buf)
+{
+	return _odp_buf_hdr(buf)->event_hdr.index.event;
 }
 
 #ifdef __cplusplus
