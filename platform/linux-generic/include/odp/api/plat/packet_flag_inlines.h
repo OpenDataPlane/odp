@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2017-2018 Linaro Limited
- * Copyright (c) 2022 Nokia
+ * Copyright (c) 2022-2024 Nokia
  */
 
 /**
@@ -32,6 +32,7 @@ static inline uint64_t _odp_packet_input_flags(odp_packet_t pkt)
 	#define odp_packet_has_eth __odp_packet_has_eth
 	#define odp_packet_has_jumbo __odp_packet_has_jumbo
 	#define odp_packet_has_flow_hash __odp_packet_has_flow_hash
+	#define odp_packet_has_flow_hash_clr __odp_packet_has_flow_hash_clr
 	#define odp_packet_has_ts __odp_packet_has_ts
 	#define odp_packet_has_ipsec __odp_packet_has_ipsec
 	#define odp_packet_has_eth_bcast __odp_packet_has_eth_bcast
@@ -104,6 +105,14 @@ _ODP_INLINE int odp_packet_has_flow_hash(odp_packet_t pkt)
 
 	flags.all = _odp_packet_input_flags(pkt);
 	return flags.flow_hash;
+}
+
+_ODP_INLINE void odp_packet_has_flow_hash_clr(odp_packet_t pkt)
+{
+	_odp_packet_input_flags_t *flags = _odp_pkt_get_ptr(pkt, _odp_packet_input_flags_t,
+							    input_flags);
+
+	flags->flow_hash = 0;
 }
 
 _ODP_INLINE int odp_packet_has_ts(odp_packet_t pkt)
