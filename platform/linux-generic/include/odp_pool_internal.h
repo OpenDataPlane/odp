@@ -64,36 +64,31 @@ typedef struct pool_t {
 	uint8_t          memset_mark;
 	uint8_t          type;
 	uint8_t          pool_ext;
-	char             name[ODP_POOL_NAME_LEN];
-	odp_pool_param_t params;
+	pool_ring_t     *ring;
 	uint32_t         ring_mask;
 	uint32_t         cache_size;
 	uint32_t         burst_size;
-	odp_shm_t        shm;
-	odp_shm_t        uarea_shm;
-	uint64_t         shm_size;
-	uint64_t         uarea_shm_size;
 	uint32_t         num;
-	uint32_t         align;
 	uint32_t         headroom;
 	uint32_t         tailroom;
 	uint32_t         seg_len;
 	uint32_t         max_seg_len;
 	uint32_t         max_len;
 	uint32_t         param_uarea_size;
+
+	/* --- 64-byte cache line boundary --- */
+
 	uint32_t         uarea_size;
 	uint32_t         block_size;
 	uint32_t         block_offset;
-	uint32_t         num_populated;
 	uint32_t         trailer_size;
 	uint8_t         *base_addr;
 	uint8_t         *max_addr;
-	uint8_t         *uarea_base_addr;
-	odp_pool_type_t  type_2;
-	odp_pool_ext_param_t ext_param;
 	uint32_t         ext_head_offset;
 	uint32_t         skipped_blocks;
-	uint8_t          mem_from_huge_pages;
+	odp_pool_param_t params;
+	odp_pool_ext_param_t ext_param;
+
 	const struct _odp_pool_mem_src_ops_t *mem_src_ops;
 	/* Private area for memory source operations */
 	uint8_t mem_src_data[_ODP_POOL_MEM_SRC_DATA_SIZE] ODP_ALIGNED_CACHE;
@@ -108,8 +103,19 @@ typedef struct pool_t {
 
 	pool_cache_t     local_cache[ODP_THREAD_COUNT_MAX];
 
+	/* --- Control path data --- */
+
+	odp_shm_t        shm;
+	uint64_t         shm_size;
 	odp_shm_t        ring_shm;
-	pool_ring_t     *ring;
+	odp_shm_t        uarea_shm;
+	uint64_t         uarea_shm_size;
+	uint8_t         *uarea_base_addr;
+	uint32_t         align;
+	uint32_t         num_populated;
+	odp_pool_type_t  type_2;
+	uint8_t          mem_from_huge_pages;
+	char             name[ODP_POOL_NAME_LEN];
 
 } pool_t;
 
