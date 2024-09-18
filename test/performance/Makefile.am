@@ -25,6 +25,7 @@ COMPILE_ONLY = odp_cpu_bench \
 	       odp_dma_perf \
 	       odp_ipsec \
 	       odp_l2fwd \
+	       odp_l2fwd_perf \
 	       odp_packet_gen \
 	       odp_pktio_ordered \
 	       odp_sched_latency \
@@ -79,6 +80,8 @@ odp_dmafwd_SOURCES = odp_dmafwd.c
 odp_dma_perf_SOURCES = odp_dma_perf.c
 odp_icache_perf_SOURCES = odp_icache_perf.c
 odp_ipsec_SOURCES = odp_ipsec.c
+odp_l2fwd_SOURCES = odp_l2fwd.c
+odp_l2fwd_perf_SOURCES = odp_l2fwd_perf.c
 odp_lock_perf_SOURCES = odp_lock_perf.c
 odp_mem_perf_SOURCES = odp_mem_perf.c
 odp_packet_gen_SOURCES = odp_packet_gen.c

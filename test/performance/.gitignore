@@ -16,6 +16,7 @@ odp_icache_perf
 odp_ipsec
 odp_ipsecfwd
 odp_l2fwd
+odp_l2fwd_perf
 odp_lock_perf
 odp_mem_perf
 odp_packet_gen
