@@ -199,32 +199,32 @@ void odp_ml_config_init(odp_ml_config_t *config)
 int odp_ml_config(const odp_ml_config_t *config)
 {
 	if (!config) {
-		_ODP_ERR("Error: config must not be NULL\n");
+		_ODP_ERR("Config must not be NULL\n");
 		return -1;
 	}
 
 	if (config->max_model_size == 0 || config->max_models_created == 0 ||
 	    config->max_models_loaded == 0) {
-		_ODP_ERR("Error: max_model_size, max_models_created and max_models_loaded"
+		_ODP_ERR("max_model_size, max_models_created and max_models_loaded"
 			 " must be bigger than 0\n");
 		return -1;
 	}
 
 	if (config->max_models_loaded > config->max_models_created) {
-		_ODP_ERR("Error: max_models_loaded %d exceeds max_models_created %d\n",
+		_ODP_ERR("max_models_loaded %d exceeds max_models_created %d\n",
 			 config->max_models_loaded, config->max_models_created);
 		return -1;
 	}
 
 	if (config->max_models_created > ML_MAX_MODELS_CREATED) {
-		_ODP_ERR("Error: max_models_created %d exceeds maximum number"
+		_ODP_ERR("max_models_created %d exceeds maximum number"
 			 " of models that can be created in this driver %d\n",
 			 config->max_models_created, ML_MAX_MODELS_CREATED);
 		return -1;
 	}
 
 	if (config->max_models_loaded > ML_MAX_MODELS_LOADED) {
-		_ODP_ERR("Error: max_models_loaded %d exceeds maximum number"
+		_ODP_ERR("max_models_loaded %d exceeds maximum number"
 			 " of models that can be loaded in this driver %d\n",
 			 config->max_models_loaded, ML_MAX_MODELS_LOADED);
 		return -1;
@@ -879,7 +879,7 @@ odp_ml_model_t odp_ml_model_create(const char *name, const odp_ml_model_param_t 
 
 	status = ort_api->CreateSessionOptions(&session_opts);
 	if (check_ortstatus(status) || !session_opts) {
-		_ODP_ERR("Error: CreateSessionOptions failed.\n");
+		_ODP_ERR("CreateSessionOptions failed.\n");
 		mdl->state = ML_STATE_FREE;
 		odp_ticketlock_unlock(&mdl->lock);
 		return ODP_ML_MODEL_INVALID;
@@ -1249,7 +1249,7 @@ int odp_ml_model_extra_stats(odp_ml_model_t model, uint64_t stats[] ODP_UNUSED, 
 void odp_ml_compl_pool_param_init(odp_ml_compl_pool_param_t *pool_param)
 {
 	if (odp_unlikely(!pool_param)) {
-		_ODP_ERR("Param 'pool_param' must not NULL\n");
+		_ODP_ERR("Param 'pool_param' must not be NULL\n");
 		return;
 	}
 
@@ -1714,14 +1714,14 @@ static int verify_run_params(odp_ml_model_t model, const odp_ml_data_t *data,
 	/* Make sure that the number of input data segments equals or bigger than
 	 * the number of model inputs. */
 	if (mdl->info.num_inputs > data->num_input_seg) {
-		_ODP_ERR("The num of input data segments %u must not less than "
+		_ODP_ERR("The num of input data segments %u must not be less than "
 			 "the number of model inputs %u\n", data->num_input_seg,
 			 mdl->info.num_inputs);
 		return -1;
 	}
 
 	if (mdl->info.num_outputs > data->num_output_seg) {
-		_ODP_ERR("The num of output data segments %u must not less than "
+		_ODP_ERR("The num of output data segments %u must not be less than "
 			 "the number of model outputs %u\n", data->num_output_seg,
 			 mdl->info.num_outputs);
 		return -1;
@@ -1747,13 +1747,13 @@ static int verify_run_params(odp_ml_model_t model, const odp_ml_data_t *data,
 
 	for (uint32_t i = 0; i < data->num_input_seg; i++) {
 		if (data->input_seg[i].addr == NULL) {
-			_ODP_ERR("data->input_seg[%u].addr must not NULL\n", i);
+			_ODP_ERR("data->input_seg[%u].addr must not be NULL\n", i);
 			return -1;
 		};
 
 		if (index_new) {
 			if (input_index > mdl->info.num_inputs - 1) {
-				_ODP_ERR("Too much number of input segments given\n");
+				_ODP_ERR("Too many input segments given\n");
 				return -1;
 			}
 
@@ -1809,13 +1809,13 @@ static int verify_run_params(odp_ml_model_t model, const odp_ml_data_t *data,
 
 	for (uint32_t i = 0; i < data->num_output_seg; i++) {
 		if (data->output_seg[i].addr == NULL) {
-			_ODP_ERR("data->output_seg[%u].addr must not NULL\n", i);
+			_ODP_ERR("data->output_seg[%u].addr must not be NULL\n", i);
 			return -1;
 		}
 
 		if (index_new) {
 			if (output_index > mdl->info.num_outputs - 1) {
-				_ODP_ERR("Too much number of output segments given\n");
+				_ODP_ERR("Too many output segments given\n");
 				return -1;
 			}
 
