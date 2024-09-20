@@ -59,7 +59,7 @@ enum {
 	/* Bad input */
 	ML_BAD_INPUT,
 
-	/* Fail from underlying library onnxruntime */
+	/* Fail from underlying library */
 	ML_LIB_FAILED,
 
 	/* Bad output */
@@ -90,7 +90,7 @@ typedef struct ml_input_t {
 	uint64_t size;
 } ml_input_t;
 
-/* Onnxruntime model info */
+/* Model info */
 typedef struct ml_model_t {
 	/* Guards state, which must be accessed atomically */
 	odp_ticketlock_t	lock;
@@ -836,7 +836,8 @@ odp_ml_model_t odp_ml_model_create(const char *name, const odp_ml_model_param_t 
 	}
 
 	if (odp_unlikely(param->size > _odp_ml_glb->ml_config.max_model_size)) {
-		_ODP_ERR("Model size %" PRIu64 " exceeds maximum model size configured %" PRIu64 "\n",
+		_ODP_ERR("Model size %" PRIu64 " exceeds maximum model size configured %" PRIu64
+			 "\n",
 			 param->size, _odp_ml_glb->ml_config.max_model_size);
 		return ODP_ML_MODEL_INVALID;
 	}
@@ -853,7 +854,7 @@ odp_ml_model_t odp_ml_model_create(const char *name, const odp_ml_model_param_t 
 		return ODP_ML_MODEL_INVALID;
 	}
 
-	/* Find an emtpy slot to store the new model */
+	/* Find an empty slot to store the new model */
 	for (i = 0; i < ML_MAX_MODELS_CREATED; i++) {
 		if (_odp_ml_glb->models[i].state)
 			continue;
@@ -1139,10 +1140,10 @@ static void print_shape(const odp_ml_shape_info_t *shape)
 
 void odp_ml_model_print(odp_ml_model_t model)
 {
-	ml_model_t *mdl	= ml_model_from_handle(model);
-	const odp_ml_model_info_t * const info	= &mdl->info;
-	const odp_ml_input_info_t * const input_info = mdl->input_info;
-	const odp_ml_output_info_t * const output_info = mdl->output_info;
+	ml_model_t *mdl = ml_model_from_handle(model);
+	const odp_ml_model_info_t *const info = &mdl->info;
+	const odp_ml_input_info_t *const input_info = mdl->input_info;
+	const odp_ml_output_info_t *const output_info = mdl->output_info;
 
 	if (odp_unlikely(model == ODP_ML_MODEL_INVALID)) {
 		_ODP_ERR("Bad ML model handle\n");
@@ -1409,8 +1410,8 @@ void odp_ml_compl_param_init(odp_ml_compl_param_t *compl_param)
 {
 	memset(compl_param, 0, sizeof(odp_ml_compl_param_t));
 
-	compl_param->queue	= ODP_QUEUE_INVALID;
-	compl_param->event	= ODP_EVENT_INVALID;
+	compl_param->queue = ODP_QUEUE_INVALID;
+	compl_param->event = ODP_EVENT_INVALID;
 }
 
 int odp_ml_model_load(odp_ml_model_t model, odp_ml_load_result_t *result)
