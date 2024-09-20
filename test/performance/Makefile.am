@@ -47,6 +47,7 @@ TESTSCRIPTS = odp_cpu_bench_run.sh \
 	      odp_dma_perf_run.sh \
 	      odp_ipsec_run.sh \
 	      odp_l2fwd_run.sh \
+	      odp_l2fwd_perf_run.sh \
 	      odp_packet_gen_run.sh \
 	      odp_sched_latency_run.sh \
 	      odp_sched_perf_run.sh \
