@@ -114,7 +114,7 @@ typedef struct ml_model_t {
 
 	struct {
 		void *user_ptr;
-	} result[ML_MAX_COMPL_ID];
+	} result[ML_MAX_COMPL_ID + 1];
 } ml_model_t;
 
 typedef struct ml_global_t {
