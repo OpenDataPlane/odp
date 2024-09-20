@@ -894,7 +894,7 @@ odp_ml_model_t odp_ml_model_create(const char *name, const odp_ml_model_param_t 
 
 	/* Store model info */
 	info = &mdl->info;
-	memset(info, 0, sizeof(odp_ml_model_info_t));
+	memset(info, 0, sizeof(*info));
 
 	if (create_ort_model(param, &session, mdl, session_opts)) {
 		mdl->state = ML_STATE_FREE;
@@ -1260,7 +1260,6 @@ void odp_ml_compl_pool_param_init(odp_ml_compl_pool_param_t *pool_param)
 
 odp_pool_t odp_ml_compl_pool_create(const char *name, const odp_ml_compl_pool_param_t *pool_param)
 {
-	odp_pool_t pool;
 	odp_pool_param_t ml_pool_param;
 	uint32_t num = pool_param->num;
 	uint32_t uarea_size = pool_param->uarea_size;
@@ -1293,9 +1292,7 @@ odp_pool_t odp_ml_compl_pool_create(const char *name, const odp_ml_compl_pool_pa
 	ml_pool_param.buf.size           = buf_size;
 	ml_pool_param.buf.uarea_size     = uarea_size;
 
-	pool = _odp_pool_create(name, &ml_pool_param, ODP_POOL_ML_COMPL);
-
-	return pool;
+	return _odp_pool_create(name, &ml_pool_param, ODP_POOL_ML_COMPL);
 }
 
 odp_ml_compl_t odp_ml_compl_alloc(odp_pool_t pool)
