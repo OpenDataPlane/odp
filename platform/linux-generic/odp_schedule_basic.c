@@ -1196,7 +1196,7 @@ static inline int balance_spread(int grp, int prio, int cur_spr)
 	return new_spr;
 }
 
-static inline int copy_from_stash(odp_event_t out_ev[], uint32_t max)
+static inline int copy_from_stash(odp_event_t *restrict out_ev, uint32_t max)
 {
 	int i = 0;
 
