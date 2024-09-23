@@ -112,7 +112,8 @@ static inline int odph_ipv4_csum(odp_packet_t pkt,
 				 odp_u16sum_t *chksum)
 {
 	uint32_t nleft = (uint32_t)(ODPH_IPV4HDR_IHL(ip->ver_ihl) * 4);
-	uint16_t buf[nleft / 2];
+	const int max_ip_header_len = 15 * 4;
+	uint16_t buf[max_ip_header_len];
 	int res;
 
 	if (odp_unlikely(nleft < sizeof(*ip)))
