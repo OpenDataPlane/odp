@@ -325,6 +325,9 @@ free_events:
 			odp_event_free(event[i]);
 	}
 
+	if (ret)
+		ODPH_ERR("Initializing test queues failed.\n");
+
 	return ret;
 }
 
@@ -340,10 +343,8 @@ static int destroy_queues(test_global_t *global)
 	odp_pool_t pool    = global->pool;
 
 	for (i = 0; i < num_queue; i++) {
-		if (queue[i] == ODP_QUEUE_INVALID) {
-			ODPH_ERR("Invalid queue handle (i: %u).\n", i);
+		if (queue[i] == ODP_QUEUE_INVALID)
 			break;
-		}
 
 		for (j = 0; j < num_event; j++) {
 			ev = odp_queue_deq(queue[i]);
@@ -643,10 +644,8 @@ int main(int argc, char **argv)
 
 	global->instance = instance;
 
-	if (create_queues(global)) {
-		ODPH_ERR("Create queues failed.\n");
+	if (create_queues(global))
 		goto destroy;
-	}
 
 	if (start_workers(global)) {
 		ODPH_ERR("Test start failed.\n");
