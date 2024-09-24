@@ -153,6 +153,11 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 		return -1;
 	}
 
+	if (test_options->single && test_options->num_cpu != 1) {
+		ODPH_ERR("Using single prod/cons queue(s) with multiple workers not supported.\n");
+		return -1;
+	}
+
 	return ret;
 }
 
@@ -178,6 +183,7 @@ static int create_queues(test_global_t *global)
 	       nonblock == ODP_BLOCKING ? "NORMAL" :
 	       (nonblock == ODP_NONBLOCKING_LF ? "LOCKFREE" :
 	       (nonblock == ODP_NONBLOCKING_WF ? "WAITFREE" : "???")));
+	printf("  single prod/cons     %d\n", test_options->single);
 	printf("  num rounds           %u\n", num_round);
 	printf("  num queues           %u\n", num_queue);
 	printf("  num events per queue %u\n", num_event);
