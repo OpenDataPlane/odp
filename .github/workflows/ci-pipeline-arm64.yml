@@ -1,7 +1,7 @@
 name: CI arm64
 
 # github.repository has been used to ensure CI is only run on the repo where
-# self-hosted runners are installed. This will prevent [self-hosted, ARM64] CI failing on forks
+# self-hosted runners are installed. This will prevent CI failing on forks.
 
 on: [push, pull_request, merge_group]
 env:
@@ -13,7 +13,7 @@ env:
 jobs:
   Build_gcc:
     if: ${{ github.repository == 'OpenDataPlane/odp' }}
-    runs-on: [self-hosted, ARM64]
+    runs-on: ah-ubuntu_22_04-c7g_2x-50
     strategy:
       fail-fast: false
       matrix:
@@ -30,13 +30,13 @@ jobs:
       - uses: OpenDataPlane/action-clean-up@main
       - uses: actions/checkout@v4
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC=gcc
-               -e CONF="${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-native /odp/scripts/ci/build_${ARCH}.sh
+               -e CONF="${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-graviton3 /odp/scripts/ci/build_${ARCH}.sh
       - if: ${{ failure() }}
         uses: ./.github/actions/build-failure-log
 
   Build_clang:
     if: ${{ github.repository == 'OpenDataPlane/odp' }}
-    runs-on: [self-hosted, ARM64]
+    runs-on: ah-ubuntu_22_04-c7g_2x-50
     strategy:
       fail-fast: false
       matrix:
@@ -55,13 +55,13 @@ jobs:
       - uses: OpenDataPlane/action-clean-up@main
       - uses: actions/checkout@v4
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC=clang
-                -e CONF="${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-native /odp/scripts/ci/build_${ARCH}.sh
+                -e CONF="${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-graviton3 /odp/scripts/ci/build_${ARCH}.sh
       - if: ${{ failure() }}
         uses: ./.github/actions/build-failure-log
 
   Build_static_u22:
     if: ${{ github.repository == 'OpenDataPlane/odp' }}
-    runs-on: [self-hosted, ARM64]
+    runs-on: ah-ubuntu_22_04-c7g_2x-50
     env:
       OS: ubuntu_22.04
       CONF: "--disable-shared --without-openssl --without-pcap"
@@ -74,13 +74,13 @@ jobs:
       - uses: OpenDataPlane/action-clean-up@main
       - uses: actions/checkout@v4
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="gcc-${{matrix.cc_ver}}" -e CXX="g++-${{matrix.cc_ver}}"
-               -e CONF="${CONF} ${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-native /odp/scripts/ci/build_static.sh
+               -e CONF="${CONF} ${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-graviton3 /odp/scripts/ci/build_static.sh
       - if: ${{ failure() }}
         uses: ./.github/actions/build-failure-log
 
   Build_OS:
     if: ${{ github.repository == 'OpenDataPlane/odp' }}
-    runs-on: [self-hosted, ARM64]
+    runs-on: ah-ubuntu_22_04-c7g_2x-50
     strategy:
       fail-fast: false
       matrix:
@@ -90,13 +90,13 @@ jobs:
       - uses: OpenDataPlane/action-clean-up@main
       - uses: actions/checkout@v4
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}"
-               -e CONF="${CONF}" $CONTAINER_NAMESPACE/odp-ci-${{matrix.os}}-${ARCH}-native /odp/scripts/ci/build_${ARCH}.sh
+               -e CONF="${CONF}" $CONTAINER_NAMESPACE/odp-ci-${{matrix.os}}-${ARCH}-graviton3 /odp/scripts/ci/build_${ARCH}.sh
       - if: ${{ failure() }}
         uses: ./.github/actions/build-failure-log
 
   Build_gcc_u22:
     if: ${{ github.repository == 'OpenDataPlane/odp' }}
-    runs-on: [self-hosted, ARM64]
+    runs-on: ah-ubuntu_22_04-c7g_2x-50
     env:
       OS: ubuntu_22.04
     strategy:
@@ -108,24 +108,24 @@ jobs:
       - uses: OpenDataPlane/action-clean-up@main
       - uses: actions/checkout@v4
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="gcc-${{matrix.cc_ver}}" -e CXX="g++-${{matrix.cc_ver}}"
-               -e CONF="${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-native /odp/scripts/ci/build_${ARCH}.sh
+               -e CONF="${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-graviton3 /odp/scripts/ci/build_${ARCH}.sh
       - if: ${{ failure() }}
         uses: ./.github/actions/build-failure-log
 
   Build_out-of-tree:
     if: ${{ github.repository == 'OpenDataPlane/odp' }}
-    runs-on: [self-hosted, ARM64]
+    runs-on: ah-ubuntu_22_04-c7g_2x-50
     steps:
       - uses: OpenDataPlane/action-clean-up@main
       - uses: actions/checkout@v4
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}"
-               -e CONF="${CONF}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-native /odp/scripts/ci/out_of_tree.sh
+               -e CONF="${CONF}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-graviton3 /odp/scripts/ci/out_of_tree.sh
       - if: ${{ failure() }}
         uses: ./.github/actions/build-failure-log
 
   Build_XDP:
     if: ${{ github.repository == 'OpenDataPlane/odp' }}
-    runs-on: [self-hosted, ARM64]
+    runs-on: ah-ubuntu_22_04-c7g_2x-50
     env:
       CONF: "--enable-xdp"
       OS: ubuntu_22.04
@@ -137,13 +137,13 @@ jobs:
       - uses: OpenDataPlane/action-clean-up@main
       - uses: actions/checkout@v4
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}"
-               -e CONF="${CONF}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-native /odp/scripts/ci/build_${ARCH}.sh
+               -e CONF="${CONF}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-graviton3 /odp/scripts/ci/build_${ARCH}.sh
       - if: ${{ failure() }}
         uses: ./.github/actions/build-failure-log
 
   Run_distcheck:
     if: ${{ github.repository == 'OpenDataPlane/odp' }}
-    runs-on: [self-hosted, ARM64]
+    runs-on: ah-ubuntu_22_04-c7g_2x-50
     strategy:
       fail-fast: false
       matrix:
@@ -152,13 +152,13 @@ jobs:
       - uses: OpenDataPlane/action-clean-up@main
       - uses: actions/checkout@v4
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}"
-               -e CONF="${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-native /odp/scripts/ci/distcheck.sh
+               -e CONF="${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-graviton3 /odp/scripts/ci/distcheck.sh
       - if: ${{ failure() }}
         uses: ./.github/actions/run-failure-log
 
   Run_gcc:
     if: ${{ github.repository == 'OpenDataPlane/odp' }}
-    runs-on: [self-hosted, ARM64]
+    runs-on: ah-ubuntu_22_04-c7g_2x-50
     strategy:
       fail-fast: false
       matrix:
@@ -176,7 +176,7 @@ jobs:
       - uses: OpenDataPlane/action-clean-up@main
       - uses: actions/checkout@v4
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC=gcc -e ARCH="${ARCH}"
-               -e CONF="${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-native /odp/scripts/ci/check.sh
+               -e CONF="${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-graviton3 /odp/scripts/ci/check.sh
       - if: ${{ failure() }}
         uses: ./.github/actions/run-failure-log
       - if: ${{ success() }}
@@ -184,7 +184,7 @@ jobs:
 
   Run_clang:
     if: ${{ github.repository == 'OpenDataPlane/odp' }}
-    runs-on: [self-hosted, ARM64]
+    runs-on: ah-ubuntu_22_04-c7g_2x-50
     strategy:
       fail-fast: false
       matrix:
@@ -198,29 +198,29 @@ jobs:
       - uses: OpenDataPlane/action-clean-up@main
       - uses: actions/checkout@v4
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC=clang -e ARCH="${ARCH}"
-               -e CONF="${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-native /odp/scripts/ci/check.sh
+               -e CONF="${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-graviton3 /odp/scripts/ci/check.sh
       - if: ${{ failure() }}
         uses: ./.github/actions/run-failure-log
 
   Run_CFLAGS:
     if: ${{ github.repository == 'OpenDataPlane/odp' }}
-    runs-on: [self-hosted, ARM64]
+    runs-on: ah-ubuntu_22_04-c7g_2x-50
     strategy:
       fail-fast: false
       matrix:
         cc: [gcc, clang]
-        cflags: ['-march=armv8.2-a -O2', '-march=armv8.2-a+crypto -O2']
+        cflags: ['-march=armv8.4-a -O2', '-march=armv8.4-a+crypto -O2']
     steps:
       - uses: OpenDataPlane/action-clean-up@main
       - uses: actions/checkout@v4
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}" -e ARCH="${ARCH}"
-               -e CXX=g++-10 -e CFLAGS="${{matrix.cflags}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-native /odp/scripts/ci/check.sh
+               -e CXX=g++-10 -e CFLAGS="${{matrix.cflags}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-graviton3 /odp/scripts/ci/check.sh
       - if: ${{ failure() }}
         uses: ./.github/actions/run-failure-log
 
   Run_OS:
     if: ${{ github.repository == 'OpenDataPlane/odp' }}
-    runs-on: [self-hosted, ARM64]
+    runs-on: ah-ubuntu_22_04-c7g_2x-50
     strategy:
       fail-fast: false
       matrix:
@@ -229,119 +229,119 @@ jobs:
       - uses: OpenDataPlane/action-clean-up@main
       - uses: actions/checkout@v4
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}" -e ARCH="${ARCH}"
-               -e CONF="${CONF}" $CONTAINER_NAMESPACE/odp-ci-${{matrix.os}}-${ARCH}-native /odp/scripts/ci/check.sh
+               -e CONF="${CONF}" $CONTAINER_NAMESPACE/odp-ci-${{matrix.os}}-${ARCH}-graviton3 /odp/scripts/ci/check.sh
       - if: ${{ failure() }}
         uses: ./.github/actions/run-failure-log
 
   Run_sched_config:
     if: ${{ github.repository == 'OpenDataPlane/odp' }}
-    runs-on: [self-hosted, ARM64]
+    runs-on: ah-ubuntu_22_04-c7g_2x-50
     steps:
       - uses: OpenDataPlane/action-clean-up@main
       - uses: actions/checkout@v4
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}" -e ARCH="${ARCH}"
-               -e CONF="${CONF}" -e ODP_CONFIG_FILE=/odp/platform/linux-generic/test/sched-basic.conf $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-native /odp/scripts/ci/check.sh
+               -e CONF="${CONF}" -e ODP_CONFIG_FILE=/odp/platform/linux-generic/test/sched-basic.conf $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-graviton3 /odp/scripts/ci/check.sh
       - if: ${{ failure() }}
         uses: ./.github/actions/run-failure-log
 
   Run_stash_config:
     if: ${{ github.repository == 'OpenDataPlane/odp' }}
-    runs-on: [self-hosted, ARM64]
+    runs-on: ah-ubuntu_22_04-c7g_2x-50
     steps:
       - uses: OpenDataPlane/action-clean-up@main
       - uses: actions/checkout@v4
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}" -e ARCH="${ARCH}"
-               -e CONF="${CONF}" -e ODP_CONFIG_FILE=/odp/platform/linux-generic/test/stash-custom.conf $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-native /odp/scripts/ci/check.sh
+               -e CONF="${CONF}" -e ODP_CONFIG_FILE=/odp/platform/linux-generic/test/stash-custom.conf $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-graviton3 /odp/scripts/ci/check.sh
       - if: ${{ failure() }}
         uses: ./.github/actions/run-failure-log
 
   Run_scheduler_sp:
     if: ${{ github.repository == 'OpenDataPlane/odp' }}
-    runs-on: [self-hosted, ARM64]
+    runs-on: ah-ubuntu_22_04-c7g_2x-50
     steps:
       - uses: OpenDataPlane/action-clean-up@main
       - uses: actions/checkout@v4
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}" -e ARCH="${ARCH}"
-               -e CONF="${CONF}" -e ODP_SCHEDULER=sp $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-native /odp/scripts/ci/check.sh
+               -e CONF="${CONF}" -e ODP_SCHEDULER=sp $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-graviton3 /odp/scripts/ci/check.sh
       - if: ${{ failure() }}
         uses: ./.github/actions/run-failure-log
 
   Run_scheduler_scalable:
     if: ${{ github.repository == 'OpenDataPlane/odp' }}
-    runs-on: [self-hosted, ARM64]
+    runs-on: ah-ubuntu_22_04-c7g_2x-50
     steps:
       - uses: OpenDataPlane/action-clean-up@main
       - uses: actions/checkout@v4
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}" -e ARCH="${ARCH}"
-               -e CONF="${CONF}" -e ODP_SCHEDULER=scalable -e CI_SKIP=pktio_test_pktin_event_sched $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-native /odp/scripts/ci/check.sh
+               -e CONF="${CONF}" -e ODP_SCHEDULER=scalable -e CI_SKIP=pktio_test_pktin_event_sched $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-graviton3 /odp/scripts/ci/check.sh
       - if: ${{ failure() }}
         uses: ./.github/actions/run-failure-log
 
   Run_process_mode:
     if: ${{ github.repository == 'OpenDataPlane/odp' }}
-    runs-on: [self-hosted, ARM64]
+    runs-on: ah-ubuntu_22_04-c7g_2x-50
     steps:
       - uses: OpenDataPlane/action-clean-up@main
       - uses: actions/checkout@v4
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}" -e ARCH="${ARCH}"
                -e CONF="${CONF}" -e ODP_CONFIG_FILE=/odp/platform/linux-generic/test/process-mode.conf
-               -e ODPH_PROC_MODE=1 $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-native /odp/scripts/ci/check.sh
+               -e ODPH_PROC_MODE=1 $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-graviton3 /odp/scripts/ci/check.sh
       - if: ${{ failure() }}
         uses: ./.github/actions/run-failure-log
 
   Run_inline_timer:
     if: ${{ github.repository == 'OpenDataPlane/odp' }}
-    runs-on: [self-hosted, ARM64]
+    runs-on: ah-ubuntu_22_04-c7g_2x-50
     steps:
       - uses: OpenDataPlane/action-clean-up@main
       - uses: actions/checkout@v4
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}" -e ARCH="${ARCH}"
                -e CONF="${CONF}" -e ODP_CONFIG_FILE=/odp/platform/linux-generic/test/inline-timer.conf
-               $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-native /odp/scripts/ci/check_inline_timer.sh
+               $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-graviton3 /odp/scripts/ci/check_inline_timer.sh
       - if: ${{ failure() }}
         uses: ./.github/actions/run-failure-log
 
   Run_packet_align:
     if: ${{ github.repository == 'OpenDataPlane/odp' }}
-    runs-on: [self-hosted, ARM64]
+    runs-on: ah-ubuntu_22_04-c7g_2x-50
     steps:
       - uses: OpenDataPlane/action-clean-up@main
       - uses: actions/checkout@v4
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}" -e ARCH="${ARCH}"
                -e CONF="${CONF}" -e ODP_CONFIG_FILE=/odp/platform/linux-generic/test/packet_align.conf
-               $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-native /odp/scripts/ci/check_pktio.sh
+               $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-graviton3 /odp/scripts/ci/check_pktio.sh
       - if: ${{ failure() }}
         uses: ./.github/actions/run-failure-log
 
   Run_dpdk-19_11:
     if: ${{ github.repository == 'OpenDataPlane/odp' }}
-    runs-on: [self-hosted, ARM64]
+    runs-on: ah-ubuntu_22_04-c7g_2x-50
     steps:
       - uses: OpenDataPlane/action-clean-up@main
       - uses: actions/checkout@v4
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}" -e ARCH="${ARCH}"
-               -e CONF="${CONF}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-native-dpdk_19.11 /odp/scripts/ci/check.sh
+               -e CONF="${CONF}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-graviton3-dpdk_19.11 /odp/scripts/ci/check.sh
       - if: ${{ failure() }}
         uses: ./.github/actions/run-failure-log
 
   Run_dpdk-20_11:
     if: ${{ github.repository == 'OpenDataPlane/odp' }}
-    runs-on: [self-hosted, ARM64]
+    runs-on: ah-ubuntu_22_04-c7g_2x-50
     steps:
       - uses: OpenDataPlane/action-clean-up@main
       - uses: actions/checkout@v4
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}" -e ARCH="${ARCH}"
-               -e CONF="${CONF}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-native-dpdk_20.11 /odp/scripts/ci/check.sh
+               -e CONF="${CONF}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-graviton3-dpdk_20.11 /odp/scripts/ci/check.sh
       - if: ${{ failure() }}
         uses: ./.github/actions/run-failure-log
 
   Run_dpdk-21_11:
     if: ${{ github.repository == 'OpenDataPlane/odp' }}
-    runs-on: [self-hosted, ARM64]
+    runs-on: ah-ubuntu_22_04-c7g_2x-50
     steps:
       - uses: OpenDataPlane/action-clean-up@main
       - uses: actions/checkout@v4
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}" -e ARCH="${ARCH}"
-               -e CONF="${CONF}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-native-dpdk_21.11 /odp/scripts/ci/check.sh
+               -e CONF="${CONF}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-graviton3-dpdk_21.11 /odp/scripts/ci/check.sh
       - if: ${{ failure() }}
         uses: ./.github/actions/run-failure-log
