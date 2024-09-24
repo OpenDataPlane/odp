@@ -148,8 +148,8 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 	}
 
 	if (test_options->num_queue > MAX_QUEUES) {
-		printf("Too many queues %u. Test maximum %u.\n",
-		       test_options->num_queue, MAX_QUEUES);
+		ODPH_ERR("Too many queues %u. Test maximum %u.\n",
+			 test_options->num_queue, MAX_QUEUES);
 		return -1;
 	}
 
@@ -190,72 +190,69 @@ static int create_queues(test_global_t *global)
 		event[i] = ODP_EVENT_INVALID;
 
 	if (odp_queue_capability(&queue_capa)) {
-		printf("Error: Queue capa failed.\n");
+		ODPH_ERR("Queue capa failed.\n");
 		return -1;
 	}
 
 	if (odp_pool_capability(&pool_capa)) {
-		printf("Error: Pool capa failed.\n");
+		ODPH_ERR("Pool capa failed.\n");
 		return -1;
 	}
 
 	if (nonblock == ODP_BLOCKING) {
 		if (num_queue > queue_capa.plain.max_num) {
-			printf("Max queues supported %u\n",
-			       queue_capa.plain.max_num);
+			ODPH_ERR("Max queues supported %u.\n", queue_capa.plain.max_num);
 			return -1;
 		}
 
 		max_size = queue_capa.plain.max_size;
 		if (max_size && num_event > max_size) {
-			printf("Max queue size supported %u\n", max_size);
+			ODPH_ERR("Max queue size supported %u.\n", max_size);
 			return -1;
 		}
 	} else if (nonblock == ODP_NONBLOCKING_LF) {
 		if (queue_capa.plain.lockfree.max_num == 0) {
-			printf("Lockfree queues not supported\n");
+			ODPH_ERR("Lockfree queues not supported.\n");
 			return -1;
 		}
 
 		if (num_queue > queue_capa.plain.lockfree.max_num) {
-			printf("Max lockfree queues supported %u\n",
-			       queue_capa.plain.lockfree.max_num);
+			ODPH_ERR("Max lockfree queues supported %u.\n",
+				 queue_capa.plain.lockfree.max_num);
 			return -1;
 		}
 
 		max_size = queue_capa.plain.lockfree.max_size;
 		if (max_size && num_event > max_size) {
-			printf("Max lockfree queue size supported %u\n",
-			       max_size);
+			ODPH_ERR("Max lockfree queue size supported %u.\n", max_size);
 			return -1;
 		}
 	} else if (nonblock == ODP_NONBLOCKING_WF) {
 		if (queue_capa.plain.waitfree.max_num == 0) {
-			printf("Waitfree queues not supported\n");
+			ODPH_ERR("Waitfree queues not supported.\n");
 			return -1;
 		}
 
 		if (num_queue > queue_capa.plain.waitfree.max_num) {
-			printf("Max waitfree queues supported %u\n",
-			       queue_capa.plain.waitfree.max_num);
+			ODPH_ERR("Max waitfree queues supported %u.\n",
+				 queue_capa.plain.waitfree.max_num);
 			return -1;
 		}
 
 		max_size = queue_capa.plain.waitfree.max_size;
 		if (max_size && num_event > max_size) {
-			printf("Max waitfree queue size supported %u\n",
-			       max_size);
+			ODPH_ERR("Max waitfree queue size supported %u.\n", max_size);
 			return -1;
 		}
 	} else {
-		printf("Error: Bad queue blocking type\n");
+		ODPH_ERR("Bad queue blocking type.\n");
 		return -1;
 	}
 
 	max_num = pool_capa.buf.max_num;
 
 	if (max_num && tot_event > max_num) {
-		printf("Error: max events supported %u\n", max_num);
+		ODPH_ERR("Max events supported %u.\n", max_num);
 		return -1;
 	}
 
@@ -266,7 +263,7 @@ static int create_queues(test_global_t *global)
 	pool = odp_pool_create("queue perf pool", &pool_param);
 
 	if (pool == ODP_POOL_INVALID) {
-		printf("Error: Pool create failed.\n");
+		ODPH_ERR("Pool create failed.\n");
 		return -1;
 	}
 
@@ -286,7 +283,7 @@ static int create_queues(test_global_t *global)
 		queue[i] = odp_queue_create(NULL, &queue_param);
 
 		if (queue[i] == ODP_QUEUE_INVALID) {
-			printf("Error: Queue create failed %u.\n", i);
+			ODPH_ERR("Queue create failed %u.\n", i);
 			return -1;
 		}
 	}
@@ -295,7 +292,7 @@ static int create_queues(test_global_t *global)
 		event[i] = odp_buffer_to_event(odp_buffer_alloc(pool));
 
 		if (event[i] == ODP_EVENT_INVALID) {
-			printf("Error: Event alloc failed %u.\n", i);
+			ODPH_ERR("Event alloc failed %u.\n", i);
 			ret = -1;
 			goto free_events;
 		}
@@ -306,7 +303,7 @@ static int create_queues(test_global_t *global)
 			uint32_t id = i * num_event + j;
 
 			if (odp_queue_enq(queue[i], event[id])) {
-				printf("Error: Queue enq failed %u/%u\n", i, j);
+				ODPH_ERR("Queue enq failed %u/%u.\n", i, j);
 				ret = -1;
 				goto free_events;
 			}
@@ -338,7 +335,7 @@ static int destroy_queues(test_global_t *global)
 
 	for (i = 0; i < num_queue; i++) {
 		if (queue[i] == ODP_QUEUE_INVALID) {
-			printf("Error: Invalid queue handle (i: %u).\n", i);
+			ODPH_ERR("Invalid queue handle (i: %u).\n", i);
 			break;
 		}
 
@@ -350,14 +347,14 @@ static int destroy_queues(test_global_t *global)
 		}
 
 		if (odp_queue_destroy(queue[i])) {
-			printf("Error: Queue destroy failed %u.\n", i);
+			ODPH_ERR("Queue destroy failed %u.\n", i);
 			ret = -1;
 			break;
 		}
 	}
 
 	if (pool != ODP_POOL_INVALID && odp_pool_destroy(pool)) {
-		printf("Error: Pool destroy failed.\n");
+		ODPH_ERR("Pool destroy failed.\n");
 		ret = -1;
 	}
 
@@ -454,7 +451,7 @@ static int start_workers(test_global_t *global)
 	ret = odp_cpumask_default_worker(&cpumask, num_cpu);
 
 	if (num_cpu && ret != num_cpu) {
-		printf("Error: Too many workers. Max supported %i\n.", ret);
+		ODPH_ERR("Too many workers. Max supported %i\n.", ret);
 		return -1;
 	}
 
@@ -584,13 +581,13 @@ int main(int argc, char **argv)
 	/* Let helper collect its own arguments (e.g. --odph_proc) */
 	argc = odph_parse_options(argc, argv);
 	if (odph_options(&helper_options)) {
-		ODPH_ERR("Error: Reading ODP helper options failed.\n");
+		ODPH_ERR("Reading ODP helper options failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
 	argc = test_common_parse_options(argc, argv);
 	if (test_common_options(&common_options)) {
-		ODPH_ERR("Error: Reading test options failed.\n");
+		ODPH_ERR("Reading test options failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -608,25 +605,25 @@ int main(int argc, char **argv)
 
 	/* Init ODP before calling anything else */
 	if (odp_init_global(&instance, &init, NULL)) {
-		printf("Error: Global init failed.\n");
+		ODPH_ERR("Global init failed.\n");
 		return -1;
 	}
 
 	/* Init this thread */
 	if (odp_init_local(instance, ODP_THREAD_WORKER)) {
-		printf("Error: Local init failed.\n");
+		ODPH_ERR("Local init failed.\n");
 		return -1;
 	}
 
 	shm = odp_shm_reserve("queue_perf_global", sizeof(test_global_t), ODP_CACHE_LINE_SIZE, 0);
 	if (shm == ODP_SHM_INVALID) {
-		ODPH_ERR("Error: Shared mem reserve failed.\n");
+		ODPH_ERR("Shared memory reserve failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
 	global = odp_shm_addr(shm);
 	if (global == NULL) {
-		ODPH_ERR("Error: Shared mem alloc failed\n");
+		ODPH_ERR("Shared memory address read failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -641,12 +638,12 @@ int main(int argc, char **argv)
 	global->instance = instance;
 
 	if (create_queues(global)) {
-		printf("Error: Create queues failed.\n");
+		ODPH_ERR("Create queues failed.\n");
 		goto destroy;
 	}
 
 	if (start_workers(global)) {
-		printf("Error: Test start failed.\n");
+		ODPH_ERR("Test start failed.\n");
 		return -1;
 	}
 
@@ -654,28 +651,28 @@ int main(int argc, char **argv)
 	odph_thread_join(global->thread_tbl, global->options.num_cpu);
 
 	if (output_results(global)) {
-		ODPH_ERR("Error: Outputting results failed.\n");
+		ODPH_ERR("Outputting results failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
 destroy:
 	if (destroy_queues(global)) {
-		printf("Error: Destroy queues failed.\n");
+		ODPH_ERR("Destroy queues failed.\n");
 		return -1;
 	}
 
 	if (odp_shm_free(shm)) {
-		ODPH_ERR("Error: Shared mem free failed.\n");
+		ODPH_ERR("Shared memory free failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
 	if (odp_term_local()) {
-		printf("Error: term local failed.\n");
+		ODPH_ERR("Term local failed.\n");
 		return -1;
 	}
 
 	if (odp_term_global(instance)) {
-		printf("Error: term global failed.\n");
+		ODPH_ERR("Term global failed.\n");
 		return -1;
 	}
 
