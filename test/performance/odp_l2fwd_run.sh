@@ -91,7 +91,12 @@ run_l2fwd()
 			PASS_PPS=10
 		fi
 		MAX_PPS=$(awk '/TEST RESULT/ {print $3}' $LOG)
-		if [ "$MAX_PPS" -lt "$PASS_PPS" ]; then
+		NUMREG='^[0-9]+$'
+		echo "PARSED PPS: $MAX_PPS"
+		if ! [[ $MAX_PPS =~ $NUMREG ]]; then
+			echo "FAIL: cannot parse $LOG"
+			ret=1
+		elif [ "$MAX_PPS" -lt "$PASS_PPS" ]; then
 			echo -e "\nodp_packet_gen"
 			echo "=============="
 			cat $GEN_LOG
