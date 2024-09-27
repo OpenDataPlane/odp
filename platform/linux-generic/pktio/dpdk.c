@@ -58,6 +58,7 @@
 
 #include <ctype.h>
 #include <errno.h>
+#include <pthread.h>
 #include <sched.h>
 #include <stdint.h>
 #include <unistd.h>
