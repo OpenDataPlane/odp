@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2018 Linaro Limited
- * Copyright (c) 2021-2023 Nokia
+ * Copyright (c) 2021-2024 Nokia
  */
 
 /**
@@ -20,6 +20,8 @@
 
 #include <odp_api.h>
 #include <odp/helper/odph_api.h>
+
+#include <export_results.h>
 
 #define MAX_QUEUES (32 * 1024)
 
@@ -53,6 +55,7 @@ typedef struct test_global_t {
 	odp_queue_t      queue[MAX_QUEUES];
 	odph_thread_t    thread_tbl[ODP_THREAD_COUNT_MAX];
 	test_stat_t      stat[ODP_THREAD_COUNT_MAX];
+	test_common_options_t common_options;
 
 } test_global_t;
 
@@ -387,7 +390,7 @@ static int run_test(void *arg)
 	/* Start all workers at the same time */
 	odp_barrier_wait(&global->barrier);
 
-	t1 = odp_time_local();
+	t1 = odp_time_local_strict();
 	c1 = odp_cpu_cycles();
 
 	for (rounds = 0; rounds < num_round; rounds++) {
@@ -424,7 +427,7 @@ static int run_test(void *arg)
 	}
 
 	c2 = odp_cpu_cycles();
-	t2 = odp_time_local();
+	t2 = odp_time_local_strict();
 
 	nsec   = odp_time_diff_ns(t2, t1);
 	cycles = odp_cpu_cycles_diff(c2, c1);
@@ -482,7 +485,7 @@ static int start_workers(test_global_t *global)
 	return 0;
 }
 
-static void print_stat(test_global_t *global)
+static int output_results(test_global_t *global)
 {
 	int i, num;
 	double rounds_ave, events_ave, nsec_ave, cycles_ave;
@@ -507,7 +510,7 @@ static void print_stat(test_global_t *global)
 
 	if (rounds_sum == 0) {
 		printf("No results.\n");
-		return;
+		return 0;
 	}
 
 	rounds_ave   = rounds_sum / num_cpu;
@@ -547,6 +550,26 @@ static void print_stat(test_global_t *global)
 
 	printf("TOTAL events per sec:       %.3f M\n\n",
 	       (1000.0 * events_sum) / nsec_ave);
+
+	if (global->common_options.is_export) {
+		if (test_common_write("cycles per event,events per sec (M),TOTAL events per sec (M),"
+				      "dequeue retries,enqueue retries\n")) {
+			test_common_write_term();
+			return -1;
+		}
+		if (test_common_write("%f,%f,%f,%" PRIu64 ",%" PRIu64 "\n",
+				      cycles_ave / events_ave,
+				      (1000.0 * events_ave) / nsec_ave,
+				      (1000.0 * events_sum) / nsec_ave,
+				      deq_retry_sum,
+				      enq_retry_sum)) {
+			test_common_write_term();
+			return -1;
+		}
+		test_common_write_term();
+	}
+
+	return 0;
 }
 
 int main(int argc, char **argv)
@@ -556,11 +579,18 @@ int main(int argc, char **argv)
 	odp_init_t init;
 	odp_shm_t shm;
 	test_global_t *global;
+	test_common_options_t common_options;
 
 	/* Let helper collect its own arguments (e.g. --odph_proc) */
 	argc = odph_parse_options(argc, argv);
 	if (odph_options(&helper_options)) {
 		ODPH_ERR("Error: Reading ODP helper options failed.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	argc = test_common_parse_options(argc, argv);
+	if (test_common_options(&common_options)) {
+		ODPH_ERR("Error: Reading test options failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -601,6 +631,7 @@ int main(int argc, char **argv)
 	}
 
 	memset(global, 0, sizeof(test_global_t));
+	global->common_options = common_options;
 
 	if (parse_options(argc, argv, &global->options))
 		return -1;
@@ -622,7 +653,10 @@ int main(int argc, char **argv)
 	/* Wait workers to exit */
 	odph_thread_join(global->thread_tbl, global->options.num_cpu);
 
-	print_stat(global);
+	if (output_results(global)) {
+		ODPH_ERR("Error: Outputting results failed.\n");
+		exit(EXIT_FAILURE);
+	}
 
 destroy:
 	if (destroy_queues(global)) {
