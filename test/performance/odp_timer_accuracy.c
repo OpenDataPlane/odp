@@ -1043,6 +1043,8 @@ static int print_stat(test_global_t *test_global)
 			test_common_write_term();
 			return -1;
 		}
+
+		test_common_write_term();
 	}
 
 	return 0;
