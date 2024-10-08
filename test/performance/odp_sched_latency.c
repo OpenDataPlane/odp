@@ -358,6 +358,9 @@ static int output_results(test_globals_t *globals)
 		}
 	}
 
+	if (globals->common_options.is_export)
+		test_common_write_term();
+
 	return 0;
 }
 

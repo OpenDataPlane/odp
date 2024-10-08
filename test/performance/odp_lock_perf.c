@@ -319,6 +319,10 @@ static int output_summary(test_global_t *global)
 			}
 		}
 	}
+
+	if (global->common_options.is_export)
+		test_common_write_term();
+
 	return 0;
 }
 
