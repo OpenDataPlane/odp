@@ -1485,6 +1485,8 @@ static int output_results(test_global_t *global)
 			test_common_write_term();
 			return -1;
 		}
+
+		test_common_write_term();
 	}
 
 	return 0;
