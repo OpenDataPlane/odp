@@ -1890,7 +1890,9 @@ void print_queue_ident(odp_queue_t q)
 {
 	odp_queue_info_t info;
 
-	if (!odp_queue_info(q, &info) && strlen(info.name))
+	if (q == ODP_QUEUE_INVALID)
+		_ODP_PRINT("        none\n");
+	else if (!odp_queue_info(q, &info) && strlen(info.name))
 		_ODP_PRINT("        %s\n", info.name);
 	else
 		_ODP_PRINT("        %" PRIx64 "\n", odp_queue_to_u64(q));
