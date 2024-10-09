@@ -38,6 +38,7 @@ typedef union odp_cls_testcase {
 		uint32_t drop_cos:1;
 		uint32_t error_cos:1;
 		uint32_t pmr_chain:1;
+		uint32_t pmr_chain_rev:1;
 		uint32_t pmr_cos:1;
 		uint32_t pmr_composite_cos:1;
 	};
@@ -79,6 +80,8 @@ void configure_pktio_error_cos(odp_bool_t enable_pktv);
 void test_pktio_error_cos(odp_bool_t enable_pktv);
 void configure_cls_pmr_chain(odp_bool_t enable_pktv);
 void test_cls_pmr_chain(odp_bool_t enable_pktv);
+void configure_cls_pmr_chain_rev(odp_bool_t enable_pktv);
+void test_cls_pmr_chain_rev(odp_bool_t enable_pktv);
 void configure_cos_with_l2_priority(odp_bool_t enable_pktv);
 void test_cos_with_l2_priority(odp_bool_t enable_pktv);
 void configure_pmr_cos(odp_bool_t enable_pktv);

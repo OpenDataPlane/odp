@@ -22,7 +22,6 @@ static odp_cls_testcase_u tc;
 #define NUM_COS_DEFAULT	1
 #define NUM_COS_DROP	1
 #define NUM_COS_ERROR	1
-#define NUM_COS_L2_PRIO	CLS_L2_QOS_MAX
 #define NUM_COS_PMR	1
 #define NUM_COS_COMPOSITE	1
 #define PKTV_DEFAULT_SIZE	8
@@ -375,6 +374,169 @@ void test_cls_pmr_chain(odp_bool_t enable_pktv)
 	CU_ASSERT(seqno == cls_pkt_get_seq(pkt));
 	pool = odp_packet_pool(pkt);
 	CU_ASSERT(pool == pool_list[CLS_PMR_CHAIN_SRC]);
+	odp_packet_free(pkt);
+}
+
+void configure_cls_pmr_chain_rev(odp_bool_t enable_pktv)
+{
+	/*
+	 * Same as configure_cls_pmr_chain, but with PMRs created in reverse
+	 * order.
+	 */
+
+	uint16_t val;
+	uint16_t maskport;
+	char cosname[ODP_COS_NAME_LEN];
+	odp_queue_param_t qparam;
+	odp_cls_cos_param_t cls_param;
+	char queuename[ODP_QUEUE_NAME_LEN];
+	char poolname[ODP_POOL_NAME_LEN];
+	uint32_t addr;
+	uint32_t mask;
+	odp_pmr_param_t pmr_param;
+	odp_schedule_capability_t schedule_capa;
+
+	CU_ASSERT_FATAL(odp_schedule_capability(&schedule_capa) == 0);
+
+	odp_queue_param_init(&qparam);
+	qparam.type       = ODP_QUEUE_TYPE_SCHED;
+	qparam.sched.prio = odp_schedule_default_prio();
+	qparam.sched.sync = ODP_SCHED_SYNC_PARALLEL;
+	qparam.sched.group = ODP_SCHED_GROUP_ALL;
+	qparam.sched.lock_count = schedule_capa.max_ordered_locks;
+	sprintf(queuename, "%s", "SrcQueue");
+
+	queue_list[CLS_PMR_CHAIN_REV_SRC] = odp_queue_create(queuename, &qparam);
+
+	CU_ASSERT_FATAL(queue_list[CLS_PMR_CHAIN_REV_SRC] != ODP_QUEUE_INVALID);
+
+	sprintf(poolname, "%s", "SrcPool");
+	pool_list[CLS_PMR_CHAIN_REV_SRC] = pool_create(poolname);
+	CU_ASSERT_FATAL(pool_list[CLS_PMR_CHAIN_REV_SRC] != ODP_POOL_INVALID);
+
+	sprintf(cosname, "SrcCos");
+	odp_cls_cos_param_init(&cls_param);
+	cls_param.pool = pool_list[CLS_PMR_CHAIN_REV_SRC];
+	cls_param.queue = queue_list[CLS_PMR_CHAIN_REV_SRC];
+
+	if (enable_pktv) {
+		cls_param.vector.enable = true;
+		cls_param.vector.pool = pktv_config.pool;
+		cls_param.vector.max_size = pktv_config.max_size;
+		cls_param.vector.max_tmo_ns = pktv_config.max_tmo_ns;
+	}
+
+	cos_list[CLS_PMR_CHAIN_REV_SRC] = odp_cls_cos_create(cosname, &cls_param);
+	CU_ASSERT_FATAL(cos_list[CLS_PMR_CHAIN_REV_SRC] != ODP_COS_INVALID);
+
+	odp_queue_param_init(&qparam);
+	qparam.type       = ODP_QUEUE_TYPE_SCHED;
+	qparam.sched.prio = odp_schedule_default_prio();
+	qparam.sched.sync = ODP_SCHED_SYNC_PARALLEL;
+	qparam.sched.group = ODP_SCHED_GROUP_ALL;
+	sprintf(queuename, "%s", "DstQueue");
+
+	queue_list[CLS_PMR_CHAIN_REV_DST] = odp_queue_create(queuename, &qparam);
+	CU_ASSERT_FATAL(queue_list[CLS_PMR_CHAIN_REV_DST] != ODP_QUEUE_INVALID);
+
+	sprintf(poolname, "%s", "DstPool");
+	pool_list[CLS_PMR_CHAIN_REV_DST] = pool_create(poolname);
+	CU_ASSERT_FATAL(pool_list[CLS_PMR_CHAIN_REV_DST] != ODP_POOL_INVALID);
+
+	sprintf(cosname, "DstCos");
+	odp_cls_cos_param_init(&cls_param);
+	cls_param.pool = pool_list[CLS_PMR_CHAIN_REV_DST];
+	cls_param.queue = queue_list[CLS_PMR_CHAIN_REV_DST];
+
+	if (enable_pktv) {
+		cls_param.vector.enable = true;
+		cls_param.vector.pool = pktv_config.pool;
+		cls_param.vector.max_size = pktv_config.max_size;
+		cls_param.vector.max_tmo_ns = pktv_config.max_tmo_ns;
+	}
+
+	cos_list[CLS_PMR_CHAIN_REV_DST] = odp_cls_cos_create(cosname, &cls_param);
+	CU_ASSERT_FATAL(cos_list[CLS_PMR_CHAIN_REV_DST] != ODP_COS_INVALID);
+
+	val = odp_cpu_to_be_16(CLS_PMR_CHAIN_REV_PORT);
+	maskport = odp_cpu_to_be_16(0xffff);
+	odp_cls_pmr_param_init(&pmr_param);
+	pmr_param.term = find_first_supported_l3_pmr();
+	pmr_param.match.value = &val;
+	pmr_param.match.mask = &maskport;
+	pmr_param.val_sz = sizeof(val);
+	pmr_list[CLS_PMR_CHAIN_REV_DST] =
+	odp_cls_pmr_create(&pmr_param, 1, cos_list[CLS_PMR_CHAIN_REV_SRC],
+			   cos_list[CLS_PMR_CHAIN_REV_DST]);
+	CU_ASSERT_FATAL(pmr_list[CLS_PMR_CHAIN_REV_DST] != ODP_PMR_INVALID);
+
+	parse_ipv4_string(CLS_PMR_CHAIN_REV_SADDR, &addr, &mask);
+	addr = odp_cpu_to_be_32(addr);
+	mask = odp_cpu_to_be_32(mask);
+
+	odp_cls_pmr_param_init(&pmr_param);
+	pmr_param.term = ODP_PMR_SIP_ADDR;
+	pmr_param.match.value = &addr;
+	pmr_param.match.mask = &mask;
+	pmr_param.val_sz = sizeof(addr);
+	pmr_list[CLS_PMR_CHAIN_REV_SRC] =
+	odp_cls_pmr_create(&pmr_param, 1, cos_list[CLS_DEFAULT],
+			   cos_list[CLS_PMR_CHAIN_REV_SRC]);
+	CU_ASSERT_FATAL(pmr_list[CLS_PMR_CHAIN_REV_SRC] != ODP_PMR_INVALID);
+}
+
+void test_cls_pmr_chain_rev(odp_bool_t enable_pktv)
+{
+	odp_packet_t pkt;
+	odph_ipv4hdr_t *ip;
+	odp_queue_t queue;
+	odp_pool_t pool;
+	uint32_t addr = 0;
+	uint32_t mask;
+	uint32_t seqno = 0;
+	cls_packet_info_t pkt_info;
+
+	pkt_info = default_pkt_info;
+	pkt_info.l4_type = CLS_PKT_L4_UDP;
+	pkt = create_packet(pkt_info);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+	seqno = cls_pkt_get_seq(pkt);
+	CU_ASSERT(seqno != TEST_SEQ_INVALID);
+
+	ip = (odph_ipv4hdr_t *)odp_packet_l3_ptr(pkt, NULL);
+	parse_ipv4_string(CLS_PMR_CHAIN_REV_SADDR, &addr, &mask);
+	ip->src_addr = odp_cpu_to_be_32(addr);
+	odph_ipv4_csum_update(pkt);
+
+	set_first_supported_pmr_port(pkt, CLS_PMR_CHAIN_REV_PORT);
+
+	enqueue_pktio_interface(pkt, pktio_loop);
+
+	pkt = receive_packet(&queue, ODP_TIME_SEC_IN_NS, enable_pktv);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+	CU_ASSERT(queue == queue_list[CLS_PMR_CHAIN_REV_DST]);
+	CU_ASSERT(seqno == cls_pkt_get_seq(pkt));
+	pool = odp_packet_pool(pkt);
+	CU_ASSERT(pool == pool_list[CLS_PMR_CHAIN_REV_DST]);
+	odp_packet_free(pkt);
+
+	pkt = create_packet(pkt_info);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+	seqno = cls_pkt_get_seq(pkt);
+	CU_ASSERT(seqno != TEST_SEQ_INVALID);
+
+	ip = (odph_ipv4hdr_t *)odp_packet_l3_ptr(pkt, NULL);
+	parse_ipv4_string(CLS_PMR_CHAIN_REV_SADDR, &addr, &mask);
+	ip->src_addr = odp_cpu_to_be_32(addr);
+	odph_ipv4_csum_update(pkt);
+
+	enqueue_pktio_interface(pkt, pktio_loop);
+	pkt = receive_packet(&queue, ODP_TIME_SEC_IN_NS, enable_pktv);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+	CU_ASSERT(queue == queue_list[CLS_PMR_CHAIN_REV_SRC]);
+	CU_ASSERT(seqno == cls_pkt_get_seq(pkt));
+	pool = odp_packet_pool(pkt);
+	CU_ASSERT(pool == pool_list[CLS_PMR_CHAIN_REV_SRC]);
 	odp_packet_free(pkt);
 }
 
@@ -901,6 +1063,11 @@ static void cls_pktio_configure_common(odp_bool_t enable_pktv)
 		tc.pmr_chain = 1;
 		num_cos -= NUM_COS_PMR_CHAIN;
 	}
+	if (num_cos >= NUM_COS_PMR_CHAIN && TEST_PMR_CHAIN_REV) {
+		configure_cls_pmr_chain_rev(enable_pktv);
+		tc.pmr_chain_rev = 1;
+		num_cos -= NUM_COS_PMR_CHAIN;
+	}
 	if (num_cos >= NUM_COS_PMR && TEST_PMR) {
 		configure_pmr_cos(enable_pktv);
 		tc.pmr_cos = 1;
@@ -912,6 +1079,7 @@ static void cls_pktio_configure_common(odp_bool_t enable_pktv)
 		num_cos -= NUM_COS_COMPOSITE;
 	}
 
+	odp_cls_print_all();
 }
 
 static void cls_pktio_configure(void)
@@ -935,6 +1103,8 @@ static void cls_pktio_test_common(odp_bool_t enable_pktv)
 		test_pktio_error_cos(enable_pktv);
 	if (tc.pmr_chain && TEST_PMR_CHAIN)
 		test_cls_pmr_chain(enable_pktv);
+	if (tc.pmr_chain_rev && TEST_PMR_CHAIN_REV)
+		test_cls_pmr_chain_rev(enable_pktv);
 	if (tc.pmr_cos && TEST_PMR)
 		test_pmr_cos(enable_pktv);
 	if (tc.pmr_composite_cos && TEST_PMR_SET)
