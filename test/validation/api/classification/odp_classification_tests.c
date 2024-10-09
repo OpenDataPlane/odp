@@ -22,7 +22,6 @@ static odp_cls_testcase_u tc;
 #define NUM_COS_DEFAULT	1
 #define NUM_COS_DROP	1
 #define NUM_COS_ERROR	1
-#define NUM_COS_L2_PRIO	CLS_L2_QOS_MAX
 #define NUM_COS_PMR	1
 #define NUM_COS_COMPOSITE	1
 #define PKTV_DEFAULT_SIZE	8
@@ -214,24 +213,60 @@ int classification_suite_pktv_term(void)
 	return classification_suite_common_term(true);
 }
 
-void configure_cls_pmr_chain(odp_bool_t enable_pktv)
+static void configure_cls_pmr_chain_create_saddr_pmr(int src, int dst, const char *saddr)
+{
+	uint32_t addr;
+	uint32_t mask;
+	odp_pmr_param_t pmr_param;
+
+	parse_ipv4_string(saddr, &addr, &mask);
+	addr = odp_cpu_to_be_32(addr);
+	mask = odp_cpu_to_be_32(mask);
+
+	odp_cls_pmr_param_init(&pmr_param);
+	pmr_param.term = ODP_PMR_SIP_ADDR;
+	pmr_param.match.value = &addr;
+	pmr_param.match.mask = &mask;
+	pmr_param.val_sz = sizeof(addr);
+	pmr_list[dst] =
+	odp_cls_pmr_create(&pmr_param, 1, cos_list[src],
+			   cos_list[dst]);
+	CU_ASSERT_FATAL(pmr_list[dst] != ODP_PMR_INVALID);
+}
+
+static void configure_cls_pmr_chain_create_port_pmr(int src, int dst, uint16_t port)
+{
+	uint16_t val;
+	uint16_t maskport;
+	odp_pmr_param_t pmr_param;
+
+	val = odp_cpu_to_be_16(port);
+	maskport = odp_cpu_to_be_16(0xffff);
+	odp_cls_pmr_param_init(&pmr_param);
+	pmr_param.term = find_first_supported_l3_pmr();
+	pmr_param.match.value = &val;
+	pmr_param.match.mask = &maskport;
+	pmr_param.val_sz = sizeof(val);
+	pmr_list[dst] =
+	odp_cls_pmr_create(&pmr_param, 1, cos_list[src],
+			   cos_list[dst]);
+	CU_ASSERT_FATAL(pmr_list[dst] != ODP_PMR_INVALID);
+}
+
+void configure_cls_pmr_chain(odp_bool_t enable_pktv, int src, int dst, const char *saddr,
+			     uint16_t port, odp_bool_t saddr_first)
 {
 	/* PKTIO --> PMR_SRC(SRC IP ADDR) --> PMR_DST (TCP SPORT) */
 
 	/* Packet matching only the SRC IP ADDR should be delivered
-	in queue[CLS_PMR_CHAIN_SRC] and a packet matching both SRC IP ADDR and
-	TCP SPORT should be delivered to queue[CLS_PMR_CHAIN_DST] */
+	in queue[src] and a packet matching both SRC IP ADDR and
+	TCP SPORT should be delivered to queue[dst] */
 
-	uint16_t val;
-	uint16_t maskport;
 	char cosname[ODP_COS_NAME_LEN];
 	odp_queue_param_t qparam;
 	odp_cls_cos_param_t cls_param;
 	char queuename[ODP_QUEUE_NAME_LEN];
 	char poolname[ODP_POOL_NAME_LEN];
-	uint32_t addr;
-	uint32_t mask;
-	odp_pmr_param_t pmr_param;
 	odp_schedule_capability_t schedule_capa;
 
 	CU_ASSERT_FATAL(odp_schedule_capability(&schedule_capa) == 0);
@@ -244,18 +279,18 @@ void configure_cls_pmr_chain(odp_bool_t enable_pktv)
 	qparam.sched.lock_count = schedule_capa.max_ordered_locks;
 	sprintf(queuename, "%s", "SrcQueue");
 
-	queue_list[CLS_PMR_CHAIN_SRC] = odp_queue_create(queuename, &qparam);
+	queue_list[src] = odp_queue_create(queuename, &qparam);
 
-	CU_ASSERT_FATAL(queue_list[CLS_PMR_CHAIN_SRC] != ODP_QUEUE_INVALID);
+	CU_ASSERT_FATAL(queue_list[src] != ODP_QUEUE_INVALID);
 
 	sprintf(poolname, "%s", "SrcPool");
-	pool_list[CLS_PMR_CHAIN_SRC] = pool_create(poolname);
-	CU_ASSERT_FATAL(pool_list[CLS_PMR_CHAIN_SRC] != ODP_POOL_INVALID);
+	pool_list[src] = pool_create(poolname);
+	CU_ASSERT_FATAL(pool_list[src] != ODP_POOL_INVALID);
 
 	sprintf(cosname, "SrcCos");
 	odp_cls_cos_param_init(&cls_param);
-	cls_param.pool = pool_list[CLS_PMR_CHAIN_SRC];
-	cls_param.queue = queue_list[CLS_PMR_CHAIN_SRC];
+	cls_param.pool = pool_list[src];
+	cls_param.queue = queue_list[src];
 
 	if (enable_pktv) {
 		cls_param.vector.enable = true;
@@ -264,8 +299,8 @@ void configure_cls_pmr_chain(odp_bool_t enable_pktv)
 		cls_param.vector.max_tmo_ns = pktv_config.max_tmo_ns;
 	}
 
-	cos_list[CLS_PMR_CHAIN_SRC] = odp_cls_cos_create(cosname, &cls_param);
-	CU_ASSERT_FATAL(cos_list[CLS_PMR_CHAIN_SRC] != ODP_COS_INVALID);
+	cos_list[src] = odp_cls_cos_create(cosname, &cls_param);
+	CU_ASSERT_FATAL(cos_list[src] != ODP_COS_INVALID);
 
 	odp_queue_param_init(&qparam);
 	qparam.type       = ODP_QUEUE_TYPE_SCHED;
@@ -274,17 +309,17 @@ void configure_cls_pmr_chain(odp_bool_t enable_pktv)
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
 	sprintf(queuename, "%s", "DstQueue");
 
-	queue_list[CLS_PMR_CHAIN_DST] = odp_queue_create(queuename, &qparam);
-	CU_ASSERT_FATAL(queue_list[CLS_PMR_CHAIN_DST] != ODP_QUEUE_INVALID);
+	queue_list[dst] = odp_queue_create(queuename, &qparam);
+	CU_ASSERT_FATAL(queue_list[dst] != ODP_QUEUE_INVALID);
 
 	sprintf(poolname, "%s", "DstPool");
-	pool_list[CLS_PMR_CHAIN_DST] = pool_create(poolname);
-	CU_ASSERT_FATAL(pool_list[CLS_PMR_CHAIN_DST] != ODP_POOL_INVALID);
+	pool_list[dst] = pool_create(poolname);
+	CU_ASSERT_FATAL(pool_list[dst] != ODP_POOL_INVALID);
 
 	sprintf(cosname, "DstCos");
 	odp_cls_cos_param_init(&cls_param);
-	cls_param.pool = pool_list[CLS_PMR_CHAIN_DST];
-	cls_param.queue = queue_list[CLS_PMR_CHAIN_DST];
+	cls_param.pool = pool_list[dst];
+	cls_param.queue = queue_list[dst];
 
 	if (enable_pktv) {
 		cls_param.vector.enable = true;
@@ -293,37 +328,19 @@ void configure_cls_pmr_chain(odp_bool_t enable_pktv)
 		cls_param.vector.max_tmo_ns = pktv_config.max_tmo_ns;
 	}
 
-	cos_list[CLS_PMR_CHAIN_DST] = odp_cls_cos_create(cosname, &cls_param);
-	CU_ASSERT_FATAL(cos_list[CLS_PMR_CHAIN_DST] != ODP_COS_INVALID);
+	cos_list[dst] = odp_cls_cos_create(cosname, &cls_param);
+	CU_ASSERT_FATAL(cos_list[dst] != ODP_COS_INVALID);
 
-	parse_ipv4_string(CLS_PMR_CHAIN_SADDR, &addr, &mask);
-	addr = odp_cpu_to_be_32(addr);
-	mask = odp_cpu_to_be_32(mask);
-
-	odp_cls_pmr_param_init(&pmr_param);
-	pmr_param.term = ODP_PMR_SIP_ADDR;
-	pmr_param.match.value = &addr;
-	pmr_param.match.mask = &mask;
-	pmr_param.val_sz = sizeof(addr);
-	pmr_list[CLS_PMR_CHAIN_SRC] =
-	odp_cls_pmr_create(&pmr_param, 1, cos_list[CLS_DEFAULT],
-			   cos_list[CLS_PMR_CHAIN_SRC]);
-	CU_ASSERT_FATAL(pmr_list[CLS_PMR_CHAIN_SRC] != ODP_PMR_INVALID);
-
-	val = odp_cpu_to_be_16(CLS_PMR_CHAIN_PORT);
-	maskport = odp_cpu_to_be_16(0xffff);
-	odp_cls_pmr_param_init(&pmr_param);
-	pmr_param.term = find_first_supported_l3_pmr();
-	pmr_param.match.value = &val;
-	pmr_param.match.mask = &maskport;
-	pmr_param.val_sz = sizeof(val);
-	pmr_list[CLS_PMR_CHAIN_DST] =
-	odp_cls_pmr_create(&pmr_param, 1, cos_list[CLS_PMR_CHAIN_SRC],
-			   cos_list[CLS_PMR_CHAIN_DST]);
-	CU_ASSERT_FATAL(pmr_list[CLS_PMR_CHAIN_DST] != ODP_PMR_INVALID);
+	if (saddr_first) {
+		configure_cls_pmr_chain_create_saddr_pmr(CLS_DEFAULT, src, saddr);
+		configure_cls_pmr_chain_create_port_pmr(src, dst, port);
+	} else {
+		configure_cls_pmr_chain_create_port_pmr(src, dst, port);
+		configure_cls_pmr_chain_create_saddr_pmr(CLS_DEFAULT, src, saddr);
+	}
 }
 
-void test_cls_pmr_chain(odp_bool_t enable_pktv)
+void test_cls_pmr_chain(odp_bool_t enable_pktv, int src, int dst, const char *saddr, uint16_t port)
 {
 	odp_packet_t pkt;
 	odph_ipv4hdr_t *ip;
@@ -342,20 +359,20 @@ void test_cls_pmr_chain(odp_bool_t enable_pktv)
 	CU_ASSERT(seqno != TEST_SEQ_INVALID);
 
 	ip = (odph_ipv4hdr_t *)odp_packet_l3_ptr(pkt, NULL);
-	parse_ipv4_string(CLS_PMR_CHAIN_SADDR, &addr, &mask);
+	parse_ipv4_string(saddr, &addr, &mask);
 	ip->src_addr = odp_cpu_to_be_32(addr);
 	odph_ipv4_csum_update(pkt);
 
-	set_first_supported_pmr_port(pkt, CLS_PMR_CHAIN_PORT);
+	set_first_supported_pmr_port(pkt, port);
 
 	enqueue_pktio_interface(pkt, pktio_loop);
 
 	pkt = receive_packet(&queue, ODP_TIME_SEC_IN_NS, enable_pktv);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
-	CU_ASSERT(queue == queue_list[CLS_PMR_CHAIN_DST]);
+	CU_ASSERT(queue == queue_list[dst]);
 	CU_ASSERT(seqno == cls_pkt_get_seq(pkt));
 	pool = odp_packet_pool(pkt);
-	CU_ASSERT(pool == pool_list[CLS_PMR_CHAIN_DST]);
+	CU_ASSERT(pool == pool_list[dst]);
 	odp_packet_free(pkt);
 
 	pkt = create_packet(pkt_info);
@@ -364,17 +381,17 @@ void test_cls_pmr_chain(odp_bool_t enable_pktv)
 	CU_ASSERT(seqno != TEST_SEQ_INVALID);
 
 	ip = (odph_ipv4hdr_t *)odp_packet_l3_ptr(pkt, NULL);
-	parse_ipv4_string(CLS_PMR_CHAIN_SADDR, &addr, &mask);
+	parse_ipv4_string(saddr, &addr, &mask);
 	ip->src_addr = odp_cpu_to_be_32(addr);
 	odph_ipv4_csum_update(pkt);
 
 	enqueue_pktio_interface(pkt, pktio_loop);
 	pkt = receive_packet(&queue, ODP_TIME_SEC_IN_NS, enable_pktv);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
-	CU_ASSERT(queue == queue_list[CLS_PMR_CHAIN_SRC]);
+	CU_ASSERT(queue == queue_list[src]);
 	CU_ASSERT(seqno == cls_pkt_get_seq(pkt));
 	pool = odp_packet_pool(pkt);
-	CU_ASSERT(pool == pool_list[CLS_PMR_CHAIN_SRC]);
+	CU_ASSERT(pool == pool_list[src]);
 	odp_packet_free(pkt);
 }
 
@@ -897,8 +914,15 @@ static void cls_pktio_configure_common(odp_bool_t enable_pktv)
 		num_cos -= NUM_COS_ERROR;
 	}
 	if (num_cos >= NUM_COS_PMR_CHAIN && TEST_PMR_CHAIN) {
-		configure_cls_pmr_chain(enable_pktv);
+		configure_cls_pmr_chain(enable_pktv, CLS_PMR_CHAIN_SRC, CLS_PMR_CHAIN_DST,
+					CLS_PMR_CHAIN_SADDR, CLS_PMR_CHAIN_PORT, true);
 		tc.pmr_chain = 1;
+		num_cos -= NUM_COS_PMR_CHAIN;
+	}
+	if (num_cos >= NUM_COS_PMR_CHAIN && TEST_PMR_CHAIN_REV) {
+		configure_cls_pmr_chain(enable_pktv, CLS_PMR_CHAIN_REV_SRC, CLS_PMR_CHAIN_REV_DST,
+					CLS_PMR_CHAIN_REV_SADDR, CLS_PMR_CHAIN_REV_PORT, false);
+		tc.pmr_chain_rev = 1;
 		num_cos -= NUM_COS_PMR_CHAIN;
 	}
 	if (num_cos >= NUM_COS_PMR && TEST_PMR) {
@@ -912,6 +936,7 @@ static void cls_pktio_configure_common(odp_bool_t enable_pktv)
 		num_cos -= NUM_COS_COMPOSITE;
 	}
 
+	odp_cls_print_all();
 }
 
 static void cls_pktio_configure(void)
@@ -934,7 +959,11 @@ static void cls_pktio_test_common(odp_bool_t enable_pktv)
 	if (tc.error_cos && TEST_ERROR)
 		test_pktio_error_cos(enable_pktv);
 	if (tc.pmr_chain && TEST_PMR_CHAIN)
-		test_cls_pmr_chain(enable_pktv);
+		test_cls_pmr_chain(enable_pktv, CLS_PMR_CHAIN_SRC, CLS_PMR_CHAIN_DST,
+				   CLS_PMR_CHAIN_SADDR, CLS_PMR_CHAIN_PORT);
+	if (tc.pmr_chain_rev && TEST_PMR_CHAIN_REV)
+		test_cls_pmr_chain(enable_pktv, CLS_PMR_CHAIN_REV_SRC, CLS_PMR_CHAIN_REV_DST,
+				   CLS_PMR_CHAIN_REV_SADDR, CLS_PMR_CHAIN_REV_PORT);
 	if (tc.pmr_cos && TEST_PMR)
 		test_pmr_cos(enable_pktv);
 	if (tc.pmr_composite_cos && TEST_PMR_SET)

@@ -48,12 +48,14 @@
 #define CLS_PMR_SET_SADDR	"10.0.0.6/32"
 #define CLS_PMR_SET_PORT	5000
 
-/* Config values for CoS L2 Priority */
-#define TEST_L2_QOS		1
-#define CLS_L2_QOS_0		7
-#define CLS_L2_QOS_MAX		5
+/* Config values for PMR_CHAIN_REV */
+#define TEST_PMR_CHAIN_REV	1
+#define CLS_PMR_CHAIN_REV_SRC	8
+#define CLS_PMR_CHAIN_REV_DST	9
+#define CLS_PMR_CHAIN_REV_SADDR	"10.0.0.7/32"
+#define CLS_PMR_CHAIN_REV_PORT	3001
 
-#define CLS_ENTRIES		(CLS_L2_QOS_0 + CLS_L2_QOS_MAX)
+#define CLS_ENTRIES		(CLS_PMR_CHAIN_REV_DST + 1)
 
 /* Test Packet values */
 #define DATA_MAGIC		0x01020304
