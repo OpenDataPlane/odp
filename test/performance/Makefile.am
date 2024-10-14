@@ -42,6 +42,11 @@ if LIBCONFIG
 COMPILE_ONLY += odp_ipsecfwd
 endif
 
+if WITH_ML
+COMPILE_ONLY += odp_ml_perf
+odp_ml_perf_SOURCES = odp_ml_perf.c
+endif
+
 TESTSCRIPTS = odp_cpu_bench_run.sh \
 	      odp_crypto_run.sh \
 	      odp_dma_perf_run.sh \
