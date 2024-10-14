@@ -3134,10 +3134,9 @@ int _odp_lso_create_packets(odp_packet_t packet, const odp_packet_lso_opt_t *lso
 	num = odp_packet_alloc_multi(pool, pkt_len, pkt_out, num_full);
 	if (odp_unlikely(num < num_full)) {
 		_ODP_DBG("Alloc failed %i\n", num);
-		if (num > 0) {
+		if (num > 0)
 			num_free = num;
-			goto error;
-		}
+		goto error;
 	}
 
 	if (left_over_len) {
