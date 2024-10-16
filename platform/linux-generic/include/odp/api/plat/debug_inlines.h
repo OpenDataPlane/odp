@@ -34,15 +34,22 @@ extern "C" {
 #pragma GCC diagnostic ignored "-Wgnu-zero-variadic-macro-arguments"
 #endif
 
-extern odp_log_func_t ODP_PRINTF_FORMAT(2, 3) _odp_log_fn;
+extern odp_log_func_t _odp_log_fn;
 extern odp_abort_func_t _odp_abort_fn;
+
+static inline odp_log_func_t _odp_log_fn_get(void)
+{
+	if (_odp_this_thread && _odp_this_thread->log_fn)
+		return _odp_this_thread->log_fn;
+	else if (_odp_log_fn)
+		return _odp_log_fn;
+	else
+		return odp_override_log;
+}
 
 #define _ODP_LOG_FN(level, ...) \
 	do { \
-		if (_odp_this_thread && _odp_this_thread->log_fn) \
-			_odp_this_thread->log_fn(level, ##__VA_ARGS__); \
-		else \
-			_odp_log_fn(level, ##__VA_ARGS__); \
+		_odp_log_fn_get()(level, ##__VA_ARGS__); \
 	} while (0)
 
 /**
