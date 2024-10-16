@@ -735,6 +735,11 @@ odp_log_func_t odp_log_fn_get(void)
 	return _odp_log_fn_get();
 }
 
+odp_abort_func_t odp_abort_fn_get(void)
+{
+	return _odp_abort_fn;
+}
+
 int odp_instance(odp_instance_t *instance)
 {
 	*instance = (odp_instance_t)odp_global_ro.main_pid;
