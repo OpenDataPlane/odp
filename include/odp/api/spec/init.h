@@ -418,6 +418,20 @@ void odp_log_thread_fn_set(odp_log_func_t func);
 odp_log_func_t odp_log_fn_get(void);
 
 /**
+ * Get abort function
+ *
+ * May be called even if ODP is not initialized.
+ *
+ * Returns the abort function specified in odp_init_global(). If no abort
+ * function was specified in odp_init_global(), returns the default or override
+ * abort function (see odp_override_abort()). Returns NULL if ODP is not
+ * initialized.
+ *
+ * @return Abort function
+ */
+odp_abort_func_t odp_abort_fn_get(void);
+
+/**
  * Get instance handle
  *
  * A successful call outputs the calling thread's ODP instance handle.
