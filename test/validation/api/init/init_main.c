@@ -113,6 +113,35 @@ static void init_test_abort(void)
 	CU_ASSERT(ret == 0);
 }
 
+static void init_test_abort_fn_get(void)
+{
+	int ret;
+	odp_instance_t instance;
+	odp_init_t param;
+	odp_abort_func_t fn;
+
+	fn = odp_abort_fn_get();
+	CU_ASSERT(fn == NULL);
+
+	odp_init_param_init(&param);
+	param.abort_fn = &my_abort_func;
+
+	ret = odp_init_global(&instance, &param, NULL);
+	CU_ASSERT_FATAL(ret == 0);
+
+	ret = odp_init_local(instance, ODP_THREAD_WORKER);
+	CU_ASSERT_FATAL(ret == 0);
+
+	fn = odp_abort_fn_get();
+	CU_ASSERT(fn == &my_abort_func);
+
+	ret = odp_term_local();
+	CU_ASSERT_FATAL(ret == 0);
+
+	ret = odp_term_global(instance);
+	CU_ASSERT(ret == 0);
+}
+
 static void init_test_log(void)
 {
 	int ret;
@@ -311,6 +340,7 @@ odp_testinfo_t testinfo[] = {
 	ODP_TEST_INFO(init_test_param_init),
 	ODP_TEST_INFO(init_test_term_abnormal),
 	ODP_TEST_INFO(init_test_log_fn_get),
+	ODP_TEST_INFO(init_test_abort_fn_get),
 };
 
 odp_testinfo_t init_suite[] = {
