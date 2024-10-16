@@ -60,8 +60,13 @@ do { \
 				##__VA_ARGS__); \
 		} \
 	} \
-	if (level == ODPH_LOG_ABORT) \
-		abort(); \
+	if (level == ODPH_LOG_ABORT) { \
+		odp_abort_func_t fn = odp_abort_fn_get(); \
+		if (fn) \
+			fn(); \
+		else \
+			abort(); \
+	} \
 } while (0)
 
 /**
