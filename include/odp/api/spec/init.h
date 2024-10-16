@@ -260,6 +260,7 @@ void odp_init_param_init(odp_init_t *param);
  *   odp_cpumask_default_worker(), odp_cpumask_default_control() and
  *   odp_cpumask_all_available()
  * - odp_log_fn_get()
+ * - odp_abort_fn_get()
  *
  * A successful odp_init_global() call outputs a handle for the new instance.
  * The handle is used in other initialization and termination calls.
@@ -419,6 +420,20 @@ void odp_log_thread_fn_set(odp_log_func_t func);
  * @retval NULL ODP not initialized
  */
 odp_log_func_t odp_log_fn_get(void);
+
+/**
+ * Get abort function
+ *
+ * May be called even if ODP is not initialized.
+ *
+ * Returns the abort function specified in odp_init_global() parameters. If no
+ * abort function was specified, returns the default or override abort function
+ * (see odp_override_abort()). Returns NULL if ODP is not initialized.
+ *
+ * @return Abort function
+ * @retval NULL ODP not initialized
+ */
+odp_abort_func_t odp_abort_fn_get(void);
 
 /**
  * Get instance handle
