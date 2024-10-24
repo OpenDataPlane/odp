@@ -113,6 +113,36 @@ static void init_test_abort(void)
 	CU_ASSERT(ret == 0);
 }
 
+static void init_test_abort_fn_get(void)
+{
+	int ret;
+	odp_instance_t instance;
+	odp_init_t param;
+	odp_abort_func_t fn;
+
+	fn = odp_abort_fn_get();
+	CU_ASSERT(fn != NULL);
+	CU_ASSERT(fn != &my_abort_func);
+
+	odp_init_param_init(&param);
+	param.abort_fn = &my_abort_func;
+
+	ret = odp_init_global(&instance, &param, NULL);
+	CU_ASSERT_FATAL(ret == 0);
+
+	ret = odp_init_local(instance, ODP_THREAD_WORKER);
+	CU_ASSERT_FATAL(ret == 0);
+
+	fn = odp_abort_fn_get();
+	CU_ASSERT(fn == &my_abort_func);
+
+	ret = odp_term_local();
+	CU_ASSERT_FATAL(ret == 0);
+
+	ret = odp_term_global(instance);
+	CU_ASSERT(ret == 0);
+}
+
 static void init_test_log(void)
 {
 	int ret;
@@ -160,6 +190,40 @@ static void init_test_log_thread(void)
 	my_log_thread_func_count = 0;
 	odp_sys_info_print();
 	CU_ASSERT(my_log_thread_func_count == 0);
+
+	ret = odp_term_local();
+	CU_ASSERT_FATAL(ret == 0);
+
+	ret = odp_term_global(instance);
+	CU_ASSERT(ret == 0);
+}
+
+static void init_test_log_fn_get(void)
+{
+	int ret;
+	odp_instance_t instance;
+	odp_init_t param;
+
+	odp_init_param_init(&param);
+
+	ret = odp_init_global(&instance, &param, NULL);
+	CU_ASSERT_FATAL(ret == 0);
+
+	ret = odp_init_local(instance, ODP_THREAD_WORKER);
+	CU_ASSERT_FATAL(ret == 0);
+
+	/* Default log function is not NULL. */
+	odp_log_func_t log_fn_def = odp_log_fn_get();
+
+	CU_ASSERT(log_fn_def != NULL);
+
+	/* Set log function and check that it was set. */
+	odp_log_thread_fn_set(my_log_thread_func);
+	CU_ASSERT(odp_log_fn_get() == my_log_thread_func);
+
+	/* Set to NULL and check that the default function is returned. */
+	odp_log_thread_fn_set(NULL);
+	CU_ASSERT(odp_log_fn_get() == log_fn_def);
 
 	ret = odp_term_local();
 	CU_ASSERT_FATAL(ret == 0);
@@ -270,7 +334,9 @@ odp_testinfo_t testinfo[] = {
 	ODP_TEST_INFO(init_test_feature_disabled),
 	ODP_TEST_INFO(init_test_log_thread),
 	ODP_TEST_INFO(init_test_param_init),
-	ODP_TEST_INFO(init_test_term_abnormal)
+	ODP_TEST_INFO(init_test_term_abnormal),
+	ODP_TEST_INFO(init_test_log_fn_get),
+	ODP_TEST_INFO(init_test_abort_fn_get),
 };
 
 odp_testinfo_t init_suite[] = {
