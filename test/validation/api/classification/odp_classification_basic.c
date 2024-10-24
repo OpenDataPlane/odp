@@ -730,7 +730,7 @@ static int check_capa_cos_hashing(void)
 {
 	odp_cls_capability_t capa;
 
-	if (odp_cls_capability(&capa) < 0)
+	if (odp_cls_capability(&capa) != 0)
 		return ODP_TEST_INACTIVE;
 
 	return capa.max_hash_queues > 1 ? ODP_TEST_ACTIVE : ODP_TEST_INACTIVE;
