@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2015-2018 Linaro Limited
- * Copyright (c) 2020-2023 Nokia
+ * Copyright (c) 2020-2024 Nokia
  */
 
 #include "odp_classification_testsuites.h"
@@ -352,7 +352,7 @@ void test_cls_pmr_chain(odp_bool_t enable_pktv, int src, int dst, const char *sa
 	cls_packet_info_t pkt_info;
 
 	pkt_info = default_pkt_info;
-	pkt_info.l4_type = CLS_PKT_L4_UDP;
+	pkt_info.l4_type = find_first_supported_proto();
 	pkt = create_packet(pkt_info);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	seqno = cls_pkt_get_seq(pkt);
@@ -514,7 +514,7 @@ void test_pktio_drop_cos(odp_bool_t enable_pktv)
 
 	CU_ASSERT_FATAL(odp_cls_capability(&capa) == 0);
 	pkt_info = default_pkt_info;
-	pkt_info.l4_type = CLS_PKT_L4_UDP;
+	pkt_info.l4_type = find_first_supported_proto();
 	pkt = create_packet(pkt_info);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	seqno = cls_pkt_get_seq(pkt);
@@ -771,7 +771,7 @@ void test_pmr_cos(odp_bool_t enable_pktv)
 	cls_packet_info_t pkt_info;
 
 	pkt_info = default_pkt_info;
-	pkt_info.l4_type = CLS_PKT_L4_UDP;
+	pkt_info.l4_type = find_first_supported_proto();
 	pkt = create_packet(pkt_info);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	seqno = cls_pkt_get_seq(pkt);
@@ -867,7 +867,7 @@ void test_pktio_pmr_composite_cos(odp_bool_t enable_pktv)
 	cls_packet_info_t pkt_info;
 
 	pkt_info = default_pkt_info;
-	pkt_info.l4_type = CLS_PKT_L4_UDP;
+	pkt_info.l4_type = find_first_supported_proto();
 	pkt = create_packet(pkt_info);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	seqno = cls_pkt_get_seq(pkt);
@@ -894,7 +894,10 @@ static void cls_pktio_configure_common(odp_bool_t enable_pktv)
 	odp_cls_capability_t capa;
 	int num_cos;
 
-	odp_cls_capability(&capa);
+	if (odp_cls_capability(&capa)) {
+		CU_FAIL("odp_cls_capability() failed");
+		return;
+	}
 	num_cos = capa.max_cos;
 
 	/* Configure the Different CoS for the pktio interface */

@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2015-2018 Linaro Limited
- * Copyright (c) 2020 Nokia
+ * Copyright (c) 2020-2024 Nokia
  */
 
 #include "odp_classification_testsuites.h"
@@ -546,7 +546,10 @@ odp_cls_pmr_term_t find_first_supported_l3_pmr(void)
 	odp_cls_pmr_term_t term = ODP_PMR_TCP_DPORT;
 	odp_cls_capability_t capability;
 
-	odp_cls_capability(&capability);
+	if (odp_cls_capability(&capability)) {
+		CU_FAIL("odp_cls_capability() failed");
+		return term;
+	}
 
 	/* choose supported PMR */
 	if (capability.supported_terms.bit.udp_sport)
@@ -558,9 +561,29 @@ odp_cls_pmr_term_t find_first_supported_l3_pmr(void)
 	else if (capability.supported_terms.bit.tcp_dport)
 		term = ODP_PMR_TCP_DPORT;
 	else
-		CU_FAIL("Implementations doesn't support any TCP/UDP PMR");
+		CU_FAIL("Implementation doesn't support any TCP/UDP PMR");
 
 	return term;
+}
+
+cls_packet_l4_info find_first_supported_proto(void)
+{
+	odp_cls_capability_t capability;
+
+	if (odp_cls_capability(&capability)) {
+		CU_FAIL("odp_cls_capability() failed");
+		return CLS_PKT_L4_UDP;
+	}
+
+	if (capability.supported_terms.bit.udp_sport ||
+	    capability.supported_terms.bit.udp_dport)
+		return CLS_PKT_L4_UDP;
+	else if (capability.supported_terms.bit.tcp_sport ||
+		 capability.supported_terms.bit.tcp_dport)
+		return CLS_PKT_L4_TCP;
+
+	CU_FAIL("TCP or UDP port matching is not supported");
+	return CLS_PKT_L4_UDP;
 }
 
 int set_first_supported_pmr_port(odp_packet_t pkt, uint16_t port)

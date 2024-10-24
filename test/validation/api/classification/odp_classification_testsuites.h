@@ -89,6 +89,7 @@ void configure_pktio_pmr_composite(odp_bool_t enable_pktv);
 void test_pktio_pmr_composite_cos(odp_bool_t enable_pktv);
 int stop_pktio(odp_pktio_t pktio);
 odp_cls_pmr_term_t find_first_supported_l3_pmr(void);
+cls_packet_l4_info find_first_supported_proto(void);
 int set_first_supported_pmr_port(odp_packet_t pkt, uint16_t port);
 
 #endif /* ODP_BUFFER_TESTSUITES_H_ */
