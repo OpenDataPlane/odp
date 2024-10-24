@@ -1,0 +1,10 @@
+<map id="deprecated.h" name="deprecated.h">
+<area shape="rect" id="node1" title="Macro for deprecated API definitions." alt="" coords="105,5,211,32"/>
+<area shape="rect" id="node2" href="$deprecated_8h.html" title="Control deprecated API definitions." alt="" coords="105,80,211,107"/>
+<area shape="rect" id="node3" href="$spec_2timer__types_8h.html" title="ODP timer API type definitions." alt="" coords="102,155,214,181"/>
+<area shape="rect" id="node4" href="$timer__types_8h.html" title="ODP timer service." alt="" coords="102,229,214,256"/>
+<area shape="rect" id="node5" href="$spec_2timer_8h.html" title="ODP timer service." alt="" coords="5,304,73,331"/>
+<area shape="rect" id="node7" href="$event__inlines_8h_source.html" title=" " alt="" coords="97,304,219,331"/>
+<area shape="rect" id="node8" href="$timer__inlines_8h_source.html" title=" " alt="" coords="243,304,361,331"/>
+<area shape="rect" id="node6" href="$timer_8h.html" title="ODP timer service." alt="" coords="5,379,73,405"/>
+</map>
