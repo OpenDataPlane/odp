@@ -69,6 +69,8 @@ typedef struct test_options_t {
 	uint32_t ctx_size;
 	uint32_t ctx_rd_words;
 	uint32_t ctx_rw_words;
+	uint32_t tot_rd_size;
+	uint32_t tot_rw_size;
 	uint32_t uarea_rd;
 	uint32_t uarea_rw;
 	uint32_t uarea_size;
@@ -407,6 +409,10 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 
 	test_options->ctx_size = ctx_size;
 	test_options->uarea_size = 8 * (test_options->uarea_rd + test_options->uarea_rw);
+	test_options->tot_rd_size = 8 * (test_options->ctx_rd_words + test_options->uarea_rd +
+					 test_options->rd_words);
+	test_options->tot_rw_size = 8 * (test_options->ctx_rw_words + test_options->uarea_rw +
+					 test_options->rw_words);
 
 	return ret;
 }
@@ -507,6 +513,10 @@ static void print_options(test_options_t *options)
 	printf("  queue type                %s\n\n", options->queue_type == 0 ? "parallel" :
 						     options->queue_type == 1 ? "atomic" :
 						     "ordered");
+
+	printf("Extra rd/rw ops per event (queue context + user area + event data)\n");
+	printf("  read                      %u bytes\n", options->tot_rd_size);
+	printf("  write                     %u bytes\n\n", options->tot_rw_size);
 }
 
 static int create_pool(test_global_t *global)
@@ -1365,7 +1375,7 @@ static double measure_wait_time_cycles(uint64_t wait_ns)
 static int output_results(test_global_t *global)
 {
 	int i, num;
-	double rounds_ave, enqueues_ave, events_ave, nsec_ave, cycles_ave;
+	double rounds_ave, enqueues_ave, events_ave, events_per_sec, nsec_ave, cycles_ave;
 	double waits_ave, wait_cycles, wait_cycles_ave;
 	test_options_t *test_options = &global->test_options;
 	int num_cpu = test_options->num_cpu;
@@ -1376,6 +1386,8 @@ static int output_results(test_global_t *global)
 	uint64_t nsec_sum = 0;
 	uint64_t cycles_sum = 0;
 	uint64_t waits_sum = 0;
+	uint32_t tot_rd = test_options->tot_rd_size;
+	uint32_t tot_rw = test_options->tot_rw_size;
 
 	wait_cycles = measure_wait_time_cycles(wait_ns);
 
@@ -1447,8 +1459,12 @@ static int output_results(test_global_t *global)
 	       events_ave / rounds_ave);
 	printf("  rounds per sec:           %.3f M\n",
 	       (1000.0 * rounds_ave) / nsec_ave);
-	printf("  events per sec:           %.3f M\n\n",
-	       (1000.0 * events_ave) / nsec_ave);
+
+	events_per_sec = (1000.0 * events_ave) / nsec_ave;
+	printf("  events per sec:           %.3f M\n", events_per_sec);
+
+	printf("  extra reads per sec:      %.3f MB\n", tot_rd * events_per_sec);
+	printf("  extra writes per sec:     %.3f MB\n", tot_rw * events_per_sec);
 
 	printf("TOTAL events per sec:       %.3f M\n\n",
 	       (1000.0 * events_sum) / nsec_ave);
