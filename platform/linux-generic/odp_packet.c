@@ -175,8 +175,11 @@ static inline void *packet_map(void *pkt_ptr, uint32_t offset,
 	odp_packet_hdr_t *pkt_hdr = pkt_ptr;
 	int seg_count = pkt_hdr->seg_count;
 
-	if (odp_unlikely(offset >= pkt_hdr->frame_len))
+	if (odp_unlikely(offset >= pkt_hdr->frame_len)) {
+		if (seg_len)
+			*seg_len = 0;
 		return NULL;
+	}
 
 	if (odp_likely(seg_count == 1)) {
 		addr = pkt_hdr->seg_data + offset;
