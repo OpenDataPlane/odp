@@ -23,6 +23,7 @@
 #define LSO_TEST_CUSTOM_ETH_SEGNUM_OFFSET 16
 #define LSO_TEST_MIN_ETH_PKT_LEN 60  /* CRC not included in ODP packets */
 #define LSO_TEST_IPV4_FLAG_MF 0x2000 /* More fragments flag within the frag_offset field */
+#define LSO_TEST_IPV4_FLAG_DF 0x4000 /* Don't fragment flag within the frag_offset field */
 
 /* Pktio interface info
  */
@@ -879,17 +880,41 @@ static void update_ipv4_hdr(uint8_t *hdr, uint32_t hdr_len, uint32_t orig_pkt_le
 	memcpy(&hdr[l3_offset], &ip, sizeof(ip));
 }
 
+static void change_ipv4_frag_offset(uint8_t *ip_packet, uint16_t value, uint16_t mask)
+{
+	odph_ipv4hdr_t ip;
+	uint16_t frag_offset;
+
+	memcpy(&ip, ip_packet, sizeof(ip));
+	frag_offset = odp_be_to_cpu_16(ip.frag_offset);
+	frag_offset &= ~mask;
+	frag_offset |= (value & mask);
+	ip.frag_offset = odp_cpu_to_be_16(frag_offset);
+	ip.chksum = 0;
+	memcpy(ip_packet, &ip, sizeof(ip));
+	ip.chksum = ~odp_chksum_ones_comp16(ip_packet, ODPH_IPV4HDR_IHL(ip.ver_ihl) * 4);
+	memcpy(ip_packet, &ip, sizeof(ip));
+}
+
 static void lso_send_ipv4(const uint8_t *test_packet, uint32_t pkt_len, uint32_t max_payload,
 			  int use_opt)
 {
 	odp_lso_profile_param_t param;
 	const uint32_t l3_offset = ODPH_ETHHDR_LEN;
 	const uint32_t hdr_len = l3_offset + ODPH_IPV4HDR_LEN;
+	uint8_t pkt2[pkt_len];
 
 	odp_lso_profile_param_init(&param);
 	param.lso_proto = ODP_LSO_PROTO_IPV4;
 
 	lso_test(param, max_payload, test_packet, pkt_len, hdr_len, l3_offset, use_opt,
+		 is_ipv4_test_pkt,
+		 update_ipv4_hdr);
+
+	/* Same test with DF set */
+	memcpy(pkt2, test_packet, pkt_len);
+	change_ipv4_frag_offset(&pkt2[l3_offset], LSO_TEST_IPV4_FLAG_DF, LSO_TEST_IPV4_FLAG_DF);
+	lso_test(param, max_payload, pkt2, pkt_len, hdr_len, l3_offset, use_opt,
 		 is_ipv4_test_pkt,
 		 update_ipv4_hdr);
 }
