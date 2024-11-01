@@ -671,6 +671,7 @@ static void lso_test(odp_lso_profile_param_t param, uint32_t max_payload,
 
 	profile = odp_lso_profile_create(pktio_a->hdl, &param);
 	CU_ASSERT_FATAL(profile != ODP_LSO_PROFILE_INVALID);
+	memset(&param, 0, sizeof(param)); /* ODP is not supposed to use param anymore */
 
 	CU_ASSERT_FATAL(start_interfaces() == 0);
 
