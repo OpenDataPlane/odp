@@ -19,6 +19,7 @@
 #define MAX_NUM_SEG     256
 
 /* Constants specific to the lso_test() family of tests */
+#define LSO_TEST_MARKER_ETHERTYPE 0x88B6 /* Local experimental Ethertype */
 #define LSO_TEST_CUSTOM_ETHERTYPE 0x88B5 /* Must match test packets. */
 #define LSO_TEST_CUSTOM_ETH_SEGNUM_OFFSET 16
 #define LSO_TEST_MIN_ETH_PKT_LEN 60  /* CRC not included in ODP packets */
@@ -291,6 +292,18 @@ static int send_packet(odp_lso_profile_t lso_profile, pktio_info_t *pktio,
 	return 0;
 }
 
+static uint16_t ethertype(odp_packet_t pkt)
+{
+	uint32_t len;
+	odph_ethhdr_t *eth = odp_packet_l2_ptr(pkt, &len);
+	odp_u16be_t type;
+
+	if (len < sizeof(*eth))
+		return 0;
+	memcpy(&type, &eth->type, sizeof(type));
+	return odp_be_to_cpu_16(type);
+}
+
 static int recv_packets(pktio_info_t *pktio_info, uint64_t timeout_ns,
 			odp_packet_t *pkt_out, int max_num)
 {
@@ -303,7 +316,7 @@ static int recv_packets(pktio_info_t *pktio_info, uint64_t timeout_ns,
 	wait_time = odp_time_local_from_ns(timeout_ns);
 	end = odp_time_sum(odp_time_local(), wait_time);
 
-	do {
+	while (1) {
 		pkt = ODP_PACKET_INVALID;
 		ret = odp_pktin_recv(pktin, &pkt, 1);
 
@@ -317,6 +330,10 @@ static int recv_packets(pktio_info_t *pktio_info, uint64_t timeout_ns,
 
 		if (ret == 1) {
 			CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+			if (ethertype(pkt) == LSO_TEST_MARKER_ETHERTYPE) {
+				odp_packet_free(pkt);
+				break;
+			}
 			pkt_out[num] = pkt;
 			num++;
 			if (num == max_num) {
@@ -324,7 +341,12 @@ static int recv_packets(pktio_info_t *pktio_info, uint64_t timeout_ns,
 				return num;
 			}
 		}
-	} while (odp_time_cmp(end, odp_time_local()) > 0);
+
+		if (odp_time_cmp(end, odp_time_local()) < 0) {
+			CU_FAIL("Timeout when waiting for end marker packet");
+			break;
+		}
+	};
 
 	return num;
 }
@@ -663,6 +685,39 @@ static void test_lso_request_clear(odp_lso_profile_t lso_profile, const uint8_t 
 	odp_packet_free(pkt);
 }
 
+static int send_marker(pktio_info_t *src, pktio_info_t *dst)
+{
+	odph_ethhdr_t marker = {.type = odp_cpu_to_be_16(LSO_TEST_MARKER_ETHERTYPE)};
+	odp_packet_t pkt;
+	int retries = 10;
+
+	pkt = create_packet_for_pktio((uint8_t *)&marker, sizeof(marker), src->hdl, dst->hdl);
+	if (pkt == ODP_PACKET_INVALID) {
+		CU_FAIL("Marker allocation failed");
+		return -1;
+	}
+
+	while (retries) {
+		int ret = odp_pktout_send(src->pktout, &pkt, 1);
+
+		CU_ASSERT_FATAL(ret < 2);
+		if (ret < 0) {
+			CU_FAIL("Marker sending failed");
+			odp_packet_free(pkt);
+			return -1;
+		}
+		if (ret == 1)
+			return 0;
+
+		odp_time_wait_ns(10 * ODP_TIME_MSEC_IN_NS);
+		retries--;
+	}
+
+	CU_FAIL("Marker sending timeout");
+	odp_packet_free(pkt);
+	return -1;
+}
+
 static void lso_test(odp_lso_profile_param_t param, uint32_t max_payload,
 		     const uint8_t *test_packet, uint32_t pkt_len,
 		     uint32_t hdr_len, uint32_t l3_offset,
@@ -696,6 +751,8 @@ static void lso_test(odp_lso_profile_param_t param, uint32_t max_payload,
 	CU_ASSERT(odp_packet_copy_to_mem(pkt, 0, hdr_len, orig_hdr) == 0);
 
 	ret = send_packet(profile, pktio_a, pkt, hdr_len, max_payload, l3_offset, use_opt);
+	CU_ASSERT_FATAL(ret == 0);
+	ret = send_marker(pktio_a, pktio_b);
 	CU_ASSERT_FATAL(ret == 0);
 
 	ODPH_DBG("\n    Sent payload length:     %u bytes\n", sent_payload);
@@ -758,12 +815,7 @@ static void lso_test(odp_lso_profile_param_t param, uint32_t max_payload,
 
 static int is_custom_eth_test_pkt(odp_packet_t pkt)
 {
-	uint32_t len;
-	odph_ethhdr_t *eth = odp_packet_l2_ptr(pkt, &len);
-
-	if (len >= sizeof(*eth) && odp_be_to_cpu_16(eth->type) == LSO_TEST_CUSTOM_ETHERTYPE)
-		return 1;
-	return 0;
+	return ethertype(pkt) == LSO_TEST_CUSTOM_ETHERTYPE;
 }
 
 static void update_custom_eth_hdr(uint8_t *hdr, uint32_t hdr_len, uint32_t orig_pkt_len,
