@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2013-2018 Linaro Limited
- * Copyright (c) 2019-2023 Nokia
+ * Copyright (c) 2019-2024 Nokia
  */
 
 #include <odp_posix_extensions.h>
@@ -2977,10 +2977,19 @@ static int lso_update_ipv4(odp_packet_t pkt, int index, int num_pkt,
 	ipv4 = odp_packet_l3_ptr(pkt, NULL);
 	ipv4->tot_len = odp_cpu_to_be_16(tot_len);
 
-	/* IP payload offset in 8 byte blocks */
-	frag_offset = ((uint32_t)index * payload_len) / 8;
+	/* Give up if the IP header contains options as we cannot yet handle them */
+	if (odp_unlikely(_ODP_IPV4HDR_IHL(ipv4->ver_ihl) > _ODP_IPV4HDR_IHL_MIN)) {
+		_ODP_ERR("Cannot handle packets with IP options in IPv4 LSO\n");
+		return -1;
+	}
 
-	/* More fragments flag */
+	/* Preserve DF and MF flags and the original fragment offset */
+	frag_offset = odp_be_to_cpu_16(ipv4->frag_offset);
+
+	/* Increment fragment offset in the fragments that we created */
+	frag_offset += ((uint32_t)index * payload_len) / 8;
+
+	/* Make sure MF flag is set in the non-last fragments that we created */
 	if (index < (num_pkt - 1))
 		frag_offset |= _ODP_IPV4HDR_FRAG_OFFSET_MORE_FRAGS;
 
