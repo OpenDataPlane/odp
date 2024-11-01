@@ -21,6 +21,8 @@
 /* Constants specific to the lso_test() family of tests */
 #define LSO_TEST_CUSTOM_ETHERTYPE 0x88B5 /* Must match test packets. */
 #define LSO_TEST_CUSTOM_ETH_SEGNUM_OFFSET 16
+#define LSO_TEST_MIN_ETH_PKT_LEN 60  /* CRC not included in ODP packets */
+#define LSO_TEST_IPV4_FLAG_MF 0x2000 /* More fragments flag within the frag_offset field */
 
 /* Pktio interface info
  */
@@ -664,11 +666,13 @@ static void lso_test(odp_lso_profile_param_t param, uint32_t max_payload,
 		     uint32_t hdr_len, uint32_t l3_offset,
 		     int use_opt,
 		     int (*is_test_pkt)(odp_packet_t),
-		     void (*check_hdr)(odp_packet_t pkt, uint16_t seg_num))
+		     void (*update_hdr)(uint8_t *hdr, uint32_t hdr_len, uint32_t orig_pkt_len,
+					odp_packet_t pkt, uint16_t seg_num, uint16_t seg_offset))
 {
 	int i, ret, num, seg_num;
 	odp_lso_profile_t profile;
 	odp_packet_t pkt;
+	uint8_t orig_hdr[hdr_len];
 	uint32_t offset, len, payload_len, payload_sum;
 	odp_packet_t pkt_out[MAX_NUM_SEG];
 	uint32_t sent_payload = pkt_len - hdr_len;
@@ -687,6 +691,8 @@ static void lso_test(odp_lso_profile_param_t param, uint32_t max_payload,
 		return;
 	}
 
+	CU_ASSERT(odp_packet_copy_to_mem(pkt, 0, hdr_len, orig_hdr) == 0);
+
 	ret = send_packet(profile, pktio_a, pkt, hdr_len, max_payload, l3_offset, use_opt);
 	CU_ASSERT_FATAL(ret == 0);
 
@@ -702,23 +708,33 @@ static void lso_test(odp_lso_profile_param_t param, uint32_t max_payload,
 	payload_sum = 0;
 	seg_num = 0;
 	for (i = 0; i < num; i++) {
+		uint8_t expected_hdr[hdr_len];
+
 		/* Filter out possible non-test packets */
 		if (!is_test_pkt(pkt_out[i]))
 			continue;
 
-		check_hdr(pkt_out[i], seg_num);
-
 		len = odp_packet_len(pkt_out[i]);
 		CU_ASSERT_FATAL(len > hdr_len);
+		/* Assume no Ethernet padding in test packets */
+		CU_ASSERT(len >= LSO_TEST_MIN_ETH_PKT_LEN);
 		payload_len = len - hdr_len;
 
 		ODPH_DBG("    LSO segment[%u] payload:  %u bytes\n", seg_num, payload_len);
+
+		memcpy(expected_hdr, orig_hdr, sizeof(expected_hdr));
+		update_hdr(expected_hdr, hdr_len, pkt_len, pkt_out[i], seg_num, offset - hdr_len);
+
+		if (compare_data(pkt_out[i], 0, expected_hdr, hdr_len) >= 0) {
+			ODPH_ERR("    Header compare failed\n");
+			CU_FAIL("Header comparison failed");
+		}
 
 		CU_ASSERT(payload_len <= max_payload);
 
 		if (compare_data(pkt_out[i], hdr_len, test_packet + offset, payload_len) >= 0) {
 			ODPH_ERR("    Payload compare failed at offset %u\n", offset);
-			CU_FAIL("Payload compare failed\n");
+			CU_FAIL("Payload comparison failed");
 		}
 
 		offset      += payload_len;
@@ -748,19 +764,16 @@ static int is_custom_eth_test_pkt(odp_packet_t pkt)
 	return 0;
 }
 
-static void check_custom_eth_hdr(odp_packet_t pkt, uint16_t seg_num)
+static void update_custom_eth_hdr(uint8_t *hdr, uint32_t hdr_len, uint32_t orig_pkt_len,
+				  odp_packet_t pkt, uint16_t seg_num, uint16_t seg_offset)
 {
-	uint16_t segnum;
-	int ret;
+	(void)orig_pkt_len;
+	(void)pkt;
+	(void)seg_offset;
+	(void)hdr_len;
+	odp_u16be_t segnum_be = odp_cpu_to_be_16(seg_num);
 
-	ret = odp_packet_copy_to_mem(pkt, LSO_TEST_CUSTOM_ETH_SEGNUM_OFFSET, 2, &segnum);
-
-	if (ret == 0) {
-		segnum = odp_be_to_cpu_16(segnum);
-		CU_ASSERT(segnum == seg_num);
-	} else {
-		CU_FAIL("Seg num field read failed\n");
-	}
+	memcpy(hdr + LSO_TEST_CUSTOM_ETH_SEGNUM_OFFSET, &segnum_be, sizeof(segnum_be));
 }
 
 static void lso_send_custom_eth(const uint8_t *test_packet, uint32_t pkt_len, uint32_t max_payload,
@@ -779,7 +792,7 @@ static void lso_send_custom_eth(const uint8_t *test_packet, uint32_t pkt_len, ui
 
 	lso_test(param, max_payload, test_packet, pkt_len, hdr_len, l3_offset, use_opt,
 		 is_custom_eth_test_pkt,
-		 check_custom_eth_hdr);
+		 update_custom_eth_hdr);
 }
 
 static void lso_send_custom_eth_723(uint32_t max_payload, int use_opt)
@@ -843,11 +856,27 @@ static int is_ipv4_test_pkt(odp_packet_t pkt)
 	return 1;
 }
 
-static void check_ipv4_hdr(odp_packet_t pkt, uint16_t seg_num)
+static void update_ipv4_hdr(uint8_t *hdr, uint32_t hdr_len, uint32_t orig_pkt_len,
+			    odp_packet_t pkt, uint16_t seg_num, uint16_t seg_offset)
 {
 	(void)seg_num;
+	uint32_t l3_offset = ODPH_ETHHDR_LEN;
+	uint16_t frag_offset;
+	odph_ipv4hdr_t ip;
 
 	CU_ASSERT(odp_packet_has_error(pkt) == 0);
+
+	memcpy(&ip, &hdr[l3_offset], sizeof(ip));
+
+	frag_offset = odp_be_to_cpu_16(ip.frag_offset);
+	frag_offset += seg_offset / 8;
+	if (odp_packet_len(pkt) + seg_offset < orig_pkt_len)
+		frag_offset |= LSO_TEST_IPV4_FLAG_MF;
+	ip.tot_len = odp_cpu_to_be_16(odp_packet_len(pkt) - l3_offset);
+	ip.frag_offset = odp_cpu_to_be_16(frag_offset);
+	ip.chksum = 0;
+	ip.chksum = ~odp_chksum_ones_comp16(&ip, hdr_len - l3_offset);
+	memcpy(&hdr[l3_offset], &ip, sizeof(ip));
 }
 
 static void lso_send_ipv4(const uint8_t *test_packet, uint32_t pkt_len, uint32_t max_payload,
@@ -862,7 +891,7 @@ static void lso_send_ipv4(const uint8_t *test_packet, uint32_t pkt_len, uint32_t
 
 	lso_test(param, max_payload, test_packet, pkt_len, hdr_len, l3_offset, use_opt,
 		 is_ipv4_test_pkt,
-		 check_ipv4_hdr);
+		 update_ipv4_hdr);
 }
 
 static void lso_send_ipv4_udp_325(uint32_t max_payload, int use_opt)
