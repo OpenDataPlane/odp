@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright (c) 2020-2022 Nokia
+ * Copyright (c) 2020-2024 Nokia
  */
 
 #include <odp_api.h>
@@ -17,6 +17,10 @@
 
 /* Maximum number of segments test is prepared to receive per outgoing packet */
 #define MAX_NUM_SEG     256
+
+/* Constants specific to the lso_test() family of tests */
+#define LSO_TEST_CUSTOM_ETHERTYPE 0x88B5 /* Must match test packets. */
+#define LSO_TEST_CUSTOM_ETH_SEGNUM_OFFSET 16
 
 /* Pktio interface info
  */
@@ -215,9 +219,9 @@ static void pktio_pkt_set_macs(odp_packet_t pkt, odp_pktio_t src, odp_pktio_t ds
 	CU_ASSERT(ret <= ODP_PKTIO_MACADDR_MAXSIZE);
 }
 
-static int send_packets(odp_lso_profile_t lso_profile, pktio_info_t *pktio_a, pktio_info_t *pktio_b,
-			const uint8_t *data, uint32_t len, uint32_t hdr_len, uint32_t max_payload,
-			uint32_t l3_offset, int use_opt)
+static int send_packet(odp_lso_profile_t lso_profile, pktio_info_t *pktio_a, pktio_info_t *pktio_b,
+		       const uint8_t *data, uint32_t len, uint32_t hdr_len, uint32_t max_payload,
+		       uint32_t l3_offset, int use_opt)
 {
 	odp_packet_t pkt;
 	int ret;
@@ -548,7 +552,7 @@ static void lso_capability(void)
 	/* LSO can create at least two segments */
 	CU_ASSERT(pktio_a->capa.lso.max_segments > 1);
 	/* LSO can copy at least Ethernet header to segments */
-	CU_ASSERT(pktio_a->capa.lso.max_payload_offset >= 14);
+	CU_ASSERT(pktio_a->capa.lso.max_payload_offset >= ODPH_ETHHDR_LEN);
 
 	if (pktio_a->capa.lso.proto.custom) {
 		CU_ASSERT(pktio_a->capa.lso.max_num_custom > 0);
@@ -652,27 +656,18 @@ static void test_lso_request_clear(odp_lso_profile_t lso_profile, const uint8_t 
 	odp_packet_free(pkt);
 }
 
-static void lso_send_custom_eth(const uint8_t *test_packet, uint32_t pkt_len, uint32_t max_payload,
-				int use_opt)
+static void lso_test(odp_lso_profile_param_t param, uint32_t max_payload,
+		     const uint8_t *test_packet, uint32_t pkt_len,
+		     uint32_t hdr_len, uint32_t l3_offset,
+		     int use_opt,
+		     int (*is_test_pkt)(odp_packet_t),
+		     void (*check_hdr)(odp_packet_t pkt, uint16_t seg_num))
 {
-	int i, ret, num, num_rcv;
-	odp_lso_profile_param_t param;
+	int i, ret, num, seg_num;
 	odp_lso_profile_t profile;
 	uint32_t offset, len, payload_len, payload_sum;
-	uint16_t segnum;
 	odp_packet_t pkt_out[MAX_NUM_SEG];
-	/* Ethernet 14B + custom headers 8B */
-	uint32_t hdr_len = 22;
-	/* Offset to "segment number" field */
-	uint32_t segnum_offset = 16;
 	uint32_t sent_payload = pkt_len - hdr_len;
-
-	odp_lso_profile_param_init(&param);
-	param.lso_proto = ODP_LSO_PROTO_CUSTOM;
-	param.custom.num_custom = 1;
-	param.custom.field[0].mod_op = ODP_LSO_ADD_SEGMENT_NUM;
-	param.custom.field[0].offset = segnum_offset;
-	param.custom.field[0].size   = 2;
 
 	profile = odp_lso_profile_create(pktio_a->hdl, &param);
 	CU_ASSERT_FATAL(profile != ODP_LSO_PROFILE_INVALID);
@@ -681,8 +676,8 @@ static void lso_send_custom_eth(const uint8_t *test_packet, uint32_t pkt_len, ui
 
 	test_lso_request_clear(profile, test_packet, pkt_len, hdr_len, max_payload);
 
-	ret = send_packets(profile, pktio_a, pktio_b, test_packet, pkt_len, hdr_len,
-			   max_payload, 0, use_opt);
+	ret = send_packet(profile, pktio_a, pktio_b, test_packet, pkt_len, hdr_len,
+			  max_payload, l3_offset, use_opt);
 	CU_ASSERT_FATAL(ret == 0);
 
 	ODPH_DBG("\n    Sent payload length:     %u bytes\n", sent_payload);
@@ -695,40 +690,29 @@ static void lso_send_custom_eth(const uint8_t *test_packet, uint32_t pkt_len, ui
 
 	offset = hdr_len;
 	payload_sum = 0;
-	segnum = 0xffff;
-	num_rcv = 0;
+	seg_num = 0;
 	for (i = 0; i < num; i++) {
-		odph_ethhdr_t *eth = (odph_ethhdr_t *)odp_packet_l2_ptr(pkt_out[i], NULL);
-
 		/* Filter out possible non-test packets */
-		if (odp_be_to_cpu_16(eth->type) != 0x88B5)
+		if (!is_test_pkt(pkt_out[i]))
 			continue;
+
+		check_hdr(pkt_out[i], seg_num);
 
 		len = odp_packet_len(pkt_out[i]);
 		payload_len = len - hdr_len;
 
-		ret = odp_packet_copy_to_mem(pkt_out[i], segnum_offset, 2, &segnum);
-
-		if (ret == 0) {
-			segnum = odp_be_to_cpu_16(segnum);
-			CU_ASSERT(segnum == num_rcv);
-		} else {
-			CU_FAIL("Seg num field read failed\n");
-		}
-
-		ODPH_DBG("    LSO segment[%u] payload:  %u bytes\n", segnum, payload_len);
+		ODPH_DBG("    LSO segment[%u] payload:  %u bytes\n", seg_num, payload_len);
 
 		CU_ASSERT(payload_len <= max_payload);
 
-		if (compare_data(pkt_out[i], hdr_len,
-				 test_packet_custom_eth_1 + offset, payload_len) >= 0) {
+		if (compare_data(pkt_out[i], hdr_len, test_packet + offset, payload_len) >= 0) {
 			ODPH_ERR("    Payload compare failed at offset %u\n", offset);
 			CU_FAIL("Payload compare failed\n");
 		}
 
 		offset      += payload_len;
 		payload_sum += payload_len;
-		num_rcv++;
+		seg_num++;
 	}
 
 	ODPH_DBG("    Received payload length: %u bytes\n", payload_sum);
@@ -741,6 +725,50 @@ static void lso_send_custom_eth(const uint8_t *test_packet, uint32_t pkt_len, ui
 	CU_ASSERT_FATAL(stop_interfaces() == 0);
 
 	CU_ASSERT_FATAL(odp_lso_profile_destroy(profile) == 0);
+}
+
+static int is_custom_eth_test_pkt(odp_packet_t pkt)
+{
+	uint32_t len;
+	odph_ethhdr_t *eth = odp_packet_l2_ptr(pkt, &len);
+
+	if (len >= sizeof(*eth) && odp_be_to_cpu_16(eth->type) == LSO_TEST_CUSTOM_ETHERTYPE)
+		return 1;
+	return 0;
+}
+
+static void check_custom_eth_hdr(odp_packet_t pkt, uint16_t seg_num)
+{
+	uint16_t segnum;
+	int ret;
+
+	ret = odp_packet_copy_to_mem(pkt, LSO_TEST_CUSTOM_ETH_SEGNUM_OFFSET, 2, &segnum);
+
+	if (ret == 0) {
+		segnum = odp_be_to_cpu_16(segnum);
+		CU_ASSERT(segnum == seg_num);
+	} else {
+		CU_FAIL("Seg num field read failed\n");
+	}
+}
+
+static void lso_send_custom_eth(const uint8_t *test_packet, uint32_t pkt_len, uint32_t max_payload,
+				int use_opt)
+{
+	odp_lso_profile_param_t param;
+	const uint32_t hdr_len = ODPH_ETHHDR_LEN + 8;	/* Ethernet header + custom header 8B */
+	uint32_t l3_offset = 0;
+
+	odp_lso_profile_param_init(&param);
+	param.lso_proto = ODP_LSO_PROTO_CUSTOM;
+	param.custom.num_custom = 1;
+	param.custom.field[0].mod_op = ODP_LSO_ADD_SEGMENT_NUM;
+	param.custom.field[0].offset = LSO_TEST_CUSTOM_ETH_SEGNUM_OFFSET;
+	param.custom.field[0].size   = 2;
+
+	lso_test(param, max_payload, test_packet, pkt_len, hdr_len, l3_offset, use_opt,
+		 is_custom_eth_test_pkt,
+		 check_custom_eth_hdr);
 }
 
 static void lso_send_custom_eth_723(uint32_t max_payload, int use_opt)
@@ -786,83 +814,44 @@ static void lso_send_custom_eth_723_288_opt(void)
 	lso_send_custom_eth_723(288, 1);
 }
 
+static int is_ipv4_test_pkt(odp_packet_t pkt)
+{
+	uint32_t len;
+	odph_ipv4hdr_t *ip;
+
+	if (!odp_packet_has_ipv4(pkt))
+		return 0;
+
+	ip = odp_packet_l3_ptr(pkt, &len);
+
+	if (len < sizeof(*ip) ||
+	    odp_be_to_cpu_32(ip->dst_addr) != 0xc0a80101 ||
+	    odp_be_to_cpu_32(ip->src_addr) != 0xc0a80102)
+		return 0;
+
+	return 1;
+}
+
+static void check_ipv4_hdr(odp_packet_t pkt, uint16_t seg_num)
+{
+	(void)seg_num;
+
+	CU_ASSERT(odp_packet_has_error(pkt) == 0);
+}
+
 static void lso_send_ipv4(const uint8_t *test_packet, uint32_t pkt_len, uint32_t max_payload,
 			  int use_opt)
 {
-	int i, ret, num;
 	odp_lso_profile_param_t param;
-	odp_lso_profile_t profile;
-	uint32_t offset, len, payload_len, payload_sum;
-	odp_packet_t packet[MAX_NUM_SEG];
-	/* Ethernet 14B + IPv4 header 20B */
-	uint32_t hdr_len = 34;
-	uint32_t sent_payload = pkt_len - hdr_len;
+	const uint32_t l3_offset = ODPH_ETHHDR_LEN;
+	const uint32_t hdr_len = l3_offset + ODPH_IPV4HDR_LEN;
 
 	odp_lso_profile_param_init(&param);
 	param.lso_proto = ODP_LSO_PROTO_IPV4;
 
-	profile = odp_lso_profile_create(pktio_a->hdl, &param);
-	CU_ASSERT_FATAL(profile != ODP_LSO_PROFILE_INVALID);
-
-	CU_ASSERT_FATAL(start_interfaces() == 0);
-
-	test_lso_request_clear(profile, test_packet, pkt_len, hdr_len, max_payload);
-
-	ret = send_packets(profile, pktio_a, pktio_b, test_packet, pkt_len,
-			   hdr_len, max_payload, 14, use_opt);
-	CU_ASSERT_FATAL(ret == 0);
-
-	ODPH_DBG("\n    Sent payload length:     %u bytes\n", sent_payload);
-
-	/* Wait a bit to receive all created segments. Timeout and MAX_NUM_SEG values should be
-	 * large enough to ensure that we receive all created segments. */
-	num = recv_packets(pktio_b, 100 * ODP_TIME_MSEC_IN_NS, packet, MAX_NUM_SEG);
-	CU_ASSERT(num > 0);
-	CU_ASSERT(num < MAX_NUM_SEG);
-
-	offset = hdr_len;
-	payload_sum = 0;
-	for (i = 0; i < num; i++) {
-		if (!odp_packet_has_ipv4(packet[i]))
-			continue;
-
-		odph_ipv4hdr_t *ip = odp_packet_l3_ptr(packet[i], NULL);
-
-		/* Filter out possible non-test packets */
-		if (odp_be_to_cpu_32(ip->dst_addr) != 0xc0a80101 ||
-		    odp_be_to_cpu_32(ip->src_addr) != 0xc0a80102)
-			continue;
-
-		len = odp_packet_len(packet[i]);
-		payload_len = len - hdr_len;
-
-		ODPH_DBG("    LSO segment[%i] payload:  %u bytes\n", i, payload_len);
-
-		CU_ASSERT(odp_packet_has_error(packet[i]) == 0);
-		CU_ASSERT(payload_len <= max_payload);
-
-		if (pkt_len > max_payload)
-			CU_ASSERT(odp_packet_has_ipfrag(packet[i]));
-
-		if (compare_data(packet[i], hdr_len, test_packet + offset, payload_len) >= 0) {
-			ODPH_ERR("    Payload compare failed at offset %u\n", offset);
-			CU_FAIL("Payload compare failed\n");
-		}
-
-		offset      += payload_len;
-		payload_sum += payload_len;
-	}
-
-	ODPH_DBG("    Received payload length: %u bytes\n", payload_sum);
-
-	CU_ASSERT(payload_sum == sent_payload);
-
-	if (num > 0)
-		odp_packet_free_multi(packet, num);
-
-	CU_ASSERT_FATAL(stop_interfaces() == 0);
-
-	CU_ASSERT_FATAL(odp_lso_profile_destroy(profile) == 0);
+	lso_test(param, max_payload, test_packet, pkt_len, hdr_len, l3_offset, use_opt,
+		 is_ipv4_test_pkt,
+		 check_ipv4_hdr);
 }
 
 static void lso_send_ipv4_udp_325(uint32_t max_payload, int use_opt)
