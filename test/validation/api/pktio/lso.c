@@ -699,6 +699,7 @@ static void lso_test(odp_lso_profile_param_t param, uint32_t max_payload,
 		check_hdr(pkt_out[i], seg_num);
 
 		len = odp_packet_len(pkt_out[i]);
+		CU_ASSERT_FATAL(len > hdr_len);
 		payload_len = len - hdr_len;
 
 		ODPH_DBG("    LSO segment[%u] payload:  %u bytes\n", seg_num, payload_len);
