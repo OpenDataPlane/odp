@@ -219,24 +219,27 @@ static void pktio_pkt_set_macs(odp_packet_t pkt, odp_pktio_t src, odp_pktio_t ds
 	CU_ASSERT(ret <= ODP_PKTIO_MACADDR_MAXSIZE);
 }
 
-static int send_packet(odp_lso_profile_t lso_profile, pktio_info_t *pktio_a, pktio_info_t *pktio_b,
-		       const uint8_t *data, uint32_t len, uint32_t hdr_len, uint32_t max_payload,
-		       uint32_t l3_offset, int use_opt)
+static odp_packet_t create_packet_for_pktio(const uint8_t *data, uint32_t len,
+					    odp_pktio_t src, odp_pktio_t dst)
 {
 	odp_packet_t pkt;
+
+	pkt = create_packet(data, len);
+	if (pkt != ODP_PACKET_INVALID) {
+		pktio_pkt_set_macs(pkt, src, dst);
+		CU_ASSERT(odp_packet_has_lso_request(pkt) == 0);
+	}
+	return pkt;
+}
+
+static int send_packet(odp_lso_profile_t lso_profile, pktio_info_t *pktio,
+		       odp_packet_t pkt, uint32_t hdr_len, uint32_t max_payload,
+		       uint32_t l3_offset, int use_opt)
+{
 	int ret;
 	odp_packet_lso_opt_t lso_opt;
 	odp_packet_lso_opt_t *opt_ptr = NULL;
 	int retries = 10;
-
-	pkt = create_packet(data, len);
-	if (pkt == ODP_PACKET_INVALID) {
-		CU_FAIL("failed to generate test packet");
-		return -1;
-	}
-
-	pktio_pkt_set_macs(pkt, pktio_a->hdl, pktio_b->hdl);
-	CU_ASSERT(odp_packet_has_lso_request(pkt) == 0);
 
 	memset(&lso_opt, 0, sizeof(odp_packet_lso_opt_t));
 	lso_opt.lso_profile     = lso_profile;
@@ -259,7 +262,7 @@ static int send_packet(odp_lso_profile_t lso_profile, pktio_info_t *pktio_a, pkt
 		odp_packet_l3_offset_set(pkt, l3_offset);
 
 	while (retries) {
-		ret = odp_pktout_send_lso(pktio_a->pktout, &pkt, 1, opt_ptr);
+		ret = odp_pktout_send_lso(pktio->pktout, &pkt, 1, opt_ptr);
 
 		CU_ASSERT_FATAL(ret < 2);
 
@@ -665,6 +668,7 @@ static void lso_test(odp_lso_profile_param_t param, uint32_t max_payload,
 {
 	int i, ret, num, seg_num;
 	odp_lso_profile_t profile;
+	odp_packet_t pkt;
 	uint32_t offset, len, payload_len, payload_sum;
 	odp_packet_t pkt_out[MAX_NUM_SEG];
 	uint32_t sent_payload = pkt_len - hdr_len;
@@ -677,8 +681,13 @@ static void lso_test(odp_lso_profile_param_t param, uint32_t max_payload,
 
 	test_lso_request_clear(profile, test_packet, pkt_len, hdr_len, max_payload);
 
-	ret = send_packet(profile, pktio_a, pktio_b, test_packet, pkt_len, hdr_len,
-			  max_payload, l3_offset, use_opt);
+	pkt = create_packet_for_pktio(test_packet, pkt_len, pktio_a->hdl, pktio_b->hdl);
+	if (pkt == ODP_PACKET_INVALID) {
+		CU_FAIL("failed to generate test packet");
+		return;
+	}
+
+	ret = send_packet(profile, pktio_a, pkt, hdr_len, max_payload, l3_offset, use_opt);
 	CU_ASSERT_FATAL(ret == 0);
 
 	ODPH_DBG("\n    Sent payload length:     %u bytes\n", sent_payload);
