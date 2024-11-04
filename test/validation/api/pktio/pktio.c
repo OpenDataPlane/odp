@@ -20,6 +20,9 @@
 #define PKT_LEN_MAX            (PKT_BUF_SIZE - ODPH_ETHHDR_LEN - \
 				ODPH_IPV4HDR_LEN - ODPH_UDPHDR_LEN)
 
+#define NUM_TEST_PKTS          100
+#define NUM_RX_ATTEMPTS        200
+
 #define USE_MTU                0
 #define MAX_NUM_IFACES         2
 #define TEST_SEQ_INVALID       ((uint32_t)~0)
@@ -2350,8 +2353,8 @@ static void pktio_test_statistics_counters(void)
 		ODP_PKTIO_INVALID, ODP_PKTIO_INVALID
 	};
 	odp_packet_t pkt;
-	odp_packet_t tx_pkt[1000];
-	uint32_t pkt_seq[1000];
+	odp_packet_t tx_pkt[NUM_TEST_PKTS];
+	uint32_t pkt_seq[NUM_TEST_PKTS];
 	odp_event_t ev;
 	int i, pkts, tx_pkts, ret, alloc = 0;
 	odp_pktout_queue_t pktout;
@@ -2381,7 +2384,7 @@ static void pktio_test_statistics_counters(void)
 		CU_ASSERT(ret == 0);
 	}
 
-	alloc = create_packets(tx_pkt, pkt_seq, 1000, pktio_tx, pktio_rx);
+	alloc = create_packets(tx_pkt, pkt_seq, NUM_TEST_PKTS, pktio_tx, pktio_rx);
 
 	ret = odp_pktio_stats_reset(pktio_tx);
 	CU_ASSERT(ret == 0);
@@ -2402,7 +2405,7 @@ static void pktio_test_statistics_counters(void)
 	tx_pkts = pkts;
 
 	/* get */
-	for (i = 0, pkts = 0; i < 1000 && pkts != tx_pkts; i++) {
+	for (i = 0, pkts = 0; i < NUM_RX_ATTEMPTS && pkts != tx_pkts; i++) {
 		ev = odp_schedule(NULL, wait);
 		if (ev != ODP_EVENT_INVALID) {
 			if (odp_event_type(ev) == ODP_EVENT_PACKET) {
@@ -2640,8 +2643,8 @@ static void pktio_test_queue_statistics_counters(void)
 	odp_pktio_t pktio[MAX_NUM_IFACES] = {
 		ODP_PKTIO_INVALID, ODP_PKTIO_INVALID
 	};
-	odp_packet_t tx_pkt[1000];
-	uint32_t pkt_seq[1000];
+	odp_packet_t tx_pkt[NUM_TEST_PKTS];
+	uint32_t pkt_seq[NUM_TEST_PKTS];
 	int i, pkts, tx_pkts, ret, alloc = 0;
 	odp_pktout_queue_t pktout;
 	odp_pktin_queue_t pktin;
@@ -2669,7 +2672,7 @@ static void pktio_test_queue_statistics_counters(void)
 	if (num_ifaces > 1)
 		CU_ASSERT_FATAL(odp_pktio_start(pktio_rx) == 0);
 
-	alloc = create_packets(tx_pkt, pkt_seq, 1000, pktio_tx, pktio_rx);
+	alloc = create_packets(tx_pkt, pkt_seq, NUM_TEST_PKTS, pktio_tx, pktio_rx);
 
 	CU_ASSERT(odp_pktio_stats_reset(pktio_tx) == 0);
 	if (num_ifaces > 1)
@@ -2685,7 +2688,7 @@ static void pktio_test_queue_statistics_counters(void)
 	}
 	tx_pkts = pkts;
 
-	for (i = 0, pkts = 0; i < 1000 && pkts != tx_pkts; i++) {
+	for (i = 0, pkts = 0; i < NUM_RX_ATTEMPTS && pkts != tx_pkts; i++) {
 		odp_packet_t pkt;
 
 		if (odp_pktin_recv_tmo(pktin, &pkt, 1, wait) != 1)
@@ -2763,8 +2766,8 @@ static void pktio_test_event_queue_statistics_counters(void)
 		ODP_PKTIO_INVALID, ODP_PKTIO_INVALID
 	};
 	odp_packet_t pkt;
-	odp_packet_t tx_pkt[1000];
-	uint32_t pkt_seq[1000];
+	odp_packet_t tx_pkt[NUM_TEST_PKTS];
+	uint32_t pkt_seq[NUM_TEST_PKTS];
 	odp_event_t ev;
 	int i, pkts, tx_pkts;
 	odp_queue_t pktout;
@@ -2793,7 +2796,7 @@ static void pktio_test_event_queue_statistics_counters(void)
 	if (num_ifaces > 1)
 		CU_ASSERT_FATAL(odp_pktio_start(pktio_rx) == 0);
 
-	tx_pkts = create_packets(tx_pkt, pkt_seq, 1000, pktio_tx, pktio_rx);
+	tx_pkts = create_packets(tx_pkt, pkt_seq, NUM_TEST_PKTS, pktio_tx, pktio_rx);
 
 	CU_ASSERT(odp_pktio_stats_reset(pktio_tx) == 0);
 	if (num_ifaces > 1)
@@ -2802,7 +2805,7 @@ static void pktio_test_event_queue_statistics_counters(void)
 	CU_ASSERT_FATAL(send_packet_events(pktout, tx_pkt, tx_pkts) == 0);
 
 	/* Receive */
-	for (i = 0, pkts = 0; i < 1000 && pkts != tx_pkts; i++) {
+	for (i = 0, pkts = 0; i < NUM_RX_ATTEMPTS && pkts != tx_pkts; i++) {
 		ev = odp_schedule(NULL, wait);
 		if (ev != ODP_EVENT_INVALID) {
 			if (odp_event_type(ev) == ODP_EVENT_PACKET) {
@@ -3094,8 +3097,8 @@ static void pktio_test_start_stop(void)
 	odp_pktio_t pktio[MAX_NUM_IFACES];
 	odp_pktio_t pktio_in;
 	odp_packet_t pkt;
-	odp_packet_t tx_pkt[1000];
-	uint32_t pkt_seq[1000];
+	odp_packet_t tx_pkt[NUM_TEST_PKTS];
+	uint32_t pkt_seq[NUM_TEST_PKTS];
 	odp_event_t ev;
 	int i, pkts, ret, alloc = 0;
 	odp_pktout_queue_t pktout;
@@ -3125,7 +3128,7 @@ static void pktio_test_start_stop(void)
 
 	/* Test Rx on a stopped interface. Only works if there are 2 */
 	if (num_ifaces > 1) {
-		alloc = create_packets(tx_pkt, pkt_seq, 1000, pktio[0],
+		alloc = create_packets(tx_pkt, pkt_seq, NUM_TEST_PKTS, pktio[0],
 				       pktio[1]);
 
 		for (pkts = 0; pkts != alloc; ) {
@@ -3138,7 +3141,7 @@ static void pktio_test_start_stop(void)
 			pkts += ret;
 		}
 		/* check that packets did not arrive */
-		for (i = 0, pkts = 0; i < 1000; i++) {
+		for (i = 0, pkts = 0; i < NUM_RX_ATTEMPTS; i++) {
 			ev = odp_schedule(NULL, wait);
 			if (ev == ODP_EVENT_INVALID)
 				continue;
@@ -3159,9 +3162,8 @@ static void pktio_test_start_stop(void)
 		CU_ASSERT(ret == 0);
 
 		_pktio_wait_linkup(pktio[1]);
-
 		/* flush packets with magic number in pipes */
-		for (i = 0; i < 1000; i++) {
+		for (i = 0; i < NUM_RX_ATTEMPTS; i++) {
 			ev = odp_schedule(NULL, wait);
 			if (ev != ODP_EVENT_INVALID)
 				odp_event_free(ev);
@@ -3173,7 +3175,7 @@ static void pktio_test_start_stop(void)
 	else
 		pktio_in = pktio[0];
 
-	alloc = create_packets(tx_pkt, pkt_seq, 1000, pktio[0], pktio_in);
+	alloc = create_packets(tx_pkt, pkt_seq, NUM_TEST_PKTS, pktio[0], pktio_in);
 
 	/* send */
 	for (pkts = 0; pkts != alloc; ) {
@@ -3186,7 +3188,7 @@ static void pktio_test_start_stop(void)
 	}
 
 	/* get */
-	for (i = 0, pkts = 0; i < 1000; i++) {
+	for (i = 0, pkts = 0; i < NUM_RX_ATTEMPTS; i++) {
 		ev = odp_schedule(NULL, wait);
 		if (ev != ODP_EVENT_INVALID) {
 			if (odp_event_type(ev) == ODP_EVENT_PACKET) {
