@@ -797,22 +797,99 @@ typedef enum odp_lso_protocol_t {
 
 	/** LSO performs IPv4 fragmentation.
 	 *
-	 *  IP header length and checksum fields are updated. IP fragmentation related fields are
-	 *  filled and IPv4 Identification field value is copied from the original packet. */
+	 *  The total length, MF flag, fragment offset and checksum fields
+	 *  of the IP header are updated according to the IPv4 standard and
+	 *  other fields are copied from the original packet. All IP options
+	 *  in the original packets are copied to the fragments.
+	 *
+	 *  IPv4 LSO must not be attempted for the following packets:
+	 *  - packets that are not IPv4 packets
+	 *  - packets that are already IPv4 fragments
+	 *  - packets that have IP options that may not be copied to all
+	 *    fragments
+	 *  - packets for which L4 checksum offload is requested
+	 *
+	 *  L3 offset must point to the start of the IP header.
+	 *  Payload offset must point to the start of the IP payload.
+	 */
 	ODP_LSO_PROTO_IPV4,
 
-	/** LSO performs IPv6 fragmentation. */
+	/** LSO performs IPv6 fragmentation.
+	 *
+	 *  Header updates and fragment header generation are done according
+	 *  to the IPv6 standard. The identification field of the fragment
+	 *  header is generated in an implementation specific manner.
+	 *
+	 *  Fragment header is inserted in the packets in the offset pointed
+	 *  to by the payload offset metadata. IPv6 base header and extension
+	 *  headers up to and including the inserted fragment header are
+	 *  copied to all created fragments.
+	 *
+	 *  IPv6 LSO must not be attempted for the following packets:
+	 *  - packets that are not IPv6 packets
+	 *  - packets that are already IPv6 fragments
+	 *  - packets for which L4 checksum offload is requested
+	 *
+	 *  L3 offset must point to the start of the IP header.
+	 *  Payload offset must point to the first byte of after the
+	 *  per-fragment headers as defined in RFC 8200, i.e. to the
+	 *  packet offset where the fragment header is to be inserted.
+	 */
 	ODP_LSO_PROTO_IPV6,
 
 	/** LSO performs TCP segmentation on top of IPv4.
 	 *
-	 *  IP header length and checksum fields are updated. IP fragmentation is not performed
-	 *  and IPv4 Don't Fragment bit is not set. Unique IPv4 Identification field values
-	 *  are generated. Those are usually increments of the IPv4 ID field value in the packet.
+	 *  TCP header is updated as if the payload data was originally sent
+	 *  in multiple TCP segments.
+	 *
+	 *  TCP headers of the created segments are copied from the original
+	 *  packet, with the sequence number and checksum updated. All TCP
+	 *  options are copied from the original packet. The FIN flag is copied
+	 *  to the last created segment and cleared in other segments. The CWR
+	 *  flag is copied to the first created segment and cleared in other
+	 *  segments.
+	 *
+	 *  IP headers (including IP options) of the created segments are
+	 *  copied from the original packet, with total length, checksum
+	 *  and identification fields updated. Unique IPv4 identification
+	 *  field values are generated if the DF flag is not set. The
+	 *  values are usually increments of the IPv4 ID field value in
+	 *  the original packet so an application should not send packets
+	 *  with consecutive identification values if the DF flag is not set.
+	 *
+	 *  TCP_IPV4 LSO must not be attempted for the following packets;
+	 *  - packets that are not TCP over IPv4
+	 *  - packets that are IP fragments
+	 *  - packets that have the SYN, RST or URG flag set
+	 *  - packets that have TCP options that may not be copied to all
+	 *    segments
+	 *
+	 * L3 offset must point to the start of the IP header.
+	 * L4 offset must point to the start of the TCP header.
+	 * Payload offset must point to the start of the TCP payload.
 	 */
 	ODP_LSO_PROTO_TCP_IPV4,
 
-	/** LSO performs TCP segmentation on top of IPv6. */
+	/** LSO performs TCP segmentation on top of IPv6.
+	 *
+	 *  TCP headers of the created segments are created in the same way
+	 *  as in ODP_LSO_PROTO_TCP_IPV4.
+	 *
+	 *  IP headers (including extension headers) of the created segments
+	 *  are copied from the original packet, with the payload length
+	 *  updated.
+	 *
+	 *  TCP_IPV6 LSO must not be attempted for the following packets;
+	 *  - packets that are not TCP over IPv6
+	 *  - packets that are IP fragments
+	 *  - packets that have the SYN, RST or URG flag set
+	 *  - packets that have TCP options that may not be copied to all
+	 *    segments
+	 *
+	 * L3 offset must point to the start of the IP header.
+	 * L4 offset must point to the start of the TCP header.
+	 * Payload offset must point to the start of the TCP payload.
+	 */
 	ODP_LSO_PROTO_TCP_IPV6,
 
 	/** LSO performs SCTP segmentation on top of IPv4. */
