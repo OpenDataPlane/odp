@@ -26,6 +26,9 @@
 #define LSO_TEST_IPV4_FLAG_MF 0x2000 /* More fragments flag within the frag_offset field */
 #define LSO_TEST_IPV4_FLAG_DF 0x4000 /* Don't fragment flag within the frag_offset field */
 #define LSO_TEST_IPV4_FRAG_OFFS_MASK 0x1fff /* Fragment offset bits in the frag_offset field */
+/* Segment number field value in the original packet. Nonzero to verify that the LSO operation
+ * adds to the value instead of simply overwriting it. */
+#define LSO_TEST_CUSTOM_ETH_SEGNUM 0x00fe
 
 /* Pktio interface info
  */
@@ -825,7 +828,7 @@ static void update_custom_eth_hdr(uint8_t *hdr, uint32_t hdr_len, uint32_t orig_
 	(void)pkt;
 	(void)seg_offset;
 	(void)hdr_len;
-	odp_u16be_t segnum_be = odp_cpu_to_be_16(seg_num);
+	odp_u16be_t segnum_be = odp_cpu_to_be_16(seg_num + LSO_TEST_CUSTOM_ETH_SEGNUM);
 
 	memcpy(hdr + LSO_TEST_CUSTOM_ETH_SEGNUM_OFFSET, &segnum_be, sizeof(segnum_be));
 }
@@ -852,11 +855,16 @@ static void lso_send_custom_eth(const uint8_t *test_packet, uint32_t pkt_len, ui
 static void lso_send_custom_eth_723(uint32_t max_payload, int use_opt)
 {
 	uint32_t pkt_len = sizeof(test_packet_custom_eth_1);
+	odp_u16be_t segnum = odp_cpu_to_be_16(LSO_TEST_CUSTOM_ETH_SEGNUM);
+	uint8_t test_pkt[pkt_len];
+
+	memcpy(test_pkt, test_packet_custom_eth_1, pkt_len);
+	memcpy(test_pkt + LSO_TEST_CUSTOM_ETH_SEGNUM_OFFSET, &segnum, sizeof(segnum));
 
 	if (max_payload > pktio_a->capa.lso.max_payload_len)
 		max_payload = pktio_a->capa.lso.max_payload_len;
 
-	lso_send_custom_eth(test_packet_custom_eth_1, pkt_len, max_payload, use_opt);
+	lso_send_custom_eth(test_pkt, pkt_len, max_payload, use_opt);
 }
 
 /* No segmentation needed: packet size 723 bytes, LSO segment payload 800 bytes */
