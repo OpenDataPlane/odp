@@ -22,13 +22,23 @@
 #define LSO_TEST_MARKER_ETHERTYPE 0x88B6 /* Local experimental Ethertype */
 #define LSO_TEST_CUSTOM_ETHERTYPE 0x88B5 /* Must match test packets. */
 #define LSO_TEST_CUSTOM_ETH_SEGNUM_OFFSET 16
+#define LSO_TEST_CUSTOM_ETH_BITS_OFFSET LSO_TEST_CUSTOM_ETH_SEGNUM_OFFSET /* Intentional overlap */
 #define LSO_TEST_MIN_ETH_PKT_LEN 60  /* CRC not included in ODP packets */
 #define LSO_TEST_IPV4_FLAG_MF 0x2000 /* More fragments flag within the frag_offset field */
 #define LSO_TEST_IPV4_FLAG_DF 0x4000 /* Don't fragment flag within the frag_offset field */
 #define LSO_TEST_IPV4_FRAG_OFFS_MASK 0x1fff /* Fragment offset bits in the frag_offset field */
 /* Segment number field value in the original packet. Nonzero to verify that the LSO operation
- * adds to the value instead of simply overwriting it. */
-#define LSO_TEST_CUSTOM_ETH_SEGNUM 0x00fe
+ * adds to the value instead of simply overwriting it. We use binary 10101010 bit pattern in the
+ * most significant byte for testing overlapping write bits operations */
+#define LSO_TEST_CUSTOM_ETH_SEGNUM 0xaafe
+/* Parameters for write bits custom operation. These should flip the corresponding bit pairs
+ * of the original packet (in the most significant byte of the segment number field */
+#define LSO_TEST_FIRST_SEG_MASK   (3 << 2)
+#define LSO_TEST_FIRST_SEG_VALUE ((1 << 2) | 1) /* set an extra bit that must be ignored */
+#define LSO_TEST_MIDDLE_SEG_MASK  (3 << 4)
+#define LSO_TEST_MIDDLE_SEG_VALUE (1 << 4)
+#define LSO_TEST_LAST_SEG_MASK    (3 << 6)
+#define LSO_TEST_LAST_SEG_VALUE   (1 << 6)
 
 /* Pktio interface info
  */
@@ -496,7 +506,22 @@ static int check_lso_custom(void)
 	if (pktio_a->capa.lso.max_profiles == 0 || pktio_a->capa.lso.max_profiles_per_pktio == 0)
 		return ODP_TEST_INACTIVE;
 
-	if (pktio_a->capa.lso.proto.custom == 0 || pktio_a->capa.lso.mod_op.add_segment_num == 0)
+	if (pktio_a->capa.lso.proto.custom == 0)
+		return ODP_TEST_INACTIVE;
+
+	if (pktio_a->capa.lso.mod_op.add_segment_num == 0 &&
+	    pktio_a->capa.lso.mod_op.write_bits == 0)
+		return ODP_TEST_INACTIVE;
+
+	return ODP_TEST_ACTIVE;
+}
+
+static int check_lso_custom_segnum(void)
+{
+	if (check_lso_custom() == ODP_TEST_INACTIVE)
+		return ODP_TEST_INACTIVE;
+
+	if (pktio_a->capa.lso.mod_op.add_segment_num == 0)
 		return ODP_TEST_INACTIVE;
 
 	return ODP_TEST_ACTIVE;
@@ -596,7 +621,8 @@ static void lso_capability(void)
 
 		CU_ASSERT(pktio_a->capa.lso.mod_op.add_segment_num ||
 			  pktio_a->capa.lso.mod_op.add_payload_len ||
-			  pktio_a->capa.lso.mod_op.add_payload_offset)
+			  pktio_a->capa.lso.mod_op.add_payload_offset ||
+			  pktio_a->capa.lso.mod_op.write_bits)
 	}
 }
 
@@ -822,8 +848,8 @@ static int is_custom_eth_test_pkt(odp_packet_t pkt)
 	return ethertype(pkt) == LSO_TEST_CUSTOM_ETHERTYPE;
 }
 
-static void update_custom_eth_hdr(uint8_t *hdr, uint32_t hdr_len, odp_packet_t pkt,
-				  uint16_t seg_num, uint16_t seg_offset, uint16_t num_segs)
+static void update_custom_hdr_segnum(uint8_t *hdr, uint32_t hdr_len, odp_packet_t pkt,
+				     uint16_t seg_num, uint16_t seg_offset, uint16_t num_segs)
 {
 	(void)pkt;
 	(void)seg_offset;
@@ -834,6 +860,60 @@ static void update_custom_eth_hdr(uint8_t *hdr, uint32_t hdr_len, odp_packet_t p
 	memcpy(hdr + LSO_TEST_CUSTOM_ETH_SEGNUM_OFFSET, &segnum_be, sizeof(segnum_be));
 }
 
+static void update_custom_hdr_bits(uint8_t *hdr, uint32_t hdr_len, odp_packet_t pkt,
+				   uint16_t seg_num, uint16_t seg_offset, uint16_t num_segs)
+{
+	(void)hdr_len;
+	(void)pkt;
+	(void)seg_offset;
+	uint8_t value;
+
+	if (seg_num == 0) {
+		value = LSO_TEST_FIRST_SEG_VALUE & LSO_TEST_FIRST_SEG_MASK;
+		hdr[LSO_TEST_CUSTOM_ETH_BITS_OFFSET] &= ~LSO_TEST_FIRST_SEG_MASK;
+		hdr[LSO_TEST_CUSTOM_ETH_BITS_OFFSET] |= value;
+	} else if (seg_num < num_segs - 1) {
+		value = LSO_TEST_MIDDLE_SEG_VALUE & LSO_TEST_MIDDLE_SEG_MASK;
+		hdr[LSO_TEST_CUSTOM_ETH_BITS_OFFSET] &= ~LSO_TEST_MIDDLE_SEG_MASK;
+		hdr[LSO_TEST_CUSTOM_ETH_BITS_OFFSET] |= value;
+	} else {
+		value = LSO_TEST_LAST_SEG_VALUE & LSO_TEST_LAST_SEG_MASK;
+		hdr[LSO_TEST_CUSTOM_ETH_BITS_OFFSET] &= ~LSO_TEST_LAST_SEG_MASK;
+		hdr[LSO_TEST_CUSTOM_ETH_BITS_OFFSET] |= value;
+	}
+}
+
+static void update_custom_hdr_segnum_bits(uint8_t *hdr, uint32_t hdr_len, odp_packet_t pkt,
+					  uint16_t seg_num, uint16_t seg_offset, uint16_t num_segs)
+{
+	update_custom_hdr_segnum(hdr, hdr_len, pkt, seg_num, seg_offset, num_segs);
+	update_custom_hdr_bits(hdr, hdr_len, pkt, seg_num, seg_offset, num_segs);
+}
+
+static void add_profile_param_custom_segnum(odp_lso_profile_param_t *param)
+{
+	uint8_t idx = param->custom.num_custom++;
+
+	param->custom.field[idx].mod_op = ODP_LSO_ADD_SEGMENT_NUM;
+	param->custom.field[idx].offset = LSO_TEST_CUSTOM_ETH_SEGNUM_OFFSET;
+	param->custom.field[idx].size   = 2;
+}
+
+static void add_profile_param_custom_write_bits(odp_lso_profile_param_t *param)
+{
+	uint8_t idx = param->custom.num_custom++;
+
+	param->custom.field[idx].mod_op = ODP_LSO_WRITE_BITS;
+	param->custom.field[idx].offset = LSO_TEST_CUSTOM_ETH_BITS_OFFSET;
+	param->custom.field[idx].size   = 1;
+	param->custom.field[idx].write_bits.first_seg.mask[0]   = LSO_TEST_FIRST_SEG_MASK;
+	param->custom.field[idx].write_bits.first_seg.value[0]  = LSO_TEST_FIRST_SEG_VALUE;
+	param->custom.field[idx].write_bits.middle_seg.mask[0]  = LSO_TEST_MIDDLE_SEG_MASK;
+	param->custom.field[idx].write_bits.middle_seg.value[0] = LSO_TEST_MIDDLE_SEG_VALUE;
+	param->custom.field[idx].write_bits.last_seg.mask[0]    = LSO_TEST_LAST_SEG_MASK;
+	param->custom.field[idx].write_bits.last_seg.value[0]   = LSO_TEST_LAST_SEG_VALUE;
+}
+
 static void lso_send_custom_eth(const uint8_t *test_packet, uint32_t pkt_len, uint32_t max_payload,
 				int use_opt)
 {
@@ -841,16 +921,34 @@ static void lso_send_custom_eth(const uint8_t *test_packet, uint32_t pkt_len, ui
 	const uint32_t hdr_len = ODPH_ETHHDR_LEN + 8;	/* Ethernet header + custom header 8B */
 	uint32_t l3_offset = 0;
 
-	odp_lso_profile_param_init(&param);
-	param.lso_proto = ODP_LSO_PROTO_CUSTOM;
-	param.custom.num_custom = 1;
-	param.custom.field[0].mod_op = ODP_LSO_ADD_SEGMENT_NUM;
-	param.custom.field[0].offset = LSO_TEST_CUSTOM_ETH_SEGNUM_OFFSET;
-	param.custom.field[0].size   = 2;
+	if (pktio_a->capa.lso.mod_op.add_segment_num) {
+		odp_lso_profile_param_init(&param);
+		param.lso_proto = ODP_LSO_PROTO_CUSTOM;
+		add_profile_param_custom_segnum(&param);
+		lso_test(param, max_payload, test_packet, pkt_len, hdr_len, l3_offset, use_opt,
+			 is_custom_eth_test_pkt,
+			 update_custom_hdr_segnum);
+	}
+	if (pktio_a->capa.lso.mod_op.write_bits) {
+		odp_lso_profile_param_init(&param);
+		param.lso_proto = ODP_LSO_PROTO_CUSTOM;
+		add_profile_param_custom_write_bits(&param);
+		lso_test(param, max_payload, test_packet, pkt_len, hdr_len, l3_offset, use_opt,
+			 is_custom_eth_test_pkt,
+			 update_custom_hdr_bits);
+	}
 
-	lso_test(param, max_payload, test_packet, pkt_len, hdr_len, l3_offset, use_opt,
-		 is_custom_eth_test_pkt,
-		 update_custom_eth_hdr);
+	if (pktio_a->capa.lso.max_num_custom >= 2 &&
+	    pktio_a->capa.lso.mod_op.add_segment_num &&
+	    pktio_a->capa.lso.mod_op.write_bits) {
+		odp_lso_profile_param_init(&param);
+		param.lso_proto = ODP_LSO_PROTO_CUSTOM;
+		add_profile_param_custom_segnum(&param);
+		add_profile_param_custom_write_bits(&param);
+		lso_test(param, max_payload, test_packet, pkt_len, hdr_len, l3_offset, use_opt,
+			 is_custom_eth_test_pkt,
+			 update_custom_hdr_segnum_bits);
+	}
 }
 
 static void lso_send_custom_eth_723(uint32_t max_payload, int use_opt)
@@ -1058,7 +1156,7 @@ static void lso_send_ipv4_1500_700_opt(void)
 odp_testinfo_t lso_suite[] = {
 	ODP_TEST_INFO(lso_capability),
 	ODP_TEST_INFO_CONDITIONAL(lso_create_ipv4_profile, check_lso_ipv4),
-	ODP_TEST_INFO_CONDITIONAL(lso_create_custom_profile, check_lso_custom),
+	ODP_TEST_INFO_CONDITIONAL(lso_create_custom_profile, check_lso_custom_segnum),
 	ODP_TEST_INFO_CONDITIONAL(lso_send_ipv4_325_700_pkt_meta, check_lso_ipv4_segs_1),
 	ODP_TEST_INFO_CONDITIONAL(lso_send_ipv4_325_700_opt, check_lso_ipv4_segs_1),
 	ODP_TEST_INFO_CONDITIONAL(lso_send_ipv4_1500_1000_pkt_meta, check_lso_ipv4_segs_2),
