@@ -275,6 +275,8 @@ typedef struct ODP_PACKED {
  * NULL terminated. The address is written only when successful. The address
  * byte order is CPU native.
  *
+ * This function may be called before ODP initialization.
+ *
  * @param[out] ip_addr    Pointer to IPv4 address for output (in native endian)
  * @param      str        IPv4 address string to be parsed
  *

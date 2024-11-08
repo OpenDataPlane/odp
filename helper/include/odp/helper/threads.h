@@ -347,6 +347,8 @@ int odph_odpthread_getaffinity(void);
  *                                                   pthreads are used instead.
  * </table>
  *
+ * This function may be called before ODP initialization.
+ *
  * @param argc   Argument count
  * @param argv   Argument vector
  *
@@ -360,6 +362,8 @@ int odph_parse_options(int argc, char *argv[]);
  *
  * Return used ODP helper options. odph_parse_options() must be called before
  * using this function.
+ *
+ * This function may be called before ODP initialization.
  *
  * @param[out] options  ODP helper options
  *
