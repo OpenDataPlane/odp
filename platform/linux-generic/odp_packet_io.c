@@ -1593,6 +1593,7 @@ int odp_pktio_capability(odp_pktio_t pktio, odp_pktio_capability_t *capa)
 	capa->lso.proto.ipv4             = 1;
 	capa->lso.proto.custom           = 1;
 	capa->lso.mod_op.add_segment_num = 1;
+	capa->lso.mod_op.write_bits      = 1;
 
 	capa->tx_compl.queue_type_sched = 1;
 	capa->tx_compl.queue_type_plain = 1;
@@ -2861,8 +2862,16 @@ odp_lso_profile_t odp_lso_profile_create(odp_pktio_t pktio, const odp_lso_profil
 				return ODP_LSO_PROFILE_INVALID;
 			}
 
-			/* Currently only segment number supported */
-			if (mod_op != ODP_LSO_ADD_SEGMENT_NUM) {
+			switch (mod_op) {
+			case ODP_LSO_ADD_SEGMENT_NUM:
+				break;
+			case ODP_LSO_WRITE_BITS:
+				if (size != 1) {
+					_ODP_ERR("Bad custom field size %u\n", size);
+					return ODP_LSO_PROFILE_INVALID;
+				}
+				break;
+			default:
 				_ODP_ERR("Custom modify operation %u not supported\n", mod_op);
 				return ODP_LSO_PROFILE_INVALID;
 			}
@@ -2999,7 +3008,7 @@ static int lso_update_ipv4(odp_packet_t pkt, int index, int num_pkt,
 	return ret;
 }
 
-static int lso_update_custom(lso_profile_t *lso_prof, odp_packet_t pkt, int segnum)
+static int lso_update_custom(lso_profile_t *lso_prof, odp_packet_t pkt, int segnum, int num_segs)
 {
 	void *ptr;
 	int i, mod_op;
@@ -3046,6 +3055,17 @@ static int lso_update_custom(lso_profile_t *lso_prof, odp_packet_t pkt, int segn
 				u16 = odp_cpu_to_be_16(segnum + odp_be_to_cpu_16(u16));
 			else
 				u8 += segnum;
+		} else if (mod_op == ODP_LSO_WRITE_BITS) {
+			odp_lso_write_bits_t bits;
+
+			if (segnum == 0)
+				bits = lso_prof->param.custom.field[i].write_bits.first_seg;
+			else if (segnum == num_segs - 1)
+				bits = lso_prof->param.custom.field[i].write_bits.last_seg;
+			else
+				bits = lso_prof->param.custom.field[i].write_bits.middle_seg;
+
+			u8 = (u8 & ~bits.mask[0]) | (bits.value[0] & bits.mask[0]);
 		}
 
 		if (odp_packet_copy_from_mem(pkt, offset, size, ptr)) {
@@ -3207,7 +3227,7 @@ int _odp_lso_create_packets(odp_packet_t packet, const odp_packet_lso_opt_t *lso
 		int num_custom = lso_prof->param.custom.num_custom;
 
 		for (i = 0; num_custom && i < num_pkt; i++) {
-			if (lso_update_custom(lso_prof, pkt_out[i], i)) {
+			if (lso_update_custom(lso_prof, pkt_out[i], i, num_pkt)) {
 				_ODP_ERR("Custom field update failed. Segment %i\n", i);
 				goto error;
 			}
