@@ -32,6 +32,8 @@ extern "C" {
  * terminated, unless sz is zero in which case returns dst without doing
  * anything else.
  *
+ * This function may be called before ODP initialization.
+ *
  * @param[out] dst Pointer to destination string.
  * @param src Pointer to source string.
  * @param sz Destination size.
