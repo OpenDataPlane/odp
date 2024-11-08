@@ -16,6 +16,10 @@
  *
  *  @image html overview.svg
  *
+ * ODP must be initialized before calling helper functions, unless stated
+ * otherwise. Pre-processor macros may be invoked independently of ODP
+ * initialization.
+ *
  * @section contact Contact Details
  * - The main web site is http://www.opendataplane.org/
  * - The git repo is https://github.com/OpenDataPlane/odp.git

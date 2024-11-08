@@ -7,6 +7,9 @@
  *
  * The OpenDataPlane helper API
  *
+ * ODP must be initialized before calling helper functions, unless stated
+ * otherwise. Pre-processor macros may be invoked independently of ODP
+ * initialization.
  */
 
 #ifndef ODP_HELPER_H_

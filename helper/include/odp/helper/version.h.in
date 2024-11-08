@@ -57,6 +57,8 @@ extern "C" {
  *
  * The string is null terminated.
  *
+ * This function may be called before ODP initialization.
+ *
  * @return Pointer to helper library version string
  */
 const char *odph_version_str(void);
