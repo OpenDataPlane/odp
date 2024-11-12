@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2014-2018 Linaro Limited
- * Copyright (c) 2021-2023 Nokia
+ * Copyright (c) 2021-2024 Nokia
  */
 
 /**
@@ -383,8 +383,29 @@ typedef struct odp_red_param_t {
 } odp_red_param_t;
 
 /** Back pressure (BP)
- * When back pressure is enabled for a particular flow, the HW can send
- * back pressure information to the remote peer indicating a network congestion.
+ *
+ * When back pressure is enabled, HW can send back pressure to the remote peer
+ * indicating resource shortage. Depending on the implementation, back pressure
+ * can be asserted when the fill level of the destination queue of a CoS
+ * exceeds the configured threshold or when the utilization of the packet pool
+ * associated with a CoS exceeds the configured threshold.
+ *
+ * If multiple CoSes configure back pressure for the same pktio, pool/queue
+ * and pfc level, then back pressure is sent as long as any of the CoSes
+ * assert back pressure. There does not have to be packets flowing through
+ * a CoS node for the CoS to assert back pressure, because packets may be
+ * directed to the same queue/pool by some other CoS node (which might not
+ * even have backpressure configured), some other ODP component or the ODP
+ * application.
+ *
+ * Conceptually, a configured CoS hierarchy determines unique global back
+ * pressure threshold for each (pktio, queue/pool, pfc_level)-tuple. The
+ * back pressure configuration in a CoS affects the global thresholds that
+ * have the same queue/pool as configured in the Cos, the same pfc_level
+ * (if PFC is enabled) and a pktio that is a connected to the CoS. One
+ * CoS can affect multiple global thresholds and one global threshold can
+ * be affected by multiple CoSes (in which case the minimum of the
+ * configured thresholds is used).
  */
 typedef struct odp_bp_param_t {
 	/** A boolean to enable Back pressure
