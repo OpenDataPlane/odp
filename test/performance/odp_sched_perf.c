@@ -42,7 +42,8 @@
 
 typedef struct test_options_t {
 	uint32_t num_cpu;
-	uint32_t num_queue;
+	uint32_t num_queue; /* Active queues (excludes dummy queues) */
+	uint32_t num_def;
 	uint32_t num_low;
 	uint32_t num_high;
 	uint32_t num_dummy;
@@ -57,7 +58,8 @@ typedef struct test_options_t {
 	int      fairness;
 	uint32_t event_size;
 	uint32_t queue_size;
-	uint32_t tot_queue;
+	uint32_t forward_group_size;
+	uint32_t tot_queue; /* All queues (includes dummy queues) */
 	uint32_t tot_event;
 	int      touch_data;
 	uint32_t stress;
@@ -101,7 +103,13 @@ typedef struct test_global_t {
 	odp_pool_t pool;
 	odp_cpumask_t cpumask;
 	odp_shm_t ctx_shm;
-	odp_queue_t queue[MAX_QUEUES];
+	struct {
+		odp_queue_t dummy[MAX_QUEUES];
+		odp_queue_t def_prio[MAX_QUEUES];
+		odp_queue_t low_prio[MAX_QUEUES];
+		odp_queue_t high_prio[MAX_QUEUES];
+		odp_queue_t all[MAX_QUEUES];
+	} queue;
 	odp_schedule_group_t group[MAX_GROUPS];
 	odph_thread_t thread_tbl[ODP_THREAD_COUNT_MAX];
 	test_stat_t stat[ODP_THREAD_COUNT_MAX];
@@ -142,11 +150,9 @@ static void print_usage(void)
 	       "Usage: odp_sched_perf [options]\n"
 	       "\n"
 	       "  -c, --num_cpu          Number of CPUs (worker threads). 0: all available CPUs. Default: 1.\n"
-	       "  -q, --num_queue        Number of queues. Default: 1.\n"
-	       "  -L, --num_low          Number of lowest priority queues out of '--num_queue' queues. Rest of\n"
-	       "                         the queues are default (or highest) priority. Default: 0.\n"
-	       "  -H, --num_high         Number of highest priority queues out of '--num_queue' queues. Rest of\n"
-	       "                         the queues are default (or lowest) priority. Default: 0.\n"
+	       "  -q, --num_def          Number of default priority queues. Default: 1.\n"
+	       "  -L, --num_low          Number of lowest priority queues. Default: 0.\n"
+	       "  -H, --num_high         Number of highest priority queues. Default: 0.\n"
 	       "  -d, --num_dummy        Number of empty queues. Default: 0.\n"
 	       "  -e, --num_event        Number of events per queue. Default: 100.\n"
 	       "  -s, --num_sched        Number of events to schedule per thread. If zero, the application runs\n"
@@ -159,7 +165,11 @@ static void print_usage(void)
 	       "                         0: join all groups (default)\n"
 	       "  -b, --burst            Maximum number of events per operation. Default: 100.\n"
 	       "  -t, --type             Queue type. 0: parallel, 1: atomic, 2: ordered. Default: 0.\n"
-	       "  -f, --forward          0: Keep event in the original queue, 1: Forward event to the next queue. Default: 0.\n"
+	       "  -f, --forward          0: Keep event in the original queue (default)\n"
+	       "                         1: Forward event between all queues\n"
+	       "                         N: Forward events between queues of N identical queue sets. In this mode 'num_def',\n"
+	       "                            'num_low', and 'num_high' options are per set, so the total number of active\n"
+	       "                            queues is N * (num_def + num_low + num_high).\n"
 	       "  -F, --fairness         0: Don't count events per queue, 1: Count and report events relative to average. Default: 0.\n"
 	       "  -w, --wait_ns          Number of nsec to wait before enqueueing events. Default: 0.\n"
 	       "  -S, --stress           CPU stress function(s) to be called for each event data word (requires -n or -m).\n"
@@ -190,7 +200,7 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 
 	static const struct option longopts[] = {
 		{"num_cpu",      required_argument, NULL, 'c'},
-		{"num_queue",    required_argument, NULL, 'q'},
+		{"num_def",      required_argument, NULL, 'q'},
 		{"num_low",      required_argument, NULL, 'L'},
 		{"num_high",     required_argument, NULL, 'H'},
 		{"num_dummy",    required_argument, NULL, 'd'},
@@ -219,7 +229,7 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 	static const char *shortopts = "+c:q:L:H:d:e:s:g:j:b:t:f:F:w:S:k:l:n:m:p:u:U:vh";
 
 	test_options->num_cpu    = 1;
-	test_options->num_queue  = 1;
+	test_options->num_def    = 1;
 	test_options->num_low    = 0;
 	test_options->num_high   = 0;
 	test_options->num_dummy  = 0;
@@ -252,7 +262,7 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 			test_options->num_cpu = atoi(optarg);
 			break;
 		case 'q':
-			test_options->num_queue = atoi(optarg);
+			test_options->num_def = atoi(optarg);
 			break;
 		case 'L':
 			test_options->num_low = atoi(optarg);
@@ -342,14 +352,22 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 		ret = -1;
 	}
 
-	if ((test_options->num_queue + test_options->num_dummy) > MAX_QUEUES) {
-		ODPH_ERR("Too many queues. Max supported %i.\n", MAX_QUEUES);
+	test_options->forward_group_size = test_options->num_def + test_options->num_low +
+						test_options->num_high;
+	/* In queue group forward mode the queue count options are per group */
+	if (test_options->forward > 1) {
+		test_options->num_def *= test_options->forward;
+		test_options->num_low *= test_options->forward;
+		test_options->num_high *= test_options->forward;
+	} else if (test_options->forward < 0) {
+		ODPH_ERR("Invalid forward mode %i.\n", test_options->forward);
 		ret = -1;
 	}
 
-	if ((test_options->num_low + test_options->num_high) > test_options->num_queue) {
-		ODPH_ERR("Number of low/high prio %u/%u exceed number of queues %u.\n",
-			 test_options->num_low, test_options->num_high, test_options->num_queue);
+	test_options->num_queue = test_options->num_def + test_options->num_low +
+					test_options->num_high;
+	if ((test_options->num_queue + test_options->num_dummy) > MAX_QUEUES) {
+		ODPH_ERR("Too many queues. Max supported %i.\n", MAX_QUEUES);
 		ret = -1;
 	}
 
@@ -383,9 +401,8 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 	test_options->queue_size = test_options->num_event;
 
 	if (test_options->forward) {
-		/* When forwarding, all events may end up into
-		 * a single queue */
-		test_options->queue_size = test_options->tot_event;
+		/* When forwarding, events may accumulate into a single queue. */
+		test_options->queue_size *= test_options->forward_group_size;
 	}
 
 	if (test_options->forward || test_options->fairness)
@@ -462,7 +479,7 @@ static void print_options(test_options_t *options)
 	printf("\nScheduler performance test\n");
 	printf("  num sched                 %u\n", options->num_sched);
 	printf("  num cpu                   %u\n", options->num_cpu);
-	printf("  num queues                %u\n", options->num_queue);
+	printf("  num default prio queues   %u\n", options->num_def);
 	printf("  num lowest prio queues    %u\n", options->num_low);
 	printf("  num highest prio queues   %u\n", options->num_high);
 	printf("  num empty queues          %u\n", options->num_dummy);
@@ -477,7 +494,7 @@ static void print_options(test_options_t *options)
 		printf("\n");
 
 	printf("  num join                  %u\n", options->num_join);
-	printf("  forward events            %i\n", options->forward ? 1 : 0);
+	printf("  forward events            %i\n", options->forward);
 	printf("  wait                      %" PRIu64 " nsec\n", options->wait_ns);
 	printf("  events per queue          %u\n", options->num_event);
 	printf("  queue size                %u\n", options->queue_size);
@@ -628,12 +645,154 @@ static int create_groups(test_global_t *global)
 	return 0;
 }
 
-static int create_queues(test_global_t *global)
+static void setup_forwarding(test_global_t *global)
+{
+	const test_options_t *test_options = &global->test_options;
+	const uint32_t forward_group_size = test_options->forward_group_size;
+	const uint32_t num_groups = test_options->forward;
+	uint32_t num_low = test_options->num_low;
+	uint32_t num_high = test_options->num_high;
+	uint32_t num_def = test_options->num_def;
+	const uint32_t num_high_per_group = num_high / num_groups;
+	const uint32_t num_low_per_group = num_low / num_groups;
+	const uint32_t num_def_per_group = num_def / num_groups;
+	odp_queue_t cur_queue, first_queue;
+
+	for (uint32_t i = 0; i < num_groups; i++) {
+		uint32_t num_group_low = num_low_per_group;
+		uint32_t num_group_high = num_high_per_group;
+		uint32_t num_group_def = num_def_per_group;
+
+		if (num_group_low) {
+			first_queue = global->queue.low_prio[--num_low];
+			num_group_low--;
+		} else if (num_group_high) {
+			first_queue = global->queue.high_prio[--num_high];
+			num_group_high--;
+		} else {
+			first_queue = global->queue.def_prio[--num_def];
+			num_group_def--;
+		}
+		cur_queue = first_queue;
+
+		for (uint32_t j = 0; j < forward_group_size; j++) {
+			queue_context_t *qc = (queue_context_t *)odp_queue_context(cur_queue);
+			odp_queue_t *next_queue = &qc->next;
+			const uint32_t next_id = j + 1;
+
+			if (next_id == forward_group_size) {
+				/* Last queue points to the first one */
+				*next_queue = first_queue;
+				break;
+			}
+
+			/* Mix low, high and default priority queues */
+			switch (next_id % 3) {
+			case 0:
+				if (num_group_low) {
+					*next_queue = global->queue.low_prio[--num_low];
+					num_group_low--;
+				} else if (num_group_high) {
+					*next_queue = global->queue.high_prio[--num_high];
+					num_group_high--;
+				} else {
+					*next_queue = global->queue.def_prio[--num_def];
+					num_group_def--;
+				}
+				break;
+			case 1:
+				if (num_group_high) {
+					*next_queue = global->queue.high_prio[--num_high];
+					num_group_high--;
+				} else if (num_group_low) {
+					*next_queue = global->queue.low_prio[--num_low];
+					num_group_low--;
+				} else {
+					*next_queue = global->queue.def_prio[--num_def];
+					num_group_def--;
+				}
+				break;
+			default:
+				if (num_group_def) {
+					*next_queue = global->queue.def_prio[--num_def];
+					num_group_def--;
+				} else if (num_group_high) {
+					*next_queue = global->queue.high_prio[--num_high];
+					num_group_high--;
+				} else {
+					*next_queue = global->queue.low_prio[--num_low];
+					num_group_low--;
+				}
+				break;
+			}
+			cur_queue = *next_queue;
+		}
+	}
+}
+
+static int set_queue_contexts(test_global_t *global, uint8_t *ctx)
+{
+	test_options_t *test_options = &global->test_options;
+	uint32_t tot_queue = test_options->tot_queue;
+	uint32_t ctx_size = test_options->ctx_size;
+	uint32_t first = test_options->num_dummy;
+
+	if (ctx_size == 0)
+		return 0;
+
+	for (uint32_t i = first; i < tot_queue; i++) {
+		if (test_options->fairness) {
+			/* Cast increases alignment, but it's ok, since ctx and ctx_size are both
+			 * cache line aligned. */
+			queue_context_t *qc = (queue_context_t *)(uintptr_t)ctx;
+
+			odp_atomic_init_u64(&qc->count, 0);
+		}
+
+		if (odp_queue_context_set(global->queue.all[i], ctx, ctx_size)) {
+			ODPH_ERR("Context set failed %u\n", i);
+			return -1;
+		}
+
+		ctx += ctx_size;
+	}
+
+	if (test_options->forward)
+		setup_forwarding(global);
+
+	return 0;
+}
+
+static int create_queues(test_global_t *global, odp_queue_param_t *queue_param, int num_groups,
+			 odp_queue_t queue[], uint32_t num)
+{
+	static uint32_t total_queues;
+
+	for (uint32_t i = 0; i < num; i++) {
+		if (num_groups > 0) /* Divide all queues evenly into groups */
+			queue_param->sched.group = global->group[(total_queues + i) % num_groups];
+
+		queue[i] = odp_queue_create(NULL, queue_param);
+
+		if (queue[i] == ODP_QUEUE_INVALID) {
+			ODPH_ERR("Queue create failed %u\n", i);
+			return -1;
+		}
+	}
+
+	/* Copy all queue handles to a single array for simpler initialization and clean-up */
+	for (uint32_t i = 0; i < num; i++)
+		global->queue.all[total_queues + i] = queue[i];
+	total_queues += num;
+
+	return 0;
+}
+
+static int create_all_queues(test_global_t *global)
 {
 	odp_queue_param_t queue_param;
 	odp_queue_t queue;
 	odp_schedule_sync_t sync;
-	odp_schedule_prio_t prio;
 	uint32_t i, j, first;
 	test_options_t *test_options = &global->test_options;
 	uint32_t event_size = test_options->event_size;
@@ -642,7 +801,7 @@ static int create_queues(test_global_t *global)
 	uint32_t tot_queue = test_options->tot_queue;
 	uint32_t num_low = test_options->num_low;
 	uint32_t num_high = test_options->num_high;
-	uint32_t num_default = test_options->num_queue - num_low - num_high;
+	uint32_t num_default = test_options->num_def;
 	int num_group = test_options->num_group;
 	int type = test_options->queue_type;
 	odp_pool_t pool = global->pool;
@@ -679,6 +838,7 @@ static int create_queues(test_global_t *global)
 	odp_queue_param_init(&queue_param);
 	queue_param.type = ODP_QUEUE_TYPE_SCHED;
 	queue_param.sched.sync  = sync;
+	queue_param.sched.prio = odp_schedule_default_prio();
 	queue_param.size = queue_size;
 	if (num_group == -1)
 		queue_param.sched.group = ODP_SCHED_GROUP_WORKER;
@@ -687,100 +847,44 @@ static int create_queues(test_global_t *global)
 
 	first = test_options->num_dummy;
 
-	for (i = 0; i < tot_queue; i++) {
-		if (num_group > 0) {
-			odp_schedule_group_t group;
+	/* Dummy queues */
+	if (create_queues(global, &queue_param, num_group, global->queue.dummy,
+			  test_options->num_dummy)) {
+		ODPH_ERR("Dummy queue create failed\n");
+		return -1;
+	}
 
-			/* Divide all queues evenly into groups */
-			group = global->group[i % num_group];
-			queue_param.sched.group = group;
-		}
+	/* Lowest priority queues */
+	queue_param.sched.prio = odp_schedule_min_prio();
+	if (create_queues(global, &queue_param, num_group, global->queue.low_prio, num_low)) {
+		ODPH_ERR("Lowest priority queue create failed\n");
+		return -1;
+	}
 
-		/* Create low, high and default queues in a mixed order. Dummy queues are created
-		 * first and with default priority. */
-		prio = odp_schedule_default_prio();
-		if (i >= first) {
-			switch (i % 3) {
-			case 0:
-				if (num_low) {
-					num_low--;
-					prio = odp_schedule_min_prio();
-				} else if (num_high) {
-					num_high--;
-					prio = odp_schedule_max_prio();
-				} else {
-					num_default--;
-				}
-				break;
-			case 1:
-				if (num_high) {
-					num_high--;
-					prio = odp_schedule_max_prio();
-				} else if (num_low) {
-					num_low--;
-					prio = odp_schedule_min_prio();
-				} else {
-					num_default--;
-				}
-				break;
-			default:
-				if (num_default) {
-					num_default--;
-				} else if (num_high) {
-					num_high--;
-					prio = odp_schedule_max_prio();
-				} else {
-					num_low--;
-					prio = odp_schedule_min_prio();
-				}
-				break;
-			}
-		}
+	/* Highest priority queues */
+	queue_param.sched.prio = odp_schedule_max_prio();
+	if (create_queues(global, &queue_param, num_group, global->queue.high_prio, num_high)) {
+		ODPH_ERR("Highest priority queue create failed\n");
+		return -1;
+	}
 
-		queue_param.sched.prio = prio;
+	/* Default priority queues */
+	queue_param.sched.prio = odp_schedule_default_prio();
+	if (create_queues(global, &queue_param, num_group, global->queue.def_prio, num_default)) {
+		ODPH_ERR("Default priority queue create failed\n");
+		return -1;
+	}
 
-		queue = odp_queue_create(NULL, &queue_param);
-
-		global->queue[i] = queue;
-
-		if (queue == ODP_QUEUE_INVALID) {
-			ODPH_ERR("Queue create failed %u\n", i);
-			return -1;
-		}
+	if (set_queue_contexts(global, ctx)) {
+		ODPH_ERR("Set queue context failed\n");
+		return -1;
 	}
 
 	/* Store events into queues. Dummy queues are allocated from
 	 * the beginning of the array, so that usage of those affect allocation
 	 * of active queues. Dummy queues are left empty. */
 	for (i = first; i < tot_queue; i++) {
-		queue = global->queue[i];
-
-		if (ctx_size) {
-			/*
-			 * Cast increases alignment, but it's ok, since ctx and
-			 * ctx_size are both cache line aligned.
-			 */
-			queue_context_t *qc = (queue_context_t *)(uintptr_t)ctx;
-
-			if (test_options->forward) {
-				uint32_t next = i + 1;
-
-				if (next == tot_queue)
-					next = first;
-
-				qc->next = global->queue[next];
-			}
-
-			if (test_options->fairness)
-				odp_atomic_init_u64(&qc->count, 0);
-
-			if (odp_queue_context_set(queue, ctx, ctx_size)) {
-				ODPH_ERR("Context set failed %u\n", i);
-				return -1;
-			}
-
-			ctx += ctx_size;
-		}
+		queue = global->queue.all[i];
 
 		for (j = 0; j < num_event; j++) {
 			odp_event_t ev;
@@ -874,7 +978,7 @@ static void print_queue_fairness(test_global_t *global)
 		return;
 
 	for (i = first; i < tot_queue; i++) {
-		ctx = odp_queue_context(global->queue[i]);
+		ctx = odp_queue_context(global->queue.all[i]);
 		total += odp_atomic_load_u64(&ctx->count);
 	}
 
@@ -886,7 +990,7 @@ static void print_queue_fairness(test_global_t *global)
 	printf("        1      2      3      4      5      6      7      8      9     10");
 
 	for (i = first; i < tot_queue; i++) {
-		ctx = odp_queue_context(global->queue[i]);
+		ctx = odp_queue_context(global->queue.all[i]);
 
 		if ((i % 10) == 0)
 			printf("\n   ");
@@ -916,8 +1020,8 @@ static int destroy_queues(test_global_t *global)
 		odp_event_free(ev);
 
 	for (i = 0; i < tot_queue; i++) {
-		if (global->queue[i] != ODP_QUEUE_INVALID) {
-			if (odp_queue_destroy(global->queue[i])) {
+		if (global->queue.all[i] != ODP_QUEUE_INVALID) {
+			if (odp_queue_destroy(global->queue.all[i])) {
 				ODPH_ERR("Queue destroy failed %u\n", i);
 				return -1;
 			}
@@ -1586,7 +1690,7 @@ int main(int argc, char **argv)
 	if (create_groups(global))
 		return -1;
 
-	if (create_queues(global))
+	if (create_all_queues(global))
 		return -1;
 
 	if (global->test_options.verbose)
