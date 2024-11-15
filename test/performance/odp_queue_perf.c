@@ -71,6 +71,7 @@ typedef struct test_global_t {
 	odp_instance_t   instance;
 	odp_shm_t        shm;
 	odp_pool_t       pool;
+	odp_atomic_u32_t workers_finished;
 	odp_queue_t      queue[MAX_QUEUES];
 	odph_thread_t    thread_tbl[ODP_THREAD_COUNT_MAX];
 	thread_args_t    thread_args[ODP_THREAD_COUNT_MAX];
@@ -446,6 +447,7 @@ static int run_test(void *arg)
 	uint64_t events = 0;
 	const uint32_t num_queue = thr_args->num_queues;
 	const uint32_t num_round = thr_args->options->num_round;
+	const uint32_t num_workers = thr_args->options->num_cpu;
 	const uint32_t max_burst = thr_args->options->max_burst;
 	uint32_t queue_idx = 0;
 	odp_event_t ev[max_burst];
@@ -500,6 +502,32 @@ static int run_test(void *arg)
 
 	c2 = odp_cpu_cycles();
 	t2 = odp_time_local_strict();
+
+	odp_atomic_inc_u32(&global->workers_finished);
+
+	/* Keep forwarding events in pair mode until all workers have completed */
+	while (thr_args->options->mode == TEST_MODE_PAIR &&
+	       odp_atomic_load_u32(&global->workers_finished) < num_workers) {
+		int num_enq = 0;
+
+		src_queue = src_queue_tbl[queue_idx];
+		dst_queue = dst_queue_tbl[queue_idx];
+
+		queue_idx++;
+		if (queue_idx == num_queue)
+			queue_idx = 0;
+
+		num_ev = odp_queue_deq_multi(src_queue, ev, max_burst);
+
+		while (num_enq < num_ev) {
+			int num = odp_queue_enq_multi(dst_queue, &ev[num_enq], num_ev - num_enq);
+
+			if (odp_unlikely(num < 0))
+				ODPH_ABORT("odp_queue_enq_multi() failed\n");
+
+			num_enq += num;
+		}
+	}
 
 	nsec   = odp_time_diff_ns(t2, t1);
 	cycles = odp_cpu_cycles_diff(c2, c1);
@@ -811,6 +839,7 @@ int main(int argc, char **argv)
 
 	memset(global, 0, sizeof(test_global_t));
 	global->common_options = common_options;
+	odp_atomic_init_u32(&global->workers_finished, 0);
 
 	if (parse_options(argc, argv, &global->options))
 		return -1;
