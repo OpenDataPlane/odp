@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright (c) 2021-2023 Nokia
+ * Copyright (c) 2021-2024 Nokia
  */
 
 #include <odp_api.h>
@@ -1294,6 +1294,18 @@ static int check_scheduled(void)
 	return ODP_TEST_INACTIVE;
 }
 
+static int check_multiple_segs(void)
+{
+	if (global.disabled)
+		return ODP_TEST_INACTIVE;
+
+	if (global.dma_capa.max_src_segs > 1 && global.dma_capa.max_dst_segs > 1 &&
+	    global.dma_capa.max_segs > 3)
+		return ODP_TEST_ACTIVE;
+
+	return ODP_TEST_INACTIVE;
+}
+
 static int check_poll(void)
 {
 	if (global.disabled)
@@ -1517,6 +1529,80 @@ static void test_dma_pkt_to_pkt_sync_max_seg(void)
 	CU_ASSERT(odp_dma_destroy(dma) == 0);
 }
 
+static void test_dma_pkt_to_pkt_multiple_offsets(void)
+{
+	/* Test transfers data from two source packets to single destination packet, but with two
+	 * offsets, so allocate three packets and reserve two destination segments for the
+	 * different offsets. */
+	odp_dma_param_t dma_param;
+	odp_dma_transfer_param_t trs_param;
+	odp_dma_t dma;
+	const uint32_t num_pkts = 2;
+	odp_packet_t dst_pkt, src_pkts[num_pkts];
+	uint32_t seg_len, len, offset = 0;
+	int ret;
+	odp_dma_seg_t src_seg[num_pkts];
+	odp_dma_seg_t dst_seg[num_pkts];
+
+	odp_dma_param_init(&dma_param);
+	dma_param.compl_mode_mask = ODP_DMA_COMPL_SYNC;
+	dma = odp_dma_create("pkt_to_pkt_offsets", &dma_param);
+	CU_ASSERT_FATAL(dma != ODP_DMA_INVALID);
+
+	dst_pkt = odp_packet_alloc(global.pkt_pool, global.pkt_len);
+	CU_ASSERT_FATAL(dst_pkt != ODP_PACKET_INVALID);
+
+	seg_len = odp_packet_seg_len(dst_pkt);
+	len = (seg_len - OFFSET) / num_pkts;
+	ret = odp_packet_alloc_multi(global.pkt_pool, len, src_pkts, num_pkts);
+	CU_ASSERT_FATAL(ret == (int)num_pkts);
+
+	for (uint32_t i = 0; i < num_pkts; i++)
+		init_source(odp_packet_data(src_pkts[i]), len);
+
+	memset(odp_packet_data(dst_pkt), 0, seg_len);
+	memset(src_seg, 0, sizeof(src_seg));
+	memset(dst_seg, 0, sizeof(dst_seg));
+
+	for (uint32_t i = 0; i < num_pkts; i++) {
+		odp_dma_seg_t *seg = &src_seg[i];
+
+		seg->packet = src_pkts[i];
+		seg->len = len;
+
+		seg = &dst_seg[i];
+		seg->packet = dst_pkt;
+		seg->offset = offset;
+		seg->len = len;
+		offset += len + OFFSET;
+	}
+
+	odp_dma_transfer_param_init(&trs_param);
+	trs_param.src_format = ODP_DMA_FORMAT_PACKET;
+	trs_param.dst_format = ODP_DMA_FORMAT_PACKET;
+	trs_param.num_src = num_pkts;
+	trs_param.num_dst = num_pkts;
+	trs_param.src_seg = src_seg;
+	trs_param.dst_seg = dst_seg;
+	ret = do_transfer(dma, &trs_param, 0, 0);
+
+	if (ret > 0) {
+		uint8_t *src_data = odp_packet_data(src_pkts[0]);
+		uint8_t *dst_data = odp_packet_data(dst_pkt);
+
+		CU_ASSERT(check_equal(src_data, dst_data, len) == 0);
+
+		src_data = odp_packet_data(src_pkts[1]);
+
+		CU_ASSERT(check_equal(src_data, dst_data + len + OFFSET, len) == 0);
+		CU_ASSERT(check_zero(dst_data + len, OFFSET) == 0);
+	}
+
+	odp_packet_free_multi(src_pkts, num_pkts);
+	odp_packet_free(dst_pkt);
+	CU_ASSERT(odp_dma_destroy(dma) == 0);
+}
+
 static void test_dma_addr_to_addr_poll(void)
 {
 	test_dma_addr_to_addr(ODP_DMA_COMPL_POLL, 1, 0, 0);
@@ -1692,6 +1778,7 @@ odp_testinfo_t dma_suite[] = {
 	ODP_TEST_INFO_CONDITIONAL(test_dma_pkt_to_addr_sync, check_sync),
 	ODP_TEST_INFO_CONDITIONAL(test_dma_pkt_to_pkt_sync, check_sync),
 	ODP_TEST_INFO_CONDITIONAL(test_dma_pkt_to_pkt_sync_max_seg, check_sync),
+	ODP_TEST_INFO_CONDITIONAL(test_dma_pkt_to_pkt_multiple_offsets, check_multiple_segs),
 	ODP_TEST_INFO_CONDITIONAL(test_dma_addr_to_addr_poll, check_poll),
 	ODP_TEST_INFO_CONDITIONAL(test_dma_addr_to_addr_poll_mtrs, check_poll),
 	ODP_TEST_INFO_CONDITIONAL(test_dma_addr_to_addr_poll_mseg, check_poll),
