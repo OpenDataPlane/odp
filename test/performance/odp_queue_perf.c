@@ -233,6 +233,7 @@ static int create_queues(test_global_t *global)
 	uint32_t num_event = test_options->num_event;
 	uint32_t num_round = test_options->num_round;
 	uint32_t tot_event = num_queue * num_event;
+	uint32_t queue_size = test_options->mode == TEST_MODE_PAIR ? 2 * num_event : num_event;
 	int ret = 0;
 	odp_queue_t *queue = global->queue;
 	odp_event_t event[tot_event];
@@ -248,6 +249,7 @@ static int create_queues(test_global_t *global)
 	printf("  num rounds           %u\n", num_round);
 	printf("  num queues           %u\n", num_queue);
 	printf("  num events per queue %u\n", num_event);
+	printf("  queue size           %u\n", queue_size);
 	printf("  max burst size       %u\n", test_options->max_burst);
 
 	for (i = 0; i < num_queue; i++)
@@ -273,7 +275,7 @@ static int create_queues(test_global_t *global)
 		}
 
 		max_size = queue_capa.plain.max_size;
-		if (max_size && num_event > max_size) {
+		if (max_size && queue_size > max_size) {
 			ODPH_ERR("Max queue size supported %u.\n", max_size);
 			return -1;
 		}
@@ -290,7 +292,7 @@ static int create_queues(test_global_t *global)
 		}
 
 		max_size = queue_capa.plain.lockfree.max_size;
-		if (max_size && num_event > max_size) {
+		if (max_size && queue_size > max_size) {
 			ODPH_ERR("Max lockfree queue size supported %u.\n", max_size);
 			return -1;
 		}
@@ -307,7 +309,7 @@ static int create_queues(test_global_t *global)
 		}
 
 		max_size = queue_capa.plain.waitfree.max_size;
-		if (max_size && num_event > max_size) {
+		if (max_size && queue_size > max_size) {
 			ODPH_ERR("Max waitfree queue size supported %u.\n", max_size);
 			return -1;
 		}
@@ -339,7 +341,7 @@ static int create_queues(test_global_t *global)
 	odp_queue_param_init(&queue_param);
 	queue_param.type        = ODP_QUEUE_TYPE_PLAIN;
 	queue_param.nonblocking = nonblock;
-	queue_param.size        = num_event;
+	queue_param.size        = queue_size;
 
 	if (test_options->single) {
 		queue_param.enq_mode = ODP_QUEUE_OP_MT_UNSAFE;
