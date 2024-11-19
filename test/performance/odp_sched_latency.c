@@ -848,32 +848,27 @@ static int destroy_groups(odp_schedule_group_t group[], int num)
 
 static int create_queues(test_globals_t *globals)
 {
+	odp_queue_param_t param;
 	test_args_t *args = &globals->args;
 	int num_group = args->num_group;
+
+	odp_queue_param_init(&param);
+	param.type = ODP_QUEUE_TYPE_SCHED;
+	param.sched.sync = args->sync_type;
 
 	for (int i = 0; i < NUM_PRIOS; i++) {
 		char name[] = "sched_XX_YY";
 		odp_queue_t queue;
-		odp_queue_param_t param;
-		odp_schedule_group_t grp;
-		int prio;
+		odp_schedule_group_t grp = num_group < 0 ? ODP_SCHED_GROUP_WORKER :
+							   ODP_SCHED_GROUP_ALL;
+		const int prio = i == HI_PRIO ? odp_schedule_max_prio() :
+						odp_schedule_min_prio();
 
-		grp = ODP_SCHED_GROUP_ALL;
-		if (num_group < 0)
-			grp = ODP_SCHED_GROUP_WORKER;
+		param.sched.prio = prio;
 
-		if (i == HI_PRIO)
-			prio = odp_schedule_max_prio();
-		else
-			prio = odp_schedule_min_prio();
-
+		/* Replace XX and YY in name to differentiate queues */
 		name[6] = '0' + (prio / 10);
 		name[7] = '0' + prio - (10 * (prio / 10));
-
-		odp_queue_param_init(&param);
-		param.type        = ODP_QUEUE_TYPE_SCHED;
-		param.sched.prio  = prio;
-		param.sched.sync  = args->sync_type;
 
 		for (int j = 0; j < args->prio[i].queues; j++) {
 			name[9]  = '0' + j / 10;
