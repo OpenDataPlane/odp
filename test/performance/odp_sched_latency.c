@@ -846,11 +846,53 @@ static int destroy_groups(odp_schedule_group_t group[], int num)
 	return 0;
 }
 
+static int calc_queue_sizes(test_globals_t *globals, uint32_t queue_size[])
+{
+	odp_schedule_capability_t capa;
+	test_args_t *args = &globals->args;
+	const uint32_t min_queue_size = 256;
+
+	if (odp_schedule_capability(&capa)) {
+		ODPH_ERR("Schedule capability failed\n");
+		return -1;
+	}
+
+	for (int i = 0; i < NUM_PRIOS; i++) {
+		uint32_t events = args->prio[i].events;
+		int queues = args->prio[i].queues;
+
+		if (!args->prio[i].events_per_queue && queues)
+			events = (events + queues - 1) / queues;
+
+		/* Events may stack up if forwarding is enabled */
+		if (args->forward_mode != EVENT_FORWARD_NONE)
+			events *= queues;
+
+		/* Reserve room for sample event */
+		events++;
+
+		queue_size[i] = ODPH_MAX(events, min_queue_size);
+
+		if (capa.max_queue_size && queue_size[i] > capa.max_queue_size) {
+			ODPH_ERR("Warn: queues may not be able to store all events (required size "
+				"%" PRIu32 ", max supported %" PRIu32 ")\n", queue_size[i],
+				capa.max_queue_size);
+			queue_size[i] = capa.max_queue_size;
+		}
+	}
+
+	return 0;
+}
+
 static int create_queues(test_globals_t *globals)
 {
 	odp_queue_param_t param;
 	test_args_t *args = &globals->args;
 	int num_group = args->num_group;
+	uint32_t queue_size[NUM_PRIOS];
+
+	if (calc_queue_sizes(globals, queue_size))
+		return -1;
 
 	odp_queue_param_init(&param);
 	param.type = ODP_QUEUE_TYPE_SCHED;
@@ -865,6 +907,7 @@ static int create_queues(test_globals_t *globals)
 						odp_schedule_min_prio();
 
 		param.sched.prio = prio;
+		param.size = queue_size[i];
 
 		/* Replace XX and YY in name to differentiate queues */
 		name[6] = '0' + (prio / 10);
