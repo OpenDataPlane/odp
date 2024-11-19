@@ -851,6 +851,7 @@ static int calc_queue_sizes(test_globals_t *globals, uint32_t queue_size[])
 	odp_schedule_capability_t capa;
 	test_args_t *args = &globals->args;
 	const uint32_t min_queue_size = 256;
+	uint32_t tot_queues = 0;
 
 	if (odp_schedule_capability(&capa)) {
 		ODPH_ERR("Schedule capability failed\n");
@@ -879,6 +880,13 @@ static int calc_queue_sizes(test_globals_t *globals, uint32_t queue_size[])
 				capa.max_queue_size);
 			queue_size[i] = capa.max_queue_size;
 		}
+		tot_queues += queues;
+	}
+
+	if (tot_queues > capa.max_queues) {
+		ODPH_ERR("Requested %" PRIu32 " queues, max %" PRIu32 " supported\n",
+			 tot_queues, capa.max_queues);
+		return -1;
 	}
 
 	return 0;
