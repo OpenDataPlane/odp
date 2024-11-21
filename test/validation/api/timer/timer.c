@@ -2256,10 +2256,6 @@ static void handle_tmo(odp_event_t ev, bool stale, uint64_t prev_tick)
 		CU_FAIL("odp_timeout_timer() wrong timer");
 
 	if (!stale) {
-#if ODP_DEPRECATED_API
-		if (!odp_timeout_fresh(tmo))
-			CU_FAIL("Wrong status (stale) for fresh timeout");
-#endif
 		/* tmo tick cannot be smaller than pre-calculated tick */
 		if (tick < ttp->tick) {
 			ODPH_DBG("Too small tick: pre-calculated %" PRIu64 " "
