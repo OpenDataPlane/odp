@@ -17,7 +17,6 @@
 extern "C" {
 #endif
 
-#include <odp/api/deprecated.h>
 #include <odp/api/event_types.h>
 #include <odp/api/std_types.h>
 
@@ -531,13 +530,6 @@ typedef enum {
 	ODP_TIMER_FAIL = -3
 
 } odp_timer_retval_t;
-
-/**
- * For backwards compatibility, odp_timer_set_t is synonym of odp_timer_retval_t
- *
- * @deprecated Use odp_timer_retval_t instead.
- */
-typedef odp_timer_retval_t ODP_DEPRECATE(odp_timer_set_t);
 
 /**
  * Timer tick information
