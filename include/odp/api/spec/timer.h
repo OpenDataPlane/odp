@@ -17,6 +17,7 @@
 extern "C" {
 #endif
 
+#include <odp/api/deprecated.h>
 #include <odp/api/timer_types.h>
 #include <odp/api/event_types.h>
 #include <odp/api/pool_types.h>
@@ -143,7 +144,7 @@ odp_timer_pool_t odp_timer_pool_create(const char *name, const odp_timer_pool_pa
  *
  * @deprecated Use odp_timer_pool_start_multi() instead
  */
-void odp_timer_pool_start(void);
+void ODP_DEPRECATE(odp_timer_pool_start)(void);
 
 /**
  * Start timer pools
