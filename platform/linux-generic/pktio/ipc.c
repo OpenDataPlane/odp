@@ -3,6 +3,7 @@
  * Copyright (c) 2019-2022 Nokia
  */
 
+#include <odp/api/deprecated.h>
 #include <odp/api/hints.h>
 #include <odp/api/system_info.h>
 
@@ -922,7 +923,9 @@ static int ipc_capability(pktio_entry_t *pktio_entry ODP_UNUSED, odp_pktio_capab
 	capa->max_input_queues  = 1;
 	capa->max_output_queues = 1;
 	capa->config.pktout.bit.tx_compl_ena = 1;
+#if ODP_DEPRECATED_API
 	capa->tx_compl.mode_all = 1;
+#endif
 	capa->tx_compl.mode_event = 1;
 	capa->tx_compl.mode_poll = 1;
 

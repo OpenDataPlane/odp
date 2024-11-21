@@ -3567,8 +3567,10 @@ static void pktio_test_pktout_compl_event(bool use_plain_queue)
 		/* Configure Tx completion offload for PKTIO Tx */
 		if (i == 0) {
 			CU_ASSERT_FATAL(pktio_capa.tx_compl.mode_event == 1);
+#if ODP_DEPRECATED_API
 			CU_ASSERT_FATAL(pktio_capa.tx_compl.mode_all ==
 					pktio_capa.tx_compl.mode_event);
+#endif
 			if (use_plain_queue) {
 				/* CU_ASSERT needs these extra braces */
 				CU_ASSERT_FATAL(pktio_capa.tx_compl.queue_type_plain != 0);
