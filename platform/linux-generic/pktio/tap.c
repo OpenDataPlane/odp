@@ -29,6 +29,7 @@
 #include <odp_posix_extensions.h>
 
 #include <odp/api/debug.h>
+#include <odp/api/deprecated.h>
 #include <odp/api/hints.h>
 #include <odp/api/packet_io.h>
 #include <odp/api/random.h>
@@ -535,7 +536,9 @@ static int tap_capability(pktio_entry_t *pktio_entry ODP_UNUSED,
 
 	capa->config.pktout.bit.ts_ena = 1;
 	capa->config.pktout.bit.tx_compl_ena = 1;
+#if ODP_DEPRECATED_API
 	capa->tx_compl.mode_all = 1;
+#endif
 	capa->tx_compl.mode_event = 1;
 	capa->tx_compl.mode_poll = 1;
 

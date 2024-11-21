@@ -17,6 +17,7 @@
 extern "C" {
 #endif
 
+#include <odp/api/deprecated.h>
 #include <odp/api/packet_types.h>
 #include <odp/api/packet_io_stats.h>
 #include <odp/api/pool_types.h>
@@ -1120,7 +1121,7 @@ typedef struct odp_pktio_capability_t {
 		 *
 		 * @deprecated Use mode_event instead.
 		 */
-		uint32_t mode_all   : 1;
+		uint32_t ODP_DEPRECATE(mode_all)   : 1;
 
 		/** Packet transmit completion mode ODP_PACKET_TX_COMPL_EVENT support */
 		uint32_t mode_event : 1;
