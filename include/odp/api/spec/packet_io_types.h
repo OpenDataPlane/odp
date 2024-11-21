@@ -534,7 +534,7 @@ typedef union odp_pktout_config_opt_t {
 		 *
 		 * @deprecated Use odp_pktio_config_t::mode_event instead.
 		 */
-		uint64_t tx_compl_ena : 1;
+		uint64_t ODP_DEPRECATE(tx_compl_ena) : 1;
 
 		/** Enable packet protocol stats update */
 		uint64_t proto_stats_ena : 1;
