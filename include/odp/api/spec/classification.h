@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2014-2018 Linaro Limited
- * Copyright (c) 2021-2023 Nokia
+ * Copyright (c) 2021-2024 Nokia
  */
 
 /**
@@ -682,7 +682,13 @@ typedef struct odp_cls_cos_param {
 	/** Back Pressure configuration */
 	odp_bp_param_t bp;
 
-	/** Packet input vector configuration */
+	/** Packet input vector configuration
+	 *
+	 * Generating vectors of packets can be enabled either through this
+	 * configuration or by using a destination queue(s) which has event
+	 * vector generation enabled. Both options cannot be enabled
+	 * simultaneously for the same pktio device.
+	 */
 	odp_pktin_vector_config_t vector;
 
 } odp_cls_cos_param_t;

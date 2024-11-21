@@ -302,7 +302,13 @@ typedef struct odp_pktin_queue_param_t {
 	  */
 	odp_pktin_queue_param_ovr_t *queue_param_ovr;
 
-	/** Packet input vector configuration */
+	/** Packet input vector configuration
+	 *
+	 * Generating vectors of packets can be enabled either by using this
+	 * configuration, or by enabling event vector generation through queue
+	 * parameters ('queue_param'). Both options cannot be enabled
+	 * simultaneously for the same pktio device.
+	 */
 	odp_pktin_vector_config_t vector;
 
 } odp_pktin_queue_param_t;
