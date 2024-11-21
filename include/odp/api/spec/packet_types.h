@@ -17,6 +17,7 @@
 extern "C" {
 #endif
 
+#include <odp/api/deprecated.h>
 #include <odp/api/proto_stats_types.h>
 #include <odp/api/queue_types.h>
 
@@ -444,7 +445,9 @@ typedef enum odp_packet_tx_compl_mode_t {
  *
  * @deprecated Use #ODP_PACKET_TX_COMPL_EVENT instead.
  */
+#if ODP_DEPRECATED_API
 #define ODP_PACKET_TX_COMPL_ALL ODP_PACKET_TX_COMPL_EVENT
+#endif
 
 /**
  * Packet transmit completion request options
