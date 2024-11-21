@@ -471,20 +471,6 @@ void odp_timeout_from_event_multi(odp_timeout_t tmo[], const odp_event_t ev[], i
 odp_event_t odp_timeout_to_event(odp_timeout_t tmo);
 
 /**
- * Check for fresh timeout
- *
- * If the corresponding timer has been reset or cancelled since this timeout
- * was enqueued, the timeout is stale (not fresh).
- *
- * @param tmo Timeout handle
- * @retval 1 Timeout is fresh
- * @retval 0 Timeout is stale
- *
- * @deprecated The function will be removed in a future API version.
- */
-int ODP_DEPRECATE(odp_timeout_fresh)(odp_timeout_t tmo);
-
-/**
  * Return timer handle for the timeout
  *
  * @param tmo Timeout handle
