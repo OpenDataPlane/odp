@@ -27,95 +27,20 @@ or *Closed* via the `odp_pktio_close()` API to return the PktIO to the
 *Unallocated* state.
 
 === PktIO Allocation
-PktIO objects begin life by being _opened_ via the call:
+PktIO objects begin life by being _opened_ with `odp_pktio_open()` API:
 [source,c]
 -----
-/**
- * Open a packet IO interface
- *
- * An ODP program can open a single packet IO interface per device, attempts
- * to open an already open device will fail, returning ODP_PKTIO_INVALID with
- * errno set. Use odp_pktio_lookup() to obtain a handle to an already open
- * device. Packet IO parameters provide interface level configuration options.
- *
- * Use odp_pktio_param_init() to initialize packet IO parameters into their
- * default values. Default values are also used when 'param' pointer is NULL.
- *
- * Packet input queue configuration must be setup with
- * odp_pktin_queue_config() before odp_pktio_start() is called. When packet
- * input mode is ODP_PKTIN_MODE_DISABLED, odp_pktin_queue_config() call is
- * optional and will ignore all parameters.
- *
- * Packet output queue configuration must be setup with
- * odp_pktout_queue_config() before odp_pktio_start() is called. When packet
- * output mode is ODP_PKTOUT_MODE_DISABLED or ODP_PKTOUT_MODE_TM,
- * odp_pktout_queue_config() call is optional and will ignore all parameters.
- *
- * Packet receive and transmit on the interface is enabled with a call to
- * odp_pktio_start(). If not specified otherwise, any interface level
- * configuration must not be changed when the interface is active (between start
- * and stop calls).
- *
- * In summary, a typical pktio interface setup sequence is ...
- *   * odp_pktio_open()
- *   * odp_pktin_queue_config()
- *   * odp_pktout_queue_config()
- *   * odp_pktio_start()
- *
- * ... and tear down sequence is:
- *   * odp_pktio_stop()
- *   * odp_pktio_close()
- *
- * @param name   Packet IO device name
- * @param pool   Default pool from which to allocate storage for packets
- *               received over this interface, must be of type ODP_POOL_PACKET
- * @param param  Packet IO parameters. Uses defaults when NULL.
- *
- * @return Packet IO handle
- * @retval ODP_PKTIO_INVALID on failure
- *
- * @note The device name "loop" is a reserved name for a loopback device used
- *	 for testing purposes.
- *
- * @note Packets arriving via this interface assigned to a CoS by the
- *	 classifier are received into the pool associated with that CoS. This
- *	 will occur either because this pktio is assigned a default CoS via
- *	 the odp_pktio_default_cos_set() routine, or because a matching PMR
- *	 assigned the packet to a specific CoS. The default pool specified
- *	 here is applicable only for those packets that are not assigned to a
- *	 more specific CoS.
- *
- * @see odp_pktio_start(), odp_pktio_stop(), odp_pktio_close()
- */
-odp_pktio_t odp_pktio_open(const char *name, odp_pool_t pool,
-			   const odp_pktio_param_t *param);
+odp_pktio_t odp_pktio_open(const char *name,
+                           odp_pool_t pool,
+                           const odp_pktio_param_t *param)
 -----
-`odp_pktio_open()` takes three arguments: a *name*, which is an
-implementation-defined string that identifies the logical interface to be
-opened, a *pool* that identifies the ODP pool that storage for received
-packets should be allocated from, and a *param* structure that specifies
-I/O options to be associated with this PktIO instance.
-[source,c]
------
-/**
- * Packet IO parameters
- *
- * Packet IO interface level parameters. Use odp_pktio_param_init() to
- * initialize the structure with default values.
- */
-typedef struct odp_pktio_param_t {
-	/** Packet input mode
-	  *
-	  * The default value is ODP_PKTIN_MODE_DIRECT. */
-	odp_pktin_mode_t in_mode;
 
-	/** Packet output mode
-	  *
-	  * The default value is ODP_PKTOUT_MODE_DIRECT. */
-	odp_pktout_mode_t out_mode;
+The function has three arguments: a *name*, which is an implementation-defined
+string that identifies the logical interface to be opened, a *pool* that
+identifies the ODP pool that storage for received packets should be allocated
+from, and a *param* structure that specifies I/O options to be associated with
+this PktIO instance.
 
-} odp_pktio_param_t;
------
 ODP defines *"loop"* as a reserved name to indicate that this PktIO represents
 a loopback interface. Loopback interfaces are useful as a means of recycling
 packets back for reclassification after decryption or decapsulation, as well as
@@ -136,330 +61,24 @@ struct, in turn, specifies the input and output *modes* of the PktIO.
 Associated with each PktIO is a set of _capabilities_ that provide information
 such as the maximum number of input/output queues it supports, its configuration
 options, and the operations is supports. These are aggregated into
-the struct:
-[source,c]
------
-/**
- * Packet IO capabilities
- */
-typedef struct odp_pktio_capability_t {
-	/** Maximum number of input queues */
-	unsigned max_input_queues;
-
-	/** Maximum number of output queues */
-	unsigned max_output_queues;
-
-	/** Supported pktio configuration options */
-	odp_pktio_config_t config;
-
-	/** Supported set operations
-	 *
-	 * A bit set to one indicates a supported operation. All other bits are
-	 * set to zero. */
-	odp_pktio_set_op_t set_op;
-
-} odp_pktio_capability_t;
------
-That is returned by the `odp_pktio_capability()` API. This returns the
-limits and default values for these capabilities which can in turn be set
-via the `odp_pktio_config()` API, which takes as input the struct:
-[source,c]
------
-/**
- * Packet IO configuration options
- *
- * Packet IO interface level configuration options. Use odp_pktio_capability()
- * to see which options are supported by the implementation.
- * Use odp_pktio_config_init() to initialize the structure with default values.
- */
-typedef struct odp_pktio_config_t {
-	/** Packet input configuration options bit field
-	 *
-	 *  Default value for all bits is zero. */
-	odp_pktin_config_opt_t pktin;
-
-	/** Packet output configuration options bit field
-	 *
-	 *  Default value for all bits is zero. */
-	odp_pktout_config_opt_t pktout;
-
-	/** Packet input parser configuration */
-	odp_pktio_parser_config_t parser;
-
-	/** Interface loopback mode
-	 *
-	 * In this mode the packets sent out through the interface is
-	 * looped back to input of the same interface. Supporting loopback mode
-	 * is an optional feature per interface and should be queried in the
-	 * interface capability before enabling the same. */
-	odp_bool_t enable_loop;
-
-	/** Inbound IPSEC inlined with packet input
-	 *
-	 *  Enable/disable inline inbound IPSEC operation. When enabled packet
-	 *  input directs all IPSEC packets automatically to IPSEC inbound
-	 *  processing. IPSEC configuration (through IPSEC API) must be done
-	 *  before enabling this feature in pktio.
-	 *  Packets that are not (recognized as) IPSEC are processed
-	 *  according to the packet input configuration.
-	 *
-	 *  0: Disable inbound IPSEC inline operation (default)
-	 *  1: Enable inbound IPSEC inline operation
-	 *
-	 *  @see odp_ipsec_config(), odp_ipsec_sa_create()
-	 */
-	odp_bool_t inbound_ipsec;
-
-	/** Outbound IPSEC inlined with packet output
-	 *
-	 *  Enable/disable inline outbound IPSEC operation. When enabled IPSEC
-	 *  outbound processing can send outgoing IPSEC packets directly
-	 *  to the pktio interface for output. IPSEC configuration is done
-	 *  through the IPSEC API.
-	 *
-	 *  Outbound IPSEC inline operation cannot be combined with traffic
-	 *  manager (ODP_PKTOUT_MODE_TM).
-	 *
-	 *  0: Disable outbound IPSEC inline operation (default)
-	 *  1: Enable outbound IPSEC inline operation
-	 *
-	 *  @see odp_ipsec_config(), odp_ipsec_sa_create()
-	 */
-	odp_bool_t outbound_ipsec;
-
-} odp_pktio_config_t;
------
-The IPsec related configurations will be discussed later in the IPsec chapter,
-but for now we'll focus on the PktIn/PktOut configuration and the
-parser configuration.
+`odp_pktio_capability_t` the struct, which is returned by
+`odp_pktio_capability()` API.
 
 ==== PktIn Configuration
 For PktIOs that will receive packets, the `odp_pktin_config_opt_t` struct
-controls RX processing to be performed on these packets as they are received:
-[source,c]
------
-/**
- * Packet input configuration options bit field
- *
- * Packet input configuration options listed in a bit field structure. Packet
- * input timestamping may be enabled for all packets or at least for those that
- * belong to time synchronization protocol (PTP).
- *
- * Packet input checksum checking may be enabled or disabled. When it is
- * enabled, implementation will attempt to verify checksum correctness on
- * incoming packets and depending on drop configuration either deliver erroneous
- * packets with appropriate flags set (e.g. odp_packet_has_l3_error(),
- * odp_packet_l3_chksum_status()) or drop those. When packet dropping is
- * enabled, application will never receive a packet with the specified error
- * and may avoid to check the error flag.
- *
- * If checksum checking is enabled, IPv4 header checksum checking is always
- * done for packets that do not have IP options and L4 checksum checking
- * is done for unfragmented packets that do not have IPv4 options or IPv6
- * extension headers. In other cases checksum checking may or may not
- * be done. For example, L4 checksum of fragmented packets is typically
- * not checked.
- *
- * IPv4 checksum checking may be enabled only when parsing level is
- * ODP_PROTO_LAYER_L3 or higher. Similarly, L4 level checksum checking
- * may be enabled only with parsing level ODP_PROTO_LAYER_L4 or higher.
- *
- * Whether checksum checking was done and whether a checksum was correct
- * can be queried for each received packet with odp_packet_l3_chksum_status()
- * and odp_packet_l4_chksum_status().
- */
-typedef union odp_pktin_config_opt_t {
-	/** Option flags */
-	struct {
-		/** Timestamp all packets on packet input */
-		uint64_t ts_all        : 1;
-
-		/** Timestamp (at least) IEEE1588 / PTP packets
-		  * on packet input */
-		uint64_t ts_ptp        : 1;
-
-		/** Check IPv4 header checksum on packet input */
-		uint64_t ipv4_chksum   : 1;
-
-		/** Check UDP checksum on packet input */
-		uint64_t udp_chksum    : 1;
-
-		/** Check TCP checksum on packet input */
-		uint64_t tcp_chksum    : 1;
-
-		/** Check SCTP checksum on packet input */
-		uint64_t sctp_chksum   : 1;
-
-		/** Drop packets with an IPv4 error on packet input */
-		uint64_t drop_ipv4_err : 1;
-
-		/** Drop packets with an IPv6 error on packet input */
-		uint64_t drop_ipv6_err : 1;
-
-		/** Drop packets with a UDP error on packet input */
-		uint64_t drop_udp_err  : 1;
-
-		/** Drop packets with a TCP error on packet input */
-		uint64_t drop_tcp_err  : 1;
-
-		/** Drop packets with a SCTP error on packet input */
-		uint64_t drop_sctp_err : 1;
-
-	} bit;
-
-	/** All bits of the bit field structure
-	  *
-	  * This field can be used to set/clear all flags, or bitwise
-	  * operations over the entire structure. */
-	uint64_t all_bits;
-} odp_pktin_config_opt_t;
------
-These are used to control packet timestamping as well as default packet checksum
-verification processing.
+controls the RX processing to be performed on received packets. For example,
+`odp_pktin_config_opt_t` includes options for controlling packet timestamping as
+well as default packet checksum verification processing.
 
 ==== PktIO Parsing Configuration
-For RX processing, packets may also be parsed automatically as part of
-receipt as controlled by the `odp_pktio_parser_config_t` struct:
-[source,c]
------
-/**
- * Parser configuration
- */
-typedef struct odp_pktio_parser_config_t {
-	/** Protocol parsing level in packet input
-	  *
-	  * Application requires that protocol headers in a packet are checked
-	  * up to this layer during packet input. Use ODP_PROTO_LAYER_ALL for
-	  * all layers. Packet metadata for this and all preceding layers are
-	  * set. In addition, offset (and pointer) to the next layer is set.
-	  * Other layer/protocol specific metadata have undefined values.
-	  *
-	  * The default value is ODP_PROTO_LAYER_ALL. */
-	odp_proto_layer_t layer;
-
-} odp_pktio_parser_config_t;
------
-Note that parsing is automatically done whenever classification is enabled
-for an RX interface (see below).
+For RX processing, packets may also be parsed automatically as part of receipt
+as controlled by the `odp_pktio_parser_config_t` struct.
 
 ==== PktOut Configuration
 For PktIOs that will transmit packets, the `odp_pktout_config_opt_t` struct
-controls TX processing to be performed on these packets as they are
-transmitted:
-[source,c]
------
-/**
- * Packet output configuration options bit field
- *
- * Packet output configuration options listed in a bit field structure. Packet
- * output checksum insertion may be enabled or disabled (e.g. ipv4_chksum_ena):
- *
- *  0: Disable checksum insertion. Application will not request checksum
- *     insertion for any packet. This is the default value for xxx_chksum_ena
- *     bits.
- *  1: Enable checksum insertion. Application will request checksum insertion
- *     for some packets.
- *
- * When checksum insertion is enabled, application may use configuration options
- * to set the default behaviour on packet output (e.g. ipv4_chksum):
- *
- *  0: Do not insert checksum by default. This is the default value for
- *     xxx_chksum bits.
- *  1: Calculate and insert checksum by default.
- *
- * These defaults may be overridden on per packet basis using e.g.
- * odp_packet_l4_chksum_insert().
- *
- * For correct operation, packet metadata must provide valid offsets and type
- * flags for the appropriate layer 3 and layer 4 protocols.  L3 and L4 offsets
- * can be updated with odp_packet_l3_offset_set() and odp_packet_l4_offset_set()
- * calls. L3 and L4 type flags can be updated using odp_packet_has_*_set() calls
- * For example, UDP checksum calculation needs both L3 and L4 types (IP and UDP) and
- * L3 and L4 offsets (to access IP and UDP headers), while IP checksum
- * calculation only needs L3 type (IP) and L3 offset (to access IP header).
- * When application (e.g. a switch) does not modify L3/L4 data and thus checksum
- * does not need to be updated, checksum insertion should be disabled for optimal
- * performance.
- *
- * UDP, TCP and SCTP checksum insertion must not be requested for IP fragments.
- * Use checksum override function (odp_packet_l4_chksum_insert()) to disable
- * checksumming when sending a fragment through a packet IO interface that has
- * the relevant L4 checksum insertion enabled.
- *
- * Result of checksum insertion at packet output is undefined if the protocol
- * headers required for checksum calculation are not well formed. Packet must
- * contain at least as many data bytes after L3/L4 offsets as the headers
- * indicate. Other data bytes of the packet are ignored for the checksum
- * insertion.
- *
- * No packet refs is an offload when set indicates that this pktio
- * can always free the packet buffer after transmission and need not check
- * for packet references and application will make sure that a packet
- * transmitted via this pktio will always have only single reference.
- *
- * Packet Tx timestamp capture may be enabled or disabled.
- * When enabled, packet Tx timestamps will be captured per packet basis for
- * packets requesting it (odp_packet_ts_request()). The timestamp can be
- * retrieved using odp_pktout_ts_read() API after the packet has been
- * transmitted. Since packet Tx depends on scheduling, shaping and then finally
- * transmission to physical link, user has to wait long enough for
- * odp_pktout_ts_read() to provide the timestamp captured for the last packet.
- */
-typedef union odp_pktout_config_opt_t {
-	/** Option flags for packet output */
-	struct {
-		/** Enable Tx timestamp capture */
-		uint64_t ts_ena : 1;
-
-		/** Enable IPv4 header checksum insertion */
-		uint64_t ipv4_chksum_ena : 1;
-
-		/** Enable UDP checksum insertion */
-		uint64_t udp_chksum_ena  : 1;
-
-		/** Enable TCP checksum insertion */
-		uint64_t tcp_chksum_ena  : 1;
-
-		/** Enable SCTP checksum insertion */
-		uint64_t sctp_chksum_ena : 1;
-
-		/** Insert IPv4 header checksum by default */
-		uint64_t ipv4_chksum     : 1;
-
-		/** Insert UDP checksum on packet by default */
-		uint64_t udp_chksum      : 1;
-
-		/** Insert TCP checksum on packet by default */
-		uint64_t tcp_chksum      : 1;
-
-		/** Insert SCTP checksum on packet by default */
-		uint64_t sctp_chksum     : 1;
-
-		/** Packet references not used on packet output
-		 *
-		 * When set, application indicates that it will not transmit
-		 * packet references on this packet IO interface.
-		 * Since every ODP implementation supports it, it is always
-		 * ok to set this flag.
-		 *
-		 * 0: Packet references may be transmitted on the
-		 *    interface (the default value).
-		 * 1: Packet references will not be transmitted on the
-		 *    interface.
-		 */
-		uint64_t no_packet_refs  : 1;
-
-	} bit;
-
-	/** All bits of the bit field structure
-	  *
-	  * This field can be used to set/clear all flags, or bitwise
-	  * operations over the entire structure. */
-	uint64_t all_bits;
-} odp_pktout_config_opt_t;
------
-These are used to control default checksum generation processing for
-transmitted packets.
+controls the TX processing to be performed on transmitted packets. For example,
+`odp_pktout_config_opt_t` includes options for controlling checksum insertion
+for transmitted packets.
 
 === PktIO Input and Output Modes
 PktIO objects support four different Input and Output modes, that may be
@@ -500,97 +119,7 @@ of type *odp_pktin_queue_t* and are retrieved by threads calling the
 `odp_pktin_recv()` API.
 
 Once opened, setting up a DIRECT mode PktIO is performed by the
-`odp_pktin_queue_config()` API.
-[source,c]
------
-/**
- * Configure packet input queues
- *
- * Setup a number of packet input queues and configure those. The maximum number
- * of queues is platform dependent and can be queried with
- * odp_pktio_capability(). Use odp_pktin_queue_param_init() to initialize
- * parameters into their default values. Default values are also used when
- * 'param' pointer is NULL.
- *
- * Queue handles for input queues can be requested with odp_pktin_queue() or
- * odp_pktin_event_queue() after this call. All requested queues are setup on
- * success, no queues are setup on failure. Each call reconfigures input queues
- * and may invalidate all previous queue handles.
- *
- * @param pktio    Packet IO handle
- * @param param    Packet input queue configuration parameters. Uses defaults
- *                 when NULL.
- *
- * @retval 0 on success
- * @retval <0 on failure
- *
- * @see odp_pktio_capability(), odp_pktin_queue(), odp_pktin_event_queue()
- */
-int odp_pktin_queue_config(odp_pktio_t pktio,
-			   const odp_pktin_queue_param_t *param);
------
-The second argument to this call is the *odp_pktin_queue_param_t*
-[source,c]
------
-/**
- * Packet input queue parameters
- */
-typedef struct odp_pktin_queue_param_t {
-	/** Operation mode
-	  *
-	  * The default value is ODP_PKTIO_OP_MT. Application may enable
-	  * performance optimization by defining ODP_PKTIO_OP_MT_UNSAFE when
-	  * applicable. */
-	odp_pktio_op_mode_t op_mode;
-
-	/** Enable classifier
-	  *
-	  * * 0: Classifier is disabled (default)
-	  * * 1: Classifier is enabled. Use classifier to direct incoming
-	  *      packets into pktin event queues. Classifier can be enabled
-	  *      only in ODP_PKTIN_MODE_SCHED and ODP_PKTIN_MODE_QUEUE modes.
-	  *      Both classifier and hashing cannot be enabled simultaneously
-	  *      ('hash_enable' must be 0). */
-	odp_bool_t classifier_enable;
-
-	/** Enable flow hashing
-	  *
-	  * * 0: Do not hash flows (default)
-	  * * 1: Enable flow hashing. Use flow hashing to spread incoming
-	  *      packets into input queues. Hashing can be enabled in all
-	  *      modes. Both classifier and hashing cannot be enabled
-	  *      simultaneously ('classifier_enable' must be 0). */
-	odp_bool_t hash_enable;
-
-	/** Protocol field selection for hashing
-	  *
-	  * Multiple protocols can be selected. Ignored when 'hash_enable' is
-	  * zero. The default value is all bits zero. */
-	odp_pktin_hash_proto_t hash_proto;
-
-	/** Number of input queues to be created
-	  *
-	  * When classifier is enabled in odp_pktin_queue_config() this
-	  * value is ignored, otherwise at least one queue is required.
-	  * More than one input queues require flow hashing configured.
-	  * The maximum value is defined by pktio capability 'max_input_queues'.
-	  * Queue type is defined by the input mode. The default value is 1. */
-	unsigned num_queues;
-
-	/** Queue parameters
-	  *
-	  * These are used for input queue creation in ODP_PKTIN_MODE_QUEUE
-	  * or ODP_PKTIN_MODE_SCHED modes. Scheduler parameters are considered
-	  * only in ODP_PKTIN_MODE_SCHED mode. Default values are defined in
-	  * odp_queue_param_t documentation.
-	  * When classifier is enabled in odp_pktin_queue_config() this
-	  * value is ignored. */
-	odp_queue_param_t queue_param;
-
-} odp_pktin_queue_param_t;
------
-Note that the *queue_param* field of this struct is ignored in DIRECT mode.
-The purpose of `odp_pktin_queue_config()` is to specify the number of PktIn
+`odp_pktin_queue_config()` API, whose purpose is to specify the number of PktIn
 queues to be created and to set their attributes.
 
 It is important to note that while `odp_pktio_queue_config()` creates a
@@ -607,39 +136,11 @@ how those tools are used.
 ===== Hash Processing
 Another feature of DIRECT mode input is the provision of a *hash* function  used
 to distribute incoming packets among the PktIO's PktIn queues. If the
-`hash_enable` field of the *odp_pktin_queue_param_t* is 1,
+`hash_enable` field of the *odp_pktin_queue_param_t* is `true`,
 then the `hash_proto` field is used to specify which field(s) of incoming
 packets should be used as input to an implementation-defined packet
 distribution hash function.
-[source,c]
------
-/**
- * Packet input hash protocols
- *
- * The list of protocol header field combinations, which are included into
- * packet input hash calculation.
- */
-typedef union odp_pktin_hash_proto_t {
-	/** Protocol header fields for hashing */
-	struct {
-		/** IPv4 addresses and UDP port numbers */
-		uint32_t ipv4_udp : 1;
-		/** IPv4 addresses and TCP port numbers */
-		uint32_t ipv4_tcp : 1;
-		/** IPv4 addresses */
-		uint32_t ipv4     : 1;
-		/** IPv6 addresses and UDP port numbers */
-		uint32_t ipv6_udp : 1;
-		/** IPv6 addresses and TCP port numbers */
-		uint32_t ipv6_tcp : 1;
-		/** IPv6 addresses */
-		uint32_t ipv6     : 1;
-	} proto;
 
-	/** All bits of the bit field structure */
-	uint32_t all_bits;
-} odp_pktin_hash_proto_t;
------
 Note that the hash function used in PktIO poll mode operation is intended to
 provide simple packet distribution among multiple PktIn queues associated with
 the PktIO. It does not have the sophistication of the *ODP Classifier*, however
@@ -655,73 +156,13 @@ same PktIn queue.
 ===== PktIn Queues
 A *PktIn Queue* is a special type of queue that is used internally by PktIOs
 operating in DIRECT mode. Applications cannot perform enqueues to these queues,
-however they may obtain references to them via the `odp_pktin_queue()` API
-[source,c]
------
-/**
- * Direct packet input queues
- *
- * Returns the number of input queues configured for the interface in
- * ODP_PKTIN_MODE_DIRECT mode. Outputs up to 'num' queue handles when the
- * 'queues' array pointer is not NULL. If return value is larger than 'num',
- * there are more queues than the function was allowed to output. If return
- * value (N) is less than 'num', only queues[0 ... N-1] have been written.
- *
- * Packets from these queues are received with odp_pktin_recv().
- *
- * @param      pktio    Packet IO handle
- * @param[out] queues   Points to an array of queue handles for output
- * @param      num      Maximum number of queue handles to output
- *
- * @return Number of packet input queues
- * @retval <0 on failure
- */
-int odp_pktin_queue(odp_pktio_t pktio, odp_pktin_queue_t queues[], int num);
------
+however they may obtain references to them via the `odp_pktin_queue()` API.
+
 Once configured, prior to receiving packets the PktIO must be placed into the
-*Ready* state via a call to `odp_pktio_start()`
-[source,c]
------
-/**
- * Start packet receive and transmit
- *
- * Activate packet receive and transmit on a previously opened or stopped
- * interface. The interface can be stopped with a call to odp_pktio_stop().
- *
- * @param pktio  Packet IO handle
- *
- * @retval 0 on success
- * @retval <0 on failure
- *
- * @see odp_pktio_open(), odp_pktio_stop()
- */
-int odp_pktio_start(odp_pktio_t pktio);
------
-Once started, the PktIn queue handles are used as arguments to
-`odp_pktin_recv()` to receive packets from the PktIO.
-[source,c]
------
-/**
- * Receive packets directly from an interface input queue
- *
- * Receives up to 'num' packets from the pktio interface input queue. Returns
- * the number of packets received.
- *
- * When input queue parameter 'op_mode' has been set to ODP_PKTIO_OP_MT_UNSAFE,
- * the operation is optimized for single thread operation per queue and the same
- * queue must not be accessed simultaneously from multiple threads.
- *
- * @param      queue      Packet input queue handle for receiving packets
- * @param[out] packets[]  Packet handle array for output of received packets
- * @param      num        Maximum number of packets to receive
- *
- * @return Number of packets received
- * @retval <0 on failure
- *
- * @see odp_pktin_queue()
- */
-int odp_pktin_recv(odp_pktin_queue_t queue, odp_packet_t packets[], int num);
------
+*Ready* state via a call to `odp_pktio_start()`. Once started, the PktIn queue
+handles are used as arguments to `odp_pktin_recv()` to receive packets from the
+PktIO.
+
 Note that it is the caller's responsibility to ensure that PktIn queues
 are used correctly. For example, it is an error for multiple threads to
 attempt to perform concurrent receive processing on the same PktIn queue
@@ -739,120 +180,21 @@ image::pktout_direct_send.svg[align="center"]
 
 Direct TX processing operates similarly to Direct RX processing. Following
 open, the `odp_pktout_queue_config()` API is used to create and configure
-one or more *PktOut queues* to be used to support packet transmission by
-this PktIO
-[source,c]
------
-/**
- * Configure packet output queues
- *
- * Setup a number of packet output queues and configure those. The maximum
- * number of queues is platform dependent and can be queried with
- * odp_pktio_capability(). Use odp_pktout_queue_param_init() to initialize
- * parameters into their default values. Default values are also used when
- * 'param' pointer is NULL.
- *
- * Queue handles for output queues can be requested with odp_pktout_queue() or
- * odp_pktout_event_queue() after this call. All requested queues are setup on
- * success, no queues are setup on failure. Each call reconfigures output queues
- * and may invalidate all previous queue handles.
- *
- * @param pktio    Packet IO handle
- * @param param    Packet output queue configuration parameters. Uses defaults
- *                 when NULL.
- *
- * @retval 0 on success
- * @retval <0 on failure
- *
- * @see odp_pktio_capability(), odp_pktout_queue(), odp_pktout_event_queue()
- */
-int odp_pktout_queue_config(odp_pktio_t pktio,
-			    const odp_pktout_queue_param_t *param);
------
-As with `odp_pktin_queue_config()`, the configuration of PktOut queues
-involves the use of a parameter struct:
-[source,c]
------
-/**
- * Packet output queue parameters
- *
- * These parameters are used in ODP_PKTOUT_MODE_DIRECT and
- * ODP_PKTOUT_MODE_QUEUE modes.
- */
-typedef struct odp_pktout_queue_param_t {
-	/** Operation mode
-	  *
-	  * The default value is ODP_PKTIO_OP_MT. Application may enable
-	  * performance optimization by defining ODP_PKTIO_OP_MT_UNSAFE when
-	  * applicable. */
-	odp_pktio_op_mode_t op_mode;
+one or more *PktOut queues* of type *odp_pktout_queue_t* to be used for packet
+transmission by this PktIO. As with PktIn queues, the handles for these created
+PktOut queues may be retrieved by the `odp_pktout_queue()` API.
 
-	/** Number of output queues to be created. The value must be between
-	  * 1 and interface capability. The default value is 1. */
-	unsigned num_queues;
-
-} odp_pktout_queue_param_t;
------
-As with direct input, direct output uses one or more special output queues
-of type *odp_pktout_queue_t* that are created and configured by this call.
-
-As with PktIn queues, the handles for these created PktOut queues may be
-retrieved by the `odp_pktout_queue()` API:
-[source,c]
------
-/**
- * Direct packet output queues
- *
- * Returns the number of output queues configured for the interface in
- * ODP_PKTOUT_MODE_DIRECT mode. Outputs up to 'num' queue handles when the
- * 'queues' array pointer is not NULL. If return value is larger than 'num',
- * there are more queues than the function was allowed to output. If return
- * value (N) is less than 'num', only queues[0 ... N-1] have been written.
- *
- * Packets are sent to these queues with odp_pktout_send().
- *
- * @param      pktio    Packet IO handle
- * @param[out] queues   Points to an array of queue handles for output
- * @param      num      Maximum number of queue handles to output
- *
- * @return Number of packet output queues
- * @retval <0 on failure
- */
-int odp_pktout_queue(odp_pktio_t pktio, odp_pktout_queue_t queues[], int num);
------
 Once the PktIO has been configured for output and started via
 `odp_pktio_start()`, packets may be transmitted to the PktIO by calling
 `odp_pktout_send()`:
 [source,c]
 -----
-/**
- * Send packets directly to an interface output queue
- *
- * Sends out a number of packets to the interface output queue. When
- * output queue parameter 'op_mode' has been set to ODP_PKTIO_OP_MT_UNSAFE,
- * the operation is optimized for single thread operation per queue and the same
- * queue must not be accessed simultaneously from multiple threads.
- *
- * A successful call returns the actual number of packets sent. If return value
- * is less than 'num', the remaining packets at the end of packets[] array
- * are not consumed, and the caller has to take care of them.
- *
- * Entire packet data is sent out (odp_packet_len() bytes of data, starting from
- * odp_packet_data()). All other packet metadata is ignored unless otherwise
- * specified e.g. for protocol offload purposes. Link protocol specific frame
- * checksum and padding are added to frames before transmission.
- *
- * @param queue        Packet output queue handle for sending packets
- * @param packets[]    Array of packets to send
- * @param num          Number of packets to send
- *
- * @return Number of packets sent
- * @retval <0 on failure
- */
-int odp_pktout_send(odp_pktout_queue_t queue, const odp_packet_t packets[],
-		    int num);;
+int odp_pktout_send(odp_pktout_queue_t queue,
+                    const odp_packet_t packets[],
+                    int num)
 -----
-Note that the argument to this call specifies the PktOut queue that the
+
+Note that the first argument to this call specifies the PktOut queue that the
 packet is to be added to rather than the PktIO itself. This permits multiple
 threads (presumably operating on different cores) a more efficient means of
 separating I/O processing destined for the same interface.
@@ -882,31 +224,8 @@ the PktIO uses standard ODP event queues, other parts of the application can
 use `odp_queue_enq()` API calls to enqueue packets to these queues for
 "RX" processing in addition to those originating from the PktIO interface
 itself. To obtain the handles of these input queues, the
-`odp_pktin_event_queue()` API is used:
-[source,c]
------
-/**
- * Event queues for packet input
- *
- * Returns the number of input queues configured for the interface in
- * ODP_PKTIN_MODE_QUEUE and ODP_PKTIN_MODE_SCHED modes. Outputs up to 'num'
- * queue handles when the 'queues' array pointer is not NULL. If return value is
- * larger than 'num', there are more queues than the function was allowed to
- * output. If return value (N) is less than 'num', only queues[0 ... N-1] have
- * been written.
- *
- * Packets (and other events) from these queues are received with
- * odp_queue_deq(), odp_schedule(), etc calls.
- *
- * @param      pktio    Packet IO handle
- * @param[out] queues   Points to an array of queue handles for output
- * @param      num      Maximum number of queue handles to output
- *
- * @return Number of packet input queues
- * @retval <0 on failure
- */
-int odp_pktin_event_queue(odp_pktio_t pktio, odp_queue_t queues[], int num);
------
+`odp_pktin_event_queue()` API is used.
+
 Similarly, threads receive packets from PktIOs operating in QUEUE mode by
 making standard `odp_queue_deq()` calls to one of the event queues associated
 with the PktIO.
@@ -983,28 +302,5 @@ Scheduled transmit processing is performed via the *ODP Traffic Manager* and
 is requested when a PktIO is opened with an `out_mode` of `ODP_PKTOUT_MODE_TM`.
 
 For TX processing via the Traffic Manager, applications use the `odp_tm_enq()`
-API:
-[source,c]
------
-/** The odp_tm_enq() function is used to add packets to a given TM system.
- * Note that the System Metadata associated with the pkt needed by the TM
- * system is (a) a drop_eligible bit, (b) a two bit "pkt_color", (c) a 16-bit
- * pkt_len, and MAYBE? (d) a signed 8-bit shaper_len_adjust.
- *
- * If there is a non-zero shaper_len_adjust, then it is added to the pkt_len
- * after any non-zero shaper_len_adjust that is part of the shaper profile.
- *
- * The pkt_color bits are a result of some earlier Metering/Marking/Policing
- * processing (typically ingress based), and should not be confused with the
- * shaper_color produced from the TM shaper entities within the tm_inputs and
- * tm_nodes.
- *
- * @param[in] tm_queue  Specifies the tm_queue (and indirectly the TM system).
- * @param[in] pkt       Handle to a packet.
- * @return              Returns 0 upon success, < 0 upon failure. One of the
- *                      more common failure reasons is WRED dropage.
- */
-int odp_tm_enq(odp_tm_queue_t tm_queue, odp_packet_t pkt);
------
-See the *Traffic Manager* section of this document for full information about
-Traffic Manager configuration and operation.
+API. See the *Traffic Manager* section of this document for more information
+about Traffic Manager configuration and operation.
