@@ -563,21 +563,6 @@ In the linux helper, two functions are given to create and join ODP threads:
 These two functions abstract what an ODP thread really is and their usage
 is recommended as they would be implemented in other OS`s helper lib.
 
-Five older functions exist to tie and ODP thread to a specific implementation:
-
-`odph_linux_pthread_create()`
-
-`odph_linux_pthread_join()`
-
-`odph_linux_process_fork_n()`
-
-`odph_linux_process_fork()`
-
-`odph_linux_process_wait_n()`
-
-The usage of these functions should not occur within ODP examples nor tests.
-The usage of these functions in other application is not recommended.
-
 [[typedefs]]
 == ODP Abstract Types and Implementation Typedefs
 ODP APIs are defined to be abstract and operate on abstract types. For example,
