@@ -958,15 +958,20 @@ ODP applications make use of them either explicitly or implicitly. Queues are
 created via the 'odp_queue_create()' API that returns a handle of type
 `odp_queue_t` that is used to refer to this queue in all subsequent APIs that
 reference it. Queues have one of two ODP-defined _types_, PLAIN, and SCHED that
-determine how they are used. PLAIN queues directly managed by the ODP
+determine how they are used. PLAIN queues are directly managed by the ODP
 application while SCHED queues make use of the *ODP scheduler* to provide
 automatic scalable dispatching and synchronization services.
 
 .Operations on PLAIN queues
 [source,c]
 ----
-odp_queue_t plain_q1 = odp_queue_create("poll queue 1", ODP_QUEUE_TYPE_PLAIN, NULL);
-odp_queue_t plain_q2 = odp_queue_create("poll queue 2", ODP_QUEUE_TYPE_PLAIN, NULL);
+odp_queue_param_t qp;
+
+odp_queue_param_init(&qp);
+qp.type = ODP_QUEUE_TYPE_PLAIN;
+
+odp_queue_t plain_q1 = odp_queue_create("poll queue 1", &qp);
+odp_queue_t plain_q2 = odp_queue_create("poll queue 2", &qp);
 ...
 odp_event_t ev = odp_queue_deq(plain_q1);
 ...do something
@@ -981,21 +986,22 @@ responsibility of the ODP scheduler.
 [source,c]
 ----
 odp_queue_param_t qp;
+
 odp_queue_param_init(&qp);
-odp_schedule_prio_t prio = ...;
-odp_schedule_group_t sched_group = ...;
-qp.sched.prio = prio;
-qp.sched.sync = ODP_SCHED_SYNC_[PARALLEL|ATOMIC|ORDERED];
-qp.sched.group = sched_group;
-qp.lock_count = n; /* Only relevant for ordered queues */
-odp_queue_t sched_q1 = odp_queue_create("sched queue 1", ODP_QUEUE_TYPE_SCHED, &qp);
+qp.type        = ODP_QUEUE_TYPE_SCHED;
+qp.sched.group = ODP_SCHED_GROUP_WORKER;
+qp.sched.prio  = odp_schedule_max_prio();
+qp.sched.sync  = ODP_SCHED_SYNC_PARALLEL;
+
+odp_queue_t sched_q1 = odp_queue_create("sched queue 1", &qp);
 
 ...thread init processing
 
 while (1) {
         odp_event_t ev;
-        odp_queue_t which_q;
-        ev = odp_schedule(&which_q, <wait option>);
+        odp_queue_t src_q;
+
+        ev = odp_schedule(&src_q, ODP_SCHED_WAIT);
         ...process the event
 }
 ----
@@ -1189,55 +1195,9 @@ odp_schedule()
 -----
 The `odp_schedule_capability()` API returns an `odp_schedule_capability_t`
 struct that defines various limits and capabilities offered by this
-implementation of the ODP scheduler:
-
-.ODP Scheduler Capabilities
-[source,c]
------
-/**
- * Scheduler capabilities
- */
-typedef struct odp_schedule_capability_t {
-	/** Maximum number of ordered locks per queue */
-	uint32_t max_ordered_locks;
-
-	/** Maximum number of scheduling groups */
-	uint32_t max_groups;
-
-	/** Number of scheduling priorities */
-	uint32_t max_prios;
-
-	/** Maximum number of scheduled (ODP_BLOCKING) queues of the default
-	 * size. */
-	uint32_t max_queues;
-
-	/** Maximum number of events a scheduled (ODP_BLOCKING) queue can store
-	 * simultaneously. The value of zero means that scheduled queues do not
-	 * have a size limit, but a single queue can store all available
-	 * events. */
-	uint32_t max_queue_size;
-
-	/** Maximum flow ID per queue
-	 *
-	 *  Valid flow ID range in flow aware mode of scheduling is from 0 to
-	 *  this maximum value. So, maximum number of flows per queue is this
-	 *  value plus one. A value of 0 indicates that flow aware mode is not
-	 *  supported. */
-	uint32_t max_flow_id;
-
-	/** Lock-free (ODP_NONBLOCKING_LF) queues support.
-	 * The specification is the same as for the blocking implementation. */
-	odp_support_t lockfree_queues;
-
-	/** Wait-free (ODP_NONBLOCKING_WF) queues support.
-	 * The specification is the same as for the blocking implementation. */
-	odp_support_t waitfree_queues;
-
-} odp_schedule_capability_t;
------
-This struct indicates the various scheduling limits supported by this ODP
-implementation. Of note is the `max_flow_id` capability, which indicates
-whether this implementation is able to operate in _flow aware mode_.
+implementation of the ODP scheduler. Of note is the `max_flow_id` capability,
+which indicates whether this implementation is able to operate in
+_flow aware mode_.
 
 ==== Flow Aware Scheduling
 A _flow_ is a sequence of events that share some application-specific meaning
@@ -1281,56 +1241,17 @@ parallel queues behave).
 ==== Scheduler Configuration
 After determining the scheduler's capabilities, but before starting to use
 the scheduler to process events, applications must configure the scheduler
-by calling `odp_schedule_config()`.
-
-The argument to this call is the `odp_schedule_config_t` struct:
-
-.ODP Scheduler Configuration
+by calling `odp_schedule_config()` API:
 [source,c]
------
-/**
- * Schedule configuration
- */
-typedef struct odp_schedule_config_t {
-	/** Maximum number of scheduled queues to be supported.
-	 *
-	 * @see odp_schedule_capability_t
-	 */
-	uint32_t num_queues;
+----
+void odp_schedule_config_init(odp_schedule_config_t *config)
+----
 
-	/** Maximum number of events required to be stored simultaneously in
-	 * scheduled queue. This number must not exceed 'max_queue_size'
-	 * capability.  A value of 0 configures default queue size supported by
-	 * the implementation.
-	 */
-	uint32_t queue_size;
-
-	/** Maximum flow ID per queue
-	 *
-	 *  This value must not exceed 'max_flow_id' capability. Flow aware
-	 *  mode of scheduling is enabled when the value is greater than 0.
-	 *  The default value is 0.
-	 *
-	 *  Application can assign events to specific flows by calling
-	 *  odp_event_flow_id_set() before enqueuing events into a scheduled
-	 *  queue. When in flow aware mode, the event flow id value affects
-	 *  scheduling of the event and synchronization is maintained per flow
-	 *  within each queue.
-	 *
-	 *  Depending on implementation, there may be much more flows supported
-	 *  than queues, as flows are lightweight entities.
-	 *
-	 *  @see odp_schedule_capability_t, odp_event_flow_id()
-	 */
-	uint32_t max_flow_id;
-
-} odp_schedule_config_t;
------
-The `odp_schedule_config_init()` API should be used to initialize this
-struct to its default values. The application then sets whatever
-overrides it needs prior to calling `odp_schedule_config()` to activate
-them. Note that `NULL` may be passed as the argument to `odp_schedule_config()`
-if the application simply wants to use the implementation-defined default
+The `odp_schedule_config_t` struct argument must first be initialized to its
+default values with `odp_schedule_config_init()` API. An application can then
+set whatever overrides it needs prior to calling `odp_schedule_config()` to
+activate them. Note that `NULL` is a valid value for the argument if the
+application simply wants to use the implementation-defined default
 configuration. In the default configuration, the scheduler does not operate in
 flow aware mode.
 
