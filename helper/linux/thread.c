@@ -115,9 +115,9 @@ void ODPH_DEPRECATE(odph_linux_pthread_join)(odph_linux_pthread_t *thread_tbl, i
 	}
 }
 
-int odph_linux_process_fork_n(odph_linux_process_t *proc_tbl,
-			      const odp_cpumask_t *mask,
-			      const odph_linux_thr_params_t *thr_params)
+int ODPH_DEPRECATE(odph_linux_process_fork_n)(odph_linux_process_t *proc_tbl,
+					      const odp_cpumask_t *mask,
+					      const odph_linux_thr_params_t *thr_params)
 {
 	pid_t pid;
 	int num;
@@ -184,17 +184,17 @@ int odph_linux_process_fork_n(odph_linux_process_t *proc_tbl,
 	return 1;
 }
 
-int odph_linux_process_fork(odph_linux_process_t *proc, int cpu,
-			    const odph_linux_thr_params_t *thr_params)
+int ODPH_DEPRECATE(odph_linux_process_fork)(odph_linux_process_t *proc, int cpu,
+					    const odph_linux_thr_params_t *thr_params)
 {
 	odp_cpumask_t mask;
 
 	odp_cpumask_zero(&mask);
 	odp_cpumask_set(&mask, cpu);
-	return odph_linux_process_fork_n(proc, &mask, thr_params);
+	return ODPH_DEPRECATE(odph_linux_process_fork_n)(proc, &mask, thr_params);
 }
 
-int odph_linux_process_wait_n(odph_linux_process_t *proc_tbl, int num)
+int ODPH_DEPRECATE(odph_linux_process_wait_n)(odph_linux_process_t *proc_tbl, int num)
 {
 	pid_t pid;
 	int i, j;
