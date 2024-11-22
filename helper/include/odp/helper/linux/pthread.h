@@ -15,6 +15,7 @@
 #ifndef ODPH_LINUX_PTHREAD_H_
 #define ODPH_LINUX_PTHREAD_H_
 
+#include <odp/helper/deprecated.h>
 #include <odp/helper/threads.h>
 #include <odp_api.h>
 
@@ -39,10 +40,12 @@ extern "C" {
  * @param      thr_params  Linux helper thread parameters
  *
  * @return Number of threads created
+ *
+ * @deprecated Use odph_thread_create() instead.
  */
-int odph_linux_pthread_create(odph_linux_pthread_t *pthread_tbl,
-			      const odp_cpumask_t *mask,
-			      const odph_linux_thr_params_t *thr_params);
+int ODPH_DEPRECATE(odph_linux_pthread_create)(odph_linux_pthread_t *pthread_tbl,
+					      const odp_cpumask_t *mask,
+					      const odph_linux_thr_params_t *thr_params);
 
 /**
  * Waits pthreads to exit
@@ -52,8 +55,9 @@ int odph_linux_pthread_create(odph_linux_pthread_t *pthread_tbl,
  * @param thread_tbl    Thread table
  * @param num           Number of threads to create
  *
+ * @deprecated Use odph_thread_join() instead.
  */
-void odph_linux_pthread_join(odph_linux_pthread_t *thread_tbl, int num);
+void ODPH_DEPRECATE(odph_linux_pthread_join)(odph_linux_pthread_t *thread_tbl, int num);
 
 /**
  * @}
