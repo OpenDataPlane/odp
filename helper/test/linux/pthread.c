@@ -71,8 +71,8 @@ int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 	thr_params.thr_type = ODP_THREAD_WORKER;
 	thr_params.instance = instance;
 
-	odph_linux_pthread_create(&thread_tbl[0], &cpu_mask, &thr_params);
-	odph_linux_pthread_join(thread_tbl, num_workers);
+	ODPH_DEPRECATE(odph_linux_pthread_create)(&thread_tbl[0], &cpu_mask, &thr_params);
+	ODPH_DEPRECATE(odph_linux_pthread_join)(thread_tbl, num_workers);
 
 	if (odp_term_local()) {
 		ODPH_ERR("Error: ODP local term failed.\n");
