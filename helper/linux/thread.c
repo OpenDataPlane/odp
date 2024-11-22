@@ -19,6 +19,7 @@
 
 #include <odp_api.h>
 #include <odp/helper/debug.h>
+#include <odp/helper/deprecated.h>
 #include <odp/helper/linux/pthread.h>
 #include <odp/helper/linux/process.h>
 
@@ -41,9 +42,9 @@ static void *_odph_run_start_routine(void *arg)
 	return ret_ptr;
 }
 
-int odph_linux_pthread_create(odph_linux_pthread_t *pthread_tbl,
-			      const odp_cpumask_t *mask,
-			      const odph_linux_thr_params_t *thr_params)
+int ODPH_DEPRECATE(odph_linux_pthread_create)(odph_linux_pthread_t *pthread_tbl,
+					      const odp_cpumask_t *mask,
+					      const odph_linux_thr_params_t *thr_params)
 {
 	int i;
 	int num;
@@ -98,7 +99,7 @@ int odph_linux_pthread_create(odph_linux_pthread_t *pthread_tbl,
 	return i;
 }
 
-void odph_linux_pthread_join(odph_linux_pthread_t *thread_tbl, int num)
+void ODPH_DEPRECATE(odph_linux_pthread_join)(odph_linux_pthread_t *thread_tbl, int num)
 {
 	int i;
 	int ret;
