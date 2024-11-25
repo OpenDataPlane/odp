@@ -407,9 +407,10 @@ typedef struct odp_packet_lso_opt_t {
 	/** Maximum payload length in an LSO segment
 	 *
 	 *  Max_payload_len parameter defines the maximum number of payload bytes in each
-	 *  created segment. Depending on the implementation, segments with less payload may be
-	 *  created. However, this value is used typically to divide packet payload evenly over
-	 *  all segments except the last one, which contains the remaining payload bytes.
+	 *  created segment. Depending on the implementation and the LSO profile, segments
+	 *  with less payload may be created. However, this value is used typically to divide
+	 *  packet payload evenly over all segments except the last one, which contains the
+	 *  remaining payload bytes.
 	 */
 	uint32_t max_payload_len;
 

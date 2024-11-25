@@ -792,7 +792,11 @@ typedef enum odp_lso_protocol_t {
 	/** Protocol not selected. */
 	ODP_LSO_PROTO_NONE = 0,
 
-	/** Custom protocol. LSO performs only custom field updates to the packet headers. */
+	/** Custom protocol. LSO performs only custom field updates to the packet headers.
+	 *
+	 *  All segments except the last one have exactly the maximum number of payload
+	 *  bytes as given by the max_payload_len parameter in odp_packet_lso_opt_t.
+	 */
 	ODP_LSO_PROTO_CUSTOM,
 
 	/** LSO performs IPv4 fragmentation.
