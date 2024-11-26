@@ -33,7 +33,7 @@ static void test_defaults(uint8_t fill)
 	odp_crypto_session_param_init(&param);
 
 	CU_ASSERT(param.op == ODP_CRYPTO_OP_ENCODE);
-	CU_ASSERT(param.op_type == ODP_CRYPTO_OP_TYPE_LEGACY);
+	CU_ASSERT(param.op_type == ODP_CRYPTO_OP_TYPE_BASIC);
 	CU_ASSERT(param.cipher_range_in_bits == false);
 	CU_ASSERT(param.auth_range_in_bits == false);
 	CU_ASSERT(param.auth_cipher_text == false);
