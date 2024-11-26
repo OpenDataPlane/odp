@@ -53,10 +53,12 @@ int crypto_op(odp_packet_t pkt_in,
 	odp_event_subtype_t subtype = ODP_EVENT_NO_SUBTYPE;
 	odp_packet_t orig_pkt_out;
 
-	if (op_type == ODP_CRYPTO_OP_TYPE_LEGACY)
-		*pkt_out = pkt_in;
-	else if (op_type == ODP_CRYPTO_OP_TYPE_BASIC)
+	if (op_type == ODP_CRYPTO_OP_TYPE_BASIC)
 		*pkt_out = ODP_PACKET_INVALID;
+#if ODP_DEPRECATED_API
+	else if (op_type == ODP_CRYPTO_OP_TYPE_LEGACY)
+		*pkt_out = pkt_in;
+#endif
 	orig_pkt_out = *pkt_out;
 
 	if (suite_context.op_mode == ODP_CRYPTO_SYNC) {
