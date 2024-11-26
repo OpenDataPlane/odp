@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2015-2018 Linaro Limited
- * Copyright (c) 2023 Nokia
+ * Copyright (c) 2021-2024 Nokia
  */
 
 /**
@@ -100,13 +100,6 @@ typedef struct {
 	 * --debug option.
 	 */
 	int debug_packets;
-
-	/**
-	 * If non-zero, try to run crypto operation in place. Note some
-	 * implementation may not support such mode. Enabled by -n or
-	 * --inplace option.
-	 */
-	int in_place;
 
 	/**
 	 * If non-zero, output of previous operation taken as input for
@@ -694,21 +687,13 @@ create_session_from_config(odp_crypto_session_t *session,
 {
 	odp_crypto_session_param_t params;
 	odp_crypto_ses_create_err_t ses_create_rc;
-	odp_pool_t pkt_pool;
 	odp_queue_t out_queue;
 
-	odp_crypto_session_param_init(&params);
 	memcpy(&params, &config->session, sizeof(odp_crypto_session_param_t));
 	params.op = ODP_CRYPTO_OP_ENCODE;
+	params.op_type = ODP_CRYPTO_OP_TYPE_BASIC;
 	params.auth_cipher_text = true;
-
-	/* Lookup the packet pool */
-	pkt_pool = odp_pool_lookup("packet_pool");
-	if (pkt_pool == ODP_POOL_INVALID) {
-		ODPH_ERR("packet_pool pool not found\n");
-		return -1;
-	}
-	params.output_pool = pkt_pool;
+	params.output_pool = ODP_POOL_INVALID;
 
 	if (cargs->schedule || cargs->poll) {
 		out_queue = odp_queue_lookup("crypto-out");
@@ -836,8 +821,6 @@ run_measure_one(crypto_args_t *cargs,
 				if (ODP_PACKET_INVALID == pkt)
 					return -1;
 			}
-
-			out_pkt = cargs->in_place ? pkt : ODP_PACKET_INVALID;
 
 			if (cargs->debug_packets) {
 				mem = odp_packet_data(pkt);
@@ -1408,7 +1391,6 @@ static void parse_args(int argc, char *argv[], crypto_args_t *cargs)
 		{"flight", optional_argument, NULL, 'f'},
 		{"help", no_argument, NULL, 'h'},
 		{"iterations", optional_argument, NULL, 'i'},
-		{"inplace", no_argument, NULL, 'n'},
 		{"payload", optional_argument, NULL, 'l'},
 		{"sessions", optional_argument, NULL, 'm'},
 		{"reuse", no_argument, NULL, 'r'},
@@ -1417,9 +1399,8 @@ static void parse_args(int argc, char *argv[], crypto_args_t *cargs)
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+a:c:df:hi:m:nl:spr";
+	static const char *shortopts = "+a:c:df:hi:m:l:spr";
 
-	cargs->in_place = 0;
 	cargs->in_flight = 1;
 	cargs->debug_packets = 0;
 	cargs->iteration_count = 10000;
@@ -1459,9 +1440,6 @@ static void parse_args(int argc, char *argv[], crypto_args_t *cargs)
 			break;
 		case 'm':
 			cargs->max_sessions = atoi(optarg);
-			break;
-		case 'n':
-			cargs->in_place = 1;
 			break;
 		case 'l':
 			cargs->payload_length = atoi(optarg);
@@ -1513,7 +1491,6 @@ static void usage(char *progname)
 	printf("  -d, --debug	       Enable dump of processed packets.\n"
 	       "  -f, --flight <number> Max number of packet processed in parallel (default 1)\n"
 	       "  -i, --iterations <number> Number of iterations.\n"
-	       "  -n, --inplace	       Encrypt on place.\n"
 	       "  -l, --payload	       Payload length.\n"
 	       "  -r, --reuse	       Output encrypted packet is passed as input\n"
 	       "		       to next encrypt iteration.\n"
