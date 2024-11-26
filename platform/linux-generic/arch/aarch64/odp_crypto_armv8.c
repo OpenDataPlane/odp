@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2014-2018 Linaro Limited
  * Copyright (c) 2021 ARM Limited
- * Copyright (c) 2022-2023 Nokia
+ * Copyright (c) 2022-2024 Nokia
  */
 
 #include <odp_posix_extensions.h>
@@ -756,6 +756,7 @@ uint64_t odp_crypto_session_to_u64(odp_crypto_session_t hdl)
 	return (uint64_t)hdl;
 }
 
+#if ODP_DEPRECATED_API
 static int copy_data_and_metadata(odp_packet_t dst, odp_packet_t src)
 {
 	int md_copy;
@@ -807,6 +808,7 @@ static odp_packet_t get_output_packet(const odp_crypto_generic_session_t *sessio
 	odp_packet_free(pkt_in);
 	return pkt_out;
 }
+#endif
 
 static
 int crypto_int(odp_packet_t pkt_in,
@@ -814,17 +816,17 @@ int crypto_int(odp_packet_t pkt_in,
 	       const odp_crypto_packet_op_param_t *param)
 {
 	odp_crypto_generic_session_t *session;
-	odp_packet_t out_pkt;
+	odp_packet_t out_pkt = pkt_in;
 
 	session = (odp_crypto_generic_session_t *)(intptr_t)param->session;
 
-	if (odp_likely(session->p.op_type == ODP_CRYPTO_OP_TYPE_BASIC)) {
-		out_pkt = pkt_in;
-	} else {
+#if ODP_DEPRECATED_API
+	if (odp_unlikely(session->p.op_type == ODP_CRYPTO_OP_TYPE_LEGACY)) {
 		out_pkt = get_output_packet(session, pkt_in, *pkt_out);
 		if (odp_unlikely(out_pkt == ODP_PACKET_INVALID))
 			return -1;
 	}
+#endif
 
 	if (odp_unlikely(session->p.null_crypto_enable &&
 			 param->null_crypto))
