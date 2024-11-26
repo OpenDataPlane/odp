@@ -696,7 +696,7 @@ typedef enum odp_crypto_op_type_t {
 	 * and then processed. Output packet is allocated by the caller
 	 * or by ODP.
 	 *
-	 * This is the default value but will be deprecated in the future.
+	 * This op type will be deprecated in the future.
 	 */
 	ODP_CRYPTO_OP_TYPE_LEGACY,
 
@@ -754,7 +754,7 @@ typedef struct odp_crypto_session_param_t {
 	 *  how output packets are allocated and what data and metadata
 	 *  they contain.
 	 *
-	 *  The default value is ODP_CRYPTO_OP_TYPE_LEGACY.
+	 *  The default value is ODP_CRYPTO_OP_TYPE_BASIC.
 	 */
 	odp_crypto_op_type_t op_type;
 
