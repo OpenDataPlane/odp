@@ -2518,6 +2518,7 @@ int _odp_crypto_term_local(void)
 void odp_crypto_session_param_init(odp_crypto_session_param_t *param)
 {
 	memset(param, 0, sizeof(odp_crypto_session_param_t));
+	param->op_type = ODP_CRYPTO_OP_TYPE_BASIC;
 }
 
 uint64_t odp_crypto_session_to_u64(odp_crypto_session_t hdl)
