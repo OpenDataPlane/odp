@@ -12,6 +12,7 @@
 #define ODP_API_SPEC_CRYPTO_TYPES_H_
 #include <odp/visibility_begin.h>
 
+#include <odp/api/deprecated.h>
 #include <odp/api/packet_types.h>
 #include <odp/api/pool_types.h>
 #include <odp/api/std_types.h>
@@ -696,9 +697,11 @@ typedef enum odp_crypto_op_type_t {
 	 * and then processed. Output packet is allocated by the caller
 	 * or by ODP.
 	 *
-	 * This op type will be deprecated in the future.
+	 * @deprecated Use another crypto op type instead.
 	 */
+#if ODP_DEPRECATED_API
 	ODP_CRYPTO_OP_TYPE_LEGACY,
+#endif
 
 	/**
 	 * Input packet data and metadata are copied to the output packet
