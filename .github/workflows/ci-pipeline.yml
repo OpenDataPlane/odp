@@ -9,7 +9,7 @@ env:
 
 jobs:
   Checkpatch:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
         with:
@@ -36,7 +36,7 @@ jobs:
           ./scripts/ci-checkpatches.sh ${COMMIT_RANGE}
 
   Documentation:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
       - name: Install dependencies
@@ -58,7 +58,7 @@ jobs:
           ! fgrep -rq warning ./doxygen.log
 
   Build_gcc:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
       matrix:
@@ -79,7 +79,7 @@ jobs:
         uses: ./.github/actions/build-failure-log
 
   Build_clang:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
       matrix:
@@ -99,7 +99,7 @@ jobs:
         uses: ./.github/actions/build-failure-log
 
   Build_static_u24:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     env:
       OS: ubuntu_24.04
       CONF: "--disable-shared --without-openssl --without-pcap"
@@ -116,7 +116,7 @@ jobs:
         uses: ./.github/actions/build-failure-log
 
   Build_arm64:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     env:
       ARCH: arm64
       CONF: "--enable-dpdk-shared"
@@ -134,7 +134,7 @@ jobs:
         uses: ./.github/actions/build-failure-log
 
   Build_armhf:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     env:
       ARCH: armhf
     strategy:
@@ -150,7 +150,7 @@ jobs:
         uses: ./.github/actions/build-failure-log
 
   Build_ppc64el:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     env:
       ARCH: ppc64el
       CONF: "--enable-dpdk-shared"
@@ -167,7 +167,7 @@ jobs:
         uses: ./.github/actions/build-failure-log
 
   Build_i386:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     env:
       ARCH: i386
       OS: ubuntu_18.04
@@ -184,7 +184,7 @@ jobs:
         uses: ./.github/actions/build-failure-log
 
   Build_riscv64:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     env:
       ARCH: riscv64
     strategy:
@@ -200,7 +200,7 @@ jobs:
         uses: ./.github/actions/build-failure-log
 
   Build_OS:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
       matrix:
@@ -215,7 +215,7 @@ jobs:
         uses: ./.github/actions/build-failure-log
 
   Build_gcc_u24:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     env:
       OS: ubuntu_24.04
     strategy:
@@ -231,7 +231,7 @@ jobs:
         uses: ./.github/actions/build-failure-log
 
   Build_out-of-tree:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}"
@@ -240,7 +240,7 @@ jobs:
         uses: ./.github/actions/build-failure-log
 
   Build_XDP:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     env:
         CONF: "--enable-xdp"
         OS: ubuntu_22.04
@@ -256,7 +256,7 @@ jobs:
         uses: ./.github/actions/build-failure-log
 
   Run_distcheck:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
       matrix:
@@ -269,7 +269,7 @@ jobs:
         uses: ./.github/actions/run-failure-log
 
   Run_gcc:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
       matrix:
@@ -290,7 +290,7 @@ jobs:
         uses: ./.github/actions/dump-log
 
   Run_clang:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
       matrix:
@@ -308,7 +308,7 @@ jobs:
         uses: ./.github/actions/run-failure-log
 
   Run_OS:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
       matrix:
@@ -322,7 +322,7 @@ jobs:
         uses: ./.github/actions/run-failure-log
 
   Run_sched_config:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}" -e ARCH="${ARCH}"
@@ -331,7 +331,7 @@ jobs:
         uses: ./.github/actions/run-failure-log
 
   Run_stash_config:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}" -e ARCH="${ARCH}"
@@ -340,7 +340,7 @@ jobs:
         uses: ./.github/actions/run-failure-log
 
   Run_scheduler_sp:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}" -e ARCH="${ARCH}"
@@ -349,7 +349,7 @@ jobs:
         uses: ./.github/actions/run-failure-log
 
   Run_scheduler_scalable:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}" -e ARCH="${ARCH}"
@@ -358,7 +358,7 @@ jobs:
         uses: ./.github/actions/run-failure-log
 
   Run_process_mode:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}" -e ARCH="${ARCH}"
@@ -368,7 +368,7 @@ jobs:
         uses: ./.github/actions/run-failure-log
 
   Run_inline_timer:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}" -e ARCH="${ARCH}"
@@ -378,7 +378,7 @@ jobs:
         uses: ./.github/actions/run-failure-log
 
   Run_packet_align:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}" -e ARCH="${ARCH}"
@@ -388,7 +388,7 @@ jobs:
         uses: ./.github/actions/run-failure-log
 
   Run_dpdk-21_11:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}" -e ARCH="${ARCH}"
@@ -397,7 +397,7 @@ jobs:
         uses: ./.github/actions/run-failure-log
 
   Run_dpdk-23_11:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}" -e ARCH="${ARCH}"
@@ -406,7 +406,7 @@ jobs:
         uses: ./.github/actions/run-failure-log
 
   Run_sanitizer:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     env:
       OS: ubuntu_22.04
     strategy:
