@@ -7,6 +7,7 @@
 
 #include <odp/api/align.h>
 #include <odp/api/atomic.h>
+#include <odp/api/cpu.h>
 #include <odp/api/hints.h>
 #include <odp/api/shared_memory.h>
 #include <odp/api/spinlock.h>
@@ -158,7 +159,7 @@ static int free_id(int thr)
 	return odp_atomic_fetch_dec_u32(&thread_globals->num) - 1;
 }
 
-static int cpu_id(void)
+int odp_cpu_id(void)
 {
 	int cpu = sched_getcpu();
 
@@ -172,7 +173,6 @@ static int cpu_id(void)
 int _odp_thread_init_local(odp_thread_type_t type)
 {
 	int id;
-	int cpu;
 	int group_all, group_worker, group_control;
 
 	group_all = 1;
@@ -197,13 +197,7 @@ int _odp_thread_init_local(odp_thread_type_t type)
 		return -1;
 	}
 
-	cpu = cpu_id();
-	if (cpu < 0)
-		return -1;
-
 	thread_globals->thr[id].thr  = id;
-	thread_globals->thr[id].cpu  = odp_global_ro.system_info.cpu_id_static ? cpu : -1;
-	thread_globals->thr[id].cpu_id_fn = cpu_id;
 	thread_globals->thr[id].type = type;
 
 	_odp_this_thread = &thread_globals->thr[id];

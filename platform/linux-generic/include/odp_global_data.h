@@ -33,7 +33,6 @@ typedef struct {
 	uint64_t page_size;
 	int      cache_line_size;
 	uint8_t cpu_hz_static;
-	uint8_t cpu_id_static;
 	uint8_t cpu_constant_tsc;
 	odp_cpu_arch_t cpu_arch;
 	odp_cpu_arch_isa_t cpu_isa_sw;
