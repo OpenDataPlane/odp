@@ -19,6 +19,7 @@
 
 #include <odp_api.h>
 #include <odp/helper/debug.h>
+#include <odp/helper/deprecated.h>
 #include <odp/helper/linux/pthread.h>
 #include <odp/helper/linux/process.h>
 
@@ -41,9 +42,9 @@ static void *_odph_run_start_routine(void *arg)
 	return ret_ptr;
 }
 
-int odph_linux_pthread_create(odph_linux_pthread_t *pthread_tbl,
-			      const odp_cpumask_t *mask,
-			      const odph_linux_thr_params_t *thr_params)
+int ODPH_DEPRECATE(odph_linux_pthread_create)(odph_linux_pthread_t *pthread_tbl,
+					      const odp_cpumask_t *mask,
+					      const odph_linux_thr_params_t *thr_params)
 {
 	int i;
 	int num;
@@ -98,7 +99,7 @@ int odph_linux_pthread_create(odph_linux_pthread_t *pthread_tbl,
 	return i;
 }
 
-void odph_linux_pthread_join(odph_linux_pthread_t *thread_tbl, int num)
+void ODPH_DEPRECATE(odph_linux_pthread_join)(odph_linux_pthread_t *thread_tbl, int num)
 {
 	int i;
 	int ret;
@@ -114,9 +115,9 @@ void odph_linux_pthread_join(odph_linux_pthread_t *thread_tbl, int num)
 	}
 }
 
-int odph_linux_process_fork_n(odph_linux_process_t *proc_tbl,
-			      const odp_cpumask_t *mask,
-			      const odph_linux_thr_params_t *thr_params)
+int ODPH_DEPRECATE(odph_linux_process_fork_n)(odph_linux_process_t *proc_tbl,
+					      const odp_cpumask_t *mask,
+					      const odph_linux_thr_params_t *thr_params)
 {
 	pid_t pid;
 	int num;
@@ -183,17 +184,17 @@ int odph_linux_process_fork_n(odph_linux_process_t *proc_tbl,
 	return 1;
 }
 
-int odph_linux_process_fork(odph_linux_process_t *proc, int cpu,
-			    const odph_linux_thr_params_t *thr_params)
+int ODPH_DEPRECATE(odph_linux_process_fork)(odph_linux_process_t *proc, int cpu,
+					    const odph_linux_thr_params_t *thr_params)
 {
 	odp_cpumask_t mask;
 
 	odp_cpumask_zero(&mask);
 	odp_cpumask_set(&mask, cpu);
-	return odph_linux_process_fork_n(proc, &mask, thr_params);
+	return ODPH_DEPRECATE(odph_linux_process_fork_n)(proc, &mask, thr_params);
 }
 
-int odph_linux_process_wait_n(odph_linux_process_t *proc_tbl, int num)
+int ODPH_DEPRECATE(odph_linux_process_wait_n)(odph_linux_process_t *proc_tbl, int num)
 {
 	pid_t pid;
 	int i, j;

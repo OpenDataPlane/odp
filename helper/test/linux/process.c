@@ -70,7 +70,7 @@ int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 	thr_params.instance = instance;
 
 	/* Fork worker processes */
-	ret = odph_linux_process_fork_n(proc, &cpu_mask, &thr_params);
+	ret = ODPH_DEPRECATE(odph_linux_process_fork_n)(proc, &cpu_mask, &thr_params);
 
 	if (ret < 0) {
 		ODPH_ERR("Fork workers failed %i\n", ret);
@@ -87,7 +87,7 @@ int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 		}
 	} else {
 		/* Parent process */
-		odph_linux_process_wait_n(proc, num_workers);
+		ODPH_DEPRECATE(odph_linux_process_wait_n)(proc, num_workers);
 
 		if (odp_term_local()) {
 			ODPH_ERR("Error: ODP local term failed.\n");
