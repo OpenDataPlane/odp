@@ -75,29 +75,16 @@ several additional APIs and conventions are provided.
 Timer allocation is performed via the `odp_timer_alloc()` API:
 [source,c]
 -----
-/**
- * Allocate a timer
- *
- * Create a timer (allocating all necessary resources e.g. timeout event) from
- * the timer pool. The user_ptr is copied to timeouts and can be retrieved
- * using the odp_timeout_user_ptr() call.
- *
- * @param tpid     Timer pool identifier
- * @param queue    Destination queue for timeout notifications
- * @param user_ptr User defined pointer or NULL to be copied to timeouts
- *
- * @return Timer handle on success
- * @retval ODP_TIMER_INVALID on failure and errno set.
- */
-odp_timer_t odp_timer_alloc(odp_timer_pool_t tpid,
-			    odp_queue_t queue,
-			    void *user_ptr);
+odp_timer_t odp_timer_alloc(odp_timer_pool_t timer_pool,
+                            odp_queue_t queue,
+                            const void *user_ptr)
 -----
-Note that in addition to the timer pool id and queue, a user pointer is
-provided. This is to allow context associated with the timeout to be
-communicated. Upon receiving a timeout event, the application can use
-the `odp_timeout_user_ptr()` API to retrieve the user pointer associated
-with the timer that triggered this event.
+
+Note that in addition to the timer pool and queue, a user pointer is provided.
+This is to allow context associated with the timeout to be communicated. Upon
+receiving a timeout event, the application can use the `odp_timeout_user_ptr()`
+API to retrieve the user pointer associated with the timer that triggered this
+event.
 
 An worker thread receiving events that may include timeouts might be structured
 as follows:
