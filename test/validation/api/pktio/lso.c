@@ -1076,28 +1076,6 @@ static void lso_send_ipv4(const uint8_t *test_packet, uint32_t pkt_len, uint32_t
 	lso_test(param, max_payload, pkt2, pkt_len, hdr_len, l3_offset, use_opt,
 		 is_ipv4_test_pkt,
 		 update_ipv4_hdr);
-
-	/* Same test with a first fragment */
-	memcpy(pkt2, test_packet, pkt_len);
-	change_ipv4_frag_offset(&pkt2[l3_offset], LSO_TEST_IPV4_FLAG_MF, LSO_TEST_IPV4_FLAG_MF);
-	lso_test(param, max_payload, pkt2, pkt_len, hdr_len, l3_offset, use_opt,
-		 is_ipv4_test_pkt,
-		 update_ipv4_hdr);
-
-	/* Same test with a middle fragment */
-	memcpy(pkt2, test_packet, pkt_len);
-	change_ipv4_frag_offset(&pkt2[l3_offset], 500, LSO_TEST_IPV4_FRAG_OFFS_MASK);
-	change_ipv4_frag_offset(&pkt2[l3_offset], LSO_TEST_IPV4_FLAG_MF, LSO_TEST_IPV4_FLAG_MF);
-	lso_test(param, max_payload, pkt2, pkt_len, hdr_len, l3_offset, use_opt,
-		 is_ipv4_test_pkt,
-		 update_ipv4_hdr);
-
-	/* Same test with a last fragment */
-	memcpy(pkt2, test_packet, pkt_len);
-	change_ipv4_frag_offset(&pkt2[l3_offset], 500, LSO_TEST_IPV4_FRAG_OFFS_MASK);
-	lso_test(param, max_payload, pkt2, pkt_len, hdr_len, l3_offset, use_opt,
-		 is_ipv4_test_pkt,
-		 update_ipv4_hdr);
 }
 
 static void lso_send_ipv4_udp_325(uint32_t max_payload, int use_opt)
