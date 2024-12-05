@@ -1,0 +1,9 @@
+<map id="deprecated.h" name="deprecated.h">
+<area shape="rect" id="node1" title="Macro for deprecated API definitions." alt="" coords="55,5,161,32"/>
+<area shape="rect" id="node2" href="$deprecated_8h.html" title="Control deprecated API definitions." alt="" coords="55,80,161,107"/>
+<area shape="rect" id="node3" href="$api_2spec_2timer__types_8h.html" title="ODP timer API type definitions." alt="" coords="5,155,117,181"/>
+<area shape="rect" id="node7" href="$odp__api_8h.html" title="The OpenDataPlane API." alt="" coords="71,453,156,480"/>
+<area shape="rect" id="node4" href="$api_2timer__types_8h.html" title="ODP timer service." alt="" coords="5,229,117,256"/>
+<area shape="rect" id="node5" href="$api_2spec_2timer_8h.html" title="ODP timer service." alt="" coords="38,304,106,331"/>
+<area shape="rect" id="node6" href="$api_2timer_8h.html" title="ODP timer service." alt="" coords="43,379,111,405"/>
+</map>
