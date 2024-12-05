@@ -17,6 +17,7 @@
 extern "C" {
 #endif
 
+#include <odp/api/deprecated.h>
 #include <odp/api/packet_types.h>
 #include <odp/api/packet_io_stats.h>
 #include <odp/api/pool_types.h>
@@ -533,7 +534,7 @@ typedef union odp_pktout_config_opt_t {
 		 *
 		 * @deprecated Use odp_pktio_config_t::mode_event instead.
 		 */
-		uint64_t tx_compl_ena : 1;
+		uint64_t ODP_DEPRECATE(tx_compl_ena) : 1;
 
 		/** Enable packet protocol stats update */
 		uint64_t proto_stats_ena : 1;
@@ -1033,7 +1034,7 @@ typedef struct odp_pktio_capability_t {
 		 *
 		 * @deprecated Use mode_event instead.
 		 */
-		uint32_t mode_all   : 1;
+		uint32_t ODP_DEPRECATE(mode_all)   : 1;
 
 		/** Packet transmit completion mode ODP_PACKET_TX_COMPL_EVENT support */
 		uint32_t mode_event : 1;
