@@ -111,6 +111,8 @@ ODP_STATIC_ASSERT(sizeof(odph_vlanhdr_t) == ODPH_VLANHDR_LEN,
  * and may have leading zeros. String does not have to be NULL terminated.
  * The address is written only when successful.
  *
+ * This function may be called before ODP initialization.
+ *
  * @param[out] mac   Pointer to Ethernet address for output
  * @param      str   MAC address string to be parsed
  *
