@@ -58,6 +58,7 @@ AC_ARG_ENABLE([helper-deprecated],
     [AS_HELP_STRING([--enable-helper-deprecated],
 		    [enable deprecated helper API definitions [default=disabled]])],
     [], [enable_helper_deprecated=no])
+AM_CONDITIONAL([helper_deprecated], [test x$enable_helper_deprecated != xno ])
 AS_IF([test "x$enable_helper_deprecated" != "xno"], [ODPH_DEPRECATED_API=1],
       [ODPH_DEPRECATED_API=0])
 AC_DEFINE_UNQUOTED([ODPH_DEPRECATED_API], [$ODPH_DEPRECATED_API],
