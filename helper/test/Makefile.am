@@ -12,10 +12,12 @@ EXECUTABLES = odph_version \
 #restrict their application to Linux.
 
 if helper_linux
+if helper_deprecated
 EXECUTABLES += linux/odph_pthread \
 	       linux/odph_process
 linux_odph_pthread_SOURCES = linux/pthread.c
 linux_odph_process_SOURCES = linux/process.c
+endif
 endif
 
 if helper_cli
