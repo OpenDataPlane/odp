@@ -752,10 +752,8 @@ static inline void timer_expire(timer_pool_t *tp, uint32_t idx, uint64_t tick)
 		/* Post the timeout to the destination queue */
 		int rc = odp_queue_enq(queue, tmo_event);
 
-		if (odp_unlikely(rc != 0)) {
-			_odp_event_free(tmo_event);
+		if (odp_unlikely(rc != 0))
 			_ODP_ABORT("Failed to enqueue timeout event (%d)\n", rc);
-		}
 	}
 }
 
