@@ -45,9 +45,9 @@
 #include <odp_fdserver_internal.h>
 #include <odp_shm_internal.h>
 #include <odp_ishmphy_internal.h>
-#include <odp_ishmpool_internal.h>
 #include <odp_libconfig_internal.h>
 #include <odp_string_internal.h>
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -1786,9 +1786,6 @@ int _odp_ishm_init_global(const odp_init_t *init)
 		_ODP_ERR("unable to init the main thread\n.");
 		goto init_glob_err4;
 	}
-
-	/* get ready to create pools: */
-	_odp_ishm_pool_init();
 
 	/* init cache files */
 	hp_init();

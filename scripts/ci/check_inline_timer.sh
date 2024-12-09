@@ -11,6 +11,5 @@ cd "$(dirname "$0")"/../..
 
 ODP_SCHEDULER=basic    ./test/validation/api/timer/timer_main
 ODP_SCHEDULER=sp       ./test/validation/api/timer/timer_main
-ODP_SCHEDULER=scalable ./test/validation/api/timer/timer_main
 
 umount /mnt/huge
