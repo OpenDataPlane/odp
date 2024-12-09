@@ -9,16 +9,18 @@
 
 #include <odp_posix_extensions.h>
 
+#include <odp/api/align.h>
+#include <odp/api/cpu.h>
+#include <odp/api/hints.h>
 #include <odp/api/system_info.h>
 #include <odp/api/version.h>
+
 #include <odp_global_data.h>
 #include <odp_sysinfo_internal.h>
 #include <odp_init_internal.h>
 #include <odp_libconfig_internal.h>
 #include <odp_debug_internal.h>
 #include <odp_config_internal.h>
-#include <odp/api/align.h>
-#include <odp/api/cpu.h>
 
 #include <errno.h>
 #include <string.h>
@@ -438,6 +440,9 @@ int _odp_system_info_term(void)
 uint64_t odp_cpu_hz(void)
 {
 	int id = odp_cpu_id();
+
+	if (odp_unlikely(id < 0))
+		return -1;
 
 	if (odp_global_ro.system_info.cpu_hz_static)
 		return cpu_hz_static(id);

@@ -927,6 +927,9 @@ dequeue_atomic:
 	}
 
 	cpu_id = odp_cpu_id();
+	if (odp_unlikely(cpu_id < 0))
+		return 0;
+
 	/* Scan our schedq list from beginning to end */
 	for (i = 0; i < ts->num_schedq; i++) {
 		sched_queue_t *schedq = ts->schedq_list[i];
