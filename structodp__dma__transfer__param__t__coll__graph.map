@@ -1,0 +1,5 @@
+<map id="odp_dma_transfer_param_t" name="odp_dma_transfer_param_t">
+<area shape="rect" id="node1" title="DMA transfer parameters." alt="" coords="5,199,207,225"/>
+<area shape="rect" id="node2" href="$structodp__dma__seg__t.html" title="DMA segment." alt="" coords="44,95,168,121"/>
+<area shape="rect" id="node3" href="$struct__odp__abi__packet__t.html" title=" " alt="" coords="35,5,177,32"/>
+</map>
