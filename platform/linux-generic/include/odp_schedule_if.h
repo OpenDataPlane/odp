@@ -19,7 +19,6 @@ extern "C" {
 
 #define _ODP_SCHED_ID_BASIC    0
 #define _ODP_SCHED_ID_SP       1
-#define _ODP_SCHED_ID_SCALABLE 2
 
 /* Scheduler identifier */
 extern int _odp_sched_id;

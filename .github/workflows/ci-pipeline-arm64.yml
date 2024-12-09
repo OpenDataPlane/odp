@@ -266,17 +266,6 @@ jobs:
       - if: ${{ failure() }}
         uses: ./.github/actions/run-failure-log
 
-  Run_scheduler_scalable:
-    if: ${{ github.repository == 'OpenDataPlane/odp' }}
-    runs-on: ah-ubuntu_22_04-c7g_2x-50
-    steps:
-      - uses: OpenDataPlane/action-clean-up@main
-      - uses: actions/checkout@v4
-      - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}" -e ARCH="${ARCH}"
-               -e CONF="${CONF}" -e ODP_SCHEDULER=scalable -e CI_SKIP=pktio_test_pktin_event_sched $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-graviton3 /odp/scripts/ci/check.sh
-      - if: ${{ failure() }}
-        uses: ./.github/actions/run-failure-log
-
   Run_process_mode:
     if: ${{ github.repository == 'OpenDataPlane/odp' }}
     runs-on: ah-ubuntu_22_04-c7g_2x-50

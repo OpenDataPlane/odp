@@ -14,13 +14,6 @@
 #include <odp_types_internal.h>
 
 /*
- * Use LLD/SCD atomic primitives instead of lock-based code path in llqueue
- * LLD/SCD is on ARM the fastest way to enqueue and dequeue elements from a
- * linked list queue.
- */
-#define CONFIG_LLDSCD
-
-/*
  * Use DMB;STR instead of STRL on ARM
  * On early ARMv8 implementations (e.g. Cortex-A57) this is noticeably more
  * performant than using store-release.
@@ -188,7 +181,6 @@ static inline uint32_t scd(_odp_u128_t *var, _odp_u128_t neu, int mm)
 }
 
 #include "odp_atomic.h"
-#include "odp_wait_until.h"
 
 #ifdef __ARM_FEATURE_UNALIGNED
 #define _ODP_UNALIGNED 1
