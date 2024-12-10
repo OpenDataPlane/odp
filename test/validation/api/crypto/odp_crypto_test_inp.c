@@ -33,7 +33,7 @@ static void test_defaults(uint8_t fill)
 	odp_crypto_session_param_init(&param);
 
 	CU_ASSERT(param.op == ODP_CRYPTO_OP_ENCODE);
-	CU_ASSERT(param.op_type == ODP_CRYPTO_OP_TYPE_LEGACY);
+	CU_ASSERT(param.op_type == ODP_CRYPTO_OP_TYPE_BASIC);
 	CU_ASSERT(param.cipher_range_in_bits == false);
 	CU_ASSERT(param.auth_range_in_bits == false);
 	CU_ASSERT(param.auth_cipher_text == false);
@@ -58,9 +58,11 @@ static void print_alg_test_param(const crypto_op_test_param_t *p)
 	const char *auth_mode   = p->session.auth_range_in_bits   ? "bit" : "byte";
 
 	switch (p->session.op_type) {
+#if ODP_DEPRECATED_API
 	case ODP_CRYPTO_OP_TYPE_LEGACY:
 		printf("legacy ");
 		break;
+#endif
 	case ODP_CRYPTO_OP_TYPE_BASIC:
 		printf("basic ");
 		break;
@@ -380,7 +382,9 @@ static void alg_test_op_types(odp_crypto_op_t op,
 			      odp_bool_t session_creation_must_fail)
 {
 	odp_crypto_op_type_t op_types[] = {
+#if ODP_DEPRECATED_API
 		ODP_CRYPTO_OP_TYPE_LEGACY,
+#endif
 		ODP_CRYPTO_OP_TYPE_BASIC,
 		ODP_CRYPTO_OP_TYPE_OOP,
 		ODP_CRYPTO_OP_TYPE_BASIC_AND_OOP,
