@@ -22,9 +22,6 @@ const _odp_queue_api_fn_t *_odp_queue_api;
 
 #include <odp/visibility_end.h>
 
-extern const _odp_queue_api_fn_t _odp_queue_scalable_api;
-extern const queue_fn_t _odp_queue_scalable_fn;
-
 extern const _odp_queue_api_fn_t _odp_queue_basic_api;
 extern const queue_fn_t _odp_queue_basic_fn;
 
@@ -127,9 +124,6 @@ int _odp_queue_init_global(void)
 	if (!strcmp(sched, "basic") || !strcmp(sched, "sp")) {
 		_odp_queue_fn = &_odp_queue_basic_fn;
 		_odp_queue_api = &_odp_queue_basic_api;
-	} else if (!strcmp(sched, "scalable")) {
-		_odp_queue_fn = &_odp_queue_scalable_fn;
-		_odp_queue_api = &_odp_queue_scalable_api;
 	} else {
 		_ODP_ABORT("Unknown scheduler specified via ODP_SCHEDULER\n");
 		return -1;

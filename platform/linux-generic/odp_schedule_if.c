@@ -30,7 +30,6 @@ int _odp_schedule_configured(void)
 
 extern const schedule_fn_t _odp_schedule_sp_fn;
 extern const schedule_fn_t _odp_schedule_basic_fn;
-extern const schedule_fn_t _odp_schedule_scalable_fn;
 const schedule_fn_t *_odp_sched_fn;
 int _odp_sched_id;
 
@@ -154,9 +153,6 @@ int _odp_schedule_init_global(void)
 	} else if (!strcmp(sched, "sp")) {
 		_odp_sched_id = _ODP_SCHED_ID_SP;
 		_odp_sched_fn = &_odp_schedule_sp_fn;
-	} else if (!strcmp(sched, "scalable")) {
-		_odp_sched_id = _ODP_SCHED_ID_SCALABLE;
-		_odp_sched_fn = &_odp_schedule_scalable_fn;
 	} else {
 		_ODP_ABORT("Unknown scheduler specified via ODP_SCHEDULER\n");
 		return -1;
