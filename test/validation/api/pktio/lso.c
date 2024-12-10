@@ -736,6 +736,7 @@ static void lso_test(odp_lso_profile_param_t param, uint32_t max_payload,
 	uint32_t offset, len, payload_len, payload_sum;
 	odp_packet_t pkt_out[MAX_NUM_SEG];
 	uint32_t sent_payload = pkt_len - hdr_len;
+	const int is_custom_proto = (param.lso_proto == ODP_LSO_PROTO_CUSTOM);
 
 	profile = odp_lso_profile_create(pktio_a->hdl, &param);
 	CU_ASSERT_FATAL(profile != ODP_LSO_PROFILE_INVALID);
@@ -777,6 +778,7 @@ static void lso_test(odp_lso_profile_param_t param, uint32_t max_payload,
 			continue;
 
 		len = odp_packet_len(pkt_out[i]);
+
 		CU_ASSERT_FATAL(len > hdr_len);
 		/* Assume no Ethernet padding in test packets */
 		CU_ASSERT(len >= LSO_TEST_MIN_ETH_PKT_LEN);
@@ -793,6 +795,8 @@ static void lso_test(odp_lso_profile_param_t param, uint32_t max_payload,
 		}
 
 		CU_ASSERT(payload_len <= max_payload);
+		if (is_custom_proto && payload_sum + payload_len < sent_payload)
+			CU_ASSERT(payload_len == max_payload);
 
 		if (compare_data(pkt_out[i], hdr_len, test_packet + offset, payload_len) >= 0) {
 			ODPH_ERR("    Payload compare failed at offset %u\n", offset);
