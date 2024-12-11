@@ -72,46 +72,13 @@ int odp_comp_op(const odp_packet_t pkt_in[], odp_packet_t pkt_out[],
 		int num_pkt, const odp_comp_packet_op_param_t param[]);
 -----
 An input packet array is compressed/decompressed into a supplied output
-packet array under the control of a supplied parameter struct.
-
-The supplied `odp_comp_packet_op_param_t` struct looks as follows:
-
-.ODP compression parameter structure
-[source,c]
------
-/**
- * Compression per packet operation parameters
- */
-typedef struct odp_comp_packet_op_param_t {
-	/** Session handle */
-	odp_comp_session_t session;
-
-	/** Input data range to process. where,
-	 *
-	 * offset - starting offset
-	 * length - length of data for compression operation
-	 * */
-	odp_packet_data_range_t in_data_range;
-
-	/** Output packet data range.
-	 * Indicates where processed packet will be written. where,
-	 *
-	 * offset - starting offset
-	 * length - length of buffer available for output
-	 *
-	 * Output packet data is not modified outside of this provided data
-	 * range. If output data length is not sufficient for compression
-	 * operation ODP_COMP_STATUS_OUT_OF_SPACE_TERM error will occur
-	 */
-	odp_packet_data_range_t out_data_range;
-} odp_comp_packet_op_param_t;
------
-Note that this struct points to the session used to control the operation and
-specifies the input and output packet data ranges to be used for the
-operation. For input, the output data range must be sufficiently sized to
-contain the result of the operation to avoid an out of space error. Upon
-output, this range is updated to reflect the actual data written. This
-information can then be used to trim off any excess padding before
+packet array under the control of a supplied parameter struct
+`odp_comp_packet_op_param_t`. Note that this struct points to the session used
+to control the operation and specifies the input and output packet data ranges
+to be used for the operation. For input, the output data range must be
+sufficiently sized to contain the result of the operation to avoid an out of
+space error. Upon output, this range is updated to reflect the actual data
+written. This information can then be used to trim off any excess padding before
 continuing processing of the output packet(s).
 
 ==== Asynchronous compression operations
@@ -137,29 +104,8 @@ presented as an event of type `ODP_EVENT_PACKET` with subtype
 When receiving this event, the `odp_comp_packet_from_event()` API is used to
 convert the event into a usable `odp_packet_t`, and the `odp_comp_result()`
 API is used to retrieve the `odp_comp_packet_result_t` metadata associated
-with this packet. This struct looks as follows:
+with this packet.
 
-.Compression output result
-[source,c]
------
-/**
- * Compression packet operation result
- */
-typedef struct odp_comp_packet_result_t {
-	/** Operation status code */
-	odp_comp_status_t status;
-
-	/** Input packet handle */
-	odp_packet_t pkt_in;
-
-	/** Output packet data range
-	 * Specifies offset and length of data resulting from compression
-	 * operation. When hashing is configured output_data_range.len equals
-	 * length of output data + length of digest.
-	 */
-	odp_packet_data_range_t output_data_range;
-} odp_comp_packet_result_t;
------
 Note that if the originating `odp_comp_op_enq()` call specified an array of
 input packets, each of these generates a separate result event. The order of
 these events on the completion queue associated with the compression session is
