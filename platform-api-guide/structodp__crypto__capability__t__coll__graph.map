@@ -1,0 +1,5 @@
+<map id="odp_crypto_capability_t" name="odp_crypto_capability_t">
+<area shape="rect" id="node1" title="Crypto capabilities." alt="" coords="121,109,298,136"/>
+<area shape="rect" id="node2" href="$unionodp__crypto__cipher__algos__t.html" title="Cipher algorithms in a bit field structure." alt="" coords="5,5,200,32"/>
+<area shape="rect" id="node3" href="$unionodp__crypto__auth__algos__t.html" title="Authentication algorithms in a bit field structure." alt="" coords="224,5,408,32"/>
+</map>
