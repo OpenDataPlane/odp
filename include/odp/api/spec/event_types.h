@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2015-2018 Linaro Limited
- * Copyright (c) 2022-2023 Nokia
+ * Copyright (c) 2022-2024 Nokia
  */
 
 /**
@@ -42,6 +42,9 @@ extern "C" {
  * Results are undefined, if conversion function of a wrong event type is used.
  * Application cannot change event type by chaining conversion functions.
  *
+ * The special event type ODP_EVENT_ANY does not match to any particular event
+ * type and can only be used when explicitly documented by the API.
+ *
  * List of event types:
  * - ODP_EVENT_BUFFER
  *     - Buffer event (odp_buffer_t) for simple data storage and message passing
@@ -52,6 +55,8 @@ extern "C" {
  *     - Timeout event (odp_timeout_t) from a timer
  * - ODP_EVENT_IPSEC_STATUS
  *     - IPSEC status update event (odp_ipsec_status_t)
+ * - ODP_EVENT_VECTOR
+ *     - Vector of events (odp_event_t) as odp_event_vector_t
  * - ODP_EVENT_PACKET_VECTOR
  *     - Vector of packet events (odp_packet_t) as odp_packet_vector_t
  * - ODP_EVENT_PACKET_TX_COMPL
@@ -61,6 +66,8 @@ extern "C" {
  *     - DMA completion event (odp_dma_compl_t) indicates that a DMA transfer has finished
  * - ODP_EVENT_ML_COMPL
  *     - ML completion event (odp_ml_compl_t) indicates that an ML operation has finished
+ * - ODP_EVENT_ANY
+ *     - Special event type used only as function return value or configuration option
  */
 
 /**

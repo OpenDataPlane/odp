@@ -400,7 +400,7 @@ typedef struct odp_pool_pkt_subparam_t {
  * Pool types
  */
 typedef enum odp_pool_type_t {
-	/** Packet pool*/
+	/** Packet pool */
 	ODP_POOL_PACKET = ODP_EVENT_PACKET,
 
 	/** Buffer pool */
@@ -409,12 +409,7 @@ typedef enum odp_pool_type_t {
 	/** Timeout pool */
 	ODP_POOL_TIMEOUT = ODP_EVENT_TIMEOUT,
 
-	/** Vector event pool
-	 *
-	 * Each vector event holds an array of handles. All handles of a vector
-	 * are the same type (such as odp_packet_t).
-	 * @see ODP_EVENT_PACKET_VECTOR
-	 */
+	/** Event vector pool */
 	ODP_POOL_VECTOR,
 
 	/** DMA completion event pool */

@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2013-2018 Linaro Limited
- * Copyright (c) 2023 Nokia
+ * Copyright (c) 2023-2024 Nokia
  */
 
 /**
@@ -18,6 +18,7 @@ extern "C" {
 #endif
 
 #include <odp/api/event_types.h>
+#include <odp/api/event_vector_types.h>
 #include <odp/api/queue_types.h>
 #include <odp/api/std_types.h>
 
@@ -192,6 +193,29 @@ int odp_queue_enq(odp_queue_t queue, odp_event_t ev);
  * @retval <0 on failure
  */
 int odp_queue_enq_multi(odp_queue_t queue, const odp_event_t events[], int num);
+
+/**
+ * Enqueue an event to a queue vector aggregator
+ *
+ * Like odp_queue_enq(), but enqueues the event to a specific vector event
+ * aggregator. Vector aggregator index must be smaller than the configured
+ * number of vector aggregators for the queue (odp_queue_param_t::num_vector).
+ * Aggregators are indexed in the same order as they were given in
+ * odp_queue_param_t::vector array.
+ *
+ * Event ordering is not maintained across multiple vector aggregators within a
+ * queue. Optional flags can be used to control vector generation.
+ *
+ * @param queue        Queue handle
+ * @param aggr_index   Vector aggregator index
+ * @param ev           Event handle
+ * @param flags        Flags for the enqueue operation
+ *
+ * @retval 0 on success
+ * @retval <0 on failure
+ */
+int odp_queue_enq_vector(odp_queue_t queue, uint32_t aggr_index, odp_event_t ev,
+			 odp_event_vector_flag_t flags);
 
 /**
  * Dequeue an event from a queue
