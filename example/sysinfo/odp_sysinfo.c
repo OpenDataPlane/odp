@@ -588,6 +588,7 @@ static void print_pktio_capa(appl_args_t *appl_args)
 		printf("    lso.mod_op.add_payload_len:    %u\n", capa->lso.mod_op.add_payload_len);
 		printf("    lso.mod_op.add_payload_offset: %u\n",
 		       capa->lso.mod_op.add_payload_offset);
+		printf("    lso.mod_op.write_bits:         %u\n", capa->lso.mod_op.write_bits);
 		printf("    lso.max_num_custom:            %u\n", capa->lso.max_num_custom);
 		printf("    lso.proto.custom:              %u\n", capa->lso.proto.custom);
 		printf("    lso.proto.ipv4:                %u\n", capa->lso.proto.ipv4);
