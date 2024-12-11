@@ -1,3 +1,97 @@
+== OpenDataPlane (1.46.0.0)
+
+=== Backward incompatible API changes
+==== Crypto
+* Change the default crypto op type written by `odp_crypto_session_param_init()`
+to `ODP_CRYPTO_OP_TYPE_BASIC`.
+* Deprecate old default crypto op type `ODP_CRYPTO_OP_TYPE_LEGACY`.
+
+==== Packet IO
+* Modify certain details of IP and TCP Large Send Offload (LSO), specify missing
+details, add restrictions, and clarify the API in general.
+* Deprecate `ODP_PACKET_TX_COMPL_ALL` define. Use `ODP_PACKET_TX_COMPL_EVENT`
+instead.
+* Deprecate `odp_pktio_capability_t.tx_compl.mode_all` field. Use `mode_event`
+instead.
+* Deprecate `odp_pktout_config_opt_t.bit.tx_compl_ena` field. Use
+`odp_pktio_config_t.mode_event` instead.
+
+==== Timer
+* Deprecate `odp_timer_pool_start()` function. Use
+`odp_timer_pool_start_multi()` instead.
+
+=== Backward compatible API changes
+==== Event
+* Clarify `odp_event_free()` documentation by stating that it frees also the
+packets stored inside packet vectors.
+
+==== Init
+* Add printf format check to `odp_override_log()` and `odp_log_func_t`
+declarations.
+* Add `odp_log_fn_get()` function, which returns the current log function.
+* Add `odp_abort_fn_get()` function, which returns the abort function.
+
+==== Packet IO
+* Add a new custom LSO operation (`ODP_LSO_WRITE_BITS`) for setting and clearing
+selected bits in first/middle/last segment when segmentation occurs.
+* Specify that all segments, except the last one, have the maximum payload
+length with the custom LSO protocol (`ODP_LSO_PROTO_CUSTOM`).
+
+=== Remove deprecated APIs
+==== Timer
+* Remove deprecated `odp_timeout_fresh()` function.
+* Remove deprecated `odp_timer_set_t` type.
+
+=== Helper (1.7.0)
+
+==== Backward incompatible changes
+* Deprecate `odph_linux_pthread_create()` and `odph_linux_pthread_join()`
+functions which have been replaced by generic `odph_thread_create()` and
+`odph_thread_join()` functions.
+* Deprecate `odph_linux_process_fork()`, `odph_linux_process_fork_n()`,
+and `odph_linux_process_wait_n()` functions which have been replaced by
+generic `odph_thread_create()` and `odph_thread_join()` functions.
+
+==== Backward compatible API changes
+* Explicitly state that ODP must be initialized before calling helper functions
+and document exceptions to this rule individually.
+* Improve debug macro documentation.
+
+=== Implementation
+* Remove scalable scheduler implementation.
+* Remove `system:cpu_id_static` config file option.
+* Add support for DPDK v23.11 packet IO.
+
+=== Example Applications
+* Remove `odp_l2fwd_simple` application.
+
+=== Performance Tests
+==== crypto
+* Use the basic crypto operation type instead of now deprecated legacy operation
+type.
+* Remove explicit encrypt in-place operation option (`-n`).
+
+==== l2fwd_perf
+* New minimal performance optimized L2 forwarding benchmark application. Aim is
+to keep the tester as simple as possible in order to provide a stable
+benchmarking utility with comparable results across releases.
+
+==== ml_perf
+* New machine learning (ML) performance test application. The application
+measures nanoseconds used for various ML operations, such as creating and
+destroying a model, loading and unloading a model, and inferencing.
+
+==== packet_gen
+* Add new option (`-X`) for L4 checksum offloading.
+* Add new option (`-T`) for transmitting packets with LSO.
+
+==== queue_perf
+* Add possibility to export test results into a .csv file by using
+`--test-common-export` option or `TEST_COMMON_EXPORT` environment variable.
+* Add new option (`-p`) for using private queues per worker.
+* Add pair test mode (`-m 1`) where events are moved between queue pairs
+connecting two or more workers.
+
 == OpenDataPlane (1.45.1.0)
 
 === Backward compatible API changes
