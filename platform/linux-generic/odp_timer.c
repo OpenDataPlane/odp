@@ -15,6 +15,7 @@
 #include <odp/api/atomic.h>
 #include <odp/api/cpu.h>
 #include <odp/api/debug.h>
+#include <odp/api/deprecated.h>
 #include <odp/api/event.h>
 #include <odp/api/hints.h>
 #include <odp/api/pool.h>
@@ -1461,7 +1462,7 @@ odp_timer_pool_t odp_timer_pool_create(const char *name,
 	return timer_pool_new(name, param);
 }
 
-void odp_timer_pool_start(void)
+void ODP_DEPRECATE(odp_timer_pool_start)(void)
 {
 	/* Nothing to do here, timer pools are started by the create call */
 }
@@ -1812,25 +1813,6 @@ uint64_t odp_timer_to_u64(odp_timer_t hdl)
 uint64_t odp_timeout_to_u64(odp_timeout_t tmo)
 {
 	return _odp_pri(tmo);
-}
-
-int ODP_DEPRECATE(odp_timeout_fresh)(odp_timeout_t tmo)
-{
-	const odp_timeout_hdr_t *hdr = timeout_hdr(tmo);
-	odp_timer_t hdl = hdr->timer;
-
-	/* Timeout not connected to a timer */
-	if (odp_unlikely(hdl == ODP_TIMER_INVALID))
-		return 0;
-
-	timer_pool_t *tp = handle_to_tp(hdl);
-	uint32_t idx = handle_to_idx(hdl, tp);
-	tick_buf_t *tb = &tp->tick_buf[idx];
-	uint64_t exp_tck = odp_atomic_load_u64(&tb->exp_tck);
-
-	/* Return true if the timer still has the same expiration tick
-	 * (ignoring the inactive/expired bit) as the timeout */
-	return hdr->expiration == (exp_tck & ~TMO_INACTIVE);
 }
 
 odp_timeout_t odp_timeout_alloc(odp_pool_t pool_hdl)

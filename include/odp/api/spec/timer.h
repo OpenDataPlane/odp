@@ -17,6 +17,7 @@
 extern "C" {
 #endif
 
+#include <odp/api/deprecated.h>
 #include <odp/api/timer_types.h>
 #include <odp/api/event_types.h>
 #include <odp/api/pool_types.h>
@@ -143,7 +144,7 @@ odp_timer_pool_t odp_timer_pool_create(const char *name, const odp_timer_pool_pa
  *
  * @deprecated Use odp_timer_pool_start_multi() instead
  */
-void odp_timer_pool_start(void);
+void ODP_DEPRECATE(odp_timer_pool_start)(void);
 
 /**
  * Start timer pools
@@ -468,20 +469,6 @@ void odp_timeout_from_event_multi(odp_timeout_t tmo[], const odp_event_t ev[], i
  * @return Event handle
  */
 odp_event_t odp_timeout_to_event(odp_timeout_t tmo);
-
-/**
- * Check for fresh timeout
- *
- * If the corresponding timer has been reset or cancelled since this timeout
- * was enqueued, the timeout is stale (not fresh).
- *
- * @param tmo Timeout handle
- * @retval 1 Timeout is fresh
- * @retval 0 Timeout is stale
- *
- * @deprecated The function will be removed in a future API version.
- */
-int ODP_DEPRECATE(odp_timeout_fresh)(odp_timeout_t tmo);
 
 /**
  * Return timer handle for the timeout
