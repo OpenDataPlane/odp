@@ -308,6 +308,7 @@ static uint16_t ethertype(odp_packet_t pkt)
 }
 
 static int recv_packets(pktio_info_t *pktio_info, uint64_t timeout_ns,
+			int (*is_test_pkt)(odp_packet_t),
 			odp_packet_t *pkt_out, int max_num)
 {
 	odp_packet_t pkt;
@@ -337,8 +338,12 @@ static int recv_packets(pktio_info_t *pktio_info, uint64_t timeout_ns,
 				odp_packet_free(pkt);
 				break;
 			}
-			pkt_out[num] = pkt;
-			num++;
+			if (is_test_pkt(pkt)) {
+				pkt_out[num] = pkt;
+				num++;
+			} else {
+				odp_packet_free(pkt);
+			}
 			if (num == max_num) {
 				CU_FAIL("Too many packets received\n");
 				return num;
@@ -726,10 +731,10 @@ static void lso_test(odp_lso_profile_param_t param, uint32_t max_payload,
 		     uint32_t hdr_len, uint32_t l3_offset,
 		     int use_opt,
 		     int (*is_test_pkt)(odp_packet_t),
-		     void (*update_hdr)(uint8_t *hdr, uint32_t hdr_len, uint32_t orig_pkt_len,
-					odp_packet_t pkt, uint16_t seg_num, uint16_t seg_offset))
+		     void (*update_hdr)(uint8_t *hdr, uint32_t hdr_len, odp_packet_t pkt,
+					uint16_t seg_num, uint16_t seg_offset, uint16_t num_segs))
 {
-	int i, ret, num, seg_num;
+	int ret, num, seg_num;
 	odp_lso_profile_t profile;
 	odp_packet_t pkt;
 	uint8_t orig_hdr[hdr_len];
@@ -762,21 +767,17 @@ static void lso_test(odp_lso_profile_param_t param, uint32_t max_payload,
 
 	/* Wait a bit to receive all created segments. Timeout and MAX_NUM_SEG values should be
 	 * large enough to ensure that we receive all created segments. */
-	num = recv_packets(pktio_b, 100 * ODP_TIME_MSEC_IN_NS, pkt_out, MAX_NUM_SEG);
+	num = recv_packets(pktio_b, 100 * ODP_TIME_MSEC_IN_NS, is_test_pkt, pkt_out, MAX_NUM_SEG);
 	CU_ASSERT(num > 0);
 	CU_ASSERT(num < MAX_NUM_SEG);
 
 	offset = hdr_len;
 	payload_sum = 0;
-	seg_num = 0;
-	for (i = 0; i < num; i++) {
+	for (seg_num = 0; seg_num < num; seg_num++) {
 		uint8_t expected_hdr[hdr_len];
+		odp_packet_t seg = pkt_out[seg_num];
 
-		/* Filter out possible non-test packets */
-		if (!is_test_pkt(pkt_out[i]))
-			continue;
-
-		len = odp_packet_len(pkt_out[i]);
+		len = odp_packet_len(seg);
 		CU_ASSERT_FATAL(len > hdr_len);
 		/* Assume no Ethernet padding in test packets */
 		CU_ASSERT(len >= LSO_TEST_MIN_ETH_PKT_LEN);
@@ -785,23 +786,23 @@ static void lso_test(odp_lso_profile_param_t param, uint32_t max_payload,
 		ODPH_DBG("    LSO segment[%u] payload:  %u bytes\n", seg_num, payload_len);
 
 		memcpy(expected_hdr, orig_hdr, sizeof(expected_hdr));
-		update_hdr(expected_hdr, hdr_len, pkt_len, pkt_out[i], seg_num, offset - hdr_len);
+		if (num > 1)
+			update_hdr(expected_hdr, hdr_len, seg, seg_num, offset - hdr_len, num);
 
-		if (compare_data(pkt_out[i], 0, expected_hdr, hdr_len) >= 0) {
+		if (compare_data(seg, 0, expected_hdr, hdr_len) >= 0) {
 			ODPH_ERR("    Header compare failed\n");
 			CU_FAIL("Header comparison failed");
 		}
 
 		CU_ASSERT(payload_len <= max_payload);
 
-		if (compare_data(pkt_out[i], hdr_len, test_packet + offset, payload_len) >= 0) {
+		if (compare_data(seg, hdr_len, test_packet + offset, payload_len) >= 0) {
 			ODPH_ERR("    Payload compare failed at offset %u\n", offset);
 			CU_FAIL("Payload comparison failed");
 		}
 
 		offset      += payload_len;
 		payload_sum += payload_len;
-		seg_num++;
 	}
 
 	ODPH_DBG("    Received payload length: %u bytes\n", payload_sum);
@@ -821,13 +822,13 @@ static int is_custom_eth_test_pkt(odp_packet_t pkt)
 	return ethertype(pkt) == LSO_TEST_CUSTOM_ETHERTYPE;
 }
 
-static void update_custom_eth_hdr(uint8_t *hdr, uint32_t hdr_len, uint32_t orig_pkt_len,
-				  odp_packet_t pkt, uint16_t seg_num, uint16_t seg_offset)
+static void update_custom_eth_hdr(uint8_t *hdr, uint32_t hdr_len, odp_packet_t pkt,
+				  uint16_t seg_num, uint16_t seg_offset, uint16_t num_segs)
 {
-	(void)orig_pkt_len;
 	(void)pkt;
 	(void)seg_offset;
 	(void)hdr_len;
+	(void)num_segs;
 	odp_u16be_t segnum_be = odp_cpu_to_be_16(seg_num + LSO_TEST_CUSTOM_ETH_SEGNUM);
 
 	memcpy(hdr + LSO_TEST_CUSTOM_ETH_SEGNUM_OFFSET, &segnum_be, sizeof(segnum_be));
@@ -918,10 +919,9 @@ static int is_ipv4_test_pkt(odp_packet_t pkt)
 	return 1;
 }
 
-static void update_ipv4_hdr(uint8_t *hdr, uint32_t hdr_len, uint32_t orig_pkt_len,
-			    odp_packet_t pkt, uint16_t seg_num, uint16_t seg_offset)
+static void update_ipv4_hdr(uint8_t *hdr, uint32_t hdr_len, odp_packet_t pkt,
+			    uint16_t seg_num, uint16_t seg_offset, uint16_t num_segs)
 {
-	(void)seg_num;
 	uint32_t l3_offset = ODPH_ETHHDR_LEN;
 	uint16_t frag_offset;
 	odph_ipv4hdr_t ip;
@@ -932,7 +932,7 @@ static void update_ipv4_hdr(uint8_t *hdr, uint32_t hdr_len, uint32_t orig_pkt_le
 
 	frag_offset = odp_be_to_cpu_16(ip.frag_offset);
 	frag_offset += seg_offset / 8;
-	if (odp_packet_len(pkt) + seg_offset < orig_pkt_len)
+	if (seg_num < num_segs - 1)
 		frag_offset |= LSO_TEST_IPV4_FLAG_MF;
 	ip.tot_len = odp_cpu_to_be_16(odp_packet_len(pkt) - l3_offset);
 	ip.frag_offset = odp_cpu_to_be_16(frag_offset);
