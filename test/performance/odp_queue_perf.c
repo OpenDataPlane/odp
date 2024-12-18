@@ -397,12 +397,10 @@ free_events:
 
 static int destroy_queues(test_global_t *global)
 {
-	odp_event_t ev;
-	uint32_t i, j;
+	uint32_t i;
 	int ret = 0;
 	test_options_t *test_options = &global->options;
 	uint32_t num_queue = test_options->num_queue;
-	uint32_t num_event = test_options->num_event;
 	odp_queue_t *queue = global->queue;
 	odp_pool_t pool    = global->pool;
 
@@ -410,11 +408,12 @@ static int destroy_queues(test_global_t *global)
 		if (queue[i] == ODP_QUEUE_INVALID)
 			break;
 
-		for (j = 0; j < num_event; j++) {
-			ev = odp_queue_deq(queue[i]);
+		while (1) {
+			odp_event_t ev = odp_queue_deq(queue[i]);
 
-			if (ev != ODP_EVENT_INVALID)
-				odp_event_free(ev);
+			if (ev == ODP_EVENT_INVALID)
+				break;
+			odp_event_free(ev);
 		}
 
 		if (odp_queue_destroy(queue[i])) {
