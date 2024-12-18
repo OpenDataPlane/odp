@@ -17,7 +17,8 @@ EXECUTABLES = odp_atomic_perf \
 	      odp_queue_perf \
 	      odp_stash_perf \
 	      odp_random \
-	      odp_stress
+	      odp_stress \
+	      odp_timer_stress
 
 COMPILE_ONLY = odp_cpu_bench \
 	       odp_crypto \
@@ -103,6 +104,7 @@ odp_sched_perf_SOURCES = odp_sched_perf.c
 odp_stress_SOURCES = odp_stress.c
 odp_timer_accuracy_SOURCES = odp_timer_accuracy.c
 odp_timer_perf_SOURCES = odp_timer_perf.c
+odp_timer_stress_SOURCES = odp_timer_stress.c
 
 if LIBCONFIG
 odp_ipsecfwd_SOURCES = odp_ipsecfwd.c
