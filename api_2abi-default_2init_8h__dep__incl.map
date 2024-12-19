@@ -1,0 +1,9 @@
+<map id="init.h" name="init.h">
+<area shape="rect" id="node1" title="ODP initialization." alt="" coords="201,5,256,32"/>
+<area shape="rect" id="node2" href="$arch_2arm32-linux_2odp_2api_2abi_2init_8h_source.html" title=" " alt="" coords="5,80,60,107"/>
+<area shape="rect" id="node3" href="$arch_2arm64-linux_2odp_2api_2abi_2init_8h_source.html" title=" " alt="" coords="84,80,139,107"/>
+<area shape="rect" id="node4" href="$arch_2default-linux_2odp_2api_2abi_2init_8h_source.html" title=" " alt="" coords="163,80,217,107"/>
+<area shape="rect" id="node5" href="$arch_2power64-linux_2odp_2api_2abi_2init_8h_source.html" title=" " alt="" coords="241,80,296,107"/>
+<area shape="rect" id="node6" href="$arch_2x86__32-linux_2odp_2api_2abi_2init_8h_source.html" title=" " alt="" coords="320,80,375,107"/>
+<area shape="rect" id="node7" href="$arch_2x86__64-linux_2odp_2api_2abi_2init_8h_source.html" title=" " alt="" coords="399,80,453,107"/>
+</map>
