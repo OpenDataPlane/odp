@@ -89,7 +89,7 @@ typedef enum {
  * @return The number of characters logged on success
  * @retval <0 on failure
  */
-int odp_override_log(odp_log_level_t level, const char *fmt, ...);
+int odp_override_log(odp_log_level_t level, const char *fmt, ...) ODP_PRINTF_FORMAT(2, 3);
 
 /**
  * ODP abort function
@@ -114,7 +114,7 @@ int odp_override_log(odp_log_level_t level, const char *fmt, ...);
 void odp_override_abort(void) ODP_NORETURN;
 
 /** Replaceable logging function */
-typedef int (*odp_log_func_t)(odp_log_level_t level, const char *fmt, ...);
+typedef int (*odp_log_func_t)(odp_log_level_t level, const char *fmt, ...) ODP_PRINTF_FORMAT(2, 3);
 
 /** Replaceable abort function */
 typedef void (*odp_abort_func_t)(void) ODP_NORETURN;
@@ -251,13 +251,16 @@ void odp_init_param_init(odp_init_t *param);
  * An ODP instance is created with an odp_init_global() call. By default, each
  * thread of the instance must call odp_init_local() before calling any other
  * ODP API functions. Exceptions to this are functions that are needed for
- * setting up parameters for odp_init_global() and odp_init_local() calls:
+ * setting up parameters for odp_init_global() and odp_init_local() calls, and
+ * some other functions that may be convenient before initialization.
  * - odp_init_param_init()
  * - odp_cpumask_zero(), odp_cpumask_set(), etc functions to format
  *   odp_cpumask_t. However, these cpumask functions are excluded as their
  *   behaviour depend on global initialization parameters:
  *   odp_cpumask_default_worker(), odp_cpumask_default_control() and
  *   odp_cpumask_all_available()
+ * - odp_log_fn_get()
+ * - odp_abort_fn_get()
  *
  * A successful odp_init_global() call outputs a handle for the new instance.
  * The handle is used in other initialization and termination calls.
@@ -401,6 +404,36 @@ int odp_term_abnormal(odp_instance_t instance, uint64_t flags, void *data);
  * @param func Log function
  */
 void odp_log_thread_fn_set(odp_log_func_t func);
+
+/**
+ * Get current log function
+ *
+ * May be called even if ODP is not initialized.
+ *
+ * Returns the function previously set by the calling thread via
+ * odp_log_thread_fn_set(). If no thread specific log function has been set,
+ * returns the log function specified in odp_init_global() parameters. If no log
+ * function was specified, returns the default or override log function (see
+ * odp_override_log()). Returns NULL if ODP is not initialized.
+ *
+ * @return Log function
+ * @retval NULL ODP not initialized
+ */
+odp_log_func_t odp_log_fn_get(void);
+
+/**
+ * Get abort function
+ *
+ * May be called even if ODP is not initialized.
+ *
+ * Returns the abort function specified in odp_init_global() parameters. If no
+ * abort function was specified, returns the default or override abort function
+ * (see odp_override_abort()). Returns NULL if ODP is not initialized.
+ *
+ * @return Abort function
+ * @retval NULL ODP not initialized
+ */
+odp_abort_func_t odp_abort_fn_get(void);
 
 /**
  * Get instance handle
