@@ -15,6 +15,7 @@
 #ifndef ODPH_LINUX_PROCESS_H_
 #define ODPH_LINUX_PROCESS_H_
 
+#include <odp/helper/deprecated.h>
 #include <odp/helper/threads.h>
 #include <odp_api.h>
 
@@ -39,9 +40,11 @@ extern "C" {
  *
  * @return On success: 1 for the parent, 0 for the child
  *         On failure: -1 for the parent, -2 for the child
+ *
+ * @deprecated Use odph_thread_create() instead.
  */
-int odph_linux_process_fork(odph_linux_process_t *proc, int cpu,
-			    const odph_linux_thr_params_t *thr_params);
+int ODPH_DEPRECATE(odph_linux_process_fork)(odph_linux_process_t *proc, int cpu,
+					    const odph_linux_thr_params_t *thr_params);
 
 /**
  * Fork a number of processes
@@ -55,10 +58,12 @@ int odph_linux_process_fork(odph_linux_process_t *proc, int cpu,
  *
  * @return On success: 1 for the parent, 0 for the child
  *         On failure: -1 for the parent, -2 for the child
+ *
+ * @deprecated Use odph_thread_create() instead.
  */
-int odph_linux_process_fork_n(odph_linux_process_t *proc_tbl,
-			      const odp_cpumask_t *mask,
-			      const odph_linux_thr_params_t *thr_params);
+int ODPH_DEPRECATE(odph_linux_process_fork_n)(odph_linux_process_t *proc_tbl,
+					      const odp_cpumask_t *mask,
+					      const odph_linux_thr_params_t *thr_params);
 
 /**
  * Wait for a number of processes
@@ -70,8 +75,10 @@ int odph_linux_process_fork_n(odph_linux_process_t *proc_tbl,
  * @param num           Number of processes to wait
  *
  * @return 0 on success, -1 on failure
+ *
+ * @deprecated Use odph_thread_join() instead.
  */
-int odph_linux_process_wait_n(odph_linux_process_t *proc_tbl, int num);
+int ODPH_DEPRECATE(odph_linux_process_wait_n)(odph_linux_process_t *proc_tbl, int num);
 
 /**
  * @}
