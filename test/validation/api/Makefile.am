@@ -57,8 +57,10 @@ TESTS = \
 	hints/hints_main$(EXEEXT) \
 	init/init_defaults.sh \
 	init/init_abort.sh \
+	init/init_abort_fn_get.sh \
 	init/init_log.sh \
 	init/init_log_thread.sh \
+	init/init_log_fn_get.sh \
 	init/init_num_thr.sh \
 	init/init_feature_enabled.sh \
 	init/init_feature_disabled.sh \
