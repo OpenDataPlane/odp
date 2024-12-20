@@ -126,7 +126,7 @@ static odp_stash_t create_stash(void)
 	odp_stash_param_t stash_param;
 	odp_stash_t stash;
 	uint32_t id, tmp, i;
-	int32_t ret;
+	int32_t ret = 0;
 
 	odp_stash_param_init(&stash_param);
 	stash_param.num_obj    = MAX_TRANSFERS;
