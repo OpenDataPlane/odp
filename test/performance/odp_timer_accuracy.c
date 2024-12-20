@@ -1222,7 +1222,7 @@ static int run_test(void *arg)
 			/* Reset timer for next period */
 			odp_timer_t tim;
 			uint64_t nsec, tick;
-			odp_timer_retval_t ret;
+			odp_timer_retval_t ret = ODP_TIMER_FAIL;
 			unsigned int j;
 			unsigned int retries = test_global->opt.early_retry;
 			uint64_t start_ns = test_global->start_ns;
