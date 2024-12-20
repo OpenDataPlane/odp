@@ -1,0 +1,5 @@
+<map id="odp_init_t" name="odp_init_t">
+<area shape="rect" id="node1" title="Global initialization parameters." alt="" coords="95,109,181,136"/>
+<area shape="rect" id="node2" href="$structodp__cpumask__t.html" title="CPU mask." alt="" coords="5,5,129,32"/>
+<area shape="rect" id="node3" href="$unionodp__feature__t.html" title="Definition of ODP features." alt="" coords="154,5,266,32"/>
+</map>
