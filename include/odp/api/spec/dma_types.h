@@ -336,6 +336,13 @@ typedef struct odp_dma_capability_t {
 	/** DMA completion event pool capabilities */
 	odp_dma_pool_capability_t pool;
 
+	/** Source segment free support for data format type odp_packet_t
+	 *
+	 *  0: Source segment free feature is not supported
+	 *  1: Source segment free feature is supported
+	 */
+	odp_bool_t src_seg_free;
+
 } odp_dma_capability_t;
 
 /**
@@ -491,6 +498,38 @@ typedef struct odp_dma_transfer_param_t {
 	 *  The table has 'num_dst' entries. Data format is defined by 'dst_format'.
 	 */
 	odp_dma_seg_t *dst_seg;
+
+	/** Transfer hints
+	 *
+	 *  Depending on the implementation, adjusting hints bit fields may improve performance.
+	 *  Initialize all unused bits to zero.
+	 */
+	union {
+		/** Hint bit fields */
+		struct {
+			/** Allow freeing all the source segments
+			 *
+			 *  When set to 1, all source segments with data format type odp_packet_t
+			 *  are freed, packet free options (odp_packet_free_ctrl_t) does not affect
+			 *  this bit.
+			 */
+			uint16_t seg_free : 1;
+
+			/** Allow freeing all source segments to a single pool
+			 *
+			 *  When set to 1, all source segments with data format type odp_packet_t
+			 *  are freed to a single pool.
+			 */
+			uint16_t single_pool : 1;
+		};
+
+		/** Entire bit field structure
+		 *
+		 *  This can be used to set or clear all bits, or to carry out bitwise operations
+		 *  on those.
+		 */
+		uint16_t all;
+	};
 
 } odp_dma_transfer_param_t;
 
