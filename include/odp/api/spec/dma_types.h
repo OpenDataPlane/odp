@@ -132,7 +132,7 @@ typedef struct odp_dma_pool_param_t {
 } odp_dma_pool_param_t;
 
 /* Includes pool_types.h, which depends on odp_dma_pool_param_t. */
-#include <odp/api/queue_types.h>
+#include <odp/api/pool_types.h>
 
 /**
  * DMA transfer direction
@@ -333,6 +333,13 @@ typedef struct odp_dma_capability_t {
 	 */
 	odp_bool_t queue_type_plain;
 
+	/** Source segment free support for data format #ODP_DMA_FORMAT_PACKET
+	 *
+	 *  0: Source segment free is not supported
+	 *  1: Source segment free is supported
+	 */
+	odp_bool_t src_seg_free;
+
 	/** DMA completion event pool capabilities */
 	odp_dma_pool_capability_t pool;
 
@@ -491,6 +498,50 @@ typedef struct odp_dma_transfer_param_t {
 	 *  The table has 'num_dst' entries. Data format is defined by 'dst_format'.
 	 */
 	odp_dma_seg_t *dst_seg;
+
+	/** Transfer options
+	 *
+	 *  Options to further configure the transfer.
+	 *  The default value for all option bits is zero.
+	 */
+	union {
+		/** Option bit fields */
+		struct {
+			/** Allow freeing all the source segments
+			 *
+			 *  When set to 1, the implementation frees all source segments with data
+			 *  format #ODP_DMA_FORMAT_PACKET after successful transfers.
+			 *
+			 *  Segments are freed regardless of packet free options
+			 *  (odp_packet_free_ctrl_t).
+			 */
+			uint16_t seg_free : 1;
+
+			/** Option bit to denote a source segment of data format
+			 *  #ODP_DMA_FORMAT_PACKET have unique packets or not
+			 *
+			 *  Set to 1, when every source segment is a unique packet.
+			 *
+			 *  Set to 0, when the same packet is reused across the source segment
+			 *  descriptors.
+			 */
+			uint16_t unique_src_segs : 1;
+
+			/** Allow freeing all source segments to a single pool
+			 *
+			 *  When set to 1, all source segments with data format
+			 *  #ODP_DMA_FORMAT_PACKET are freed to a single pool.
+			 */
+			uint16_t single_pool : 1;
+		} opts;
+
+		/** Entire bit field structure
+		 *
+		 *  This can be used to set or clear all bits, or to carry out bitwise operations
+		 *  on those.
+		 */
+		uint16_t all_opts;
+	};
 
 } odp_dma_transfer_param_t;
 
