@@ -343,6 +343,13 @@ typedef struct odp_dma_capability_t {
 	 */
 	odp_bool_t src_seg_free;
 
+	/** Destination segment allocation support for data format type odp_packet_t
+	 *
+	 *  0: Destination segment allocation feature is not supported
+	 *  1: Destination segment allocation feature is supported
+	 */
+	odp_bool_t dst_seg_alloc;
+
 } odp_dma_capability_t;
 
 /**
@@ -404,6 +411,14 @@ typedef struct odp_dma_seg_t {
 		 *  with other data formats. */
 		odp_packet_t packet;
 
+		/** Segment index
+		 *
+		 *  Defines a packet handle index with in the odp_dma_transfer_param_t::dst_seg
+		 *  table to which this segment belongs to. When destination segment allocation
+		 *  support is used, this index field can be used to merge multiple segments
+		 *  into a single packet handle.
+		 */
+		uint16_t index;
 	};
 
 	/** Segment length in bytes
@@ -499,6 +514,13 @@ typedef struct odp_dma_transfer_param_t {
 	 */
 	odp_dma_seg_t *dst_seg;
 
+	/** Destination segment pool
+	 *
+	 *  If application chooses for destination segment allocation support, provide the pool
+	 *  details from which the buffers need to be allocated.
+	 */
+	odp_pool_t dst_seg_pool;
+
 	/** Transfer hints
 	 *
 	 *  Depending on the implementation, adjusting hints bit fields may improve performance.
@@ -521,6 +543,13 @@ typedef struct odp_dma_transfer_param_t {
 			 *  are freed to a single pool.
 			 */
 			uint16_t single_pool : 1;
+
+			/** Allow allocating all the destination segments
+			 *
+			 *  When set to 1, all the destination segments will be allocated from
+			 *  dst_seg_pool.
+			 */
+			uint16_t seg_alloc : 1;
 		};
 
 		/** Entire bit field structure
@@ -599,6 +628,21 @@ typedef struct odp_dma_result_t {
 	 *  (odp_dma_compl_param_t). The default value is NULL.
 	 */
 	void *user_ptr;
+
+	/** Number of destination segments
+	 *
+	 * When destination buffer allocation feature is used, this value provides
+	 * the number of segments in the destination segment table.
+	 */
+	uint32_t num_dst;
+
+	/** Table of destination segments
+	 *
+	 * When destination buffer allocation feature is used, application provides the
+	 * destination segment table of 'num_dst' size which gets filled with allocated
+	 * destination segment details.
+	 */
+	odp_dma_seg_t *dst_seg;
 
 } odp_dma_result_t;
 
