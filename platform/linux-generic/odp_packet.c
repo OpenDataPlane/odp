@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2013-2018 Linaro Limited
- * Copyright (c) 2019-2024 Nokia
+ * Copyright (c) 2019-2025 Nokia
  */
 
 #include <odp/autoheader_external.h>
@@ -383,7 +383,7 @@ static inline odp_packet_hdr_t *alloc_segments(pool_t *pool, int num)
 
 	if (odp_unlikely(ret != num)) {
 		if (ret > 0)
-			_odp_event_free_multi((_odp_event_hdr_t **)pkt_hdr, ret);
+			_odp_event_free_sp((_odp_event_hdr_t **)pkt_hdr, ret);
 
 		return NULL;
 	}
@@ -603,7 +603,7 @@ static inline int packet_alloc(pool_t *pool, uint32_t len, int max_pkt,
 			_odp_event_hdr_t **p;
 
 			p = (_odp_event_hdr_t **)&pkt_hdr[num_buf - num_free];
-			_odp_event_free_multi(p, num_free);
+			_odp_event_free_sp(p, num_free);
 		}
 
 		if (num == 0)
