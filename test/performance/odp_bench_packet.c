@@ -1842,10 +1842,11 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
-	/* At least 2 x TEST_REPEAT_COUNT packets required */
-	pkt_num = (gbl_args->appl.burst_size > 2) ?
+	/* At least 2 x TEST_REPEAT_COUNT packets are required for the tests and depending on the
+	 * implementation extra packets may be required for packet references. */
+	pkt_num = (gbl_args->appl.burst_size > 4) ?
 			gbl_args->appl.burst_size * TEST_REPEAT_COUNT :
-			2 * TEST_REPEAT_COUNT;
+			4 * TEST_REPEAT_COUNT;
 
 	if (capa.pkt.max_num && capa.pkt.max_num < pkt_num) {
 		ODPH_ERR("Error: packet pool size not supported.\n");
