@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2013-2018 Linaro Limited
- * Copyright (c) 2019-2023 Nokia
+ * Copyright (c) 2019-2025 Nokia
  */
 
 #include <odp/api/align.h>
@@ -1424,6 +1424,13 @@ void _odp_event_free_multi(_odp_event_hdr_t *event_hdr[], int num_total)
 	}
 }
 
+void _odp_event_free_sp(_odp_event_hdr_t *event_hdr[], int num)
+{
+	_ODP_ASSERT(num > 0);
+
+	event_free_to_pool(_odp_pool_entry(event_hdr[0]->pool), event_hdr, num);
+}
+
 odp_buffer_t odp_buffer_alloc(odp_pool_t pool_hdl)
 {
 	odp_buffer_t buf;
@@ -1474,7 +1481,7 @@ void odp_buffer_free(odp_buffer_t buf)
 {
 	_odp_buffer_validate(buf, _ODP_EV_BUFFER_FREE);
 
-	_odp_event_free_multi((_odp_event_hdr_t **)&buf, 1);
+	_odp_event_free(odp_buffer_to_event(buf));
 }
 
 void odp_buffer_free_multi(const odp_buffer_t buf[], int num)

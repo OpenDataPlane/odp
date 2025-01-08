@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2013-2018 Linaro Limited
- * Copyright (c) 2019-2022 Nokia
+ * Copyright (c) 2019-2025 Nokia
  */
 
 /**
@@ -202,11 +202,12 @@ static inline _odp_event_hdr_t *_odp_event_hdr_from_index_u32(uint32_t u32)
 odp_event_t _odp_event_alloc(pool_t *pool);
 int _odp_event_alloc_multi(pool_t *pool, _odp_event_hdr_t *event_hdr[], int num);
 void _odp_event_free_multi(_odp_event_hdr_t *event_hdr[], int num_free);
+void _odp_event_free_sp(_odp_event_hdr_t *event_hdr[], int num);
 int _odp_event_is_valid(odp_event_t event);
 
 static inline void _odp_event_free(odp_event_t event)
 {
-	_odp_event_free_multi((_odp_event_hdr_t **)&event, 1);
+	_odp_event_free_sp((_odp_event_hdr_t **)&event, 1);
 }
 
 odp_pool_t _odp_pool_create(const char *name, const odp_pool_param_t *params,
