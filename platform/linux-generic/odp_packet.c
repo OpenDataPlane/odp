@@ -5,6 +5,7 @@
 
 #include <odp/autoheader_external.h>
 
+#include <odp/api/buffer.h>
 #include <odp/api/byteorder.h>
 #include <odp/api/hash.h>
 #include <odp/api/hints.h>

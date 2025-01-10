@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2015-2018 Linaro Limited
- * Copyright (c) 2020-2024 Nokia
+ * Copyright (c) 2020-2025 Nokia
  */
 
 #include <odp/autoheader_external.h>
@@ -19,6 +19,7 @@
 #include <odp_debug_internal.h>
 #include <odp_packet_internal.h>
 #include <odp_event_internal.h>
+#include <odp_timer_internal.h>
 #include <odp_event_validation_internal.h>
 #include <odp_event_vector_internal.h>
 
@@ -127,6 +128,41 @@ static inline void event_free_multi(const odp_event_t event[], int num, odp_even
 	}
 }
 
+static inline void event_free_sp(const odp_event_t event[], int num, odp_event_type_t type,
+				 _odp_ev_id_t id)
+{
+	switch (type) {
+	case ODP_EVENT_BUFFER:
+		_odp_buffer_validate_multi((odp_buffer_t *)(uintptr_t)event, num, id);
+		_odp_buffer_free_sp((odp_buffer_t *)(uintptr_t)event, num);
+		break;
+	case ODP_EVENT_PACKET:
+		_odp_packet_validate_multi((odp_packet_t *)(uintptr_t)event, num, id);
+		odp_packet_free_sp((odp_packet_t *)(uintptr_t)event, num);
+		break;
+	case ODP_EVENT_PACKET_VECTOR:
+		packet_vector_free_full_multi((odp_packet_vector_t *)(uintptr_t)event, num);
+		break;
+	case ODP_EVENT_TIMEOUT:
+		_odp_timeout_free_sp((odp_timeout_t *)(uintptr_t)event, num);
+		break;
+	case ODP_EVENT_IPSEC_STATUS:
+		ipsec_status_free_multi((ipsec_status_t *)(uintptr_t)event, num);
+		break;
+	case ODP_EVENT_PACKET_TX_COMPL:
+		packet_tx_compl_free_multi((odp_packet_tx_compl_t *)(uintptr_t)event, num);
+		break;
+	case ODP_EVENT_DMA_COMPL:
+		dma_compl_free_multi((odp_dma_compl_t *)(uintptr_t)event, num);
+		break;
+	case ODP_EVENT_ML_COMPL:
+		ml_compl_free_multi((odp_ml_compl_t *)(uintptr_t)event, num);
+		break;
+	default:
+		_ODP_ABORT("Invalid event type: %d\n", type);
+	}
+}
+
 void odp_event_free_multi(const odp_event_t event[], int num)
 {
 	const odp_event_t *burst_start;
@@ -170,7 +206,7 @@ void odp_event_free_sp(const odp_event_t event[], int num)
 			_ODP_ASSERT(_odp_event_pool(event[i]) == pool);
 	}
 
-	event_free_multi(event, num, odp_event_type(event[0]), _ODP_EV_EVENT_FREE_SP);
+	event_free_sp(event, num, odp_event_type(event[0]), _ODP_EV_EVENT_FREE_SP);
 }
 
 uint64_t odp_event_to_u64(odp_event_t hdl)
