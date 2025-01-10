@@ -21,7 +21,6 @@ extern "C" {
 #include <odp/api/ticketlock.h>
 #include <odp/api/align.h>
 
-#include <odp_buffer_internal.h>
 #include <odp_event_internal.h>
 #include <odp_config_internal.h>
 #include <odp_ring_ptr_internal.h>
