@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2013-2018 Linaro Limited
- * Copyright (c) 2019-2021 Nokia
+ * Copyright (c) 2019-2025 Nokia
  */
 
 #include <odp_config_internal.h>
@@ -62,6 +62,11 @@ odp_shm_t odp_shm_reserve(const char *name, uint64_t size, uint64_t align,
 	uint32_t flgs = 0; /* internal ishm flags */
 	uint32_t supported_flgs = SUPPORTED_SHM_FLAGS;
 
+	if (name && strlen(name) + 1 > ODP_SHM_NAME_LEN) {
+		_ODP_ERR("SHM name too long (max %d)\n", ODP_SHM_NAME_LEN);
+		return ODP_SHM_INVALID;
+	}
+
 	if (flags & ~supported_flgs) {
 		_ODP_ERR("Unsupported SHM flag\n");
 		return ODP_SHM_INVALID;
@@ -81,6 +86,11 @@ odp_shm_t odp_shm_import(const char *remote_name,
 			 const char *local_name)
 {
 	int ret;
+
+	if (local_name && strlen(local_name) + 1 > ODP_SHM_NAME_LEN) {
+		_ODP_ERR("SHM local name too long (max %d)\n", ODP_SHM_NAME_LEN);
+		return ODP_SHM_INVALID;
+	}
 
 	ret =  _odp_ishm_find_exported(remote_name, (pid_t)odp_inst,
 				       local_name);
