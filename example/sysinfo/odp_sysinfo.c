@@ -790,7 +790,6 @@ static void parse_interfaces(appl_args_t *config, const char *optarg)
 static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 {
 	int opt;
-	int long_index;
 	static const struct option longopts[] = {
 		{"interfaces", required_argument, NULL, 'i'},
 		{"help", no_argument, NULL, 'h'},
@@ -799,7 +798,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	static const char *shortopts =  "i:h";
 
 	while (1) {
-		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
+		opt = getopt_long(argc, argv, shortopts, longopts, NULL);
 
 		if (opt == -1)
 			break;	/* No more options */

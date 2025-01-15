@@ -1161,7 +1161,6 @@ static int parse_policy_ci_pass_count(appl_args_t *appl_args, char *optarg)
 static int parse_args(int argc, char *argv[], appl_args_t *appl_args)
 {
 	int opt;
-	int long_index;
 	size_t len;
 	int i;
 	int interface = 0;
@@ -1198,7 +1197,7 @@ static int parse_args(int argc, char *argv[], appl_args_t *appl_args)
 
 	while (ret == 0) {
 		opt = getopt_long(argc, argv, shortopts,
-				  longopts, &long_index);
+				  longopts, NULL);
 
 		if (opt == -1)
 			break;	/* No more options */

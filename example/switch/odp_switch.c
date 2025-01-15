@@ -851,7 +851,6 @@ static void usage(char *progname)
 static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 {
 	int opt;
-	int long_index;
 	char *token;
 	size_t len;
 	unsigned int i;
@@ -871,7 +870,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	appl_args->accuracy = 10; /* get and print pps stats second */
 
 	while (1) {
-		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
+		opt = getopt_long(argc, argv, shortopts, longopts, NULL);
 
 		if (opt == -1)
 			break;	/* No more options */
