@@ -657,7 +657,7 @@ static int init_bins(test_global_t *global)
 
 static int parse_options(int argc, char *argv[], test_global_t *global)
 {
-	int opt, i, len, str_len, long_index, port;
+	int opt, i, len, str_len, port;
 	unsigned long int count;
 	uint32_t min_packets, num_tx_pkt, num_tx_alloc, pkt_len, req_len, val, bins;
 	char *name, *str, *end;
@@ -751,7 +751,7 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 	}
 
 	while (1) {
-		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
+		opt = getopt_long(argc, argv, shortopts, longopts, NULL);
 
 		if (opt == -1)
 			break;

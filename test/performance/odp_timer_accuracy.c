@@ -175,7 +175,7 @@ static void print_usage(void)
 
 static int parse_options(int argc, char *argv[], test_opt_t *test_opt)
 {
-	int opt, long_index;
+	int opt;
 	const struct option longopts[] = {
 		{"count",        required_argument, NULL, 'c'},
 		{"period",       required_argument, NULL, 'p'},
@@ -230,7 +230,7 @@ static int parse_options(int argc, char *argv[], test_opt_t *test_opt)
 	test_opt->early_retry = 0;
 
 	while (1) {
-		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
+		opt = getopt_long(argc, argv, shortopts, longopts, NULL);
 
 		if (opt == -1)
 			break;	/* No more options */

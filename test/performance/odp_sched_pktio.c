@@ -579,7 +579,7 @@ static void print_usage(const char *progname)
 
 static int parse_options(int argc, char *argv[], test_options_t *test_options)
 {
-	int i, opt, long_index;
+	int i, opt;
 	char *name, *str;
 	int len, str_len, sched_mode;
 	const struct option longopts[] = {
@@ -608,7 +608,7 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 	test_options->pipe_queue_size = 256;
 
 	while (1) {
-		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
+		opt = getopt_long(argc, argv, shortopts, longopts, NULL);
 
 		if (opt == -1)
 			break;	/* No more options */

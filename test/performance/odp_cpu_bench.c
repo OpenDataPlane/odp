@@ -377,7 +377,6 @@ static void usage(char *progname)
 static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 {
 	int opt;
-	int long_index;
 
 	static const struct option longopts[] = {
 		{"accuracy", required_argument, NULL, 'a'},
@@ -396,7 +395,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	appl_args->time = 10; /* Loop forever if time to run is 0 */
 
 	while (1) {
-		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
+		opt = getopt_long(argc, argv, shortopts, longopts, NULL);
 
 		if (opt == -1)
 			break;	/* No more options */
