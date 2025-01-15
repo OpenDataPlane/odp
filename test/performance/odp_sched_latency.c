@@ -624,7 +624,6 @@ static void usage(void)
 static void parse_args(int argc, char *argv[], test_args_t *args)
 {
 	int opt;
-	int long_index;
 	int i;
 
 	static const struct option longopts[] = {
@@ -666,7 +665,7 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 	args->prio[HI_PRIO].sample_events = 1;
 
 	while (1) {
-		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
+		opt = getopt_long(argc, argv, shortopts, longopts, NULL);
 
 		if (opt == -1)
 			break;	/* No more options */

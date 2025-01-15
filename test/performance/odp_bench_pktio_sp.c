@@ -876,7 +876,6 @@ static int parse_args(int argc, char *argv[])
 {
 	int i;
 	int opt;
-	int long_index;
 	static const struct option longopts[] = {
 		{"interface", required_argument, NULL, 'i'},
 		{"in_mode", required_argument, NULL, 'm'},
@@ -901,7 +900,7 @@ static int parse_args(int argc, char *argv[])
 	gbl_args->opt.num_pmr = 1;
 
 	while (1) {
-		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
+		opt = getopt_long(argc, argv, shortopts, longopts, NULL);
 
 		if (opt == -1)
 			break;	/* No more options */

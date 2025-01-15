@@ -76,7 +76,6 @@ static void print_usage(void)
 static int parse_options(int argc, char *argv[], test_options_t *test_options)
 {
 	int opt;
-	int long_index;
 	int ret = 0;
 
 	static const struct option longopts[] = {
@@ -100,7 +99,7 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 	test_options->mode      = 0;
 
 	while (1) {
-		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
+		opt = getopt_long(argc, argv, shortopts, longopts, NULL);
 
 		if (opt == -1)
 			break;

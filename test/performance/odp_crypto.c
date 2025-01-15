@@ -1384,7 +1384,6 @@ int main(int argc, char *argv[])
 static void parse_args(int argc, char *argv[], crypto_args_t *cargs)
 {
 	int opt;
-	int long_index;
 	static const struct option longopts[] = {
 		{"algorithm", optional_argument, NULL, 'a'},
 		{"debug",  no_argument, NULL, 'd'},
@@ -1410,7 +1409,7 @@ static void parse_args(int argc, char *argv[], crypto_args_t *cargs)
 	cargs->schedule = 0;
 
 	while (1) {
-		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
+		opt = getopt_long(argc, argv, shortopts, longopts, NULL);
 
 		if (opt == -1)
 			break;	/* No more options */

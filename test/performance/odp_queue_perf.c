@@ -107,7 +107,7 @@ static void print_usage(void)
 
 static int parse_options(int argc, char *argv[], test_options_t *test_options)
 {
-	int opt, long_index, num_cpu;
+	int opt, num_cpu;
 	int ret = 0;
 
 	static const struct option longopts[] = {
@@ -138,7 +138,7 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 	test_options->private_queues = false;
 
 	while (1) {
-		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
+		opt = getopt_long(argc, argv, shortopts, longopts, NULL);
 
 		if (opt == -1)
 			break;

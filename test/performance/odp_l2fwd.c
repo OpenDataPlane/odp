@@ -1970,7 +1970,6 @@ static void usage(char *progname)
 static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 {
 	int opt;
-	int long_index;
 	char *token;
 	char *tmp_str, *tmp;
 	size_t str_len, len;
@@ -2051,7 +2050,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	appl_args->flow_control = 0;
 
 	while (1) {
-		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
+		opt = getopt_long(argc, argv, shortopts, longopts, NULL);
 
 		if (opt == -1)
 			break;	/* No more options */

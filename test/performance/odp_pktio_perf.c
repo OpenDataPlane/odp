@@ -946,7 +946,6 @@ static void usage(void)
 static void parse_args(int argc, char *argv[], test_args_t *args)
 {
 	int opt;
-	int long_index;
 
 	static const struct option longopts[] = {
 		{"count",     required_argument, NULL, 'c'},
@@ -977,7 +976,7 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 
 	while (1) {
 		opt = getopt_long(argc, argv, shortopts,
-				  longopts, &long_index);
+				  longopts, NULL);
 
 		if (opt == -1)
 			break;

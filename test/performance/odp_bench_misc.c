@@ -886,7 +886,6 @@ static void usage(void)
 static int parse_args(int argc, char *argv[])
 {
 	int opt;
-	int long_index;
 	appl_args_t *appl_args = &gbl_args->appl;
 	static const struct option longopts[] = {
 		{"time", required_argument, NULL, 't'},
@@ -903,7 +902,7 @@ static int parse_args(int argc, char *argv[])
 	appl_args->rounds = ROUNDS;
 
 	while (1) {
-		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
+		opt = getopt_long(argc, argv, shortopts, longopts, NULL);
 
 		if (opt == -1)
 			break;	/* No more options */

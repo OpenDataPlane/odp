@@ -1468,7 +1468,7 @@ static parse_result_t check_options(prog_config_t *config)
 
 static parse_result_t parse_options(int argc, char **argv, prog_config_t *config)
 {
-	int opt, long_index;
+	int opt;
 	config_t cfg;
 
 	static const struct option longopts[] = {
@@ -1489,7 +1489,7 @@ static parse_result_t parse_options(int argc, char **argv, prog_config_t *config
 	static const char *shortopts = "i:n:l:c:m:C:I:S:O:dh";
 
 	while (true) {
-		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
+		opt = getopt_long(argc, argv, shortopts, longopts, NULL);
 
 		if (opt == -1)
 			break;
