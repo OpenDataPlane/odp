@@ -516,7 +516,6 @@ static void print_usage(char *progname)
 static void parse_cmdline_args(int argc, char *argv[], app_args_t *args)
 {
 	int opt;
-	int long_index;
 	char *token, *local;
 	size_t len, route_index = 0;
 	int mem_failure = 0;
@@ -538,7 +537,7 @@ static void parse_cmdline_args(int argc, char *argv[], app_args_t *args)
 
 	while (1) {
 		opt = getopt_long(argc, argv, "+s:t:d:i:r:q:e:h",
-				  longopts, &long_index);
+				  longopts, NULL);
 
 		if (opt == -1)
 			break;	/* No more options */
