@@ -96,7 +96,6 @@ odp_pktio_t create_pktio(odp_pool_t pool, int master_pid)
 void parse_args(int argc, char *argv[])
 {
 	int opt;
-	int long_index;
 	static struct option longopts[] = {
 		{"start-timeout", required_argument, NULL, 's'},
 		{"run-time", required_argument, NULL, 't'},
@@ -111,7 +110,7 @@ void parse_args(int argc, char *argv[])
 
 	while (1) {
 		opt = getopt_long(argc, argv, "+s:t:p:h",
-				  longopts, &long_index);
+				  longopts, NULL);
 
 		if (opt == -1)
 			break;	/* No more options */
