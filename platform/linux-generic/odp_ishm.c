@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2016-2018 Linaro Limited
- * Copyright (c) 2019 Nokia
+ * Copyright (c) 2019-2025 Nokia
  */
 
 /* This file handles the internal shared memory: internal shared memory
@@ -160,6 +160,7 @@ typedef struct ishm_fragment {
 typedef enum {UNKNOWN, HUGE, NORMAL, EXTERNAL, CACHED} huge_flag_t;
 typedef struct ishm_block {
 	char name[ISHM_NAME_MAXLEN];    /* name for the ishm block (if any) */
+	char param_name[ISHM_NAME_MAXLEN];   /* name given by application   */
 	char filename[ISHM_FILENAME_MAXLEN]; /* name of the .../odp-* file  */
 	char exptname[ISHM_FILENAME_MAXLEN]; /* name of the export file     */
 	uint32_t user_flags;     /* any flags the user want to remember.    */
@@ -590,18 +591,14 @@ static void free_fragment(ishm_fragment_t *fragmnt)
 	}
 }
 
-static char *create_seq_string(char *output, size_t size)
-{
-	snprintf(output, size, "%08" PRIu64, ishm_tbl->dev_seq++);
-
-	return output;
-}
-
-static int create_export_file(ishm_block_t *new_block, const char *name,
-			      uint64_t len, uint32_t flags, uint32_t align,
+static int create_export_file(ishm_block_t *new_block, uint64_t len, uint32_t flags, uint32_t align,
 			      odp_bool_t single_va, uint64_t offset)
 {
 	FILE *export_file;
+	const char *name = new_block->param_name;
+
+	if (!new_block->param_name[0])
+		name = new_block->name;
 
 	snprintf(new_block->exptname, ISHM_FILENAME_MAXLEN,
 		 ISHM_EXPTNAME_FORMAT,
@@ -651,7 +648,6 @@ static int create_file(int block_index, huge_flag_t huge, uint64_t len,
 	char *name;
 	int  fd;
 	ishm_block_t *new_block = NULL;	/* entry in the main block table    */
-	char seq_string[ISHM_FILENAME_MAXLEN];   /* used to construct filename*/
 	char filename[ISHM_FILENAME_MAXLEN]; /* filename in /dev/shm or
 					      *		    /mnt/huge */
 	int  oflag = O_RDWR | O_CREAT | O_TRUNC; /* flags for open	      */
@@ -665,9 +661,6 @@ static int create_file(int block_index, huge_flag_t huge, uint64_t len,
 	} else {
 		new_block = &ishm_tbl->block[block_index];
 		name = new_block->name;
-		if (!name || !name[0])
-			name = create_seq_string(seq_string,
-						 ISHM_FILENAME_MAXLEN);
 	}
 
 	/* huge dir must be known to create files there!: */
@@ -727,8 +720,7 @@ static int create_file(int block_index, huge_flag_t huge, uint64_t len,
 	if (flags & _ODP_ISHM_EXPORT) {
 		memcpy(new_block->filename, filename, ISHM_FILENAME_MAXLEN);
 
-		create_export_file(new_block, name, len, flags, align, false,
-				   0);
+		create_export_file(new_block, len, flags, align, false, 0);
 	} else {
 		new_block->exptname[0] = 0;
 		/* remove the file from the filesystem, keeping its fd open */
@@ -796,20 +788,14 @@ static void *do_map(int block_index, uint64_t len, uint32_t align,
 /*
  * Allocate block from pre-reserved single VA memory
  */
-static void *alloc_single_va(const char *name, int new_index, uint64_t size,
-			     uint32_t align, uint32_t flags, int *fd,
+static void *alloc_single_va(int new_index, uint64_t size, uint32_t align, uint32_t flags, int *fd,
 			     uint64_t *len_out)
 {
 	uint64_t len;
 	uint64_t page_sz;
-	char *file_name = (char *)(uintptr_t)name;
 	void *addr;
 	ishm_block_t *new_block = &ishm_tbl->block[new_index];
 	ishm_fragment_t *fragment = NULL;
-	char seq_string[ISHM_FILENAME_MAXLEN];
-
-	if (!file_name || !file_name[0])
-		file_name = create_seq_string(seq_string, ISHM_FILENAME_MAXLEN);
 
 	/* Common fd for all single VA blocks */
 	*fd = ishm_tbl->single_va_fd;
@@ -843,8 +829,7 @@ static void *alloc_single_va(const char *name, int new_index, uint64_t size,
 		memcpy(new_block->filename, ishm_tbl->single_va_filename,
 		       ISHM_FILENAME_MAXLEN);
 
-		create_export_file(new_block, file_name, len, flags, align,
-				   true, offset);
+		create_export_file(new_block, len, flags, align, true, offset);
 	} else {
 		new_block->exptname[0] = 0;
 	}
@@ -918,11 +903,22 @@ static int find_block_by_name(const char *name)
 
 	for (i = 0; i < ISHM_MAX_NB_BLOCKS; i++) {
 		if ((ishm_tbl->block[i].len) &&
-		    (strcmp(name, ishm_tbl->block[i].name) == 0))
+		    (strcmp(name, ishm_tbl->block[i].param_name) == 0))
 			return i;
 	}
 
 	return -1;
+}
+
+/*
+ * Make application given memory block name unique
+ */
+static void make_name_unique(char *block_name, const char *name, size_t sz)
+{
+	if (name)
+		_odp_snprint(block_name, sz, "%08" PRIu64 "-%s", ishm_tbl->dev_seq++, name);
+	else
+		_odp_snprint(block_name, sz, "%08" PRIu64 "", ishm_tbl->dev_seq++);
 }
 
 /*
@@ -1094,11 +1090,13 @@ int _odp_ishm_reserve(const char *name, uint64_t size, int fd,
 
 	new_block = &ishm_tbl->block[new_index];
 
-	/* save block name (if any given): */
+	/* Save application given block name as-is and make internal block name used for mmap
+	   unique */
 	if (name)
-		_odp_strcpy(new_block->name, name, ISHM_NAME_MAXLEN);
+		_odp_strcpy(new_block->param_name, name, ISHM_NAME_MAXLEN);
 	else
-		new_block->name[0] = 0;
+		new_block->param_name[0] = 0;
+	make_name_unique(new_block->name, name, ISHM_NAME_MAXLEN);
 
 	new_block->offset = 0;
 
@@ -1205,8 +1203,7 @@ int _odp_ishm_reserve(const char *name, uint64_t size, int fd,
 use_single_va:
 	/* Reserve memory from single VA space */
 	if (fd < 0 && (flags & _ODP_ISHM_SINGLE_VA))
-		addr = alloc_single_va(name, new_index, size, align, flags, &fd,
-				       &len);
+		addr = alloc_single_va(new_index, size, align, flags, &fd, &len);
 
 	/* if neither huge pages or normal pages works, we cannot proceed: */
 	if ((fd < 0) || (addr == NULL) || (len == 0)) {
@@ -1557,7 +1554,7 @@ int _odp_ishm_info(int block_index, _odp_ishm_info_t *info)
 		return -1;
 	}
 
-	info->name	 = ishm_tbl->block[block_index].name;
+	info->name	 = ishm_tbl->block[block_index].param_name;
 	info->addr	 = ishm_proctable->entry[proc_index].start;
 	info->size	 = ishm_tbl->block[block_index].user_len;
 	info->page_size  = (ishm_tbl->block[block_index].huge == HUGE) ?
@@ -1912,7 +1909,7 @@ int _odp_ishm_term_global(void)
 		if (block->len != 0) {
 			_ODP_ERR("block '%s' (file %s) was never freed "
 				"(cleaning up...).\n",
-				block->name, block->filename);
+				block->param_name, block->filename);
 			delete_file(block);
 		}
 	}
@@ -1985,7 +1982,7 @@ int _odp_ishm_status(const char *title)
 		if (ishm_tbl->block[i].len <= 0)
 			continue;
 
-		str_len = strlen(ishm_tbl->block[i].name);
+		str_len = strlen(ishm_tbl->block[i].param_name);
 
 		if (max_name_len < str_len)
 			max_name_len = str_len;
@@ -2045,7 +2042,7 @@ int _odp_ishm_status(const char *title)
 		_ODP_PRINT("%2i  %-*s %s%c  %p-%p %-8" PRIu64 "   "
 			  "%-8" PRIu64 " %-3" PRIu64 " %-3" PRIu64 " "
 			  "%-3d %s\n",
-			  i, max_name_len, ishm_tbl->block[i].name,
+			  i, max_name_len, ishm_tbl->block[i].param_name,
 			  flags, huge, start_addr, end_addr,
 			  ishm_tbl->block[i].user_len,
 			  ishm_tbl->block[i].len - ishm_tbl->block[i].user_len,
@@ -2142,7 +2139,8 @@ void _odp_ishm_print(int block_index)
 	block = &ishm_tbl->block[block_index];
 
 	_ODP_PRINT("\nSHM block info\n--------------\n");
-	_ODP_PRINT(" name:       %s\n",   block->name);
+	_ODP_PRINT(" name:       %s\n",   block->param_name);
+	_ODP_PRINT(" int. name:  %s\n",   block->name);
 	_ODP_PRINT(" file:       %s\n",   block->filename);
 	_ODP_PRINT(" expt:       %s\n",   block->exptname);
 	_ODP_PRINT(" user_flags: 0x%x\n", block->user_flags);
@@ -2180,7 +2178,7 @@ int32_t odp_system_meminfo(odp_system_meminfo_t *info, odp_system_memblock_t mem
 			   int32_t max_num)
 {
 	ishm_block_t *block;
-	int name_len, proc_index;
+	int proc_index;
 	int32_t i;
 	uintptr_t addr;
 	uint64_t len, lost, page_size;
@@ -2205,12 +2203,7 @@ int32_t odp_system_meminfo(odp_system_meminfo_t *info, odp_system_memblock_t mem
 		if (num < max_num) {
 			odp_system_memblock_t *mb = &memblock[num];
 
-			name_len = strlen(block->name);
-			if (name_len >= ODP_SYSTEM_MEMBLOCK_NAME_LEN)
-				name_len = ODP_SYSTEM_MEMBLOCK_NAME_LEN - 1;
-
-			memcpy(mb->name, block->name, name_len);
-			mb->name[name_len] = 0;
+			_odp_strcpy(mb->name, block->param_name, ODP_SYSTEM_MEMBLOCK_NAME_LEN);
 
 			addr = 0;
 			proc_index = procfind_block(i);
