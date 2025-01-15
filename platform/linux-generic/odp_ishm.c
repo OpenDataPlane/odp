@@ -33,12 +33,15 @@
  *  _odp_ishm_reserve(), _odp_ishm_free*() and _odp_ishm_lookup*()...
  */
 #include <odp_posix_extensions.h>
-#include <odp_config_internal.h>
-#include <odp_global_data.h>
+
 #include <odp/api/spinlock.h>
 #include <odp/api/align.h>
+#include <odp/api/shared_memory.h>
 #include <odp/api/system_info.h>
 #include <odp/api/debug.h>
+
+#include <odp_config_internal.h>
+#include <odp_global_data.h>
 #include <odp_init_internal.h>
 #include <odp_shm_internal.h>
 #include <odp_debug_internal.h>
@@ -79,6 +82,9 @@
  * probably taking the same number as SHM name size make sense at this stage
  */
 #define ISHM_NAME_MAXLEN 128
+
+ODP_STATIC_ASSERT(ISHM_NAME_MAXLEN >= ODP_SHM_NAME_LEN,
+		  "ISHM_NAME_MAXLEN smaller than ODP_SHM_NAME_LEN");
 
 /*
  * Linux underlying file name: <directory>/odp-<odp_pid>-ishm-<name>
