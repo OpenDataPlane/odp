@@ -19,7 +19,7 @@ typedef struct { char dummy; /**< @internal Dummy */ } _odp_abi_shm_t;
 typedef _odp_abi_shm_t *odp_shm_t;
 
 #define ODP_SHM_INVALID   ((odp_shm_t)0)
-#define ODP_SHM_NAME_LEN  32
+#define ODP_SHM_NAME_LEN  64
 
 #define ODP_SHM_IOVA_INVALID ((uint64_t)-1)
 #define ODP_SHM_PA_INVALID   ODP_SHM_IOVA_INVALID
