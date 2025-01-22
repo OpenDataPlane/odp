@@ -54,8 +54,6 @@ enum {
 #define DEF_TIME 2U
 #define DEF_WORKERS 1U
 
-#define ROUNDUP_DIV(a, b) (((a) + ((b) - 1)) / (b))
-
 typedef enum {
 	PRS_OK,
 	PRS_NOK,
@@ -489,7 +487,7 @@ static odp_bool_t setup_config(prog_config_t *config)
 	odp_queue_param_t q_param;
 	odp_thrmask_t zero;
 	void *cancel_addr = NULL;
-	uint32_t num_tmr_p_w = ROUNDUP_DIV(opts->num_tmr, opts->num_workers),
+	uint32_t num_tmr_p_w = ODPH_DIV_ROUNDUP(opts->num_tmr, opts->num_workers),
 	num_tmr = opts->num_tmr;
 	worker_config_t *worker;
 
