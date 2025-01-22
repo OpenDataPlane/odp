@@ -59,10 +59,6 @@
 /* Default test duration in T_SCALE units */
 #define DEFAULT_DURATION 1
 
-#define CACHE_ALIGN_ROUNDUP(x)\
-	((ODP_CACHE_LINE_SIZE) * \
-	 (((x) + ODP_CACHE_LINE_SIZE - 1) / (ODP_CACHE_LINE_SIZE)))
-
 #define PKT_HDR_LEN (sizeof(pkt_head_t) + ODPH_UDPHDR_LEN + \
 		     ODPH_IPV4HDR_LEN + ODPH_ETHHDR_LEN)
 
