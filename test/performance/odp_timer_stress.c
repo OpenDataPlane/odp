@@ -711,7 +711,7 @@ static int process_single_shot(void *args)
 
 		tmr = odp_timeout_timer(odp_timeout_from_event(ev));
 		odp_event_free(ev);
-		odp_timer_free(tmr);
+		(void)odp_timer_free(tmr);
 	}
 
 	return 0;
@@ -810,7 +810,7 @@ static int process_periodic(void *args)
 
 		if (ret == 2) {
 			odp_event_free(ev);
-			odp_timer_free(tmr);
+			(void)odp_timer_free(tmr);
 			odp_spinlock_unlock(&config->lock);
 			continue;
 		}
@@ -914,7 +914,7 @@ static int process_cancel(void *args)
 
 		tmr = odp_timeout_timer(odp_timeout_from_event(ev));
 		odp_event_free(ev);
-		odp_timer_free(tmr);
+		(void)odp_timer_free(tmr);
 	}
 
 	return 0;
