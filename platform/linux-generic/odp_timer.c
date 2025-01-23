@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2013-2018 Linaro Limited
- * Copyright (c) 2019-2023 Nokia
+ * Copyright (c) 2019-2025 Nokia
  */
 
 /**
@@ -354,7 +354,7 @@ static void odp_timer_pool_del(timer_pool_t *tp)
 
 	odp_spinlock_lock(&tp->lock);
 
-	if (!odp_global_rw->inline_timers)
+	if (!timer_global->use_inline_timers)
 		posix_timer_stop(tp);
 
 	if (tp->num_alloc != 0) {
@@ -1283,8 +1283,9 @@ static odp_timer_pool_t timer_pool_new(const char *name, const odp_timer_pool_pa
 	timer_global->timer_pool[tp_idx] = tp;
 	timer_global->tp_shm[tp_idx] = shm;
 
-	if (timer_global->num_timer_pools == 1)
-		odp_global_rw->inline_timers = timer_global->use_inline_timers;
+	/* Enable inline timer polling */
+	if (timer_global->use_inline_timers)
+		odp_global_rw->inline_timers = true;
 
 	/* Increase poll rate to match the highest resolution */
 	if (timer_global->poll_interval_nsec > nsec_per_scan) {
@@ -1299,7 +1300,7 @@ static odp_timer_pool_t timer_pool_new(const char *name, const odp_timer_pool_pa
 
 	odp_ticketlock_unlock(&timer_global->lock);
 
-	if (!odp_global_rw->inline_timers)
+	if (!timer_global->use_inline_timers)
 		posix_timer_start(tp);
 
 	return timer_pool_to_hdl(tp);
@@ -2092,7 +2093,7 @@ int _odp_timer_term_global(void)
 			rc = -1;
 
 			/* Prevent crash from timer thread */
-			if (!odp_global_rw->inline_timers) {
+			if (!timer_global->use_inline_timers) {
 				timer_pool_t *tp = timer_global->timer_pool[i];
 
 				if (tp != NULL)

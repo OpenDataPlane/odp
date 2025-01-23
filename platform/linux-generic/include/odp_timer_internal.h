@@ -63,4 +63,9 @@ static inline uint64_t timer_run(int dec)
 	return UINT64_MAX;
 }
 
+static inline void _odp_timeout_free_sp(odp_timeout_t tmo[], int num)
+{
+	_odp_event_free_sp((_odp_event_hdr_t **)(uintptr_t)tmo, num);
+}
+
 #endif

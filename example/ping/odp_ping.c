@@ -84,7 +84,7 @@ static void print_usage(void)
 
 static int parse_options(int argc, char *argv[], test_global_t *global)
 {
-	int i, opt, long_index;
+	int i, opt;
 	char *name, *str;
 	int len, str_len;
 
@@ -101,7 +101,7 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 	int ret = 0;
 
 	while (1) {
-		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
+		opt = getopt_long(argc, argv, shortopts, longopts, NULL);
 
 		if (opt == -1)
 			break;	/* No more options */

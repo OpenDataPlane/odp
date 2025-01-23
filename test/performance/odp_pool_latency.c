@@ -567,7 +567,7 @@ static parse_result_t check_options(prog_config_t *config)
 
 static parse_result_t parse_options(int argc, char **argv, prog_config_t *config)
 {
-	int opt, long_index;
+	int opt;
 
 	static const struct option longopts[] = {
 		{ "burst_pattern", required_argument, NULL, 'b' },
@@ -589,7 +589,7 @@ static parse_result_t parse_options(int argc, char **argv, prog_config_t *config
 	init_config(config);
 
 	while (1) {
-		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
+		opt = getopt_long(argc, argv, shortopts, longopts, NULL);
 
 		if (opt == -1)
 			break;

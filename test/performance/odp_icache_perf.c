@@ -15468,7 +15468,6 @@ static void print_usage(void)
 static int parse_options(int argc, char *argv[], test_global_t *global)
 {
 	int opt;
-	int long_index;
 	test_options_t *test_options = &global->test_options;
 	int ret = 0;
 	uint32_t max_func = ODPH_ARRAY_SIZE(work_0);
@@ -15504,7 +15503,7 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 	test_options->pref_before = 0;
 
 	while (1) {
-		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
+		opt = getopt_long(argc, argv, shortopts, longopts, NULL);
 
 		if (opt == -1)
 			break;

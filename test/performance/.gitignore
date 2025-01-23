@@ -34,3 +34,4 @@ odp_stash_perf
 odp_stress
 odp_timer_accuracy
 odp_timer_perf
+odp_timer_stress

@@ -1556,7 +1556,6 @@ static void usage(char *progname)
 static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 {
 	int opt;
-	int long_index;
 	static const struct option longopts[] = {
 		{"burst", required_argument, NULL, 'b'},
 		{"cache_size", required_argument, NULL, 'c'},
@@ -1576,7 +1575,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	appl_args->time = 0;
 
 	while (1) {
-		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
+		opt = getopt_long(argc, argv, shortopts, longopts, NULL);
 
 		if (opt == -1)
 			break;	/* No more options */
@@ -1842,10 +1841,11 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
-	/* At least 2 x TEST_REPEAT_COUNT packets required */
-	pkt_num = (gbl_args->appl.burst_size > 2) ?
+	/* At least 2 x TEST_REPEAT_COUNT packets are required for the tests and depending on the
+	 * implementation extra packets may be required for packet references. */
+	pkt_num = (gbl_args->appl.burst_size > 4) ?
 			gbl_args->appl.burst_size * TEST_REPEAT_COUNT :
-			2 * TEST_REPEAT_COUNT;
+			4 * TEST_REPEAT_COUNT;
 
 	if (capa.pkt.max_num && capa.pkt.max_num < pkt_num) {
 		ODPH_ERR("Error: packet pool size not supported.\n");

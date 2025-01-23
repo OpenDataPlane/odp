@@ -563,7 +563,6 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	char *token;
 	size_t len;
 	int opt;
-	int long_index;
 	int i;
 	int if_count = 0;
 	static const struct option longopts[] = {
@@ -588,7 +587,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	appl_args->extra_work = 0;
 
 	while (1) {
-		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
+		opt = getopt_long(argc, argv, shortopts, longopts, NULL);
 
 		if (opt == -1)
 			break;	/* No more options */

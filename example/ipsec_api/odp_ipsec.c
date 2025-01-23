@@ -1188,7 +1188,6 @@ main(int argc, char *argv[])
 static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 {
 	int opt;
-	int long_index;
 	char *token;
 	size_t len;
 	int rc = 0;
@@ -1216,7 +1215,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	printf("\nParsing command line options\n");
 
 	while (!rc) {
-		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
+		opt = getopt_long(argc, argv, shortopts, longopts, NULL);
 
 		if (-1 == opt)
 			break;	/* No more options */
