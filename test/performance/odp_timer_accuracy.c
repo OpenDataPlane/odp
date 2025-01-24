@@ -154,12 +154,7 @@ static void print_usage(void)
 	       "                            1: One-shot. Each period, restart timers with absolute time.\n"
 	       "                            2: One-shot. Each period, restart timers with relative time.\n"
 	       "                            3: Periodic.\n"
-	       "  -P, --periodic <freq_integer:freq_numer:freq_denom:max_multiplier>\n"
-	       "                          Periodic timer pool parameters. Default: 5:0:0:1 (5 Hz)\n"
-	       "  -M, --multiplier        Periodic timer multiplier. Default: 1\n"
 	       "  -o, --output <file>     Output file for measurement logs\n"
-	       "  -e, --early_retry <num> When timer restart fails due to ODP_TIMER_TOO_NEAR, retry this many times\n"
-	       "                          with expiration time incremented by the period. Default: 0\n"
 	       "  -s, --clk_src           Clock source select (default 0):\n"
 	       "                            0: ODP_CLOCK_DEFAULT\n"
 	       "                            1: ODP_CLOCK_SRC_1, ...\n"
@@ -170,7 +165,17 @@ static void print_usage(void)
 	       "  -q, --num_queue         Number of queues. Default is 1.\n"
 	       "  -G, --sched_groups      Use dedicated schedule group for each worker.\n"
 	       "  -i, --init              Set global init parameters. Default: init params not set.\n"
-	       "  -h, --help              Display help and exit.\n\n");
+	       "  -h, --help              Display help and exit.\n"
+	       "\n"
+	       "ONE-SHOT MODE OPTIONS:\n"
+	       "  -e, --early_retry <num> When timer restart fails due to ODP_TIMER_TOO_NEAR, retry this many times\n"
+	       "                          with expiration time incremented by the period. Default: 0\n"
+	       "\n"
+	       "PERIODIC MODE OPTIONS:\n"
+	       "  -P, --periodic <freq_integer:freq_numer:freq_denom:max_multiplier>\n"
+	       "                          Periodic timer pool parameters. Default: 5:0:0:1 (5 Hz)\n"
+	       "  -M, --multiplier        Periodic timer multiplier. Default: 1\n"
+	       "\n");
 }
 
 static int parse_options(int argc, char *argv[], test_opt_t *test_opt)
