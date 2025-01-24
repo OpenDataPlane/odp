@@ -395,7 +395,10 @@ static int single_shot_params(test_global_t *test_global, odp_timer_pool_param_t
 		timer_param->min_tmo = offset_ns / 2;
 		timer_param->max_tmo = offset_ns + ((num_tmo + 1) * period_ns);
 	} else {
-		timer_param->min_tmo = period_ns / 10;
+		if (mode == MODE_RESTART_ABS)
+			timer_param->min_tmo = period_ns / 10;
+		else
+			timer_param->min_tmo = period_ns;
 		timer_param->max_tmo = offset_ns + (2 * period_ns);
 	}
 
