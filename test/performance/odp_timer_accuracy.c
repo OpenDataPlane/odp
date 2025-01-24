@@ -205,29 +205,18 @@ static int parse_options(int argc, char *argv[], test_opt_t *test_opt)
 
 	memset(test_opt, 0, sizeof(*test_opt));
 
-	test_opt->cpu_count = 1;
-	test_opt->period_ns = 200 * ODP_TIME_MSEC_IN_NS;
-	test_opt->res_ns    = 0;
-	test_opt->res_hz    = 0;
-	test_opt->offset_ns = UINT64_MAX;
-	test_opt->max_tmo_ns = 0;
-	test_opt->num       = 50;
-	test_opt->num_warmup = 0;
-	test_opt->burst     = 1;
-	test_opt->burst_gap = 0;
-	test_opt->mode      = MODE_ONESHOT;
-	test_opt->freq.integer = ODP_TIME_SEC_IN_NS / test_opt->period_ns;
-	test_opt->freq.numer = 0;
-	test_opt->freq.denom = 0;
+	test_opt->cpu_count      = 1;
+	test_opt->period_ns      = 200 * ODP_TIME_MSEC_IN_NS;
+	test_opt->offset_ns      = UINT64_MAX;
+	test_opt->num            = 50;
+	test_opt->burst          = 1;
+	test_opt->mode           = MODE_ONESHOT;
+	test_opt->freq.integer   = ODP_TIME_SEC_IN_NS / test_opt->period_ns;
 	test_opt->max_multiplier = 1;
-	test_opt->multiplier = 1;
-	test_opt->clk_src   = ODP_CLOCK_DEFAULT;
-	test_opt->queue_type = ODP_SCHED_SYNC_PARALLEL;
-	test_opt->groups    = 0;
-	test_opt->num_queue = 1;
-	test_opt->init      = 0;
-	test_opt->output    = 0;
-	test_opt->early_retry = 0;
+	test_opt->multiplier     = 1;
+	test_opt->clk_src        = ODP_CLOCK_DEFAULT;
+	test_opt->queue_type     = ODP_SCHED_SYNC_PARALLEL;
+	test_opt->num_queue      = 1;
 
 	while (1) {
 		opt = getopt_long(argc, argv, shortopts, longopts, NULL);
