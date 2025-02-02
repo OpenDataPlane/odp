@@ -340,6 +340,13 @@ typedef struct odp_dma_capability_t {
 	 */
 	odp_bool_t src_seg_free;
 
+	/** Destination segment allocation support for data format #ODP_DMA_FORMAT_PACKET
+	 *
+	 *  0: Destination segment allocation is not supported
+	 *  1: Destination segment allocation is supported
+	 */
+	odp_bool_t dst_seg_alloc;
+
 	/** DMA completion event pool capabilities */
 	odp_dma_pool_capability_t pool;
 
@@ -404,6 +411,36 @@ typedef struct odp_dma_seg_t {
 		 *  with other data formats. */
 		odp_packet_t packet;
 
+		/** Packet index configuration */
+		struct {
+			/** Packet index
+			 *
+			 *  When odp_dma_transfer_param_t::seg_alloc is used, implementation
+			 *  allocates all required destination packets and this pkt_index field can
+			 *  be used to define which packet of the to-be-allocated array of packets
+			 *  is used as the destination for this particular destination segment
+			 *  descriptor. Same pkt_index can be reused across subsequent segments if
+			 *  application wishes to transfer to different offsets of the same
+			 *  destination packet. This means that if application for example uses
+			 *  packet index 0 in each destination segment descriptor (with different
+			 *  'offset' values), implementation would allocate only a single packet
+			 *  with data being transferred to different offsets of that single
+			 *  destination packet. pkt_index should appear in ascending order, starting
+			 *  from index 0.
+			 */
+			uint32_t pkt_index;
+
+			/** Packet length
+			 *
+			 *  Length of the indexed to-be-allocated packet. In case of pkt_index reuse
+			 *  across segment descriptors, each new pkt_index should have a valid
+			 *  'pkt_len' field set, other descriptor 'pkt_len' fields are ignored for
+			 *  the same pkt_index. 'pkt_len' of a pkt_index cannot be shorter than the
+			 *  total length of odp_dma_seg_t::len fields of the segment descriptors
+			 *  using this packet index.
+			 */
+			uint32_t pkt_len;
+		};
 	};
 
 	/** Segment length in bytes
@@ -499,6 +536,13 @@ typedef struct odp_dma_transfer_param_t {
 	 */
 	odp_dma_seg_t *dst_seg;
 
+	/** Destination segment pool
+	 *
+	 *  When odp_dma_transfer_param_t::dst_alloc is set, provide the pool details from which
+	 *  the buffers need to be allocated.
+	 */
+	odp_pool_t dst_seg_pool;
+
 	/** Transfer options
 	 *
 	 *  Options to further configure the transfer.
@@ -533,6 +577,26 @@ typedef struct odp_dma_transfer_param_t {
 			 *  #ODP_DMA_FORMAT_PACKET are freed to a single pool.
 			 */
 			uint16_t single_pool : 1;
+
+			/** Allow allocating the destination segments for data format
+			 *  #ODP_DMA_FORMAT_PACKET
+			 *
+			 *  When set to 1, destination segments will be allocated from
+			 *  'dst_seg_pool'
+			 */
+			uint16_t seg_alloc : 1;
+
+			/** Option bit to allocate unique destination segments for data format
+			 *  #ODP_DMA_FORMAT_PACKET
+			 *
+			 *  Set to 1 to allocate unique destination segment for every packet
+			 *  in to-be-allocated packet array (odp_dma_result_t::dst_pkt).
+			 *
+			 *  Set to 0 to allocate and use single destination packet for multiple
+			 *  segment descriptors. pkt_index (odp_dma_seg_t::pkt_index) field can be
+			 *  used to index in odp_dma_result_t::dst_pkt packet array.
+			 */
+			uint16_t unique_dst_segs : 1;
 		} opts;
 
 		/** Entire bit field structure
@@ -611,6 +675,24 @@ typedef struct odp_dma_result_t {
 	 *  (odp_dma_compl_param_t). The default value is NULL.
 	 */
 	void *user_ptr;
+
+	/** Number of destination packets
+	 *
+	 *  When odp_dma_transfer_param_t::seg_alloc is used, this value provides
+	 *  the number of packets in the destination packet table.
+	 */
+	uint32_t num_dst;
+
+	/** Table of destination packets
+	 *
+	 *  When odp_dma_transfer_param_t::seg_alloc is used, the resulting array of completed
+	 *  destination packets. Packets remain accessible from completion of a transfer until
+	 *  next synchronous transfer or in case of asynchronous transfers, associated completion
+	 *  resource (transfer identifier or completion event) reuse. While accessible, application
+	 *  should take ownership of the completed packets regardless of the result of the
+	 *  transfer.
+	 */
+	odp_packet_t *dst_pkt;
 
 } odp_dma_result_t;
 
