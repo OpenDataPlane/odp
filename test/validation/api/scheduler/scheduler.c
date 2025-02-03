@@ -1222,9 +1222,9 @@ static void scheduler_test_groups(void)
 		j = 0;
 
 		/* Ensure that each test run starts from mygrp1 */
-		odp_schedule_group_leave(mygrp1, &mymask);
-		odp_schedule_group_leave(mygrp2, &mymask);
-		odp_schedule_group_join(mygrp1, &mymask);
+		CU_ASSERT_FATAL(odp_schedule_group_leave(mygrp1, &mymask) == 0);
+		CU_ASSERT_FATAL(odp_schedule_group_leave(mygrp2, &mymask) == 0);
+		CU_ASSERT_FATAL(odp_schedule_group_join(mygrp1, &mymask) == 0);
 
 		wait_time = odp_schedule_wait_time(ODP_TIME_MSEC_IN_NS);
 		schedule_retries = 0;
@@ -1272,11 +1272,11 @@ static void scheduler_test_groups(void)
 		}
 
 		/* Release scheduler context and leave groups */
-		odp_schedule_group_join(mygrp1, &mymask);
-		odp_schedule_group_join(mygrp2, &mymask);
+		CU_ASSERT_FATAL(odp_schedule_group_join(mygrp1, &mymask) == 0);
+		CU_ASSERT_FATAL(odp_schedule_group_join(mygrp2, &mymask) == 0);
 		CU_ASSERT(drain_queues() == 0);
-		odp_schedule_group_leave(mygrp1, &mymask);
-		odp_schedule_group_leave(mygrp2, &mymask);
+		CU_ASSERT_FATAL(odp_schedule_group_leave(mygrp1, &mymask) == 0);
+		CU_ASSERT_FATAL(odp_schedule_group_leave(mygrp2, &mymask) == 0);
 
 		/* Done with queues for this round */
 		CU_ASSERT_FATAL(odp_queue_destroy(queue_grp1) == 0);
@@ -1697,9 +1697,6 @@ static int schedule_common_(void *arg)
 
 	/* Clear scheduler atomic / ordered context between tests */
 	CU_ASSERT(drain_queues() == 0);
-
-	if (num)
-		printf("\nDROPPED %i events\n\n", num);
 
 	return 0;
 }
