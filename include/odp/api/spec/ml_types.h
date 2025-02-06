@@ -66,6 +66,21 @@ extern "C" {
  */
 
 /**
+ * @typedef odp_ml_input_extra_info_t
+ * ODP implementation specific extra input information
+ */
+
+/**
+ * @typedef odp_ml_output_extra_info_t
+ * ODP implementation specific extra output information
+ */
+
+/**
+ * @typedef odp_ml_model_extra_info_t
+ * ODP implementation specific extra model information
+ */
+
+/**
  * @typedef odp_ml_model_extra_param_t
  * ODP implementation specific extra parameters for model creation
  */
@@ -526,6 +541,15 @@ typedef struct odp_ml_input_info_t {
 	/** Model input data shape */
 	odp_ml_shape_info_t shape;
 
+	/**
+	 * ODP implementation specific extra input info.
+	 *
+	 * See ODP implementation documentation for details about extra input info usage. For
+	 * example, extra info may give hints about pre-defined scale and zeropoint that can
+	 * be used for quantization / dequantization.
+	 */
+	odp_ml_input_extra_info_t *extra_info;
+
 } odp_ml_input_info_t;
 
 /** Model output information */
@@ -541,6 +565,15 @@ typedef struct odp_ml_output_info_t {
 
 	/** Model output data shape */
 	odp_ml_shape_info_t shape;
+
+	/**
+	 * ODP implementation specific extra output info.
+	 *
+	 * See ODP implementation documentation for details about extra output info usage. For
+	 * example, extra info may give hints about pre-defined scale and zeropoint that can
+	 * be used for quantization / dequantization.
+	 */
+	odp_ml_output_extra_info_t *extra_info;
 
 } odp_ml_output_info_t;
 
@@ -574,6 +607,15 @@ typedef struct odp_ml_model_info_t {
 
 	/** Number of model outputs */
 	uint32_t num_outputs;
+
+	/**
+	 * ODP implementation specific extra model info.
+	 *
+	 * See ODP implementation documentation for details about extra model info usage. For
+	 * example, extra info may give hints about pre-defined scale and zeropoint that can
+	 * be used for quantization / dequantization.
+	 */
+	odp_ml_model_extra_info_t *extra_info;
 
 } odp_ml_model_info_t;
 
