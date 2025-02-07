@@ -274,7 +274,7 @@ static int parse_options(int argc, char *argv[], test_opt_t *test_opt)
 		case 'o':
 			test_opt->output = 1;
 			if (strlen(optarg) >= MAX_FILENAME) {
-				printf("Filename too long\n");
+				ODPH_ERR("Filename too long\n");
 				return -1;
 			}
 			odph_strcpy(test_opt->filename, optarg, MAX_FILENAME);
@@ -321,7 +321,7 @@ static int parse_options(int argc, char *argv[], test_opt_t *test_opt)
 	if (test_opt->mode == MODE_PERIODIC) {
 		if ((test_opt->freq.integer == 0 && test_opt->freq.numer == 0) ||
 		    (test_opt->freq.numer != 0 && test_opt->freq.denom == 0)) {
-			printf("Bad frequency\n");
+			ODPH_ERR("Bad frequency\n");
 			return -1;
 		}
 
@@ -332,7 +332,7 @@ static int parse_options(int argc, char *argv[], test_opt_t *test_opt)
 			test_opt->offset_ns = 0;
 	} else {
 		if (test_opt->res_ns < 0) {
-			printf("Resolution (res_ns) must be >= 0 with single shot timer\n");
+			ODPH_ERR("Resolution (res_ns) must be >= 0 with single shot timer\n");
 			return -1;
 		}
 
@@ -378,16 +378,18 @@ static int single_shot_params(test_global_t *test_global, odp_timer_pool_param_t
 	}
 
 	if (res_ns && res_ns < max_res_ns) {
-		printf("Resolution %" PRIu64 " nsec too high. Highest resolution %" PRIu64 " nsec. "
-		       "Default resolution is period / 10.\n\n",
-		       res_ns, max_res_ns);
+		ODPH_ERR("Resolution %" PRIu64 " nsec too high.\n"
+			 "Highest resolution %" PRIu64
+			 " nsec. Default resolution is period / 10.\n\n",
+			 res_ns, max_res_ns);
 		return -1;
 	}
 
 	if (res_hz && res_hz > max_res_hz) {
-		printf("Resolution %" PRIu64 " hz too high. Highest resolution %" PRIu64 " hz. "
-		       "Default resolution is period / 10.\n\n",
-		       res_hz, max_res_hz);
+		ODPH_ERR("Resolution %" PRIu64 " hz too high.\n"
+			 "Highest resolution %" PRIu64
+			 " hz. Default resolution is period / 10.\n\n",
+			 res_hz, max_res_hz);
 		return -1;
 	}
 
@@ -409,8 +411,8 @@ static int single_shot_params(test_global_t *test_global, odp_timer_pool_param_t
 
 	if (test_global->opt.max_tmo_ns) {
 		if (test_global->opt.max_tmo_ns < timer_param->max_tmo) {
-			printf("Max tmo is too small. Must be at least %" PRIu64 " nsec.\n",
-			       timer_param->max_tmo);
+			ODPH_ERR("Max tmo is too small. Must be at least %" PRIu64 " nsec.\n",
+				 timer_param->max_tmo);
 			return -1;
 		}
 
@@ -450,7 +452,7 @@ static int periodic_params(test_global_t *test_global, odp_timer_pool_param_t *t
 	}
 
 	if (res_ns == 0) {
-		printf("Too high resolution\n");
+		ODPH_ERR("Resolution too high\n");
 		return -1;
 	}
 
@@ -468,9 +470,10 @@ static int periodic_params(test_global_t *test_global, odp_timer_pool_param_t *t
 	ret = odp_timer_periodic_capability(test_global->opt.clk_src, &capa);
 
 	if (ret < 0) {
-		printf("Requested periodic timer capabilities are not supported.\n"
-		       "Capabilities: min base freq %g Hz, max base freq %g Hz, "
-		       "max res %" PRIu64 " Hz\n", min_freq, max_freq, timer_capa->max_res.res_hz);
+		ODPH_ERR("Requested periodic timer capabilities are not supported.\n"
+			 "Capabilities: min base freq %g Hz, max base freq %g Hz, "
+			 "max res %" PRIu64 " Hz\n",
+			 min_freq, max_freq, timer_capa->max_res.res_hz);
 		return -1;
 	}
 
@@ -566,7 +569,7 @@ static int create_timers(test_global_t *test_global)
 			group[i] = odp_schedule_group_create(NULL, &zero);
 
 			if (group[i] == ODP_SCHED_GROUP_INVALID) {
-				printf("Group create failed.\n");
+				ODPH_ERR("Group create failed.\n");
 				return -1;
 			}
 		}
@@ -584,7 +587,7 @@ static int create_timers(test_global_t *test_global)
 
 		queue[i] = odp_queue_create(NULL, &queue_param);
 		if (queue[i] == ODP_QUEUE_INVALID) {
-			printf("Queue create failed.\n");
+			ODPH_ERR("Queue create failed.\n");
 			return -1;
 		}
 	}
@@ -596,7 +599,7 @@ static int create_timers(test_global_t *test_global)
 	pool = odp_pool_create("timeout pool", &pool_param);
 
 	if (pool == ODP_POOL_INVALID) {
-		printf("Timeout pool create failed.\n");
+		ODPH_ERR("Timeout pool create failed.\n");
 		return -1;
 	}
 
@@ -604,7 +607,7 @@ static int create_timers(test_global_t *test_global)
 	clk_src = test_global->opt.clk_src;
 
 	if (odp_timer_capability(clk_src, &timer_capa)) {
-		printf("Timer capa failed\n");
+		ODPH_ERR("Timer capa failed\n");
 		return -1;
 	}
 
@@ -612,16 +615,15 @@ static int create_timers(test_global_t *test_global)
 
 	if (mode == MODE_PERIODIC) {
 		if (timer_capa.periodic.max_pools < 1) {
-			printf("Error: Periodic timers not supported.\n");
+			ODPH_ERR("Periodic timers not supported.\n");
 			return -1;
 		}
 		max_timers = timer_capa.periodic.max_timers;
 	}
 
 	if (max_timers && test_global->opt.alloc_timers > max_timers) {
-		printf("Error: Too many timers: %" PRIu64 ".\n"
-		       "       Max timers: %u\n",
-		       test_global->opt.alloc_timers, max_timers);
+		ODPH_ERR("Too many timers: %" PRIu64 " (max %u)\n", test_global->opt.alloc_timers,
+			 max_timers);
 		return -1;
 	}
 
@@ -675,7 +677,7 @@ static int create_timers(test_global_t *test_global)
 	timer_pool = odp_timer_pool_create("timer_accuracy", &timer_param);
 
 	if (timer_pool == ODP_TIMER_POOL_INVALID) {
-		printf("Timer pool create failed\n");
+		ODPH_ERR("Timer pool create failed\n");
 		return -1;
 	}
 
@@ -697,7 +699,7 @@ static int create_timers(test_global_t *test_global)
 		timer = odp_timer_alloc(timer_pool, queue[i % test_global->opt.num_queue], ctx);
 
 		if (timer == ODP_TIMER_INVALID) {
-			printf("Timer alloc failed.\n");
+			ODPH_ERR("Timer alloc failed.\n");
 			return -1;
 		}
 
@@ -705,7 +707,7 @@ static int create_timers(test_global_t *test_global)
 
 		timeout = odp_timeout_alloc(pool);
 		if (timeout == ODP_TIMEOUT_INVALID) {
-			printf("Timeout alloc failed\n");
+			ODPH_ERR("Timeout alloc failed\n");
 			return -1;
 		}
 
@@ -717,7 +719,7 @@ static int create_timers(test_global_t *test_global)
 		event = odp_schedule(NULL, ODP_SCHED_NO_WAIT);
 
 		if (event != ODP_EVENT_INVALID) {
-			printf("Spurious event received\n");
+			ODPH_ERR("Spurious event received\n");
 			odp_event_free(event);
 			return -1;
 		}
@@ -801,7 +803,7 @@ static int start_timers(test_global_t *test_global)
 			}
 
 			if (retval != ODP_TIMER_SUCCESS) {
-				printf("Timer[%" PRIu64 "] set failed: %i\n", idx, retval);
+				ODPH_ERR("Timer[%" PRIu64 "] set failed: %i\n", idx, retval);
 				return -1;
 			}
 
@@ -829,7 +831,7 @@ static int destroy_timers(test_global_t *test_global)
 			break;
 
 		if (odp_timer_free(timer)) {
-			printf("Timer free failed: %" PRIu64 "\n", i);
+			ODPH_ERR("Timer free failed: %" PRIu64 "\n", i);
 			ret = -1;
 		}
 	}
@@ -839,14 +841,14 @@ static int destroy_timers(test_global_t *test_global)
 
 	if (test_global->timeout_pool != ODP_POOL_INVALID) {
 		if (odp_pool_destroy(test_global->timeout_pool)) {
-			printf("Pool destroy failed.\n");
+			ODPH_ERR("Pool destroy failed.\n");
 			ret = -1;
 		}
 	}
 
 	for (i = 0; i < (uint64_t)test_global->opt.num_queue; i++) {
 		if (odp_queue_destroy(test_global->queue[i])) {
-			printf("Queue destroy failed.\n");
+			ODPH_ERR("Queue destroy failed.\n");
 			ret = -1;
 		}
 	}
@@ -854,7 +856,7 @@ static int destroy_timers(test_global_t *test_global)
 	if (test_global->opt.groups) {
 		for (i = 0; i < (uint64_t)test_global->opt.cpu_count; i++) {
 			if (odp_schedule_group_destroy(test_global->group[i])) {
-				printf("Group destroy failed.\n");
+				ODPH_ERR("Group destroy failed.\n");
 				ret = -1;
 			}
 		}
@@ -1061,7 +1063,7 @@ static void cancel_periodic_timers(test_global_t *test_global)
 			break;
 
 		if (odp_timer_periodic_cancel(timer))
-			printf("Failed to cancel periodic timer.\n");
+			ODPH_ERR("Failed to cancel periodic timer.\n");
 	}
 }
 
@@ -1085,8 +1087,7 @@ static int run_test(void *arg)
 	int tid = odp_thread_id();
 
 	if (tid > test_global->opt.cpu_count) {
-		printf("Error: tid %d is larger than cpu_count %d.\n", tid,
-		       test_global->opt.cpu_count);
+		ODPH_ERR("tid %d is larger than cpu_count %d.\n", tid, test_global->opt.cpu_count);
 		return 0;
 	}
 
@@ -1102,7 +1103,7 @@ static int run_test(void *arg)
 		group = test_global->group[tid - 1];
 
 		if (odp_schedule_group_join(group, &mask)) {
-			printf("odp_schedule_group_join() failed\n");
+			ODPH_ERR("odp_schedule_group_join() failed\n");
 			return 0;
 		}
 	}
@@ -1260,15 +1261,16 @@ static int run_test(void *arg)
 			}
 
 			if (ret != ODP_TIMER_SUCCESS) {
-				printf("Timer set failed: %i. Timeout nsec "
-				       "%" PRIu64 "\n", ret, ctx->nsec);
+				ODPH_ERR("Timer set failed: %i. Timeout nsec "
+					 "%" PRIu64 "\n",
+					 ret, ctx->nsec);
 				return 0;
 			}
 		} else if (mode == MODE_PERIODIC) {
 			int ret = odp_timer_periodic_ack(ctx->timer, ev);
 
 			if (ret < 0)
-				printf("Failed to ack a periodic timer.\n");
+				ODPH_ERR("Failed to ack a periodic timer.\n");
 
 			if (ret == 2)
 				odp_atomic_inc_u64(&test_global->last_events);
@@ -1282,7 +1284,7 @@ static int run_test(void *arg)
 
 	if (test_global->opt.groups) {
 		if (odp_schedule_group_leave(group, &mask))
-			printf("odp_schedule_group_leave() failed\n");
+			ODPH_ERR("odp_schedule_group_leave() failed\n");
 	}
 
 	return 0;
@@ -1330,13 +1332,13 @@ int main(int argc, char *argv[])
 
 	/* Init ODP before calling anything else */
 	if (odp_init_global(&instance, init_ptr, NULL)) {
-		printf("Global init failed.\n");
+		ODPH_ERR("Global init failed.\n");
 		return -1;
 	}
 
 	/* Init this thread */
 	if (odp_init_local(instance, ODP_THREAD_CONTROL)) {
-		printf("Local init failed.\n");
+		ODPH_ERR("Local init failed.\n");
 		return -1;
 	}
 
@@ -1352,7 +1354,7 @@ int main(int argc, char *argv[])
 			      ODP_CACHE_LINE_SIZE, ODP_SHM_SINGLE_VA);
 
 	if (shm == ODP_SHM_INVALID) {
-		printf("Shm alloc failed.\n");
+		ODPH_ERR("Shm alloc failed.\n");
 		return -1;
 	}
 
@@ -1367,7 +1369,7 @@ int main(int argc, char *argv[])
 				  ODP_CACHE_LINE_SIZE, ODP_SHM_SINGLE_VA);
 
 	if (shm_ctx == ODP_SHM_INVALID) {
-		printf("Timer context alloc failed.\n");
+		ODPH_ERR("Timer context alloc failed.\n");
 		ret = -1;
 		goto quit;
 	}
@@ -1378,8 +1380,8 @@ int main(int argc, char *argv[])
 	if (test_global->opt.output) {
 		test_global->file = fopen(test_global->opt.filename, "w");
 		if (test_global->file == NULL) {
-			printf("Failed to open output file %s: %s\n",
-			       test_global->opt.filename, strerror(errno));
+			ODPH_ERR("Failed to open output file %s: %s\n", test_global->opt.filename,
+				 strerror(errno));
 			ret = -1;
 			goto quit;
 		}
@@ -1390,7 +1392,7 @@ int main(int argc, char *argv[])
 					  ODP_SHM_SINGLE_VA);
 
 		if (shm_log == ODP_SHM_INVALID) {
-			printf("Test log alloc failed.\n");
+			ODPH_ERR("Test log alloc failed.\n");
 			ret = -1;
 			goto quit;
 		}
@@ -1474,12 +1476,12 @@ quit:
 		ret = -1;
 
 	if (odp_term_local()) {
-		printf("Term local failed.\n");
+		ODPH_ERR("Term local failed.\n");
 		ret = -1;
 	}
 
 	if (odp_term_global(instance)) {
-		printf("Term global failed.\n");
+		ODPH_ERR("Term global failed.\n");
 		ret = -1;
 	}
 
