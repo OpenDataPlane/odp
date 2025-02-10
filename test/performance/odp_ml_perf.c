@@ -21,6 +21,8 @@
 /* Max number of inputs and outputs */
 #define MAX_IO 8
 
+#define TEST_SKIP 77
+
 enum {
 	MODE_INFERENCE = 0,
 	MODE_INFERENCE_QUANT,
@@ -841,7 +843,7 @@ int main(int argc, char *argv[])
 
 	if (glb->capa.max_models < 1) {
 		ODPH_ERR("ML not supported (maximum number of models is zero)\n");
-		ret = -1;
+		ret = TEST_SKIP;
 		goto odp_term;
 	}
 
