@@ -512,6 +512,21 @@ typedef struct odp_ml_shape_info_t {
 
 } odp_ml_shape_info_t;
 
+/**
+ * Quantization parameters
+ *
+ * These parameters are used to convert between floating point and integer data. Scale and zerop
+ * values can be used directly with the odp_ml_fp32_from_*() and odp_ml_fp32_to_*() functions. These
+ * parameters are valid if odp_ml_model_info_t.flag.quant_param_valid is set.
+ */
+typedef struct odp_ml_quant_param_t {
+	/** Quantization scale */
+	float scale_fp32;
+
+	/** Quantization zero point */
+	int32_t zerop_i32;
+} odp_ml_quant_param_t;
+
 /** Model input information */
 typedef struct odp_ml_input_info_t {
 	/** Model input name */
@@ -525,6 +540,9 @@ typedef struct odp_ml_input_info_t {
 
 	/** Model input data shape */
 	odp_ml_shape_info_t shape;
+
+	/** Quantization parameters */
+	odp_ml_quant_param_t quant_param;
 
 } odp_ml_input_info_t;
 
@@ -541,6 +559,9 @@ typedef struct odp_ml_output_info_t {
 
 	/** Model output data shape */
 	odp_ml_shape_info_t shape;
+
+	/** Quantization parameters */
+	odp_ml_quant_param_t quant_param;
 
 } odp_ml_output_info_t;
 
@@ -574,6 +595,22 @@ typedef struct odp_ml_model_info_t {
 
 	/** Number of model outputs */
 	uint32_t num_outputs;
+
+	/** Flag bits */
+	union {
+		/** Individual flag bits */
+		struct {
+			/**
+			 * Indicates if the quantization parameters (quant_param) in input and
+			 * output information are valid.
+			 */
+			uint32_t quant_param_valid : 1;
+
+		} flag;
+
+		/** All flag bits */
+		uint32_t all_flags;
+	};
 
 } odp_ml_model_info_t;
 
