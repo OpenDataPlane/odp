@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright (c) 2021-2023 Nokia
+ * Copyright (c) 2021-2025 Nokia
  * Copyright (c) 2021 Marvell
  */
 
@@ -512,6 +512,37 @@ typedef struct odp_ml_shape_info_t {
 
 } odp_ml_shape_info_t;
 
+/**
+ * Quantization parameters
+ *
+ * These parameters are used to convert between floating point and integer data. Scale and zerop
+ * values can be used directly with the odp_ml_fp32_from_*() and odp_ml_fp32_to_*() functions.
+ */
+typedef struct odp_ml_quant_param_t {
+	/**
+	 * Type of quantization scale value
+	 *
+	 * Valid quantization scale and zero point values are provided, if set to something other
+	 * than #ODP_ML_DATA_TYPE_NONE. Allowed types are #ODP_ML_DATA_TYPE_NONE and
+	 * #ODP_ML_DATA_TYPE_FP32.
+	 */
+	odp_ml_data_type_t type;
+
+	/** Quantization scale */
+	float scale_fp32;
+
+	/** Quantization zero point */
+	int32_t zerop_i32;
+
+} odp_ml_quant_param_t;
+
+/** Quantization information */
+typedef struct odp_ml_quant_info_t {
+	/** Quantization parameters common to all data values of an input / output */
+	odp_ml_quant_param_t common;
+
+} odp_ml_quant_info_t;
+
 /** Model input information */
 typedef struct odp_ml_input_info_t {
 	/** Model input name */
@@ -525,6 +556,9 @@ typedef struct odp_ml_input_info_t {
 
 	/** Model input data shape */
 	odp_ml_shape_info_t shape;
+
+	/** Model input quantization information */
+	odp_ml_quant_info_t quant_info;
 
 } odp_ml_input_info_t;
 
@@ -541,6 +575,9 @@ typedef struct odp_ml_output_info_t {
 
 	/** Model output data shape */
 	odp_ml_shape_info_t shape;
+
+	/** Model output quantization information */
+	odp_ml_quant_info_t quant_info;
 
 } odp_ml_output_info_t;
 
@@ -574,6 +611,43 @@ typedef struct odp_ml_model_info_t {
 
 	/** Number of model outputs */
 	uint32_t num_outputs;
+
+	/** Auxiliary information regarding the model and its inputs / outputs */
+	union {
+		/** Auxiliary bit fields */
+		struct {
+			/**
+			 * Input quantization information provision
+			 *
+			 * When set to 1, model input information provides quantization
+			 * information. If set, each input needs to be separately checked for
+			 * information validity (see odp_ml_input_info_t::quant_info).
+			 *
+			 * When set to 0, no quantization information is provided for inputs.
+			 */
+			uint32_t input_quant_info  : 1;
+
+			/**
+			 * Output quantization information provision
+			 *
+			 * When set to 1, model output information provides quantization
+			 * information.  If set, each output needs to be separately checked for
+			 * information validity (see odp_ml_output_info_t::quant_info).
+			 *
+			 * When set to 0, no quantization information is provided for outputs.
+			 */
+			uint32_t output_quant_info : 1;
+
+		};
+
+		/**
+		 * All bits of the bit field structure
+		 *
+		 * This field can be used for bitwise operations over the entire structure.
+		 */
+		uint32_t all;
+
+	} aux;
 
 } odp_ml_model_info_t;
 
