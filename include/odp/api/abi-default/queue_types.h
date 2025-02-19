@@ -23,6 +23,8 @@ typedef _odp_abi_queue_t *odp_queue_t;
 
 #define ODP_QUEUE_NAME_LEN  32
 
+#define ODP_QUEUE_MAX_VECTOR_AGGR 8
+
 /**
  * @}
  */
