@@ -1,0 +1,9 @@
+<map id="ticketlock.h" name="ticketlock.h">
+<area shape="rect" id="node1" title="ODP ticketlock." alt="" coords="308,5,405,32"/>
+<area shape="rect" id="node2" href="$arch_2arm32-linux_2odp_2api_2abi_2ticketlock_8h_source.html" title=" " alt="" coords="5,80,103,107"/>
+<area shape="rect" id="node3" href="$arch_2arm64-linux_2odp_2api_2abi_2ticketlock_8h_source.html" title=" " alt="" coords="127,80,224,107"/>
+<area shape="rect" id="node4" href="$arch_2default-linux_2odp_2api_2abi_2ticketlock_8h_source.html" title=" " alt="" coords="248,80,345,107"/>
+<area shape="rect" id="node5" href="$arch_2power64-linux_2odp_2api_2abi_2ticketlock_8h_source.html" title=" " alt="" coords="369,80,467,107"/>
+<area shape="rect" id="node6" href="$arch_2x86__32-linux_2odp_2api_2abi_2ticketlock_8h_source.html" title=" " alt="" coords="491,80,588,107"/>
+<area shape="rect" id="node7" href="$arch_2x86__64-linux_2odp_2api_2abi_2ticketlock_8h_source.html" title=" " alt="" coords="612,80,709,107"/>
+</map>
