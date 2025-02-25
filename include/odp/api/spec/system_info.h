@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2013-2018 Linaro Limited
- * Copyright (c) 2020-2021 Nokia
+ * Copyright (c) 2020-2025 Nokia
  */
 
 /**
@@ -226,7 +226,7 @@ typedef struct odp_system_meminfo_t {
 	 *
 	 * Total amount of memory (in bytes) that is currently consumed by roundings to
 	 * alignment/block/page size limits, etc. overheads. This is a subset of 'total_used'
-	 * bytes.
+	 * bytes. Zero if not supported by the implementation.
 	 */
 	uint64_t total_overhead;
 
