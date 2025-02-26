@@ -35,4 +35,7 @@
 /* Define to 1 to enable IPSec MB crypto support */
 #undef _ODP_IPSECMB
 
+/* ODP Git Revision */
+#undef _ODP_GIT_REVISION
+
 #endif
