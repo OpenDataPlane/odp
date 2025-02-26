@@ -5,13 +5,11 @@
 #include <odp/autoheader_internal.h>
 #include <odp/api/version.h>
 
-#define ODP_VERSION_IMPL_STR \
-	_ODP_IMPLEMENTATION_NAME "-" \
-	ODP_VERSION_TO_STR(ODP_VERSION_BUILD) _ODP_GIT_REVISION \
-
 const char *odp_version_impl_str(void)
 {
-	return ODP_VERSION_IMPL_STR;
+	return _ODP_IMPLEMENTATION_NAME "-"
+		ODP_VERSION_TO_STR(ODP_VERSION_BUILD)
+		_ODP_GIT_REVISION;
 }
 
 const char *odp_version_impl_name(void)
