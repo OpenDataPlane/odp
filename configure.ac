@@ -24,6 +24,15 @@ ODP_VERSION_API=odp_version_api
 AC_SUBST(ODP_VERSION_API)
 
 ##########################################################################
+# ODP Git Revision
+##########################################################################
+m4_define([odp_git_revision],
+	[m4_esyscmd_s([sh -c 'hash=$(git rev-parse --short=8 HEAD 2>/dev/null) && echo "-$hash" || echo ""'])])
+
+ODP_GIT_REVISION=odp_git_revision
+AC_DEFINE_UNQUOTED([_ODP_GIT_REVISION], ["$ODP_GIT_REVISION"], "ODP Git Revision")
+
+##########################################################################
 # Helper library version
 ##########################################################################
 m4_define([odph_version_generation], [1])
