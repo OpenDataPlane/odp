@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2018 Linaro Limited
+ * Copyright (c) 2024-2025 Nokia
  */
 
 /**
@@ -16,6 +17,7 @@
 extern "C" {
 #endif
 
+#include <odp/api/event_vector_types.h>
 #include <odp/api/schedule_types.h>
 
 /** @defgroup odp_queue ODP QUEUE
@@ -52,7 +54,17 @@ typedef enum odp_queue_type_t {
 	  * Scheduled queues are connected to the scheduler. Application must
 	  * not dequeue events directly from these queues but use the scheduler
 	  * instead. */
-	ODP_QUEUE_TYPE_SCHED
+	ODP_QUEUE_TYPE_SCHED,
+
+	/** Aggregator queue
+	  *
+	  * Aggregator queues are connected to an underlyig plain or scheduled
+	  * queue. They cannot be created directly but through the creation
+	  * of the underlying queue. Application must not dequeue events
+	  * directly from these queues.
+	  */
+	ODP_QUEUE_TYPE_AGGREGATOR,
+
 } odp_queue_type_t;
 
 /**
@@ -214,6 +226,9 @@ typedef struct odp_queue_capability_t {
 
 		} waitfree;
 
+		/** Event vector generation capabilities */
+		odp_event_aggregator_capability_t aggregator;
+
 	} plain;
 
 } odp_queue_capability_t;
@@ -290,6 +305,28 @@ typedef struct odp_queue_param_t {
 	  * capability. The value of zero means implementation specific
 	  * default size. The default value is 0. */
 	uint32_t size;
+
+	/** Number of event aggregators
+	  *
+	  * Event aggregators are queues which try to aggregate multiple
+	  * events into vector events before enqueuing the events or vector
+	  * events to this queue. When at least one event aggregator is
+	  * configured, event can be enqueued directly using the queue
+	  * handle of this queue or indirectly through an event aggregator
+	  * using the queue handle of the event aggregator (see
+	  * odp_queue_aggregator_get()).
+	  *
+	  * When >= 1, configuration must be provided for each aggregator
+	  * through the 'aggregator' array.
+	  */
+	uint32_t num_aggregators;
+
+	/** Event aggregator configuration parameters
+	  *
+	  * When 'num_aggregators' is non-zero, 'aggregator' must point to
+	  * an array of size 'num_aggregators'.
+	  */
+	const odp_event_aggregator_config_t *aggregator;
 
 } odp_queue_param_t;
 
