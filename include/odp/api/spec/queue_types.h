@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2018 Linaro Limited
+ * Copyright (c) 2024-2025 Nokia
  */
 
 /**
@@ -16,6 +17,7 @@
 extern "C" {
 #endif
 
+#include <odp/api/event_vector_types.h>
 #include <odp/api/schedule_types.h>
 
 /** @defgroup odp_queue ODP QUEUE
@@ -52,7 +54,17 @@ typedef enum odp_queue_type_t {
 	  * Scheduled queues are connected to the scheduler. Application must
 	  * not dequeue events directly from these queues but use the scheduler
 	  * instead. */
-	ODP_QUEUE_TYPE_SCHED
+	ODP_QUEUE_TYPE_SCHED,
+
+	/** Aggregator queue
+	  *
+	  * Aggregator queues are connected to an underlying plain or scheduled
+	  * queue. They cannot be created directly but through the creation
+	  * of the underlying queue. Application must not dequeue events
+	  * directly from these queues.
+	  */
+	ODP_QUEUE_TYPE_AGGR,
+
 } odp_queue_type_t;
 
 /**
@@ -214,6 +226,9 @@ typedef struct odp_queue_capability_t {
 
 		} waitfree;
 
+		/** Event vector generation capabilities */
+		odp_event_aggr_capability_t aggr;
+
 	} plain;
 
 } odp_queue_capability_t;
@@ -290,6 +305,36 @@ typedef struct odp_queue_param_t {
 	  * capability. The value of zero means implementation specific
 	  * default size. The default value is 0. */
 	uint32_t size;
+
+	/** Number of event aggregators
+	  *
+	  * Event aggregators are queues which try to aggregate multiple
+	  * events into vector events before enqueuing the events or vector
+	  * events to this queue. When at least one event aggregator is
+	  * configured, an event can be enqueued directly using the queue
+	  * handle of this queue or indirectly through an event aggregator
+	  * using the queue handle of the event aggregator (see
+	  * odp_queue_aggr()).
+	  *
+	  * Two events enqueued through different aggregators (or one through
+	  * an aggregator and the other directly through this queue) may
+	  * appear in any order when dequeued.
+	  *
+	  * When >= 1, configuration must be provided for each aggregator
+	  * through the 'aggr' array.
+	  *
+	  * The default value is zero.
+	  */
+	uint32_t num_aggr;
+
+	/** Event aggregator configuration parameters
+	  *
+	  * When 'num_aggr' is non-zero, 'aggr' must point to an array
+	  * of size 'num_aggr'.
+	  *
+	  * The default value is null.
+	  */
+	const odp_event_aggr_config_t *aggr;
 
 } odp_queue_param_t;
 
