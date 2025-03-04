@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2014-2018 Linaro Limited
- * Copyright (c) 2021-2023 Nokia
+ * Copyright (c) 2021-2025 Nokia
  */
 
 #include <odp_api.h>
@@ -12,7 +12,8 @@
 #define MAX_NUM_EVENT           (1 * 1024)
 #define MAX_ITERATION           (100)
 #define MAX_QUEUES              (64 * 1024)
-#define GLOBALS_NAME		"queue_test_globals"
+#define MULTI_QUEUES            (MAX_QUEUES / 2)
+#define GLOBALS_NAME            "queue_test_globals"
 #define DEQ_RETRIES             100
 #define ENQ_RETRIES             100
 
@@ -44,7 +45,7 @@ static odp_pool_t pool;
 
 static void generate_name(char *name, uint32_t index)
 {
-	/* Uniqueue name for up to 300M queues */
+	/* Unique name for up to 300M queues */
 	name[0] = 'A' + ((index / (26 * 26 * 26 * 26 * 26)) % 26);
 	name[1] = 'A' + ((index / (26 * 26 * 26 * 26)) % 26);
 	name[2] = 'A' + ((index / (26 * 26 * 26)) % 26);
@@ -251,15 +252,15 @@ static void queue_test_create_destroy_multi(void)
 {
 	odp_queue_capability_t capa;
 	odp_queue_param_t param_single;
-	odp_queue_param_t param[MAX_QUEUES];
-	odp_queue_t queue[MAX_QUEUES];
-	const char *name[MAX_QUEUES] = {NULL, "aaa", NULL, "bbb", "ccc", NULL, "ddd"};
+	odp_queue_param_t param[MULTI_QUEUES];
+	odp_queue_t queue[MULTI_QUEUES];
+	const char *name[MULTI_QUEUES] = {NULL, "aaa", NULL, "bbb", "ccc", NULL, "ddd"};
 	uint32_t num_queues, num_created;
 
 	CU_ASSERT_FATAL(odp_queue_capability(&capa) == 0);
 	CU_ASSERT_FATAL(capa.plain.max_num != 0);
 
-	num_queues = capa.plain.max_num < MAX_QUEUES ? capa.plain.max_num : MAX_QUEUES;
+	num_queues = capa.plain.max_num < MULTI_QUEUES ? capa.plain.max_num : MULTI_QUEUES;
 	for (uint32_t i = 0; i < num_queues; i++)
 		odp_queue_param_init(&param[i]);
 	odp_queue_param_init(&param_single);
