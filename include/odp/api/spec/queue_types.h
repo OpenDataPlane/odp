@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2018 Linaro Limited
+ * Copyright (c) 2025 Nokia
  */
 
 /**
@@ -290,6 +291,17 @@ typedef struct odp_queue_param_t {
 	  * capability. The value of zero means implementation specific
 	  * default size. The default value is 0. */
 	uint32_t size;
+
+	/** Queue specific cache stashing hints
+	  *
+	  * Depending on the implementation, configuring these may improve
+	  * performance. Overrides any group or priority specific configuration
+	  * completely for this queue. By default, all regions are disabled
+	  * (see odp_cache_stash_config_t::regions).
+	  *
+	  * For PLAIN queues, the parameter is ignored and stashing
+	  * disabled. */
+	odp_cache_stash_config_t cache_stash_hints;
 
 } odp_queue_param_t;
 
