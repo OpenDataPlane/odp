@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2016-2018 Linaro Limited
- * Copyright (c) 2022 Nokia
+ * Copyright (c) 2022-2025 Nokia
  */
 
 /**
@@ -462,6 +462,11 @@ typedef struct odp_ipsec_config_t {
 	 * the application through the default queue and the SA destination
 	 * queues. It does not affect packets delivered through pktio
 	 * input queues.
+	 *
+	 * Generating vectors of packets can be enabled either through this
+	 * configuration or by using event aggregators as destination queue(s).
+	 * Both options cannot be enabled simultaneously in the same ODP
+	 * application.
 	 */
 	odp_pktin_vector_config_t vector;
 
