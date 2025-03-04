@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2015-2018 Linaro Limited
- * Copyright (c) 2023 Nokia
+ * Copyright (c) 2023-2025 Nokia
  */
 
 /**
@@ -245,6 +245,235 @@ typedef struct odp_schedule_capability_t {
 } odp_schedule_capability_t;
 
 /**
+ * Region specific cache stashing configuration
+ *
+ * Region specific cache stashing configuration for different cache levels.
+ * Application can, for example, configure caching of certain portions of a
+ * region to L2 while configuring another portion to be cached to L3 or
+ * alternatively caching to both levels by configuring overlapping offsets and
+ * byte counts.
+ */
+typedef struct odp_cache_stash_region_t {
+	/** L2 cache stashing */
+	struct {
+		/** Byte offset into a region to start caching from
+		 *
+		 *  Depending on the implementation, this might be rounded down
+		 *  to a more suitable boundary.
+		 */
+		uint32_t offset;
+
+		/** Length in bytes to cache
+		 *
+		 *  Depending on the implementation, this might be rounded up
+		 *  to a more suitable boundary.
+		 */
+		uint32_t len;
+
+	} l2;
+
+	/** L3 cache stashing */
+	struct {
+		/** Byte offset into a region to start caching from
+		 *
+		 *  Depending on the implementation, this might be rounded down
+		 *  to a more suitable boundary.
+		 */
+		uint32_t offset;
+
+		/** Length in bytes to cache
+		 *
+		 *  Depending on the implementation, this might be rounded up
+		 *  to a more suitable boundary.
+		 */
+		uint32_t len;
+
+	} l3;
+
+} odp_cache_stash_region_t;
+
+/**
+ * Cache stashing configuration
+ *
+ * Cache stashing configuration for different data regions.
+ */
+typedef struct odp_cache_stash_config_t {
+	/** Region specific configuration toggle */
+	union {
+		/** Region bit fields */
+		struct {
+			/** Enable/disable event_metadata L2 cache stashing */
+			uint32_t event_metadata_l2  : 1;
+
+			/** Enable/disable event_metadata L3 cache stashing */
+			uint32_t event_metadata_l3  : 1;
+
+			/** Enable/disable event_data L2 cache stashing */
+			uint32_t event_data_l2      : 1;
+
+			/** Enable/disable event_data L3 cache stashing */
+			uint32_t event_data_l3      : 1;
+
+			/** Enable/disable event_user_area L2 cache stashing */
+			uint32_t event_user_area_l2 : 1;
+
+			/** Enable/disable event_user_area L3 cache stashing */
+			uint32_t event_user_area_l3 : 1;
+
+			/** Enable/disable queue_context L2 cache stashing */
+			uint32_t queue_context_l2   : 1;
+
+			/** Enable/disable queue_context L3 cache stashing */
+			uint32_t queue_context_l3   : 1;
+
+		};
+
+		/** All bits of the bit field structure
+		 *
+		 *  This field can be used to set/clear all bits, or bitwise
+		 *  operations over the entire structure.
+		 */
+		uint32_t all;
+
+	} regions;
+
+	/** Cache stashing for event metadata */
+	odp_cache_stash_region_t event_metadata;
+
+	/** Cache stashing for event data */
+	odp_cache_stash_region_t event_data;
+
+	/** Cache stashing for event user area */
+	odp_cache_stash_region_t event_user_area;
+
+	/** Cache stashing for queue context region */
+	odp_cache_stash_region_t queue_context;
+
+} odp_cache_stash_config_t;
+
+/**
+ * Priority specific cache stashing configuration
+ */
+typedef struct odp_cache_stash_prio_config_t {
+	/** Priority level for applying this cache stashing configuration to */
+	odp_schedule_prio_t  prio;
+
+	/** Cache stashing configuration */
+	odp_cache_stash_config_t config;
+
+} odp_cache_stash_prio_config_t;
+
+/**
+ * Schedule group parameters
+ */
+typedef struct odp_schedule_group_param_t {
+	/** Group specific cache stashing hints
+	 *
+	 *  Depending on the implementation, configuring these may improve
+	 *  performance. Cache stashing hints can be configured with a
+	 *  group-wide configuration using 'common' and with optional priority
+	 *  specific exceptions using 'prio' and 'num'. For example:
+	 *
+	 * @code{.unparsed}
+	 *    ...
+	 *    odp_schedule_group_param_t param;
+	 *    odp_cache_stash_prio_config_t prio;
+	 *
+	 *    odp_schedule_group_param_init(&param);
+	 *    prio.prio = 3;
+	 *    prio.config.regions.event_user_area_l2 = 1;
+	 *    prio.config.event_user_area.l2.offset = 0;
+	 *    prio.config.event_user_area.l2.len = 64;
+	 *    param.cache_stash_hints.prio = &prio;
+	 *    param.cache_stash_hints.num = 1;
+	 *    ...
+	 * @endcode
+	 *
+	 *  would disable cache stashing entirely for the group except
+	 *  priority 3 would have event user area L2 cache stashing
+	 *  enabled.
+	 *
+	 * @code{.unparsed}
+	 *    ...
+	 *    odp_schedule_group_param_t param;
+	 *    odp_cache_stash_prio_config_t prio;
+	 *
+	 *    odp_schedule_group_param_init(&param);
+	 *    param.cache_stash_hints.common.regions.event_data_l2 = 1;
+	 *    param.cache_stash_hints.common.event_data.l2.offset = 0;
+	 *    param.cache_stash_hints.common.event_data.l2.len = 128;
+	 *    prio.prio = 3;
+	 *    prio.config.regions.all = 0;
+	 *    param.cache_stash_hints.prio = &prio;
+	 *    param.cache_stash_hints.num = 1;
+	 *    ...
+	 * @endcode
+	 *
+	 *  would enable event data L2 cache stashing entirely for the
+	 *  group except disable cache stashing for priority 3.
+	 *
+	 * @code{.unparsed}
+	 *    ...
+	 *    odp_schedule_group_param_t param;
+	 *    odp_cache_stash_prio_config_t prio[2];
+	 *
+	 *    odp_schedule_group_param_init(&param);
+	 *    param.cache_stash_hints.common.regions.event_data_l2 = 1;
+	 *    param.cache_stash_hints.common.event_data.l2.offset = 0;
+	 *    param.cache_stash_hints.common.event_data.l2.len = 128;
+	 *    prio[0].prio = 3;
+	 *    prio[0].config.regions.event_data_l2 = 1;
+	 *    prio[0].config.event_data.l2.offset = 64;
+	 *    prio[0].config.event_data.l2.len = 128;
+	 *    prio[1].prio = 4;
+	 *    prio[1].config.regions.event_data_l2 = 1;
+	 *    prio[1].config.event_data.l2.offset = 64;
+	 *    prio[1].config.event_data.l2.len = 128;
+	 *    param.cache_stash_hints.prio = prio;
+	 *    param.cache_stash_hints.num = 2;
+	 *    ...
+	 * @endcode
+	 *
+	 *  would enable event data L2 cache stashing entirely for the
+	 *  group but priorities 3 and 4 would have event data cache
+	 *  stashing beginning from offset 64 instead of 0.
+	 */
+	struct {
+		/** Common group specific cache stashing hints
+		 *
+		 *  Configures cache stashing for each priority under the
+		 *  group. By default, all regions are disabled (see
+		 *  odp_cache_stash_config_t::regions).
+		 */
+		odp_cache_stash_config_t common;
+
+		/** Priority specific cache stashing hints
+		 *
+		 *  Configures priority specific cache stashing. Overrides
+		 *  completely the 'common' stashing configuration for the
+		 *  given priority.
+		 */
+		struct {
+			/** Pointer to 'num' entries of priority specific
+			 *  configuration
+			 *
+			 *  The field is ignored if 'num' is 0.
+			 */
+			const odp_cache_stash_prio_config_t *prio;
+
+			/** Number of entries in 'prio' array
+			 *
+			 *  0 by default.
+			 */
+			uint32_t num;
+
+		};
+
+	} cache_stash_hints;
+
+} odp_schedule_group_param_t;
+
+/**
  * Schedule configuration
  */
 typedef struct odp_schedule_config_t {
@@ -280,7 +509,11 @@ typedef struct odp_schedule_config_t {
 	 */
 	uint32_t max_flow_id;
 
-	/** Enable/disable predefined scheduling groups */
+	/** Enable/disable predefined scheduling groups
+	 *
+	 *  Application can additionally provide parameters for the
+	 *  to-be-enabled predefined schedule groups.
+	 */
 	struct {
 		/** ODP_SCHED_GROUP_ALL
 		 *
@@ -302,6 +535,15 @@ typedef struct odp_schedule_config_t {
 		 *  1: Enable group (default)
 		 */
 		odp_bool_t worker;
+
+		/** Parameters for ODP_SCHED_GROUP_ALL schedule group */
+		odp_schedule_group_param_t all_param;
+
+		/** Parameters for ODP_SCHED_GROUP_CONTROL schedule group */
+		odp_schedule_group_param_t control_param;
+
+		/** Parameters for ODP_SCHED_GROUP_WORKER schedule group */
+		odp_schedule_group_param_t worker_param;
 
 	} sched_group;
 
