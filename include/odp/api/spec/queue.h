@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2013-2018 Linaro Limited
- * Copyright (c) 2023 Nokia
+ * Copyright (c) 2023-2025 Nokia
  */
 
 /**
@@ -34,6 +34,9 @@ extern "C" {
  * only a single matching queue. Use odp_queue_param_init() to initialize
  * parameters into their default values. Default values are also used when
  * 'param' pointer is NULL.
+ *
+ * 'name' and 'param' and any configuration structures pointed to by 'param'
+ * are used only during the call. They can be freed after queue creation.
  *
  * @param name    Name of the queue or NULL. Maximum string length is
  *                ODP_QUEUE_NAME_LEN, including the null character.
@@ -154,6 +157,50 @@ int odp_queue_context_set(odp_queue_t queue, void *context, uint32_t len);
  * @see odp_queue_context_set(), odp_queue_create()
  */
 void *odp_queue_context(odp_queue_t queue);
+
+/**
+ * Get a queue handle of an event aggregator associated with a queue
+ *
+ * Returns a queue handle that can be used to refer to an event aggregator
+ * associated with this queue. Unless otherwise noted, the returned queue
+ * handle can be used in all contexts where queue handles are used.
+ * In particular, the queue handle can be used in odp_queue_enq() to
+ * enqueue events through an event aggregator to the underlying queue.
+ * Similarly, the queue handle can be given to packet I/O, classifier,
+ * crypto and IPsec to have the generated events be enqueued by ODP through
+ * the event aggregator.
+ *
+ * This function does not create a new queue but merely returns a reference
+ * to an aggregator queue which has the same life time as the underlying
+ * queue. The underlying queue must not be destroyed as long as any of its
+ * aggregators is in use. The aggregator queue gets destroyed when the
+ * underlying queue gets destroyed. An aggregator queue handle must not
+ * be passed to odp_queue_destroy().
+ *
+ * The aggregator queues have the same enq_mode as the underlying queue.
+ *
+ * The returned queue handle cannot be used for dequeuing events. It must
+ * not be passed to odp_queue_deq() or similar.
+ *
+ * The returned queue handle must not be passed to any of the
+ * odp_queue_context* or odp_queue_sched* functions and is never returned
+ * by odp_queue_lookup().
+ *
+ * 'aggr_index' refers to the aggregator configured with the same index
+ * in odp_queue_param_t::aggregator.
+ *
+ * If 'aggr_index' is greater than odp_queue_param_t::num_aggregators,
+ * ODP_QUEUE_INVALID is returned.
+ *
+ * @param queue       Queue handle
+ * @param aggr_index  Index of the event aggregator
+ *
+ * @return event aggregator queue handle
+ * @retval ODP_QUEUE_INVALID on failure
+ *
+ * @see odp_queue_create()
+ */
+odp_queue_t odp_queue_aggregator(odp_queue_t queue, uint32_t aggr_index);
 
 /**
  * Enqueue an event to a queue
