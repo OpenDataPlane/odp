@@ -325,16 +325,32 @@ typedef struct odp_schedule_capability_t {
  * Schedule configuration
  */
 typedef struct odp_schedule_config_t {
-	/** Maximum number of scheduled queues to be supported.
+	/** Maximum number of groups to be supported
 	 *
-	 * @see odp_schedule_capability_t
+	 *  This is in addition to the predefined scheduling groups
+	 *  (ODP_SCHED_GROUP_ALL, ODP_SCHED_GROUP_WORKER and
+	 *  ODP_SCHED_GROUP_CONTROL).
+	 *
+	 *  @see odp_schedule_capability_t
+	 */
+	uint32_t num_groups;
+
+	/** Maximum number of priorities to be supported
+	 *
+	 *  @see odp_schedule_capability_t
+	 */
+	uint32_t num_prios;
+
+	/** Maximum number of scheduled queues to be supported
+	 *
+	 *  @see odp_schedule_capability_t
 	 */
 	uint32_t num_queues;
 
 	/** Maximum number of events required to be stored simultaneously in
-	 * scheduled queue. This number must not exceed 'max_queue_size'
-	 * capability.  A value of 0 configures default queue size supported by
-	 * the implementation.
+	 *  scheduled queue. This number must not exceed 'max_queue_size'
+	 *  capability.  A value of 0 configures default queue size supported by
+	 *  the implementation.
 	 */
 	uint32_t queue_size;
 
@@ -400,6 +416,17 @@ typedef struct odp_cache_stash_prio_config_t {
  * Schedule group parameters
  */
 typedef struct odp_schedule_group_param_t {
+	/** Maximum number of priorities to be supported for this group
+	 *
+	 *  Further constrains number of priorities to be supported at group
+	 *  level. Across group configuration, cumulative priority count should
+	 *  not exceed what was configured globally or what the implementation
+	 *  maximally supports. Use 0 for default.
+	 *
+	 *  @see odp_schedule_config_t, odp_schedule_capability_t
+	 */
+	uint32_t num_prios;
+
 	/** Group specific cache stashing hints
 	 *
 	 *  Depending on the implementation, configuring these may improve
