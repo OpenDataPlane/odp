@@ -326,16 +326,47 @@ typedef struct odp_schedule_capability_t {
  * Schedule configuration
  */
 typedef struct odp_schedule_config_t {
-	/** Maximum number of scheduled queues to be supported.
+	/** Maximum number of schedule groups to be supported
 	 *
-	 * @see odp_schedule_capability_t
+	 *  Can be used to optimize global group resource usage. The value
+	 *  includes the enabled predefined scheduling groups
+	 *  (ODP_SCHED_GROUP_ALL, ODP_SCHED_GROUP_WORKER, and
+	 *  ODP_SCHED_GROUP_CONTROL).
+	 *
+	 *  When configuring a value less than the number of predefined
+	 *  schedule groups, the unwanted groups must be disabled using
+	 *  'sched_group'.
+	 *
+	 *  odp_schedule_capability_t::max_groups by default.
+	 */
+	uint32_t num_groups;
+
+	/** Maximum number of priorities to be supported
+	 *
+	 *  Can be used to optimize global priority resource usage. Forms a
+	 *  single global priority range which can be assumed to be continuous
+	 *  and spanning from an implementation specific minimum value up to a
+	 *  maximum value of minimum value + 'num_prios' - 1.
+	 *
+	 *  The span of priorities within the global range can further be
+	 *  adjusted at group level with odp_schedule_group_param_t::prio. This
+	 *  enables group to contain e.g. only a set of higher priorities.
+	 *
+	 *  odp_schedule_capability_t::max_prios by default.
+	 */
+	uint32_t num_prios;
+
+	/** Maximum number of scheduled queues to be supported
+	 *
+	 *  odp_schedule_capability_t::max_queues by default.
 	 */
 	uint32_t num_queues;
 
 	/** Maximum number of events required to be stored simultaneously in
-	 * scheduled queue. This number must not exceed 'max_queue_size'
-	 * capability.  A value of 0 configures default queue size supported by
-	 * the implementation.
+	 *  scheduled queue
+	 *
+	 *  This number must not exceed 'max_queue_size' capability. A value
+	 *  of 0 configures default queue size supported by the implementation.
 	 */
 	uint32_t queue_size;
 
@@ -353,8 +384,6 @@ typedef struct odp_schedule_config_t {
 	 *
 	 *  Depending on the implementation, there may be much more flows
 	 *  supported than queues, as flows are lightweight entities.
-	 *
-	 *  @see odp_schedule_capability_t, odp_event_flow_id()
 	 */
 	uint32_t max_flow_id;
 
@@ -401,6 +430,31 @@ typedef struct odp_cache_stash_prio_config_t {
  * Schedule group parameters
  */
 typedef struct odp_schedule_group_param_t {
+	/** Group specific priority configuration */
+	struct {
+		/** Minimum priority level for this group
+		 *
+		 *  The entire group specific priority range (from 'min' to
+		 *  'min' + 'num' - 1) must fit within the global range (from
+		 *  odp_schedule_min_prio() to odp_schedule_max_prio()).
+		 *
+		 *  When creating a queue belonging to a schedule group with
+		 *  a group specific priority range, the used scheduler priority
+		 *  level (odp_schedule_param_t::prio) must be within the group
+		 *  specific range.
+		 *
+		 *  The field is ignored if 'num' is 0.
+		 */
+		odp_schedule_prio_t min;
+
+		/** Number of priorities to be supported by this group
+		 *
+		 *  Use 0 to not limit priorities at group level. 0 by default.
+		 */
+		uint32_t num;
+
+	} prio;
+
 	/** Group specific cache stashing hints
 	 *
 	 *  Depending on the implementation, configuring these may improve
