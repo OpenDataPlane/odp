@@ -6,13 +6,13 @@
 #ifndef ODP_ARCH_CPU_INLINES_H_
 #define ODP_ARCH_CPU_INLINES_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <odp/api/abi/time_cpu.h>
 
 #include <stdint.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /* CPU frequency is shifted to decrease integer division error */
 #define _ODP_CPU_FREQ_SHIFT 16

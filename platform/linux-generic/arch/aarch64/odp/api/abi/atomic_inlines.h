@@ -10,6 +10,10 @@
 
 #ifdef _ODP_LOCK_FREE_128BIT_ATOMICS
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @internal
  * Helper macro for lockless atomic CAS operations on 128-bit integers
@@ -306,6 +310,10 @@ static inline void _odp_atomic_sub_rel_u64(odp_atomic_u64_t *atom, uint64_t val)
 			 : [neg_val] "r" (neg_val)
 			 : "memory");
 }
+
+#ifdef __cplusplus
+}
+#endif
 
 #else /* !_ODP_LOCK_FREE_128BIT_ATOMICS */
 

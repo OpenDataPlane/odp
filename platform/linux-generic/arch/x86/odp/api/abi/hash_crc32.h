@@ -5,12 +5,13 @@
 #ifndef ODP_API_ABI_HASH_CRC32_H_
 #define ODP_API_ABI_HASH_CRC32_H_
 
+#include <odp/api/std_types.h>
+
+#include <stdint.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <odp/api/std_types.h>
-#include <stdint.h>
 
 uint32_t _odp_hash_crc32_generic(const void *data, uint32_t data_len,
 				 uint32_t init_val);

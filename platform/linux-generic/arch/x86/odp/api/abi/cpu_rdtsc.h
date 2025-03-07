@@ -7,6 +7,10 @@
 
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 static inline uint64_t _odp_cpu_rdtsc(void)
 {
 	union {
@@ -23,5 +27,9 @@ static inline uint64_t _odp_cpu_rdtsc(void)
 
 	return tsc.tsc_64;
 }
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

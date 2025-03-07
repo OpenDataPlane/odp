@@ -8,6 +8,10 @@
 
 #include <odp/api/atomic.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 static inline void _odp_atomic_add_u32(odp_atomic_u32_t *atom, uint32_t val)
 {
 	(void)__atomic_fetch_add(&atom->v, val, __ATOMIC_RELAXED);
@@ -321,6 +325,10 @@ static inline int _odp_atomic_cas_acq_rel_u128(odp_atomic_u128_t *atom, odp_u128
 					       odp_u128_t new_val)
 {
 	return _odp_atomic_cas_u128(atom, old_val, new_val);
+}
+#endif
+
+#ifdef __cplusplus
 }
 #endif
 
