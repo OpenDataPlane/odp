@@ -11,11 +11,11 @@
 #ifndef ODP_ABI_ALIGN_H_
 #define ODP_ABI_ALIGN_H_
 
+#include <odp/api/abi/cpu.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <odp/api/abi/cpu.h>
 
 /** @addtogroup odp_compiler_optim
  *  @{

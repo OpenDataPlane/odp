@@ -12,12 +12,12 @@
 #ifndef ODP_ABI_ATOMIC_H_
 #define ODP_ABI_ATOMIC_H_
 
+#include <odp/api/std_types.h>
+#include <odp/api/align.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <odp/api/std_types.h>
-#include <odp/api/align.h>
 
 /**
  * @internal

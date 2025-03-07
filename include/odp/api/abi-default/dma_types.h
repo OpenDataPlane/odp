@@ -5,11 +5,11 @@
 #ifndef ODP_ABI_DMA_TYPES_H_
 #define ODP_ABI_DMA_TYPES_H_
 
+#include <stdint.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <stdint.h>
 
 /** @internal Dummy type for strong typing */
 typedef struct { char dummy; /**< @internal Dummy */ } _odp_abi_dma_t;

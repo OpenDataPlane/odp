@@ -6,14 +6,6 @@
 #ifndef ODP_ABI_IPSEC_H_
 #define ODP_ABI_IPSEC_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /* Empty header required due to the packet inline functions */
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif

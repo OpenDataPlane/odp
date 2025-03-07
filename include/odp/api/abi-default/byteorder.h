@@ -11,11 +11,11 @@
 #ifndef ODP_ABI_BYTEORDER_H_
 #define ODP_ABI_BYTEORDER_H_
 
+#include <odp/api/std_types.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <odp/api/std_types.h>
 
 #ifndef __BYTE_ORDER__
 #error __BYTE_ORDER__ not defined!

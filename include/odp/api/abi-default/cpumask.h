@@ -11,6 +11,11 @@
 #ifndef ODP_ABI_CPUMASK_H_
 #define ODP_ABI_CPUMASK_H_
 
+#include <odp/api/align.h>
+#include <odp/api/std_types.h>
+
+#include <sched.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -18,10 +23,6 @@ extern "C" {
 /** @addtogroup odp_cpumask
  *  @{
  */
-
-#include <odp/api/std_types.h>
-#include <odp/api/align.h>
-#include <sched.h>
 
 #define ODP_CPUMASK_SIZE (sizeof(cpu_set_t) * 8)
 
