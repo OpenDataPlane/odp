@@ -57,10 +57,10 @@ extern "C" {
 
 #endif
 
-#include <odp/api/abi-default/debug.h>
-
 #ifdef __cplusplus
 }
 #endif
+
+#include <odp/api/abi-default/debug.h>
 
 #endif
