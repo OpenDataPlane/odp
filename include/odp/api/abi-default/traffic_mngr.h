@@ -12,11 +12,11 @@
 #ifndef ODP_ABI_TRAFFIC_MNGR_H_
 #define ODP_ABI_TRAFFIC_MNGR_H_
 
+#include <odp/api/std_types.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <odp/api/std_types.h>
 
 /** @addtogroup odp_traffic_mngr
  *  Macros and operations on a TM system.

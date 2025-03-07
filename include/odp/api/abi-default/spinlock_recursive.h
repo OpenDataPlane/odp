@@ -11,12 +11,12 @@
 #ifndef ODP_ABI_SPINLOCK_RECURSIVE_H_
 #define ODP_ABI_SPINLOCK_RECURSIVE_H_
 
+#include <odp/api/spinlock.h>
+#include <odp/api/std_types.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <odp/api/spinlock.h>
-#include <odp/api/std_types.h>
 
 /** @internal */
 typedef struct odp_spinlock_recursive_s {
