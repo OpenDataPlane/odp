@@ -12,12 +12,12 @@ extern "C" {
 
 #define ODP_CACHE_LINE_SIZE 128
 
-/* Inlined functions for non-ABI compat mode */
-#include <odp/api/plat/cpu_inlines.h>
-
 #ifdef __cplusplus
 }
 #endif
+
+/* Inlined functions for non-ABI compat mode */
+#include <odp/api/plat/cpu_inlines.h>
 
 #endif
 

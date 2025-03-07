@@ -6,12 +6,13 @@
 #ifndef ODP_ARCH_CPU_INLINES_H_
 #define ODP_ARCH_CPU_INLINES_H_
 
+#include <odp/api/abi/cpu_rdtsc.h>
+
+#include <stdint.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <stdint.h>
-#include <odp/api/abi/cpu_rdtsc.h>
 
 static inline void _odp_cpu_pause(void)
 {
