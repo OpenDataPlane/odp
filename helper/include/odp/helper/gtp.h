@@ -10,11 +10,11 @@
 #ifndef _ODPH_GTP_H_
 #define _ODPH_GTP_H_
 
+#include <odp_api.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <odp_api.h>
 
 /**
  * @addtogroup odph_protocols

@@ -15,10 +15,6 @@
 #ifndef ODP_HELPER_H_
 #define ODP_HELPER_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <odp/helper/autoheader_external.h>
 
 #include <odp/helper/chksum.h>
@@ -43,7 +39,4 @@ extern "C" {
 #include <odp/helper/cli.h>
 #endif
 
-#ifdef __cplusplus
-}
-#endif
 #endif

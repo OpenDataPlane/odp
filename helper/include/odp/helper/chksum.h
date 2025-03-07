@@ -10,11 +10,11 @@
 #ifndef ODPH_CHKSUM_H_
 #define ODPH_CHKSUM_H_
 
+#include <odp_api.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <odp_api.h>
 
 /** @defgroup odph_chksum ODPH CHECKSUM
  * TCP/UDP/SCTP checksum
