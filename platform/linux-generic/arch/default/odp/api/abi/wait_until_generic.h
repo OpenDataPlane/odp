@@ -5,11 +5,11 @@
 #ifndef ODP_API_ABI_WAIT_UNTIL_GENERIC_H_
 #define ODP_API_ABI_WAIT_UNTIL_GENERIC_H_
 
+#include <odp/api/atomic.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <odp/api/atomic.h>
 
 static inline void
 _odp_wait_until_equal_acq_u32(odp_atomic_u32_t *addr, uint32_t expected)
