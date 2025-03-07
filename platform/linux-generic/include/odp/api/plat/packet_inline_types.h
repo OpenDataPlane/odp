@@ -13,11 +13,11 @@
 #ifndef ODP_PACKET_INLINE_TYPES_H_
 #define ODP_PACKET_INLINE_TYPES_H_
 
+#include <stdint.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <stdint.h>
 
 /** @cond _ODP_HIDE_FROM_DOXYGEN_ */
 

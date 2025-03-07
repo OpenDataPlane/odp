@@ -10,6 +10,11 @@
 
 #include <odp/api/abi/ticketlock.h>
 #include <odp/api/abi/wait_until.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /** @cond _ODP_HIDE_FROM_DOXYGEN_ */
 
 #ifndef _ODP_NO_INLINE
@@ -100,5 +105,9 @@ _ODP_INLINE int odp_ticketlock_is_locked(odp_ticketlock_t *ticketlock)
 }
 
 /** @endcond */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

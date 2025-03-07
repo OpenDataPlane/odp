@@ -9,6 +9,10 @@
 
 #include <string.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #ifndef _ODP_NO_INLINE
 	/* Inline functions by default */
 	#define _ODP_INLINE static inline
@@ -35,5 +39,9 @@ _ODP_INLINE int odp_memcmp(const void *ptr1, const void *ptr2, size_t num)
 }
 
 /** @endcond */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

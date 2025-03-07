@@ -5,16 +5,16 @@
 #ifndef ODP_PLAT_SCHEDULE_INLINE_TYPES_H_
 #define ODP_PLAT_SCHEDULE_INLINE_TYPES_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <odp/api/event_types.h>
 #include <odp/api/queue_types.h>
 #include <odp/api/schedule_types.h>
 #include <odp/api/thrmask.h>
 
 #include <stdint.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** @cond _ODP_HIDE_FROM_DOXYGEN_ */
 
