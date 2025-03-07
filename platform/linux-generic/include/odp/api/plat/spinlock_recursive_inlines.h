@@ -15,6 +15,10 @@
 
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /** @cond _ODP_HIDE_FROM_DOXYGEN_ */
 
 #ifndef _ODP_NO_INLINE
@@ -25,9 +29,6 @@
 	#define odp_spinlock_recursive_trylock __odp_spinlock_recursive_trylock
 	#define odp_spinlock_recursive_unlock __odp_spinlock_recursive_unlock
 	#define odp_spinlock_recursive_is_locked __odp_spinlock_recursive_is_locked
-
-	#include <odp/api/plat/spinlock_inlines.h>
-	#include <odp/api/plat/thread_inlines.h>
 #else
 	#undef _ODP_INLINE
 	#define _ODP_INLINE
@@ -92,5 +93,9 @@ _ODP_INLINE int odp_spinlock_recursive_is_locked(odp_spinlock_recursive_t *rlock
 }
 
 /** @endcond */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
