@@ -11,16 +11,8 @@
 #ifndef ODP_API_IPSEC_H_
 #define ODP_API_IPSEC_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <odp/api/abi/ipsec.h>
 
 #include <odp/api/spec/ipsec.h>
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif

@@ -12,11 +12,11 @@
 #define ODP_API_SPEC_QUEUE_TYPES_H_
 #include <odp/visibility_begin.h>
 
+#include <odp/api/schedule_types.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <odp/api/schedule_types.h>
 
 /** @defgroup odp_queue ODP QUEUE
  *  @{

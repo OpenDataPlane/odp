@@ -13,16 +13,16 @@
 #define ODP_API_SPEC_IPSEC_TYPES_H_
 #include <odp/visibility_begin.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <odp/api/classification.h>
 #include <odp/api/crypto_types.h>
 #include <odp/api/packet_io_types.h>
 #include <odp/api/protocols.h>
 #include <odp/api/std_types.h>
 #include <odp/api/traffic_mngr.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** @defgroup odp_ipsec ODP IPSEC
  *  @{
