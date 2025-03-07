@@ -12,13 +12,13 @@
 #ifndef ODP_API_ABI_CRYPTO_TYPES_H_
 #define ODP_API_ABI_CRYPTO_TYPES_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <odp/api/std_types.h>
 
 #include <odp/api/plat/strong_types.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** @addtogroup odp_crypto
  *  @{

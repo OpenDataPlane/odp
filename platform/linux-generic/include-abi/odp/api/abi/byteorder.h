@@ -11,11 +11,11 @@
 #ifndef ODP_API_ABI_BYTEORDER_H_
 #define ODP_API_ABI_BYTEORDER_H_
 
+#include <odp/api/std_types.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <odp/api/std_types.h>
 
 #ifndef __BYTE_ORDER__
 #error __BYTE_ORDER__ not defined!
@@ -73,8 +73,6 @@ typedef uint64_t __odp_bitwise	odp_u64be_t;
 typedef uint16_t __odp_bitwise  odp_u16sum_t;
 typedef uint32_t __odp_bitwise  odp_u32sum_t;
 
-#include <odp/api/plat/byteorder_inlines.h>
-
 /**
  * @}
  */
@@ -82,5 +80,7 @@ typedef uint32_t __odp_bitwise  odp_u32sum_t;
 #ifdef __cplusplus
 }
 #endif
+
+#include <odp/api/plat/byteorder_inlines.h>
 
 #endif
