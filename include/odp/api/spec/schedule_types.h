@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2015-2018 Linaro Limited
- * Copyright (c) 2023 Nokia
+ * Copyright (c) 2023-2025 Nokia
  */
 
 /**
@@ -173,6 +173,73 @@ extern "C" {
  */
 typedef int odp_schedule_prio_t;
 
+/**
+ * Region specific cache stashing configuration
+ *
+ * Region specific cache stashing configuration for different cache levels.
+ * Application can, for example, configure caching of certain portions of a
+ * region to L2 while configuring another portion to be cached to L3 or
+ * alternatively caching to both levels by configuring overlapping offsets and
+ * byte counts.
+ */
+typedef struct odp_cache_stash_region_t {
+	/** L2 cache stashing */
+	struct {
+		/** Enable or disable cache stashing for level */
+		odp_bool_t enable;
+
+		/** Offset into a region to start caching from */
+		uint32_t offset;
+
+		/** Bytes to cache
+		 *
+		 *  Depending on the implementation, this might be rounded up
+		 *  to a more suitable boundary.
+		 */
+		uint32_t bytes;
+
+	} l2;
+
+	/** L3 cache stashing */
+	struct {
+		/** Enable or disable cache stashing for level */
+		odp_bool_t enable;
+
+		/** Offset into a region to start caching from */
+		uint32_t offset;
+
+		/** Bytes to cache
+		 *
+		 *  Depending on the implementation, this might be rounded up
+		 *  to a more suitable boundary.
+		 */
+		uint32_t bytes;
+
+	} l3;
+
+} odp_cache_stash_region_t;
+
+/**
+ * Cache stashing configuration
+ *
+ * Configuration and fine-tuning on how regions of data should be stashed to
+ * cache.
+ */
+typedef struct odp_cache_stash_config_t {
+	/** Cache stashing for event metadata */
+	odp_cache_stash_region_t event_metadata;
+
+	/** Cache stashing for event data */
+	odp_cache_stash_region_t event_data;
+
+	/** Cache stashing for event user area */
+	odp_cache_stash_region_t event_user_area;
+
+	/** Cache stashing for queue context region */
+	odp_cache_stash_region_t queue_context;
+
+} odp_cache_stash_config_t;
+
 /** Scheduler parameters */
 typedef	struct odp_schedule_param_t {
 	/** Priority level
@@ -194,6 +261,16 @@ typedef	struct odp_schedule_param_t {
 	  *
 	  * Default value is 0. */
 	uint32_t lock_count;
+
+	/** Queue specific cache stashing hints
+	  *
+	  * Depending on the implementation, configuring these may improve
+	  * performance. Overrides any group or priority specific configuration
+	  * for this queue. By default, all entries are disabled
+	  * (see odp_cache_stash_region_t::l2::enable and
+	  * odp_cache_stash_region_t::l3::enable). */
+	odp_cache_stash_config_t cache_stash_hints;
+
 } odp_schedule_param_t;
 
 /**
@@ -248,16 +325,32 @@ typedef struct odp_schedule_capability_t {
  * Schedule configuration
  */
 typedef struct odp_schedule_config_t {
-	/** Maximum number of scheduled queues to be supported.
+	/** Maximum number of groups to be supported
 	 *
-	 * @see odp_schedule_capability_t
+	 *  This is in addition to the predefined scheduling groups
+	 *  (ODP_SCHED_GROUP_ALL, ODP_SCHED_GROUP_WORKER and
+	 *  ODP_SCHED_GROUP_CONTROL).
+	 *
+	 *  @see odp_schedule_capability_t
+	 */
+	uint32_t num_groups;
+
+	/** Maximum number of priorities to be supported
+	 *
+	 *  @see odp_schedule_capability_t
+	 */
+	uint32_t num_prios;
+
+	/** Maximum number of scheduled queues to be supported
+	 *
+	 *  @see odp_schedule_capability_t
 	 */
 	uint32_t num_queues;
 
 	/** Maximum number of events required to be stored simultaneously in
-	 * scheduled queue. This number must not exceed 'max_queue_size'
-	 * capability.  A value of 0 configures default queue size supported by
-	 * the implementation.
+	 *  scheduled queue. This number must not exceed 'max_queue_size'
+	 *  capability.  A value of 0 configures default queue size supported by
+	 *  the implementation.
 	 */
 	uint32_t queue_size;
 
@@ -306,6 +399,71 @@ typedef struct odp_schedule_config_t {
 	} sched_group;
 
 } odp_schedule_config_t;
+
+/**
+ * Priority specific cache stashing configuration
+ */
+typedef struct odp_cache_stash_prio_config_t {
+	/** Priority level for applying this cache stashing configuration to */
+	odp_schedule_prio_t  prio;
+
+	/** Cache stashing configuration */
+	odp_cache_stash_config_t config;
+
+} odp_cache_stash_prio_config_t;
+
+/**
+ * Schedule group parameters
+ */
+typedef struct odp_schedule_group_param_t {
+	/** Maximum number of priorities to be supported for this group
+	 *
+	 *  Further constrains number of priorities to be supported at group
+	 *  level. Across group configuration, cumulative priority count should
+	 *  not exceed what was configured globally or what the implementation
+	 *  maximally supports. Use 0 for default.
+	 *
+	 *  @see odp_schedule_config_t, odp_schedule_capability_t
+	 */
+	uint32_t num_prios;
+
+	/** Group specific cache stashing hints
+	 *
+	 *  Depending on the implementation, configuring these may improve
+	 *  performance.
+	 */
+	struct {
+		/** Common group specific cache stashing hints
+		 *
+		 *  Configures cache stashing for each priority and queue under
+		 *  the group. By default, all entries are disabled (see
+		 *  odp_cache_stash_region_t::l2::enable and
+		 *  odp_cache_stash_region_t::l3::enable).
+		 */
+		odp_cache_stash_config_t common;
+
+		/** Priority specific cache stashing hints
+		 *
+		 *  Configures (or overrides if 'common' is enabled) priority
+		 *  specific cache stashing.
+		 */
+		struct {
+			/** Number of entries in 'prio' array
+			 *
+			 *  By default 0.
+			 */
+			uint32_t num;
+
+			/** Pointer to 'num' entries of priority specific
+			 *  configuration
+			 */
+			const odp_cache_stash_prio_config_t *prio;
+
+		};
+
+	} cache_stash_hints;
+
+} odp_schedule_group_param_t;
 
 /**
  * Schedule group information
