@@ -19,6 +19,10 @@
 #include <odp/api/plat/packet_inline_types.h>
 #include <odp/api/plat/timer_inline_types.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /** @cond _ODP_HIDE_FROM_DOXYGEN_ */
 
 #ifndef _ODP_NO_INLINE
@@ -224,5 +228,9 @@ _ODP_INLINE void odp_event_flow_id_set(odp_event_t event, uint32_t id)
 }
 
 /** @endcond */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

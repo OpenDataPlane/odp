@@ -22,11 +22,11 @@
 
 #include <odp/api/plat/thread_inline_types.h>
 
-/** @cond _ODP_HIDE_FROM_DOXYGEN_ */
-
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/** @cond _ODP_HIDE_FROM_DOXYGEN_ */
 
 #pragma GCC diagnostic push
 

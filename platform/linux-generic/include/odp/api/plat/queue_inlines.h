@@ -13,6 +13,10 @@
 #include <odp/api/plat/event_validation_external.h>
 #include <odp/api/plat/queue_inline_types.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /** @cond _ODP_HIDE_FROM_DOXYGEN_ */
 
 extern const _odp_queue_api_fn_t *_odp_queue_api;
@@ -81,5 +85,9 @@ _ODP_INLINE int odp_queue_deq_multi(odp_queue_t queue,
 }
 
 /** @endcond */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

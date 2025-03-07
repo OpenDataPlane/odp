@@ -16,6 +16,10 @@
 #include <odp/api/plat/packet_inline_types.h>
 #include <odp/api/hints.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /** @cond _ODP_HIDE_FROM_DOXYGEN_ */
 
 static inline uint64_t _odp_packet_input_flags(odp_packet_t pkt)
@@ -289,5 +293,9 @@ _ODP_INLINE int odp_packet_has_l4_error(odp_packet_t pkt)
 }
 
 /** @endcond */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

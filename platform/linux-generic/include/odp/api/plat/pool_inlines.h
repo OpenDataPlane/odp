@@ -5,15 +5,15 @@
 #ifndef ODP_PLAT_POOL_INLINES_H_
 #define ODP_PLAT_POOL_INLINES_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <odp/api/pool_types.h>
 
 #include <odp/api/plat/pool_inline_types.h>
 
 #include <stdint.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** @cond _ODP_HIDE_FROM_DOXYGEN_ */
 

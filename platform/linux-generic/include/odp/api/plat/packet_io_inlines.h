@@ -6,13 +6,13 @@
 #ifndef ODP_PLAT_PACKET_IO_INLINES_H_
 #define ODP_PLAT_PACKET_IO_INLINES_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <odp/api/abi/packet_io_types.h>
 
 #include <stdint.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** @cond _ODP_HIDE_FROM_DOXYGEN_ */
 

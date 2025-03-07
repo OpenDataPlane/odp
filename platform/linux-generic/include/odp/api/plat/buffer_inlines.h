@@ -14,6 +14,10 @@
 #include <odp/api/plat/event_inline_types.h>
 #include <odp/api/plat/pool_inline_types.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /** @cond _ODP_HIDE_FROM_DOXYGEN_ */
 
 #ifndef _ODP_NO_INLINE
@@ -78,5 +82,9 @@ _ODP_INLINE void *odp_buffer_user_area(odp_buffer_t buf)
 }
 
 /** @endcond */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
