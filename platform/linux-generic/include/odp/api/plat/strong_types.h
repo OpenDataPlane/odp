@@ -15,6 +15,10 @@
 
 #include <odp/api/std_types.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /** Use strong typing for ODP types */
 #ifdef __cplusplus
 /* Allow type to be expanded before concatenation with underscore */
@@ -34,5 +38,9 @@
 
 /** Internal macro to convert a scalar to a typed handle */
 #define _odp_cast_scalar(type, val) ((type)(uintptr_t)(val))
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
