@@ -18,10 +18,10 @@ static inline void _odp_prefetch_l1i(const void *addr)
 	(void)addr;
 }
 
-#include <odp/api/abi/cpu_generic.h>
-
 #ifdef __cplusplus
 }
 #endif
+
+#include <odp/api/abi/cpu_generic.h>
 
 #endif

@@ -11,11 +11,11 @@
 #ifndef ODPH_ETH_H_
 #define ODPH_ETH_H_
 
+#include <odp_api.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <odp_api.h>
 
 /**
  * @defgroup odph_protocols ODPH PROTOCOLS

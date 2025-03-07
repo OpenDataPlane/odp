@@ -13,6 +13,10 @@
 
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /** @cond _ODP_HIDE_FROM_DOXYGEN_ */
 
 extern const _odp_schedule_api_fn_t *_odp_sched_api;
@@ -129,5 +133,9 @@ _ODP_INLINE void odp_schedule_order_wait(void)
 }
 
 /** @endcond */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

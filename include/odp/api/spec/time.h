@@ -13,12 +13,12 @@
 #define ODP_API_SPEC_TIME_H_
 #include <odp/visibility_begin.h>
 
+#include <odp/api/std_types.h>
+#include <odp/api/time_types.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <odp/api/std_types.h>
-#include <odp/api/time_types.h>
 
 /** @addtogroup odp_time
  *  SoC global and CPU local wall clock time

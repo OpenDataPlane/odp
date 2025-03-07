@@ -17,15 +17,15 @@
 #ifndef ODPH_LINUX_H_
 #define ODPH_LINUX_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <odp_api.h>
 
 #include <pthread.h>
 #include <getopt.h>
 #include <sys/types.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**
  * @defgroup odph_thread ODPH THREAD

@@ -11,16 +11,8 @@
 #ifndef ODP_API_ALIGN_H_
 #define ODP_API_ALIGN_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <odp/api/abi/align.h>
 
 #include <odp/api/spec/align.h>
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif

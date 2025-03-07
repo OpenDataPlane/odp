@@ -5,12 +5,13 @@
 #ifndef ODP_API_ABI_ML_TYPES_H_
 #define ODP_API_ABI_ML_TYPES_H_
 
+#include <odp/api/std_types.h>
+
+#include <odp/api/plat/strong_types.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <odp/api/std_types.h>
-#include <odp/api/plat/strong_types.h>
 
 /** @internal Implementation specific ML parameters */
 struct _odp_ml_model_extra_param_t {

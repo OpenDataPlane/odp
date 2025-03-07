@@ -11,11 +11,11 @@
 #ifndef ODPH_SCTP_H_
 #define ODPH_SCTP_H_
 
+#include <odp_api.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <odp_api.h>
 
 /**
  * @addtogroup odph_protocols

@@ -11,11 +11,11 @@
 #ifndef ODP_API_ABI_TICKETLOCK_H_
 #define ODP_API_ABI_TICKETLOCK_H_
 
+#include <odp/api/atomic.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <odp/api/atomic.h>
 
 /** @addtogroup odp_locks
  *  @{
@@ -27,9 +27,6 @@ typedef struct odp_ticketlock_s {
 	odp_atomic_u32_t  cur_ticket;  /**< Current ticket */
 } odp_ticketlock_t;
 
-/* Include inlined versions of API functions */
-#include <odp/api/plat/ticketlock_inlines.h>
-
 /**
  * @}
  */
@@ -37,5 +34,8 @@ typedef struct odp_ticketlock_s {
 #ifdef __cplusplus
 }
 #endif
+
+/* Include inlined versions of API functions */
+#include <odp/api/plat/ticketlock_inlines.h>
 
 #endif

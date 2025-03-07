@@ -5,11 +5,11 @@
 #ifndef ODP_API_ABI_TIME_CPU_H_
 #define ODP_API_ABI_TIME_CPU_H_
 
+#include <stdint.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <stdint.h>
 
 static inline uint64_t _odp_time_cpu_global(void)
 {
