@@ -11,14 +11,14 @@
 #ifndef ODPH_IP_H_
 #define ODPH_IP_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <odp_api.h>
 #include <odp/helper/chksum.h>
 
 #include <string.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**
  * @addtogroup odph_protocols
