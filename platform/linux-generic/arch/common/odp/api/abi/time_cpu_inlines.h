@@ -6,15 +6,15 @@
 #ifndef ODP_ARCH_TIME_CPU_INLINES_H_
 #define ODP_ARCH_TIME_CPU_INLINES_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <odp/api/time_types.h>
 
 #include <odp/api/abi/time_cpu.h>
 
 #include <stdint.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #define _ODP_TIME_GIGA_HZ  1000000000ULL
 

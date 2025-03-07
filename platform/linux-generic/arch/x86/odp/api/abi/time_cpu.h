@@ -5,12 +5,13 @@
 #ifndef ODP_ARCH_TIME_CPU_H_
 #define ODP_ARCH_TIME_CPU_H_
 
+#include <odp/api/abi/cpu_rdtsc.h>
+
+#include <stdint.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <stdint.h>
-#include <odp/api/abi/cpu_rdtsc.h>
 
 static inline uint64_t _odp_time_cpu_global(void)
 {
