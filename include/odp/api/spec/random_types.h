@@ -13,11 +13,11 @@
 #define ODP_API_SPEC_RANDOM_TYPES_H_
 #include <odp/visibility_begin.h>
 
+#include <odp/api/std_types.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <odp/api/std_types.h>
 
 /** @defgroup odp_random ODP RANDOM
  *  @{

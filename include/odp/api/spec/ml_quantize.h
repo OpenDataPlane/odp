@@ -13,11 +13,11 @@
 #define ODP_API_SPEC_ML_QUANTIZE_H_
 #include <odp/visibility_begin.h>
 
+#include <odp/api/std_types.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <odp/api/std_types.h>
 
 /** @addtogroup odp_ml
  *  @{

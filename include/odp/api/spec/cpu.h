@@ -13,11 +13,11 @@
 #define ODP_API_SPEC_CPU_H_
 #include <odp/visibility_begin.h>
 
+#include <odp/api/std_types.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <odp/api/std_types.h>
 
 /** @defgroup odp_cpu ODP CPU
  *  CPU cycle count, frequency, etc. information.

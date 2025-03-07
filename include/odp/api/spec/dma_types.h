@@ -12,14 +12,14 @@
 #define ODP_API_SPEC_DMA_TYPES_H_
 #include <odp/visibility_begin.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <odp/api/event_types.h>
 #include <odp/api/packet_types.h>
 #include <odp/api/queue_types.h>
 #include <odp/api/std_types.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** @defgroup odp_dma ODP DMA
  *  DMA offload
@@ -131,8 +131,16 @@ typedef struct odp_dma_pool_param_t {
 
 } odp_dma_pool_param_t;
 
+#ifdef __cplusplus
+}
+#endif
+
 /* Includes pool_types.h, which depends on odp_dma_pool_param_t. */
 #include <odp/api/pool_types.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**
  * DMA transfer direction
@@ -706,4 +714,3 @@ typedef struct odp_dma_result_t {
 
 #include <odp/visibility_end.h>
 #endif
-

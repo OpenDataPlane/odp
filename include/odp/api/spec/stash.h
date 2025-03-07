@@ -12,11 +12,11 @@
 #define ODP_API_SPEC_STASH_H_
 #include <odp/visibility_begin.h>
 
+#include <odp/api/stash_types.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <odp/api/stash_types.h>
 
 /** @addtogroup odp_stash
  *  Stash for storing object handles

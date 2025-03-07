@@ -13,13 +13,13 @@
 #define ODP_API_SPEC_EVENT_H_
 #include <odp/visibility_begin.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <odp/api/event_types.h>
 #include <odp/api/packet_types.h>
 #include <odp/api/pool_types.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** @addtogroup odp_event
  *  Generic event metadata and operations.

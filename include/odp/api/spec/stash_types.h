@@ -12,11 +12,11 @@
 #define ODP_API_SPEC_STASH_TYPES_H_
 #include <odp/visibility_begin.h>
 
+#include <odp/api/std_types.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <odp/api/std_types.h>
 
 /** @defgroup odp_stash ODP STASH
  *  @{

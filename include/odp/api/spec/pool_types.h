@@ -12,13 +12,13 @@
 #define ODP_API_SPEC_POOL_TYPES_H_
 #include <odp/visibility_begin.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <odp/api/std_types.h>
 #include <odp/api/dma_types.h>
 #include <odp/api/ml_types.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** @defgroup odp_pool ODP POOL
  *  @{

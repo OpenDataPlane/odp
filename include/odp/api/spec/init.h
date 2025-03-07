@@ -11,14 +11,14 @@
 #define ODP_API_SPEC_INIT_H_
 #include <odp/visibility_begin.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <odp/api/std_types.h>
 #include <odp/api/hints.h>
 #include <odp/api/thread_types.h>
 #include <odp/api/cpumask.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** @defgroup odp_initialization ODP INITIALIZATION
  *  ODP instance initialization and termination.

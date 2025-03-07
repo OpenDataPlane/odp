@@ -13,11 +13,11 @@
 #define ODP_API_SPEC_PACKET_IO_STATS_H_
 #include <odp/visibility_begin.h>
 
+#include <odp/api/queue_types.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <odp/api/queue_types.h>
 
 /** @addtogroup odp_packet_io
  *  @{

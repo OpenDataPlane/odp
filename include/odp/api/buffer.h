@@ -11,16 +11,8 @@
 #ifndef ODP_API_BUFFER_H_
 #define ODP_API_BUFFER_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <odp/api/abi/buffer.h>
 
 #include <odp/api/spec/buffer.h>
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif
