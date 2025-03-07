@@ -13,11 +13,11 @@
 #define ODP_API_SPEC_THREAD_H_
 #include <odp/visibility_begin.h>
 
+#include <odp/api/thread_types.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <odp/api/thread_types.h>
 
 /** @addtogroup odp_thread
  *  Thread types, masks and IDs.

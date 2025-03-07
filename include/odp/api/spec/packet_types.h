@@ -13,13 +13,13 @@
 #define ODP_API_SPEC_PACKET_TYPES_H_
 #include <odp/visibility_begin.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <odp/api/deprecated.h>
 #include <odp/api/proto_stats_types.h>
 #include <odp/api/queue_types.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** @defgroup odp_packet ODP PACKET
  *  @{

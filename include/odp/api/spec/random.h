@@ -12,12 +12,12 @@
 #define ODP_API_SPEC_RANDOM_H_
 #include <odp/visibility_begin.h>
 
+#include <odp/api/random_types.h>
+#include <odp/api/std_types.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <odp/api/random_types.h>
-#include <odp/api/std_types.h>
 
 /** @addtogroup odp_random
  *  Random number generation.

@@ -13,15 +13,15 @@
 #define ODP_API_SPEC_SCHEDULE_H_
 #include <odp/visibility_begin.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <odp/api/std_types.h>
 #include <odp/api/event_types.h>
 #include <odp/api/queue_types.h>
 #include <odp/api/schedule_types.h>
 #include <odp/api/thrmask.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** @addtogroup odp_scheduler
  *  Event scheduler for work load balancing and prioritization.

@@ -13,14 +13,14 @@
 #define ODP_API_SPEC_CLASSIFICATION_H_
 #include <odp/visibility_begin.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <odp/api/packet_io_types.h>
 #include <odp/api/pool_types.h>
 #include <odp/api/std_types.h>
 #include <odp/api/threshold.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** @defgroup odp_classification ODP CLASSIFICATION
  *  Packet input classification.

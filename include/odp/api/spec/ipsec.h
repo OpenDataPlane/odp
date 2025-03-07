@@ -13,15 +13,15 @@
 #define ODP_API_SPEC_IPSEC_H_
 #include <odp/visibility_begin.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <odp/api/crypto_types.h>
 #include <odp/api/event_types.h>
 #include <odp/api/ipsec_types.h>
 #include <odp/api/packet_types.h>
 #include <odp/api/std_types.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** @addtogroup odp_ipsec
  *  IPSEC protocol offload.

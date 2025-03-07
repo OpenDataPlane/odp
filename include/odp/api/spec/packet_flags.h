@@ -13,12 +13,12 @@
 #define ODP_API_SPEC_PACKET_FLAGS_H_
 #include <odp/visibility_begin.h>
 
+#include <odp/api/packet_types.h>
+#include <odp/api/std_types.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <odp/api/std_types.h>
-#include <odp/api/packet_types.h>
 
 /** @addtogroup odp_packet
  *  @par Operations on packet metadata flags

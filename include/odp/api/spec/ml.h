@@ -13,14 +13,14 @@
 #define ODP_API_SPEC_ML_H_
 #include <odp/visibility_begin.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <odp/api/event_types.h>
 #include <odp/api/ml_types.h>
 #include <odp/api/pool_types.h>
 #include <odp/api/std_types.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**
  * @addtogroup odp_ml

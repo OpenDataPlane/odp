@@ -11,16 +11,8 @@
 #ifndef ODP_API_EVENT_H_
 #define ODP_API_EVENT_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <odp/api/abi/event.h>
 
 #include <odp/api/spec/event.h>
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif
