@@ -11,16 +11,8 @@
 #ifndef ODP_API_TIMER_H_
 #define ODP_API_TIMER_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <odp/api/abi/timer.h>
 
 #include <odp/api/spec/timer.h>
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif

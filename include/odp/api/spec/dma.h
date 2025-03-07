@@ -12,12 +12,12 @@
 #define ODP_API_SPEC_DMA_H_
 #include <odp/visibility_begin.h>
 
+#include <odp/api/dma_types.h>
+#include <odp/api/pool_types.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <odp/api/dma_types.h>
-#include <odp/api/pool_types.h>
 
 /** @addtogroup odp_dma
  *  @{

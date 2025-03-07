@@ -12,11 +12,11 @@
 #define ODP_API_SPEC_PROTO_STATS_H_
 #include <odp/visibility_begin.h>
 
+#include <odp/api/proto_stats_types.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <odp/api/proto_stats_types.h>
 
 /** @addtogroup odp_proto_stats
  *  Flow specific packet statistics.

@@ -11,16 +11,8 @@
 #ifndef ODP_API_SYNC_H_
 #define ODP_API_SYNC_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <odp/api/abi/sync.h>
 
 #include <odp/api/spec/sync.h>
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif

@@ -8,12 +8,12 @@
 #define ODP_API_SPEC_TRAFFIC_MNGR_H_
 #include <odp/visibility_begin.h>
 
+#include <odp/api/packet_io_types.h>
+#include <odp/api/std_types.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <odp/api/packet_io_types.h>
-#include <odp/api/std_types.h>
 
 /**
  * @file

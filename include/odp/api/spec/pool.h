@@ -13,12 +13,12 @@
 #define ODP_API_SPEC_POOL_H_
 #include <odp/visibility_begin.h>
 
+#include <odp/api/pool_types.h>
+#include <odp/api/std_types.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <odp/api/std_types.h>
-#include <odp/api/pool_types.h>
 
 /** @addtogroup odp_pool
  *  Packet and buffer (event) pools.

@@ -13,12 +13,12 @@
 #define ODP_API_SPEC_TIMER_TYPES_H_
 #include <odp/visibility_begin.h>
 
+#include <odp/api/event_types.h>
+#include <odp/api/std_types.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <odp/api/event_types.h>
-#include <odp/api/std_types.h>
 
 /** @defgroup odp_timer ODP TIMER
  *  Timer generating timeout events.

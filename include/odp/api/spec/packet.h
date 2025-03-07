@@ -13,10 +13,6 @@
 #define ODP_API_SPEC_PACKET_H_
 #include <odp/visibility_begin.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <odp/api/event_types.h>
 #include <odp/api/packet_types.h>
 #include <odp/api/packet_io_types.h>
@@ -24,6 +20,10 @@ extern "C" {
 #include <odp/api/proto_stats_types.h>
 #include <odp/api/std_types.h>
 #include <odp/api/time_types.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** @addtogroup odp_packet
  *  Packet event metadata and operations.
