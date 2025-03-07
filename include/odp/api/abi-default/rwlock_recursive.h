@@ -11,13 +11,13 @@
 #ifndef ODP_ABI_RWLOCK_RECURSIVE_H_
 #define ODP_ABI_RWLOCK_RECURSIVE_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <odp/api/rwlock.h>
 #include <odp/api/std_types.h>
 #include <odp/api/thread.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** @internal */
 typedef struct odp_rwlock_recursive_s {
