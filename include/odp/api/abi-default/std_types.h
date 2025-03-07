@@ -5,10 +5,6 @@
 #ifndef ODP_ABI_STD_TYPES_H_
 #define ODP_ABI_STD_TYPES_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /* uint64_t, uint32_t, etc */
 #include <stdint.h>
 
@@ -17,6 +13,10 @@ extern "C" {
 
 /* true and false for odp_bool_t */
 #include <stdbool.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** @addtogroup odp_std
  *  @{

@@ -11,12 +11,12 @@
 #ifndef ODP_ABI_BARRIER_H_
 #define ODP_ABI_BARRIER_H_
 
+#include <odp/api/std_types.h>
+#include <odp/api/atomic.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <odp/api/std_types.h>
-#include <odp/api/atomic.h>
 
 /**
  * @internal

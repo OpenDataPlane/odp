@@ -11,11 +11,11 @@
 #ifndef ODP_ABI_RWLOCK_H_
 #define ODP_ABI_RWLOCK_H_
 
+#include <odp/api/atomic.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <odp/api/atomic.h>
 
 /** @internal */
 typedef struct odp_rwlock_s {

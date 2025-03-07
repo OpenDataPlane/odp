@@ -11,12 +11,6 @@
 #ifndef ODP_ABI_SYNC_H_
 #define ODP_ABI_SYNC_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-#ifdef __cplusplus
-}
-#endif
+/* Empty header required due to inline functions */
 
 #endif
