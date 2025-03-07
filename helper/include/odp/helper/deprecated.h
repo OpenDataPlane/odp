@@ -12,11 +12,11 @@
 #ifndef ODPH_DEPRECATED_H_
 #define ODPH_DEPRECATED_H_
 
+#include <odp/helper/autoheader_external.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <odp/helper/autoheader_external.h>
 
 /**
  * @def ODPH_DEPRECATE
