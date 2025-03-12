@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2015-2018 Linaro Limited
- * Copyright (c) 2023 Nokia
+ * Copyright (c) 2023-2025 Nokia
  */
 
 /**
@@ -306,6 +306,159 @@ typedef struct odp_schedule_config_t {
 	} sched_group;
 
 } odp_schedule_config_t;
+
+/**
+ * Region specific cache stashing configuration
+ *
+ * Region specific cache stashing configuration for different cache levels.
+ * Application can, for example, configure caching of certain portions of a
+ * region to L2 while configuring another portion to be cached to L3 or
+ * alternatively caching to both levels by configuring overlapping offsets and
+ * byte counts.
+ */
+typedef struct odp_cache_stash_region_t {
+	/** L2 cache stashing */
+	struct {
+		/** Offset into a region to start caching from */
+		uint32_t offset;
+
+		/** Length in bytes to cache
+		 *
+		 *  Depending on the implementation, this might be rounded up
+		 *  to a more suitable boundary.
+		 */
+		uint32_t len;
+
+	} l2;
+
+	/** L3 cache stashing */
+	struct {
+		/** Offset into a region to start caching from */
+		uint32_t offset;
+
+		/** Length in bytes to cache
+		 *
+		 *  Depending on the implementation, this might be rounded up
+		 *  to a more suitable boundary.
+		 */
+		uint32_t len;
+
+	} l3;
+
+} odp_cache_stash_region_t;
+
+/**
+ * Cache stashing configuration
+ *
+ * Cache stashing configuration for different data regions.
+ */
+typedef struct odp_cache_stash_config_t {
+	/** Region specific configuration toggle */
+	union {
+		/** Region bit fields */
+		struct {
+			/** Enable/disable event_metadata L2 cache stashing */
+			uint16_t event_metadata_l2  : 1;
+
+			/** Enable/disable event_metadata L3 cache stashing */
+			uint16_t event_metadata_l3  : 1;
+
+			/** Enable/disable event_data L2 cache stashing */
+			uint16_t event_data_l2      : 1;
+
+			/** Enable/disable event_data L3 cache stashing */
+			uint16_t event_data_l3      : 1;
+
+			/** Enable/disable event_user_area L2 cache stashing */
+			uint16_t event_user_area_l2 : 1;
+
+			/** Enable/disable event_user_area L3 cache stashing */
+			uint16_t event_user_area_l3 : 1;
+
+			/** Enable/disable queue_context L2 cache stashing */
+			uint16_t queue_context_l2   : 1;
+
+			/** Enable/disable queue_context L3 cache stashing */
+			uint16_t queue_context_l3   : 1;
+
+		};
+
+		/** All bits of the bit field structure
+		 *
+		 *  This field can be used to set/clear all bits, or bitwise
+		 *  operations over the entire structure.
+		 */
+		uint16_t all;
+
+	} regions;
+
+	/** Cache stashing for event metadata */
+	odp_cache_stash_region_t event_metadata;
+
+	/** Cache stashing for event data */
+	odp_cache_stash_region_t event_data;
+
+	/** Cache stashing for event user area */
+	odp_cache_stash_region_t event_user_area;
+
+	/** Cache stashing for queue context region */
+	odp_cache_stash_region_t queue_context;
+
+} odp_cache_stash_config_t;
+
+/**
+ * Priority specific cache stashing configuration
+ */
+typedef struct odp_cache_stash_prio_config_t {
+	/** Priority level for applying this cache stashing configuration to */
+	odp_schedule_prio_t  prio;
+
+	/** Cache stashing configuration */
+	odp_cache_stash_config_t config;
+
+} odp_cache_stash_prio_config_t;
+
+/**
+ * Schedule group parameters
+ */
+typedef struct odp_schedule_group_param_t {
+	/** Group specific cache stashing hints
+	 *
+	 *  Depending on the implementation, configuring these may improve
+	 *  performance.
+	 */
+	struct {
+		/** Common group specific cache stashing hints
+		 *
+		 *  Configures cache stashing for each priority and queue under
+		 *  the group. By default, all regions are disabled (see
+		 *  odp_cache_stash_config_t::regions).
+		 */
+		odp_cache_stash_config_t common;
+
+		/** Priority specific cache stashing hints
+		 *
+		 *  Configures priority specific cache stashing. If 'common' is
+		 *  enabled, overrides completely the configuration for the
+		 *  given priority.
+		 */
+		struct {
+			/** Number of entries in 'prio' array
+			 *
+			 *  By default 0.
+			 */
+			uint32_t num;
+
+			/** Pointer to 'num' entries of priority specific
+			 *  configuration
+			 */
+			const odp_cache_stash_prio_config_t *prio;
+
+		};
+
+	} cache_stash_hints;
+
+} odp_schedule_group_param_t;
 
 /**
  * Schedule group information
