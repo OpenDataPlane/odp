@@ -796,6 +796,43 @@ odp_pool_t odp_dma_pool_create(const char *name, const odp_dma_pool_param_t *dma
 	return pool;
 }
 
+odp_dma_compl_t odp_dma_compl_alloc(odp_pool_t pool)
+{
+	odp_buffer_t buf;
+	odp_event_t ev;
+	odp_dma_result_t *result;
+
+	buf = odp_buffer_alloc(pool);
+	if (odp_unlikely(buf == ODP_BUFFER_INVALID))
+		return ODP_DMA_COMPL_INVALID;
+
+	result = (odp_dma_result_t *)odp_buffer_addr(buf);
+	memset(result, 0, sizeof(odp_dma_result_t));
+
+	ev = odp_buffer_to_event(buf);
+	_odp_event_type_set(ev, ODP_EVENT_DMA_COMPL);
+
+	return (odp_dma_compl_t)(uintptr_t)buf;
+}
+
+int odp_dma_compl_result(odp_dma_compl_t dma_compl, odp_dma_result_t *result_out)
+{
+	odp_dma_result_t *result;
+	odp_buffer_t buf = (odp_buffer_t)(uintptr_t)dma_compl;
+
+	if (odp_unlikely(dma_compl == ODP_DMA_COMPL_INVALID)) {
+		_ODP_ERR("Bad DMA compl handle\n");
+		return -1;
+	}
+
+	result = (odp_dma_result_t *)odp_buffer_addr(buf);
+
+	if (result_out)
+		*result_out = *result;
+
+	return result->success ? 0 : -1;
+}
+
 uint64_t odp_dma_to_u64(odp_dma_t dma)
 {
 	return _odp_pri(dma);

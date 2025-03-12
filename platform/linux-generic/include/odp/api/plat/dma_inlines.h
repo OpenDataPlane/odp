@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright (c) 2023 Nokia
+ * Copyright (c) 2023-2025 Nokia
  */
 
 #ifndef ODP_PLAT_DMA_INLINES_H_
@@ -26,10 +26,8 @@
 	#define odp_dma_compl_from_event __odp_dma_compl_from_event
 	#define odp_dma_compl_to_event __odp_dma_compl_to_event
 	#define odp_dma_compl_user_area __odp_dma_compl_user_area
-	#define odp_dma_compl_result __odp_dma_compl_result
 	#define odp_dma_transfer_param_init __odp_dma_transfer_param_init
 	#define odp_dma_compl_param_init __odp_dma_compl_param_init
-	#define odp_dma_compl_alloc __odp_dma_compl_alloc
 	#define odp_dma_compl_free __odp_dma_compl_free
 #else
 	#define _ODP_INLINE
@@ -52,24 +50,6 @@ _ODP_INLINE void *odp_dma_compl_user_area(odp_dma_compl_t dma_compl)
 	return odp_buffer_user_area((odp_buffer_t)(uintptr_t)dma_compl);
 }
 
-_ODP_INLINE int odp_dma_compl_result(odp_dma_compl_t dma_compl, odp_dma_result_t *result_out)
-{
-	odp_dma_result_t *result;
-	odp_buffer_t buf = (odp_buffer_t)(uintptr_t)dma_compl;
-
-	if (odp_unlikely(dma_compl == ODP_DMA_COMPL_INVALID)) {
-		_ODP_ERR("Bad DMA compl handle\n");
-		return -1;
-	}
-
-	result = (odp_dma_result_t *)odp_buffer_addr(buf);
-
-	if (result_out)
-		*result_out = *result;
-
-	return result->success ? 0 : -1;
-}
-
 _ODP_INLINE void odp_dma_transfer_param_init(odp_dma_transfer_param_t *trs_param)
 {
 	memset(trs_param, 0, sizeof(odp_dma_transfer_param_t));
@@ -87,27 +67,6 @@ _ODP_INLINE void odp_dma_compl_param_init(odp_dma_compl_param_t *compl_param)
 	compl_param->queue = ODP_QUEUE_INVALID;
 	compl_param->event = ODP_EVENT_INVALID;
 	compl_param->transfer_id = ODP_DMA_TRANSFER_ID_INVALID;
-}
-
-_ODP_INLINE odp_dma_compl_t odp_dma_compl_alloc(odp_pool_t pool)
-{
-	odp_buffer_t buf;
-	odp_event_t ev;
-	odp_dma_result_t *result;
-	int8_t *ev_type;
-
-	buf = odp_buffer_alloc(pool);
-	if (odp_unlikely(buf == ODP_BUFFER_INVALID))
-		return ODP_DMA_COMPL_INVALID;
-
-	result = (odp_dma_result_t *)odp_buffer_addr(buf);
-	memset(result, 0, sizeof(odp_dma_result_t));
-
-	ev = odp_buffer_to_event(buf);
-	ev_type = _odp_event_hdr_ptr(ev, int8_t, event_type);
-	*ev_type = ODP_EVENT_DMA_COMPL;
-
-	return (odp_dma_compl_t)(uintptr_t)buf;
 }
 
 _ODP_INLINE void odp_dma_compl_free(odp_dma_compl_t dma_compl)
