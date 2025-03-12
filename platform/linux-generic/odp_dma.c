@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright (c) 2021-2024 Nokia
+ * Copyright (c) 2021-2025 Nokia
  */
 
 #include <odp/api/dma.h>
@@ -100,6 +100,7 @@ int odp_dma_capability(odp_dma_capability_t *capa)
 
 	capa->queue_type_sched = 1;
 	capa->queue_type_plain = 1;
+	capa->src_seg_free     = 1;
 
 	capa->pool.max_pools         = _odp_dma_glb->pool_capa.buf.max_pools;
 	capa->pool.max_num           = _odp_dma_glb->pool_capa.buf.max_num;
@@ -456,6 +457,38 @@ static int transfer_table(transfer_t *trs, const segment_t src_seg[], const segm
 	return i + 1;
 }
 
+static uint32_t add_to_free_set(odp_packet_t pkt, odp_packet_t set[], uint32_t num)
+{
+	odp_bool_t is_found = false;
+
+	for (uint32_t i = 0; i < num; i++)
+		if (set[i] == pkt)
+			is_found = true;
+
+	if (!is_found)
+		set[num++] = pkt;
+
+	return num;
+}
+
+static void free_src_segs(const odp_dma_transfer_param_t *transfer)
+{
+	const uint32_t num_src = transfer->num_src;
+
+	if (transfer->opts.unique_src_segs) {
+		for (uint32_t i = 0; i < num_src; i++)
+			odp_packet_free(transfer->src_seg[i].packet);
+	} else {
+		odp_packet_t free_set[num_src];
+		uint32_t num = 0;
+
+		for (uint32_t i = 0; i < num_src; i++)
+			num = add_to_free_set(transfer->src_seg[i].packet, free_set, num);
+
+		odp_packet_free_multi(free_set, num);
+	}
+}
+
 int odp_dma_transfer(odp_dma_t dma, const odp_dma_transfer_param_t *transfer,
 		     odp_dma_result_t *result)
 {
@@ -485,6 +518,12 @@ int odp_dma_transfer(odp_dma_t dma, const odp_dma_transfer_param_t *transfer,
 
 	if (odp_unlikely(transfer->num_dst == 0 || transfer->num_dst > MAX_SEGS)) {
 		_ODP_ERR("Bad number of dst segments\n");
+		return -1;
+	}
+
+	if (odp_unlikely(transfer->opts.seg_free &&
+			 transfer->src_format != ODP_DMA_FORMAT_PACKET)) {
+		_ODP_ERR("Source segment freeing supported only for packets\n");
 		return -1;
 	}
 
@@ -524,6 +563,9 @@ int odp_dma_transfer(odp_dma_t dma, const odp_dma_transfer_param_t *transfer,
 
 	for (i = 0; i < num; i++)
 		memcpy(trs[i].dst, trs[i].src, trs[i].len);
+
+	if (transfer->opts.seg_free)
+		free_src_segs(transfer);
 
 	if (result) {
 		memset(result, 0, sizeof(odp_dma_result_t));
