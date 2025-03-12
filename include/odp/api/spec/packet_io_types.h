@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2013-2018 Linaro Limited
- * Copyright (c) 2020-2024 Nokia
+ * Copyright (c) 2020-2025 Nokia
  */
 
 /**
@@ -303,7 +303,13 @@ typedef struct odp_pktin_queue_param_t {
 	  */
 	odp_pktin_queue_param_ovr_t *queue_param_ovr;
 
-	/** Packet input vector configuration */
+	/** Packet input vector configuration
+	 *
+	 * Generating vectors of packets can be enabled either through this
+	 * configuration or by using event aggregators as destination queue(s).
+	 * Both options cannot be enabled simultaneously in the same ODP
+	 * application.
+	 */
 	odp_pktin_vector_config_t vector;
 
 } odp_pktin_queue_param_t;
