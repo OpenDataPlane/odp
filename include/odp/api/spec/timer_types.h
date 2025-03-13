@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2013-2018 Linaro Limited
- * Copyright (c) 2019-2023 Nokia
+ * Copyright (c) 2019-2025 Nokia
  */
 
 /**
@@ -131,6 +131,9 @@ typedef struct {
 	/** Maximum number of timer pools for single shot timers (per clock source) */
 	uint32_t max_pools;
 
+	/** Maximum single shot timer pool priority */
+	uint16_t max_priority;
+
 	/** Maximum number of single shot timers in a pool
 	 *
 	 * The value of zero means that limited only by the available
@@ -202,6 +205,9 @@ typedef struct {
 		 *  When zero, periodic timers (#ODP_TIMER_TYPE_PERIODIC) are not supported.
 		 */
 		uint32_t max_pools;
+
+		/** Maximum periodic timer pool priority */
+		uint16_t max_priority;
 
 		/** Maximum number of periodic timers in a pool */
 		uint32_t max_timers;
@@ -371,6 +377,16 @@ typedef struct {
 
 	/** Number of timers in the pool. */
 	uint32_t num_timers;
+
+	/** Timer pool priority
+	 *
+	 *  Timers allocated from pools with a higher priority value are served with higher priority
+	 *  than timers allocated from pools with a lower priority value. The prioritization
+	 *  algorithm is implementation specific. Note that lower priority timers may get delayed
+	 *  due to higher priority timer processing. All values between zero and 'max_priority'
+	 *  (see odp_timer_capability_t) are valid. The default value is zero.
+	 */
+	uint16_t priority;
 
 	/** Thread private timer pool. When zero, multiple thread may use the
 	 *  timer pool concurrently. When non-zero, only single thread uses the
