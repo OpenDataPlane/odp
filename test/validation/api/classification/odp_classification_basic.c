@@ -707,7 +707,6 @@ static void cls_create_cos_with_hash_queues(void)
 
 	ret = odp_cls_capability(&capa);
 	CU_ASSERT_FATAL(ret == 0);
-	CU_ASSERT_FATAL(capa.hash_protocols.all_bits != 0);
 
 	odp_queue_param_init(&q_param);
 	q_param.type = ODP_QUEUE_TYPE_SCHED;
@@ -731,6 +730,9 @@ static int check_capa_cos_hashing(void)
 	odp_cls_capability_t capa;
 
 	if (odp_cls_capability(&capa) != 0)
+		return ODP_TEST_INACTIVE;
+
+	if (capa.hash_protocols.all_bits == 0)
 		return ODP_TEST_INACTIVE;
 
 	return capa.max_hash_queues > 1 ? ODP_TEST_ACTIVE : ODP_TEST_INACTIVE;
@@ -835,7 +837,7 @@ odp_testinfo_t classification_suite_basic[] = {
 	ODP_TEST_INFO(cls_cos_set_pool),
 	ODP_TEST_INFO(cls_pmr_composite_create),
 	ODP_TEST_INFO_CONDITIONAL(cls_create_cos_with_hash_queues, check_capa_cos_hashing),
-	ODP_TEST_INFO(cls_hash_result_single_queue),
+	ODP_TEST_INFO_CONDITIONAL(cls_hash_result_single_queue, check_capa_cos_hashing),
 	ODP_TEST_INFO_CONDITIONAL(cls_hash_result_many_queues, check_capa_cos_hashing),
 	ODP_TEST_INFO_NULL,
 };
