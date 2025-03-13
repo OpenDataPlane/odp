@@ -11,12 +11,12 @@
 #ifndef ODP_API_ABI_ATOMIC_H_
 #define ODP_API_ABI_ATOMIC_H_
 
+#include <odp/api/align.h>
+#include <odp/api/std_types.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <odp/api/std_types.h>
-#include <odp/api/align.h>
 
 /**
  * @internal
@@ -78,17 +78,10 @@ typedef struct ODP_ALIGNED(sizeof(odp_u128_t)) odp_atomic_u128_s {
 
 #endif
 
-/** @addtogroup odp_atomic
- *  @{
- */
-
-#include <odp/api/plat/atomic_inlines.h>
-
-/**
- * @}
- */
 #ifdef __cplusplus
 }
 #endif
+
+#include <odp/api/plat/atomic_inlines.h>
 
 #endif

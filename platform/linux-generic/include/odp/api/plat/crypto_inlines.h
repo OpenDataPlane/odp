@@ -5,16 +5,16 @@
 #ifndef ODP_PLAT_CRYPTO_INLINES_H_
 #define ODP_PLAT_CRYPTO_INLINES_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <odp/api/crypto_types.h>
 #include <odp/api/event.h>
 #include <odp/api/packet.h>
 
 #include <odp/api/plat/debug_inlines.h>
 #include <odp/api/plat/packet_inline_types.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** @cond _ODP_HIDE_FROM_DOXYGEN_ */
 

@@ -13,10 +13,6 @@
 #define ODP_API_SPEC_PACKET_IO_H_
 #include <odp/visibility_begin.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <odp/api/classification.h>
 #include <odp/api/packet_types.h>
 #include <odp/api/packet_io_stats.h>
@@ -24,6 +20,10 @@ extern "C" {
 #include <odp/api/queue_types.h>
 #include <odp/api/reassembly.h>
 #include <odp/api/time_types.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** @addtogroup odp_packet_io
  *  Packet IO interfaces.

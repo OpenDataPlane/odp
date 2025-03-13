@@ -13,11 +13,11 @@
 #define ODP_API_SPEC_STD_H_
 #include <odp/visibility_begin.h>
 
+#include <odp/api/std_types.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <odp/api/std_types.h>
 
 /** @addtogroup odp_std
  *  Standard types and performance optimized versions of selected C library

@@ -28,6 +28,10 @@
 #include <stdint.h>
 #include <string.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /** @cond _ODP_HIDE_FROM_DOXYGEN_ */
 
 #ifndef _ODP_NO_INLINE
@@ -679,5 +683,9 @@ _ODP_INLINE odp_packet_buf_t odp_packet_buf_from_head(odp_pool_t pool, void *hea
 }
 
 /** @endcond */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

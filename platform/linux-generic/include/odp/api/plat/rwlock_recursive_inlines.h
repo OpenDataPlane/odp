@@ -16,6 +16,10 @@
 #include <stdint.h>
 #include <string.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /** @cond _ODP_HIDE_FROM_DOXYGEN_ */
 
 #ifndef _ODP_NO_INLINE
@@ -136,5 +140,9 @@ _ODP_INLINE void odp_rwlock_recursive_write_unlock(odp_rwlock_recursive_t *rlock
 }
 
 /** @endcond */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

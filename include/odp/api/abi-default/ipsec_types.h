@@ -6,11 +6,11 @@
 #ifndef ODP_ABI_IPSEC_TYPES_H_
 #define ODP_ABI_IPSEC_TYPES_H_
 
+#include <odp/api/std_types.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <odp/api/std_types.h>
 
 /** @internal Dummy type for strong typing */
 typedef struct { char dummy; /**< @internal Dummy */ } _odp_abi_ipsec_sa_t;

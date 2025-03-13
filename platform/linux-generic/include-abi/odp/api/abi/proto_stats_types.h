@@ -12,12 +12,13 @@
 #ifndef ODP_API_ABI_PROTO_STATS_TYPES_H_
 #define ODP_API_ABI_PROTO_STATS_TYPES_H_
 
+#include <odp/api/std_types.h>
+
+#include <odp/api/plat/strong_types.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <odp/api/std_types.h>
-#include <odp/api/plat/strong_types.h>
 
 /** @addtogroup odp_proto_stats
  *  @{

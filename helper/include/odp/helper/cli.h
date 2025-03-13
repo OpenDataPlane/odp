@@ -11,12 +11,12 @@
 #ifndef ODPH_CLI_H_
 #define ODPH_CLI_H_
 
+#include <stdarg.h>
+#include <stdint.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <stdint.h>
-#include <stdarg.h>
 
 /**
  * @defgroup odph_cli ODPH CLI
