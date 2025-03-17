@@ -27,7 +27,15 @@ struct odp_barrier_s {
 	odp_atomic_u32_t bar;    /**< Barrier counter */
 };
 
+/** @addtogroup odp_barrier
+ *  @{
+ */
+
 typedef struct odp_barrier_s odp_barrier_t;
+
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }
