@@ -1460,6 +1460,11 @@ odp_timer_pool_t odp_timer_pool_create(const char *name,
 	if (param->res_ns == 0 && param->res_hz > timer_global->highest_res_hz)
 		return ODP_TIMER_POOL_INVALID;
 
+	if (param->priority > 0) {
+		_ODP_ERR("Only default timer pool priority supported.\n");
+		return ODP_TIMER_POOL_INVALID;
+	}
+
 	return timer_pool_new(name, param);
 }
 
