@@ -167,9 +167,10 @@ extern "C" {
 /**
  * Scheduling priority level
  *
- * Priority level is an integer value between odp_schedule_min_prio() and
- * odp_schedule_max_prio(). Queues with a higher priority value are served with
- * higher priority than queues with a lower priority value.
+ * Priority level is a non-negative integer value between
+ * odp_schedule_min_prio() and odp_schedule_max_prio(). Queues with a higher
+ * priority value are served with higher priority than queues with a lower
+ * priority value.
  */
 typedef int odp_schedule_prio_t;
 
