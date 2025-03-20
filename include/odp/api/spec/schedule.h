@@ -389,7 +389,7 @@ int odp_schedule_group_destroy(odp_schedule_group_t group);
  * @param name   Name of schedule group
  *
  * @return Handle of the first matching schedule group
- * @retval ODP_SCHEDULE_GROUP_INVALID No matching schedule group found
+ * @retval ODP_SCHED_GROUP_INVALID No matching schedule group found
  */
 odp_schedule_group_t odp_schedule_group_lookup(const char *name);
 
