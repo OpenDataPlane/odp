@@ -35,6 +35,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#define ML_MAX_ENGINES 1
 #define ML_MAX_IO_SEGS UINT32_MAX
 #define ML_MAX_COMPL_ID 32
 #define ML_MAX_CONFIG_STR_LEN 65
@@ -151,6 +152,7 @@ int odp_ml_capability(odp_ml_capability_t *capa)
 		return 0;
 	}
 
+	capa->max_engines = 1;
 	capa->max_model_size = ML_MAX_MODEL_SIZE;
 	capa->max_models = ML_MAX_MODELS_CREATED;
 	capa->max_models_loaded = ML_MAX_MODELS_LOADED;
@@ -192,6 +194,7 @@ int odp_ml_capability(odp_ml_capability_t *capa)
 void odp_ml_config_init(odp_ml_config_t *config)
 {
 	memset(config, 0, sizeof(odp_ml_config_t));
+	config->engine_id = 0;
 	config->max_models_created = 1;
 	config->max_models_loaded = 1;
 }
@@ -200,6 +203,12 @@ int odp_ml_config(const odp_ml_config_t *config)
 {
 	if (!config) {
 		_ODP_ERR("Config must not be NULL\n");
+		return -1;
+	}
+
+	if (config->engine_id >= ML_MAX_ENGINES) {
+		_ODP_ERR("Engine ID %u exceeds maximum number of engines %d\n",
+			 config->engine_id, ML_MAX_ENGINES);
 		return -1;
 	}
 
@@ -679,6 +688,7 @@ static int create_ort_model(const odp_ml_model_param_t *param, OrtSession **sess
 		return -1;
 	}
 
+	mdl->info.engine_id = 0;
 	mdl->max_compl_id = param->max_compl_id;
 	mdl->info.num_inputs = num_inputs;
 	mdl->info.num_outputs = num_outputs;
@@ -832,6 +842,12 @@ odp_ml_model_t odp_ml_model_create(const char *name, const odp_ml_model_param_t 
 
 	if (odp_unlikely(odp_global_ro.disable.ml)) {
 		_ODP_ERR("ML is disabled\n");
+		return ODP_ML_MODEL_INVALID;
+	}
+
+	if (odp_unlikely(param->engine_id >= ML_MAX_ENGINES)) {
+		_ODP_ERR("Engine ID %u exceeds maximum number of engines %d\n",
+			 param->engine_id, ML_MAX_ENGINES);
 		return ODP_ML_MODEL_INVALID;
 	}
 
