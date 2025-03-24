@@ -544,6 +544,24 @@ typedef struct odp_cls_stats_capability_t {
 
 } odp_cls_stats_capability_t;
 
+/** Event aggregator related capabilities */
+typedef struct odp_cls_aggr_capability_t {
+	/** Supported enqueuing profile types in addition to ODP_AEP_TYPE_NONE,
+	 *  which is always supported. See odp_aggr_enq_profile_t. */
+	struct {
+		/** IPv4 fragment profile (ODP_AEP_TYPE_IPV4_FRAG) */
+		uint64_t ipv4_frag : 1;
+
+		/** IPv6 fragment profile (ODP_AEP_TYPE_IPV6_FRAG) */
+		uint64_t ipv6_frag : 1;
+
+		/** Custom profile (ODP_AEP_TYPE_CUSTOM) */
+		uint64_t custom : 1;
+
+	} enq_profile_type;
+
+} odp_cls_aggr_capability_t;
+
 /**
  * Classification capabilities
  * This capability structure defines system level classification capability
@@ -605,6 +623,9 @@ typedef struct odp_cls_capability_t {
 
 	/** Statistics counters capabilities */
 	odp_cls_stats_capability_t stats;
+
+	/** Event aggregator related capabilities */
+	odp_cls_aggr_capability_t aggr;
 
 } odp_cls_capability_t;
 
@@ -711,6 +732,18 @@ typedef struct odp_cls_cos_param {
 	 * application.
 	 */
 	odp_pktin_vector_config_t vector;
+
+	/** Event aggregator enqueuing profile
+	 *
+	 * This parameter has an effect only when a packet is enqueued to
+	 * an aggregator queue by this CoS.
+	 *
+	 * If the profile is not one of the supported types indicated in
+	 * odp_cls_capability_t::aggr.enq_profile_type, or if the profile
+	 * type is supported but the profile cannot be supported in this CoS
+	 * instance (e.g. due to resource constraints), CoS creation will fail.
+	 */
+	odp_aggr_enq_profile_t aggr_enq_profile;
 
 } odp_cls_cos_param_t;
 

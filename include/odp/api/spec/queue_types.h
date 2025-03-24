@@ -382,6 +382,47 @@ typedef struct odp_aggr_enq_param_t {
 } odp_aggr_enq_param_t;
 
 /**
+ * Event aggregator enqueuing profile
+ *
+ * This profile affects how enqueuing to an event aggregator is done.
+ * Depending on the event being enqueued and the profile chosen,
+ * start-of-vector, end-of-vector or other similar hints may
+ * be passed to the aggregator along with the event.
+ *
+ * @see odp_aggr_enq_param_t
+ */
+typedef struct odp_aggr_enq_profile_t {
+	/** Profile type. The default value is ODP_AEP_TYPE_NONE. */
+	enum {
+		/** Default enqueuing behaviour with no hints being passed */
+		ODP_AEP_TYPE_NONE,
+
+		/** Try to get fragments of the same IPv4 packet into the
+		 *  same vector by enqueuing the first and last fragments
+		 *  with the start-of-vector and/or end-of-vector hints.
+		 */
+		ODP_AEP_TYPE_IPV4_FRAG,
+
+		/** Try to get fragments of the same IPv6 packet into the
+		 *  same vector by enqueuing the first and last fragments
+		 *  with the start-of-vector and/or end-of-vector hints.
+		 */
+		ODP_AEP_TYPE_IPV6_FRAG,
+
+		/** Implementation specific behaviour. */
+		ODP_AEP_TYPE_CUSTOM,
+	} type;
+
+	/** Additional implementation specific parameter for the
+	 *  ODP_AEP_TYPE_CUSTOM profile type. Must be zero for the other
+	 *  profile types.
+	 *
+	 *  The default value is zero.
+	 */
+	uintptr_t param;
+} odp_aggr_enq_profile_t;
+
+/**
  * @}
  */
 
