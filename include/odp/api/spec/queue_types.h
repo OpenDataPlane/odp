@@ -303,6 +303,81 @@ typedef struct odp_queue_info_t {
 } odp_queue_info_t;
 
 /**
+ * Event aggregator enqueuing parameters
+ */
+typedef struct odp_aggr_enq_param_t {
+	/** The event being enqueued is the first event of related events.
+	  *
+	  * Give a hint to an event aggregator to make room for new events
+	  * in the aggregation queue by generating an event vector of the
+	  * events already in the aggregation queue. This makes it more
+	  * likely that this event and the related events end up in the
+	  * same event vector.
+	  *
+	  * This flag has an effect only when an event is enqueued to an
+	  * event aggregation queue.
+	  *
+	  * Default value is zero.
+	  */
+	uint8_t start_of_vector :1;
+
+	/** The event being enqueued is the last event of related events.
+	  *
+	  * Give a hint to an event aggregator to stop aggregating more
+	  * events before generating an event vector. This reduces the
+	  * delay experienced by the events being aggregated.
+	  *
+	  * This flag has an effect only when an event is enqueued to an
+	  * event aggregation queue.
+	  *
+	  * Default value is zero.
+	  */
+	uint8_t end_of_vector :1;
+
+} odp_aggr_enq_param_t;
+
+/**
+ * Event aggregator enqueuing profile
+ *
+ * This profile affects how enqueuing to an event aggregator is done.
+ * Depending on the event being enqueued and the profile chosen,
+ * start-of-vector, end-of-vector or other similar hints may
+ * be passed to the aggregator along with the event.
+ *
+ * @see odp_aggr_enq_param_t
+ */
+typedef struct odp_aggr_enq_profile_t {
+	/** Profile type. The default value is ODP_AEP_TYPE_NONE. */
+	enum {
+		/** Default enqueuing behaviour with no hints being passed */
+		ODP_AEP_TYPE_NONE,
+
+		/** Try to get fragments of the same IPv4 packet into the
+		 *  same vector by enqueuing the first and last fragments
+		 *  with the start-of-vector and/or end-of-vetor hints.
+		 */
+		ODP_AEP_TYPE_IPV4_FRAG,
+
+		/** Try to get fragments of the same IPv6 packet into the
+		 *  same vector by enqueuing the first and last fragments
+		 *  with the start-of-vector and/or end-of-vetor hints.
+		 */
+		ODP_AEP_TYPE_IPV6_FRAG,
+
+		/** Implementation specific behaviour. */
+		ODP_AEP_TYPE_CUSTOM,
+	} type;
+
+	/** Additional implementation specific parameter for the
+	 *  ODP_AEP_TYPE_CUSTOM profile type. Must be zero for the other
+	 *  profile types.
+	 *
+	 *  The default value is zero.
+	 */
+	uintptr_t param;
+} odp_aggr_enq_profile_t;
+
+/**
  * @}
  */
 
