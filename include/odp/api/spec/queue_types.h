@@ -348,6 +348,40 @@ typedef struct odp_queue_info_t {
 } odp_queue_info_t;
 
 /**
+ * Event aggregator enqueuing parameters
+ */
+typedef struct odp_aggr_enq_param_t {
+	/** The event being enqueued is the first event of related events.
+	  *
+	  * Give a hint to an event aggregator to make room for new events
+	  * in the aggregation queue by generating an event vector of the
+	  * events already in the aggregation queue. This makes it more
+	  * likely that this event and the related events end up in the
+	  * same event vector.
+	  *
+	  * This flag has an effect only when an event is enqueued to an
+	  * event aggregation queue.
+	  *
+	  * Default value is zero.
+	  */
+	uint8_t start_of_vector :1;
+
+	/** The event being enqueued is the last event of related events.
+	  *
+	  * Give a hint to an event aggregator to stop aggregating more
+	  * events before generating an event vector. This reduces the
+	  * delay experienced by the events being aggregated.
+	  *
+	  * This flag has an effect only when an event is enqueued to an
+	  * event aggregation queue.
+	  *
+	  * Default value is zero.
+	  */
+	uint8_t end_of_vector :1;
+
+} odp_aggr_enq_param_t;
+
+/**
  * @}
  */
 
