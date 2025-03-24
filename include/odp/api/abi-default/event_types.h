@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2017-2018 Linaro Limited
- * Copyright (c) 2022-2023 Nokia
+ * Copyright (c) 2022-2024 Nokia
  */
 
 #ifndef ODP_ABI_EVENT_TYPES_H_
@@ -27,6 +27,7 @@ typedef enum {
 	ODP_EVENT_BUFFER = 1,
 	ODP_EVENT_PACKET = 2,
 	ODP_EVENT_TIMEOUT = 3,
+	ODP_EVENT_VECTOR = 4,
 	ODP_EVENT_IPSEC_STATUS = 5,
 	ODP_EVENT_PACKET_VECTOR = 6,
 	ODP_EVENT_PACKET_TX_COMPL = 7,
