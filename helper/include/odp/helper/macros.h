@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright(C) 2023 Nokia
+ * Copyright(C) 2023-2025 Nokia
  */
 
 /**
@@ -54,6 +54,27 @@ extern "C" {
 	__extension__ ({			\
 		__typeof__(v) abs_v = (v);	\
 		abs_v < 0 ? -abs_v : abs_v;	\
+	})
+
+/**
+ * Return division of two numbers rounded up to the closest integer (positive
+ * values expected)
+ */
+#define ODPH_DIV_ROUNDUP(dividend, divisor)			\
+	__extension__ ({					\
+		__typeof__(dividend) _dividend = (dividend);	\
+		__typeof__(divisor) _divisor = (divisor);	\
+		(_dividend + _divisor - 1) / _divisor;		\
+	})
+
+/**
+ * Round up 'x' to next multiple of 'y' (positive values expected)
+ */
+#define ODPH_ROUNDUP_MULTIPLE(x, y)			\
+	__extension__ ({				\
+		__typeof__(x) _x = (x);			\
+		__typeof__(y) _y = (y);			\
+		_y * (ODPH_DIV_ROUNDUP(_x, _y));	\
 	})
 
 /**
