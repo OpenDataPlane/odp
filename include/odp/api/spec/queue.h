@@ -243,6 +243,36 @@ int odp_queue_enq(odp_queue_t queue, odp_event_t ev);
 int odp_queue_enq_multi(odp_queue_t queue, const odp_event_t events[], int num);
 
 /**
+ * Enqueue an event with event aggregation hints
+ *
+ * Similar to odp_queue_enq() but passes an aggregation hint to the queue
+ * if the queue is an event aggregator. If the queue is not an event
+ * aggregator, works the same way as odp_queue_enq().
+ *
+ * Queuing to an event aggregator can be done using the normal enqueueing
+ * functions if an aggregation hint is not needed.
+ *
+ * Use odp_aggr_enq_param_init() to initialize param.
+ *
+ * @param queue   Queue handle
+ * @param ev      Event handle
+ * @param param   Aggregation hint parameters
+ *
+ * @retval 0 on success
+ * @retval <0 on failure
+ */
+int odp_queue_enq_aggr(odp_queue_t queue, odp_event_t ev, const odp_aggr_enq_param_t *param);
+
+/**
+ * Initialize aggregator enqueue parameters to their default values
+ *
+ * Initialize all fields of the parameter structure to their default values
+ *
+ * @param[out] param   Aggregation hint parameters
+ */
+void odp_aggr_enq_param_init(odp_aggr_enq_param_t *param);
+
+/**
  * Dequeue an event from a queue
  *
  * Returns the next event from head of the queue, or ODP_EVENT_INVALID when the
