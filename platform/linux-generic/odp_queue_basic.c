@@ -430,7 +430,7 @@ static int queue_destroy(odp_queue_t handle)
 	}
 
 	if (queue->spsc)
-		empty = ring_spsc_is_empty(&queue->ring_spsc);
+		empty = ring_spsc_u32_is_empty(&queue->ring_spsc);
 	else if (queue->type == ODP_QUEUE_TYPE_SCHED)
 		empty = ring_st_u32_is_empty(&queue->ring_st);
 	else
@@ -789,7 +789,7 @@ static void queue_print(odp_queue_t handle)
 	} else if (queue->spsc) {
 		_ODP_PRINT("  implementation  ring_spsc\n");
 		_ODP_PRINT("  length          %" PRIu32 "/%" PRIu32 "\n",
-			   ring_spsc_length(&queue->ring_spsc), queue->ring_mask + 1);
+			   ring_spsc_u32_len(&queue->ring_spsc), queue->ring_mask + 1);
 	} else if (queue->type == ODP_QUEUE_TYPE_SCHED) {
 		_ODP_PRINT("  implementation  ring_st\n");
 		_ODP_PRINT("  length          %" PRIu32 "/%" PRIu32 "\n",
@@ -852,7 +852,7 @@ static void queue_print_all(void)
 			len     = _odp_queue_lf_length(queue->queue_lf);
 			max_len = _odp_queue_lf_max_length();
 		} else if (queue->spsc) {
-			len     = ring_spsc_length(&queue->ring_spsc);
+			len     = ring_spsc_u32_len(&queue->ring_spsc);
 			max_len = queue->ring_mask + 1;
 		} else if (type == ODP_QUEUE_TYPE_SCHED) {
 			len     = ring_st_u32_len(&queue->ring_st);
