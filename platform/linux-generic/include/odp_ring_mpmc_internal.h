@@ -1,14 +1,10 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2018 Linaro Limited
- * Copyright (c) 2023 Nokia
+ * Copyright (c) 2023-2025 Nokia
  */
 
 #ifndef ODP_RING_MPMC_INTERNAL_H_
 #define ODP_RING_MPMC_INTERNAL_H_
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 #include <odp/api/align.h>
 #include <odp/api/atomic.h>
@@ -20,7 +16,12 @@ extern "C" {
 
 #include <odp_ring_common.h>
 
-/* Ring of uint32_t/uint64_t data
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/**
+ * Multi-producer multi-consumer ring
  *
  * Ring stores head and tail counters. Ring indexes are formed from these
  * counters with a mask (mask = ring_size - 1), which requires that ring size
@@ -79,6 +80,10 @@ typedef struct ODP_ALIGNED_CACHE {
 	struct ring_mpmc_common r;
 } ring_mpmc_u64_t;
 
+typedef struct ODP_ALIGNED_CACHE {
+	struct ring_mpmc_common r;
+} ring_mpmc_ptr_t;
+
 static inline int ring_mpmc_cas_u32(odp_atomic_u32_t *atom,
 				    uint32_t *old_val, uint32_t new_val)
 {
@@ -103,31 +108,42 @@ static inline int ring_mpmc_cas_u32(odp_atomic_u32_t *atom,
 /* This header should NOT be included directly. There are no include guards for
  * the following types and function definitions! */
 #ifndef _ODP_RING_TYPE
-#error Include type specific (u32/u64) ring header instead of this common file.
+#error Include type specific ring header instead of this common file.
 #endif
 
 #if _ODP_RING_TYPE == _ODP_RING_TYPE_U32
-	#define _ring_mpmc_gen_t ring_mpmc_u32_t
-	#define _ring_mpmc_data_t uint32_t
+	#define _ring_mpmc_gen_t	ring_mpmc_u32_t
+	#define _ring_mpmc_data_t	uint32_t
 
-	#define _RING_MPMC_INIT ring_mpmc_u32_init
-	#define _RING_MPMC_DEQ_MULTI ring_mpmc_u32_deq_multi
-	#define _RING_MPMC_ENQ_MULTI ring_mpmc_u32_enq_multi
-	#define _RING_MPMC_DEQ_BATCH ring_mpmc_u32_deq_batch
-	#define _RING_MPMC_ENQ_BATCH ring_mpmc_u32_enq_batch
-	#define _RING_MPMC_IS_EMPTY ring_mpmc_u32_is_empty
-	#define _RING_MPMC_LEN ring_mpmc_u32_len
+	#define _RING_MPMC_INIT		ring_mpmc_u32_init
+	#define _RING_MPMC_DEQ_MULTI	ring_mpmc_u32_deq_multi
+	#define _RING_MPMC_ENQ_MULTI	ring_mpmc_u32_enq_multi
+	#define _RING_MPMC_DEQ_BATCH	ring_mpmc_u32_deq_batch
+	#define _RING_MPMC_ENQ_BATCH	ring_mpmc_u32_enq_batch
+	#define _RING_MPMC_IS_EMPTY	ring_mpmc_u32_is_empty
+	#define _RING_MPMC_LEN		ring_mpmc_u32_len
 #elif _ODP_RING_TYPE == _ODP_RING_TYPE_U64
-	#define _ring_mpmc_gen_t ring_mpmc_u64_t
-	#define _ring_mpmc_data_t uint64_t
+	#define _ring_mpmc_gen_t	ring_mpmc_u64_t
+	#define _ring_mpmc_data_t	uint64_t
 
-	#define _RING_MPMC_INIT ring_mpmc_u64_init
-	#define _RING_MPMC_DEQ_MULTI ring_mpmc_u64_deq_multi
-	#define _RING_MPMC_ENQ_MULTI ring_mpmc_u64_enq_multi
-	#define _RING_MPMC_DEQ_BATCH ring_mpmc_u64_deq_batch
-	#define _RING_MPMC_ENQ_BATCH ring_mpmc_u64_enq_batch
-	#define _RING_MPMC_IS_EMPTY ring_mpmc_u64_is_empty
-	#define _RING_MPMC_LEN ring_mpmc_u64_len
+	#define _RING_MPMC_INIT		ring_mpmc_u64_init
+	#define _RING_MPMC_DEQ_MULTI	ring_mpmc_u64_deq_multi
+	#define _RING_MPMC_ENQ_MULTI	ring_mpmc_u64_enq_multi
+	#define _RING_MPMC_DEQ_BATCH	ring_mpmc_u64_deq_batch
+	#define _RING_MPMC_ENQ_BATCH	ring_mpmc_u64_enq_batch
+	#define _RING_MPMC_IS_EMPTY	ring_mpmc_u64_is_empty
+	#define _RING_MPMC_LEN		ring_mpmc_u64_len
+#elif _ODP_RING_TYPE == _ODP_RING_TYPE_PTR
+	#define _ring_mpmc_gen_t	ring_mpmc_ptr_t
+	#define _ring_mpmc_data_t	uintptr_t
+
+	#define _RING_MPMC_INIT		ring_mpmc_ptr_init
+	#define _RING_MPMC_DEQ_MULTI	ring_mpmc_ptr_deq_multi
+	#define _RING_MPMC_ENQ_MULTI	ring_mpmc_ptr_enq_multi
+	#define _RING_MPMC_DEQ_BATCH	ring_mpmc_ptr_deq_batch
+	#define _RING_MPMC_ENQ_BATCH	ring_mpmc_ptr_enq_batch
+	#define _RING_MPMC_IS_EMPTY	ring_mpmc_ptr_is_empty
+	#define _RING_MPMC_LEN		ring_mpmc_ptr_len
 #endif
 
 /* Initialize ring */
