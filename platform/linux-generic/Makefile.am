@@ -175,6 +175,7 @@ noinst_HEADERS = \
 		  include/odp_ring_common.h \
 		  include/odp_ring_internal.h \
 		  include/odp_ring_mpmc_internal.h \
+		  include/odp_ring_mpmc_ptr_internal.h \
 		  include/odp_ring_mpmc_u32_internal.h \
 		  include/odp_ring_mpmc_u64_internal.h \
 		  include/odp_ring_ptr_internal.h \
