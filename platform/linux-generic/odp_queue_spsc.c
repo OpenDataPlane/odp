@@ -11,40 +11,18 @@
 #include <string.h>
 #include <stdio.h>
 
-static inline void event_index_from_hdr(uint32_t event_index[],
-					_odp_event_hdr_t *event_hdr[], int num)
-{
-	int i;
-
-	for (i = 0; i < num; i++)
-		event_index[i] = event_hdr[i]->index.u32;
-}
-
-static inline void event_index_to_hdr(_odp_event_hdr_t *event_hdr[],
-				      uint32_t event_index[], int num)
-{
-	int i;
-
-	for (i = 0; i < num; i++) {
-		event_hdr[i] = _odp_event_hdr_from_index_u32(event_index[i]);
-		odp_prefetch(event_hdr[i]);
-	}
-}
-
 static int queue_spsc_enq(odp_queue_t handle, _odp_event_hdr_t *event_hdr)
 {
 	queue_entry_t *queue = qentry_from_handle(handle);
-	ring_spsc_u32_t *ring_spsc = &queue->ring_spsc;
-	uint32_t num_enq;
+	ring_spsc_ptr_t *ring_spsc = &queue->ring_spsc;
 
 	if (ODP_DEBUG && odp_unlikely(queue->status < QUEUE_STATUS_READY)) {
 		_ODP_ERR("Bad queue status\n");
 		return -1;
 	}
 
-	num_enq = ring_spsc_u32_enq(ring_spsc, queue->ring_data, queue->ring_mask,
-				    event_hdr->index.u32);
-	if (odp_likely(num_enq))
+	if (odp_likely(ring_spsc_ptr_enq(ring_spsc, queue->ring_data, queue->ring_mask,
+					 (uintptr_t)event_hdr)))
 		return 0;
 
 	return -1;
@@ -52,41 +30,33 @@ static int queue_spsc_enq(odp_queue_t handle, _odp_event_hdr_t *event_hdr)
 
 static inline int queue_spsc_enq_multi(odp_queue_t handle, _odp_event_hdr_t *event_hdr[], int num)
 {
-	queue_entry_t *queue;
-	ring_spsc_u32_t *ring_spsc;
-	uint32_t buf_idx[num];
-
-	queue = qentry_from_handle(handle);
-	ring_spsc = &queue->ring_spsc;
-
-	event_index_from_hdr(buf_idx, event_hdr, num);
+	queue_entry_t *queue = qentry_from_handle(handle);
+	ring_spsc_ptr_t *ring_spsc = &queue->ring_spsc;
 
 	if (ODP_DEBUG && odp_unlikely(queue->status < QUEUE_STATUS_READY)) {
 		_ODP_ERR("Bad queue status\n");
 		return -1;
 	}
 
-	return ring_spsc_u32_enq_multi(ring_spsc, queue->ring_data,
-				       queue->ring_mask, buf_idx, num);
+	return ring_spsc_ptr_enq_multi(ring_spsc, queue->ring_data,
+				       queue->ring_mask, (uintptr_t *)event_hdr, num);
 }
 
 static _odp_event_hdr_t *queue_spsc_deq(odp_queue_t handle)
 {
 	queue_entry_t *queue = qentry_from_handle(handle);
-	ring_spsc_u32_t *ring_spsc = &queue->ring_spsc;
+	ring_spsc_ptr_t *ring_spsc = &queue->ring_spsc;
 	_odp_event_hdr_t *event_hdr;
-	uint32_t num_deq, event_idx;
 
 	if (ODP_DEBUG && odp_unlikely(queue->status < QUEUE_STATUS_READY)) {
 		/* Bad queue, or queue has been destroyed. */
 		return NULL;
 	}
 
-	num_deq = ring_spsc_u32_deq(ring_spsc, queue->ring_data, queue->ring_mask, &event_idx);
-	if (num_deq == 0)
+	if (ring_spsc_ptr_deq(ring_spsc, queue->ring_data, queue->ring_mask,
+			      (uintptr_t *)&event_hdr) == 0)
 		return NULL;
 
-	event_hdr = _odp_event_hdr_from_index_u32(event_idx);
 	odp_prefetch(event_hdr);
 
 	return event_hdr;
@@ -94,26 +64,23 @@ static _odp_event_hdr_t *queue_spsc_deq(odp_queue_t handle)
 
 static inline int queue_spsc_deq_multi(odp_queue_t handle, _odp_event_hdr_t *event_hdr[], int num)
 {
-	queue_entry_t *queue;
-	int num_deq;
-	ring_spsc_u32_t *ring_spsc;
-	uint32_t buf_idx[num];
-
-	queue = qentry_from_handle(handle);
-	ring_spsc = &queue->ring_spsc;
+	queue_entry_t *queue = qentry_from_handle(handle);
+	ring_spsc_ptr_t *ring_spsc = &queue->ring_spsc;
+	uint32_t num_deq;
 
 	if (ODP_DEBUG && odp_unlikely(queue->status < QUEUE_STATUS_READY)) {
 		/* Bad queue, or queue has been destroyed. */
 		return -1;
 	}
 
-	num_deq = ring_spsc_u32_deq_multi(ring_spsc, queue->ring_data,
-					  queue->ring_mask, buf_idx, num);
+	num_deq = ring_spsc_ptr_deq_multi(ring_spsc, queue->ring_data, queue->ring_mask,
+					  (uintptr_t *)event_hdr, num);
 
 	if (num_deq == 0)
 		return 0;
 
-	event_index_to_hdr(event_hdr, buf_idx, num_deq);
+	for (uint32_t i = 0; i < num_deq; i++)
+		odp_prefetch(event_hdr[i]);
 
 	return num_deq;
 }
@@ -132,5 +99,5 @@ void _odp_queue_spsc_init(queue_entry_t *queue, uint32_t queue_size)
 
 	queue->ring_data = &_odp_queue_glb->ring_data[offset];
 	queue->ring_mask = queue_size - 1;
-	ring_spsc_u32_init(&queue->ring_spsc);
+	ring_spsc_ptr_init(&queue->ring_spsc);
 }
