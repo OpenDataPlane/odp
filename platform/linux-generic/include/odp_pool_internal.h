@@ -184,20 +184,6 @@ static inline _odp_event_hdr_t *event_hdr_from_index(pool_t *pool,
 	return event_hdr;
 }
 
-static inline _odp_event_hdr_t *_odp_event_hdr_from_index_u32(uint32_t u32)
-{
-	_odp_event_index_t index;
-	uint32_t pool_idx, event_idx;
-	pool_t *pool;
-
-	index.u32  = u32;
-	pool_idx   = index.pool;
-	event_idx  = index.event;
-	pool       = _odp_pool_entry_from_idx(pool_idx);
-
-	return event_hdr_from_index(pool, event_idx);
-}
-
 odp_event_t _odp_event_alloc(pool_t *pool);
 int _odp_event_alloc_multi(pool_t *pool, _odp_event_hdr_t *event_hdr[], int num);
 void _odp_event_free_multi(_odp_event_hdr_t *event_hdr[], int num_free);
