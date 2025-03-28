@@ -432,7 +432,7 @@ static int queue_destroy(odp_queue_t handle)
 	if (queue->spsc)
 		empty = ring_spsc_is_empty(&queue->ring_spsc);
 	else if (queue->type == ODP_QUEUE_TYPE_SCHED)
-		empty = ring_st_is_empty(&queue->ring_st);
+		empty = ring_st_u32_is_empty(&queue->ring_st);
 	else
 		empty = ring_mpmc_u32_is_empty(&queue->ring_mpmc);
 
@@ -793,7 +793,7 @@ static void queue_print(odp_queue_t handle)
 	} else if (queue->type == ODP_QUEUE_TYPE_SCHED) {
 		_ODP_PRINT("  implementation  ring_st\n");
 		_ODP_PRINT("  length          %" PRIu32 "/%" PRIu32 "\n",
-			   ring_st_length(&queue->ring_st), queue->ring_mask + 1);
+			   ring_st_u32_len(&queue->ring_st), queue->ring_mask + 1);
 	} else {
 		_ODP_PRINT("  implementation  ring_mpmc\n");
 		_ODP_PRINT("  length          %" PRIu32 "/%" PRIu32 "\n",
@@ -855,7 +855,7 @@ static void queue_print_all(void)
 			len     = ring_spsc_length(&queue->ring_spsc);
 			max_len = queue->ring_mask + 1;
 		} else if (type == ODP_QUEUE_TYPE_SCHED) {
-			len     = ring_st_length(&queue->ring_st);
+			len     = ring_st_u32_len(&queue->ring_st);
 			max_len = queue->ring_mask + 1;
 			prio    = queue->param.sched.prio;
 			grp     = queue->param.sched.group;
@@ -917,7 +917,7 @@ static inline int _sched_queue_enq_multi(odp_queue_t handle,
 	int ret;
 	queue_entry_t *queue;
 	int num_enq;
-	ring_st_t *ring_st;
+	ring_st_u32_t *ring_st;
 	uint32_t event_idx[num];
 
 	queue = qentry_from_handle(handle);
@@ -930,8 +930,8 @@ static inline int _sched_queue_enq_multi(odp_queue_t handle,
 
 	LOCK(queue);
 
-	num_enq = ring_st_enq_multi(ring_st, queue->ring_data,
-				    queue->ring_mask, event_idx, num);
+	num_enq = ring_st_u32_enq_multi(ring_st, queue->ring_data,
+					queue->ring_mask, event_idx, num);
 
 	if (odp_unlikely(num_enq == 0)) {
 		UNLOCK(queue);
@@ -956,7 +956,7 @@ int _odp_sched_queue_deq(uint32_t queue_index, odp_event_t ev[], int max_num,
 			 int update_status)
 {
 	int num_deq, status;
-	ring_st_t *ring_st;
+	ring_st_u32_t *ring_st;
 	queue_entry_t *queue = qentry_from_index(queue_index);
 	uint32_t event_idx[max_num];
 
@@ -978,8 +978,8 @@ int _odp_sched_queue_deq(uint32_t queue_index, odp_event_t ev[], int max_num,
 		return -1;
 	}
 
-	num_deq = ring_st_deq_multi(ring_st, queue->ring_data,
-				    queue->ring_mask, event_idx, max_num);
+	num_deq = ring_st_u32_deq_multi(ring_st, queue->ring_data,
+					queue->ring_mask, event_idx, max_num);
 
 	if (num_deq == 0) {
 		/* Already empty queue */
@@ -1029,7 +1029,7 @@ int _odp_sched_queue_empty(uint32_t queue_index)
 		return -1;
 	}
 
-	if (ring_st_is_empty(&queue->ring_st)) {
+	if (ring_st_u32_is_empty(&queue->ring_st)) {
 		/* Already empty queue. Update status. */
 		if (queue->status == QUEUE_STATUS_SCHED)
 			queue->status = QUEUE_STATUS_NOTSCHED;
@@ -1122,7 +1122,7 @@ static int queue_init(queue_entry_t *queue, const char *name,
 
 			queue->ring_data = &_odp_queue_glb->ring_data[offset];
 			queue->ring_mask = queue_size - 1;
-			ring_st_init(&queue->ring_st);
+			ring_st_u32_init(&queue->ring_st);
 		}
 	}
 
