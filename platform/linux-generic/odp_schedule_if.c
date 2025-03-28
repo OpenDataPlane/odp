@@ -1,9 +1,11 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2016-2018 Linaro Limited
- * Copyright (c) 2021-2024 Nokia
+ * Copyright (c) 2021-2025 Nokia
  */
 
 #include <odp/autoheader_internal.h>
+
+#include <odp/api/hints.h>
 
 #include <odp/api/plat/schedule_inline_types.h>
 #include <odp/api/plat/strong_types.h>
@@ -90,6 +92,18 @@ int odp_schedule_num_prio(void)
 
 odp_schedule_group_t odp_schedule_group_create(const char *name,
 					       const odp_thrmask_t *mask)
+{
+	return _odp_sched_api->schedule_group_create(name, mask);
+}
+
+void odp_schedule_group_param_init(odp_schedule_group_param_t *param)
+{
+	memset(param, 0, sizeof(*param));
+}
+
+odp_schedule_group_t odp_schedule_group_create_2(const char *name,
+						 const odp_thrmask_t *mask,
+						 const odp_schedule_group_param_t *p ODP_UNUSED)
 {
 	return _odp_sched_api->schedule_group_create(name, mask);
 }
