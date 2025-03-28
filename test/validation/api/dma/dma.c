@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright (c) 2021-2024 Nokia
+ * Copyright (c) 2021-2025 Nokia
  */
 
 #include <odp_api.h>
@@ -23,6 +23,7 @@
 typedef struct global_t {
 	odp_dma_capability_t dma_capa;
 	odp_shm_t shm;
+	odp_pool_param_t pool_param;
 	int disabled;
 	uint8_t *src_addr;
 	uint8_t *dst_addr;
@@ -34,6 +35,7 @@ typedef struct global_t {
 	odp_pool_t compl_pool;
 	uint32_t event_count;
 	uint32_t cache_size;
+	odp_packet_t src_ref_opts;
 
 } global_t;
 
@@ -41,6 +43,14 @@ typedef struct {
 	uint32_t count;
 	uint8_t mark[ELEM_NUM];
 } uarea_init_t;
+
+typedef struct {
+	odp_bool_t seg_free;
+	odp_bool_t unique_src_segs;
+	odp_bool_t single_pool;
+	odp_bool_t seg_alloc;
+	odp_bool_t unique_dst_segs;
+} opts_t;
 
 static global_t global;
 
@@ -110,6 +120,7 @@ static int dma_suite_init(void)
 
 	global.pkt_len = pkt_len;
 	global.pkt_pool = odp_pool_create("DMA test pkt pool", &pool_param);
+	global.pool_param = pool_param;
 
 	if (global.pkt_pool == ODP_POOL_INVALID) {
 		ODPH_ERR("Packet pool create failed\n");
@@ -589,6 +600,21 @@ static int check_zero(uint8_t *ptr, uint32_t len)
 	return 0;
 }
 
+static void check_dst_alloc(odp_dma_result_t *res, odp_pool_t dst_pool)
+{
+	odp_packet_t dst;
+
+	CU_ASSERT(res->num_dst == 1)
+
+	if (res->num_dst == 1) {
+		dst = res->dst_pkt[0];
+		CU_ASSERT(odp_packet_pool(dst) == dst_pool);
+		CU_ASSERT(check_equal(odp_packet_data(global.src_ref_opts), odp_packet_data(dst),
+				      odp_packet_seg_len(dst)) == 0);
+		odp_packet_free(dst);
+	}
+}
+
 static int do_transfer(odp_dma_t dma, const odp_dma_transfer_param_t *trs_param, int multi, int res)
 {
 	int i, ret;
@@ -614,8 +640,12 @@ static int do_transfer(odp_dma_t dma, const odp_dma_transfer_param_t *trs_param,
 
 	CU_ASSERT(ret == 1);
 
-	if (res)
+	if (res) {
 		CU_ASSERT(result.success);
+
+		if (trs_param->opts.seg_alloc)
+			check_dst_alloc(&result, trs_param->dst_seg_pool);
+	}
 
 	return ret;
 }
@@ -706,6 +736,9 @@ static int do_transfer_async(odp_dma_t dma, odp_dma_transfer_param_t *trs_param,
 			CU_ASSERT(result.user_ptr == user_ptr);
 			CU_ASSERT(user_data == USER_DATA);
 
+			if (trs_param->opts.seg_alloc)
+				check_dst_alloc(&result, trs_param->dst_seg_pool);
+
 			odp_dma_transfer_id_free(dma, compl_param[i].transfer_id);
 		} else if (compl_mode == ODP_DMA_COMPL_EVENT) {
 			odp_queue_t from = ODP_QUEUE_INVALID;
@@ -730,6 +763,9 @@ static int do_transfer_async(odp_dma_t dma, odp_dma_transfer_param_t *trs_param,
 			CU_ASSERT(result.success);
 			CU_ASSERT(result.user_ptr == user_ptr);
 			CU_ASSERT(user_data == USER_DATA);
+
+			if (trs_param->opts.seg_alloc)
+				check_dst_alloc(&result, trs_param->dst_seg_pool);
 
 			/* Test also without result struct output */
 			CU_ASSERT(odp_dma_compl_result(compl, NULL) == 0);
@@ -1342,6 +1378,156 @@ static int check_poll_none(void)
 	return ODP_TEST_INACTIVE;
 }
 
+static int check_src_seg_free_sync(void)
+{
+	if (global.disabled)
+		return ODP_TEST_INACTIVE;
+
+	if (global.dma_capa.src_seg_free && check_sync() == ODP_TEST_ACTIVE)
+		return ODP_TEST_ACTIVE;
+
+	return ODP_TEST_INACTIVE;
+}
+
+static int check_src_seg_free_segs_sync(void)
+{
+	if (global.disabled)
+		return ODP_TEST_INACTIVE;
+
+	if (check_src_seg_free_sync() == ODP_TEST_ACTIVE &&
+	    check_multiple_segs() == ODP_TEST_ACTIVE)
+		return ODP_TEST_ACTIVE;
+
+	return ODP_TEST_INACTIVE;
+}
+
+static int check_dst_seg_alloc_sync(void)
+{
+	if (global.disabled)
+		return ODP_TEST_INACTIVE;
+
+	if (global.dma_capa.dst_seg_alloc && check_sync() == ODP_TEST_ACTIVE)
+		return ODP_TEST_ACTIVE;
+
+	return ODP_TEST_INACTIVE;
+}
+
+static int check_dst_seg_alloc_segs_sync(void)
+{
+	if (global.disabled)
+		return ODP_TEST_INACTIVE;
+
+	if (check_dst_seg_alloc_sync() == ODP_TEST_ACTIVE &&
+	    check_multiple_segs() == ODP_TEST_ACTIVE)
+		return ODP_TEST_ACTIVE;
+
+	return ODP_TEST_INACTIVE;
+}
+
+static int check_src_seg_free_poll(void)
+{
+	if (global.disabled)
+		return ODP_TEST_INACTIVE;
+
+	if (global.dma_capa.src_seg_free && check_poll() == ODP_TEST_ACTIVE)
+		return ODP_TEST_ACTIVE;
+
+	return ODP_TEST_INACTIVE;
+}
+
+static int check_src_seg_free_segs_poll(void)
+{
+	if (global.disabled)
+		return ODP_TEST_INACTIVE;
+
+	if (check_src_seg_free_poll() == ODP_TEST_ACTIVE &&
+	    check_multiple_segs() == ODP_TEST_ACTIVE)
+		return ODP_TEST_ACTIVE;
+
+	return ODP_TEST_INACTIVE;
+}
+
+static int check_dst_seg_alloc_poll(void)
+{
+	if (global.disabled)
+		return ODP_TEST_INACTIVE;
+
+	if (global.dma_capa.dst_seg_alloc && check_poll() == ODP_TEST_ACTIVE)
+		return ODP_TEST_ACTIVE;
+
+	return ODP_TEST_INACTIVE;
+}
+
+static int check_dst_seg_alloc_segs_poll(void)
+{
+	if (global.disabled)
+		return ODP_TEST_INACTIVE;
+
+	if (check_dst_seg_alloc_poll() == ODP_TEST_ACTIVE &&
+	    check_multiple_segs() == ODP_TEST_ACTIVE)
+		return ODP_TEST_ACTIVE;
+
+	return ODP_TEST_INACTIVE;
+}
+
+static int check_src_seg_free_event(void)
+{
+	if (global.disabled)
+		return ODP_TEST_INACTIVE;
+
+	if (global.dma_capa.src_seg_free && check_event() == ODP_TEST_ACTIVE)
+		return ODP_TEST_ACTIVE;
+
+	return ODP_TEST_INACTIVE;
+}
+
+static int check_src_seg_free_segs_event(void)
+{
+	if (global.disabled)
+		return ODP_TEST_INACTIVE;
+
+	if (check_src_seg_free_event() == ODP_TEST_ACTIVE &&
+	    check_multiple_segs() == ODP_TEST_ACTIVE)
+		return ODP_TEST_ACTIVE;
+
+	return ODP_TEST_INACTIVE;
+}
+
+static int check_dst_seg_alloc_event(void)
+{
+	if (global.disabled)
+		return ODP_TEST_INACTIVE;
+
+	if (global.dma_capa.dst_seg_alloc && check_event() == ODP_TEST_ACTIVE)
+		return ODP_TEST_ACTIVE;
+
+	return ODP_TEST_INACTIVE;
+}
+
+static int check_dst_seg_alloc_segs_event(void)
+{
+	if (global.disabled)
+		return ODP_TEST_INACTIVE;
+
+	if (check_dst_seg_alloc_event() == ODP_TEST_ACTIVE &&
+	    check_multiple_segs() == ODP_TEST_ACTIVE)
+		return ODP_TEST_ACTIVE;
+
+	return ODP_TEST_INACTIVE;
+}
+
+static int check_src_seg_free_dst_seg_alloc(void)
+{
+	if (global.disabled)
+		return ODP_TEST_INACTIVE;
+
+	if (check_src_seg_free_sync() == ODP_TEST_ACTIVE &&
+	    check_dst_seg_alloc_sync() == ODP_TEST_ACTIVE)
+		return ODP_TEST_ACTIVE;
+
+	return ODP_TEST_INACTIVE;
+}
+
 static void test_dma_addr_to_addr_sync(void)
 {
 	test_dma_addr_to_addr(ODP_DMA_COMPL_SYNC, 1, 0, 0);
@@ -1603,6 +1789,226 @@ static void test_dma_pkt_to_pkt_multiple_offsets(void)
 	CU_ASSERT(odp_dma_destroy(dma) == 0);
 }
 
+static odp_dma_t create_dma(odp_dma_compl_mode_t mask)
+{
+	odp_dma_param_t dma_param;
+	odp_dma_t dma;
+
+	odp_dma_param_init(&dma_param);
+	dma_param.compl_mode_mask = mask;
+	dma = odp_dma_create("pkt_to_pkt_opts", &dma_param);
+
+	CU_ASSERT_FATAL(dma != ODP_DMA_INVALID);
+
+	return dma;
+}
+
+static odp_pool_t create_pool(uint32_t num)
+{
+	odp_pool_param_t pool_param = global.pool_param;
+	odp_pool_t pool;
+
+	pool_param.pkt.num = num;
+	pool = odp_pool_create("pkt_to_pkt_opts", &pool_param);
+
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+
+	return pool;
+}
+
+static uint32_t allocate_packets(odp_pool_t pool, odp_packet_t pkts[], uint32_t len, uint32_t num)
+{
+	odp_packet_t pkt;
+	uint32_t seg_len = 0;
+
+	for (uint32_t i = 0; i < num; i++) {
+		pkt = odp_packet_alloc(pool, len);
+
+		CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+
+		seg_len = odp_packet_seg_len(pkt);
+		init_source(odp_packet_data(pkt), seg_len);
+		pkts[i] = pkt;
+	}
+
+	return seg_len;
+}
+
+static void setup_segs(odp_dma_seg_t segs[], odp_packet_t pkt, uint32_t len, uint32_t num,
+		       odp_bool_t use_idx)
+{
+	odp_dma_seg_t *seg;
+	const uint32_t seg_len = len / num;
+	uint32_t offset = 0;
+
+	for (uint32_t i = 0; i < num; i++) {
+		seg = &segs[i];
+
+		if (use_idx) {
+			seg->pkt_index = 0;
+			seg->pkt_len = len;
+		} else {
+			seg->packet = pkt;
+		}
+
+		seg->len = seg_len;
+		seg->offset = offset;
+		offset += seg_len;
+	}
+}
+
+static void set_src_ref(odp_dma_transfer_param_t *trs)
+{
+	odp_packet_t src = trs->src_seg[0].packet, src_ref = ODP_PACKET_INVALID;
+
+	src_ref = trs->opts.seg_free ? odp_packet_copy(src, global.pkt_pool) : src;
+
+	CU_ASSERT_FATAL(src_ref != ODP_PACKET_INVALID);
+
+	global.src_ref_opts = src_ref;
+}
+
+static void test_dma_pkt_to_pkt_opts(odp_dma_compl_mode_t mask, const opts_t *opts)
+{
+	odp_dma_t dma;
+	odp_pool_t pool = global.pkt_pool;
+	/* One source and one destination packet. */
+	const uint32_t num_pkts = 2, src_idx = 0, dst_idx = 1,
+	num_src_seg = opts->unique_src_segs ? 1 : 2, num_dst_seg = opts->unique_dst_segs ? 1 : 2;
+	odp_packet_t pkts[num_pkts], pkt;
+	uint32_t seg_len;
+	odp_dma_seg_t src_seg[num_pkts];
+	odp_dma_seg_t dst_seg[num_pkts];
+	odp_dma_transfer_param_t trs_param;
+	int ret;
+
+	memset(src_seg, 0, sizeof(src_seg));
+	memset(dst_seg, 0, sizeof(dst_seg));
+	dma = create_dma(mask);
+
+	if (opts->seg_free)
+		pool = create_pool(num_pkts);
+
+	seg_len = allocate_packets(pool, pkts, global.pkt_len, num_pkts);
+	setup_segs(src_seg, pkts[src_idx], seg_len, num_src_seg, false);
+	setup_segs(dst_seg, pkts[dst_idx], seg_len, num_dst_seg, opts->seg_alloc);
+
+	odp_dma_transfer_param_init(&trs_param);
+	trs_param.src_format = ODP_DMA_FORMAT_PACKET;
+	trs_param.dst_format = ODP_DMA_FORMAT_PACKET;
+	trs_param.num_src = num_src_seg;
+	trs_param.num_dst = num_dst_seg;
+	trs_param.src_seg = src_seg;
+	trs_param.dst_seg = dst_seg;
+	trs_param.opts.seg_free = opts->seg_free;
+	trs_param.opts.unique_src_segs = opts->unique_src_segs;
+	trs_param.opts.single_pool = opts->single_pool;
+	trs_param.opts.seg_alloc = opts->seg_alloc;
+	trs_param.opts.unique_dst_segs = opts->unique_dst_segs;
+	set_src_ref(&trs_param);
+
+	if (opts->seg_alloc)
+		trs_param.dst_seg_pool = global.pkt_pool;
+
+	if (mask == ODP_DMA_COMPL_SYNC)
+		ret = do_transfer(dma, &trs_param, 0, 1);
+	else
+		ret = do_transfer_async(dma, &trs_param, mask, 0);
+
+	if (ret == 1) {
+		if (!opts->seg_alloc)
+			CU_ASSERT(check_equal(odp_packet_data(global.src_ref_opts),
+					      odp_packet_data(pkts[dst_idx]), seg_len) == 0);
+
+		if (opts->seg_free) {
+			/* The transfer-freed packet should be available now. */
+			pkt = odp_packet_alloc(pool, global.pkt_len);
+
+			CU_ASSERT(pkt != ODP_PACKET_INVALID);
+
+			odp_packet_free(pkt);
+		}
+	} else if (opts->seg_free) {
+		odp_packet_free(pkts[src_idx]);
+	}
+
+	/* 'global.src_ref_opts' is either 'pkts[src_idx]' if source segments are not freed or a
+	   copy of it if they are. */
+	odp_packet_free(global.src_ref_opts);
+	odp_packet_free(pkts[dst_idx]);
+
+	if (opts->seg_free)
+		CU_ASSERT(odp_pool_destroy(pool) == 0);
+
+	CU_ASSERT(odp_dma_destroy(dma) == 0);
+}
+
+static void test_dma_src_seg_free_sync(void)
+{
+	const opts_t opts = { .seg_free = true,
+			      .unique_src_segs = true,
+			      .single_pool = false,
+			      .seg_alloc = false,
+			      .unique_dst_segs = true };
+
+	test_dma_pkt_to_pkt_opts(ODP_DMA_COMPL_SYNC, &opts);
+}
+
+static void test_dma_src_seg_free_single_pool_sync(void)
+{
+	const opts_t opts = { .seg_free = true,
+			      .unique_src_segs = true,
+			      .single_pool = true,
+			      .seg_alloc = false,
+			      .unique_dst_segs = true };
+
+	test_dma_pkt_to_pkt_opts(ODP_DMA_COMPL_SYNC, &opts);
+}
+
+static void test_dma_src_seg_free_multiple_offsets_sync(void)
+{
+	const opts_t opts = { .seg_free = true,
+			      .unique_src_segs = false,
+			      .single_pool = false,
+			      .seg_alloc = false,
+			      .unique_dst_segs = true };
+
+	test_dma_pkt_to_pkt_opts(ODP_DMA_COMPL_SYNC, &opts);
+}
+
+static void test_dma_dst_seg_alloc_sync(void)
+{
+	const opts_t opts = { .seg_free = false,
+			      .unique_src_segs = true,
+			      .single_pool = false,
+			      .seg_alloc = true,
+			      .unique_dst_segs = true };
+
+	test_dma_pkt_to_pkt_opts(ODP_DMA_COMPL_SYNC, &opts);
+}
+
+static void test_dma_dst_seg_alloc_multiple_offsets_sync(void)
+{
+	const opts_t opts = { .seg_free = false,
+			      .unique_src_segs = true,
+			      .single_pool = false,
+			      .seg_alloc = true,
+			      .unique_dst_segs = false };
+
+	test_dma_pkt_to_pkt_opts(ODP_DMA_COMPL_SYNC, &opts);
+}
+
+static void test_dma_src_seg_free_dst_seg_alloc(void)
+{
+	const opts_t opts = { .seg_free = true,
+			      .unique_src_segs = true,
+			      .single_pool = false,
+			      .seg_alloc = true,
+			      .unique_dst_segs = true };
+
+	test_dma_pkt_to_pkt_opts(ODP_DMA_COMPL_SYNC, &opts);
+}
+
 static void test_dma_addr_to_addr_poll(void)
 {
 	test_dma_addr_to_addr(ODP_DMA_COMPL_POLL, 1, 0, 0);
@@ -1637,6 +2043,61 @@ static void test_dma_pkt_to_pkt_poll(void)
 	test_dma_pkt_to_pkt(ODP_DMA_COMPL_POLL, 0);
 }
 
+static void test_dma_src_seg_free_poll(void)
+{
+	const opts_t opts = { .seg_free = true,
+			      .unique_src_segs = true,
+			      .single_pool = false,
+			      .seg_alloc = false,
+			      .unique_dst_segs = true };
+
+	test_dma_pkt_to_pkt_opts(ODP_DMA_COMPL_POLL, &opts);
+}
+
+static void test_dma_src_seg_free_single_pool_poll(void)
+{
+	const opts_t opts = { .seg_free = true,
+			      .unique_src_segs = true,
+			      .single_pool = true,
+			      .seg_alloc = false,
+			      .unique_dst_segs = true };
+
+	test_dma_pkt_to_pkt_opts(ODP_DMA_COMPL_POLL, &opts);
+}
+
+static void test_dma_src_seg_free_multiple_offsets_poll(void)
+{
+	const opts_t opts = { .seg_free = true,
+			      .unique_src_segs = false,
+			      .single_pool = false,
+			      .seg_alloc = false,
+			      .unique_dst_segs = true };
+
+	test_dma_pkt_to_pkt_opts(ODP_DMA_COMPL_POLL, &opts);
+}
+
+static void test_dma_dst_seg_alloc_poll(void)
+{
+	const opts_t opts = { .seg_free = false,
+			      .unique_src_segs = true,
+			      .single_pool = false,
+			      .seg_alloc = true,
+			      .unique_dst_segs = true };
+
+	test_dma_pkt_to_pkt_opts(ODP_DMA_COMPL_POLL, &opts);
+}
+
+static void test_dma_dst_seg_alloc_multiple_offsets_poll(void)
+{
+	const opts_t opts = { .seg_free = false,
+			      .unique_src_segs = true,
+			      .single_pool = false,
+			      .seg_alloc = true,
+			      .unique_dst_segs = false };
+
+	test_dma_pkt_to_pkt_opts(ODP_DMA_COMPL_POLL, &opts);
+}
+
 static void test_dma_addr_to_addr_event(void)
 {
 	test_dma_addr_to_addr(ODP_DMA_COMPL_EVENT, 1, 0, 0);
@@ -1669,6 +2130,61 @@ static void test_dma_pkt_to_addr_event(void)
 static void test_dma_pkt_to_pkt_event(void)
 {
 	test_dma_pkt_to_pkt(ODP_DMA_COMPL_EVENT, 0);
+}
+
+static void test_dma_src_seg_free_event(void)
+{
+	const opts_t opts = { .seg_free = true,
+			      .unique_src_segs = true,
+			      .single_pool = false,
+			      .seg_alloc = false,
+			      .unique_dst_segs = true };
+
+	test_dma_pkt_to_pkt_opts(ODP_DMA_COMPL_EVENT, &opts);
+}
+
+static void test_dma_src_seg_free_single_pool_event(void)
+{
+	const opts_t opts = { .seg_free = true,
+			      .unique_src_segs = true,
+			      .single_pool = true,
+			      .seg_alloc = false,
+			      .unique_dst_segs = true };
+
+	test_dma_pkt_to_pkt_opts(ODP_DMA_COMPL_EVENT, &opts);
+}
+
+static void test_dma_src_seg_free_multiple_offsets_event(void)
+{
+	const opts_t opts = { .seg_free = true,
+			      .unique_src_segs = false,
+			      .single_pool = false,
+			      .seg_alloc = false,
+			      .unique_dst_segs = true };
+
+	test_dma_pkt_to_pkt_opts(ODP_DMA_COMPL_EVENT, &opts);
+}
+
+static void test_dma_dst_seg_alloc_event(void)
+{
+	const opts_t opts = { .seg_free = false,
+			      .unique_src_segs = true,
+			      .single_pool = false,
+			      .seg_alloc = true,
+			      .unique_dst_segs = true };
+
+	test_dma_pkt_to_pkt_opts(ODP_DMA_COMPL_EVENT, &opts);
+}
+
+static void test_dma_dst_seg_alloc_multiple_offsets_event(void)
+{
+	const opts_t opts = { .seg_free = false,
+			      .unique_src_segs = true,
+			      .single_pool = false,
+			      .seg_alloc = true,
+			      .unique_dst_segs = false };
+
+	test_dma_pkt_to_pkt_opts(ODP_DMA_COMPL_EVENT, &opts);
 }
 
 static void test_dma_addr_to_addr_poll_none(void)
@@ -1779,18 +2295,42 @@ odp_testinfo_t dma_suite[] = {
 	ODP_TEST_INFO_CONDITIONAL(test_dma_pkt_to_pkt_sync, check_sync),
 	ODP_TEST_INFO_CONDITIONAL(test_dma_pkt_to_pkt_sync_max_seg, check_sync),
 	ODP_TEST_INFO_CONDITIONAL(test_dma_pkt_to_pkt_multiple_offsets, check_multiple_segs),
+	ODP_TEST_INFO_CONDITIONAL(test_dma_src_seg_free_sync, check_src_seg_free_sync),
+	ODP_TEST_INFO_CONDITIONAL(test_dma_src_seg_free_single_pool_sync, check_src_seg_free_sync),
+	ODP_TEST_INFO_CONDITIONAL(test_dma_src_seg_free_multiple_offsets_sync,
+				  check_src_seg_free_segs_sync),
+	ODP_TEST_INFO_CONDITIONAL(test_dma_dst_seg_alloc_sync, check_dst_seg_alloc_sync),
+	ODP_TEST_INFO_CONDITIONAL(test_dma_dst_seg_alloc_multiple_offsets_sync,
+				  check_dst_seg_alloc_segs_sync),
+	ODP_TEST_INFO_CONDITIONAL(test_dma_src_seg_free_dst_seg_alloc,
+				  check_src_seg_free_dst_seg_alloc),
 	ODP_TEST_INFO_CONDITIONAL(test_dma_addr_to_addr_poll, check_poll),
 	ODP_TEST_INFO_CONDITIONAL(test_dma_addr_to_addr_poll_mtrs, check_poll),
 	ODP_TEST_INFO_CONDITIONAL(test_dma_addr_to_addr_poll_mseg, check_poll),
 	ODP_TEST_INFO_CONDITIONAL(test_dma_addr_to_pkt_poll, check_poll),
 	ODP_TEST_INFO_CONDITIONAL(test_dma_pkt_to_addr_poll, check_poll),
 	ODP_TEST_INFO_CONDITIONAL(test_dma_pkt_to_pkt_poll, check_poll),
+	ODP_TEST_INFO_CONDITIONAL(test_dma_src_seg_free_poll, check_src_seg_free_poll),
+	ODP_TEST_INFO_CONDITIONAL(test_dma_src_seg_free_single_pool_poll, check_src_seg_free_poll),
+	ODP_TEST_INFO_CONDITIONAL(test_dma_src_seg_free_multiple_offsets_poll,
+				  check_src_seg_free_segs_poll),
+	ODP_TEST_INFO_CONDITIONAL(test_dma_dst_seg_alloc_poll, check_dst_seg_alloc_poll),
+	ODP_TEST_INFO_CONDITIONAL(test_dma_dst_seg_alloc_multiple_offsets_poll,
+				  check_dst_seg_alloc_segs_poll),
 	ODP_TEST_INFO_CONDITIONAL(test_dma_addr_to_addr_event, check_scheduled),
 	ODP_TEST_INFO_CONDITIONAL(test_dma_addr_to_addr_event_mtrs, check_scheduled),
 	ODP_TEST_INFO_CONDITIONAL(test_dma_addr_to_addr_event_mseg, check_scheduled),
 	ODP_TEST_INFO_CONDITIONAL(test_dma_addr_to_pkt_event, check_scheduled),
 	ODP_TEST_INFO_CONDITIONAL(test_dma_pkt_to_addr_event, check_scheduled),
 	ODP_TEST_INFO_CONDITIONAL(test_dma_pkt_to_pkt_event, check_scheduled),
+	ODP_TEST_INFO_CONDITIONAL(test_dma_src_seg_free_event, check_src_seg_free_event),
+	ODP_TEST_INFO_CONDITIONAL(test_dma_src_seg_free_single_pool_event,
+				  check_src_seg_free_event),
+	ODP_TEST_INFO_CONDITIONAL(test_dma_src_seg_free_multiple_offsets_event,
+				  check_src_seg_free_segs_event),
+	ODP_TEST_INFO_CONDITIONAL(test_dma_dst_seg_alloc_event, check_dst_seg_alloc_event),
+	ODP_TEST_INFO_CONDITIONAL(test_dma_dst_seg_alloc_multiple_offsets_event,
+				  check_dst_seg_alloc_segs_event),
 	ODP_TEST_INFO_CONDITIONAL(test_dma_addr_to_addr_poll_none, check_poll_none),
 	ODP_TEST_INFO_CONDITIONAL(test_dma_addr_to_addr_event_none, check_sched_none),
 	ODP_TEST_INFO_CONDITIONAL(test_dma_multi_addr_to_addr_sync, check_sync),
