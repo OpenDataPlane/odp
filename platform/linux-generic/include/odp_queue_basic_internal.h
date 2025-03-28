@@ -23,7 +23,7 @@ extern "C" {
 #include <odp_config_internal.h>
 #include <odp_macros_internal.h>
 #include <odp_ring_mpmc_u32_internal.h>
-#include <odp_ring_st_internal.h>
+#include <odp_ring_st_u32_internal.h>
 #include <odp_ring_spsc_internal.h>
 #include <odp_queue_lf.h>
 
@@ -50,8 +50,8 @@ typedef struct ODP_ALIGNED_CACHE queue_entry_s {
 
 	odp_ticketlock_t     lock;
 	union {
-		ring_st_t    ring_st;
-		ring_spsc_t  ring_spsc;
+		ring_st_u32_t ring_st;
+		ring_spsc_t   ring_spsc;
 	};
 
 	odp_atomic_u64_t     num_timers;
