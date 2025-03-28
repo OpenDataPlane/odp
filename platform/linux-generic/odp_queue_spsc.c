@@ -35,7 +35,7 @@ static inline int spsc_enq_multi(odp_queue_t handle,
 				 _odp_event_hdr_t *event_hdr[], int num)
 {
 	queue_entry_t *queue;
-	ring_spsc_t *ring_spsc;
+	ring_spsc_u32_t *ring_spsc;
 	uint32_t buf_idx[num];
 
 	queue = qentry_from_handle(handle);
@@ -48,8 +48,8 @@ static inline int spsc_enq_multi(odp_queue_t handle,
 		return -1;
 	}
 
-	return ring_spsc_enq_multi(ring_spsc, queue->ring_data,
-				   queue->ring_mask, buf_idx, num);
+	return ring_spsc_u32_enq_multi(ring_spsc, queue->ring_data,
+				       queue->ring_mask, buf_idx, num);
 }
 
 static inline int spsc_deq_multi(odp_queue_t handle,
@@ -57,7 +57,7 @@ static inline int spsc_deq_multi(odp_queue_t handle,
 {
 	queue_entry_t *queue;
 	int num_deq;
-	ring_spsc_t *ring_spsc;
+	ring_spsc_u32_t *ring_spsc;
 	uint32_t buf_idx[num];
 
 	queue = qentry_from_handle(handle);
@@ -68,8 +68,8 @@ static inline int spsc_deq_multi(odp_queue_t handle,
 		return -1;
 	}
 
-	num_deq = ring_spsc_deq_multi(ring_spsc, queue->ring_data,
-				      queue->ring_mask, buf_idx, num);
+	num_deq = ring_spsc_u32_deq_multi(ring_spsc, queue->ring_data,
+					  queue->ring_mask, buf_idx, num);
 
 	if (num_deq == 0)
 		return 0;
@@ -130,5 +130,5 @@ void _odp_queue_spsc_init(queue_entry_t *queue, uint32_t queue_size)
 
 	queue->ring_data = &_odp_queue_glb->ring_data[offset];
 	queue->ring_mask = queue_size - 1;
-	ring_spsc_init(&queue->ring_spsc);
+	ring_spsc_u32_init(&queue->ring_spsc);
 }
