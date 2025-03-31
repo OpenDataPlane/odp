@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright (c) 2021-2024 Nokia
+ * Copyright (c) 2021-2025 Nokia
  */
 
 #include <odp/api/dma.h>
@@ -47,7 +47,10 @@ typedef struct transfer_t {
 } transfer_t;
 
 typedef struct result_t {
+	uint32_t num_dst;
 	void *user_ptr;
+	/* Space for implementation allocated packets if requested */
+	odp_packet_t pkts[MAX_SEGS];
 
 } result_t;
 
@@ -57,7 +60,8 @@ typedef struct ODP_ALIGNED_CACHE dma_session_t {
 	uint8_t           active;
 	char              name[ODP_DMA_NAME_LEN];
 	odp_stash_t       stash;
-	result_t          result[MAX_TRANSFERS];
+	/* Last element in array reserved for sync transfers, others added to ID stash */
+	result_t          result[MAX_TRANSFERS + 1];
 
 } dma_session_t;
 
@@ -100,6 +104,8 @@ int odp_dma_capability(odp_dma_capability_t *capa)
 
 	capa->queue_type_sched = 1;
 	capa->queue_type_plain = 1;
+	capa->src_seg_free     = 1;
+	capa->dst_seg_alloc    = 1;
 
 	capa->pool.max_pools         = _odp_dma_glb->pool_capa.buf.max_pools;
 	capa->pool.max_num           = _odp_dma_glb->pool_capa.buf.max_num;
@@ -324,6 +330,11 @@ odp_dma_t odp_dma_lookup(const char *name)
 	return ODP_DMA_INVALID;
 }
 
+static inline result_t *get_sync_res(dma_session_t *session)
+{
+	return &session->result[MAX_SESSIONS];
+}
+
 static uint32_t transfer_len(const odp_dma_transfer_param_t *trs_param)
 {
 	uint32_t i;
@@ -400,6 +411,63 @@ static inline int segment_pkt(segment_t seg[], int num_seg, const odp_dma_seg_t 
 	return num;
 }
 
+static int alloc_dst_segs(const odp_dma_transfer_param_t *transfer, result_t *res)
+{
+	const uint32_t num_dst = transfer->num_dst;
+	odp_dma_seg_t *seg;
+	odp_pool_t pool = transfer->dst_seg_pool;
+	odp_packet_t pkt = ODP_PACKET_INVALID;
+	int ret = 0;
+	int64_t cur_idx, prev_idx = -1;
+
+	res->num_dst = 0;
+
+	if (transfer->opts.unique_dst_segs) {
+		for (uint32_t i = 0; i < num_dst; i++) {
+			seg = &transfer->dst_seg[i];
+			pkt = odp_packet_alloc(pool, seg->pkt_len);
+
+			if (odp_unlikely(pkt == ODP_PACKET_INVALID)) {
+				_ODP_ERR("Destination packet allocation failed\n");
+				ret = -1;
+				break;
+			}
+
+			seg->packet = pkt;
+			res->pkts[res->num_dst++] = pkt;
+		}
+	} else {
+		for (uint32_t i = 0; i < num_dst; i++) {
+			seg = &transfer->dst_seg[i];
+			cur_idx = seg->pkt_index;
+
+			if (prev_idx == cur_idx) {
+				seg->packet = pkt;
+				continue;
+			}
+
+			pkt = odp_packet_alloc(pool, seg->pkt_len);
+
+			if (odp_unlikely(pkt == ODP_PACKET_INVALID)) {
+				_ODP_ERR("Destination packet allocation failed\n");
+				ret = -1;
+				break;
+			}
+
+			seg->packet = pkt;
+			res->pkts[res->num_dst++] = pkt;
+			prev_idx = cur_idx;
+		}
+	}
+
+	if (odp_unlikely(ret == -1)) {
+		for (uint32_t i = 0; i < res->num_dst; i++)
+			odp_packet_free(res->pkts[i]);
+	}
+
+	return ret;
+}
+
 static int transfer_table(transfer_t *trs, const segment_t src_seg[], const segment_t dst_seg[],
 			  int max_num, uint32_t tot_len)
 {
@@ -456,22 +524,48 @@ static int transfer_table(transfer_t *trs, const segment_t src_seg[], const segm
 	return i + 1;
 }
 
-int odp_dma_transfer(odp_dma_t dma, const odp_dma_transfer_param_t *transfer,
-		     odp_dma_result_t *result)
+static uint32_t add_to_free_set(odp_packet_t pkt, odp_packet_t set[], uint32_t num)
+{
+	odp_bool_t is_found = false;
+
+	for (uint32_t i = 0; i < num; i++)
+		if (set[i] == pkt)
+			is_found = true;
+
+	if (!is_found)
+		set[num++] = pkt;
+
+	return num;
+}
+
+static void free_src_segs(const odp_dma_transfer_param_t *transfer)
+{
+	const uint32_t num_src = transfer->num_src;
+
+	if (transfer->opts.unique_src_segs) {
+		for (uint32_t i = 0; i < num_src; i++)
+			odp_packet_free(transfer->src_seg[i].packet);
+	} else {
+		odp_packet_t free_set[num_src];
+		uint32_t num = 0;
+
+		for (uint32_t i = 0; i < num_src; i++)
+			num = add_to_free_set(transfer->src_seg[i].packet, free_set, num);
+
+		odp_packet_free_multi(free_set, num);
+	}
+}
+
+static int do_transfer(dma_session_t *session, const odp_dma_transfer_param_t *transfer,
+		       result_t *result)
 {
 	int num, i;
 	uint32_t tot_len;
-	dma_session_t *session = dma_session_from_handle(dma);
 	int num_src, num_dst;
 	const int max_num = 2 * MAX_SEGS;
 	transfer_t trs[max_num];
 	segment_t src[MAX_SEGS];
 	segment_t dst[MAX_SEGS];
-
-	if (odp_unlikely(dma == ODP_DMA_INVALID)) {
-		_ODP_ERR("Bad DMA handle\n");
-		return -1;
-	}
 
 	if (odp_unlikely(session->active == 0)) {
 		_ODP_ERR("Session not created\n");
@@ -485,6 +579,18 @@ int odp_dma_transfer(odp_dma_t dma, const odp_dma_transfer_param_t *transfer,
 
 	if (odp_unlikely(transfer->num_dst == 0 || transfer->num_dst > MAX_SEGS)) {
 		_ODP_ERR("Bad number of dst segments\n");
+		return -1;
+	}
+
+	if (odp_unlikely(transfer->opts.seg_free &&
+			 transfer->src_format != ODP_DMA_FORMAT_PACKET)) {
+		_ODP_ERR("Source segment freeing supported only for packets\n");
+		return -1;
+	}
+
+	if (odp_unlikely(transfer->opts.seg_alloc &&
+			 transfer->dst_format != ODP_DMA_FORMAT_PACKET)) {
+		_ODP_ERR("Destination segment allocation supported only for packets\n");
 		return -1;
 	}
 
@@ -509,6 +615,11 @@ int odp_dma_transfer(odp_dma_t dma, const odp_dma_transfer_param_t *transfer,
 		num_dst = transfer->num_dst;
 		segment_raw(dst, num_dst, transfer->dst_seg);
 	} else {
+		if (result) {
+			if (odp_unlikely(alloc_dst_segs(transfer, result) == -1))
+				return -1;
+		}
+
 		num_dst = segment_pkt(dst, transfer->num_dst, transfer->dst_seg);
 
 		if (odp_unlikely(num_dst == 0))
@@ -525,18 +636,57 @@ int odp_dma_transfer(odp_dma_t dma, const odp_dma_transfer_param_t *transfer,
 	for (i = 0; i < num; i++)
 		memcpy(trs[i].dst, trs[i].src, trs[i].len);
 
-	if (result) {
-		memset(result, 0, sizeof(odp_dma_result_t));
-		result->success = 1;
-	}
+	if (transfer->opts.seg_free)
+		free_src_segs(transfer);
 
 	return 1;
+}
+
+int odp_dma_transfer(odp_dma_t dma, const odp_dma_transfer_param_t *transfer,
+		     odp_dma_result_t *result)
+{
+	dma_session_t *session = dma_session_from_handle(dma);
+	result_t *res = NULL;
+	int ret;
+
+	if (result)
+		memset(result, 0, sizeof(odp_dma_result_t));
+
+	if (odp_unlikely(dma == ODP_DMA_INVALID)) {
+		_ODP_ERR("Bad DMA handle\n");
+		return -1;
+	}
+
+	if (odp_unlikely(transfer->opts.seg_alloc && result == NULL)) {
+		_ODP_ERR("Transfer result structure required for destination segment "
+			 "allocation\n");
+		return -1;
+	}
+
+	if (transfer->opts.seg_alloc)
+		res = get_sync_res(session);
+
+	ret = do_transfer(session, transfer, res);
+
+	if (odp_unlikely(ret < 1))
+		return ret;
+
+	if (result) {
+		result->success = 1;
+
+		if (transfer->opts.seg_alloc) {
+			result->num_dst = res->num_dst;
+			result->dst_pkt = res->pkts;
+		}
+	}
+
+	return ret;
 }
 
 int odp_dma_transfer_multi(odp_dma_t dma, const odp_dma_transfer_param_t *trs_param[],
 			   odp_dma_result_t *result[], int num)
 {
-	int i;
+	int i, seg_allocd = 0;
 	odp_dma_result_t *res = NULL;
 	int ret = 0;
 
@@ -546,6 +696,11 @@ int odp_dma_transfer_multi(odp_dma_t dma, const odp_dma_transfer_param_t *trs_pa
 	}
 
 	for (i = 0; i < num; i++) {
+		if (seg_allocd)
+			/* In order to preserve access for implementation allocated packets, stop
+			 * here and return */
+			break;
+
 		if (result)
 			res = result[i];
 
@@ -553,6 +708,9 @@ int odp_dma_transfer_multi(odp_dma_t dma, const odp_dma_transfer_param_t *trs_pa
 
 		if (odp_unlikely(ret != 1))
 			break;
+
+		if (trs_param[i]->opts.seg_alloc)
+			seg_allocd = 1;
 	}
 
 	if (odp_unlikely(i == 0))
@@ -598,6 +756,7 @@ int odp_dma_transfer_start(odp_dma_t dma, const odp_dma_transfer_param_t *transf
 	int ret;
 	dma_session_t *session = dma_session_from_handle(dma);
 	const uint32_t transfer_id = compl->transfer_id;
+	result_t *res = NULL;
 
 	if (odp_unlikely(dma == ODP_DMA_INVALID)) {
 		_ODP_ERR("Bad DMA handle\n");
@@ -613,6 +772,9 @@ int odp_dma_transfer_start(odp_dma_t dma, const odp_dma_transfer_param_t *transf
 			_ODP_ERR("Bad transfer ID: %u\n", transfer_id);
 			return -1;
 		}
+
+		res = &session->result[index_from_transfer_id(transfer_id)];
+		res->user_ptr = compl->user_ptr;
 		break;
 	case ODP_DMA_COMPL_EVENT:
 		if (compl->event == ODP_EVENT_INVALID ||
@@ -620,24 +782,7 @@ int odp_dma_transfer_start(odp_dma_t dma, const odp_dma_transfer_param_t *transf
 			_ODP_ERR("Bad event or queue\n");
 			return -1;
 		}
-		break;
-	default:
-		_ODP_ERR("Bad completion mode %u\n", compl->compl_mode);
-		return -1;
-	}
 
-	ret = odp_dma_transfer(dma, transfer, NULL);
-
-	if (odp_unlikely(ret < 1))
-		return ret;
-
-	if (compl->compl_mode == ODP_DMA_COMPL_POLL) {
-		uint32_t index = index_from_transfer_id(transfer_id);
-
-		session->result[index].user_ptr = compl->user_ptr;
-
-	} else if (compl->compl_mode == ODP_DMA_COMPL_EVENT) {
-		odp_dma_result_t *result;
 		odp_buffer_t buf = (odp_buffer_t)(uintptr_t)compl->event;
 
 		if (odp_unlikely(odp_event_type(compl->event) != ODP_EVENT_DMA_COMPL)) {
@@ -645,10 +790,20 @@ int odp_dma_transfer_start(odp_dma_t dma, const odp_dma_transfer_param_t *transf
 			return -1;
 		}
 
-		result = odp_buffer_addr(buf);
-		result->success  = 1;
-		result->user_ptr = compl->user_ptr;
+		res = odp_buffer_addr(buf);
+		res->user_ptr = compl->user_ptr;
+		break;
+	default:
+		_ODP_ERR("Bad completion mode %u\n", compl->compl_mode);
+		return -1;
+	}
 
+	ret = do_transfer(session, transfer, transfer->opts.seg_alloc ? res : NULL);
+
+	if (odp_unlikely(ret < 1))
+		return ret;
+
+	if (compl->compl_mode == ODP_DMA_COMPL_EVENT) {
 		if (odp_unlikely(odp_queue_enq(compl->queue, compl->event))) {
 			_ODP_ERR("Completion event enqueue failed %" PRIu64 "\n",
 				 odp_queue_to_u64(compl->queue));
@@ -689,6 +844,9 @@ int odp_dma_transfer_done(odp_dma_t dma, odp_dma_transfer_id_t transfer_id,
 	dma_session_t *session = dma_session_from_handle(dma);
 	const uint32_t id = transfer_id;
 
+	if (result)
+		memset(result, 0, sizeof(odp_dma_result_t));
+
 	if (odp_unlikely(dma == ODP_DMA_INVALID)) {
 		_ODP_ERR("Bad DMA handle\n");
 		return -1;
@@ -700,10 +858,12 @@ int odp_dma_transfer_done(odp_dma_t dma, odp_dma_transfer_id_t transfer_id,
 	}
 
 	if (result) {
-		uint32_t index = index_from_transfer_id(id);
+		result_t *res = &session->result[index_from_transfer_id(id)];
 
 		result->success  = 1;
-		result->user_ptr = session->result[index].user_ptr;
+		result->user_ptr = res->user_ptr;
+		result->num_dst = res->num_dst;
+		result->dst_pkt = res->pkts;
 	}
 
 	return 1;
@@ -747,11 +907,57 @@ odp_pool_t odp_dma_pool_create(const char *name, const odp_dma_pool_param_t *dma
 	pool_param.buf.num            = num;
 	pool_param.buf.uarea_size     = uarea_size;
 	pool_param.buf.cache_size     = cache_size;
-	pool_param.buf.size           = sizeof(odp_dma_result_t);
+	pool_param.buf.size           = sizeof(result_t);
 
 	pool = _odp_pool_create(name, &pool_param, ODP_POOL_DMA_COMPL);
 
 	return pool;
+}
+
+odp_dma_compl_t odp_dma_compl_alloc(odp_pool_t pool)
+{
+	odp_buffer_t buf;
+	odp_event_t ev;
+	result_t *result;
+
+	buf = odp_buffer_alloc(pool);
+
+	if (odp_unlikely(buf == ODP_BUFFER_INVALID))
+		return ODP_DMA_COMPL_INVALID;
+
+	result = (result_t *)odp_buffer_addr(buf);
+	memset(result, 0, sizeof(*result));
+
+	ev = odp_buffer_to_event(buf);
+	_odp_event_type_set(ev, ODP_EVENT_DMA_COMPL);
+
+	return (odp_dma_compl_t)(uintptr_t)buf;
+}
+
+int odp_dma_compl_result(odp_dma_compl_t dma_compl, odp_dma_result_t *result)
+{
+	result_t *res;
+	odp_buffer_t buf = (odp_buffer_t)(uintptr_t)dma_compl;
+
+	if (result)
+		memset(result, 0, sizeof(odp_dma_result_t));
+
+	if (odp_unlikely(dma_compl == ODP_DMA_COMPL_INVALID)) {
+		_ODP_ERR("Bad DMA compl handle\n");
+		return -1;
+	}
+
+	res = (result_t *)odp_buffer_addr(buf);
+
+	if (result) {
+		result->success = 1;
+		result->user_ptr = res->user_ptr;
+		result->num_dst = res->num_dst;
+		result->dst_pkt = res->pkts;
+	}
+
+	/* We only enqueue events for successful transfers */
+	return 0;
 }
 
 uint64_t odp_dma_to_u64(odp_dma_t dma)
