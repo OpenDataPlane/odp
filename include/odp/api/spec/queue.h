@@ -240,6 +240,8 @@ odp_queue_type_t odp_queue_type(odp_queue_t queue);
 /**
  * Queue schedule type
  *
+ * @note The queue must be of type #ODP_QUEUE_TYPE_SCHED
+ *
  * @param queue   Queue handle
  *
  * @return Queue schedule synchronization type
@@ -249,7 +251,7 @@ odp_schedule_sync_t odp_queue_sched_type(odp_queue_t queue);
 /**
  * Queue priority
  *
- * @note Passing an invalid queue_handle will result in UNDEFINED behavior
+ * @note The queue must be of type #ODP_QUEUE_TYPE_SCHED
  *
  * @param queue   Queue handle
  *
@@ -260,7 +262,7 @@ odp_schedule_prio_t odp_queue_sched_prio(odp_queue_t queue);
 /**
  * Queue group
  *
- * @note Passing an invalid queue_handle will result in UNDEFINED behavior
+ * @note The queue must be of type #ODP_QUEUE_TYPE_SCHED
  *
  * @param queue   Queue handle
  *
@@ -273,6 +275,8 @@ odp_schedule_group_t odp_queue_sched_group(odp_queue_t queue);
  *
  * Return number of ordered locks associated with this ordered queue.
  * Lock count is defined in odp_schedule_param_t.
+ *
+ * @note The queue must be of type #ODP_QUEUE_TYPE_SCHED
  *
  * @param queue   Queue handle
  *
