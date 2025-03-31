@@ -234,6 +234,51 @@ typedef struct odp_tm_queue_stats_capability_t {
 	};
 } odp_tm_queue_stats_capability_t;
 
+/** TM node specific statistics counters */
+typedef struct odp_tm_node_stats_t {
+	/** Number of packets discarded after scheduling/shaping. */
+	uint64_t discards;
+
+	/** Number of octets in packets discarded after scheduling/shaping. */
+	uint64_t discard_octets;
+
+	/** Number of successfully processed packets. */
+	uint64_t packets;
+
+	/** Number of octets in successfully processed packets. */
+	uint64_t octets;
+} odp_tm_node_stats_t;
+
+/**
+ * TM node statistics capabilities
+ */
+typedef struct odp_tm_node_stats_capability_t {
+	/** Supported counters */
+	union {
+		/** Statistics counters in a bit field struct */
+		struct {
+			/** @see odp_tm_node_stats_t::discards */
+			uint64_t discards       : 1;
+
+			/** @see odp_tm_node_stats_t::discard_octets */
+			uint64_t discard_octets : 1;
+
+			/** @see odp_tm_node_stats_t::packets */
+			uint64_t packets        : 1;
+
+			/** @see odp_tm_node_stats_t::octets */
+			uint64_t octets         : 1;
+
+		} counter;
+
+		/** All bits of the bit field structure
+		 *
+		 *  This field can be used to set/clear all flags, or
+		 *  for bitwise operations over the entire structure. */
+		uint64_t all_counters;
+	};
+} odp_tm_node_stats_capability_t;
+
 /** Per Level Capabilities
  *
  * The odp_tm_level_capabilities_t record is used to describe the capabilities
@@ -357,6 +402,8 @@ typedef struct {
 
 	} tm_node_threshold;
 
+	/** Node statistics counter capabilities */
+	odp_tm_node_stats_capability_t node_stats;
 } odp_tm_level_capabilities_t;
 
 /** The tm_pkt_prio_mode_t enumeration type is used to indicate different
@@ -2143,6 +2190,20 @@ typedef struct {
  */
 int odp_tm_node_fanin_info(odp_tm_node_t             tm_node,
 			   odp_tm_node_fanin_info_t *info);
+
+/** Get statistics for a TM node
+ *
+ * The odp_tm_node_stats() function is used to extract runtime statistics
+ * associated with a given tm_node. Counters not supported by the node are set
+ * to zero.
+ *
+ * @param      tm_node TM node handle
+ * @param[out] stats   Statistics structure for output
+ *
+ * @retval  0 on success
+ * @retval <0 on failure
+ */
+int odp_tm_node_stats(odp_tm_node_t tm_node, odp_tm_node_stats_t *stats);
 
 /** The odp_tm_queue_info_t record type  is used to return various bits of
  * information about a given tm_queue via the odp_tm_queue_info() function.
