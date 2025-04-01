@@ -23,7 +23,7 @@ extern "C" {
 
 #include <odp_event_internal.h>
 #include <odp_config_internal.h>
-#include <odp_ring_ptr_internal.h>
+#include <odp_ring_mpmc_rst_ptr_internal.h>
 #include <odp/api/plat/strong_types.h>
 
 #define _ODP_POOL_MEM_SRC_DATA_SIZE 128
@@ -41,7 +41,7 @@ typedef struct ODP_ALIGNED_CACHE pool_cache_t {
 /* Event header ring */
 typedef struct ODP_ALIGNED_CACHE {
 	/* Ring header */
-	ring_ptr_t hdr;
+	ring_mpmc_rst_ptr_t hdr;
 
 	/* Ring data: buffer handles */
 	_odp_event_hdr_t *event_hdr[CONFIG_POOL_MAX_NUM + 1];
