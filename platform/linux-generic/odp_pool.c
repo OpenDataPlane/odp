@@ -23,7 +23,7 @@
 #include <odp_event_internal.h>
 #include <odp_event_validation_internal.h>
 #include <odp_macros_internal.h>
-#include <odp_ring_ptr_internal.h>
+#include <odp_ring_mpmc_rst_ptr_internal.h>
 #include <odp_global_data.h>
 #include <odp_libconfig_internal.h>
 #include <odp_shm_internal.h>
@@ -132,7 +132,7 @@ static inline void cache_push(pool_cache_t *cache, _odp_event_hdr_t *event_hdr[]
 static void cache_flush(pool_cache_t *cache, pool_t *pool)
 {
 	_odp_event_hdr_t *event_hdr;
-	ring_ptr_t *ring;
+	ring_mpmc_rst_ptr_t *ring;
 	uint32_t mask;
 
 	if (!pool->ring)
@@ -142,7 +142,7 @@ static void cache_flush(pool_cache_t *cache, pool_t *pool)
 	mask = pool->ring_mask;
 
 	while (cache_pop(cache, &event_hdr, 1))
-		ring_ptr_enq(ring, mask, event_hdr);
+		ring_mpmc_rst_ptr_enq(ring, mask, event_hdr);
 }
 
 static inline int cache_available(pool_t *pool, odp_pool_stats_t *stats)
@@ -564,7 +564,7 @@ static void init_buffers(pool_t *pool)
 	uint8_t *data = NULL;
 	uint8_t *data_ptr = NULL;
 	uint32_t offset;
-	ring_ptr_t *ring;
+	ring_mpmc_rst_ptr_t *ring;
 	uint32_t mask;
 	odp_pool_type_t type;
 	uint64_t page_size;
@@ -626,7 +626,7 @@ static void init_buffers(pool_t *pool)
 		init_event_hdr(pool, event_hdr, i, data_ptr, uarea);
 
 		/* Store buffer into the global pool */
-		ring_ptr_enq(ring, mask, event_hdr);
+		ring_mpmc_rst_ptr_enq(ring, mask, event_hdr);
 	}
 	pool->skipped_blocks = skipped_blocks;
 
@@ -979,7 +979,7 @@ odp_pool_t _odp_pool_create(const char *name, const odp_pool_param_t *params,
 		goto error;
 	}
 
-	ring_ptr_init(&pool->ring->hdr);
+	ring_mpmc_rst_ptr_init(&pool->ring->hdr);
 	init_buffers(pool);
 
 	if (type == ODP_POOL_PACKET && pool->mem_src_ops && pool->mem_src_ops->bind &&
@@ -1336,7 +1336,7 @@ int _odp_event_alloc_multi(pool_t *pool, _odp_event_hdr_t *event_hdr[], int max_
 {
 	uint32_t pool_idx = pool->pool_idx;
 	pool_cache_t *cache = local.cache[pool_idx];
-	ring_ptr_t *ring;
+	ring_mpmc_rst_ptr_t *ring;
 	_odp_event_hdr_t *hdr;
 	uint32_t mask, num_ch, num_alloc, i;
 	uint32_t num_deq = 0;
@@ -1361,8 +1361,7 @@ int _odp_event_alloc_multi(pool_t *pool, _odp_event_hdr_t *event_hdr[], int max_
 
 		ring      = &pool->ring->hdr;
 		mask      = pool->ring_mask;
-		burst     = ring_ptr_deq_multi(ring, mask, (void **)hdr_tmp,
-					       burst);
+		burst     = ring_mpmc_rst_ptr_deq_multi(ring, mask, (void **)hdr_tmp, burst);
 		cache_num = burst - num_deq;
 
 		if (CONFIG_POOL_STATISTICS) {
@@ -1400,7 +1399,7 @@ static inline void event_free_to_pool(pool_t *pool,
 {
 	uint32_t pool_idx = pool->pool_idx;
 	pool_cache_t *cache = local.cache[pool_idx];
-	ring_ptr_t *ring;
+	ring_mpmc_rst_ptr_t *ring;
 	uint32_t cache_num, mask;
 	uint32_t cache_size = pool->cache_size;
 
@@ -1410,7 +1409,7 @@ static inline void event_free_to_pool(pool_t *pool,
 		ring  = &pool->ring->hdr;
 		mask  = pool->ring_mask;
 
-		ring_ptr_enq_multi(ring, mask, (void **)event_hdr, num);
+		ring_mpmc_rst_ptr_enq_multi(ring, mask, (void **)event_hdr, num);
 
 		if (CONFIG_POOL_STATISTICS && pool->params.stats.bit.free_ops)
 			odp_atomic_inc_u64(&pool->stats.free_ops);
@@ -1437,7 +1436,7 @@ static inline void event_free_to_pool(pool_t *pool,
 
 		cache_pop(cache, ev_hdr, burst);
 
-		ring_ptr_enq_multi(ring, mask, (void **)ev_hdr, burst);
+		ring_mpmc_rst_ptr_enq_multi(ring, mask, (void **)ev_hdr, burst);
 		if (CONFIG_POOL_STATISTICS && pool->params.stats.bit.free_ops)
 			odp_atomic_inc_u64(&pool->stats.free_ops);
 	}
@@ -1728,7 +1727,7 @@ void odp_pool_print_all(void)
 			continue;
 		}
 
-		available  = ring_ptr_len(&pool->ring->hdr);
+		available  = ring_mpmc_rst_ptr_len(&pool->ring->hdr);
 		cache_size = pool->cache_size;
 		ext        = pool->pool_ext;
 		index      = pool->pool_idx;
@@ -1792,7 +1791,7 @@ int odp_pool_stats(odp_pool_t pool_hdl, odp_pool_stats_t *stats)
 	memset(stats, 0, offsetof(odp_pool_stats_t, thread));
 
 	if (pool->params.stats.bit.available)
-		stats->available = ring_ptr_len(&pool->ring->hdr);
+		stats->available = ring_mpmc_rst_ptr_len(&pool->ring->hdr);
 
 	if (pool->params.stats.bit.alloc_ops)
 		stats->alloc_ops = odp_atomic_load_u64(&pool->stats.alloc_ops);
@@ -1847,7 +1846,7 @@ int odp_pool_stats_selected(odp_pool_t pool_hdl, odp_pool_stats_selected_t *stat
 	}
 
 	if (opt->bit.available)
-		stats->available = ring_ptr_len(&pool->ring->hdr);
+		stats->available = ring_mpmc_rst_ptr_len(&pool->ring->hdr);
 
 	if (opt->bit.alloc_ops || opt->bit.total_ops)
 		stats->alloc_ops = odp_atomic_load_u64(&pool->stats.alloc_ops);
@@ -2120,7 +2119,7 @@ odp_pool_t odp_pool_ext_create(const char *name, const odp_pool_ext_param_t *par
 	pool->base_addr      = (uint8_t *)(uintptr_t)UINT64_MAX;
 	pool->max_addr       = 0;
 
-	ring_ptr_init(&pool->ring->hdr);
+	ring_mpmc_rst_ptr_init(&pool->ring->hdr);
 
 	return _odp_pool_handle(pool);
 
@@ -2142,7 +2141,7 @@ int odp_pool_ext_populate(odp_pool_t pool_hdl, void *buf[], uint32_t buf_size, u
 {
 	pool_t *pool;
 	_odp_event_hdr_t *event_hdr;
-	ring_ptr_t *ring;
+	ring_mpmc_rst_ptr_t *ring;
 	uint32_t i, ring_mask, buf_index, head_offset;
 	uint32_t num_populated;
 	uint8_t *data_ptr, *min_addr, *max_addr;
@@ -2217,7 +2216,7 @@ int odp_pool_ext_populate(odp_pool_t pool_hdl, void *buf[], uint32_t buf_size, u
 		pool->ring->event_hdr_by_index[buf_index] = event_hdr;
 		buf_index++;
 
-		ring_ptr_enq(ring, ring_mask, event_hdr);
+		ring_mpmc_rst_ptr_enq(ring, ring_mask, event_hdr);
 	}
 
 	pool->num_populated += num;
