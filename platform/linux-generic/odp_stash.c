@@ -18,8 +18,8 @@
 #include <odp_macros_internal.h>
 #include <odp_ring_mpmc_u32_internal.h>
 #include <odp_ring_mpmc_u64_internal.h>
-#include <odp_ring_u32_internal.h>
-#include <odp_ring_u64_internal.h>
+#include <odp_ring_mpmc_rst_u32_internal.h>
+#include <odp_ring_mpmc_rst_u64_internal.h>
 
 #include <stdio.h>
 #include <stdint.h>
@@ -88,12 +88,12 @@ typedef struct ODP_ALIGNED_CACHE stash_t {
 	/* Ring header followed by variable sized data (object handles) */
 	union {
 		struct ODP_ALIGNED_CACHE {
-			ring_u32_t hdr;
+			ring_mpmc_rst_u32_t hdr;
 			uint32_t   data[];
 		} ring_u32;
 
 		struct ODP_ALIGNED_CACHE {
-			ring_u64_t hdr;
+			ring_mpmc_rst_u64_t hdr;
 			uint64_t   data[];
 		} ring_u64;
 
@@ -311,7 +311,7 @@ static void free_index(int i)
 
 static inline void strict_ring_u32_init(stash_t *stash)
 {
-	ring_u32_init(&stash->ring_u32.hdr);
+	ring_mpmc_rst_u32_init(&stash->ring_u32.hdr);
 
 	for (uint32_t i = 0; i < stash->ring_size; i++)
 		stash->ring_u32.data[i] = 0;
@@ -319,7 +319,7 @@ static inline void strict_ring_u32_init(stash_t *stash)
 
 static inline void strict_ring_u64_init(stash_t *stash)
 {
-	ring_u64_init(&stash->ring_u64.hdr);
+	ring_mpmc_rst_u64_init(&stash->ring_u64.hdr);
 
 	for (uint32_t i = 0; i < stash->ring_size; i++)
 		stash->ring_u64.data[i] = 0;
@@ -328,7 +328,8 @@ static inline void strict_ring_u64_init(stash_t *stash)
 static inline int32_t strict_ring_u32_enq_multi(stash_t *stash, const uint32_t val[], int32_t num)
 {
 	/* Success always */
-	ring_u32_enq_multi(&stash->ring_u32.hdr, stash->ring_mask, (uint32_t *)(uintptr_t)val, num);
+	ring_mpmc_rst_u32_enq_multi(&stash->ring_u32.hdr, stash->ring_mask,
+				    (uint32_t *)(uintptr_t)val, num);
 
 	return num;
 }
@@ -336,39 +337,40 @@ static inline int32_t strict_ring_u32_enq_multi(stash_t *stash, const uint32_t v
 static inline int32_t strict_ring_u64_enq_multi(stash_t *stash, const uint64_t val[], int32_t num)
 {
 	/* Success always */
-	ring_u64_enq_multi(&stash->ring_u64.hdr, stash->ring_mask, (uint64_t *)(uintptr_t)val, num);
+	ring_mpmc_rst_u64_enq_multi(&stash->ring_u64.hdr, stash->ring_mask,
+				    (uint64_t *)(uintptr_t)val, num);
 
 	return num;
 }
 
 static inline int32_t strict_ring_u32_deq_multi(stash_t *stash, uint32_t val[], int32_t num)
 {
-	return ring_u32_deq_multi(&stash->ring_u32.hdr, stash->ring_mask, val, num);
+	return ring_mpmc_rst_u32_deq_multi(&stash->ring_u32.hdr, stash->ring_mask, val, num);
 }
 
 static inline int32_t strict_ring_u64_deq_multi(stash_t *stash, uint64_t val[], int32_t num)
 {
-	return ring_u64_deq_multi(&stash->ring_u64.hdr, stash->ring_mask, val, num);
+	return ring_mpmc_rst_u64_deq_multi(&stash->ring_u64.hdr, stash->ring_mask, val, num);
 }
 
 static inline int32_t strict_ring_u32_deq_batch(stash_t *stash, uint32_t val[], int32_t num)
 {
-	return ring_u32_deq_batch(&stash->ring_u32.hdr, stash->ring_mask, val, num);
+	return ring_mpmc_rst_u32_deq_batch(&stash->ring_u32.hdr, stash->ring_mask, val, num);
 }
 
 static inline int32_t strict_ring_u64_deq_batch(stash_t *stash, uint64_t val[], int32_t num)
 {
-	return ring_u64_deq_batch(&stash->ring_u64.hdr, stash->ring_mask, val, num);
+	return ring_mpmc_rst_u64_deq_batch(&stash->ring_u64.hdr, stash->ring_mask, val, num);
 }
 
 static inline int32_t strict_ring_u32_len(stash_t *stash)
 {
-	return ring_u32_len(&stash->ring_u32.hdr);
+	return ring_mpmc_rst_u32_len(&stash->ring_u32.hdr);
 }
 
 static inline int32_t strict_ring_u64_len(stash_t *stash)
 {
-	return ring_u64_len(&stash->ring_u64.hdr);
+	return ring_mpmc_rst_u64_len(&stash->ring_u64.hdr);
 }
 
 static inline void mpmc_ring_u32_init(stash_t *stash)
