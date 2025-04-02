@@ -13,14 +13,14 @@
 #define ODP_API_SPEC_BUFFER_H_
 #include <odp/visibility_begin.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <odp/api/buffer_types.h>
 #include <odp/api/event_types.h>
 #include <odp/api/pool_types.h>
 #include <odp/api/std_types.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** @addtogroup odp_buffer
  *  Buffer event metadata and operations.

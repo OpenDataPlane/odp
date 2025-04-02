@@ -7,11 +7,11 @@
 
 #include <odp/api/plat/strong_types.h>
 
+#include <stdint.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <stdint.h>
 
 /** @addtogroup odp_compression
  *  @{

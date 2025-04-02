@@ -11,16 +11,8 @@
 #ifndef ODP_API_CRYPTO_H_
 #define ODP_API_CRYPTO_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <odp/api/abi/crypto.h>
 
 #include <odp/api/spec/crypto.h>
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif

@@ -14,6 +14,10 @@
 
 #include <odp/api/abi/atomic_inlines.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /** @cond _ODP_HIDE_FROM_DOXYGEN_ */
 
 #ifndef _ODP_NO_INLINE
@@ -677,5 +681,9 @@ _ODP_INLINE int odp_atomic_cas_acq_rel_u128(odp_atomic_u128_t *atom,
 }
 
 /** @endcond */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

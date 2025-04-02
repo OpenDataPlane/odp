@@ -5,11 +5,15 @@
 #ifndef ODP_API_ABI_HASH_CRC32_H_
 #define ODP_API_ABI_HASH_CRC32_H_
 
+#include <stdint.h>
+
+#ifdef __ARM_FEATURE_CRC32
+#include <arm_acle.h>
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <stdint.h>
 
 uint32_t _odp_hash_crc32_generic(const void *data, uint32_t data_len,
 				 uint32_t init_val);
@@ -17,8 +21,6 @@ uint32_t _odp_hash_crc32c_generic(const void *data, uint32_t data_len,
 				  uint32_t init_val);
 
 #ifdef __ARM_FEATURE_CRC32
-
-#include <arm_acle.h>
 
 static inline uint32_t _odp_hash_crc32(const void *data_ptr, uint32_t data_len,
 				       uint32_t init_val)

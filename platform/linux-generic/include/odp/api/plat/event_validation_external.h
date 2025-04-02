@@ -21,11 +21,11 @@
 #include <odp/api/hints.h>
 #include <odp/api/packet_types.h>
 
-/** @cond _ODP_HIDE_FROM_DOXYGEN_ */
-
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/** @cond _ODP_HIDE_FROM_DOXYGEN_ */
 
 /** Enumerations for identifying ODP API functions */
 typedef enum {

@@ -6,13 +6,13 @@
 #ifndef ODP_ARCH_TIME_INLINES_H_
 #define ODP_ARCH_TIME_INLINES_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <odp/api/time_types.h>
 
 #include <stdint.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 odp_time_t _odp_time_cur(void);
 uint64_t _odp_time_res(void);

@@ -11,6 +11,8 @@
 #ifndef ODP_ABI_THRMASK_H_
 #define ODP_ABI_THRMASK_H_
 
+#include <odp/api/cpumask.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -18,8 +20,6 @@ extern "C" {
 /** @addtogroup odp_thread
  *  @{
  */
-
-#include <odp/api/cpumask.h>
 
 /**
  * Minimum size of output buffer for odp_thrmask_to_str()
