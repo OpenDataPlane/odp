@@ -6,13 +6,14 @@
 #ifndef ODP_API_ABI_CPU_GENERIC_H_
 #define ODP_API_ABI_CPU_GENERIC_H_
 
+#include <stdint.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include <stdint.h>
-
 uint64_t _odp_cpu_cycles(void);
+uint64_t _odp_cpu_cycles_strict(void);
 int _odp_cpu_cycles_init_global(void);
 
 static inline uint64_t _odp_cpu_cycles_max(void)

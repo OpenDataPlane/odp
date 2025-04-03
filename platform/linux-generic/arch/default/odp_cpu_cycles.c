@@ -1,9 +1,11 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2015-2018 Linaro Limited
- * Copyright (c) 2021 Nokia
+ * Copyright (c) 2021-2025 Nokia
  */
 
 #include <odp_posix_extensions.h>
+
+#include <odp/api/sync.h>
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -37,6 +39,12 @@ uint64_t _odp_cpu_cycles(void)
 	cycles += (ns * hz) / GIGA;
 
 	return cycles;
+}
+
+uint64_t _odp_cpu_cycles_strict(void)
+{
+	odp_mb_full();
+	return _odp_cpu_cycles();
 }
 
 int _odp_cpu_cycles_init_global(void)
