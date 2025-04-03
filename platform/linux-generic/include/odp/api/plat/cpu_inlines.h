@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2018 Linaro Limited
- * Copyright (c) 2021-2023 Nokia
+ * Copyright (c) 2021-2025 Nokia
  */
 
 #ifndef ODP_PLAT_CPU_INLINES_H_
@@ -12,6 +12,10 @@
 
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /** @cond _ODP_HIDE_FROM_DOXYGEN_ */
 
 #ifndef _ODP_NO_INLINE
@@ -19,6 +23,7 @@
 	#define _ODP_INLINE static inline
 	#define odp_cpu_pause               __odp_cpu_pause
 	#define odp_cpu_cycles              __odp_cpu_cycles
+	#define odp_cpu_cycles_strict       __odp_cpu_cycles_strict
 	#define odp_cpu_cycles_max          __odp_cpu_cycles_max
 	#define odp_cpu_cycles_resolution   __odp_cpu_cycles_resolution
 	#define odp_cpu_cycles_diff         __odp_cpu_cycles_diff
@@ -55,6 +60,11 @@ _ODP_INLINE uint64_t odp_cpu_cycles_resolution(void)
 _ODP_INLINE uint64_t odp_cpu_cycles(void)
 {
 	return _odp_cpu_cycles();
+}
+
+_ODP_INLINE uint64_t odp_cpu_cycles_strict(void)
+{
+	return _odp_cpu_cycles_strict();
 }
 
 _ODP_INLINE uint64_t odp_cpu_cycles_diff(uint64_t c2, uint64_t c1)
@@ -127,5 +137,9 @@ _ODP_INLINE void odp_prefetch_l1i(const void *addr)
 }
 
 /** @endcond */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
