@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2015-2018 Linaro Limited
- * Copyright (c) 2024 Nokia
+ * Copyright (c) 2025 Nokia
  */
 
 /**
@@ -129,6 +129,18 @@ uint64_t odp_cpu_hz_max_id(int id);
  * @retval 0 Not supported
  */
 uint64_t odp_cpu_cycles(void);
+
+/**
+ * Current CPU cycle count (strict)
+ *
+ * Like odp_cpu_cycles(), but reads the cycle count value more strictly in the program order. The
+ * function may decrease CPU performance around the call, as it may include additional barrier
+ * instructions or otherwise limit out-of-order execution.
+ *
+ * @return Current CPU cycle count
+ * @retval 0 Not supported
+ */
+uint64_t odp_cpu_cycles_strict(void);
 
 /**
  * CPU cycle count difference
