@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright (c) 2024 Nokia
+ * Copyright (c) 2024-2025 Nokia
  * Copyright (c) 2015-2018 Linaro Limited
  */
 
@@ -195,6 +195,32 @@ static void cpu_cycles(void)
 	c1 = odp_cpu_cycles();
 	odp_time_wait_ns(WAIT_TIME);
 	c2 = odp_cpu_cycles();
+
+	CU_ASSERT(c2 != c1);
+
+	max = odp_cpu_cycles_max();
+
+	/* With 10 usec delay, diff should be small compared to the maximum.
+	 * Otherwise, counter is going backwards. */
+	if (c2 > c1) {
+		diff = c2 - c1;
+		CU_ASSERT(diff < (max - diff));
+	}
+
+	/* Same applies also when there was a wrap. */
+	if (c2 < c1) {
+		diff = max - c1 + c2;
+		CU_ASSERT(diff < (max - diff));
+	}
+}
+
+static void cpu_cycles_strict(void)
+{
+	uint64_t c2, c1, diff, max;
+
+	c1 = odp_cpu_cycles_strict();
+	odp_time_wait_ns(WAIT_TIME);
+	c2 = odp_cpu_cycles_strict();
 
 	CU_ASSERT(c2 != c1);
 
@@ -439,6 +465,7 @@ odp_testinfo_t cpu_suite[] = {
 	ODP_TEST_INFO_CONDITIONAL(cpu_hz_max, check_cpu_hz_max),
 	ODP_TEST_INFO_CONDITIONAL(cpu_hz_max_id, check_cpu_hz_max_id),
 	ODP_TEST_INFO_CONDITIONAL(cpu_cycles, check_cycle_counter),
+	ODP_TEST_INFO_CONDITIONAL(cpu_cycles_strict, check_cycle_counter),
 	ODP_TEST_INFO_CONDITIONAL(cpu_cycles_diff, check_cycle_counter),
 	ODP_TEST_INFO_CONDITIONAL(cpu_cycles_max, check_cycle_counter),
 	ODP_TEST_INFO_CONDITIONAL(cpu_cycles_resolution, check_cycle_counter),
