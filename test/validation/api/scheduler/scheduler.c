@@ -164,11 +164,18 @@ static void release_context(odp_schedule_sync_t sync)
 
 static void test_init(uint8_t fill)
 {
+	odp_schedule_capability_t sched_capa;
 	odp_schedule_config_t default_config;
+
+	CU_ASSERT_FATAL(odp_schedule_capability(&sched_capa) == 0);
 
 	memset(&default_config, fill, sizeof(default_config));
 	odp_schedule_config_init(&default_config);
 
+	CU_ASSERT(default_config.num_groups == sched_capa.max_groups);
+	CU_ASSERT(default_config.prio.min == sched_capa.min_prio);
+	CU_ASSERT(default_config.prio.num == sched_capa.max_prios);
+	CU_ASSERT(default_config.num_queues == sched_capa.max_queues);
 	CU_ASSERT(default_config.max_flow_id == 0);
 
 	CU_ASSERT(default_config.sched_group.all);
@@ -1006,6 +1013,7 @@ static void scheduler_test_group_param_init(void)
 
 	memset(&param, 0xff, sizeof(param));
 	odp_schedule_group_param_init(&param);
+	CU_ASSERT(param.prio.num == 0);
 	CU_ASSERT(param.cache_stash_hints.common.regions.all == 0);
 	CU_ASSERT(param.cache_stash_hints.num == 0);
 }
