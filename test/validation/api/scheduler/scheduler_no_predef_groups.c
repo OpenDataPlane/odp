@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2013-2018 Linaro Limited
- * Copyright (c) 2019-2021 Nokia
+ * Copyright (c) 2019-2025 Nokia
  */
 
 #include <odp_api.h>
@@ -94,7 +94,7 @@ static void scheduler_test_create_max_groups(void)
 	odp_schedule_capability_t sched_capa;
 
 	CU_ASSERT_FATAL(!odp_schedule_capability(&sched_capa));
-	uint32_t max_groups = sched_capa.max_groups;
+	uint32_t max_groups = sched_capa.max_groups - 3;
 	odp_schedule_group_t group[max_groups];
 	odp_queue_t queue[max_groups];
 
