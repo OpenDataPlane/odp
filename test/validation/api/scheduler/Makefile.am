@@ -1,5 +1,6 @@
 include ../Makefile.inc
 
-test_PROGRAMS = scheduler_main scheduler_no_predef_groups
+test_PROGRAMS = scheduler_main scheduler_no_predef_groups scheduler_group_prio_config
 scheduler_main_SOURCES = scheduler.c
-scheduler_no_predef_groups = scheduler_no_predef_groups.c
+scheduler_no_predef_groups_SOURCES = scheduler_no_predef_groups.c
+scheduler_group_prio_config_SOURCES = scheduler_group_prio_config.c
