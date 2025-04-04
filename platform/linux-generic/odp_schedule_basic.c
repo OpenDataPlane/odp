@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2013-2018 Linaro Limited
- * Copyright (c) 2019-2022 Nokia
+ * Copyright (c) 2019-2025 Nokia
  */
 
 /*
@@ -285,6 +285,8 @@ typedef struct {
 		odp_thrmask_t  mask;
 		uint16_t       spread_thrs[MAX_SPREAD];
 		uint8_t        allocated;
+		uint8_t        level[NUM_PRIO];
+		uint32_t       num_prio;
 	} sched_grp[NUM_SCHED_GRPS];
 
 	struct {
@@ -302,6 +304,8 @@ typedef struct {
 	/* Scheduler interface config options (not used in fast path) */
 	schedule_config_t config_if;
 	uint32_t max_queues;
+	uint32_t num_grps;
+	uint32_t num_grp_prios;
 	odp_atomic_u32_t next_rand;
 
 } sched_global_t;
@@ -643,6 +647,12 @@ static int schedule_init_global(void)
 	_ODP_ASSERT(ring_size <= MAX_RING_SIZE);
 	sched->ring_mask = ring_size - 1;
 
+	sched->config_if.max_groups = NUM_SCHED_GRPS - SCHED_GROUP_NAMED;
+	sched->config_if.max_group_prios = NUM_SCHED_GRPS * NUM_PRIO;
+	sched->config_if.max_prios = NUM_PRIO;
+	sched->config_if.min_prio = 0;
+	sched->config_if.max_prio = NUM_PRIO - 1;
+	sched->config_if.def_prio = sched->config_if.max_prio / 2;
 	/* Each ring can hold in maximum ring_size-1 queues. Due to ring size round up,
 	 * total capacity of rings may be larger than CONFIG_MAX_SCHED_QUEUES. */
 	sched->max_queues = sched->ring_mask * num_rings;
@@ -675,11 +685,17 @@ static int schedule_init_global(void)
 	for (i = 0; i < NUM_SCHED_GRPS; i++) {
 		memset(sched->sched_grp[i].name, 0, ODP_SCHED_GROUP_NAME_LEN);
 		odp_thrmask_zero(&sched->sched_grp[i].mask);
+
+		for (j = 0; j < (int)sched->config_if.max_prios; ++j)
+			sched->sched_grp[i].level[j] = sched->config_if.min_prio + j;
+
+		sched->sched_grp[i].num_prio = sched->config_if.max_prios;
 	}
 
 	sched->sched_grp[ODP_SCHED_GROUP_ALL].allocated = 1;
 	sched->sched_grp[ODP_SCHED_GROUP_WORKER].allocated = 1;
 	sched->sched_grp[ODP_SCHED_GROUP_CONTROL].allocated = 1;
+
 	_odp_strcpy(sched->sched_grp[ODP_SCHED_GROUP_ALL].name, "__SCHED_GROUP_ALL",
 		    ODP_SCHED_GROUP_NAME_LEN);
 	_odp_strcpy(sched->sched_grp[ODP_SCHED_GROUP_WORKER].name, "__SCHED_GROUP_WORKER",
@@ -779,22 +795,22 @@ static uint32_t schedule_max_ordered_locks(void)
 
 static int schedule_min_prio(void)
 {
-	return 0;
+	return sched->config_if.min_prio;
 }
 
 static int schedule_max_prio(void)
 {
-	return NUM_PRIO - 1;
+	return sched->config_if.max_prio;
 }
 
 static int schedule_default_prio(void)
 {
-	return schedule_max_prio() / 2;
+	return sched->config_if.def_prio;
 }
 
 static int schedule_num_prio(void)
 {
-	return NUM_PRIO;
+	return sched->config_if.max_prios;
 }
 
 static inline int prio_level_from_api(int api_prio)
@@ -874,6 +890,15 @@ static uint8_t allocate_spread(int grp, int prio)
 	return spr;
 }
 
+static int check_queue_prio(int prio, int grp)
+{
+	for (uint32_t i = 0; i < sched->sched_grp[grp].num_prio; i++)
+		if (prio == sched->sched_grp[grp].level[i])
+			return 1;
+
+	return 0;
+}
+
 static int schedule_create_queue(uint32_t queue_index,
 				 const odp_schedule_param_t *sched_param)
 {
@@ -889,6 +914,10 @@ static int schedule_create_queue(uint32_t queue_index,
 
 	if (grp < 0 || grp >= NUM_SCHED_GRPS) {
 		_ODP_ERR("Bad schedule group %i\n", grp);
+		return -1;
+	}
+	if (!check_queue_prio(sched_param->prio, grp)) {
+		_ODP_ERR("Bad priority %i\n", sched_param->prio);
 		return -1;
 	}
 	if (grp == ODP_SCHED_GROUP_ALL && !sched->config_if.group_enable.all) {
@@ -1121,11 +1150,42 @@ static int schedule_term_local(void)
 
 static void schedule_config_init(odp_schedule_config_t *config)
 {
+	config->num_groups = sched->config_if.max_groups;
+	config->num_group_prios = sched->config_if.max_group_prios;
+	config->prio.min = sched->config_if.min_prio;
+	config->prio.num = sched->config_if.max_prios;
 	config->num_queues = sched->max_queues;
 	config->queue_size = _odp_queue_glb->config.max_queue_size;
 	config->sched_group.all = sched->config_if.group_enable.all;
 	config->sched_group.control = sched->config_if.group_enable.control;
 	config->sched_group.worker = sched->config_if.group_enable.worker;
+}
+
+static int check_group_prios(const odp_schedule_group_param_t *param, int min_prio, int max_prio)
+{
+	int prev = -1, level;
+
+	for (uint32_t i = 0; i < param->prio.num; ++i) {
+		level = param->prio.level[i];
+
+		if (level <= prev || level < min_prio || level > max_prio)
+			return 0;
+
+		prev = level;
+	}
+
+	return 1;
+}
+
+static void set_group_prios(odp_schedule_group_t group, const odp_schedule_group_param_t *param)
+{
+	if (param->prio.num == 0)
+		return;
+
+	for (uint32_t i = 0; i < param->prio.num; ++i)
+		sched->sched_grp[group].level[i] = param->prio.level[i];
+
+	sched->sched_grp[group].num_prio = param->prio.num;
 }
 
 static void schedule_group_clear(odp_schedule_group_t group)
@@ -1141,13 +1201,123 @@ static void schedule_group_clear(odp_schedule_group_t group)
 	sched->sched_grp[group].allocated = 0;
 }
 
+static uint32_t get_inc_groups(const odp_schedule_config_t *config)
+{
+	uint32_t num = 0;
+
+	if (config->sched_group.all)
+		num++;
+
+	if (config->sched_group.control)
+		num++;
+
+	if (config->sched_group.worker)
+		num++;
+
+	return num;
+}
+
+static uint32_t get_inc_group_prios(const odp_schedule_config_t *config)
+{
+	uint32_t num = 0;
+	const uint32_t def = config->prio.num;
+
+	if (config->sched_group.all) {
+		if (config->sched_group.all_param.prio.num > 0)
+			num += config->sched_group.all_param.prio.num;
+		else
+			num += def;
+	}
+
+	if (config->sched_group.control) {
+		if (config->sched_group.control_param.prio.num > 0)
+			num += config->sched_group.control_param.prio.num;
+		else
+			num += def;
+	}
+
+	if (config->sched_group.worker) {
+		if (config->sched_group.worker_param.prio.num > 0)
+			num += config->sched_group.worker_param.prio.num;
+		else
+			num += def;
+	}
+
+	return num;
+}
+
 static int schedule_config(const odp_schedule_config_t *config)
 {
-	odp_ticketlock_lock(&sched->grp_lock);
+	const int max_prio = config->prio.min + config->prio.num - 1;
+	const uint32_t inc_grps = get_inc_groups(config),
+	inc_grp_prios = get_inc_group_prios(config);
 
+	if (config->num_groups > sched->config_if.max_groups) {
+		_ODP_ERR("Bad number of groups %u\n", config->num_groups);
+		return -1;
+	}
+
+	if (config->num_group_prios > sched->config_if.max_group_prios) {
+		_ODP_ERR("Bad number of group priorities %u\n", config->num_group_prios);
+		return -1;
+	}
+
+	if (config->prio.num > sched->config_if.max_prios) {
+		_ODP_ERR("Bad number of priorities %u\n", config->prio.num);
+		return -1;
+	}
+
+	if (config->prio.min < sched->config_if.min_prio) {
+		_ODP_ERR("Bad minimum priority %u\n", config->prio.min);
+		return -1;
+	}
+
+	if (max_prio > sched->config_if.max_prio) {
+		_ODP_ERR("Bad maximum priority %u\n", max_prio);
+		return -1;
+	}
+
+	if (inc_grps > config->num_groups) {
+		_ODP_ERR("Insufficient groups (required: %u, configured: %u)\n", inc_grps,
+			 config->num_groups);
+		return -1;
+	}
+
+	if (inc_grp_prios > config->num_group_prios) {
+		_ODP_ERR("Insufficient group priorities (required: %u, configured: %u)\n",
+			 inc_grp_prios, config->num_group_prios);
+		return -1;
+	}
+
+	if (!check_group_prios(&config->sched_group.all_param, config->prio.min, max_prio) ||
+	    !check_group_prios(&config->sched_group.worker_param, config->prio.min, max_prio) ||
+	    !check_group_prios(&config->sched_group.control_param, config->prio.min, max_prio)) {
+		_ODP_ERR("Bad predefined group priority range\n");
+		return -1;
+	}
+
+	odp_ticketlock_lock(&sched->grp_lock);
 	sched->config_if.group_enable.all = config->sched_group.all;
 	sched->config_if.group_enable.control = config->sched_group.control;
 	sched->config_if.group_enable.worker = config->sched_group.worker;
+	sched->config_if.max_groups = config->num_groups;
+	sched->config_if.max_group_prios = config->num_group_prios;
+	sched->config_if.max_prios = config->prio.num;
+	sched->config_if.min_prio = config->prio.min;
+	sched->config_if.max_prio = max_prio;
+	sched->config_if.def_prio = (sched->config_if.max_prio - sched->config_if.min_prio) / 2 +
+				    sched->config_if.min_prio;
+
+	for (int i = 0; i < NUM_SCHED_GRPS; i++) {
+		for (uint32_t j = 0; j < sched->config_if.max_prios; ++j)
+			sched->sched_grp[i].level[j] = sched->config_if.min_prio + j;
+
+		sched->sched_grp[i].num_prio = sched->config_if.max_prios;
+	}
+
+	set_group_prios(ODP_SCHED_GROUP_ALL, &config->sched_group.all_param);
+	set_group_prios(ODP_SCHED_GROUP_WORKER, &config->sched_group.worker_param);
+	set_group_prios(ODP_SCHED_GROUP_CONTROL, &config->sched_group.control_param);
 
 	/* Remove existing threads from predefined scheduling groups. */
 	if (!config->sched_group.all)
@@ -1158,6 +1328,9 @@ static int schedule_config(const odp_schedule_config_t *config)
 
 	if (!config->sched_group.control)
 		schedule_group_clear(ODP_SCHED_GROUP_CONTROL);
+
+	sched->num_grps += inc_grps;
+	sched->num_grp_prios += inc_grp_prios;
 
 	odp_ticketlock_unlock(&sched->grp_lock);
 
@@ -1939,11 +2112,50 @@ static inline int threads_from_mask(int thr_tbl[], int count, const odp_thrmask_
 	return 0;
 }
 
+static odp_schedule_group_t allocate_group(const char *name, const odp_thrmask_t *mask,
+					   int *thr_tbl, uint32_t num_prio, int num_thr)
+{
+	odp_schedule_group_t group = ODP_SCHED_GROUP_INVALID;
+
+	if (sched->num_grps >= sched->config_if.max_groups) {
+		_ODP_ERR("Maximum number of groups created\n");
+		return group;
+	}
+
+	if (sched->num_grp_prios + num_prio > sched->config_if.max_group_prios) {
+		_ODP_ERR("Insufficient group priorities (attempted: %u, left: %u)\n",
+			 num_prio, sched->config_if.max_group_prios - sched->num_grp_prios);
+		return group;
+	}
+
+	for (int i = SCHED_GROUP_NAMED; i < NUM_SCHED_GRPS; i++) {
+		if (!sched->sched_grp[i].allocated) {
+			char *grp_name = sched->sched_grp[i].name;
+
+			if (name == NULL)
+				grp_name[0] = 0;
+			else
+				_odp_strcpy(grp_name, name,
+					    ODP_SCHED_GROUP_NAME_LEN);
+
+			grp_update_mask(i, mask);
+			group = (odp_schedule_group_t)i;
+			spread_thrs_inc(group, thr_tbl, num_thr);
+			sched->sched_grp[i].allocated = 1;
+			sched->num_grps++;
+			sched->num_grp_prios += num_prio;
+			break;
+		}
+	}
+
+	return group;
+}
+
 static odp_schedule_group_t schedule_group_create(const char *name,
 						  const odp_thrmask_t *mask)
 {
-	odp_schedule_group_t group = ODP_SCHED_GROUP_INVALID;
-	int count, i;
+	odp_schedule_group_t group;
+	int count;
 
 	count = odp_thrmask_count(mask);
 	if (count < 0) {
@@ -1957,26 +2169,45 @@ static odp_schedule_group_t schedule_group_create(const char *name,
 		return ODP_SCHED_GROUP_INVALID;
 
 	odp_ticketlock_lock(&sched->grp_lock);
+	group = allocate_group(name, mask, thr_tbl, sched->config_if.max_prios, count);
+	odp_ticketlock_unlock(&sched->grp_lock);
 
-	for (i = SCHED_GROUP_NAMED; i < NUM_SCHED_GRPS; i++) {
-		if (!sched->sched_grp[i].allocated) {
-			char *grp_name = sched->sched_grp[i].name;
+	return group;
+}
 
-			if (name == NULL)
-				grp_name[0] = 0;
-			else
-				_odp_strcpy(grp_name, name,
-					    ODP_SCHED_GROUP_NAME_LEN);
+static odp_schedule_group_t schedule_group_create_2(const char *name,
+						    const odp_thrmask_t *mask,
+						    const odp_schedule_group_param_t *param)
+{
+	odp_schedule_group_t group;
+	int count;
 
-			grp_update_mask(i, mask);
-			group = (odp_schedule_group_t)i;
-			spread_thrs_inc(group, thr_tbl, count);
-			sched->sched_grp[i].allocated = 1;
-			break;
-		}
+	if (!check_group_prios(param, sched->config_if.min_prio, sched->config_if.max_prio)) {
+		_ODP_ERR("Bad priority range\n");
+		return ODP_SCHED_GROUP_INVALID;
 	}
 
+	count = odp_thrmask_count(mask);
+	if (count < 0) {
+		_ODP_ERR("Bad thread count\n");
+		return ODP_SCHED_GROUP_INVALID;
+	}
+
+	int thr_tbl[ODP_THREAD_COUNT_MAX];
+
+	if (count && threads_from_mask(thr_tbl, count, mask))
+		return ODP_SCHED_GROUP_INVALID;
+
+	odp_ticketlock_lock(&sched->grp_lock);
+	group = allocate_group(name, mask, thr_tbl,
+			       param->prio.num > 0 ? param->prio.num : sched->config_if.max_prios,
+			       count);
+
+	if (group != ODP_SCHED_GROUP_INVALID)
+		set_group_prios(group, param);
+
 	odp_ticketlock_unlock(&sched->grp_lock);
+
 	return group;
 }
 
@@ -2007,6 +2238,8 @@ static int schedule_group_destroy(odp_schedule_group_t group)
 
 	memset(sched->sched_grp[group].name, 0, ODP_SCHED_GROUP_NAME_LEN);
 	sched->sched_grp[group].allocated = 0;
+	sched->num_grps--;
+	sched->num_grp_prios -= sched->sched_grp[group].num_prio;
 
 	odp_ticketlock_unlock(&sched->grp_lock);
 	return 0;
@@ -2152,6 +2385,11 @@ static int schedule_group_info(odp_schedule_group_t group,
 	if (group < NUM_SCHED_GRPS && sched->sched_grp[group].allocated) {
 		info->name    = sched->sched_grp[group].name;
 		info->thrmask = sched->sched_grp[group].mask;
+		info->num     = sched->sched_grp[group].num_prio;
+
+		for (int i = 0; i < info->num; i++)
+			info->level[i] = sched->sched_grp[group].level[i];
+
 		ret = 0;
 	} else {
 		ret = -1;
@@ -2221,11 +2459,6 @@ static void schedule_prefetch(int num)
 	(void)num;
 }
 
-static int schedule_num_grps(void)
-{
-	return NUM_SCHED_GRPS - SCHED_GROUP_NAMED;
-}
-
 static void schedule_get_config(schedule_config_t *config)
 {
 	*config = sched->config_if;
@@ -2236,8 +2469,10 @@ static int schedule_capability(odp_schedule_capability_t *capa)
 	memset(capa, 0, sizeof(odp_schedule_capability_t));
 
 	capa->max_ordered_locks = schedule_max_ordered_locks();
-	capa->max_groups = schedule_num_grps();
-	capa->max_prios = schedule_num_prio();
+	capa->max_groups = sched->config_if.max_groups;
+	capa->max_group_prios = sched->config_if.max_group_prios;
+	capa->min_prio = sched->config_if.min_prio;
+	capa->max_prios = sched->config_if.max_prios;
 	capa->max_queues = sched->max_queues;
 	capa->max_queue_size = _odp_queue_glb->config.max_queue_size;
 	capa->max_flow_id = BUF_HDR_MAX_FLOW_ID;
@@ -2350,7 +2585,6 @@ schedule_fn_t _odp_schedule_basic_fn = {
 	.pktio_start = schedule_pktio_start,
 	.thr_add = schedule_thr_add,
 	.thr_rem = schedule_thr_rem,
-	.num_grps = schedule_num_grps,
 	.create_queue = schedule_create_queue,
 	.destroy_queue = schedule_destroy_queue,
 	.sched_queue = schedule_sched_queue,
@@ -2386,6 +2620,7 @@ const _odp_schedule_api_fn_t _odp_schedule_basic_api = {
 	.schedule_default_prio    = schedule_default_prio,
 	.schedule_num_prio        = schedule_num_prio,
 	.schedule_group_create    = schedule_group_create,
+	.schedule_group_create_2  = schedule_group_create_2,
 	.schedule_group_destroy   = schedule_group_destroy,
 	.schedule_group_lookup    = schedule_group_lookup,
 	.schedule_group_join      = schedule_group_join,
@@ -2423,6 +2658,7 @@ const _odp_schedule_api_fn_t _odp_schedule_basic_sleep_api = {
 	.schedule_default_prio    = schedule_default_prio,
 	.schedule_num_prio        = schedule_num_prio,
 	.schedule_group_create    = schedule_group_create,
+	.schedule_group_create_2  = schedule_group_create_2,
 	.schedule_group_destroy   = schedule_group_destroy,
 	.schedule_group_lookup    = schedule_group_lookup,
 	.schedule_group_join      = schedule_group_join,
