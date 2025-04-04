@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2013-2018 Linaro Limited
- * Copyright (c) 2024 Nokia
+ * Copyright (c) 2024-2025 Nokia
  */
 
 /**
@@ -340,6 +340,34 @@ int odp_schedule_capability(odp_schedule_capability_t *capa);
  */
 odp_schedule_group_t odp_schedule_group_create(const char *name,
 					       const odp_thrmask_t *mask);
+/**
+ * Initialize schedule group parameters
+ *
+ * Initialize an odp_schedule_group_param_t to its default values.
+ *
+ * @param[out] param  Pointer to parameter structure
+ */
+void odp_schedule_group_param_init(odp_schedule_group_param_t *param);
+
+/**
+ * Schedule group create with parameters
+ *
+ * Otherwise like odp_schedule_group_create() but additionally accepts a set of
+ * parameters.
+ *
+ * @param name    Name of the schedule group or NULL. Maximum string length is
+ *                ODP_SCHED_GROUP_NAME_LEN, including the null character.
+ * @param mask    Thread mask
+ * @param param   Schedule group parameters
+ *
+ * @return Schedule group handle
+ * @retval ODP_SCHED_GROUP_INVALID on failure
+ *
+ * @see odp_schedule_group_create()
+ */
+odp_schedule_group_t odp_schedule_group_create_2(const char *name,
+						 const odp_thrmask_t *mask,
+						 const odp_schedule_group_param_t *param);
 
 /**
  * Schedule group destroy

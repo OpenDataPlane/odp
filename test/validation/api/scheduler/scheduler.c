@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2014-2018 Linaro Limited
- * Copyright (c) 2019-2024 Nokia
+ * Copyright (c) 2019-2025 Nokia
  */
 
 #include <odp_api.h>
@@ -174,6 +174,14 @@ static void test_init(uint8_t fill)
 	CU_ASSERT(default_config.sched_group.all);
 	CU_ASSERT(default_config.sched_group.control);
 	CU_ASSERT(default_config.sched_group.worker);
+	CU_ASSERT(default_config.sched_group.all_param.cache_stash_hints.common.regions.all == 0);
+	CU_ASSERT(default_config.sched_group.all_param.cache_stash_hints.num == 0);
+	CU_ASSERT(default_config.sched_group.control_param.cache_stash_hints.common.regions.all
+		  == 0);
+	CU_ASSERT(default_config.sched_group.control_param.cache_stash_hints.num == 0);
+	CU_ASSERT(default_config.sched_group.worker_param.cache_stash_hints.common.regions.all
+		  == 0);
+	CU_ASSERT(default_config.sched_group.worker_param.cache_stash_hints.num == 0);
 }
 
 static void scheduler_test_init(void)
@@ -923,11 +931,8 @@ static void scheduler_test_group_info_predef(void)
 	printf("    Schedule group worker name: %s\n", info.name);
 }
 
-static void scheduler_test_create_group(void)
+static void test_group_basic(odp_schedule_group_t group)
 {
-	odp_thrmask_t mask;
-	odp_schedule_group_t group;
-	int thr_id;
 	odp_pool_t pool;
 	odp_pool_param_t pool_params;
 	odp_queue_t queue, from;
@@ -935,13 +940,6 @@ static void scheduler_test_create_group(void)
 	odp_buffer_t buf;
 	odp_event_t ev;
 	uint64_t wait_time, u64;
-
-	thr_id = odp_thread_id();
-	odp_thrmask_zero(&mask);
-	odp_thrmask_set(&mask, thr_id);
-
-	group = odp_schedule_group_create("create_group", &mask);
-	CU_ASSERT_FATAL(group != ODP_SCHED_GROUP_INVALID);
 
 	u64 = odp_schedule_group_to_u64(group);
 	CU_ASSERT(u64 != odp_schedule_group_to_u64(ODP_SCHED_GROUP_INVALID));
@@ -986,6 +984,73 @@ static void scheduler_test_create_group(void)
 
 	/* Run scheduler after the group has been destroyed */
 	CU_ASSERT_FATAL(odp_schedule(NULL, wait_time) == ODP_EVENT_INVALID);
+}
+
+static void scheduler_test_create_group(void)
+{
+	odp_thrmask_t mask;
+	odp_schedule_group_t group;
+
+	odp_thrmask_zero(&mask);
+	odp_thrmask_set(&mask, odp_thread_id());
+	group = odp_schedule_group_create("create_group", &mask);
+
+	CU_ASSERT_FATAL(group != ODP_SCHED_GROUP_INVALID);
+
+	test_group_basic(group);
+}
+
+static void scheduler_test_group_param_init(void)
+{
+	odp_schedule_group_param_t param;
+
+	memset(&param, 0xff, sizeof(param));
+	odp_schedule_group_param_init(&param);
+	CU_ASSERT(param.cache_stash_hints.common.regions.all == 0);
+	CU_ASSERT(param.cache_stash_hints.num == 0);
+}
+
+static void scheduler_test_create_group_2(void)
+{
+	odp_schedule_group_param_t param;
+	odp_thrmask_t mask;
+	odp_schedule_group_t group;
+
+	odp_thrmask_zero(&mask);
+	odp_thrmask_set(&mask, odp_thread_id());
+	odp_schedule_group_param_init(&param);
+
+	param.cache_stash_hints.common.regions.event_metadata_l2 = 1;
+	param.cache_stash_hints.common.regions.event_metadata_l3 = 1;
+	param.cache_stash_hints.common.regions.event_data_l2 = 1;
+	param.cache_stash_hints.common.regions.event_data_l3 = 1;
+	param.cache_stash_hints.common.regions.event_user_area_l2 = 1;
+	param.cache_stash_hints.common.regions.event_user_area_l3 = 1;
+	param.cache_stash_hints.common.regions.queue_context_l2 = 1;
+	param.cache_stash_hints.common.regions.queue_context_l3 = 1;
+
+	param.cache_stash_hints.common.event_metadata.l2.offset = 0;
+	param.cache_stash_hints.common.event_metadata.l2.len = ODP_CACHE_LINE_SIZE;
+	param.cache_stash_hints.common.event_metadata.l3.offset = 0;
+	param.cache_stash_hints.common.event_metadata.l3.len = ODP_CACHE_LINE_SIZE;
+	param.cache_stash_hints.common.event_data.l2.offset = 0;
+	param.cache_stash_hints.common.event_data.l2.len = ODP_CACHE_LINE_SIZE;
+	param.cache_stash_hints.common.event_data.l3.offset = 0;
+	param.cache_stash_hints.common.event_data.l3.len = ODP_CACHE_LINE_SIZE;
+	param.cache_stash_hints.common.event_user_area.l2.offset = 0;
+	param.cache_stash_hints.common.event_user_area.l2.len = ODP_CACHE_LINE_SIZE;
+	param.cache_stash_hints.common.event_user_area.l3.offset = 0;
+	param.cache_stash_hints.common.event_user_area.l3.len = ODP_CACHE_LINE_SIZE;
+	param.cache_stash_hints.common.queue_context.l2.offset = 0;
+	param.cache_stash_hints.common.queue_context.l2.len = ODP_CACHE_LINE_SIZE;
+	param.cache_stash_hints.common.queue_context.l3.offset = 0;
+	param.cache_stash_hints.common.queue_context.l3.len = ODP_CACHE_LINE_SIZE;
+
+	group = odp_schedule_group_create_2("create_group", &mask, &param);
+
+	CU_ASSERT_FATAL(group != ODP_SCHED_GROUP_INVALID);
+
+	test_group_basic(group);
 }
 
 static void scheduler_test_group_long_name(void)
@@ -3692,6 +3757,8 @@ odp_testinfo_t scheduler_basic_suite[] = {
 	ODP_TEST_INFO(scheduler_test_order_ignore),
 	ODP_TEST_INFO(scheduler_test_group_info_predef),
 	ODP_TEST_INFO(scheduler_test_create_group),
+	ODP_TEST_INFO(scheduler_test_group_param_init),
+	ODP_TEST_INFO(scheduler_test_create_group_2),
 	ODP_TEST_INFO(scheduler_test_group_long_name),
 	ODP_TEST_INFO(scheduler_test_create_max_groups),
 	ODP_TEST_INFO(scheduler_test_groups),
