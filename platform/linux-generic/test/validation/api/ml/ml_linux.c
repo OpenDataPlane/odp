@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright (c) 2023 Nokia
+ * Copyright (c) 2023-2025 Nokia
  */
 
 #ifndef _GNU_SOURCE
@@ -445,6 +445,9 @@ static void test_ml_model_info(void)
 	CU_ASSERT(ml_info.model_version == 1);
 	CU_ASSERT(ml_info.num_inputs == NUM_INPUTS);
 	CU_ASSERT(ml_info.num_outputs == NUM_OUTPUTS);
+	/* Scale and zero point are not provided so check accordingly */
+	CU_ASSERT(ml_info.aux.input_quant_info == 0);
+	CU_ASSERT(ml_info.aux.output_quant_info == 0);
 
 	num_ret = odp_ml_model_input_info(global.ml_model, input_info, NUM_INPUTS);
 	CU_ASSERT(num_ret == NUM_INPUTS);
@@ -452,6 +455,9 @@ static void test_ml_model_info(void)
 	CU_ASSERT(input_info[0].shape.num_dim == 1);
 	CU_ASSERT(input_info[0].shape.dim[0] == 1);
 	CU_ASSERT((int)input_info[0].data_type == ODP_ML_DATA_TYPE_INT32);
+
+	for (uint32_t i = 0; i < num_ret; i++)
+		CU_ASSERT(input_info[i].quant_info.common.type == ODP_ML_DATA_TYPE_NONE);
 
 	/* When num is 0, return normally, and input_info is ignored */
 	num_ret = odp_ml_model_input_info(global.ml_model, input_info, 0);
@@ -474,6 +480,9 @@ static void test_ml_model_info(void)
 	CU_ASSERT(output_info[0].shape.num_dim == 1);
 	CU_ASSERT(output_info[0].shape.dim[0] == 1);
 	CU_ASSERT((int)output_info[0].data_type == ODP_ML_DATA_TYPE_INT32);
+
+	for (uint32_t i = 0; i < num_ret; i++)
+		CU_ASSERT(output_info[i].quant_info.common.type == ODP_ML_DATA_TYPE_NONE);
 
 	/* When num is 0, return normally, and input_info is ignored */
 	num_ret = odp_ml_model_output_info(global.ml_model, output_info, 0);
