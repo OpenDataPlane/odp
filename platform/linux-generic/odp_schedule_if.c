@@ -1,9 +1,11 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2016-2018 Linaro Limited
- * Copyright (c) 2021-2024 Nokia
+ * Copyright (c) 2021-2025 Nokia
  */
 
 #include <odp/autoheader_internal.h>
+
+#include <odp/api/hints.h>
 
 #include <odp/api/plat/schedule_inline_types.h>
 #include <odp/api/plat/strong_types.h>
@@ -88,10 +90,42 @@ int odp_schedule_num_prio(void)
 	return _odp_sched_api->schedule_num_prio();
 }
 
+int odp_schedule_group_min_prio(odp_schedule_group_t group)
+{
+	return _odp_sched_api->schedule_group_min_prio(group);
+}
+
+int odp_schedule_group_max_prio(odp_schedule_group_t group)
+{
+	return _odp_sched_api->schedule_group_max_prio(group);
+}
+
+int odp_schedule_group_default_prio(odp_schedule_group_t group)
+{
+	return _odp_sched_api->schedule_group_default_prio(group);
+}
+
+int odp_schedule_group_num_prio(odp_schedule_group_t group)
+{
+	return _odp_sched_api->schedule_group_num_prio(group);
+}
+
 odp_schedule_group_t odp_schedule_group_create(const char *name,
 					       const odp_thrmask_t *mask)
 {
 	return _odp_sched_api->schedule_group_create(name, mask);
+}
+
+void odp_schedule_group_param_init(odp_schedule_group_param_t *param)
+{
+	memset(param, 0, sizeof(*param));
+}
+
+odp_schedule_group_t odp_schedule_group_create_2(const char *name,
+						 const odp_thrmask_t *mask,
+						 const odp_schedule_group_param_t *param)
+{
+	return _odp_sched_api->schedule_group_create_2(name, mask, param);
 }
 
 int odp_schedule_group_destroy(odp_schedule_group_t group)
