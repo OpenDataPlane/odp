@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright (c) 2022 Nokia
+ * Copyright (c) 2022-2025 Nokia
  */
 
 #ifndef ODP_PLAT_SCHEDULE_INLINE_TYPES_H_
@@ -37,7 +37,14 @@ typedef struct {
 	int (*schedule_max_prio)(void);
 	int (*schedule_default_prio)(void);
 	int (*schedule_num_prio)(void);
+	int (*schedule_group_min_prio)(odp_schedule_group_t group);
+	int (*schedule_group_max_prio)(odp_schedule_group_t group);
+	int (*schedule_group_default_prio)(odp_schedule_group_t group);
+	int (*schedule_group_num_prio)(odp_schedule_group_t group);
 	odp_schedule_group_t (*schedule_group_create)(const char *name, const odp_thrmask_t *mask);
+	odp_schedule_group_t (*schedule_group_create_2)(const char *name,
+							const odp_thrmask_t *mask,
+							const odp_schedule_group_param_t *param);
 	int (*schedule_group_destroy)(odp_schedule_group_t group);
 	odp_schedule_group_t (*schedule_group_lookup)(const char *name);
 	int (*schedule_group_join)(odp_schedule_group_t group, const odp_thrmask_t *mask);

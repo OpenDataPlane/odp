@@ -90,6 +90,26 @@ int odp_schedule_num_prio(void)
 	return _odp_sched_api->schedule_num_prio();
 }
 
+int odp_schedule_group_min_prio(odp_schedule_group_t group)
+{
+	return _odp_sched_api->schedule_group_min_prio(group);
+}
+
+int odp_schedule_group_max_prio(odp_schedule_group_t group)
+{
+	return _odp_sched_api->schedule_group_max_prio(group);
+}
+
+int odp_schedule_group_default_prio(odp_schedule_group_t group)
+{
+	return _odp_sched_api->schedule_group_default_prio(group);
+}
+
+int odp_schedule_group_num_prio(odp_schedule_group_t group)
+{
+	return _odp_sched_api->schedule_group_num_prio(group);
+}
+
 odp_schedule_group_t odp_schedule_group_create(const char *name,
 					       const odp_thrmask_t *mask)
 {
@@ -103,9 +123,9 @@ void odp_schedule_group_param_init(odp_schedule_group_param_t *param)
 
 odp_schedule_group_t odp_schedule_group_create_2(const char *name,
 						 const odp_thrmask_t *mask,
-						 const odp_schedule_group_param_t *p ODP_UNUSED)
+						 const odp_schedule_group_param_t *param)
 {
-	return _odp_sched_api->schedule_group_create(name, mask);
+	return _odp_sched_api->schedule_group_create_2(name, mask, param);
 }
 
 int odp_schedule_group_destroy(odp_schedule_group_t group)
