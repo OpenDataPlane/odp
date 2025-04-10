@@ -320,6 +320,11 @@ static sched_global_t *sched;
 /* Thread local scheduler context */
 static __thread sched_local_t sched_local;
 
+extern schedule_fn_t _odp_schedule_basic_fn;
+static int schedule_ord_enq_multi_no_stash(odp_queue_t dst_queue,
+					   void *event_hdr[],
+					   int num, int *ret);
+
 static void prio_grp_mask_init(void)
 {
 	int i;
@@ -614,6 +619,9 @@ static int schedule_init_global(void)
 		odp_shm_free(shm);
 		return -1;
 	}
+
+	if (sched->config.order_stash_size == 0)
+		_odp_schedule_basic_fn.ord_enq_multi = schedule_ord_enq_multi_no_stash;
 
 	sched->shm = shm;
 	prefer_ratio = sched->config.prefer_ratio;
@@ -1264,6 +1272,30 @@ static int schedule_ord_enq_multi(odp_queue_t dst_queue, void *event_hdr[],
 
 	*ret = num;
 	return 1;
+}
+
+static int schedule_ord_enq_multi_no_stash(odp_queue_t dst_queue,
+					   void *event_hdr[] ODP_UNUSED,
+					   int num ODP_UNUSED, int *ret ODP_UNUSED)
+{
+	queue_entry_t *dst_qentry;
+	uint32_t src_queue;
+
+	if (odp_likely(sched_local.sync_ctx != ODP_SCHED_SYNC_ORDERED))
+		return 0;
+	if (sched_local.ordered.in_order)
+		return 0;
+
+	dst_qentry = qentry_from_handle(dst_queue);
+	if (dst_qentry->param.order == ODP_QUEUE_ORDER_IGNORE)
+		return 0;
+
+	src_queue  = sched_local.ordered.src_queue;
+	if (odp_unlikely(!ordered_own_turn(src_queue)))
+		wait_for_order(src_queue);
+
+	sched_local.ordered.in_order = 1;
+	return 0;
 }
 
 static inline int queue_is_pktin(uint32_t queue_index)
@@ -2314,7 +2346,7 @@ static const _odp_schedule_api_fn_t *sched_api(void)
 }
 
 /* Fill in scheduler interface */
-const schedule_fn_t _odp_schedule_basic_fn = {
+schedule_fn_t _odp_schedule_basic_fn = {
 	.pktio_start = schedule_pktio_start,
 	.thr_add = schedule_thr_add,
 	.thr_rem = schedule_thr_rem,
