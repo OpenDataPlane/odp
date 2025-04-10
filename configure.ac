@@ -3,7 +3,7 @@ AC_PREREQ([2.5])
 # ODP API version
 ##########################################################################
 m4_define([odp_version_generation], [1])
-m4_define([odp_version_major],     [46])
+m4_define([odp_version_major],     [47])
 m4_define([odp_version_minor],      [0])
 m4_define([odp_version_patch],      [0])
 
@@ -37,7 +37,7 @@ AC_DEFINE_UNQUOTED([_ODP_GIT_REVISION], ["$ODP_GIT_REVISION"], "ODP Git Revision
 ##########################################################################
 m4_define([odph_version_generation], [1])
 m4_define([odph_version_major], [7])
-m4_define([odph_version_minor], [0])
+m4_define([odph_version_minor], [1])
 
 m4_define([odph_version],
     [odph_version_generation.odph_version_major.odph_version_minor])
