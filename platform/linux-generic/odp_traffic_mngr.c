@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2015 EZchip Semiconductor Ltd.
  * Copyright (c) 2015-2018 Linaro Limited
- * Copyright (c) 2022 Marvell
+ * Copyright (c) 2022-2025 Marvell
  * Copyright (c) 2022 Nokia
  */
 
@@ -4782,6 +4782,14 @@ int odp_tm_node_fanin_info(odp_tm_node_t             tm_node,
 	sched_params        = next_shaper_obj->sched_params;
 	if (sched_params != NULL)
 		info->sched_profile = sched_params->sched_profile;
+
+	return 0;
+}
+
+int odp_tm_node_stats(odp_tm_node_t tm_node, odp_tm_node_stats_t *stats)
+{
+	(void)tm_node;
+	memset(stats, 0, sizeof(odp_tm_node_stats_t));
 
 	return 0;
 }
