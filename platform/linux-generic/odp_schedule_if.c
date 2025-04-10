@@ -29,7 +29,7 @@ int _odp_schedule_configured(void)
 #include <odp/visibility_end.h>
 
 extern const schedule_fn_t _odp_schedule_sp_fn;
-extern const schedule_fn_t _odp_schedule_basic_fn;
+extern schedule_fn_t _odp_schedule_basic_fn;
 const schedule_fn_t *_odp_sched_fn;
 int _odp_sched_id;
 
