@@ -1,0 +1,5 @@
+<map id="odp_ipsec_status_t" name="odp_ipsec_status_t">
+<area shape="rect" id="node1" title="IPSEC status content." alt="" coords="87,95,233,121"/>
+<area shape="rect" id="node2" href="$structodp__ipsec__warn__t.html" title="IPSEC warnings." alt="" coords="5,5,144,32"/>
+<area shape="rect" id="node3" href="$struct__odp__abi__ipsec__sa__t.html" title=" " alt="" coords="168,5,323,32"/>
+</map>

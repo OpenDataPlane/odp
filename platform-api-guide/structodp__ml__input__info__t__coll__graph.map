@@ -1,0 +1,4 @@
+<map id="odp_ml_input_info_t" name="odp_ml_input_info_t">
+<area shape="rect" id="node1" title="Model input information." alt="" coords="8,95,163,121"/>
+<area shape="rect" id="node2" href="$structodp__ml__shape__info__t.html" title="Model input / output data shape information." alt="" coords="5,5,165,32"/>
+</map>
