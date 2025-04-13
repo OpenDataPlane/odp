@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2015-2018 Linaro Limited
- * Copyright (c) 2019-2023 Nokia
+ * Copyright (c) 2019-2025 Nokia
  */
 
 /* For rand_r and nanosleep */
@@ -2563,6 +2563,7 @@ static void timer_test_all(odp_queue_type_t queue_type)
 	odp_timer_pool_t tp;
 	uint32_t num_timers;
 	uint32_t num_workers;
+	uint32_t max_groups;
 	int timers_per_thread;
 	odp_timer_clk_src_t clk_src = test_global->clk_src;
 
@@ -2571,14 +2572,15 @@ static void timer_test_all(odp_queue_type_t queue_type)
 	 * test hopefully can run undisturbed and thus get better timing
 	 * results. */
 	num_workers = odp_cpumask_default_worker(NULL, 0);
+	max_groups = sched_capa.max_groups - 3;
 
 	/* force to max CPU count */
 	if (num_workers > MAX_WORKERS)
 		num_workers = MAX_WORKERS;
 
 	if (queue_type == ODP_QUEUE_TYPE_SCHED &&
-	    num_workers > sched_capa.max_groups)
-		num_workers = sched_capa.max_groups;
+	    num_workers > max_groups)
+		num_workers = max_groups;
 
 	/* On a single-CPU machine run at least one thread */
 	if (num_workers < 1)

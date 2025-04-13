@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2013-2018 Linaro Limited
- * Copyright (c) 2021 Nokia
+ * Copyright (c) 2021-2025 Nokia
  */
 
 #ifndef ODP_SCHEDULE_IF_H_
@@ -29,6 +29,12 @@ typedef struct schedule_config_t {
 		int worker;
 		int control;
 	} group_enable;
+
+	uint32_t num_groups;
+	uint32_t num_prios;
+	int min_prio;
+	int max_prio;
+	int def_prio;
 
 } schedule_config_t;
 
