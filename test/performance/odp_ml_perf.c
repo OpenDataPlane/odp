@@ -20,6 +20,7 @@
 
 /* Max number of inputs and outputs */
 #define MAX_IO 8
+#define ENGINE_ID 0
 
 #define TEST_SKIP 77
 
@@ -849,7 +850,7 @@ int main(int argc, char *argv[])
 		goto odp_term;
 	}
 
-	if (odp_ml_capability(&glb->capa)) {
+	if (odp_ml_capability(ENGINE_ID, &glb->capa)) {
 		ODPH_ERR("odp_ml_capability() failed\n");
 		ret = -1;
 		goto odp_term;

@@ -8,6 +8,8 @@
 
 #include "model_read.h"
 
+#define ENGINE_ID 0
+
 /**
  * Read basic model information, e.g. inputs/outputs.
  */
@@ -54,7 +56,7 @@ int main(int argc, char *argv[])
 		goto odp_term;
 	}
 
-	if (odp_ml_capability(&capa)) {
+	if (odp_ml_capability(ENGINE_ID, &capa)) {
 		printf("odp_ml_capability() failed\n");
 		ret = -1;
 		goto odp_term;

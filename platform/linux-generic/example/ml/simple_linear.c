@@ -26,6 +26,7 @@
 #define NUM_OUTPUTS	1
 #define MAX_NUM_WORKERS	10
 #define MAX_MODEL_SIZE	500
+#define ENGINE_ID 0
 
 typedef struct infer_param_t {
 	int32_t x;
@@ -165,7 +166,7 @@ int main(int argc, char *argv[])
 		goto odp_term;
 	}
 
-	if (odp_ml_capability(&capa)) {
+	if (odp_ml_capability(ENGINE_ID, &capa)) {
 		ODPH_ERR("odp_ml_capability() failed\n");
 		ret = -1;
 		goto odp_term;

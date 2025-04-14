@@ -10,6 +10,7 @@
 #define UAREA     0xaa
 #define NUM_COMPL 10u
 #define COMPL_POOL_NAME "ML compl pool"
+#define ENGINE_ID 0
 
 typedef struct global_t {
 	int disabled;
@@ -41,7 +42,7 @@ static int ml_suite_init(void)
 		goto odp_term;
 	}
 
-	if (odp_ml_capability(&global.ml_capa)) {
+	if (odp_ml_capability(ENGINE_ID, &global.ml_capa)) {
 		ODPH_ERR("ML capability failed\n");
 		return -1;
 	}
