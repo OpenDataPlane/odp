@@ -26,7 +26,21 @@ static global_t global;
 
 static int ml_suite_init(void)
 {
+	int num_engines;
+
 	memset(&global, 0, sizeof(global_t));
+
+	num_engines = odp_ml_num_engines();
+	if (num_engines < 0) {
+		ODPH_ERR("ML engine count failed\n");
+		return num_engines;
+	}
+
+	if (num_engines == 0) {
+		global.disabled = 1;
+		ODPH_DBG("ML test disabled\n");
+		return 0;
+	}
 
 	if (odp_ml_capability(&global.ml_capa)) {
 		ODPH_ERR("ML capability failed\n");
@@ -52,12 +66,60 @@ static int check_ml_support(void)
 	return ODP_TEST_ACTIVE;
 }
 
+static void test_ml_engine_count(void)
+{
+	int num_engines = odp_ml_num_engines();
+
+	CU_ASSERT(num_engines >= 0);
+}
+
 static void test_ml_capability(void)
 {
 	odp_ml_capability_t ml_capa;
 
 	memset(&ml_capa, 0, sizeof(odp_ml_capability_t));
 	CU_ASSERT(odp_ml_capability(&ml_capa) == 0);
+
+	if (ml_capa.max_models == 0)
+		return;
+
+	CU_ASSERT(ml_capa.max_model_size > 0);
+	CU_ASSERT(ml_capa.max_models_loaded > 0);
+	CU_ASSERT(ml_capa.max_inputs > 0);
+	CU_ASSERT(ml_capa.max_outputs > 0);
+	CU_ASSERT(ml_capa.max_segs_per_input > 0);
+	CU_ASSERT(ml_capa.max_segs_per_output > 0);
+	CU_ASSERT(ml_capa.min_input_align > 0);
+	CU_ASSERT(ml_capa.min_output_align > 0);
+
+	if ((ml_capa.load.compl_mode_mask | ml_capa.run.compl_mode_mask) &
+	    ODP_ML_COMPL_MODE_EVENT) {
+		odp_pool_capability_t pool_capa;
+
+		CU_ASSERT_FATAL(odp_pool_capability(&pool_capa) == 0);
+
+		CU_ASSERT(ml_capa.pool.max_pools > 0);
+		CU_ASSERT(ml_capa.pool.max_pools <= pool_capa.max_pools);
+		CU_ASSERT(ml_capa.pool.max_num > 0);
+		CU_ASSERT(ml_capa.pool.max_cache_size >= ml_capa.pool.min_cache_size);
+	}
+
+	CU_ASSERT(ml_capa.load.compl_mode_mask);
+	CU_ASSERT(ml_capa.run.compl_mode_mask);
+
+	if (ml_capa.load.compl_mode_mask & ODP_ML_COMPL_MODE_EVENT)
+		CU_ASSERT(ml_capa.load.compl_queue_plain || ml_capa.load.compl_queue_sched);
+
+	if (ml_capa.run.compl_mode_mask & ODP_ML_COMPL_MODE_EVENT)
+		CU_ASSERT(ml_capa.run.compl_queue_plain || ml_capa.run.compl_queue_sched);
+}
+
+static void test_ml_engine_capability(void)
+{
+	odp_ml_capability_t ml_capa;
+
+	memset(&ml_capa, 0, sizeof(odp_ml_capability_t));
+	CU_ASSERT(odp_ml_engine_capability(ODP_ML_ENGINE_ANY, &ml_capa) == 0);
 
 	if (ml_capa.max_models == 0)
 		return;
@@ -103,6 +165,7 @@ static void test_ml_param(uint8_t fill)
 
 	memset(&config, fill, sizeof(config));
 	odp_ml_config_init(&config);
+	CU_ASSERT(config.engine_id == ODP_ML_ENGINE_ANY);
 	CU_ASSERT(config.max_models_created == 1);
 	CU_ASSERT(config.max_models_loaded == 1);
 	CU_ASSERT(config.load_mode_mask == 0);
@@ -110,6 +173,7 @@ static void test_ml_param(uint8_t fill)
 
 	memset(&model_param, fill, sizeof(model_param));
 	odp_ml_model_param_init(&model_param);
+	CU_ASSERT(model_param.engine_id == ODP_ML_ENGINE_ANY);
 	CU_ASSERT(model_param.max_compl_id == 0);
 	CU_ASSERT(!model_param.extra_stat_enable);
 	CU_ASSERT(model_param.extra_param == NULL);
@@ -627,7 +691,9 @@ static void test_ml_fp32_fp16(void)
 }
 
 odp_testinfo_t ml_suite[] = {
+	ODP_TEST_INFO(test_ml_engine_count),
 	ODP_TEST_INFO(test_ml_capability),
+	ODP_TEST_INFO(test_ml_engine_capability),
 	ODP_TEST_INFO_CONDITIONAL(test_ml_param_init, check_ml_support),
 	ODP_TEST_INFO_CONDITIONAL(test_ml_debug, check_ml_support),
 	ODP_TEST_INFO_CONDITIONAL(ml_compl_pool_create_max_pools, check_ml_support),
