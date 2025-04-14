@@ -874,7 +874,7 @@ int main(int argc, char **argv)
 	odp_ipsec_capability_t ipsec_capa;
 	odp_schedule_capability_t schedule_capa;
 	odp_stash_capability_t stash_capa;
-	odp_ml_capability_t ml_capa;
+	odp_ml_capability_t *ml_capa;
 	appl_args_t appl_args;
 	uint64_t huge_page[MAX_HUGE_PAGES];
 	char ava_mask_str[ODP_CPUMASK_STR_SIZE];
@@ -882,6 +882,7 @@ int main(int argc, char **argv)
 	char ctrl_mask_str[ODP_CPUMASK_STR_SIZE];
 	int crypto_ret;
 	int ipsec_ret;
+	int num_ml_engines;
 
 	memset(&appl_args, 0, sizeof(appl_args_t));
 
@@ -990,9 +991,23 @@ int main(int argc, char **argv)
 		exit(EXIT_FAILURE);
 	}
 
-	if (odp_ml_capability(&ml_capa)) {
-		ODPH_ERR("ml capability failed\n");
+	num_ml_engines = odp_ml_num_engines();
+	if (num_ml_engines < 0) {
+		ODPH_ERR("ml engine count failed\n");
 		exit(EXIT_FAILURE);
+	}
+
+	if (num_ml_engines > 0)
+		ml_capa = malloc(num_ml_engines * sizeof(odp_ml_capability_t));
+	else
+		ml_capa = NULL;
+
+	for (i = 0; i < num_ml_engines; i++) {
+		if (odp_ml_capability(i, &ml_capa[i])) {
+			ODPH_ERR("ml capability failed for engine: %d\n", i);
+			free(ml_capa);
+			exit(EXIT_FAILURE);
+		}
 	}
 
 	crypto_ret = odp_crypto_capability(&crypto_capa);
@@ -1241,30 +1256,37 @@ int main(int argc, char **argv)
 
 	printf("\n");
 	printf("  ML\n");
-	printf("    max_models:             %u\n", ml_capa.max_models);
-	printf("    max_models_loaded:      %u\n", ml_capa.max_models_loaded);
-	printf("    max_model_size:         %" PRIu64 "B\n", ml_capa.max_model_size);
-	printf("    max_compl_id:           %u\n", ml_capa.max_compl_id);
-	printf("    max_inputs:             %u\n", ml_capa.max_inputs);
-	printf("    max_outputs:            %u\n", ml_capa.max_outputs);
-	printf("    max_segs_per_input:     %u\n", ml_capa.max_segs_per_input);
-	printf("    max_segs_per_output:    %u\n", ml_capa.max_segs_per_output);
-	printf("    min_input_align:        %u\n", ml_capa.min_input_align);
-	printf("    min_output_align:       %u\n", ml_capa.min_output_align);
-	printf("    packed_input_data:      %u\n", ml_capa.packed_input_data);
-	printf("    packed_output_data:     %u\n", ml_capa.packed_output_data);
-	printf("    load.compl_mode_mask:   0x%x\n", ml_capa.load.compl_mode_mask);
-	printf("    load.compl_queue_plain: %i\n", ml_capa.load.compl_queue_plain);
-	printf("    load.compl_queue_sched: %i\n", ml_capa.load.compl_queue_sched);
-	printf("    run.compl_mode_mask:    0x%x\n", ml_capa.run.compl_mode_mask);
-	printf("    run.compl_queue_plain:  %i\n", ml_capa.run.compl_queue_plain);
-	printf("    run.compl_queue_sched:  %i\n", ml_capa.run.compl_queue_sched);
-	printf("    pool.max_pools:         %u\n", ml_capa.pool.max_pools);
-	printf("    pool.max_num:           %u\n", ml_capa.pool.max_num);
-	printf("    pool.max_uarea_size:    %u B\n", ml_capa.pool.max_uarea_size);
-	printf("    pool.uarea_persistence: %u\n", ml_capa.pool.uarea_persistence);
-	printf("    pool.min_cache_size:    %u\n", ml_capa.pool.min_cache_size);
-	printf("    pool.max_cache_size:    %u\n", ml_capa.pool.max_cache_size);
+	printf("    num_engines:            %d\n", num_ml_engines);
+	for (i = 0; i < num_ml_engines; i++) {
+		printf("    engine_id:              %d\n", i);
+		printf("    max_models:             %u\n", ml_capa[i].max_models);
+		printf("    max_models_loaded:      %u\n", ml_capa[i].max_models_loaded);
+		printf("    max_model_size:         %" PRIu64 "B\n", ml_capa[i].max_model_size);
+		printf("    max_compl_id:           %u\n", ml_capa[i].max_compl_id);
+		printf("    max_inputs:             %u\n", ml_capa[i].max_inputs);
+		printf("    max_outputs:            %u\n", ml_capa[i].max_outputs);
+		printf("    max_segs_per_input:     %u\n", ml_capa[i].max_segs_per_input);
+		printf("    max_segs_per_output:    %u\n", ml_capa[i].max_segs_per_output);
+		printf("    min_input_align:        %u\n", ml_capa[i].min_input_align);
+		printf("    min_output_align:       %u\n", ml_capa[i].min_output_align);
+		printf("    packed_input_data:      %u\n", ml_capa[i].packed_input_data);
+		printf("    packed_output_data:     %u\n", ml_capa[i].packed_output_data);
+		printf("    load.compl_mode_mask:   0x%x\n", ml_capa[i].load.compl_mode_mask);
+		printf("    load.compl_queue_plain: %i\n", ml_capa[i].load.compl_queue_plain);
+		printf("    load.compl_queue_sched: %i\n", ml_capa[i].load.compl_queue_sched);
+		printf("    run.compl_mode_mask:    0x%x\n", ml_capa[i].run.compl_mode_mask);
+		printf("    run.compl_queue_plain:  %i\n", ml_capa[i].run.compl_queue_plain);
+		printf("    run.compl_queue_sched:  %i\n", ml_capa[i].run.compl_queue_sched);
+		printf("    pool.max_pools:         %u\n", ml_capa[i].pool.max_pools);
+		printf("    pool.max_num:           %u\n", ml_capa[i].pool.max_num);
+		printf("    pool.max_uarea_size:    %u B\n", ml_capa[i].pool.max_uarea_size);
+		printf("    pool.uarea_persistence: %u\n", ml_capa[i].pool.uarea_persistence);
+		printf("    pool.min_cache_size:    %u\n", ml_capa[i].pool.min_cache_size);
+		printf("    pool.max_cache_size:    %u\n", ml_capa[i].pool.max_cache_size);
+		printf("    ---\n");
+	}
+	if (num_ml_engines > 0)
+		free(ml_capa);
 
 	print_timer_capa(&appl_args);
 

@@ -41,6 +41,7 @@
 #define ML_MAX_MODEL_SIZE (1024 * 1024 * 1024)
 #define ML_MAX_MODELS_CREATED CONFIG_ML_MAX_MODELS
 #define ML_MAX_MODELS_LOADED CONFIG_ML_MAX_MODELS
+#define ML_MAX_ENGINES 1
 
 /* Error codes */
 enum {
@@ -140,7 +141,17 @@ static inline ml_model_t *ml_model_from_handle(odp_ml_model_t model)
 	return (ml_model_t *)(uintptr_t)model;
 }
 
-int odp_ml_capability(odp_ml_capability_t *capa)
+int odp_ml_num_engines(void)
+{
+	if (odp_global_ro.disable.ml) {
+		_ODP_PRINT("ML is disabled\n");
+		return 0;
+	}
+
+	return ML_MAX_ENGINES;
+}
+
+int odp_ml_capability(uint32_t engine_id ODP_UNUSED, odp_ml_capability_t *capa)
 {
 	odp_pool_capability_t pool_capa;
 
@@ -192,6 +203,7 @@ int odp_ml_capability(odp_ml_capability_t *capa)
 void odp_ml_config_init(odp_ml_config_t *config)
 {
 	memset(config, 0, sizeof(odp_ml_config_t));
+	config->engine_id = 0;
 	config->max_models_created = 1;
 	config->max_models_loaded = 1;
 }
@@ -200,6 +212,12 @@ int odp_ml_config(const odp_ml_config_t *config)
 {
 	if (!config) {
 		_ODP_ERR("Config must not be NULL\n");
+		return -1;
+	}
+
+	if (config->engine_id >= ML_MAX_ENGINES) {
+		_ODP_ERR("Engine ID %u exceeds maximum number of engines %d\n",
+			 config->engine_id, ML_MAX_ENGINES);
 		return -1;
 	}
 
@@ -835,6 +853,12 @@ odp_ml_model_t odp_ml_model_create(const char *name, const odp_ml_model_param_t 
 		return ODP_ML_MODEL_INVALID;
 	}
 
+	if (odp_unlikely(param->engine_id >= ML_MAX_ENGINES)) {
+		_ODP_ERR("Engine ID %u exceeds maximum number of engines %d\n",
+			 param->engine_id, ML_MAX_ENGINES);
+		return ODP_ML_MODEL_INVALID;
+	}
+
 	if (odp_unlikely(param->size > _odp_ml_glb->ml_config.max_model_size)) {
 		_ODP_ERR("Model size %" PRIu64 " exceeds maximum model size configured %" PRIu64
 			 "\n",
@@ -896,6 +920,7 @@ odp_ml_model_t odp_ml_model_create(const char *name, const odp_ml_model_param_t 
 	/* Store model info */
 	info = &mdl->info;
 	memset(info, 0, sizeof(*info));
+	info->engine_id = param->engine_id;
 
 	if (create_ort_model(param, &session, mdl, session_opts)) {
 		mdl->state = ML_STATE_FREE;
@@ -2582,7 +2607,7 @@ int _odp_ml_init_global(void)
 	memset(_odp_ml_glb, 0, sizeof(ml_global_t));
 	_odp_ml_glb->shm = shm;
 
-	if (odp_ml_capability(&_odp_ml_glb->capa)) {
+	if (odp_ml_capability(0, &_odp_ml_glb->capa)) {
 		_ODP_ERR("ML capability failed\n");
 		goto error;
 	}

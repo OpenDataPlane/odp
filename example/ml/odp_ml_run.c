@@ -20,6 +20,7 @@
 
 /* Max number of inputs and outputs */
 #define MAX_IO 8
+#define ENGINE_ID 0
 
 typedef struct io_size {
 	uint64_t elems, size;
@@ -350,6 +351,7 @@ int main(int argc, char *argv[])
 	void *input_file = NULL, *output_file = NULL, *reference_file = NULL;
 	uint64_t input_file_size, reference_file_size;
 	uint8_t *input = NULL, *output = NULL;
+	int num_engines;
 
 	parse_args(argc, argv);
 
@@ -363,7 +365,20 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
-	if (odp_ml_capability(&glb.capa)) {
+	num_engines = odp_ml_num_engines();
+	if (num_engines < 0) {
+		ODPH_ERR("odp_ml_num_engines() failed\n");
+		ret = -1;
+		goto odp_term;
+	}
+
+	if (num_engines == 0) {
+		ODPH_ERR("ML engine not available\n");
+		ret = -1;
+		goto odp_term;
+	}
+
+	if (odp_ml_capability(ENGINE_ID, &glb.capa)) {
 		ODPH_ERR("odp_ml_capability() failed\n");
 		ret = -1;
 		goto odp_term;

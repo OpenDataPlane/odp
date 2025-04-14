@@ -26,6 +26,7 @@
 #define NUM_OUTPUTS	1
 #define MAX_NUM_WORKERS	10
 #define MAX_MODEL_SIZE	500
+#define ENGINE_ID 0
 
 typedef struct infer_param_t {
 	int32_t x;
@@ -128,6 +129,7 @@ int main(int argc, char *argv[])
 	char cpumaskstr[ODP_CPUMASK_STR_SIZE];
 	int ret = 0;
 	uint32_t num = 0;
+	int num_engines;
 
 	if (argc != 2) {
 		ODPH_ERR("Please specify x\n"
@@ -151,7 +153,20 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
-	if (odp_ml_capability(&capa)) {
+	num_engines = odp_ml_num_engines();
+	if (num_engines < 0) {
+		ODPH_ERR("odp_ml_num_engines() failed\n");
+		ret = num_engines;
+		goto odp_term;
+	}
+
+	if (num_engines == 0) {
+		ODPH_ERR("ML engine not available\n");
+		ret = -1;
+		goto odp_term;
+	}
+
+	if (odp_ml_capability(ENGINE_ID, &capa)) {
 		ODPH_ERR("odp_ml_capability() failed\n");
 		ret = -1;
 		goto odp_term;
