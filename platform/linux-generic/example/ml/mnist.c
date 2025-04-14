@@ -39,6 +39,7 @@
 #define MAX_MODEL_SIZE 30000
 #define INPUT_NUM_ELEMS 784 /* Total shape for input: 1 * 1 * 28 * 28 */
 #define OUTPUT_NUM_ELEMS 10 /* Total shape for output: 1 * 10 */
+#define ENGINE_ID 0
 
 static int read_digit_csv(const char *file_name, uint8_t *expected_digit, float *pixels)
 {
@@ -211,7 +212,7 @@ int main(int argc, char *argv[])
 		goto odp_term;
 	}
 
-	if (odp_ml_capability(&capa)) {
+	if (odp_ml_capability(ENGINE_ID, &capa)) {
 		printf("odp_ml_capability() failed\n");
 		ret = -1;
 		goto odp_term;

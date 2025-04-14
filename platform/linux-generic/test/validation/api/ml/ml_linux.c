@@ -23,6 +23,7 @@
 
 #define COMPL_POOL_NAME "ML compl pool"
 #define NUM_COMPL	10
+#define ENGINE_ID 0
 
 /**
  * About model simple_linear.onnx being tested in this suite
@@ -141,7 +142,7 @@ static int ml_suite_init(void)
 		return -1;
 	}
 
-	if (odp_ml_capability(ml_capa)) {
+	if (odp_ml_capability(ENGINE_ID, ml_capa)) {
 		ODPH_ERR("ML capability failed\n");
 		return -1;
 	}
