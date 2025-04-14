@@ -1149,6 +1149,12 @@ int main(int argc, char **argv)
 	printf("    plain.lf.max_size:    %u\n", queue_capa.plain.lockfree.max_size);
 	printf("    plain.wf.max_num:     %u\n", queue_capa.plain.waitfree.max_num);
 	printf("    plain.wf.max_size:    %u\n", queue_capa.plain.waitfree.max_size);
+	printf("    plain.aggr.max_num:   %u\n", queue_capa.plain.aggr.max_num);
+	printf("    plain.aggr.max_num_per_queue: %u\n", queue_capa.plain.aggr.max_num_per_queue);
+	printf("    plain.aggr.max_size:  %u\n", queue_capa.plain.aggr.max_size);
+	printf("    plain.aggr.min_size:  %u\n", queue_capa.plain.aggr.min_size);
+	printf("    plain.aggr.max_tmo_ns: %" PRIu64 "\n", queue_capa.plain.aggr.max_tmo_ns);
+	printf("    plain.aggr.min_tmo_ns: %" PRIu64 "\n", queue_capa.plain.aggr.min_tmo_ns);
 
 	printf("\n");
 	printf("  SCHEDULER\n");
@@ -1161,6 +1167,12 @@ int main(int argc, char **argv)
 	printf("    lockfree_queues:      %s\n", support_level(schedule_capa.lockfree_queues));
 	printf("    waitfree_queues:      %s\n", support_level(schedule_capa.waitfree_queues));
 	printf("    order_wait:           %s\n", support_level(schedule_capa.order_wait));
+	printf("    aggr.max_num:         %u\n", schedule_capa.aggr.max_num);
+	printf("    aggr.max_num_per_queue: %u\n", schedule_capa.aggr.max_num_per_queue);
+	printf("    aggr.max_size:        %u\n", schedule_capa.aggr.max_size);
+	printf("    aggr.min_size:        %u\n", schedule_capa.aggr.min_size);
+	printf("    aggr.max_tmo_ns:      %" PRIu64 "\n", schedule_capa.aggr.max_tmo_ns);
+	printf("    aggr.min_tmo_ns:      %" PRIu64 "\n", schedule_capa.aggr.min_tmo_ns);
 
 	printf("\n");
 	printf("  STASH\n");
