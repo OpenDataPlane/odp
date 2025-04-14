@@ -26,7 +26,20 @@ static global_t global;
 
 static int ml_suite_init(void)
 {
+	int num_engines;
+
 	memset(&global, 0, sizeof(global_t));
+
+	num_engines = odp_ml_num_engines();
+	if (num_engines < 0) {
+		ODPH_ERR("ML engine count failed\n");
+		return num_engines;
+	}
+
+	if (num_engines == 0) {
+		ODPH_ERR("ML engine not available\n");
+		return -1;
+	}
 
 	if (odp_ml_capability(&global.ml_capa)) {
 		ODPH_ERR("ML capability failed\n");
@@ -50,6 +63,16 @@ static int check_ml_support(void)
 		return ODP_TEST_INACTIVE;
 
 	return ODP_TEST_ACTIVE;
+}
+
+static void test_ml_engine_count(void)
+{
+	int num_engines = odp_ml_num_engines();
+
+	CU_ASSERT(num_engines >= 0);
+
+	if (num_engines == 0)
+		return;
 }
 
 static void test_ml_capability(void)
@@ -627,6 +650,7 @@ static void test_ml_fp32_fp16(void)
 }
 
 odp_testinfo_t ml_suite[] = {
+	ODP_TEST_INFO(test_ml_engine_count),
 	ODP_TEST_INFO(test_ml_capability),
 	ODP_TEST_INFO_CONDITIONAL(test_ml_param_init, check_ml_support),
 	ODP_TEST_INFO_CONDITIONAL(test_ml_debug, check_ml_support),

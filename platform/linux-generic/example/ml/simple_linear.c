@@ -128,6 +128,7 @@ int main(int argc, char *argv[])
 	char cpumaskstr[ODP_CPUMASK_STR_SIZE];
 	int ret = 0;
 	uint32_t num = 0;
+	int num_engines;
 
 	if (argc != 2) {
 		ODPH_ERR("Please specify x\n"
@@ -149,6 +150,19 @@ int main(int argc, char *argv[])
 	if (odp_init_local(inst, ODP_THREAD_CONTROL)) {
 		ODPH_ERR("Local init failed.\n");
 		return -1;
+	}
+
+	num_engines = odp_ml_num_engines();
+	if (num_engines < 0) {
+		ODPH_ERR("odp_ml_num_engines() failed\n");
+		ret = num_engines;
+		goto odp_term;
+	}
+
+	if (num_engines == 0) {
+		ODPH_ERR("ML engine not available\n");
+		ret = -1;
+		goto odp_term;
 	}
 
 	if (odp_ml_capability(&capa)) {

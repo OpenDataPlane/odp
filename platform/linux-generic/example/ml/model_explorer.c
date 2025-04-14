@@ -19,6 +19,7 @@ int main(int argc, char *argv[])
 	odp_ml_capability_t capa;
 	odp_ml_config_t ml_config;
 	odp_ml_model_param_t model_param;
+	int num_engines;
 	int ret = 0;
 
 	if (argc != 2) {
@@ -38,6 +39,19 @@ int main(int argc, char *argv[])
 	if (odp_init_local(inst, ODP_THREAD_CONTROL)) {
 		printf("Local init failed.\n");
 		return -1;
+	}
+
+	num_engines = odp_ml_num_engines();
+	if (num_engines < 0) {
+		printf("odp_ml_num_engines() failed\n");
+		ret = num_engines;
+		goto odp_term;
+	}
+
+	if (num_engines == 0) {
+		printf("ML engine not available\n");
+		ret = -1;
+		goto odp_term;
 	}
 
 	if (odp_ml_capability(&capa)) {

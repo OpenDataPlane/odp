@@ -23,6 +23,11 @@ int _odp_ml_term_global(void)
 	return 0;
 }
 
+int odp_ml_num_engines(void)
+{
+	return 0;
+}
+
 int odp_ml_capability(odp_ml_capability_t *capa)
 {
 	memset(capa, 0, sizeof(odp_ml_capability_t));

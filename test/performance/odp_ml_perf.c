@@ -759,6 +759,7 @@ int main(int argc, char *argv[])
 	odph_helper_options_t helper_options;
 	odp_init_t init;
 	odp_shm_t shm_glb;
+	int num_engines;
 	int ret = 0;
 
 	/* Let helper collect its own arguments (e.g. --odph_proc) */
@@ -833,6 +834,19 @@ int main(int argc, char *argv[])
 			ret = -1;
 			goto odp_term;
 		}
+	}
+
+	num_engines = odp_ml_num_engines();
+	if (num_engines < 0) {
+		ODPH_ERR("odp_ml_num_engines() failed\n");
+		ret = num_engines;
+		goto odp_term;
+	}
+
+	if (num_engines == 0) {
+		ODPH_ERR("ML engine not available\n");
+		ret = -1;
+		goto odp_term;
 	}
 
 	if (odp_ml_capability(&glb->capa)) {
