@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2014-2018 Linaro Limited
  * Copyright (c) 2020 Marvell
- * Copyright (c) 2020-2023 Nokia
+ * Copyright (c) 2020-2025 Nokia
  */
 
 #include <odp_api.h>
@@ -77,6 +77,10 @@ static void test_param_init(uint8_t fill)
 	CU_ASSERT(param.vector.uarea_size == 0);
 	CU_ASSERT(param.vector.cache_size >= global_pool_capa.vector.min_cache_size &&
 		  param.vector.cache_size <= global_pool_capa.vector.max_cache_size);
+
+	CU_ASSERT(param.event_vector.uarea_size == 0);
+	CU_ASSERT(param.event_vector.cache_size >= global_pool_capa.event_vector.min_cache_size &&
+		  param.event_vector.cache_size <= global_pool_capa.event_vector.max_cache_size);
 }
 
 static void pool_test_param_init(void)
@@ -134,7 +138,7 @@ static void pool_test_create_destroy_timeout(void)
 	pool_create_destroy(&param);
 }
 
-static void pool_test_create_destroy_vector(void)
+static void pool_test_create_destroy_packet_vector(void)
 {
 	odp_pool_param_t param;
 	odp_pool_capability_t capa;
@@ -155,6 +159,26 @@ static void pool_test_create_destroy_vector(void)
 	pool_create_destroy(&param);
 }
 
+static void pool_test_create_destroy_event_vector(void)
+{
+	odp_pool_param_t param;
+	odp_pool_capability_t capa;
+	uint32_t max_num = VEC_NUM;
+
+	CU_ASSERT_FATAL(odp_pool_capability(&capa) == 0);
+
+	if (capa.event_vector.max_num && capa.event_vector.max_num < max_num)
+		max_num = capa.event_vector.max_num;
+
+	odp_pool_param_init(&param);
+	param.type = ODP_POOL_EVENT_VECTOR;
+	param.event_vector.num = max_num;
+	param.event_vector.max_size = capa.event_vector.max_size  < VEC_LEN ?
+		capa.event_vector.max_size : VEC_LEN;
+
+	pool_create_destroy(&param);
+}
+
 static int pool_check_buffer_uarea_init(void)
 {
 	if (global_pool_capa.buf.max_uarea_size == 0 || !global_pool_capa.buf.uarea_persistence)
@@ -171,10 +195,20 @@ static int pool_check_packet_uarea_init(void)
 	return ODP_TEST_ACTIVE;
 }
 
-static int pool_check_vector_uarea_init(void)
+static int check_pkt_vector_uarea_init(void)
 {
 	if (global_pool_capa.vector.max_uarea_size == 0 ||
 	    !global_pool_capa.vector.uarea_persistence)
+		return ODP_TEST_INACTIVE;
+
+	return ODP_TEST_ACTIVE;
+}
+
+static int check_ev_vector_uarea_init(void)
+{
+	if (global_pool_capa.event_vector.max_pools == 0 ||
+	    global_pool_capa.event_vector.max_uarea_size == 0 ||
+	    !global_pool_capa.event_vector.uarea_persistence)
 		return ODP_TEST_INACTIVE;
 
 	return ODP_TEST_ACTIVE;
@@ -281,7 +315,7 @@ static void pool_test_packet_uarea_init(void)
 	odp_pool_destroy(pool);
 }
 
-static void pool_test_vector_uarea_init(void)
+static void pool_test_packet_vector_uarea_init(void)
 {
 	odp_pool_param_t param;
 	uint32_t num = ODPH_MIN(global_pool_capa.vector.max_num, ELEM_NUM),
@@ -321,6 +355,50 @@ static void pool_test_vector_uarea_init(void)
 
 	for (uint32_t j = 0; j < i; j++)
 		odp_packet_vector_free(vecs[j]);
+
+	odp_pool_destroy(pool);
+}
+
+static void pool_test_event_vector_uarea_init(void)
+{
+	odp_pool_param_t param;
+	uint32_t num = ODPH_MIN(global_pool_capa.event_vector.max_num, ELEM_NUM),
+	size = ODPH_MIN(global_pool_capa.event_vector.max_size, ELEM_NUM), i;
+	odp_pool_t pool;
+	uarea_init_t data;
+	odp_event_vector_t vecs[num];
+	uint8_t *uarea;
+
+	memset(&data, 0, sizeof(uarea_init_t));
+	odp_pool_param_init(&param);
+	param.type = ODP_POOL_EVENT_VECTOR;
+	param.uarea_init.init_fn = init_event_uarea;
+	param.uarea_init.args = &data;
+	param.event_vector.num = num;
+	param.event_vector.max_size = size;
+	param.event_vector.uarea_size = 1;
+	pool = odp_pool_create(NULL, &param);
+
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+	CU_ASSERT(data.count == num);
+
+	for (i = 0; i < num; i++) {
+		CU_ASSERT(data.mark[i] == 1);
+
+		vecs[i] = odp_event_vector_alloc(pool);
+
+		CU_ASSERT(vecs[i] != ODP_EVENT_VECTOR_INVALID);
+
+		if (vecs[i] == ODP_EVENT_VECTOR_INVALID)
+			break;
+
+		uarea = odp_event_vector_user_area(vecs[i]);
+
+		CU_ASSERT(*uarea == UAREA);
+	}
+
+	for (uint32_t j = 0; j < i; j++)
+		odp_event_vector_free(vecs[j]);
 
 	odp_pool_destroy(pool);
 }
@@ -489,7 +567,7 @@ static void pool_test_same_name_tmo(void)
 	pool_test_same_name(&param);
 }
 
-static void pool_test_same_name_vec(void)
+static void pool_test_same_name_packet_vector(void)
 {
 	odp_pool_param_t param;
 
@@ -498,6 +576,19 @@ static void pool_test_same_name_vec(void)
 	param.type            = ODP_POOL_VECTOR;
 	param.vector.num      = 10;
 	param.vector.max_size = 2;
+
+	pool_test_same_name(&param);
+}
+
+static void pool_test_same_name_event_vector(void)
+{
+	odp_pool_param_t param;
+
+	odp_pool_param_init(&param);
+
+	param.type            = ODP_POOL_EVENT_VECTOR;
+	param.event_vector.num      = 10;
+	param.event_vector.max_size = 2;
 
 	pool_test_same_name(&param);
 }
@@ -610,6 +701,67 @@ static void pool_test_alloc_packet_vector_min_cache(void)
 static void pool_test_alloc_packet_vector_max_cache(void)
 {
 	alloc_packet_vector(global_pool_capa.vector.max_cache_size);
+}
+
+static void alloc_event_vector(uint32_t cache_size)
+{
+	odp_pool_t pool;
+	odp_pool_param_t param;
+	odp_pool_capability_t capa;
+	uint32_t i, num;
+	odp_event_vector_t ev_vec[VEC_NUM];
+	uint32_t max_num = VEC_NUM;
+
+	CU_ASSERT_FATAL(odp_pool_capability(&capa) == 0);
+
+	if (capa.event_vector.max_num && capa.event_vector.max_num < max_num)
+		max_num = capa.event_vector.max_num;
+
+	odp_pool_param_init(&param);
+	param.type = ODP_POOL_EVENT_VECTOR;
+	param.event_vector.num = max_num;
+	param.event_vector.max_size = capa.event_vector.max_size  < VEC_LEN ?
+		capa.event_vector.max_size : VEC_LEN;
+	param.event_vector.cache_size = cache_size;
+
+	pool = odp_pool_create(NULL, &param);
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+
+	num = 0;
+	for (i = 0; i < max_num; i++) {
+		odp_event_vector_t evv = odp_event_vector_alloc(pool);
+
+		CU_ASSERT(evv != ODP_EVENT_VECTOR_INVALID);
+
+		if (evv == ODP_EVENT_VECTOR_INVALID)
+			continue;
+
+		CU_ASSERT(odp_event_is_valid(odp_event_vector_to_event(evv)) == 1);
+		CU_ASSERT(odp_event_vector_size(evv) == 0);
+
+		ev_vec[num] = evv;
+		num++;
+	}
+
+	for (i = 0; i < num; i++)
+		odp_event_vector_free(ev_vec[i]);
+
+	CU_ASSERT(odp_pool_destroy(pool) == 0);
+}
+
+static void pool_test_alloc_event_vector(void)
+{
+	alloc_event_vector(default_pool_param.event_vector.cache_size);
+}
+
+static void pool_test_alloc_event_vector_min_cache(void)
+{
+	alloc_event_vector(global_pool_capa.event_vector.min_cache_size);
+}
+
+static void pool_test_alloc_event_vector_max_cache(void)
+{
+	alloc_event_vector(global_pool_capa.event_vector.max_cache_size);
 }
 
 static void alloc_packet(uint32_t cache_size)
@@ -1011,6 +1163,54 @@ static void pool_test_packet_vector_max_num(void)
 	CU_ASSERT(odp_pool_destroy(pool) == 0);
 }
 
+static void pool_test_event_vector_max_num(void)
+{
+	odp_pool_t pool;
+	odp_pool_param_t param;
+	odp_pool_capability_t capa;
+	uint32_t num, i;
+	odp_shm_t shm;
+	odp_event_vector_t *evv;
+	uint32_t max_num = VEC_NUM;
+
+	CU_ASSERT_FATAL(odp_pool_capability(&capa) == 0);
+
+	if (capa.event_vector.max_num)
+		max_num = capa.event_vector.max_num;
+
+	odp_pool_param_init(&param);
+
+	param.type = ODP_POOL_EVENT_VECTOR;
+	param.event_vector.num = max_num;
+	param.event_vector.max_size = 1;
+
+	pool = odp_pool_create("test_event_vector_max_num", &param);
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+
+	shm = odp_shm_reserve("test_max_num_shm", max_num * sizeof(odp_event_vector_t),
+			      sizeof(odp_event_vector_t), 0);
+	CU_ASSERT_FATAL(shm != ODP_SHM_INVALID);
+
+	evv = odp_shm_addr(shm);
+	CU_ASSERT_FATAL(evv != NULL);
+
+	num = 0;
+	for (i = 0; i < max_num; i++) {
+		evv[num] = odp_event_vector_alloc(pool);
+
+		if (evv[num] != ODP_EVENT_VECTOR_INVALID)
+			num++;
+	}
+
+	CU_ASSERT(num == max_num);
+
+	for (i = 0; i < num; i++)
+		odp_event_vector_free(evv[i]);
+
+	CU_ASSERT(odp_shm_free(shm) == 0);
+	CU_ASSERT(odp_pool_destroy(pool) == 0);
+}
+
 static void pool_test_pkt_seg_len(void)
 {
 	uint32_t len = 1500;
@@ -1337,6 +1537,15 @@ static int pool_check_packet_vector_pool_statistics(void)
 	return ODP_TEST_ACTIVE;
 }
 
+static int pool_check_event_vector_pool_statistics(void)
+{
+	if (global_pool_capa.event_vector.max_pools == 0 ||
+	    global_pool_capa.event_vector.stats.all == 0)
+		return ODP_TEST_INACTIVE;
+
+	return ODP_TEST_ACTIVE;
+}
+
 static int pool_check_timeout_pool_statistics(void)
 {
 	if (global_pool_capa.tmo.stats.all == 0)
@@ -1398,6 +1607,21 @@ static void pool_test_pool_statistics(odp_pool_type_t pool_type)
 		param.vector.num = num_obj;
 		param.vector.max_size = global_pool_capa.vector.max_size  < VEC_LEN ?
 						global_pool_capa.vector.max_size : VEC_LEN;
+	} else if (pool_type == ODP_POOL_EVENT_VECTOR) {
+		max_pools = global_pool_capa.event_vector.max_pools < max_pools ?
+				global_pool_capa.event_vector.max_pools : max_pools;
+		num_obj = VEC_NUM;
+		if (global_pool_capa.event_vector.max_num &&
+		    global_pool_capa.event_vector.max_num < num_obj)
+			num_obj = global_pool_capa.event_vector.max_num;
+		supported.all = global_pool_capa.event_vector.stats.all;
+		param.type = ODP_POOL_EVENT_VECTOR;
+		cache_size = CACHE_SIZE > global_pool_capa.event_vector.max_cache_size ?
+				global_pool_capa.event_vector.max_cache_size : CACHE_SIZE;
+		param.event_vector.cache_size = cache_size;
+		param.event_vector.num = num_obj;
+		param.event_vector.max_size = global_pool_capa.event_vector.max_size  < VEC_LEN ?
+						global_pool_capa.event_vector.max_size : VEC_LEN;
 	} else {
 		max_pools = global_pool_capa.tmo.max_pools < max_pools ?
 				global_pool_capa.tmo.max_pools : max_pools;
@@ -1500,6 +1724,11 @@ static void pool_test_pool_statistics(odp_pool_type_t pool_type)
 
 				if (pktv != ODP_PACKET_VECTOR_INVALID)
 					new_event = odp_packet_vector_to_event(pktv);
+			} else if (pool_type == ODP_POOL_EVENT_VECTOR) {
+				odp_event_vector_t evv = odp_event_vector_alloc(pool[i]);
+
+				if (evv != ODP_EVENT_VECTOR_INVALID)
+					new_event = odp_event_vector_to_event(evv);
 			} else {
 				odp_timeout_t tmo = odp_timeout_alloc(pool[i]);
 
@@ -1680,6 +1909,11 @@ static void pool_test_packet_vector_pool_statistics(void)
 	pool_test_pool_statistics(ODP_POOL_VECTOR);
 }
 
+static void pool_test_event_vector_pool_statistics(void)
+{
+	pool_test_pool_statistics(ODP_POOL_EVENT_VECTOR);
+}
+
 static void pool_test_timeout_pool_statistics(void)
 {
 	pool_test_pool_statistics(ODP_POOL_TIMEOUT);
@@ -1745,6 +1979,7 @@ static void test_packet_pool_ext_capa(void)
 	odp_pool_ext_capability_t capa;
 	odp_pool_type_t type;
 	const odp_pool_type_t unsupported_types[] = {ODP_POOL_BUFFER, ODP_POOL_TIMEOUT,
+						     ODP_POOL_EVENT_VECTOR,
 						     ODP_POOL_VECTOR, ODP_POOL_DMA_COMPL,
 						     ODP_POOL_ML_COMPL};
 	const int num_types = ODPH_ARRAY_SIZE(unsupported_types);
@@ -2344,28 +2579,50 @@ static int check_pool_ext_segment_support(void)
 	return ODP_TEST_ACTIVE;
 }
 
+static int check_event_vector(void)
+{
+	if (global_pool_capa.event_vector.max_pools == 0)
+		return ODP_TEST_INACTIVE;
+
+	return ODP_TEST_ACTIVE;
+}
+
+static int check_event_vector_2_pools(void)
+{
+	if (global_pool_capa.event_vector.max_pools < 2)
+		return ODP_TEST_INACTIVE;
+
+	return ODP_TEST_ACTIVE;
+}
+
 odp_testinfo_t pool_suite[] = {
 	ODP_TEST_INFO(pool_test_param_init),
 	ODP_TEST_INFO(pool_test_create_destroy_buffer),
 	ODP_TEST_INFO(pool_test_create_destroy_packet),
 	ODP_TEST_INFO(pool_test_create_destroy_timeout),
-	ODP_TEST_INFO(pool_test_create_destroy_vector),
+	ODP_TEST_INFO(pool_test_create_destroy_packet_vector),
+	ODP_TEST_INFO_CONDITIONAL(pool_test_create_destroy_event_vector, check_event_vector),
 	ODP_TEST_INFO_CONDITIONAL(pool_test_buffer_uarea_init, pool_check_buffer_uarea_init),
 	ODP_TEST_INFO_CONDITIONAL(pool_test_packet_uarea_init, pool_check_packet_uarea_init),
-	ODP_TEST_INFO_CONDITIONAL(pool_test_vector_uarea_init, pool_check_vector_uarea_init),
+	ODP_TEST_INFO_CONDITIONAL(pool_test_packet_vector_uarea_init, check_pkt_vector_uarea_init),
+	ODP_TEST_INFO_CONDITIONAL(pool_test_event_vector_uarea_init, check_ev_vector_uarea_init),
 	ODP_TEST_INFO_CONDITIONAL(pool_test_timeout_uarea_init, pool_check_timeout_uarea_init),
 	ODP_TEST_INFO(pool_test_lookup_info_print),
 	ODP_TEST_INFO(pool_test_long_name),
 	ODP_TEST_INFO(pool_test_same_name_buf),
 	ODP_TEST_INFO(pool_test_same_name_pkt),
 	ODP_TEST_INFO(pool_test_same_name_tmo),
-	ODP_TEST_INFO(pool_test_same_name_vec),
+	ODP_TEST_INFO(pool_test_same_name_packet_vector),
+	ODP_TEST_INFO_CONDITIONAL(pool_test_same_name_event_vector, check_event_vector_2_pools),
 	ODP_TEST_INFO(pool_test_alloc_buffer),
 	ODP_TEST_INFO(pool_test_alloc_buffer_min_cache),
 	ODP_TEST_INFO(pool_test_alloc_buffer_max_cache),
 	ODP_TEST_INFO(pool_test_alloc_packet_vector),
 	ODP_TEST_INFO(pool_test_alloc_packet_vector_min_cache),
 	ODP_TEST_INFO(pool_test_alloc_packet_vector_max_cache),
+	ODP_TEST_INFO_CONDITIONAL(pool_test_alloc_event_vector,           check_event_vector),
+	ODP_TEST_INFO_CONDITIONAL(pool_test_alloc_event_vector_min_cache, check_event_vector),
+	ODP_TEST_INFO_CONDITIONAL(pool_test_alloc_event_vector_max_cache, check_event_vector),
 	ODP_TEST_INFO(pool_test_alloc_packet),
 	ODP_TEST_INFO(pool_test_alloc_packet_min_cache),
 	ODP_TEST_INFO(pool_test_alloc_packet_max_cache),
@@ -2378,6 +2635,7 @@ odp_testinfo_t pool_suite[] = {
 	ODP_TEST_INFO(pool_test_buf_max_num),
 	ODP_TEST_INFO(pool_test_pkt_max_num),
 	ODP_TEST_INFO(pool_test_packet_vector_max_num),
+	ODP_TEST_INFO_CONDITIONAL(pool_test_event_vector_max_num, check_event_vector),
 	ODP_TEST_INFO(pool_test_pkt_seg_len),
 	ODP_TEST_INFO(pool_test_tmo_max_num),
 	ODP_TEST_INFO(pool_test_create_after_fork),
@@ -2389,6 +2647,8 @@ odp_testinfo_t pool_suite[] = {
 				  pool_check_packet_pool_statistics),
 	ODP_TEST_INFO_CONDITIONAL(pool_test_packet_vector_pool_statistics,
 				  pool_check_packet_vector_pool_statistics),
+	ODP_TEST_INFO_CONDITIONAL(pool_test_event_vector_pool_statistics,
+				  pool_check_event_vector_pool_statistics),
 	ODP_TEST_INFO_CONDITIONAL(pool_test_timeout_pool_statistics,
 				  pool_check_timeout_pool_statistics),
 	ODP_TEST_INFO_NULL,
