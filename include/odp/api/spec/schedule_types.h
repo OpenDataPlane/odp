@@ -166,6 +166,14 @@ extern "C" {
  */
 
 /**
+ * @def ODP_SCHED_MAX_PRIOS
+ * Maximum number of scheduling priorities supported by the API
+ *
+ * See odp_schedule_capability_t::max_prios for implementation specific maximum
+ * priority count.
+ */
+
+/**
  * Scheduling priority level
  *
  * Priority level is a non-negative integer value between
@@ -179,7 +187,10 @@ typedef int odp_schedule_prio_t;
 typedef	struct odp_schedule_param_t {
 	/** Priority level
 	  *
-	  * Default value is returned by odp_schedule_default_prio(). */
+	  * Default value is returned by odp_schedule_default_prio(). If
+	  * 'group' has custom priority configuration (see
+	  * odp_schedule_group_param_t::prio), the default value may not be
+	  * directly usable. */
 	odp_schedule_prio_t  prio;
 
 	/** Synchronization method
@@ -210,6 +221,18 @@ typedef struct odp_schedule_capability_t {
 	 *  ODP_SCHED_GROUP_WORKER, and ODP_SCHED_GROUP_CONTROL). By default, an
 	 *  application can create 'max_groups' - 3 groups. */
 	uint32_t max_groups;
+
+	/** Maximum simultaneous number of group and priority combinations. The
+	 *  value includes the enabled predefined scheduling group default
+	 *  priority counts (ODP_SCHED_GROUP_ALL, ODP_SCHED_GROUP_WORKER, and
+	 *  ODP_SCHED_GROUP_CONTROL). By default, an application can create
+	 *  'max_group_prios' - 3 * 'max_prios' combinations. */
+	uint32_t max_group_prios;
+
+	/** Minimum scheduling priority value
+	 *
+	 *  Supported priority range is from 'min_prio' to 'max_prios' - 1. */
+	odp_schedule_prio_t min_prio;
 
 	/** Number of scheduling priorities */
 	uint32_t max_prios;
@@ -372,6 +395,42 @@ typedef struct odp_cache_stash_prio_config_t {
  * Schedule group parameters
  */
 typedef struct odp_schedule_group_param_t {
+	/** Group specific priority configuration */
+	struct {
+		/** Priority levels to be supported by the group
+		 *
+		 *  Array of priority levels to be supported by the group. The
+		 *  level range can be non-contiguous, must have unique values
+		 *  and must always be in ascending order, i.e., minimum
+		 *  priority level must be as the first element and maximum
+		 *  priority level as the last element.
+		 *
+		 *  Additionally, each priority level must be within the global
+		 *  priority range. During odp_schedule_config() the range is
+		 *  from odp_schedule_capability_t::min_prio to
+		 *  odp_schedule_capability_t::max_prios - 1. During
+		 *  odp_schedule_group_create_2() the range is from
+		 *  odp_schedule_min_prio() to odp_schedule_max_prio().
+		 *
+		 *  When creating a queue belonging to a schedule group with
+		 *  a group specific priority configuration, the used scheduler
+		 *  priority level (odp_schedule_param_t::prio) must be within
+		 *  the group specific range.
+		 *
+		 *  The field is ignored if 'num' is 0.
+		 */
+		odp_schedule_prio_t level[ODP_SCHED_MAX_PRIOS];
+
+		/** Number of entries in 'level' array
+		 *
+		 *  When 0, the global priority range (see
+		 *  odp_schedule_config_t::prio) is used with this group. 0 by
+		 *  default.
+		 */
+		uint32_t num;
+
+	} prio;
+
 	/** Group specific cache stashing hints
 	 *
 	 *  Depending on the implementation, configuring these may improve
@@ -482,16 +541,91 @@ typedef struct odp_schedule_group_param_t {
  * Schedule configuration
  */
 typedef struct odp_schedule_config_t {
-	/** Maximum number of scheduled queues to be supported.
+	/** Maximum number of schedule groups to be supported
 	 *
-	 * @see odp_schedule_capability_t
+	 *  Can be used to optimize global group resource usage. The value
+	 *  includes the enabled predefined scheduling groups
+	 *  (ODP_SCHED_GROUP_ALL, ODP_SCHED_GROUP_WORKER, and
+	 *  ODP_SCHED_GROUP_CONTROL).
+	 *
+	 *  When configuring a value less than the number of predefined
+	 *  schedule groups, the unwanted groups must be disabled using
+	 *  'sched_group'.
+	 *
+	 *  odp_schedule_capability_t::max_groups by default.
+	 */
+	uint32_t num_groups;
+
+	/** Maximum simultaneous number of group and priority combinations to
+	 *  be supported
+	 *
+	 *  Can be used to optimize global priority resource usage. Limits the
+	 *  maximum number of cumulative priority levels that can be assigned
+	 *  to all to-be-created groups. The value includes the enabled
+	 *  predefined scheduling group priorities (ODP_SCHED_GROUP_ALL,
+	 *  ODP_SCHED_GROUP_WORKER, and ODP_SCHED_GROUP_CONTROL).
+	 *
+	 *  For example, with the following global configuration:
+	 *  - 'num_groups' of 3
+	 *  - 'num_group_prios' of 10
+	 *  - 'prio.min' of 2 and 'prio.num' of 6 (a priority range from 2 to 7)
+	 *  The following could be a potential group setup
+	 *  (odp_schedule_group_param_t::prio):
+	 *  - a group with 1 priority
+	 *  - another group with 6 priorities
+	 *  - third group with 3 priorities
+	 *  - at most 3 groups (constrained by 'num_groups')
+	 *  - cumulative priority count of 10 (1 + 6 + 3, constrained by
+	 *    'num_group_prios')
+	 *  - every priority within range of 2 to 7 (constrained by 'prio')
+	 *
+	 *  odp_schedule_capability_t::max_group_prios by default.
+	 */
+	uint32_t num_group_prios;
+
+	/** Priority range configuration
+	 *
+	 *  Can be used to optimize global priority resource usage. Forms a
+	 *  single global priority range which can be assumed to be continuous
+	 *  and spanning from the given 'min' minimum value up to a
+	 *  maximum value of 'min' + 'num' - 1.
+	 *
+	 *  The span of priorities within the global range can further be
+	 *  adjusted at group level with odp_schedule_group_param_t::prio. This
+	 *  enables a group to contain e.g. only a subset of priority levels
+	 *  from the global range.
+	 */
+	struct {
+		/** Minimum priority level to be supported
+		 *
+		 *  The priority range (from 'min' to 'min' + 'num' - 1) must
+		 *  fit within the implementation capabilities (from
+		 *  odp_schedule_capability_t::min_prio to
+		 *  odp_schedule_capability_t::max_prios - 1).
+		 *
+		 *  odp_schedule_capability_t::min_prio by default.
+		 */
+		odp_schedule_prio_t min;
+
+		/** Maximum number of priorities to be supported
+		 *
+		 *  odp_schedule_capability_t::max_prios by default.
+		 */
+		uint32_t num;
+
+	} prio;
+
+	/** Maximum number of scheduled queues to be supported
+	 *
+	 *  odp_schedule_capability_t::max_queues by default.
 	 */
 	uint32_t num_queues;
 
 	/** Maximum number of events required to be stored simultaneously in
-	 * scheduled queue. This number must not exceed 'max_queue_size'
-	 * capability.  A value of 0 configures default queue size supported by
-	 * the implementation.
+	 *  scheduled queue
+	 *
+	 *  This number must not exceed 'max_queue_size' capability. A value of
+	 *  0 configures default queue size supported by the implementation.
 	 */
 	uint32_t queue_size;
 
@@ -509,8 +643,6 @@ typedef struct odp_schedule_config_t {
 	 *
 	 *  Depending on the implementation, there may be much more flows
 	 *  supported than queues, as flows are lightweight entities.
-	 *
-	 *  @see odp_schedule_capability_t, odp_event_flow_id()
 	 */
 	uint32_t max_flow_id;
 
@@ -558,8 +690,21 @@ typedef struct odp_schedule_config_t {
  * Schedule group information
  */
 typedef struct odp_schedule_group_info_t {
-	const char    *name;   /**< Schedule group name */
-	odp_thrmask_t thrmask; /**< Thread mask of the schedule group */
+	/** Schedule group name */
+	const char *name;
+
+	/** Thread mask of the schedule group */
+	odp_thrmask_t thrmask;
+
+	/** Number of group specific priority levels in 'level' */
+	int num;
+
+	/** Group specific priority levels
+	 *
+	 *  See odp_schedule_group_param_t::prio.
+	 */
+	odp_schedule_prio_t level[ODP_SCHED_MAX_PRIOS];
+
 } odp_schedule_group_info_t;
 
 /**
