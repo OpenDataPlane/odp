@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2018 Linaro Limited
- * Copyright (c) 2022-2024 Nokia
+ * Copyright (c) 2022-2025 Nokia
  */
 
  /**
@@ -1060,6 +1060,16 @@ int main(int argc, char **argv)
 	printf("    vector.min_cache_size:    %u\n", pool_capa.vector.min_cache_size);
 	printf("    vector.max_cache_size:    %u\n", pool_capa.vector.max_cache_size);
 	printf("    vector.stats:             0x%" PRIx64 "\n", pool_capa.vector.stats.all);
+#define capa pool_capa.event_vector
+	printf("    event_vector.max_pools:         %u\n", capa.max_pools);
+	printf("    event_vector.max_num:           %u\n", capa.max_num);
+	printf("    event_vector.max_size:          %u\n", capa.max_size);
+	printf("    event_vector.max_uarea_size:    %u B\n", capa.max_uarea_size);
+	printf("    event_vector.uarea_persistence: %i\n", capa.uarea_persistence);
+	printf("    event_vector.min_cache_size:    %u\n", capa.min_cache_size);
+	printf("    event_vector.max_cache_size:    %u\n", capa.max_cache_size);
+	printf("    event_vector.stats:             0x%" PRIx64 "\n", capa.stats.all);
+#undef capa
 
 	printf("\n");
 	printf("  POOL EXT (pkt)\n");
