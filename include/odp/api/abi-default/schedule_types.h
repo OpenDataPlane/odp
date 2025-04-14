@@ -40,6 +40,8 @@ typedef int odp_schedule_group_t;
 #define ODP_SCHED_GROUP_WORKER  1
 #define ODP_SCHED_GROUP_CONTROL 2
 
+#define ODP_SCHED_MAX_PRIOS 16
+
 /**
  * @}
  */

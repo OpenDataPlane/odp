@@ -223,10 +223,14 @@ void odp_schedule_prefetch(int num);
 /**
  * Maximum scheduling priority level
  *
- * This is the maximum value that can be set to 'prio' field in
- * odp_schedule_param_t (e.g. odp_queue_create()). Queues with a higher
- * priority value are served with higher priority than queues with a lower
- * priority value.
+ * This is the global maximum value that can be set to 'prio' field in
+ * odp_schedule_param_t (e.g. odp_queue_create()). Configured based on
+ * odp_schedule_config_t::prio. Queues with a higher priority value are
+ * served with higher priority than queues with a lower priority value.
+ *
+ * Schedule group specific maximum priority (see
+ * odp_schedule_group_param_t::prio) can be queried with
+ * odp_schedule_group_info().
  *
  * @return Maximum scheduling priority level
  */
@@ -235,10 +239,14 @@ int odp_schedule_max_prio(void);
 /**
  * Minimum scheduling priority level
  *
- * This is the minimum value that can be set to 'prio' field in
- * odp_schedule_param_t (e.g. odp_queue_create()). Queues with a higher
- * priority value are served with higher priority than queues with a lower
- * priority value.
+ * This is the global minimum value that can be set to 'prio' field in
+ * odp_schedule_param_t (e.g. odp_queue_create()). Configured based on
+ * odp_schedule_config_t::prio. Queues with a higher priority value are
+ * served with higher priority than queues with a lower priority value.
+ *
+ * Schedule group specific minimum priority (see
+ * odp_schedule_group_param_t::prio) can be queried with
+ * odp_schedule_group_info().
  *
  * @return Minimum scheduling priority level
  */
@@ -247,8 +255,9 @@ int odp_schedule_min_prio(void);
 /**
  * Default scheduling priority level
  *
- * This is the default value of 'prio' field in odp_schedule_param_t
- * (e.g. odp_queue_param_init()). The default value should be suitable for
+ * This is the global default value of 'prio' field in odp_schedule_param_t
+ * (e.g. odp_queue_param_init()). Configured based on
+ * odp_schedule_config_t::prio. The default value should be suitable for
  * an application that uses single priority level for all its queues (uses
  * scheduler only for load balancing and synchronization). Typically,
  * the default value is between minimum and maximum values, but with a few
@@ -261,8 +270,13 @@ int odp_schedule_default_prio(void);
 /**
  * Number of scheduling priorities
  *
- * The number of priority levels support by the scheduler. It equals to
- * odp_schedule_max_prio() - odp_schedule_min_prio() + 1.
+ * The number of global priority levels support by the scheduler. It equals to
+ * odp_schedule_max_prio() - odp_schedule_min_prio() + 1. Configured based on
+ * odp_schedule_config_t::prio.
+ *
+ * Schedule group specific priority count (see
+ * odp_schedule_group_param_t::prio) can be queried with
+ * odp_schedule_group_info().
  *
  * @return Number of scheduling priorities
  */
