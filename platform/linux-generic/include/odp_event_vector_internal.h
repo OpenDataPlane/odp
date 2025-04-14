@@ -37,8 +37,8 @@ typedef struct ODP_ALIGNED_CACHE odp_event_vector_hdr_t {
 	/* Flags */
 	_odp_event_vector_flags_t flags;
 
-	/* Vector of packet handles */
-	odp_packet_t packet[];
+	/* Vector of event handles */
+	odp_event_t event[];
 
 } odp_event_vector_hdr_t;
 
@@ -60,7 +60,7 @@ static inline odp_event_vector_hdr_t *_odp_packet_vector_hdr(odp_packet_vector_t
  */
 static inline _odp_event_hdr_t *_odp_packet_vector_to_event_hdr(odp_packet_vector_t pktv)
 {
-	return (_odp_event_hdr_t *)(uintptr_t)&_odp_packet_vector_hdr(pktv)->event_hdr;
+	return &_odp_packet_vector_hdr(pktv)->event_hdr;
 }
 
 /**
@@ -71,7 +71,7 @@ static inline void _odp_packet_vector_free_full(odp_packet_vector_t pktv)
 	odp_event_vector_hdr_t *pktv_hdr = _odp_packet_vector_hdr(pktv);
 
 	if (pktv_hdr->size)
-		odp_packet_free_multi(pktv_hdr->packet, pktv_hdr->size);
+		odp_packet_free_multi((odp_packet_t *)pktv_hdr->event, pktv_hdr->size);
 
 	odp_packet_vector_free(pktv);
 }

@@ -30,7 +30,7 @@ typedef union {
 
 /* Event vector header field offsets for inline functions */
 typedef struct _odp_event_vector_inline_offset_t {
-	uint16_t packet;
+	uint16_t event;
 	uint16_t pool;
 	uint16_t size;
 	uint16_t uarea_addr;
