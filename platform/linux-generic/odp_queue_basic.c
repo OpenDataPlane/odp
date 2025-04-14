@@ -281,7 +281,11 @@ static odp_queue_t queue_create(const char *name,
 			_ODP_ERR("Bad queue priority: %i\n", param->sched.prio);
 			return ODP_QUEUE_INVALID;
 		}
-	}
+	} else if (type != ODP_QUEUE_TYPE_PLAIN)
+		return ODP_QUEUE_INVALID;
+
+	if (param->num_aggr > 0)
+		return ODP_QUEUE_INVALID;
 
 	if (param->nonblocking == ODP_BLOCKING) {
 		if (param->size > _odp_queue_glb->config.max_queue_size)

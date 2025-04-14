@@ -114,6 +114,11 @@ void odp_queue_print_all(void)
 	_odp_queue_api->queue_print_all();
 }
 
+odp_queue_t odp_queue_aggr(odp_queue_t queue ODP_UNUSED, uint32_t aggr_index ODP_UNUSED)
+{
+	return ODP_QUEUE_INVALID;
+}
+
 int _odp_queue_init_global(void)
 {
 	const char *sched = getenv("ODP_SCHEDULER");
