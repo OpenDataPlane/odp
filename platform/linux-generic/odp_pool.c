@@ -484,6 +484,8 @@ static void init_event_hdr(pool_t *pool, _odp_event_hdr_t *event_hdr, uint32_t e
 		hdr_len = sizeof(odp_packet_hdr_t);
 	else if (type == ODP_POOL_VECTOR)
 		hdr_len = sizeof(odp_event_vector_hdr_t);
+	else if (type == ODP_POOL_EVENT_VECTOR)
+		hdr_len = sizeof(odp_event_vector_hdr_t);
 	else if (type == ODP_POOL_TIMEOUT)
 		hdr_len = sizeof(odp_timeout_hdr_t);
 	else
@@ -527,11 +529,19 @@ static void init_event_hdr(pool_t *pool, _odp_event_hdr_t *event_hdr, uint32_t e
 		odp_atomic_init_u32(&pkt_hdr->ref_cnt, 0);
 	}
 
-	/* Initialize event vector metadata */
+	/* Initialize packet vector metadata */
 	if (type == ODP_POOL_VECTOR) {
 		odp_event_vector_hdr_t *vect_hdr = (void *)event_hdr;
 
 		event_hdr->event_type = ODP_EVENT_PACKET_VECTOR;
+		vect_hdr->uarea_addr = uarea;
+	}
+
+	/* Initialize event vector metadata */
+	if (type == ODP_POOL_EVENT_VECTOR) {
+		odp_event_vector_hdr_t *vect_hdr = (void *)event_hdr;
+
+		event_hdr->event_type = ODP_EVENT_VECTOR;
 		vect_hdr->uarea_addr = uarea;
 	}
 
@@ -851,7 +861,14 @@ odp_pool_t _odp_pool_create(const char *name, const odp_pool_param_t *params,
 		num = params->vector.num;
 		uarea_size = params->vector.uarea_size;
 		cache_size = params->vector.cache_size;
-		seg_len = params->vector.max_size * sizeof(odp_packet_t);
+		seg_len = params->vector.max_size * sizeof(odp_event_t);
+		break;
+
+	case ODP_POOL_EVENT_VECTOR:
+		num = params->event_vector.num;
+		uarea_size = params->event_vector.uarea_size;
+		cache_size = params->event_vector.cache_size;
+		seg_len = params->event_vector.max_size * sizeof(odp_event_t);
 		break;
 
 	default:
@@ -1151,6 +1168,44 @@ static int check_params(const odp_pool_param_t *params)
 		}
 
 		if (params->stats.all & ~capa.vector.stats.all) {
+			_ODP_ERR("Unsupported pool statistics counter\n");
+			return -1;
+		}
+
+		break;
+
+	case ODP_POOL_EVENT_VECTOR:
+		num = params->event_vector.num;
+		cache_size = params->event_vector.cache_size;
+
+		if (params->event_vector.num == 0) {
+			_ODP_ERR("event_vector.num zero\n");
+			return -1;
+		}
+
+		if (params->event_vector.num > capa.event_vector.max_num) {
+			_ODP_ERR("event_vector.num too large %u\n", params->event_vector.num);
+			return -1;
+		}
+
+		if (params->event_vector.max_size == 0) {
+			_ODP_ERR("event_vector.max_size zero\n");
+			return -1;
+		}
+
+		if (params->event_vector.max_size > capa.event_vector.max_size) {
+			_ODP_ERR("event_vector.max_size too large %u\n",
+				 params->event_vector.max_size);
+			return -1;
+		}
+
+		if (params->event_vector.uarea_size > capa.event_vector.max_uarea_size) {
+			_ODP_ERR("event_vector.uarea_size too large %u\n",
+				 params->event_vector.uarea_size);
+			return -1;
+		}
+
+		if (params->stats.all & ~capa.event_vector.stats.all) {
 			_ODP_ERR("Unsupported pool statistics counter\n");
 			return -1;
 		}
@@ -1550,7 +1605,7 @@ int odp_pool_capability(odp_pool_capability_t *capa)
 	capa->tmo.max_cache_size = CONFIG_POOL_CACHE_MAX_SIZE;
 	capa->tmo.stats.all = supported_stats.all;
 
-	/* Vector pools */
+	/* Packet vector pools */
 	capa->vector.max_pools = max_pools;
 	capa->vector.max_num   = CONFIG_POOL_MAX_NUM;
 	capa->vector.max_size = CONFIG_PACKET_VECTOR_MAX_SIZE;
@@ -1559,6 +1614,17 @@ int odp_pool_capability(odp_pool_capability_t *capa)
 	capa->vector.min_cache_size = 0;
 	capa->vector.max_cache_size = CONFIG_POOL_CACHE_MAX_SIZE;
 	capa->vector.stats.all = supported_stats.all;
+
+	/* Event vector pools */
+	capa->event_vector.max_pools = max_pools;
+	capa->event_vector.max_num   = CONFIG_POOL_MAX_NUM;
+	capa->event_vector.max_size  = CONFIG_EVENT_VECTOR_MAX_SIZE;
+	capa->event_vector.max_uarea_size = MAX_UAREA_SIZE;
+	capa->event_vector.uarea_persistence = true;
+	capa->event_vector.min_cache_size = 0;
+	capa->event_vector.max_cache_size = CONFIG_POOL_CACHE_MAX_SIZE;
+	capa->event_vector.stats.all = supported_stats.all;
+
 	return 0;
 }
 
@@ -1572,7 +1638,9 @@ static const char *get_long_type_str(odp_pool_type_t type)
 	case ODP_POOL_TIMEOUT:
 		return "timeout";
 	case ODP_POOL_VECTOR:
-		return "vector";
+		return "packet vector";
+	case ODP_POOL_EVENT_VECTOR:
+		return "event vector";
 	case ODP_POOL_DMA_COMPL:
 		return "dma completion";
 	case ODP_POOL_ML_COMPL:
@@ -1593,6 +1661,8 @@ static const char *get_short_type_str(odp_pool_type_t type)
 		return "T";
 	case ODP_POOL_VECTOR:
 		return "V";
+	case ODP_POOL_EVENT_VECTOR:
+		return "E";
 	case ODP_POOL_DMA_COMPL:
 		return "D";
 	case ODP_POOL_ML_COMPL:
@@ -1894,6 +1964,7 @@ int odp_pool_ext_capability(odp_pool_type_t type, odp_pool_ext_capability_t *cap
 	case ODP_POOL_BUFFER:
 	case ODP_POOL_TIMEOUT:
 	case ODP_POOL_VECTOR:
+	case ODP_POOL_EVENT_VECTOR:
 	case ODP_POOL_DMA_COMPL:
 	case ODP_POOL_ML_COMPL:
 		memset(capa, 0, sizeof(odp_pool_ext_capability_t));

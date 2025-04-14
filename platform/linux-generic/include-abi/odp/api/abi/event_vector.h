@@ -15,7 +15,7 @@
 extern "C" {
 #endif
 
-/* Placeholder for inlined functions for non-ABI compat mode */
+#include <odp/api/plat/event_vector_inlines.h>
 
 #ifdef __cplusplus
 }

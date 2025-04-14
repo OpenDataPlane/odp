@@ -17,19 +17,6 @@
 #include <inttypes.h>
 #include <stdint.h>
 
-#include <odp/visibility_begin.h>
-
-/* Packet vector header field offsets for inline functions */
-const _odp_event_vector_inline_offset_t _odp_event_vector_inline ODP_ALIGNED_CACHE = {
-	.event     = offsetof(odp_event_vector_hdr_t, event),
-	.pool      = offsetof(odp_event_vector_hdr_t, event_hdr.pool),
-	.size      = offsetof(odp_event_vector_hdr_t, size),
-	.uarea_addr = offsetof(odp_event_vector_hdr_t, uarea_addr),
-	.flags     = offsetof(odp_event_vector_hdr_t, flags)
-};
-
-#include <odp/visibility_end.h>
-
 static inline odp_event_vector_hdr_t *event_vector_hdr_from_event(odp_event_t event)
 {
 	return (odp_event_vector_hdr_t *)(uintptr_t)event;

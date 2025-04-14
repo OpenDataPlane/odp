@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright (c) 2020-2023 Nokia
+ * Copyright (c) 2020-2025 Nokia
  */
 
 /**
@@ -14,6 +14,7 @@
 #include <odp/api/align.h>
 #include <odp/api/debug.h>
 #include <odp/api/packet.h>
+#include <odp/api/event_vector.h>
 
 #include <odp/api/plat/event_vector_inline_types.h>
 
@@ -56,11 +57,27 @@ static inline odp_event_vector_hdr_t *_odp_packet_vector_hdr(odp_packet_vector_t
 }
 
 /**
+ * Return the vector header
+ */
+static inline odp_event_vector_hdr_t *_odp_event_vector_hdr(odp_event_vector_t evv)
+{
+	return (odp_event_vector_hdr_t *)(uintptr_t)evv;
+}
+
+/**
  * Return the event header
  */
 static inline _odp_event_hdr_t *_odp_packet_vector_to_event_hdr(odp_packet_vector_t pktv)
 {
 	return &_odp_packet_vector_hdr(pktv)->event_hdr;
+}
+
+/**
+ * Return the event header
+ */
+static inline _odp_event_hdr_t *_odp_event_vector_to_event_hdr(odp_event_vector_t evv)
+{
+	return &_odp_event_vector_hdr(evv)->event_hdr;
 }
 
 /**
@@ -74,6 +91,23 @@ static inline void _odp_packet_vector_free_full(odp_packet_vector_t pktv)
 		odp_packet_free_multi((odp_packet_t *)pktv_hdr->event, pktv_hdr->size);
 
 	odp_packet_vector_free(pktv);
+}
+
+/**
+ * Free event vector and contained events
+ */
+static inline void _odp_event_vector_free_full(odp_event_vector_t evv)
+{
+	odp_event_vector_hdr_t *evv_hdr = _odp_event_vector_hdr(evv);
+
+	for (uint32_t i = 0; i < evv_hdr->size; i++)
+		_ODP_ASSERT(odp_event_type(evv_hdr->event[i]) != ODP_EVENT_VECTOR &&
+			    odp_event_type(evv_hdr->event[i]) != ODP_EVENT_PACKET_VECTOR);
+
+	if (evv_hdr->size > 0)
+		odp_event_free_multi(evv_hdr->event, evv_hdr->size);
+
+	odp_event_vector_free(evv);
 }
 
 #endif /* ODP_EVENT_VECTOR_INTERNAL_H_ */

@@ -26,6 +26,7 @@
 /* Inlined API functions */
 #include <odp/api/plat/event_inlines.h>
 #include <odp/api/plat/packet_inlines.h>
+#include <odp/api/plat/event_vector_inlines.h>
 #include <odp/api/plat/packet_vector_inlines.h>
 #include <odp/api/plat/timer_inlines.h>
 
@@ -39,6 +40,9 @@ void odp_event_free(odp_event_t event)
 	case ODP_EVENT_PACKET:
 		_odp_packet_validate(odp_packet_from_event(event), _ODP_EV_EVENT_FREE);
 		odp_packet_free(odp_packet_from_event(event));
+		break;
+	case ODP_EVENT_VECTOR:
+		_odp_event_vector_free_full(odp_event_vector_from_event(event));
 		break;
 	case ODP_EVENT_PACKET_VECTOR:
 		_odp_packet_vector_free_full(odp_packet_vector_from_event(event));
@@ -61,6 +65,12 @@ void odp_event_free(odp_event_t event)
 	default:
 		_ODP_ABORT("Invalid event type: %d\n", odp_event_type(event));
 	}
+}
+
+static inline void event_vector_free_full_multi(const odp_event_vector_t evv[], int num)
+{
+	for (int i = 0; i < num; i++)
+		_odp_event_vector_free_full(evv[i]);
 }
 
 static inline void packet_vector_free_full_multi(const odp_packet_vector_t pktv[], int num)
@@ -105,6 +115,9 @@ static inline void event_free_multi(const odp_event_t event[], int num, odp_even
 		_odp_packet_validate_multi((odp_packet_t *)(uintptr_t)event, num, id);
 		odp_packet_free_multi((odp_packet_t *)(uintptr_t)event, num);
 		break;
+	case ODP_EVENT_VECTOR:
+		event_vector_free_full_multi((odp_event_vector_t *)(uintptr_t)event, num);
+		break;
 	case ODP_EVENT_PACKET_VECTOR:
 		packet_vector_free_full_multi((odp_packet_vector_t *)(uintptr_t)event, num);
 		break;
@@ -139,6 +152,9 @@ static inline void event_free_sp(const odp_event_t event[], int num, odp_event_t
 	case ODP_EVENT_PACKET:
 		_odp_packet_validate_multi((odp_packet_t *)(uintptr_t)event, num, id);
 		odp_packet_free_sp((odp_packet_t *)(uintptr_t)event, num);
+		break;
+	case ODP_EVENT_VECTOR:
+		event_vector_free_full_multi((odp_event_vector_t *)(uintptr_t)event, num);
 		break;
 	case ODP_EVENT_PACKET_VECTOR:
 		packet_vector_free_full_multi((odp_packet_vector_t *)(uintptr_t)event, num);
@@ -228,6 +244,8 @@ int odp_event_is_valid(odp_event_t event)
 	case ODP_EVENT_PACKET:
 		return !_odp_packet_validate(odp_packet_from_event(event), _ODP_EV_EVENT_IS_VALID);
 	case ODP_EVENT_TIMEOUT:
+		/* Fall through */
+	case ODP_EVENT_VECTOR:
 		/* Fall through */
 	case ODP_EVENT_IPSEC_STATUS:
 		/* Fall through */
