@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2018 Linaro Limited
- * Copyright (c) 2022-2024 Nokia
+ * Copyright (c) 2022-2025 Nokia
  */
 
 #ifndef ODP_PLAT_EVENT_INLINES_H_
@@ -85,6 +85,7 @@ _ODP_INLINE odp_pool_t odp_event_pool(odp_event_t event)
 	switch (type) {
 	case ODP_EVENT_BUFFER:
 	case ODP_EVENT_PACKET:
+	case ODP_EVENT_VECTOR:
 	case ODP_EVENT_PACKET_VECTOR:
 		return _odp_event_hdr_field(event, odp_pool_t, pool);
 	default:
@@ -103,8 +104,9 @@ _ODP_INLINE void *odp_event_user_area(odp_event_t event)
 		return _odp_buffer_get((odp_buffer_t)event, void *, uarea_addr);
 	case ODP_EVENT_PACKET:
 		return _odp_pkt_get((odp_packet_t)event, void *, user_area);
+	case ODP_EVENT_VECTOR:
 	case ODP_EVENT_PACKET_VECTOR:
-		return _odp_event_vect_get((odp_packet_vector_t)event, void *, uarea_addr);
+		return _odp_event_vect_get(event, void *, uarea_addr);
 	case ODP_EVENT_TIMEOUT:
 		return _odp_timeout_hdr_field((odp_timeout_t)event, void *, uarea_addr);
 	default:
@@ -134,15 +136,15 @@ _ODP_INLINE void *odp_event_user_area_and_flag(odp_event_t event, int *flag)
 
 		return _odp_pkt_get(pkt, void *, user_area);
 	}
+	case ODP_EVENT_VECTOR:
 	case ODP_EVENT_PACKET_VECTOR:
 	{
-		_odp_event_vector_flags_t pktv_flags;
-		odp_packet_vector_t pktv = (odp_packet_vector_t)event;
+		_odp_event_vector_flags_t v_flags;
 
-		pktv_flags.all_flags = _odp_event_vect_get(pktv, uint32_t, flags);
-		*flag = pktv_flags.user_flag;
+		v_flags.all_flags = _odp_event_vect_get(event, uint32_t, flags);
+		*flag = v_flags.user_flag;
 
-		return _odp_event_vect_get(pktv, void *, uarea_addr);
+		return _odp_event_vect_get(event, void *, uarea_addr);
 	}
 	case ODP_EVENT_TIMEOUT:
 		*flag = -1;
@@ -166,11 +168,11 @@ _ODP_INLINE void odp_event_user_flag_set(odp_event_t event, int val)
 		flags->user_flag = !!val;
 		return;
 	}
+	case ODP_EVENT_VECTOR:
 	case ODP_EVENT_PACKET_VECTOR:
 	{
-		odp_packet_vector_t pktv = (odp_packet_vector_t)event;
 		_odp_event_vector_flags_t *flags =
-				_odp_event_vect_get_ptr(pktv, _odp_event_vector_flags_t, flags);
+				_odp_event_vect_get_ptr(event, _odp_event_vector_flags_t, flags);
 
 		flags->user_flag = !!val;
 		return;
