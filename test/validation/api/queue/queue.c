@@ -17,6 +17,8 @@
 #define DEQ_RETRIES             100
 #define ENQ_RETRIES             100
 
+#define MAX_NUM_AGGR_PER_QUEUE 100 /* max number tested if more supported */
+
 typedef struct {
 	int              num_workers;
 	odp_barrier_t    barrier;
@@ -151,6 +153,8 @@ static void test_defaults(uint8_t fill)
 	CU_ASSERT(param.context == NULL);
 	CU_ASSERT(param.context_len == 0);
 	CU_ASSERT(param.size == 0);
+	CU_ASSERT(param.num_aggr == 0);
+	CU_ASSERT(param.aggr == NULL);
 }
 
 static void queue_test_param_init(void)
@@ -1153,6 +1157,169 @@ static void queue_test_mt_plain_nonblock_lf(void)
 	multithread_test(ODP_NONBLOCKING_LF);
 }
 
+static void queue_test_aggr_capa(const odp_event_aggr_capability_t *capa)
+{
+	CU_ASSERT(capa->max_num_per_queue <= capa->max_num);
+	CU_ASSERT(capa->max_size >= capa->min_size);
+	CU_ASSERT(capa->min_size >= 2 || capa->max_num == 0);
+	CU_ASSERT(capa->max_tmo_ns >= capa->min_tmo_ns);
+}
+
+static void queue_test_aggr_capa_plain(void)
+{
+	odp_queue_capability_t capa;
+
+	CU_ASSERT(odp_queue_capability(&capa) == 0);
+	queue_test_aggr_capa(&capa.plain.aggr);
+}
+
+static void queue_test_aggr_capa_sched(void)
+{
+	odp_schedule_capability_t capa;
+
+	CU_ASSERT(odp_schedule_capability(&capa) == 0);
+	queue_test_aggr_capa(&capa.aggr);
+}
+
+/*
+ * Test that odp_queue_aggr() returns ODP_QUEUE_INVALID when
+ * no aggregators have been configured for the queue.
+ */
+static void queue_test_aggr_cfg_none(odp_queue_type_t queue_type)
+{
+	odp_queue_param_t param;
+	odp_queue_t queue;
+
+	odp_queue_param_init(&param);
+	param.type = queue_type;
+	param.num_aggr = 0;
+	queue = odp_queue_create("queue_test_aggr", &param);
+	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
+	CU_ASSERT(odp_queue_aggr(queue, 0) == ODP_QUEUE_INVALID);
+	CU_ASSERT(odp_queue_destroy(queue) == 0);
+}
+
+static void queue_test_aggr_cfg_none_plain(void)
+{
+	queue_test_aggr_cfg_none(ODP_QUEUE_TYPE_PLAIN);
+}
+
+static void queue_test_aggr_cfg_none_sched(void)
+{
+	queue_test_aggr_cfg_none(ODP_QUEUE_TYPE_SCHED);
+}
+
+static odp_pool_t create_event_vector_pool(void)
+{
+	odp_pool_param_t param;
+	odp_pool_t pool;
+
+	odp_pool_param_init(&param);
+	param.type = ODP_POOL_EVENT_VECTOR;
+	param.event_vector.num = 1;
+	param.event_vector.max_size = 2;
+	pool = odp_pool_create(NULL, &param);
+	CU_ASSERT(pool != ODP_POOL_INVALID);
+
+	return pool;
+}
+
+/*
+ * Test that large/maximum number of aggregators can be configured for a queue
+ * and the aggregator queue handles can be retrieved and appear valid.
+ */
+static void queue_test_aggr_cfg_max(const odp_event_aggr_capability_t *capa,
+				    odp_queue_type_t queue_type)
+{
+	uint32_t num, i;
+	odp_pool_t evv_pool;
+	odp_queue_param_t param;
+	odp_queue_t queue, prev_aggr_queue = ODP_QUEUE_INVALID;
+
+	num = capa->max_num_per_queue;
+	if (num > MAX_NUM_AGGR_PER_QUEUE)
+		num = MAX_NUM_AGGR_PER_QUEUE;
+	CU_ASSERT_FATAL(num > 0);
+
+	odp_event_aggr_config_t aggr[num];
+
+	memset(aggr, 0, sizeof(aggr));
+	evv_pool = create_event_vector_pool();
+	for (i = 0; i < num; i++) {
+		aggr[i].pool = evv_pool;
+		aggr[i].max_size = 2;
+		aggr[i].event_type = ODP_EVENT_ANY;
+	}
+	odp_queue_param_init(&param);
+	param.type = queue_type;
+	param.num_aggr = num;
+	param.aggr = aggr;
+	queue = odp_queue_create("queue_test_aggr", &param);
+	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
+	CU_ASSERT(odp_queue_context_set(queue, &capa, 1) == 0);
+
+	for (i = 0; i < num; i++) {
+		odp_queue_t aggr_queue = odp_queue_aggr(queue, i);
+		odp_queue_info_t info = {.name = NULL};
+
+		CU_ASSERT_FATAL(aggr_queue != ODP_QUEUE_INVALID);
+		CU_ASSERT(odp_queue_type(aggr_queue) == ODP_QUEUE_TYPE_AGGR);
+		CU_ASSERT(aggr_queue != queue);
+		CU_ASSERT(aggr_queue != prev_aggr_queue);
+		prev_aggr_queue = aggr_queue;
+		CU_ASSERT(odp_queue_to_u64(aggr_queue) !=
+			  odp_queue_to_u64(queue));
+		if (i == 0 || i == num - 1)
+			odp_queue_print(aggr_queue);
+		CU_ASSERT(odp_queue_info(aggr_queue, &info) == 0);
+		CU_ASSERT(info.param.type == ODP_QUEUE_TYPE_AGGR);
+		CU_ASSERT(info.param.context == NULL);
+	}
+	CU_ASSERT(odp_queue_aggr(queue, num) == ODP_QUEUE_INVALID);
+
+	CU_ASSERT(odp_queue_destroy(queue) == 0);
+	CU_ASSERT(odp_pool_destroy(evv_pool) == 0);
+}
+
+static void queue_test_aggr_cfg_max_plain(void)
+{
+	odp_queue_capability_t capa;
+
+	CU_ASSERT_FATAL(odp_queue_capability(&capa) == 0);
+	queue_test_aggr_cfg_max(&capa.plain.aggr, ODP_QUEUE_TYPE_PLAIN);
+}
+
+static void queue_test_aggr_cfg_max_sched(void)
+{
+	odp_schedule_capability_t capa;
+
+	CU_ASSERT_FATAL(odp_schedule_capability(&capa) == 0);
+	queue_test_aggr_cfg_max(&capa.aggr, ODP_QUEUE_TYPE_SCHED);
+}
+
+static int check_plain_queue_aggr(void)
+{
+	odp_queue_capability_t capa;
+
+	if (odp_queue_capability(&capa) != 0) {
+		ODPH_ERR("odp_queue_capability() failed\n");
+		return ODP_TEST_INACTIVE;
+	}
+	return capa.plain.aggr.max_num > 0 ? ODP_TEST_ACTIVE :
+					     ODP_TEST_INACTIVE;
+}
+
+static int check_sched_queue_aggr(void)
+{
+	odp_schedule_capability_t capa;
+
+	if (odp_schedule_capability(&capa) != 0) {
+		ODPH_ERR("odp_schedule_capability() failed\n");
+		return ODP_TEST_INACTIVE;
+	}
+	return capa.aggr.max_num > 0 ? ODP_TEST_ACTIVE : ODP_TEST_INACTIVE;
+}
+
 odp_testinfo_t queue_suite[] = {
 	ODP_TEST_INFO(queue_test_capa),
 	ODP_TEST_INFO(queue_test_param_init),
@@ -1183,6 +1350,12 @@ odp_testinfo_t queue_suite[] = {
 	ODP_TEST_INFO(queue_test_info),
 	ODP_TEST_INFO(queue_test_mt_plain_block),
 	ODP_TEST_INFO(queue_test_mt_plain_nonblock_lf),
+	ODP_TEST_INFO(queue_test_aggr_capa_plain),
+	ODP_TEST_INFO(queue_test_aggr_capa_sched),
+	ODP_TEST_INFO(queue_test_aggr_cfg_none_plain),
+	ODP_TEST_INFO(queue_test_aggr_cfg_none_sched),
+	ODP_TEST_INFO_CONDITIONAL(queue_test_aggr_cfg_max_plain, check_plain_queue_aggr),
+	ODP_TEST_INFO_CONDITIONAL(queue_test_aggr_cfg_max_sched, check_sched_queue_aggr),
 	ODP_TEST_INFO_NULL,
 };
 
