@@ -6,6 +6,8 @@
 #include <odp_api.h>
 #include <odp_cunit_common.h>
 
+#include "event_vector.h"
+
 #define NUM_EVENTS  100
 #define EVENT_SIZE  100
 #define EVENT_BURST 10
@@ -447,6 +449,7 @@ odp_testinfo_t event_suite[] = {
 
 odp_suiteinfo_t event_suites[] = {
 	{"Event", NULL, NULL, event_suite},
+	{"EventVector", evv_suite_init, evv_suite_term, evv_suite},
 	ODP_SUITE_INFO_NULL,
 };
 
