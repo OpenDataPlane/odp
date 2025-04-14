@@ -124,10 +124,24 @@ static int ml_suite_init(void)
 	odp_ml_capability_t *ml_capa = &global.ml_capa;
 	odp_queue_param_t queue_param;
 	odp_ml_compl_pool_param_t ml_pool_param;
+	int num_engines;
 
 	memset(&global, 0, sizeof(global_t));
 	global.queue = ODP_QUEUE_INVALID;
 	global.compl_pool = ODP_POOL_INVALID;
+
+	num_engines = odp_ml_engine_count();
+	if (num_engines < 0) {
+		ODPH_ERR("ML engine count failed\n");
+		ret = num_engines;
+		goto odp_term;
+	}
+
+	if (num_engines == 0) {
+		ODPH_ERR("ML engine not available\n");
+		ret = -1;
+		goto odp_term;
+	}
 
 	if (odp_ml_capability(ml_capa)) {
 		ODPH_ERR("ML capability failed\n");

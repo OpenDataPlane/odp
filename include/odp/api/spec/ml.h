@@ -60,6 +60,18 @@ extern "C" {
  */
 
 /**
+ * Query number of ML engines
+ *
+ * Get number of ML engines available in the system. The number of engines may be
+ * different for each ODP instance. The number of engines may be 0 when ML offload
+ * is not available.
+ *
+ * @retval Number of ML engines
+ * @retval <0 on failure
+ */
+int odp_ml_engine_count(void);
+
+/**
  * Query ML capabilities
  *
  * Outputs ML capabilities on success. Use this capability call to check ML offload implementation

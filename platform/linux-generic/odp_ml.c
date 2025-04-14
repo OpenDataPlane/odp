@@ -41,6 +41,7 @@
 #define ML_MAX_MODEL_SIZE (1024 * 1024 * 1024)
 #define ML_MAX_MODELS_CREATED CONFIG_ML_MAX_MODELS
 #define ML_MAX_MODELS_LOADED CONFIG_ML_MAX_MODELS
+#define ML_MAX_ENGINES 1
 
 /* Error codes */
 enum {
@@ -138,6 +139,16 @@ static ml_global_t *_odp_ml_glb;
 static inline ml_model_t *ml_model_from_handle(odp_ml_model_t model)
 {
 	return (ml_model_t *)(uintptr_t)model;
+}
+
+int odp_ml_engine_count(void)
+{
+	if (odp_global_ro.disable.ml) {
+		_ODP_PRINT("ML is disabled\n");
+		return 0;
+	}
+
+	return ML_MAX_ENGINES;
 }
 
 int odp_ml_capability(odp_ml_capability_t *capa)
@@ -2559,6 +2570,7 @@ int _odp_ml_init_global(void)
 	odp_shm_t shm;
 	OrtStatus *status;
 	const OrtApi *ort_api;
+	int num_engines;
 
 	if (odp_global_ro.disable.ml) {
 		_ODP_ERR("ML is disabled\n");
@@ -2575,6 +2587,17 @@ int _odp_ml_init_global(void)
 
 	memset(_odp_ml_glb, 0, sizeof(ml_global_t));
 	_odp_ml_glb->shm = shm;
+
+	num_engines = odp_ml_engine_count();
+	if (num_engines < 0) {
+		_ODP_ERR("ML engine count failed\n");
+		goto error;
+	}
+
+	if (num_engines == 0) {
+		_ODP_ERR("ML engine not available\n");
+		goto error;
+	}
 
 	if (odp_ml_capability(&_odp_ml_glb->capa)) {
 		_ODP_ERR("ML capability failed\n");
