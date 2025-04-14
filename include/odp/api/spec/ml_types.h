@@ -70,6 +70,11 @@ extern "C" {
  * ODP implementation specific extra parameters for model creation
  */
 
+/** The special engine ID ODP_ML_ENGINE_ANY can be used to permit ODP
+ * to decide on the engine to be used to create and load a model.
+ */
+#define ODP_ML_ENGINE_ANY 0
+
 /** Maximum number of dimensions in input / output data shape */
 #define ODP_ML_MAX_DIMS      8
 
@@ -329,6 +334,18 @@ typedef struct odp_ml_capability_t {
 
 /** Machine learning configuration parameters */
 typedef struct odp_ml_config_t {
+	/**
+	 * Engine ID to be configured.
+	 *
+	 * In a system with multiple ML engines, this parameter selects the
+	 * engine to be configured. Values in the range 1..odp_ml_num_engines()
+	 * select a specific engine and the special value of ODP_ML_ENGINE_ANY
+	 * means that ODP selects the engine to be used.
+	 *
+	 * The default value is ODP_ML_ENGINE_ANY.
+	 */
+	uint32_t engine_id;
+
 	/**
 	 * Maximum number of models
 	 *
@@ -603,6 +620,9 @@ typedef struct odp_ml_model_info_t {
 	 */
 	uint64_t interface_version;
 
+	/** Engine ID to which the model is assigned */
+	uint32_t engine_id;
+
 	/** Model index assigned by the implementation */
 	uint32_t index;
 
@@ -672,6 +692,17 @@ typedef struct odp_ml_data_format_t {
  * Use odp_ml_model_param_init() to initialize the structure to its default values.
  */
 typedef struct odp_ml_model_param_t {
+	/**
+	 * Engine ID
+	 *
+	 * Engine ID to be used with the model. In a system with multiple ML engines,
+	 * this parameter selects the engine to be configured. Values in the range
+	 * 1..odp_ml_num_engines() select a specific engine and the special value of
+	 * ODP_ML_ENGINE_ANY means that ODP selects the engine to be used. The default
+	 * value is ODP_ML_ENGINE_ANY.
+	 */
+	uint32_t engine_id;
+
 	/**
 	 * Model binary
 	 *
