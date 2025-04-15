@@ -1,10 +1,12 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2018 Linaro Limited
- * Copyright (c) 2023 Nokia
+ * Copyright (c) 2023-2025 Nokia
  */
 
 #ifndef ODP_PLAT_QUEUE_INLINES_H_
 #define ODP_PLAT_QUEUE_INLINES_H_
+
+#include <string.h>
 
 #include <odp/api/hints.h>
 
@@ -21,6 +23,8 @@ extern const _odp_queue_api_fn_t *_odp_queue_api;
 	#define odp_queue_context   __odp_queue_context
 	#define odp_queue_enq       __odp_queue_enq
 	#define odp_queue_enq_multi __odp_queue_enq_multi
+	#define odp_queue_enq_aggr  __odp_queue_enq_aggr
+	#define odp_aggr_enq_param_init __odp_aggr_enq_param_init
 	#define odp_queue_deq       __odp_queue_deq
 	#define odp_queue_deq_multi __odp_queue_deq_multi
 #else
@@ -52,6 +56,17 @@ _ODP_INLINE int odp_queue_enq_multi(odp_queue_t queue,
 		return -1;
 
 	return _odp_queue_api->queue_enq_multi(queue, events, num);
+}
+
+_ODP_INLINE int odp_queue_enq_aggr(odp_queue_t queue, odp_event_t ev,
+				   const odp_aggr_enq_param_t *param ODP_UNUSED)
+{
+	return odp_queue_enq(queue, ev);
+}
+
+_ODP_INLINE void odp_aggr_enq_param_init(odp_aggr_enq_param_t *param)
+{
+	memset(param, 0, sizeof(*param));
 }
 
 _ODP_INLINE odp_event_t odp_queue_deq(odp_queue_t queue)
