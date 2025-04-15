@@ -679,7 +679,11 @@ static int create_file(int block_index, huge_flag_t huge, uint64_t len,
 	snprintf(filename, ISHM_FILENAME_MAXLEN, ISHM_FILENAME_FORMAT, dir,
 		 odp_global_ro.main_pid, name);
 
-	mkdir(dir, 0744);
+	ret = mkdir(dir, 0744);
+	if (ret && errno != EEXIST) {
+		_ODP_ERR("Could not create directory %s: %s\n", dir, strerror(errno));
+		return -1;
+	}
 
 	fd = open(filename, oflag, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 	if (fd < 0) {
