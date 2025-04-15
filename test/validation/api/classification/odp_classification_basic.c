@@ -24,6 +24,8 @@ static void test_defaults(uint8_t fill)
 	CU_ASSERT(cos_param.red.enable == false);
 	CU_ASSERT(cos_param.bp.enable == false);
 	CU_ASSERT(cos_param.vector.enable == false);
+	CU_ASSERT(cos_param.aggr_enq_profile.type == ODP_AEP_TYPE_NONE);
+	CU_ASSERT(cos_param.aggr_enq_profile.param == 0);
 
 	memset(&pmr_param, fill, sizeof(pmr_param));
 	odp_cls_pmr_param_init(&pmr_param);
@@ -820,6 +822,56 @@ static void cls_hash_result_many_queues(void)
 	odp_pool_destroy(pool);
 }
 
+/*
+ * Create a CoS with given aggregator enqueue profile type and check
+ * that the creation fails or succeeds, depending on capabilities.
+ */
+static void create_cos_aggr(int profile_type, int supported)
+{
+	odp_pool_t pool;
+	odp_queue_t queue;
+	odp_cls_cos_param_t cls_param;
+	odp_cos_t cos;
+
+	pool = pool_create("cls_basic_pool");
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+	queue = queue_create("cls_basic_queue", true);
+	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
+
+	odp_cls_cos_param_init(&cls_param);
+	cls_param.pool = pool;
+	cls_param.queue = queue;
+	cls_param.aggr_enq_profile.type = profile_type;
+	cos = odp_cls_cos_create(NULL, &cls_param);
+
+	if (supported) {
+		/*
+		 * We do not know if custom profile creation in this kind of
+		 * CoS and with zero param value is supposed to succeed.
+		 */
+		if (profile_type != ODP_AEP_TYPE_CUSTOM)
+			CU_ASSERT(cos != ODP_COS_INVALID);
+	} else {
+		CU_ASSERT(cos == ODP_COS_INVALID);
+	}
+
+	if (cos != ODP_COS_INVALID)
+		CU_ASSERT(odp_cos_destroy(cos) == 0);
+	CU_ASSERT(odp_queue_destroy(queue) == 0);
+	CU_ASSERT(odp_pool_destroy(pool) == 0);
+}
+
+static void cls_create_cos_with_aggr_enq_profile(void)
+{
+	odp_cls_capability_t capa;
+
+	CU_ASSERT_FATAL(odp_cls_capability(&capa) == 0);
+
+	create_cos_aggr(ODP_AEP_TYPE_IPV4_FRAG, capa.aggr.enq_profile_type.ipv4_frag);
+	create_cos_aggr(ODP_AEP_TYPE_IPV6_FRAG, capa.aggr.enq_profile_type.ipv6_frag);
+	create_cos_aggr(ODP_AEP_TYPE_CUSTOM,    capa.aggr.enq_profile_type.custom);
+}
+
 odp_testinfo_t classification_suite_basic[] = {
 	ODP_TEST_INFO(cls_default_values),
 	ODP_TEST_INFO(cls_create_cos),
@@ -837,5 +889,6 @@ odp_testinfo_t classification_suite_basic[] = {
 	ODP_TEST_INFO_CONDITIONAL(cls_create_cos_with_hash_queues, check_capa_cos_hashing),
 	ODP_TEST_INFO(cls_hash_result_single_queue),
 	ODP_TEST_INFO_CONDITIONAL(cls_hash_result_many_queues, check_capa_cos_hashing),
+	ODP_TEST_INFO(cls_create_cos_with_aggr_enq_profile),
 	ODP_TEST_INFO_NULL,
 };
