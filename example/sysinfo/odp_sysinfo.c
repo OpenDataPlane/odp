@@ -1113,6 +1113,11 @@ int main(int argc, char **argv)
 	printf("    threshold_bp:           0x%" PRIx8 "\n", cls_capa.threshold_bp.all_bits);
 	printf("    max_mark:               %" PRIu64 "\n", cls_capa.max_mark);
 	printf("    stats.queue:            0x%" PRIx64 "\n", cls_capa.stats.queue.all_counters);
+	#define aep_type cls_capa.aggr.enq_profile_type
+	printf("    aggr.enq_profile_type.ipv4_frag: %u\n", aep_type.ipv4_frag);
+	printf("    aggr.enq_profile_type.ipv6_frag: %u\n", aep_type.ipv6_frag);
+	printf("    aggr.enq_profile_type.custom:    %u\n", aep_type.custom);
+	#undef aep_type
 
 	printf("\n");
 	printf("  COMPRESSION\n");
