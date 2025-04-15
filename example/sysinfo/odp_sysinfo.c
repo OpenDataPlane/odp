@@ -742,6 +742,7 @@ static void print_timer_capa(appl_args_t *appl_args)
 
 		printf("    max_pools_combined:   %u\n", capa->max_pools_combined);
 		printf("    max_pools:            %u\n", capa->max_pools);
+		printf("    max_priority:         %u\n", capa->max_priority);
 		printf("    max_timers:           %u\n", capa->max_timers);
 		printf("    queue_type_sched:     %i\n", capa->queue_type_sched);
 		printf("    queue_type_plain:     %i\n", capa->queue_type_plain);
@@ -758,6 +759,7 @@ static void print_timer_capa(appl_args_t *appl_args)
 		printf("      max_tmo:            %" PRIu64 " nsec\n", capa->max_tmo.max_tmo);
 		printf("    periodic\n");
 		printf("      max_pools:          %u\n", capa->periodic.max_pools);
+		printf("      max_priority:       %u\n", capa->periodic.max_priority);
 		printf("      max_timers:         %u\n", capa->periodic.max_timers);
 		printf("      min_base_freq_hz:   %" PRIu64 " %" PRIu64 "/%" PRIu64 " Hz\n",
 		       capa->periodic.min_base_freq_hz.integer,
@@ -1176,6 +1178,8 @@ int main(int argc, char **argv)
 	printf("    compl_mode_mask:        0x%x\n", dma_capa.compl_mode_mask);
 	printf("    queue_type_sched:       %i\n", dma_capa.queue_type_sched);
 	printf("    queue_type_plain:       %i\n", dma_capa.queue_type_plain);
+	printf("    src_seg_free:           %i\n", dma_capa.src_seg_free);
+	printf("    dst_seg_alloc:          %i\n", dma_capa.dst_seg_alloc);
 	printf("    pool.max_pools:         %u\n", dma_capa.pool.max_pools);
 	printf("    pool.max_num:           %u\n", dma_capa.pool.max_num);
 	printf("    pool.max_uarea_size:    %u B\n", dma_capa.pool.max_uarea_size);
