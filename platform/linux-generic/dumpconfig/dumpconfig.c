@@ -11,7 +11,7 @@ int main(void)
 	unsigned int i;
 	const char *filename;
 	FILE *f;
-	char c;
+	int c;
 
 	printf("# Builtin platform config\n\n");
 	for (i = 0; i < sizeof(config_builtin); i++)
@@ -29,12 +29,8 @@ int main(void)
 		return -1;
 	}
 
-	while (1) {
-		c = fgetc(f);
-		if (feof(f))
-			break;
-		printf("%c", c);
-	}
+	while ((c = fgetc(f)) != EOF)
+		putchar(c);
 
 	fclose(f);
 	return 0;
