@@ -273,6 +273,9 @@ odp_cos_t odp_cls_cos_create(const char *name, const odp_cls_cos_param_t *param_
 		}
 	}
 
+	if (param.aggr_enq_profile.type != ODP_AEP_TYPE_NONE)
+		return ODP_COS_INVALID;
+
 	for (i = 0; i < CLS_COS_MAX_ENTRY; i++) {
 		cos = &cos_tbl->cos_entry[i];
 		LOCK(&cos->lock);
