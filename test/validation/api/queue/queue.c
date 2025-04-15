@@ -138,6 +138,7 @@ static void queue_test_capa(void)
 static void test_defaults(uint8_t fill)
 {
 	odp_queue_param_t param;
+	odp_aggr_enq_param_t aggr_enq_param;
 
 	memset(&param, fill, sizeof(param));
 	odp_queue_param_init(&param);
@@ -155,6 +156,11 @@ static void test_defaults(uint8_t fill)
 	CU_ASSERT(param.size == 0);
 	CU_ASSERT(param.num_aggr == 0);
 	CU_ASSERT(param.aggr == NULL);
+
+	memset(&aggr_enq_param, fill, sizeof(aggr_enq_param));
+	odp_aggr_enq_param_init(&aggr_enq_param);
+	CU_ASSERT(aggr_enq_param.start_of_vector == 0);
+	CU_ASSERT(aggr_enq_param.end_of_vector == 0);
 }
 
 static void queue_test_param_init(void)
