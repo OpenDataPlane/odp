@@ -490,6 +490,42 @@ static void print_auth(odp_auth_alg_t alg)
 	printf("%s ", auth_alg_name(alg));
 }
 
+static void print_atomic_lock_free(void)
+{
+	odp_atomic_op_t lock_free_u64, lock_free_u128;
+
+	odp_atomic_lock_free_u64(&lock_free_u64);
+	odp_atomic_lock_free_u128(&lock_free_u128);
+
+	printf("\n");
+	printf("  ATOMICS\n");
+	printf("    Lock-free odp_atomic_u64_t ops\n");
+	printf("      load:	     %s\n", lock_free_u64.op.load ? "yes" : "no");
+	printf("      store:	     %s\n", lock_free_u64.op.store ? "yes" : "no");
+	printf("      fetch_add:     %s\n", lock_free_u64.op.fetch_add ? "yes" : "no");
+	printf("      add:	     %s\n", lock_free_u64.op.add ? "yes" : "no");
+	printf("      fetch_sub:     %s\n", lock_free_u64.op.fetch_sub ? "yes" : "no");
+	printf("      sub:	     %s\n", lock_free_u64.op.sub ? "yes" : "no");
+	printf("      fetch_inc:     %s\n", lock_free_u64.op.fetch_inc ? "yes" : "no");
+	printf("      inc:	     %s\n", lock_free_u64.op.inc ? "yes" : "no");
+	printf("      fetch_dec:     %s\n", lock_free_u64.op.fetch_dec ? "yes" : "no");
+	printf("      dec:	     %s\n", lock_free_u64.op.dec ? "yes" : "no");
+	printf("      min:	     %s\n", lock_free_u64.op.min ? "yes" : "no");
+	printf("      fetch_min:     %s\n", lock_free_u64.op.fetch_min ? "yes" : "no");
+	printf("      max:	     %s\n", lock_free_u64.op.max ? "yes" : "no");
+	printf("      fetch_max:     %s\n", lock_free_u64.op.fetch_max ? "yes" : "no");
+	printf("      cas:	     %s\n", lock_free_u64.op.cas ? "yes" : "no");
+	printf("      xchg:	     %s\n", lock_free_u64.op.xchg ? "yes" : "no");
+	printf("      bit_fetch_set: %s\n", lock_free_u64.op.bit_fetch_set ? "yes" : "no");
+	printf("      bit_set:	     %s\n", lock_free_u64.op.bit_set ? "yes" : "no");
+	printf("      bit_fetch_clr: %s\n", lock_free_u64.op.bit_fetch_clr ? "yes" : "no");
+	printf("      bit_clr:	     %s\n", lock_free_u64.op.bit_clr ? "yes" : "no");
+	printf("    Lock-free odp_atomic_u128_t ops\n");
+	printf("      load:	     %s\n", lock_free_u128.op.load ? "yes" : "no");
+	printf("      store:	     %s\n", lock_free_u128.op.store ? "yes" : "no");
+	printf("      cas:	     %s\n", lock_free_u128.op.cas ? "yes" : "no");
+}
+
 static int pktio_capability(appl_args_t *appl_args)
 {
 	odp_pool_param_t pool_param;
@@ -1016,6 +1052,8 @@ int main(int argc, char **argv)
 	       (shm_capa.flags & ODP_SHM_HP) ? "HP " : "",
 	       (shm_capa.flags & ODP_SHM_HW_ACCESS) ? "HW_ACCESS " : "",
 	       (shm_capa.flags & ODP_SHM_NO_HP) ? "NO_HP " : "");
+
+	print_atomic_lock_free();
 
 	printf("\n");
 	printf("  POOL\n");
