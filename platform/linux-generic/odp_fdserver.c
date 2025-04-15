@@ -565,7 +565,11 @@ int _odp_fdserver_init_global(void)
 		 odp_global_ro.shm_dir,
 		 odp_global_ro.uid);
 
-	mkdir(sockpath, 0744);
+	res = mkdir(sockpath, 0744);
+	if (res && errno != EEXIST) {
+		_ODP_ERR("Could not create directory %s: %s\n", sockpath, strerror(errno));
+		return -1;
+	}
 
 	/* construct the server named socket path: */
 	len = snprintf(sockpath, FDSERVER_SOCKPATH_MAXLEN, FDSERVER_SOCK_FORMAT,
