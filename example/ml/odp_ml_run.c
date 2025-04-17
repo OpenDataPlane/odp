@@ -20,6 +20,7 @@
 
 /* Max number of inputs and outputs */
 #define MAX_IO 8
+#define ENGINE_ID 0
 
 typedef struct io_size {
 	uint64_t elems, size;
@@ -363,7 +364,7 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
-	if (odp_ml_capability(&glb.capa)) {
+	if (odp_ml_capability(ENGINE_ID, &glb.capa)) {
 		ODPH_ERR("odp_ml_capability() failed\n");
 		ret = -1;
 		goto odp_term;
