@@ -27,7 +27,7 @@
 #include <odp_config_internal.h>
 #include <odp_event_internal.h>
 #include <odp_macros_internal.h>
-#include <odp_ring_u32_internal.h>
+#include <odp_ring_mpmc_rst_u32_internal.h>
 #include <odp_timer_internal.h>
 #include <odp_queue_basic_internal.h>
 #include <odp_string_internal.h>
@@ -80,7 +80,7 @@ typedef struct ODP_ALIGNED_CACHE {
 #pragma GCC diagnostic ignored "-Wpedantic"
 typedef struct ODP_ALIGNED_CACHE {
 	/* Ring header */
-	ring_u32_t ring;
+	ring_mpmc_rst_u32_t ring;
 
 	/* Ring data: queue indexes */
 	uint32_t ring_idx[RING_SIZE]; /* overlaps with ring.data[] */
@@ -204,7 +204,7 @@ static int init_global(void)
 
 	for (i = 0; i < NUM_GROUP; i++)
 		for (j = 0; j < NUM_PRIO; j++)
-			ring_u32_init(&sched_global->prio_queue[i][j].ring);
+			ring_mpmc_rst_u32_init(&sched_global->prio_queue[i][j].ring);
 
 	sched_group = &sched_global->sched_group;
 	odp_ticketlock_init(&sched_group->s.lock);
@@ -476,7 +476,7 @@ static inline void add_tail(sched_cmd_t *cmd)
 	uint32_t idx = cmd->ring_idx;
 
 	prio_queue = &sched_global->prio_queue[group][prio];
-	ring_u32_enq(&prio_queue->ring, RING_MASK, idx);
+	ring_mpmc_rst_u32_enq(&prio_queue->ring, RING_MASK, idx);
 }
 
 static inline sched_cmd_t *rem_head(int group, int prio)
@@ -487,7 +487,7 @@ static inline sched_cmd_t *rem_head(int group, int prio)
 
 	prio_queue = &sched_global->prio_queue[group][prio];
 
-	if (ring_u32_deq(&prio_queue->ring, RING_MASK, &ring_idx) == 0)
+	if (ring_mpmc_rst_u32_deq(&prio_queue->ring, RING_MASK, &ring_idx) == 0)
 		return NULL;
 
 	pktio = index_from_ring_idx(&index, ring_idx);

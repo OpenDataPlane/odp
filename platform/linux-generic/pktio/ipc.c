@@ -13,7 +13,7 @@
 #include <odp_pool_internal.h>
 #include <odp_macros_internal.h>
 #include <odp_shm_internal.h>
-#include <odp_ring_ptr_internal.h>
+#include <odp_ring_mpmc_rst_ptr_internal.h>
 #include <odp_global_data.h>
 
 #include <fcntl.h>
@@ -62,21 +62,21 @@ typedef	struct {
 	struct  {
 		/* ODP ring for IPC msg packets indexes transmitted to shared
 		 * memory */
-		ring_ptr_t	*send;
+		ring_mpmc_rst_ptr_t *send;
 		/* ODP ring for IPC msg packets indexes already processed by
 		 * remote process */
-		ring_ptr_t	*free;
+		ring_mpmc_rst_ptr_t *free;
 	} tx;
 	/* RX */
 	struct {
 		/* ODP ring for IPC msg packets indexes received from shared
 		 * memory (from remote process) */
-		ring_ptr_t	*recv;
+		ring_mpmc_rst_ptr_t *recv;
 		/* odp ring for ipc msg packets indexes already processed by
 		 * current process */
-		ring_ptr_t	*free;
+		ring_mpmc_rst_ptr_t *free;
 		/* local cache to keep packet order right */
-		ring_ptr_t	*cache;
+		ring_mpmc_rst_ptr_t *cache;
 	} rx; /* slave */
 	/* Remote pool mdata base addr */
 	void *pool_mdata_base;
@@ -115,10 +115,9 @@ static const uint8_t pktio_ipc_mac[] = {0x12, 0x12, 0x12, 0x12, 0x12, 0x12};
 static odp_shm_t _ipc_map_remote_pool(const char *name, int pid);
 
 /* create the ring */
-static ring_ptr_t *_ring_create(const char *name, uint32_t count,
-				uint32_t shm_flags)
+static ring_mpmc_rst_ptr_t *_ring_create(const char *name, uint32_t count, uint32_t shm_flags)
 {
-	ring_ptr_t *r;
+	ring_mpmc_rst_ptr_t *r;
 	size_t ring_size;
 	odp_shm_t shm;
 
@@ -131,7 +130,7 @@ static ring_ptr_t *_ring_create(const char *name, uint32_t count,
 		return NULL;
 	}
 
-	ring_size = sizeof(ring_ptr_t) + count * sizeof(void *);
+	ring_size = sizeof(ring_mpmc_rst_ptr_t) + count * sizeof(void *);
 
 	/* reserve a memory zone for this ring.*/
 	shm = odp_shm_reserve(name, ring_size, ODP_CACHE_LINE_SIZE, shm_flags);
@@ -139,7 +138,7 @@ static ring_ptr_t *_ring_create(const char *name, uint32_t count,
 	r = odp_shm_addr(shm);
 	if (r != NULL) {
 		/* init the ring structure */
-		ring_ptr_init(r);
+		ring_mpmc_rst_ptr_init(r);
 
 	} else {
 		_ODP_ERR("Cannot reserve memory\n");
@@ -161,7 +160,7 @@ static int _ring_destroy(const char *name)
 /**
  * Return the number of entries in a ring.
  */
-static uint32_t _ring_count(ring_ptr_t *r, uint32_t mask)
+static uint32_t _ring_count(ring_mpmc_rst_ptr_t *r, uint32_t mask)
 {
 	uint32_t prod_tail = odp_atomic_load_u32(&r->r.w_tail);
 	uint32_t cons_tail = odp_atomic_load_u32(&r->r.r_tail);
@@ -172,7 +171,7 @@ static uint32_t _ring_count(ring_ptr_t *r, uint32_t mask)
 /**
  * Return the number of free entries in a ring.
  */
-static uint32_t _ring_free_count(ring_ptr_t *r, uint32_t mask)
+static uint32_t _ring_free_count(ring_mpmc_rst_ptr_t *r, uint32_t mask)
 {
 	uint32_t prod_tail = odp_atomic_load_u32(&r->r.w_tail);
 	uint32_t cons_tail = odp_atomic_load_u32(&r->r.r_tail);
@@ -577,7 +576,7 @@ static int ipc_pktio_open(odp_pktio_t id ODP_UNUSED,
 	return ret;
 }
 
-static void _ipc_free_ring_packets(pktio_entry_t *pktio_entry, ring_ptr_t *r,
+static void _ipc_free_ring_packets(pktio_entry_t *pktio_entry, ring_mpmc_rst_ptr_t *r,
 				   uint32_t r_mask)
 {
 	pkt_ipc_t *pktio_ipc = pkt_priv(pktio_entry);
@@ -597,7 +596,7 @@ static void _ipc_free_ring_packets(pktio_entry_t *pktio_entry, ring_ptr_t *r,
 	rbuf_p = (void *)&offsets;
 
 	while (1) {
-		ret = ring_ptr_deq_multi(r, r_mask, rbuf_p, IPC_BURST_SIZE);
+		ret = ring_mpmc_rst_ptr_deq_multi(r, r_mask, rbuf_p, IPC_BURST_SIZE);
 		if (ret <= 0)
 			break;
 		for (i = 0; i < ret; i++) {
@@ -619,8 +618,8 @@ static int ipc_pktio_recv_lockless(pktio_entry_t *pktio_entry,
 	uint32_t ring_mask = pktio_ipc->ring_mask;
 	int pkts = 0;
 	int i;
-	ring_ptr_t *r;
-	ring_ptr_t *r_p;
+	ring_mpmc_rst_ptr_t *r;
+	ring_mpmc_rst_ptr_t *r_p;
 	uintptr_t offsets[len];
 	void **ipcbufs_p = (void *)&offsets[0];
 	uint32_t ready;
@@ -635,7 +634,7 @@ static int ipc_pktio_recv_lockless(pktio_entry_t *pktio_entry,
 
 	/* rx from cache */
 	r = pktio_ipc->rx.cache;
-	pkts = ring_ptr_deq_multi(r, ring_mask, ipcbufs_p, len);
+	pkts = ring_mpmc_rst_ptr_deq_multi(r, ring_mask, ipcbufs_p, len);
 	if (odp_unlikely(pkts < 0))
 		_ODP_ABORT("internal error dequeue\n");
 
@@ -643,8 +642,7 @@ static int ipc_pktio_recv_lockless(pktio_entry_t *pktio_entry,
 	if (pkts == 0) {
 		ipcbufs_p = (void *)&offsets[0];
 		r = pktio_ipc->rx.recv;
-		pkts = ring_ptr_deq_multi(r, ring_mask, ipcbufs_p,
-					  len);
+		pkts = ring_mpmc_rst_ptr_deq_multi(r, ring_mask, ipcbufs_p, len);
 		if (odp_unlikely(pkts < 0))
 			_ODP_ABORT("internal error dequeue\n");
 	}
@@ -713,8 +711,7 @@ static int ipc_pktio_recv_lockless(pktio_entry_t *pktio_entry,
 	if (pkts != i) {
 		ipcbufs_p = (void *)&offsets[i];
 		r_p = pktio_ipc->rx.cache;
-		ring_ptr_enq_multi(r_p, ring_mask, ipcbufs_p,
-				   pkts - i);
+		ring_mpmc_rst_ptr_enq_multi(r_p, ring_mask, ipcbufs_p, pkts - i);
 
 		if (i == 0)
 			return 0;
@@ -727,7 +724,7 @@ static int ipc_pktio_recv_lockless(pktio_entry_t *pktio_entry,
 	r_p = pktio_ipc->rx.free;
 
 	ipcbufs_p = (void *)&offsets[0];
-	ring_ptr_enq_multi(r_p, ring_mask, ipcbufs_p, pkts);
+	ring_mpmc_rst_ptr_enq_multi(r_p, ring_mask, ipcbufs_p, pkts);
 
 	for (i = 0; i < pkts; i++) {
 		ODP_DBG_LVL(IPC_DBG, "%d/%d send to be free packet offset %" PRIuPTR "\n",
@@ -756,7 +753,7 @@ static int ipc_pktio_send_lockless(pktio_entry_t *pktio_entry,
 {
 	pkt_ipc_t *pktio_ipc = pkt_priv(pktio_entry);
 	uint32_t ring_mask = pktio_ipc->ring_mask;
-	ring_ptr_t *r;
+	ring_mpmc_rst_ptr_t *r;
 	void **rbuf_p;
 	int i;
 	uint32_t ready = odp_atomic_load_u32(&pktio_ipc->ready);
@@ -820,7 +817,7 @@ static int ipc_pktio_send_lockless(pktio_entry_t *pktio_entry,
 	/* Put packets to ring to be processed by other process. */
 	rbuf_p = (void *)&offsets[0];
 	r = pktio_ipc->tx.send;
-	ring_ptr_enq_multi(r, ring_mask, rbuf_p, num);
+	ring_mpmc_rst_ptr_enq_multi(r, ring_mask, rbuf_p, num);
 
 	return num;
 }

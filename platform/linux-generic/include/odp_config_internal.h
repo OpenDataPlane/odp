@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2016-2018 Linaro Limited
- * Copyright (c) 2019-2023 Nokia
+ * Copyright (c) 2019-2025 Nokia
  */
 
 #ifndef ODP_CONFIG_INTERNAL_H_
@@ -208,6 +208,10 @@ extern "C" {
 
 /* Maximum number of outputs for a ML model. */
 #define CONFIG_ML_MAX_OUTPUTS 4
+
+/* Number of empty cache lines added by _ODP_CACHE_PAD macro. Set to zero to
+ * disable padding. */
+#define CONFIG_CACHE_PAD_LINES 1
 
 #ifdef __cplusplus
 }

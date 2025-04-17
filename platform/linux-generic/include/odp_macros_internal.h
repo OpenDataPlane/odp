@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2014-2018 Linaro Limited
- * Copyright (c) 2022-2024 Nokia
+ * Copyright (c) 2022-2025 Nokia
  */
 
 /**
@@ -12,13 +12,15 @@
 #ifndef ODP_MACROS_INTERNAL_H_
 #define ODP_MACROS_INTERNAL_H_
 
+#include <odp/api/align.h>
+
+#include <odp_config_internal.h>
+
+#include <stdint.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <odp/api/align.h>
-
-#include <stdint.h>
 
 #define _ODP_ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 
@@ -93,6 +95,19 @@ __extension__ ({			\
  * Check if value is a power of two
  */
 #define _ODP_CHECK_IS_POWER2(x) ((((x) - 1) & (x)) == 0)
+
+/*
+ * Add extra padding cache line(s) to structs to prevent false sharing like effects from
+ * prefetchers.
+ */
+#if CONFIG_CACHE_PAD_LINES
+#define __ODP_CACHE_PAD2(cntr) \
+	uint8_t _odp_cp_ ## cntr[CONFIG_CACHE_PAD_LINES * ODP_CACHE_LINE_SIZE] ODP_ALIGNED_CACHE;
+#define __ODP_CACHE_PAD1(cntr) __ODP_CACHE_PAD2(cntr)
+#define _ODP_CACHE_PAD __ODP_CACHE_PAD1(__COUNTER__)
+#else
+#define _ODP_CACHE_PAD
+#endif
 
 #ifdef __cplusplus
 }

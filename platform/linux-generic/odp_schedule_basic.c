@@ -29,7 +29,7 @@
 #include <odp_config_internal.h>
 #include <odp/api/sync.h>
 #include <odp/api/packet_io.h>
-#include <odp_ring_u32_internal.h>
+#include <odp_ring_mpmc_rst_u32_internal.h>
 #include <odp_timer_internal.h>
 #include <odp_queue_basic_internal.h>
 #include <odp_libconfig_internal.h>
@@ -186,7 +186,7 @@ typedef struct ODP_ALIGNED_CACHE {
 		uint16_t    ev_index;
 		uint32_t    qi;
 		odp_queue_t queue;
-		ring_u32_t   *ring;
+		ring_mpmc_rst_u32_t   *ring;
 		odp_event_t ev[STASH_SIZE];
 	} stash;
 
@@ -215,7 +215,7 @@ typedef struct ODP_ALIGNED_CACHE {
 /* Priority queue */
 typedef struct ODP_ALIGNED_CACHE {
 	/* Ring header */
-	ring_u32_t ring;
+	ring_mpmc_rst_u32_t ring;
 
 	/* Ring data: queue indexes */
 	uint32_t queue_index[MAX_RING_SIZE]; /* overlaps with ring.data[] */
@@ -657,7 +657,7 @@ static int schedule_init_global(void)
 				prio_queue_t *prio_q;
 
 				prio_q = &sched->prio_q[grp][i][j];
-				ring_u32_init(&prio_q->ring);
+				ring_mpmc_rst_u32_init(&prio_q->ring);
 			}
 		}
 	}
@@ -704,12 +704,12 @@ static int schedule_term_global(void)
 	for (grp = 0; grp < NUM_SCHED_GRPS; grp++) {
 		for (i = 0; i < NUM_PRIO; i++) {
 			for (j = 0; j < MAX_SPREAD; j++) {
-				ring_u32_t *ring;
+				ring_mpmc_rst_u32_t *ring;
 				uint32_t qi;
 
 				ring = &sched->prio_q[grp][i][j].ring;
 
-				while (ring_u32_deq(ring, ring_mask, &qi)) {
+				while (ring_mpmc_rst_u32_deq(ring, ring_mask, &qi)) {
 					odp_event_t events[1];
 					int num;
 
@@ -968,9 +968,9 @@ static int schedule_sched_queue(uint32_t queue_index)
 	int grp      = sched->queue[queue_index].grp;
 	int prio     = sched->queue[queue_index].prio;
 	int spread   = sched->queue[queue_index].spread;
-	ring_u32_t *ring = &sched->prio_q[grp][prio][spread].ring;
+	ring_mpmc_rst_u32_t *ring = &sched->prio_q[grp][prio][spread].ring;
 
-	ring_u32_enq(ring, sched->ring_mask, queue_index);
+	ring_mpmc_rst_u32_enq(ring, sched->ring_mask, queue_index);
 	return 0;
 }
 
@@ -999,10 +999,10 @@ static void schedule_pktio_start(int pktio_index, int num_pktin,
 static inline void release_atomic(void)
 {
 	uint32_t qi  = sched_local.stash.qi;
-	ring_u32_t *ring = sched_local.stash.ring;
+	ring_mpmc_rst_u32_t *ring = sched_local.stash.ring;
 
 	/* Release current atomic queue */
-	ring_u32_enq(ring, sched->ring_mask, qi);
+	ring_mpmc_rst_u32_enq(ring, sched->ring_mask, qi);
 
 	/* We don't hold sync context anymore */
 	sched_local.sync_ctx = NO_SYNC_CONTEXT;
@@ -1390,7 +1390,7 @@ static inline int schedule_grp_prio(odp_queue_t *out_queue, odp_event_t out_ev[]
 		int num;
 		uint8_t sync_ctx, ordered;
 		odp_queue_t handle;
-		ring_u32_t *ring;
+		ring_mpmc_rst_u32_t *ring;
 		int pktin;
 		uint32_t max_deq;
 		int stashed = 1;
@@ -1409,7 +1409,7 @@ static inline int schedule_grp_prio(odp_queue_t *out_queue, odp_event_t out_ev[]
 		ring = &sched->prio_q[grp][prio][spr].ring;
 
 		/* Get queue index from the spread queue */
-		if (ring_u32_deq(ring, ring_mask, &qi) == 0) {
+		if (ring_mpmc_rst_u32_deq(ring, ring_mask, &qi) == 0) {
 			/* Spread queue is empty */
 			i++;
 			spr++;
@@ -1479,7 +1479,7 @@ static inline int schedule_grp_prio(odp_queue_t *out_queue, odp_event_t out_ev[]
 			if (num_pkt == 0 || !direct_recv) {
 				/* No packets to be returned. Continue scheduling
 				 * packet input queue even when it is empty. */
-				ring_u32_enq(ring, ring_mask, qi);
+				ring_mpmc_rst_u32_enq(ring, ring_mask, qi);
 
 				/* Continue scheduling from the next spread */
 				i++;
@@ -1502,7 +1502,7 @@ static inline int schedule_grp_prio(odp_queue_t *out_queue, odp_event_t out_ev[]
 			sched_local.ordered.src_queue = qi;
 
 			/* Continue scheduling ordered queues */
-			ring_u32_enq(ring, ring_mask, qi);
+			ring_mpmc_rst_u32_enq(ring, ring_mask, qi);
 			sched_local.sync_ctx = sync_ctx;
 
 		} else if (sync_ctx == ODP_SCHED_SYNC_ATOMIC) {
@@ -1512,7 +1512,7 @@ static inline int schedule_grp_prio(odp_queue_t *out_queue, odp_event_t out_ev[]
 			sched_local.sync_ctx   = sync_ctx;
 		} else {
 			/* Continue scheduling parallel queues */
-			ring_u32_enq(ring, ring_mask, qi);
+			ring_mpmc_rst_u32_enq(ring, ring_mask, qi);
 		}
 
 		handle = queue_from_index(qi);
@@ -2250,7 +2250,7 @@ static void schedule_print(void)
 {
 	int spr, prio, grp, pos;
 	uint32_t num_queues, num_active;
-	ring_u32_t *ring;
+	ring_mpmc_rst_u32_t *ring;
 	odp_schedule_capability_t capa;
 	int num_spread = sched->config.num_spread;
 	const int col_width = 24;
@@ -2298,7 +2298,7 @@ static void schedule_print(void)
 			for (spr = 0; spr < num_spread; spr++) {
 				num_queues = sched->prio_q_count[grp][prio][spr];
 				ring = &sched->prio_q[grp][prio][spr].ring;
-				num_active = ring_u32_len(ring);
+				num_active = ring_mpmc_rst_u32_len(ring);
 				pos += _odp_snprint(&str[pos], size - pos, " %3u/%3u",
 						    num_active, num_queues);
 			}
