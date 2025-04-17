@@ -2798,7 +2798,10 @@ static int affinitize_main_thread(void)
 		return -1;
 	}
 
-	cpu_num = odp_cpumask_first(&odp_cpu_mask);
+	rc = odp_cpumask_first(&odp_cpu_mask);
+	if (rc < 0)
+		return -1;
+	cpu_num = rc;
 
 	CPU_ZERO(&linux_cpu_set);
 	CPU_SET(cpu_num, &linux_cpu_set);
