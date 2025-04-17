@@ -40,6 +40,8 @@
 #include <odp_init_internal.h>
 #include <odp_debug_internal.h>
 #include <odp_fdserver_internal.h>
+#include <odp_string_internal.h>
+
 #include <sys/prctl.h>
 #include <signal.h>
 
@@ -256,7 +258,7 @@ static int get_socket(void)
 	}
 
 	remote.sun_family = AF_UNIX;
-	strcpy(remote.sun_path, sockpath);
+	_odp_strcpy(remote.sun_path, sockpath, sizeof(remote.sun_path));
 	len = strlen(remote.sun_path) + sizeof(remote.sun_family);
 	while (connect(s_sock, (struct sockaddr *)&remote, len) == -1) {
 		if (errno == EINTR)
