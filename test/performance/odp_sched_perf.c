@@ -370,7 +370,7 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 		       num_group, num_group - (test_options->num_cpu * num_join));
 
 		if (test_options->forward) {
-			printf("Error: Cannot forward when some queues are not served.\n");
+			ODPH_ERR("Cannot forward when some queues are not served.\n");
 			ret = -1;
 		}
 	}
@@ -422,15 +422,14 @@ static int set_num_cpu(test_global_t *global)
 
 	/* One thread used for the main thread */
 	if (num_cpu > ODP_THREAD_COUNT_MAX - 1) {
-		printf("Error: Too many workers. Maximum is %i.\n",
-		       ODP_THREAD_COUNT_MAX - 1);
+		ODPH_ERR("Too many workers. Maximum is %i.\n", ODP_THREAD_COUNT_MAX - 1);
 		return -1;
 	}
 
 	ret = odp_cpumask_default_worker(&global->cpumask, num_cpu);
 
 	if (num_cpu && ret != num_cpu) {
-		printf("Error: Too many workers. Max supported %i\n.", ret);
+		ODPH_ERR("Too many workers. Max supported %i\n.", ret);
 		return -1;
 	}
 
@@ -534,7 +533,7 @@ static int create_pool(test_global_t *global)
 	test_options->event_size = event_size;
 
 	if (odp_pool_capability(&pool_capa)) {
-		ODPH_ERR("Error: pool capa failed\n");
+		ODPH_ERR("Pool capa failed\n");
 		return -1;
 	}
 
@@ -549,17 +548,17 @@ static int create_pool(test_global_t *global)
 	}
 
 	if (max_num && tot_event > max_num) {
-		ODPH_ERR("Error: max events supported %u\n", max_num);
+		ODPH_ERR("Max events supported %u\n", max_num);
 		return -1;
 	}
 
 	if (max_size && event_size > max_size) {
-		ODPH_ERR("Error: max supported event size %u\n", max_size);
+		ODPH_ERR("Max supported event size %u\n", max_size);
 		return -1;
 	}
 
 	if (uarea_size > max_uarea) {
-		ODPH_ERR("Error: max supported user area size %u\n", max_uarea);
+		ODPH_ERR("Max supported user area size %u\n", max_uarea);
 		return -1;
 	}
 
@@ -581,7 +580,7 @@ static int create_pool(test_global_t *global)
 
 	pool = odp_pool_create("sched perf", &pool_param);
 	if (pool == ODP_POOL_INVALID) {
-		ODPH_ERR("Error: pool create failed\n");
+		ODPH_ERR("Pool create failed\n");
 		return -1;
 	}
 
@@ -602,13 +601,12 @@ static int create_groups(test_global_t *global)
 		return 0;
 
 	if (odp_schedule_capability(&sched_capa)) {
-		printf("Error: schedule capability failed\n");
+		ODPH_ERR("Schedule capability failed\n");
 		return -1;
 	}
 
 	if (num_group > sched_capa.max_groups) {
-		printf("Error: Too many sched groups (max_groups capa %u)\n",
-		       sched_capa.max_groups);
+		ODPH_ERR("Too many sched groups (max_groups capa %u)\n", sched_capa.max_groups);
 		return -1;
 	}
 
@@ -620,7 +618,7 @@ static int create_groups(test_global_t *global)
 		group = odp_schedule_group_create("test_group", &thrmask);
 
 		if (group == ODP_SCHED_GROUP_INVALID) {
-			printf("Error: Group create failed %u\n", i);
+			ODPH_ERR("Group create failed %u\n", i);
 			return -1;
 		}
 
@@ -660,22 +658,20 @@ static int create_queues(test_global_t *global)
 		sync = ODP_SCHED_SYNC_ORDERED;
 
 	if (tot_queue > global->schedule_config.num_queues) {
-		printf("Max queues supported %u\n",
-		       global->schedule_config.num_queues);
+		ODPH_ERR("Max queues supported %u\n", global->schedule_config.num_queues);
 		return -1;
 	}
 
 	if (global->schedule_config.queue_size &&
 	    queue_size > global->schedule_config.queue_size) {
-		printf("Max queue size %u\n",
-		       global->schedule_config.queue_size);
+		ODPH_ERR("Max queue size %u\n", global->schedule_config.queue_size);
 		return -1;
 	}
 
 	if (ctx_size) {
 		ctx = odp_shm_addr(global->ctx_shm);
 		if (ctx == NULL) {
-			printf("Bad queue context\n");
+			ODPH_ERR("Bad queue context\n");
 			return -1;
 		}
 	}
@@ -748,7 +744,7 @@ static int create_queues(test_global_t *global)
 		global->queue[i] = queue;
 
 		if (queue == ODP_QUEUE_INVALID) {
-			printf("Error: Queue create failed %u\n", i);
+			ODPH_ERR("Queue create failed %u\n", i);
 			return -1;
 		}
 	}
@@ -779,7 +775,7 @@ static int create_queues(test_global_t *global)
 				odp_atomic_init_u64(&qc->count, 0);
 
 			if (odp_queue_context_set(queue, ctx, ctx_size)) {
-				printf("Error: Context set failed %u\n", i);
+				ODPH_ERR("Context set failed %u\n", i);
 				return -1;
 			}
 
@@ -795,7 +791,7 @@ static int create_queues(test_global_t *global)
 				odp_buffer_t buf = odp_buffer_alloc(pool);
 
 				if (buf == ODP_BUFFER_INVALID) {
-					ODPH_ERR("Error: alloc failed %u/%u\n", i, j);
+					ODPH_ERR("Alloc failed %u/%u\n", i, j);
 					return -1;
 				}
 				ev = odp_buffer_to_event(buf);
@@ -806,7 +802,7 @@ static int create_queues(test_global_t *global)
 				odp_packet_t pkt = odp_packet_alloc(pool, event_size);
 
 				if (pkt == ODP_PACKET_INVALID) {
-					ODPH_ERR("Error: alloc failed %u/%u\n", i, j);
+					ODPH_ERR("Alloc failed %u/%u\n", i, j);
 					return -1;
 				}
 				ev = odp_packet_to_event(pkt);
@@ -818,7 +814,7 @@ static int create_queues(test_global_t *global)
 			init_val = init_data(init_val, data, words);
 
 			if (odp_queue_enq(queue, ev)) {
-				ODPH_ERR("Error: enqueue failed %u/%u\n", i, j);
+				ODPH_ERR("Enqueue failed %u/%u\n", i, j);
 				return -1;
 			}
 		}
@@ -837,8 +833,7 @@ static int join_group(test_global_t *global, int grp_index, int thr)
 	group = global->group[grp_index];
 
 	if (odp_schedule_group_join(group, &thrmask)) {
-		printf("Error: Group %i join failed (thr %i)\n",
-		       grp_index, thr);
+		ODPH_ERR("Group %i join failed (thr %i)\n", grp_index, thr);
 		return -1;
 	}
 
@@ -856,8 +851,7 @@ static int join_all_groups(test_global_t *global, int thr)
 
 	for (i = 0; i < num_group; i++) {
 		if (join_group(global, i, thr)) {
-			printf("Error: Group %u join failed (thr %i)\n",
-			       i, thr);
+			ODPH_ERR("Group %u join failed (thr %i)\n", i, thr);
 			return -1;
 		}
 	}
@@ -924,7 +918,7 @@ static int destroy_queues(test_global_t *global)
 	for (i = 0; i < tot_queue; i++) {
 		if (global->queue[i] != ODP_QUEUE_INVALID) {
 			if (odp_queue_destroy(global->queue[i])) {
-				printf("Error: Queue destroy failed %u\n", i);
+				ODPH_ERR("Queue destroy failed %u\n", i);
 				return -1;
 			}
 		}
@@ -946,7 +940,7 @@ static int destroy_groups(test_global_t *global)
 		odp_schedule_group_t group = global->group[i];
 
 		if (odp_schedule_group_destroy(group)) {
-			printf("Error: Group destroy failed %u\n", i);
+			ODPH_ERR("Group destroy failed %u\n", i);
 			return -1;
 		}
 	}
@@ -1192,8 +1186,7 @@ static int test_sched(void *arg)
 							      num);
 
 				if (num_enq < 0) {
-					printf("Error: Enqueue failed. Round %u\n",
-					       rounds);
+					ODPH_ERR("Enqueue failed. Round %u\n", rounds);
 					odp_event_free_multi(&ev[i], num);
 					ret = -1;
 					break;
@@ -1222,7 +1215,7 @@ static int test_sched(void *arg)
 				} else if (odp_time_diff_ns(cur_time,
 							    last_retry_ts) >
 						MAX_SCHED_WAIT_NS) {
-					printf("Error: scheduling timed out\n");
+					ODPH_ERR("Scheduling timed out\n");
 					ret = -1;
 					break;
 				}
@@ -1231,7 +1224,7 @@ static int test_sched(void *arg)
 
 		/* <0 not specified as an error but checking anyway */
 		if (num < 0) {
-			printf("Error: Sched failed. Round %u\n", rounds);
+			ODPH_ERR("Sched failed. Round %u\n", rounds);
 			ret = -1;
 			break;
 		}
@@ -1283,7 +1276,7 @@ static int test_sched(void *arg)
 			queue = ((queue_context_t *)odp_queue_context(queue))->next;
 
 		if (odp_queue_enq(queue, ev[0])) {
-			printf("Error: Queue enqueue failed\n");
+			ODPH_ERR("Queue enqueue failed\n");
 			odp_event_free(ev[0]);
 			ret = -1;
 		}
@@ -1333,7 +1326,7 @@ static int start_workers(test_global_t *global, odp_instance_t instance)
 				 num_cpu);
 
 	if (ret != num_cpu) {
-		printf("Error: thread create failed %i\n", ret);
+		ODPH_ERR("Thread create failed %i\n", ret);
 		return -1;
 	}
 
@@ -1506,13 +1499,13 @@ int main(int argc, char **argv)
 	/* Let helper collect its own arguments (e.g. --odph_proc) */
 	argc = odph_parse_options(argc, argv);
 	if (odph_options(&helper_options)) {
-		ODPH_ERR("Error: Reading ODP helper options failed.\n");
+		ODPH_ERR("Reading ODP helper options failed\n");
 		exit(EXIT_FAILURE);
 	}
 
 	argc = test_common_parse_options(argc, argv);
 	if (test_common_options(&common_options)) {
-		ODPH_ERR("Error: Reading test options failed\n");
+		ODPH_ERR("Reading test options failed\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -1529,25 +1522,25 @@ int main(int argc, char **argv)
 
 	/* Init ODP before calling anything else */
 	if (odp_init_global(&instance, &init, NULL)) {
-		printf("Error: Global init failed.\n");
+		ODPH_ERR("Global init failed\n");
 		return -1;
 	}
 
 	/* Init this thread */
 	if (odp_init_local(instance, ODP_THREAD_CONTROL)) {
-		printf("Error: Local init failed.\n");
+		ODPH_ERR("Local init failed\n");
 		return -1;
 	}
 
 	shm = odp_shm_reserve("sched_perf_global", sizeof(test_global_t), ODP_CACHE_LINE_SIZE, 0);
 	if (shm == ODP_SHM_INVALID) {
-		ODPH_ERR("Error: SHM reserve failed.\n");
+		ODPH_ERR("SHM reserve failed\n");
 		exit(EXIT_FAILURE);
 	}
 
 	global = odp_shm_addr(shm);
 	if (global == NULL) {
-		ODPH_ERR("Error: SHM alloc failed\n");
+		ODPH_ERR("SHM alloc failed\n");
 		exit(EXIT_FAILURE);
 	}
 	test_globals = global;
@@ -1560,7 +1553,7 @@ int main(int argc, char **argv)
 	global->common_options = common_options;
 
 	if (setup_sig_handler()) {
-		ODPH_ERR("Error: signal handler setup failed\n");
+		ODPH_ERR("Signal handler setup failed\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -1576,8 +1569,7 @@ int main(int argc, char **argv)
 		global->ctx_shm = odp_shm_reserve("queue contexts", size,
 						  ODP_CACHE_LINE_SIZE, 0);
 		if (global->ctx_shm == ODP_SHM_INVALID) {
-			printf("Error: SHM reserve %" PRIu64 " bytes failed\n",
-			       size);
+			ODPH_ERR("SHM reserve %" PRIu64 " bytes failed\n", size);
 			return -1;
 		}
 	}
@@ -1620,7 +1612,7 @@ int main(int argc, char **argv)
 		return -1;
 
 	if (odp_pool_destroy(global->pool)) {
-		printf("Error: Pool destroy failed.\n");
+		ODPH_ERR("Pool destroy failed\n");
 		return -1;
 	}
 
@@ -1628,17 +1620,17 @@ int main(int argc, char **argv)
 		odp_shm_free(global->ctx_shm);
 
 	if (odp_shm_free(shm)) {
-		ODPH_ERR("Error: SHM free failed.\n");
+		ODPH_ERR("SHM free failed\n");
 		exit(EXIT_FAILURE);
 	}
 
 	if (odp_term_local()) {
-		printf("Error: term local failed.\n");
+		ODPH_ERR("Term local failed\n");
 		return -1;
 	}
 
 	if (odp_term_global(instance)) {
-		printf("Error: term global failed.\n");
+		ODPH_ERR("Term global failed\n");
 		return -1;
 	}
 
