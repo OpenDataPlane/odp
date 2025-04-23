@@ -1466,7 +1466,9 @@ void odp_pktio_print(odp_pktio_t hdl)
 		       (entry->state ==  PKTIO_STATE_OPENED ? "opened" :
 							      "unknown"))));
 	memset(addr, 0, sizeof(addr));
-	odp_pktio_mac_addr(hdl, addr, ETH_ALEN);
+	if (odp_pktio_mac_addr(hdl, addr, ETH_ALEN) < 0)
+		_ODP_ERR("Unable to get MAC address\n");
+
 	len += snprintf(&str[len], n - len,
 			"  mac               %02x:%02x:%02x:%02x:%02x:%02x\n",
 			addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
