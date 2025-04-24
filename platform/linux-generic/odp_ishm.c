@@ -94,10 +94,12 @@ ODP_STATIC_ASSERT(ISHM_NAME_MAXLEN >= ODP_SHM_NAME_LEN,
  * size.
  * (searched at init time)
  */
-#define ISHM_FILENAME_MAXLEN (ISHM_NAME_MAXLEN + 64)
+#define ISHM_FILENAME_MAXLEN 192
 #define ISHM_FILENAME_FORMAT "%s/odp-%d-ishm-%s"
 #define ISHM_FILENAME_NORMAL_PAGE_DIR "/dev/shm"
 #define _ODP_FILES_FMT "odp-%d-"
+ODP_STATIC_ASSERT(ISHM_FILENAME_MAXLEN >= ISHM_NAME_MAXLEN,
+		  "ISHM_FILENAME_MAXLEN smaller than ISHM_NAME_MAXLEN");
 
 /*
  * when the memory is to be shared with an external entity (such as another
@@ -121,8 +123,8 @@ ODP_STATIC_ASSERT(ISHM_NAME_MAXLEN >= ODP_SHM_NAME_LEN,
  * The information given in this file is according to the following:
  */
 #define EXPORT_FILE_LINE1_FMT "ODP exported shm block info:"
-#define EXPORT_FILE_LINE2_FMT "ishm_blockname: %s"
-#define EXPORT_FILE_LINE3_FMT "file: %s"
+#define EXPORT_FILE_LINE2_FMT "ishm_blockname: "
+#define EXPORT_FILE_LINE3_FMT "file: "
 #define EXPORT_FILE_LINE4_FMT "length: %" PRIu64
 #define EXPORT_FILE_LINE5_FMT "flags: %" PRIu32
 #define EXPORT_FILE_LINE6_FMT "user_length: %" PRIu64
@@ -614,12 +616,12 @@ static int create_export_file(ishm_block_t *new_block, uint64_t len, uint32_t fl
 	}
 
 	fprintf(export_file, EXPORT_FILE_LINE1_FMT "\n");
-	fprintf(export_file, EXPORT_FILE_LINE2_FMT "\n",  new_block->name);
+	fprintf(export_file, EXPORT_FILE_LINE2_FMT "%s\n", new_block->name);
 	if (single_va)
-		fprintf(export_file, EXPORT_FILE_LINE3_FMT "\n",
+		fprintf(export_file, EXPORT_FILE_LINE3_FMT "%s\n",
 			ishm_tbl->single_va_filename);
 	else
-		fprintf(export_file, EXPORT_FILE_LINE3_FMT "\n",
+		fprintf(export_file, EXPORT_FILE_LINE3_FMT "%s\n",
 			new_block->filename);
 
 	fprintf(export_file, EXPORT_FILE_LINE4_FMT "\n", len);
@@ -1322,8 +1324,8 @@ int _odp_ishm_find_exported(const char *remote_name, pid_t external_odp_pid,
 			    const char *local_name)
 {
 	char export_filename[ISHM_FILENAME_MAXLEN];
-	char blockname[ISHM_FILENAME_MAXLEN];
-	char filename[ISHM_FILENAME_MAXLEN];
+	char blockname[ISHM_FILENAME_MAXLEN + 1];
+	char filename[ISHM_FILENAME_MAXLEN + 1];
 	FILE *export_file;
 	uint64_t len;
 	uint32_t flags;
@@ -1352,10 +1354,15 @@ int _odp_ishm_find_exported(const char *remote_name, pid_t external_odp_pid,
 	if (fscanf(export_file, EXPORT_FILE_LINE1_FMT " ") != 0)
 		goto error_exp_file;
 
-	if (fscanf(export_file, EXPORT_FILE_LINE2_FMT " ", blockname) != 1)
+	#define _TO_STR(x) #x
+	#define TO_STR(x) _TO_STR(x)
+
+	if (fscanf(export_file, EXPORT_FILE_LINE2_FMT "%" TO_STR(ISHM_FILENAME_MAXLEN) "s ",
+		   blockname) != 1)
 		goto error_exp_file;
 
-	if (fscanf(export_file, EXPORT_FILE_LINE3_FMT " ", filename) != 1)
+	if (fscanf(export_file, EXPORT_FILE_LINE3_FMT "%" TO_STR(ISHM_FILENAME_MAXLEN) "s ",
+		   filename) != 1)
 		goto error_exp_file;
 
 	if (fscanf(export_file, EXPORT_FILE_LINE4_FMT " ", &len) != 1)
