@@ -681,7 +681,10 @@ static int create_file(int block_index, huge_flag_t huge, uint64_t len,
 
 	ret = mkdir(dir, 0744);
 	if (ret && errno != EEXIST) {
-		_ODP_ERR("Could not create directory %s: %s\n", dir, strerror(errno));
+		if (use_huge)
+			_ODP_DBG("Could not create directory %s: %s\n", dir, strerror(errno));
+		else
+			_ODP_ERR("Could not create directory %s: %s\n", dir, strerror(errno));
 		return -1;
 	}
 
