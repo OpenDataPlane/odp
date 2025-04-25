@@ -1609,8 +1609,8 @@ static void test_test_sa_update_seq_num(void)
 	printf("\n  ");
 }
 
-#define SOFT_LIMIT_PKT_CNT 1024
-#define HARD_LIMIT_PKT_CNT 2048
+#define SOFT_LIMIT_PKT_CNT 1024UL
+#define HARD_LIMIT_PKT_CNT 2048UL
 #define DELTA_PKT_CNT 320
 
 static void test_out_ipv4_esp_sa_expiry(enum ipsec_test_sa_expiry expiry)
