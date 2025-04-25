@@ -950,6 +950,7 @@ static int create_combined_ref(const crypto_suite_t *suite,
 	if (digest_offset + suite->auth_capa->digest_len > total_len)
 		total_len = digest_offset + suite->auth_capa->digest_len;
 
+	memset(ref, 0, sizeof(*ref));
 	ref->cipher = suite->cipher;
 	ref->auth = suite->auth;
 	ref->cipher_key_length = suite->cipher_capa->key_len;
