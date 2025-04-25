@@ -24,8 +24,10 @@ static void random_test_get_size(odp_random_kind_t kind)
 	do {
 		ret = odp_random_data(buf + bytes, sizeof(buf) - bytes,
 				      kind);
+		if (ret < 0)
+			break;
 		bytes += ret;
-		if (ret < 0 || bytes >= sizeof(buf))
+		if (bytes >= sizeof(buf))
 			break;
 		odp_time_wait_ns(sleep_ns);
 		timeout_ns -= sleep_ns;
