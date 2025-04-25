@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright (c) 2020-2023 Nokia
+ * Copyright (c) 2020-2025 Nokia
  */
 
 #include <odp/api/align.h>
@@ -29,6 +29,7 @@
 ODP_STATIC_ASSERT(CONFIG_INTERNAL_STASHES < CONFIG_MAX_STASHES, "TOO_MANY_INTERNAL_STASHES");
 
 #define MIN_RING_SIZE 64
+#define MAX_RING_SIZE 0x80000000
 
 enum {
 	STASH_FREE = 0,
@@ -180,6 +181,13 @@ int _odp_stash_init_global(void)
 	/* Must have room for minimum sized ring */
 	if (max_num_obj < MIN_RING_SIZE)
 		max_num_obj = MIN_RING_SIZE - 1;
+
+	/* Stash size is limited by ring implementation */
+	if (max_num_obj >= MAX_RING_SIZE) {
+		_ODP_ERR("Maximum supported number of objects %" PRIu32 "\n",
+			 MAX_RING_SIZE - 1);
+		return -1;
+	}
 
 	/* Ring size must be larger than the number of items stored */
 	ring_max_size = _ODP_ROUNDUP_POWER2_U32(max_num_obj + 1);
