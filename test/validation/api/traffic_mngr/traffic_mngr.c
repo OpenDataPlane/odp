@@ -1664,6 +1664,7 @@ static tm_node_desc_t *create_tm_node(odp_tm_t        odp_tm,
 				(void)destroy_tm_queue
 					(queue_desc->tm_queues[--priority]);
 			free(queue_desc);
+			free(node_desc->node_name);
 			free(node_desc);
 			return NULL;
 		}
