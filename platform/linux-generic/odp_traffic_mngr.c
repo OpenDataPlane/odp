@@ -3303,7 +3303,7 @@ int odp_tm_drop_prec_marking(odp_tm_t           odp_tm,
 {
 	tm_tos_marking_t *tos_marking;
 	tm_system_t      *tm_system;
-	uint8_t           dscp_mask, new_dscp, inverted_mask, tos_mask;
+	uint8_t           dscp_mask, new_dscp, tos_mask;
 	uint8_t           shifted_dscp;
 
 	tm_system = GET_TM_SYSTEM(odp_tm);
@@ -3325,9 +3325,7 @@ int odp_tm_drop_prec_marking(odp_tm_t           odp_tm,
 
 	if (drop_prec_enabled) {
 		new_dscp      = new_dscp & dscp_mask;
-		inverted_mask = (uint8_t)~dscp_mask;
-		tos_mask      = (inverted_mask << _ODP_IP_TOS_DSCP_SHIFT) |
-					_ODP_IP_TOS_ECN_MASK;
+		tos_mask      = ~(dscp_mask << _ODP_IP_TOS_DSCP_SHIFT);
 		shifted_dscp  = new_dscp << _ODP_IP_TOS_DSCP_SHIFT;
 	} else {
 		tos_mask     = 0xFF;  /* Note that this is an inverted mask */
