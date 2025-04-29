@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright (c) 2023-2024 Nokia
+ * Copyright (c) 2023-2025 Nokia
  */
 
 /**
@@ -275,8 +275,8 @@ static int bench_timer_export(void *data)
 	int ret = 0;
 
 	if (test_common_write("%s", gbl_args->opt.time ?
-			      "Function name,Average nsec per function call\n" :
-			      "Function name,Average CPU cycles per function call\n")) {
+			      "function name,average nsec per function call\n" :
+			      "function name,average cpu cycles per function call\n")) {
 		ret = -1;
 		goto exit;
 	}

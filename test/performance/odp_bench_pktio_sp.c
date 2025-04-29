@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright (c) 2023-2024 Nokia
+ * Copyright (c) 2023-2025 Nokia
  */
 
 /**
@@ -794,9 +794,9 @@ static int bench_pktio_sp_export(void *data)
 	uint64_t num;
 	int ret = 0;
 
-	if (test_common_write("%s", "Function name,Latency (nsec) per function call (min),"
-				"Latency (nsec) per function call (avg),"
-				"Latency (nsec) per function call (max)\n")) {
+	if (test_common_write("%s", "function name,latency (nsec) per function call (min),"
+			      "latency (nsec) per function call (avg),"
+			      "latency (nsec) per function call (max)\n")) {
 		ret = -1;
 		goto exit;
 	}

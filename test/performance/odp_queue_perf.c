@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2018 Linaro Limited
- * Copyright (c) 2021-2024 Nokia
+ * Copyright (c) 2021-2025 Nokia
  */
 
 /**
@@ -758,7 +758,7 @@ static int output_results(test_global_t *global)
 	       (1000.0 * events_sum) / nsec_ave);
 
 	if (global->common_options.is_export) {
-		if (test_common_write("cycles per event,events per sec (M),TOTAL events per sec (M),"
+		if (test_common_write("cycles per event,events per sec (M),total events per sec (M),"
 				      "dequeue retries,enqueue retries\n")) {
 			test_common_write_term();
 			return -1;
