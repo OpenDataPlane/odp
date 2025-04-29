@@ -483,12 +483,11 @@ odp_stash_t odp_stash_create(const char *name, const odp_stash_param_t *param)
 		ring_u64 = 1;
 
 	ring_size = param->num_obj;
+	ring_size = _ODP_ROUNDUP_POWER2_U32(ring_size + 1);
 
 	/* Ring size must be larger than the number of items stored */
 	if (ring_size + 1 <= MIN_RING_SIZE)
 		ring_size = MIN_RING_SIZE;
-	else
-		ring_size = _ODP_ROUNDUP_POWER2_U32(ring_size + 1);
 
 	stash = stash_global->stash[index];
 	memset(stash, 0, sizeof(stash_t));
