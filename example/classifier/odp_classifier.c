@@ -1144,7 +1144,7 @@ static int parse_policy_ci_pass_count(appl_args_t *appl_args, char *optarg)
 		free(count_str);
 		return -1;
 	}
-	strcpy(ci_pass_rules[num_ci_pass_rules].cos_name, token);
+	odph_strcpy(ci_pass_rules[num_ci_pass_rules].cos_name, token, ODP_COS_NAME_LEN);
 	ci_pass_rules[num_ci_pass_rules].count = atoll(value);
 	appl_args->num_ci_pass_rules++;
 	free(count_str);
