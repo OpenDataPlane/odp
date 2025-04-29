@@ -579,7 +579,6 @@ static void init_buffers(pool_t *pool)
 	type = pool->type;
 
 	for (uint64_t i = 0; i < pool->num + skipped_blocks ; i++) {
-		int skip = 0;
 		addr = &pool->base_addr[i * pool->block_size];
 
 		/* Skip packet buffers which cross huge page boundaries. Some
@@ -595,7 +594,7 @@ static void init_buffers(pool_t *pool)
 					~(page_size - 1));
 			if (last_page != first_page) {
 				skipped_blocks++;
-				skip = 1;
+				continue;
 			}
 		}
 
@@ -627,8 +626,7 @@ static void init_buffers(pool_t *pool)
 		init_event_hdr(pool, event_hdr, i, data_ptr, uarea);
 
 		/* Store buffer into the global pool */
-		if (!skip)
-			ring_ptr_enq(ring, mask, event_hdr);
+		ring_ptr_enq(ring, mask, event_hdr);
 	}
 	pool->skipped_blocks = skipped_blocks;
 
