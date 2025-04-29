@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2018 Linaro Limited
- * Copyright (c) 2019-2024 Nokia
+ * Copyright (c) 2019-2025 Nokia
  */
 
 /**
@@ -655,7 +655,7 @@ static int output_results(test_global_t *global)
 		if (test_common_write("alloc calls,free calls,duration (msec),"
 				      "num cycles (M),cycles per round,cycles per event,"
 				      "ave events allocated,allocs per sec (M),frees per sec (M),"
-				      "events per sec (M),TOTAL events per sec (M)\n")) {
+				      "events per sec (M),total events per sec (M)\n")) {
 			ODPH_ERR("Export failed\n");
 			test_common_write_term();
 			return -1;

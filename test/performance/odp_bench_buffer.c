@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2017-2018 Linaro Limited
- * Copyright (c) 2022-2024 Nokia
+ * Copyright (c) 2022-2025 Nokia
  */
 
 /**
@@ -681,8 +681,8 @@ static int bench_buffer_export(void *data)
 	int ret = 0;
 
 	if (test_common_write("%s", gbl_args->appl.time ?
-			      "Function name,Average nsec per function call\n" :
-			      "Function name,Average CPU cycles per function call\n")) {
+			      "function name,average nsec per function call\n" :
+			      "function name,average cpu cycles per function call\n")) {
 		ret = -1;
 		goto exit;
 	}

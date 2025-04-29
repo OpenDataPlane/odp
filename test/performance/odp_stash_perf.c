@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2018 Linaro Limited
- * Copyright (c) 2021-2024 Nokia
+ * Copyright (c) 2021-2025 Nokia
  * Copyright (c) 2023 Arm
  */
 
@@ -426,7 +426,7 @@ static int output_results(test_global_t *global)
 	if (global->common_options.is_export) {
 		if (test_common_write("duration (msec),num cycles (M),ops per get,"
 				      "cycles per ops,retries per sec (k),ops per sec (M),"
-				      "TOTAL ops per sec (M)\n")) {
+				      "total ops per sec (M)\n")) {
 			ODPH_ERR("Export failed\n");
 			test_common_write_term();
 			return -1;

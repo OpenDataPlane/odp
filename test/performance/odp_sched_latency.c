@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2016-2018 Linaro Limited
- * Copyright (c) 2020-2024 Nokia
+ * Copyright (c) 2020-2025 Nokia
  */
 
 /**
@@ -295,9 +295,9 @@ static int output_results(test_globals_t *globals)
 	printf("  HI_PRIO sample events: %i\n\n", args->prio[HI_PRIO].sample_events);
 
 	if (globals->common_options.is_export) {
-		if (test_common_write("high priority Avg (ns),high priority Min (ns),"
-				      "high priority Max (ns),low priority Avg (ns),"
-				      "low priority Min (ns),low priority Max (ns)\n")) {
+		if (test_common_write("high priority avg (ns),high priority min (ns),"
+				      "high priority max (ns),low priority avg (ns),"
+				      "low priority min (ns),low priority max (ns)\n")) {
 			ODPH_ERR("Export failed\n");
 			test_common_write_term();
 			return -1;

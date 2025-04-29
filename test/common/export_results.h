@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright (c) 2024 Nokia
+ * Copyright (c) 2024-2025 Nokia
  */
 
 #ifndef EXPORT_RESULT_H
@@ -56,8 +56,10 @@ int test_common_options(test_common_options_t *options);
 * Only call this function after test_common_options() returns is_export = true.
 *
 * Lines should be separated by "\n" and the first line should contain the column headers.
-* Columns are separated by commas (,) i.e.:
-* Function name,Average CPU cycles per function call
+* Lower case letters should be preferred, exception being metric prefixes i.e.
+* M for mega etc. where capitalization matters.
+* Columns are separated by commas i.e.
+* function name, average cpu cycles per function call
 * odp_buffer_from_event,0.366660
 * odp_buffer_from_event_multi,11.889800
 * ...
