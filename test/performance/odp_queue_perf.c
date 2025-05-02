@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2018 Linaro Limited
- * Copyright (c) 2021-2024 Nokia
+ * Copyright (c) 2021-2025 Nokia
  */
 
 /**
@@ -95,7 +95,9 @@ static void print_usage(void)
 	       "  -c, --num_cpu          Number of worker threads (default 1)\n"
 	       "  -q, --num_queue        Number of queues (default 1)\n"
 	       "  -e, --num_event        Number of events per queue (default 1)\n"
-	       "  -b, --burst_size       Maximum number of events per operation (default 1)\n"
+	       "  -b, --burst_size       Maximum number of events per operation (default 1). When 0,\n"
+	       "                         single event enqueue/dequeue functions are used instead\n"
+	       "                         of multi event variants.\n"
 	       "  -p, --private          Use separate queues for each worker\n"
 	       "  -r, --num_round        Number of rounds\n"
 	       "  -l, --lockfree         Lock-free queues\n"
@@ -447,7 +449,8 @@ static int run_test(void *arg)
 	const uint32_t num_queue = thr_args->num_queues;
 	const uint32_t num_round = thr_args->options->num_round;
 	const uint32_t num_workers = thr_args->options->num_cpu;
-	const uint32_t max_burst = thr_args->options->max_burst;
+	const uint32_t max_burst = ODPH_MAX(thr_args->options->max_burst, 1U);
+	const uint32_t single = thr_args->options->max_burst == 0 ? 1 : 0;
 	uint32_t queue_idx = 0;
 	odp_event_t ev[max_burst];
 	odp_queue_t src_queue_tbl[MAX_QUEUES];
@@ -470,11 +473,22 @@ static int run_test(void *arg)
 		do {
 			src_queue = src_queue_tbl[queue_idx];
 			dst_queue = dst_queue_tbl[queue_idx];
+			num_ev = 0;
 
 			queue_idx++;
 			if (queue_idx == num_queue)
 				queue_idx = 0;
 
+			if (single) {
+				ev[0] = odp_queue_deq(src_queue);
+				if (odp_unlikely(ev[0] == ODP_EVENT_INVALID)) {
+					num_deq_retry++;
+					continue;
+				}
+				num_ev = 1;
+				break;
+			}
+			/* Dequeue multi variant */
 			num_ev = odp_queue_deq_multi(src_queue, ev, max_burst);
 
 			if (odp_unlikely(num_ev < 0))
@@ -486,6 +500,17 @@ static int run_test(void *arg)
 		} while (num_ev == 0);
 
 		while (num_enq < num_ev) {
+			if (single) {
+				int ret = odp_queue_enq(dst_queue, ev[0]);
+
+				if (odp_unlikely(ret != 0)) {
+					num_enq_retry++;
+					continue;
+				}
+				num_enq++;
+				break;
+			}
+			/* Enqueue multi variant */
 			int num = odp_queue_enq_multi(dst_queue, &ev[num_enq], num_ev - num_enq);
 
 			if (odp_unlikely(num < 0))
@@ -515,10 +540,23 @@ static int run_test(void *arg)
 		queue_idx++;
 		if (queue_idx == num_queue)
 			queue_idx = 0;
-
-		num_ev = odp_queue_deq_multi(src_queue, ev, max_burst);
+		if (single) {
+			ev[0] = odp_queue_deq(src_queue);
+			num_ev = ev[0] != ODP_EVENT_INVALID ? 1 : 0;
+		} else {
+			num_ev = odp_queue_deq_multi(src_queue, ev, max_burst);
+		}
 
 		while (num_enq < num_ev) {
+			if (single) {
+				int ret = odp_queue_enq(dst_queue, ev[0]);
+
+				if (odp_unlikely(ret != 0))
+					continue;
+				num_enq++;
+				break;
+			}
+			/* Enqueue multiple events */
 			int num = odp_queue_enq_multi(dst_queue, &ev[num_enq], num_ev - num_enq);
 
 			if (odp_unlikely(num < 0))
