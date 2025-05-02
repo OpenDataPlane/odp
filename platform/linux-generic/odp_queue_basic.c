@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2013-2018 Linaro Limited
- * Copyright (c) 2021-2023 Nokia
+ * Copyright (c) 2021-2025 Nokia
  */
 
 #include <odp/api/align.h>
@@ -535,8 +535,25 @@ static inline void event_index_to_hdr(_odp_event_hdr_t *event_hdr[],
 	}
 }
 
-static inline int _plain_queue_enq_multi(odp_queue_t handle,
-					 _odp_event_hdr_t *event_hdr[], int num)
+static int plain_queue_enq(odp_queue_t handle, _odp_event_hdr_t *event_hdr)
+{
+	queue_entry_t *queue = qentry_from_handle(handle);
+	ring_mpmc_u32_t *ring_mpmc = &queue->ring_mpmc;
+	uint32_t num_enq;
+	int ret;
+
+	if (_odp_sched_fn->ord_enq_multi(handle, (void **)event_hdr, 1, &ret))
+		return ret == 1 ? 0 : -1;
+
+	num_enq = ring_mpmc_u32_enq(ring_mpmc, queue->ring_data, queue->ring_mask,
+				    event_hdr->index.u32);
+	if (odp_likely(num_enq))
+		return 0;
+
+	return -1;
+}
+
+static inline int plain_queue_enq_multi(odp_queue_t handle, _odp_event_hdr_t *event_hdr[], int num)
 {
 	queue_entry_t *queue;
 	int ret, num_enq;
@@ -557,8 +574,24 @@ static inline int _plain_queue_enq_multi(odp_queue_t handle,
 	return num_enq;
 }
 
-static inline int _plain_queue_deq_multi(odp_queue_t handle,
-					 _odp_event_hdr_t *event_hdr[], int num)
+static _odp_event_hdr_t *plain_queue_deq(odp_queue_t handle)
+{
+	queue_entry_t *queue = qentry_from_handle(handle);
+	ring_mpmc_u32_t *ring_mpmc = &queue->ring_mpmc;
+	_odp_event_hdr_t *event_hdr;
+	uint32_t event_idx, num_deq;
+
+	num_deq = ring_mpmc_u32_deq(ring_mpmc, queue->ring_data, queue->ring_mask, &event_idx);
+	if (num_deq == 0)
+		return NULL;
+
+	event_hdr = _odp_event_hdr_from_index_u32(event_idx);
+	odp_prefetch(event_hdr);
+
+	return event_hdr;
+}
+
+static inline int plain_queue_deq_multi(odp_queue_t handle, _odp_event_hdr_t *event_hdr[], int num)
 {
 	int num_deq;
 	queue_entry_t *queue;
@@ -577,43 +610,6 @@ static inline int _plain_queue_deq_multi(odp_queue_t handle,
 	event_index_to_hdr(event_hdr, event_idx, num_deq);
 
 	return num_deq;
-}
-
-static int plain_queue_enq_multi(odp_queue_t handle,
-				 _odp_event_hdr_t *event_hdr[], int num)
-{
-	return _plain_queue_enq_multi(handle, event_hdr, num);
-}
-
-static int plain_queue_enq(odp_queue_t handle, _odp_event_hdr_t *event_hdr)
-{
-	int ret;
-
-	ret = _plain_queue_enq_multi(handle, &event_hdr, 1);
-
-	if (ret == 1)
-		return 0;
-	else
-		return -1;
-}
-
-static int plain_queue_deq_multi(odp_queue_t handle,
-				 _odp_event_hdr_t *event_hdr[], int num)
-{
-	return _plain_queue_deq_multi(handle, event_hdr, num);
-}
-
-static _odp_event_hdr_t *plain_queue_deq(odp_queue_t handle)
-{
-	_odp_event_hdr_t *event_hdr = NULL;
-	int ret;
-
-	ret = _plain_queue_deq_multi(handle, &event_hdr, 1);
-
-	if (ret == 1)
-		return event_hdr;
-	else
-		return NULL;
 }
 
 static int error_enqueue(odp_queue_t handle, _odp_event_hdr_t *event_hdr)
