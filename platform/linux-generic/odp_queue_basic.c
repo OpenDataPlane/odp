@@ -906,8 +906,42 @@ static void queue_print_all(void)
 	_ODP_PRINT("\n");
 }
 
-static inline int _sched_queue_enq_multi(odp_queue_t handle,
-					 _odp_event_hdr_t *event_hdr[], int num)
+static int sched_queue_enq(odp_queue_t handle, _odp_event_hdr_t *event_hdr)
+{
+	queue_entry_t *queue = qentry_from_handle(handle);
+	ring_st_u32_t *ring_st = &queue->ring_st;
+	uint32_t num_enq;
+	int ret, sched = 0;
+
+	if (_odp_sched_fn->ord_enq_multi(handle, (void **)event_hdr, 1, &ret))
+		return ret == 1 ? 0 : -1;
+
+	LOCK(queue);
+
+	num_enq = ring_st_u32_enq(ring_st, queue->ring_data, queue->ring_mask,
+				  event_hdr->index.u32);
+
+	if (odp_unlikely(num_enq == 0)) {
+		UNLOCK(queue);
+		return -1;
+	}
+
+	if (queue->status == QUEUE_STATUS_NOTSCHED) {
+		queue->status = QUEUE_STATUS_SCHED;
+		sched = 1;
+	}
+
+	UNLOCK(queue);
+
+	/* Add queue to scheduling */
+	if (sched && _odp_sched_fn->sched_queue(queue->index))
+		_ODP_ABORT("schedule_queue failed\n");
+
+	return 0;
+}
+
+static inline int sched_queue_enq_multi(odp_queue_t handle,
+					_odp_event_hdr_t *event_hdr[], int num)
 {
 	int sched = 0;
 	int ret;
@@ -992,24 +1026,6 @@ int _odp_sched_queue_deq(uint32_t queue_index, odp_event_t ev[], int max_num,
 	event_index_to_hdr((_odp_event_hdr_t **)ev, event_idx, num_deq);
 
 	return num_deq;
-}
-
-static int sched_queue_enq_multi(odp_queue_t handle,
-				 _odp_event_hdr_t *event_hdr[], int num)
-{
-	return _sched_queue_enq_multi(handle, event_hdr, num);
-}
-
-static int sched_queue_enq(odp_queue_t handle, _odp_event_hdr_t *event_hdr)
-{
-	int ret;
-
-	ret = _sched_queue_enq_multi(handle, &event_hdr, 1);
-
-	if (ret == 1)
-		return 0;
-	else
-		return -1;
 }
 
 int _odp_sched_queue_empty(uint32_t queue_index)
