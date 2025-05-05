@@ -47,7 +47,9 @@ typedef struct {
 #undef _ring_spsc_gen_t
 #undef _ring_spsc_data_t
 #undef _RING_SPSC_INIT
+#undef _RING_SPSC_DEQ
 #undef _RING_SPSC_DEQ_MULTI
+#undef _RING_SPSC_ENQ
 #undef _RING_SPSC_ENQ_MULTI
 #undef _RING_SPSC_IS_EMPTY
 #undef _RING_SPSC_LEN
@@ -63,7 +65,9 @@ typedef struct {
 	#define _ring_spsc_data_t	uint32_t
 
 	#define _RING_SPSC_INIT		ring_spsc_u32_init
+	#define _RING_SPSC_DEQ		ring_spsc_u32_deq
 	#define _RING_SPSC_DEQ_MULTI	ring_spsc_u32_deq_multi
+	#define _RING_SPSC_ENQ		ring_spsc_u32_enq
 	#define _RING_SPSC_ENQ_MULTI	ring_spsc_u32_enq_multi
 	#define _RING_SPSC_IS_EMPTY	ring_spsc_u32_is_empty
 	#define _RING_SPSC_LEN		ring_spsc_u32_len
@@ -72,7 +76,9 @@ typedef struct {
 	#define _ring_spsc_data_t	uintptr_t
 
 	#define _RING_SPSC_INIT		ring_spsc_ptr_init
+	#define _RING_SPSC_DEQ		ring_spsc_ptr_deq
 	#define _RING_SPSC_DEQ_MULTI	ring_spsc_ptr_deq_multi
+	#define _RING_SPSC_ENQ		ring_spsc_ptr_enq
 	#define _RING_SPSC_ENQ_MULTI	ring_spsc_ptr_enq_multi
 	#define _RING_SPSC_IS_EMPTY	ring_spsc_ptr_is_empty
 	#define _RING_SPSC_LEN		ring_spsc_ptr_len
@@ -83,6 +89,29 @@ static inline void _RING_SPSC_INIT(_ring_spsc_gen_t *ring)
 {
 	odp_atomic_init_u32(&ring->r.head, 0);
 	odp_atomic_init_u32(&ring->r.tail, 0);
+}
+
+/* Dequeue data from the ring head */
+static inline uint32_t _RING_SPSC_DEQ(_ring_spsc_gen_t *ring,
+				      _ring_spsc_data_t *ring_data,
+				      uint32_t ring_mask, _ring_spsc_data_t *data)
+{
+	uint32_t head, tail;
+	uint32_t num;
+
+	tail = odp_atomic_load_acq_u32(&ring->r.tail);
+	head = odp_atomic_load_u32(&ring->r.head);
+	num  = tail - head;
+
+	/* Empty */
+	if (num == 0)
+		return 0;
+
+	*data = ring_data[head & ring_mask];
+
+	odp_atomic_store_rel_u32(&ring->r.head, head + 1);
+
+	return 1;
 }
 
 /* Dequeue data from the ring head. Max_num is smaller than ring size.*/
@@ -115,6 +144,31 @@ static inline uint32_t _RING_SPSC_DEQ_MULTI(_ring_spsc_gen_t *ring,
 	odp_atomic_store_rel_u32(&ring->r.head, head + num);
 
 	return num;
+}
+
+/* Enqueue data into the ring tail */
+static inline uint32_t _RING_SPSC_ENQ(_ring_spsc_gen_t *ring,
+				      _ring_spsc_data_t *ring_data,
+				      uint32_t ring_mask,
+				      const _ring_spsc_data_t data)
+{
+	uint32_t head, tail, size;
+	uint32_t num;
+
+	head = odp_atomic_load_acq_u32(&ring->r.head);
+	tail = odp_atomic_load_u32(&ring->r.tail);
+	size = ring_mask + 1;
+	num  = size - (tail - head);
+
+	/* Full */
+	if (num == 0)
+		return 0;
+
+	ring_data[tail & ring_mask] = data;
+
+	odp_atomic_store_rel_u32(&ring->r.tail, tail + 1);
+
+	return 1;
 }
 
 /* Enqueue data into the ring tail. Num_data is smaller than ring size. */
