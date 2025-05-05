@@ -41,7 +41,9 @@ typedef struct {
 #undef _ring_st_gen_t
 #undef _ring_st_data_t
 #undef _RING_ST_INIT
+#undef _RING_ST_DEQ
 #undef _RING_ST_DEQ_MULTI
+#undef _RING_ST_ENQ
 #undef _RING_ST_ENQ_MULTI
 #undef _RING_ST_IS_EMPTY
 #undef _RING_ST_LEN
@@ -57,7 +59,9 @@ typedef struct {
 	#define _ring_st_data_t		uint32_t
 
 	#define _RING_ST_INIT		ring_st_u32_init
+	#define _RING_ST_DEQ		ring_st_u32_deq
 	#define _RING_ST_DEQ_MULTI	ring_st_u32_deq_multi
+	#define _RING_ST_ENQ		ring_st_u32_enq
 	#define _RING_ST_ENQ_MULTI	ring_st_u32_enq_multi
 	#define _RING_ST_IS_EMPTY	ring_st_u32_is_empty
 	#define _RING_ST_LEN		ring_st_u32_len
@@ -66,7 +70,9 @@ typedef struct {
 	#define _ring_st_data_t		uintptr_t
 
 	#define _RING_ST_INIT		ring_st_ptr_init
+	#define _RING_ST_DEQ		ring_st_ptr_deq
 	#define _RING_ST_DEQ_MULTI	ring_st_ptr_deq_multi
+	#define _RING_ST_ENQ		ring_st_ptr_enq
 	#define _RING_ST_ENQ_MULTI	ring_st_ptr_enq_multi
 	#define _RING_ST_IS_EMPTY	ring_st_ptr_is_empty
 	#define _RING_ST_LEN		ring_st_ptr_len
@@ -77,6 +83,30 @@ static inline void _RING_ST_INIT(_ring_st_gen_t *ring)
 {
 	ring->r.head = 0;
 	ring->r.tail = 0;
+}
+
+/* Dequeue data from the ring head */
+static inline uint32_t _RING_ST_DEQ(_ring_st_gen_t *ring,
+				    _ring_st_data_t *ring_data,
+				    uint32_t ring_mask,
+				    _ring_st_data_t *data)
+{
+	uint32_t head, tail;
+	uint32_t num;
+
+	head = ring->r.head;
+	tail = ring->r.tail;
+	num  = tail - head;
+
+	/* Empty */
+	if (num == 0)
+		return 0;
+
+	*data = ring_data[head & ring_mask];
+
+	ring->r.head = head + 1;
+
+	return 1;
 }
 
 /* Dequeue data from the ring head. Max_num is smaller than ring size.*/
@@ -110,6 +140,31 @@ static inline uint32_t _RING_ST_DEQ_MULTI(_ring_st_gen_t *ring,
 	ring->r.head = head + num;
 
 	return num;
+}
+
+/* Enqueue data into the ring tail */
+static inline uint32_t _RING_ST_ENQ(_ring_st_gen_t *ring,
+				    _ring_st_data_t *ring_data,
+				    uint32_t ring_mask,
+				    const _ring_st_data_t data)
+{
+	uint32_t head, tail, size;
+	uint32_t num;
+
+	head = ring->r.head;
+	tail = ring->r.tail;
+	size = ring_mask + 1;
+	num  = size - (tail - head);
+
+	/* Full */
+	if (num == 0)
+		return 0;
+
+	ring_data[tail & ring_mask] = data;
+
+	ring->r.tail = tail + 1;
+
+	return 1;
 }
 
 /* Enqueue data into the ring tail. Num_data is smaller than ring size. */

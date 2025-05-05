@@ -98,6 +98,8 @@ static inline int ring_mpmc_cas_u32(odp_atomic_u32_t *atom,
 #undef _ring_mpmc_gen_t
 #undef _ring_mpmc_data_t
 #undef _RING_MPMC_INIT
+#undef _RING_MPMC_DEQ
+#undef _RING_MPMC_ENQ
 #undef _RING_MPMC_DEQ_MULTI
 #undef _RING_MPMC_ENQ_MULTI
 #undef _RING_MPMC_DEQ_BATCH
@@ -116,6 +118,8 @@ static inline int ring_mpmc_cas_u32(odp_atomic_u32_t *atom,
 	#define _ring_mpmc_data_t	uint32_t
 
 	#define _RING_MPMC_INIT		ring_mpmc_u32_init
+	#define _RING_MPMC_DEQ		ring_mpmc_u32_deq
+	#define _RING_MPMC_ENQ		ring_mpmc_u32_enq
 	#define _RING_MPMC_DEQ_MULTI	ring_mpmc_u32_deq_multi
 	#define _RING_MPMC_ENQ_MULTI	ring_mpmc_u32_enq_multi
 	#define _RING_MPMC_DEQ_BATCH	ring_mpmc_u32_deq_batch
@@ -127,6 +131,8 @@ static inline int ring_mpmc_cas_u32(odp_atomic_u32_t *atom,
 	#define _ring_mpmc_data_t	uint64_t
 
 	#define _RING_MPMC_INIT		ring_mpmc_u64_init
+	#define _RING_MPMC_DEQ		ring_mpmc_u64_deq
+	#define _RING_MPMC_ENQ		ring_mpmc_u64_enq
 	#define _RING_MPMC_DEQ_MULTI	ring_mpmc_u64_deq_multi
 	#define _RING_MPMC_ENQ_MULTI	ring_mpmc_u64_enq_multi
 	#define _RING_MPMC_DEQ_BATCH	ring_mpmc_u64_deq_batch
@@ -138,6 +144,8 @@ static inline int ring_mpmc_cas_u32(odp_atomic_u32_t *atom,
 	#define _ring_mpmc_data_t	uintptr_t
 
 	#define _RING_MPMC_INIT		ring_mpmc_ptr_init
+	#define _RING_MPMC_DEQ		ring_mpmc_ptr_deq
+	#define _RING_MPMC_ENQ		ring_mpmc_ptr_enq
 	#define _RING_MPMC_DEQ_MULTI	ring_mpmc_ptr_deq_multi
 	#define _RING_MPMC_ENQ_MULTI	ring_mpmc_ptr_enq_multi
 	#define _RING_MPMC_DEQ_BATCH	ring_mpmc_ptr_deq_batch
@@ -153,6 +161,46 @@ static inline void _RING_MPMC_INIT(_ring_mpmc_gen_t *ring)
 	odp_atomic_init_u32(&ring->r.w_tail, 0);
 	odp_atomic_init_u32(&ring->r.r_head, 0);
 	odp_atomic_init_u32(&ring->r.r_tail, 0);
+}
+
+/* Dequeue data from the ring head */
+static inline uint32_t _RING_MPMC_DEQ(_ring_mpmc_gen_t *ring,
+				      _ring_mpmc_data_t *ring_data,
+				      uint32_t ring_mask,
+				      _ring_mpmc_data_t *data)
+{
+	uint32_t old_head, new_head, w_tail, num_data;
+
+	/* Load acquires ensure that w_tail load happens after r_head load,
+	 * and thus r_head value is always behind or equal to w_tail value.
+	 * When CAS operation succeeds, this thread owns data between old
+	 * and new r_head. */
+	do {
+		old_head = odp_atomic_load_acq_u32(&ring->r.r_head);
+		odp_prefetch(&ring_data[(old_head + 1) & ring_mask]);
+		w_tail   = odp_atomic_load_acq_u32(&ring->r.w_tail);
+		num_data = w_tail - old_head;
+
+		/* Ring is empty */
+		if (num_data == 0)
+			return 0;
+
+		new_head = old_head + 1;
+
+	} while (odp_unlikely(ring_mpmc_cas_u32(&ring->r.r_head, &old_head,
+						new_head) == 0));
+
+	/* Read data. This will not move above load acquire of r_head. */
+	*data = ring_data[(old_head + 1) & ring_mask];
+
+	/* Wait until other readers have updated the tail */
+	while (odp_unlikely(odp_atomic_load_u32(&ring->r.r_tail) != old_head))
+		odp_cpu_pause();
+
+	/* Release the new reader tail, writers acquire it. */
+	odp_atomic_store_rel_u32(&ring->r.r_tail, new_head);
+
+	return 1;
 }
 
 /* Dequeue data from the ring head */
@@ -241,6 +289,51 @@ static inline uint32_t _RING_MPMC_DEQ_BATCH(_ring_mpmc_gen_t *ring,
 	odp_atomic_store_rel_u32(&ring->r.r_tail, new_head);
 
 	return num;
+}
+
+/* Enqueue data into the ring tail */
+static inline uint32_t _RING_MPMC_ENQ(_ring_mpmc_gen_t *ring,
+				      _ring_mpmc_data_t *ring_data,
+				      uint32_t ring_mask,
+				      const _ring_mpmc_data_t data)
+{
+	uint32_t old_head, new_head, r_tail, num_free;
+	uint32_t size = ring_mask + 1;
+
+	/* The CAS operation guarantees that w_head value is up to date. Load
+	 * acquire is used to ensure that r_tail is read after w_head. This
+	 * guarantees that w_head - r_tail <= size. Any additional delay in
+	 * reading r_tail makes the subtraction result only smaller. This
+	 * avoids returning zero when the ring is not actually full.
+	 *
+	 * When CAS operation succeeds, this thread owns data between old and
+	 * new w_head. */
+	do {
+		old_head = odp_atomic_load_acq_u32(&ring->r.w_head);
+		r_tail   = odp_atomic_load_acq_u32(&ring->r.r_tail);
+
+		num_free = size - (old_head - r_tail);
+
+		/* Ring is full */
+		if (num_free == 0)
+			return 0;
+
+		new_head = old_head + 1;
+
+	} while (odp_unlikely(ring_mpmc_cas_u32(&ring->r.w_head, &old_head,
+						new_head) == 0));
+
+	/* Write data. This will not move above load acquire of w_head. */
+	ring_data[(old_head + 1) & ring_mask] = data;
+
+	/* Wait until other writers have updated the tail */
+	while (odp_unlikely(odp_atomic_load_u32(&ring->r.w_tail) != old_head))
+		odp_cpu_pause();
+
+	/* Release the new writer tail, readers acquire it. */
+	odp_atomic_store_rel_u32(&ring->r.w_tail, new_head);
+
+	return 1;
 }
 
 /* Enqueue multiple data into the ring tail */
