@@ -1,0 +1,259 @@
+# Generic example, showcasing ways to configure resources
+
+scheduler: {
+	groups: (
+		{
+			name: "group1";
+		}
+	);
+};
+
+queues: (
+	{
+		name: "queue1";
+		type: "plain";
+	},
+	{
+		name: "queue2";
+		type: "plain";
+	},
+	{
+		name: "queue3";
+		type: "schedule";
+		priority: 2;
+		group: "group1";
+		sync: "atomic";
+	},
+	{
+		template: 20;
+		name: ( "queuet", 2, 3 );
+		type: "schedule";
+	},
+	{
+		name: "pktio1.in.0";
+		type: "pktios";
+	}
+);
+
+pools: (
+	{
+		name: "pool1";
+		type: "packet";
+		size: 1024;
+		cache_size: 0
+		num: 10240;
+	},
+	{
+		name: "pool2";
+		type: "timeout";
+		cache_size: 0
+		num: 1;
+	},
+	{
+		name: "pool3";
+		type: "dma_completion"
+		cache_size: 0;
+		num: 128;
+	},
+	{
+		name: "pool4";
+		type: "packet";
+		size: 1024;
+		cache_size: 0
+		num: 10240;
+	}
+);
+
+pktios: (
+	{
+		name: "pktio1";
+		iface: "veth1";
+		pool: "pool1";
+		inmode: "schedule";
+		outmode: "queue";
+		num_in_queues: 1;
+		num_out_queues: 1;
+	}
+);
+
+timers: (
+	{
+		name: "timer1";
+		clk_src: "src0"
+		res_ns: 100000000;
+		min_tmo: 100000000;
+		max_tmo: 1000000000;
+		num: 1;
+	}
+);
+
+classification: {
+	cos: (
+		{
+			name: "cos1";
+			action: "enqueue";
+			queue: "queue1";
+			pool: "pool2";
+			default: "pktio1";
+		},
+		{
+			name: "cos2";
+			action: "enqueue";
+			queue: "queue2";
+			pool: "pool2";
+		},
+		{
+			template: 12
+			name: ( "cost", 40, 2 );
+			action: "enqueue";
+			queue: ( "queuet", 2, 3 );
+			pool: "pool2";
+			default: "pktio1";
+		}
+	);
+
+	pmr: (
+		{
+			name: "pmr1";
+			src_cos: "cos1";
+			dst_cos: "cos2";
+			term: "len";
+			match_value: [ 0x1, 0x2, 0x3, 0x4 ];
+			match_mask: [ 0xff, 0xff, 0xff, 0xff ];
+			val_sz: 4;
+		},
+		{
+			template: 6
+			name: ( "pmrt", 3, 6 );
+			src_cos: ( "cost", 40, 2 );
+			dst_cos: ( "cost", 52, 2 );
+			term: "len";
+			match_value: ([ 0x0, 0x0, 0x0, 0xfe ], 25);
+			match_mask: [ 0xff, 0xff, 0xff, 0xff ];
+			val_sz: 4;
+		}
+	);
+};
+
+dma: (
+	{
+		name: "dma1";
+	},
+	{
+		name: "dma2";
+	}
+);
+
+crypto: (
+	{
+		name: "crypto1";
+		op: "encode";
+		cipher_alg: "null";
+		cipher_key_data: [ 0x4, 0x3, 0x2, 0x1 ];
+		cipher_key_len: 4;
+		cipher_iv_len: 2;
+		auth_alg: "null";
+		auth_key_data: [ 0x1, 0x2, 0x3, 0x4 ];
+		auth_key_len: 4;
+		auth_iv_len: 4;
+		auth_digest_len: 1;
+		auth_aad_len: 3;
+		compl_queue: "queue1";
+	}
+);
+
+flows: (
+	{
+		name: "flow1";
+		input: "pktio1.in.0";
+		work: (
+			{
+				type: "packet_copy";
+				param: ( "pool4" );
+			},
+			{
+				type: "forward";
+				param: ( "queue1" );
+			}
+		);
+	},
+	{
+		name: "flow2"
+		input: "queue1"
+		work: (
+			{
+				type: "packet_copy";
+				param: ( "pool4" );
+			},
+			{
+				type: "forward";
+				param: ( "queue1" );
+			}
+		);
+	},
+	{
+		name: "flow3";
+		input: "queue2"
+		work: (
+			{
+				type: "sink";
+			}
+		);
+	},
+	{
+		name: "flow4";
+		output: "queue2"
+		work: (
+			{
+				type: "timeout_source";
+				param: ( "timer1", "pool2", 1000000000 );
+			},
+			{
+				type: "packet_source";
+				param: ( "pool1", 512 );
+			}
+		);
+	},
+	{
+		template: 4;
+		name: ( "flowt", 0, 1 );
+		input: ( "queuet", 2, 3 );
+		work: (
+			{
+				type: "sink";
+			}
+		);
+	}
+);
+
+workers: (
+	{
+		name: "worker1";
+		type: "schedule";
+		burst_size: 24;
+		wait_ns: 1000;
+		inputs: [ "group1" ];
+	},
+	{
+		name: "worker2";
+		type: "plain";
+		inputs: [ "queue1" ];
+	},
+	{
+		name: "worker3";
+		type: "plain";
+		burst_size: 12;
+		inputs: [ "queue2" ];
+	},
+	{
+		name: "worker4";
+		type: "plain";
+		burst_size: 8;
+		outputs: [ "queue2" ];
+	}
+)
+
+cpumap: {
+	cpumask: "0xf0";
+	workers: [ "worker1", "worker2", "worker3", "worker4" ];
+};
