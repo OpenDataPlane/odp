@@ -542,7 +542,7 @@ static int plain_queue_enq(odp_queue_t handle, _odp_event_hdr_t *event_hdr)
 	uint32_t num_enq;
 	int ret;
 
-	if (_odp_sched_fn->ord_enq_multi(handle, (void **)event_hdr, 1, &ret))
+	if (_odp_sched_fn->ord_enq_multi(handle, (void **)&event_hdr, 1, &ret))
 		return ret == 1 ? 0 : -1;
 
 	num_enq = ring_mpmc_u32_enq(ring_mpmc, queue->ring_data, queue->ring_mask,
@@ -913,7 +913,7 @@ static int sched_queue_enq(odp_queue_t handle, _odp_event_hdr_t *event_hdr)
 	uint32_t num_enq;
 	int ret, sched = 0;
 
-	if (_odp_sched_fn->ord_enq_multi(handle, (void **)event_hdr, 1, &ret))
+	if (_odp_sched_fn->ord_enq_multi(handle, (void **)&event_hdr, 1, &ret))
 		return ret == 1 ? 0 : -1;
 
 	LOCK(queue);
