@@ -884,7 +884,7 @@ static int pktout_enqueue(odp_queue_t queue, _odp_event_hdr_t *event_hdr)
 
 	_ODP_ASSERT(odp_event_type(_odp_event_from_hdr(event_hdr)) == ODP_EVENT_PACKET);
 
-	if (_odp_sched_fn->ord_enq_multi(queue, (void **)event_hdr, 1, &nbr))
+	if (_odp_sched_fn->ord_enq_multi(queue, (void **)&event_hdr, 1, &nbr))
 		return (nbr == 1 ? 0 : -1);
 
 	nbr = odp_pktout_send(_odp_queue_fn->get_pktout(queue), &pkt, 1);
