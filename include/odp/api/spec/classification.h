@@ -342,6 +342,18 @@ typedef struct odp_pmr_create_opt_t {
 	 */
 	uint64_t mark;
 
+	/** Rule priority
+	 *
+	 *  When multiple PMRs match a packet, a matching rule with the
+	 *  highest priority is selected. If there are multiple such rules,
+	 *  then it is implementation specific which one is selected.
+	 *
+	 *  Larger priority value corresponds to higher priority. The value
+	 *  must not be larger than odp_cls_capability_t::max_pmr_priority.
+	 *  The default value is 0.
+	 */
+	uint32_t priority;
+
 } odp_pmr_create_opt_t;
 
 /** Random Early Detection (RED)
@@ -584,6 +596,9 @@ typedef struct odp_cls_capability_t {
 
 	/** Maximum number of terms per composite PMR */
 	uint32_t max_terms_per_pmr;
+
+	/** Maximum priority value of a PMR */
+	uint32_t max_pmr_priority;
 
 	/** Maximum number of CoS supported */
 	uint32_t max_cos;
@@ -969,8 +984,11 @@ void odp_cls_pmr_create_opt_init(odp_pmr_create_opt_t *opt);
  *
  * Creates a PMR between source and destination Class of Service (CoS). A packet arriving to
  * a CoS is matched against all the PMRs that define it as their source CoS. A PMR match moves
- * the packet from the source to the destination CoS. If multiple PMRs of a CoS match with
- * the packet, it is implementation specific which PMR is selected.
+ * the packet from the source to the destination CoS.
+ *
+ * This function creates PMRs of priority zero. Use odp_cls_pmr_create_opt() to create PMRs of
+ * any priority. If multiple PMRs of the same priority match the packet, it is implementation
+ * specific which PMR is selected.
  *
  * A composite PMR is created when PMR parameters define more than one term. A composite PMR is
  * considered to match only if a packet matches with all its terms. It is implementation specific
