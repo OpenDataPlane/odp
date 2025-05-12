@@ -170,7 +170,7 @@ jobs:
     runs-on: ubuntu-22.04
     env:
       ARCH: i386
-      OS: ubuntu_18.04
+      OS: debian_12
     strategy:
       fail-fast: false
       matrix:
