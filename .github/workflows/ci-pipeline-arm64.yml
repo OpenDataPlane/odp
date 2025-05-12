@@ -8,7 +8,7 @@ env:
   ARCH: arm64
   CC: gcc
   CONTAINER_NAMESPACE: ghcr.io/opendataplane/odp-docker-images
-  OS: ubuntu_20.04
+  OS: ubuntu_24.04
 
 jobs:
   Build_gcc:
@@ -59,11 +59,10 @@ jobs:
       - if: ${{ failure() }}
         uses: ./.github/actions/build-failure-log
 
-  Build_static_u24:
+  Build_static:
     if: ${{ github.repository == 'OpenDataPlane/odp' }}
     runs-on: ah-ubuntu_22_04-c7g_2x-50
     env:
-      OS: ubuntu_24.04
       CONF: "--disable-shared --without-openssl --without-pcap"
     strategy:
       fail-fast: false
@@ -94,11 +93,9 @@ jobs:
       - if: ${{ failure() }}
         uses: ./.github/actions/build-failure-log
 
-  Build_gcc_u24:
+  Build_gcc_versions:
     if: ${{ github.repository == 'OpenDataPlane/odp' }}
     runs-on: ah-ubuntu_22_04-c7g_2x-50
-    env:
-      OS: ubuntu_24.04
     strategy:
       fail-fast: false
       matrix:
@@ -128,7 +125,6 @@ jobs:
     runs-on: ah-ubuntu_22_04-c7g_2x-50
     env:
       CONF: "--enable-xdp"
-      OS: ubuntu_22.04
     strategy:
       fail-fast: false
       matrix:
