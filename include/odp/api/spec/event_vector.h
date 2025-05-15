@@ -88,7 +88,10 @@ void odp_event_vector_free(odp_event_vector_t evv);
  * The event_tbl points to the event vector table. Application can edit the
  * event handles in the table directly (up to odp_pool_param_t::event_vector.max_size).
  * Application must update the size of the table using odp_event_vector_size_set()
- * when there is a change in the size of the vector.
+ * when there is a change in the size of the vector. An application must also
+ * update the type of the event vector using odp_event_vector_type_set(), as
+ * necessary, after modifying the event vector and before passing the event
+ * vector to any ODP API function.
  *
  * Invalid event handles (ODP_EVENT_INVALID) are not allowed to be stored in the
  * table to allow consumers of odp_event_vector_t handle to have optimized
@@ -119,9 +122,11 @@ uint32_t odp_event_vector_size(odp_event_vector_t evv);
 /**
  * Type of events stored in event vector
  *
- * If all events in the vector are of the same type, function returns the
- * particular event type. If the vector is empty or includes multiple event
- * types, ODP_EVENT_ANY is returned instead.
+ * Return the event type stored in event vector metadata. After event vector
+ * allocation the event type is ODP_EVENT_ANY. Event aggregators set the
+ * event type to the type of the events stored in the event vector, or
+ * to ODP_EVENT_ANY, if events of multiple types are stored in the vector.
+ * The event type can also be set through odp_event_vector_type_set().
  *
  * @param      evv        Event vector handle
  *
@@ -130,15 +135,39 @@ uint32_t odp_event_vector_size(odp_event_vector_t evv);
 odp_event_type_t odp_event_vector_type(odp_event_vector_t evv);
 
 /**
+ * Set type of events stored in event vector
+ *
+ * The specified event type is stored in the event vector metadata and
+ * can be queried later through odp_event_vector_type(). The event type
+ * does not need to match the actual type of events in the vector at
+ * the time of the call but it must match the vector content when the
+ * event is passed to any ODP API function, including odp_event_free().
+ * The type ODP_EVENT_ANY is valid for all vectors and is the only type
+ * that can be used for vectors that contain events of multiple types.
+ *
+ * Calling odp_event_vector_type_set() is not necessary after modification
+ * of an event vector if the event type already has a valid value for the
+ * new content of the vector.
+ *
+ * @param      evv        Event vector handle
+ * @param      type       Event type
+ */
+void odp_event_vector_type_set(odp_event_vector_t evv, odp_event_type_t type);
+
+/**
  * Set the number of events stored in a vector
  *
  * Update the number of events stored in a vector. When the application is
  * producing an event vector, this function shall be used by the application
  * to set the number of events available in this vector.
  *
+ * An application must update the type of the event vector using
+ * odp_event_vector_type_set(), as necessary, after modifying the event
+ * vector and before passing the event vector to any ODP API function.
+ *
  * The maximum number of events this vector can hold is defined by
  * odp_pool_param_t::event_vector.max_size. The size value must not be greater
- * than odp_pool_param_t::event_vector.max_size
+ * than odp_pool_param_t::event_vector.max_size.
  *
  * All handles in the vector table (0 .. size - 1) need to be valid event
  * handles.
