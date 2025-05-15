@@ -79,6 +79,7 @@ TESTS = \
 	random/random_main$(EXEEXT) \
 	scheduler/scheduler_main$(EXEEXT) \
 	scheduler/scheduler_no_predef_groups$(EXEEXT) \
+	scheduler/scheduler_group_prio_config$(EXEEXT) \
 	stash/stash_main$(EXEEXT) \
 	std/std_main$(EXEEXT) \
 	thread/thread_main$(EXEEXT) \
