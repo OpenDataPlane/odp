@@ -519,20 +519,52 @@ static inline void event_index_from_hdr(uint32_t event_index[],
 					_odp_event_hdr_t *event_hdr[], int num)
 {
 	int i;
+	int idx = 0;
 
-	for (i = 0; i < num; i++)
-		event_index[i] = event_hdr[i]->index.u32;
+	for (i = 0; i < (num & ~0x3); i += 4, idx += 4) {
+		event_index[i] = event_hdr[idx]->index.u32;
+		event_index[i+1] = event_hdr[idx+1]->index.u32;
+		event_index[i+2] = event_hdr[idx+2]->index.u32;
+		event_index[i+3] = event_hdr[idx+3]->index.u32;
+	}
+	switch (num & 0x3) {
+	case 3:
+		event_index[i++] = event_hdr[idx++]->index.u32;
+		__attribute__((fallthrough));
+	case 2:
+		event_index[i++] = event_hdr[idx++]->index.u32;
+		__attribute__((fallthrough));
+	case 1:
+		event_index[i++] = event_hdr[idx++]->index.u32;
+	}
+
 }
 
 static inline void event_index_to_hdr(_odp_event_hdr_t *event_hdr[],
 				      uint32_t event_index[], int num)
 {
 	int i;
+	int idx = 0;
 
-	for (i = 0; i < num; i++) {
-		event_hdr[i] = _odp_event_hdr_from_index_u32(event_index[i]);
-		odp_prefetch(event_hdr[i]);
+	for (i = 0; i < (num & ~0x3); idx += 4, i += 4) {
+		event_hdr[i] = _odp_event_hdr_from_index_u32(event_index[idx]);
+		event_hdr[i+1] = _odp_event_hdr_from_index_u32(event_index[idx+1]);
+		event_hdr[i+2] = _odp_event_hdr_from_index_u32(event_index[idx+2]);
+		event_hdr[i+3] = _odp_event_hdr_from_index_u32(event_index[idx+3]);
 	}
+
+	switch (num & 0x3) {
+	case 3:
+		event_hdr[i++] = _odp_event_hdr_from_index_u32(event_index[idx++]);
+
+		__attribute__((fallthrough));
+	case 2:
+		event_hdr[i++] = _odp_event_hdr_from_index_u32(event_index[idx++]);
+		__attribute__((fallthrough));
+	case 1:
+		event_hdr[i++] = _odp_event_hdr_from_index_u32(event_index[idx++]);
+	}
+
 }
 
 static int plain_queue_enq(odp_queue_t handle, _odp_event_hdr_t *event_hdr)
