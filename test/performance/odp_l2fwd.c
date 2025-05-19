@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2014-2018 Linaro Limited
- * Copyright (c) 2019-2024 Nokia
+ * Copyright (c) 2019-2025 Nokia
  * Copyright (c) 2020-2021 Marvell
  */
 
@@ -147,6 +147,7 @@ typedef struct {
 	uint32_t num_vec;       /* Number of vectors per pool */
 	uint64_t vec_tmo_ns;    /* Vector formation timeout in ns */
 	uint32_t vec_size;      /* Vector size */
+	uint64_t wait_ns;       /* Extra wait in ns */
 	int verbose;            /* Verbose output */
 	uint32_t packet_len;    /* Maximum packet length supported */
 	uint32_t seg_len;       /* Pool segment length */
@@ -530,6 +531,9 @@ static inline int process_extra_features(const appl_args_t *appl_args, odp_packe
 				pkts -= rx_drops;
 			}
 		}
+
+		if (appl_args->wait_ns)
+			odp_time_wait_ns(appl_args->wait_ns);
 	}
 	return pkts;
 }
@@ -1915,6 +1919,8 @@ static void usage(char *progname)
 	       "                                 from every received packet. Number of words is\n"
 	       "                                 rounded down to fit into the first segment of a\n"
 	       "                                 packet. Default is 0.\n"
+	       "  -W, --wait_ns <ns>             Number of nsecs to wait per receive burst before\n"
+	       "                                 forwarding packets. Default: 0.\n"
 	       "  -y, --pool_per_if              Create a packet (and packet vector) pool per\n"
 	       "                                 interface.\n"
 	       "                                 0: Share a single pool between all interfaces\n"
@@ -1997,6 +2003,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{"pool_per_if", required_argument, NULL, 'y'},
 		{"num_pkt", required_argument, NULL, 'n'},
 		{"num_vec", required_argument, NULL, 'w'},
+		{"wait_ns", required_argument, NULL, 'W'},
 		{"vec_size", required_argument, NULL, 'x'},
 		{"vec_tmo_ns", required_argument, NULL, 'z'},
 		{"vector_mode", no_argument, NULL, 'u'},
@@ -2016,7 +2023,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	};
 
 	static const char *shortopts = "+c:t:a:i:m:o:O:r:d:s:e:k:g:G:I:"
-				       "b:q:p:R:y:n:l:L:w:x:X:z:M:F:uPfTC:vVh";
+				       "b:q:p:R:y:n:l:L:w:W:x:X:z:M:F:uPfTC:vVh";
 
 	appl_args->time = 0; /* loop forever if time to run is 0 */
 	appl_args->accuracy = 1; /* get and print pps stats second */
@@ -2280,6 +2287,9 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		case 'w':
 			appl_args->num_vec = atoi(optarg);
 			break;
+		case 'W':
+			appl_args->wait_ns = atoll(optarg);
+			break;
 		case 'x':
 			appl_args->vec_size = atoi(optarg);
 			break;
@@ -2414,8 +2424,8 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		appl_args->burst_rx = MAX_PKT_BURST;
 
 	appl_args->extra_feat = 0;
-	if (appl_args->error_check || appl_args->chksum ||
-	    appl_args->packet_copy || appl_args->data_rd || appl_args->verbose_pkt)
+	if (appl_args->error_check || appl_args->chksum || appl_args->packet_copy ||
+	    appl_args->data_rd || appl_args->verbose_pkt || appl_args->wait_ns)
 		appl_args->extra_feat = 1;
 
 	appl_args->has_state = 0;
@@ -2485,13 +2495,17 @@ static void print_options(void)
 					   appl_args->if_count : 1);
 
 	if (appl_args->extra_feat || appl_args->has_state) {
-		printf("Extra features:     %s%s%s%s%s%s\n",
+		printf("Extra features:     %s%s%s%s%s%s%s\n",
 		       appl_args->error_check ? "error_check " : "",
 		       appl_args->chksum ? "chksum " : "",
 		       appl_args->packet_copy ? "packet_copy " : "",
 		       appl_args->data_rd ? "data_rd" : "",
 		       appl_args->tx_compl.mode != ODP_PACKET_TX_COMPL_DISABLED ? "tx_compl" : "",
-		       appl_args->verbose_pkt ? "verbose_pkt" : "");
+		       appl_args->verbose_pkt ? "verbose_pkt" : "",
+		       appl_args->wait_ns ? "wait_ns" : "");
+
+		if (appl_args->wait_ns)
+			printf("  Wait:             %" PRIu64 " ns\n", appl_args->wait_ns);
 	}
 
 	printf("Num worker threads: %i\n", appl_args->num_workers);
