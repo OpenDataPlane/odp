@@ -462,7 +462,7 @@ static int run_test(void *arg)
 	odp_barrier_wait(thr_args->barrier);
 
 	t1 = odp_time_local_strict();
-	c1 = odp_cpu_cycles();
+	c1 = odp_cpu_cycles_strict();
 
 	for (rounds = 0; rounds < num_round; rounds++) {
 		int num_enq = 0;
@@ -499,7 +499,7 @@ static int run_test(void *arg)
 		events += num_ev;
 	}
 
-	c2 = odp_cpu_cycles();
+	c2 = odp_cpu_cycles_strict();
 	t2 = odp_time_local_strict();
 
 	odp_atomic_inc_u32(&global->workers_finished);
