@@ -10,6 +10,7 @@
 
 #include <odp/api/hints.h>
 
+#include <odp/api/plat/debug_inlines.h>
 #include <odp/api/plat/event_validation_external.h>
 #include <odp/api/plat/queue_inline_types.h>
 
@@ -40,6 +41,8 @@ _ODP_INLINE void *odp_queue_context(odp_queue_t handle)
 	void *context;
 	void *qentry = (void *)handle;
 
+	_ODP_ASSERT(_odp_queue_api->queue_type(handle) != ODP_QUEUE_TYPE_AGGR);
+
 	context = _odp_qentry_field(qentry, void *, context);
 
 	return context;
@@ -63,9 +66,12 @@ _ODP_INLINE int odp_queue_enq_multi(odp_queue_t queue,
 }
 
 _ODP_INLINE int odp_queue_enq_aggr(odp_queue_t queue, odp_event_t ev,
-				   const odp_aggr_enq_param_t *param ODP_UNUSED)
+				   const odp_aggr_enq_param_t *param)
 {
-	return odp_queue_enq(queue, ev);
+	if (odp_unlikely(_odp_event_validate(ev, _ODP_EV_QUEUE_ENQ_AGGR)))
+		return -1;
+
+	return _odp_queue_api->queue_enq_aggr(queue, ev, param);
 }
 
 _ODP_INLINE void odp_aggr_enq_param_init(odp_aggr_enq_param_t *param)
