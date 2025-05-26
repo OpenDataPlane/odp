@@ -14,6 +14,7 @@
 #include <odp/api/align.h>
 #include <odp/api/debug.h>
 #include <odp/api/packet.h>
+#include <odp/api/buffer.h>
 #include <odp/api/event_vector.h>
 
 #include <odp/api/plat/event_vector_inline_types.h>
@@ -34,6 +35,9 @@ typedef struct ODP_ALIGNED_CACHE odp_event_vector_hdr_t {
 
 	/* Event vector size */
 	uint32_t size;
+
+	/* Common type of the events in the vector or ODP_EVENT_ANY */
+	odp_event_type_t event_type;
 
 	/* Flags */
 	_odp_event_vector_flags_t flags;
@@ -100,13 +104,21 @@ static inline void _odp_event_vector_free_full(odp_event_vector_t evv)
 {
 	odp_event_vector_hdr_t *evv_hdr = _odp_event_vector_hdr(evv);
 
-	for (uint32_t i = 0; i < evv_hdr->size; i++)
+	for (uint32_t i = 0; i < evv_hdr->size; i++) {
 		_ODP_ASSERT(odp_event_type(evv_hdr->event[i]) != ODP_EVENT_VECTOR &&
 			    odp_event_type(evv_hdr->event[i]) != ODP_EVENT_PACKET_VECTOR);
+		_ODP_ASSERT(evv_hdr->event_type == ODP_EVENT_ANY ||
+			    evv_hdr->event_type == odp_event_type(evv_hdr->event[i]));
+	}
 
-	if (evv_hdr->size > 0)
-		odp_event_free_multi(evv_hdr->event, evv_hdr->size);
-
+	if (evv_hdr->size > 0) {
+		if (evv_hdr->event_type == ODP_EVENT_PACKET)
+			odp_packet_free_multi((odp_packet_t *)evv_hdr->event, evv_hdr->size);
+		else if (evv_hdr->event_type == ODP_EVENT_BUFFER)
+			odp_buffer_free_multi((odp_buffer_t *)evv_hdr->event, evv_hdr->size);
+		else
+			odp_event_free_multi(evv_hdr->event, evv_hdr->size);
+	}
 	odp_event_vector_free(evv);
 }
 
