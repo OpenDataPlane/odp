@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright (c) 2023 Nokia
+ * Copyright (c) 2023-2025 Nokia
  */
 
 #include <odp/api/atomic.h>
@@ -57,7 +57,8 @@ static const _odp_ev_info_t ev_info_tbl[] = {
 	[_ODP_EV_PACKET_FREE_SP]    = {.str = "odp_packet_free_sp()"},
 	[_ODP_EV_PACKET_IS_VALID]   = {.str = "odp_packet_is_valid()"},
 	[_ODP_EV_QUEUE_ENQ]         = {.str = "odp_queue_enq()"},
-	[_ODP_EV_QUEUE_ENQ_MULTI]   = {.str = "odp_queue_enq_multi()"}
+	[_ODP_EV_QUEUE_ENQ_MULTI]   = {.str = "odp_queue_enq_multi()"},
+	[_ODP_EV_QUEUE_ENQ_AGGR]    = {.str = "odp_queue_enq_aggr()"},
 };
 
 ODP_STATIC_ASSERT(_ODP_ARRAY_SIZE(ev_info_tbl) == _ODP_EV_MAX, "ev_info_tbl missing entries");
