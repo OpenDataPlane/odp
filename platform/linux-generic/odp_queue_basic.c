@@ -4,6 +4,7 @@
  */
 
 #include <odp/api/align.h>
+#include <odp/api/event_vector.h>
 #include <odp/api/hints.h>
 #include <odp/api/packet_io.h>
 #include <odp/api/queue.h>
@@ -34,6 +35,7 @@
 #include <odp_string_internal.h>
 
 #include <inttypes.h>
+#include <stdalign.h>
 #include <string.h>
 
 #define LOCK(queue_ptr)      odp_ticketlock_lock(&((queue_ptr)->lock))
@@ -45,6 +47,9 @@
 
 static int queue_init(queue_entry_t *queue, const char *name,
 		      const odp_queue_param_t *param);
+
+static void event_aggr_queue_init(queue_entry_t *aggr_queue,
+				  const queue_entry_t *base_queue);
 
 queue_global_t *_odp_queue_glb;
 extern _odp_queue_inline_offset_t _odp_queue_inline_offset;
@@ -59,6 +64,13 @@ static int queue_capa(odp_queue_capability_t *capa, int sched ODP_UNUSED)
 	capa->plain.max_size    = _odp_queue_glb->config.max_queue_size;
 	capa->plain.lockfree.max_num  = _odp_queue_glb->queue_lf_num;
 	capa->plain.lockfree.max_size = _odp_queue_glb->queue_lf_size;
+
+	capa->plain.aggr.max_num = CONFIG_MAX_EVENT_AGGR;
+	capa->plain.aggr.max_num_per_queue = 1;
+	capa->plain.aggr.max_size = CONFIG_EVENT_VECTOR_MAX_SIZE;
+	capa->plain.aggr.min_size = 2;
+	capa->plain.aggr.max_tmo_ns = 0;
+	capa->plain.aggr.min_tmo_ns = 0;
 
 	return 0;
 }
@@ -128,7 +140,7 @@ static int queue_init_global(void)
 
 	shm = odp_shm_reserve("_odp_queue_basic_global",
 			      sizeof(queue_global_t),
-			      sizeof(queue_entry_t),
+			      alignof(queue_entry_t),
 			      0);
 	if (shm == ODP_SHM_INVALID)
 		return -1;
@@ -144,6 +156,15 @@ static int queue_init_global(void)
 		LOCK_INIT(queue);
 		queue->index  = i;
 		queue->handle = (odp_queue_t)queue;
+	}
+
+	for (i = 0; i < CONFIG_MAX_EVENT_AGGR; i++) {
+		queue_entry_t *aggr_queue = &_odp_queue_glb->aggr_queue[i];
+
+		LOCK_INIT(aggr_queue);
+		aggr_queue->index  = i;
+		aggr_queue->handle = (odp_queue_t)aggr_queue;
+		aggr_queue->type = ODP_QUEUE_TYPE_AGGR;
 	}
 
 	if (read_config_file(_odp_queue_glb)) {
@@ -257,6 +278,108 @@ static uint32_t queue_lock_count(odp_queue_t handle)
 		queue->param.sched.lock_count : 0;
 }
 
+static int event_aggr_check_param(const odp_queue_param_t *param)
+{
+	odp_event_aggr_capability_t *aggr_capa;
+	odp_queue_capability_t plain_capa;
+	odp_schedule_capability_t sched_capa;
+
+	if (param->num_aggr == 0)
+		return 0;
+
+	if (param->aggr->pool == ODP_POOL_INVALID) {
+		_ODP_ERR("Invalid pool handle\n");
+		return -1;
+	}
+	if (_odp_pool_type(param->aggr->pool) != ODP_POOL_EVENT_VECTOR) {
+		_ODP_ERR("Pool type is not event vector\n");
+		return -1;
+	}
+
+	/* Event aggregation implementation includes locking */
+	if (param->nonblocking != ODP_BLOCKING) {
+		_ODP_ERR("Event aggregation not supported for non-blocking queues\n");
+		return -1;
+	}
+
+	if (param->type == ODP_QUEUE_TYPE_PLAIN) {
+		queue_capa(&plain_capa, 0);
+		aggr_capa = &plain_capa.plain.aggr;
+	} else {
+		if (odp_schedule_capability(&sched_capa)) {
+			_ODP_ERR("Failed to read scheduler capabilities\n");
+			return -1;
+		}
+		aggr_capa = &sched_capa.aggr;
+	}
+
+	if (param->num_aggr > aggr_capa->max_num_per_queue) {
+		_ODP_ERR("Too many aggregators per queue: %u > %u\n",
+			 param->num_aggr, aggr_capa->max_num_per_queue);
+		return -1;
+	}
+	if (param->aggr->max_tmo_ns > aggr_capa->max_tmo_ns) {
+		_ODP_ERR("Too large timeout: %" PRIu64 " > %" PRIu64 "\n",
+			 param->aggr->max_tmo_ns, aggr_capa->max_tmo_ns);
+		return -1;
+	}
+	if (param->aggr->max_tmo_ns < aggr_capa->min_tmo_ns) {
+		_ODP_ERR("Too small timeout: %" PRIu64 " < %" PRIu64 "\n",
+			 param->aggr->max_tmo_ns, aggr_capa->min_tmo_ns);
+		return -1;
+	}
+	if (param->aggr->max_size > aggr_capa->max_size) {
+		_ODP_ERR("Too large event vector size: %u > %u\n",
+			 param->aggr->max_size, aggr_capa->max_size);
+		return -1;
+	}
+	if (param->aggr->max_size < aggr_capa->min_size) {
+		_ODP_ERR("Too small event vector size: %u < %u\n",
+			 param->aggr->max_size, aggr_capa->min_size);
+		return -1;
+	}
+	return 0;
+}
+
+static queue_entry_t *event_aggr_reserve(queue_global_t *global)
+{
+	for (uint32_t i = 0; i < CONFIG_MAX_EVENT_AGGR; i++) {
+		queue_entry_t *aggr_queue = &global->aggr_queue[i];
+
+		LOCK(aggr_queue);
+		if (aggr_queue->status != QUEUE_STATUS_FREE) {
+			UNLOCK(aggr_queue);
+			continue;
+		}
+		aggr_queue->status = QUEUE_STATUS_READY;
+		UNLOCK(aggr_queue);
+
+		return aggr_queue;
+	}
+	return NULL;
+}
+
+static void event_aggr_free(queue_entry_t *aggr_queue)
+{
+	event_aggr_t *aggr;
+
+	if (aggr_queue == NULL)
+		return;
+
+	aggr = &aggr_queue->aggr;
+
+	LOCK(aggr_queue);
+
+	/* Free pending events */
+	if (aggr->num_events) {
+		odp_event_free_multi(aggr->event_tbl, aggr->num_events);
+		aggr->num_events = 0;
+	}
+
+	aggr_queue->status = QUEUE_STATUS_FREE;
+	UNLOCK(aggr_queue);
+}
+
 static odp_queue_t queue_create(const char *name,
 				const odp_queue_param_t *param)
 {
@@ -284,9 +407,6 @@ static odp_queue_t queue_create(const char *name,
 	} else if (type != ODP_QUEUE_TYPE_PLAIN)
 		return ODP_QUEUE_INVALID;
 
-	if (param->num_aggr > 0)
-		return ODP_QUEUE_INVALID;
-
 	if (param->nonblocking == ODP_BLOCKING) {
 		if (param->size > _odp_queue_glb->config.max_queue_size)
 			return ODP_QUEUE_INVALID;
@@ -300,6 +420,9 @@ static odp_queue_t queue_create(const char *name,
 		/* Wait-free queues not supported */
 		return ODP_QUEUE_INVALID;
 	}
+
+	if (event_aggr_check_param(param))
+		return ODP_QUEUE_INVALID;
 
 	if (type == ODP_QUEUE_TYPE_SCHED) {
 		/* Start scheduled queue indices from zero to enable direct
@@ -315,6 +438,7 @@ static odp_queue_t queue_create(const char *name,
 	for (; i < max_idx; i++) {
 		queue = qentry_from_index(i);
 
+		/* Queue status updates should be improved to avoid races */
 		if (queue->status != QUEUE_STATUS_FREE)
 			continue;
 
@@ -370,6 +494,19 @@ static odp_queue_t queue_create(const char *name,
 		}
 	}
 
+	/* Event aggregator */
+	if (param->num_aggr) {
+		queue_entry_t *aggr_queue = event_aggr_reserve(_odp_queue_glb);
+
+		if (aggr_queue == NULL) {
+			queue->status = QUEUE_STATUS_FREE;
+			_ODP_ERR("No free event aggregators available\n");
+			return ODP_QUEUE_INVALID;
+		}
+		queue->aggr_queue = aggr_queue;
+		event_aggr_queue_init(aggr_queue, queue);
+	}
+
 	return handle;
 }
 
@@ -417,6 +554,11 @@ static int queue_destroy(odp_queue_t handle)
 	if (handle == ODP_QUEUE_INVALID)
 		return -1;
 
+	if (queue->type == ODP_QUEUE_TYPE_AGGR) {
+		_ODP_ERR("Trying to destroy aggregator queue (index=%" PRIu32 ")\n", queue->index);
+		return -1;
+	}
+
 	LOCK(queue);
 	if (queue->status == QUEUE_STATUS_FREE) {
 		UNLOCK(queue);
@@ -461,6 +603,9 @@ static int queue_destroy(odp_queue_t handle)
 	if (queue->queue_lf)
 		_odp_queue_lf_destroy(queue->queue_lf);
 
+	if (queue->param.num_aggr)
+		event_aggr_free(queue->aggr_queue);
+
 	UNLOCK(queue);
 
 	return 0;
@@ -486,10 +631,27 @@ static int queue_destroy_multi(odp_queue_t handle[], int num)
 static int queue_context_set(odp_queue_t handle, void *context,
 			     uint32_t len ODP_UNUSED)
 {
+	_ODP_ASSERT(qentry_from_handle(handle)->type != ODP_QUEUE_TYPE_AGGR);
+
 	odp_mb_full();
 	qentry_from_handle(handle)->param.context = context;
 	odp_mb_full();
 	return 0;
+}
+
+static odp_queue_t queue_aggr(odp_queue_t handle, uint32_t aggr_index)
+{
+	queue_entry_t *queue = qentry_from_handle(handle);
+
+	if (odp_unlikely(queue->type == ODP_QUEUE_TYPE_AGGR)) {
+		_ODP_ERR("Requesting aggregator handle from an aggregator\n");
+		return ODP_QUEUE_INVALID;
+	}
+
+	if (odp_unlikely(aggr_index >= queue->param.num_aggr))
+		return ODP_QUEUE_INVALID;
+
+	return (odp_queue_t)queue->aggr_queue;
 }
 
 static odp_queue_t queue_lookup(const char *name)
@@ -513,6 +675,154 @@ static odp_queue_t queue_lookup(const char *name)
 	}
 
 	return ODP_QUEUE_INVALID;
+}
+
+/* Used by queue enqueue functions */
+int _odp_event_aggr_enq(queue_entry_t *aggr_queue, _odp_event_hdr_t *event_hdr[], uint32_t num)
+{
+	event_aggr_t *aggr = &aggr_queue->aggr;
+	queue_entry_t *base_queue = qentry_from_handle(aggr->base_queue);
+	odp_event_t *evv_tbl;
+	odp_event_vector_t evv;
+	uint32_t num_enq;
+
+	_ODP_ASSERT(aggr_queue->type == ODP_QUEUE_TYPE_AGGR);
+
+	odp_ticketlock_lock(&aggr->lock);
+
+	for (num_enq = 0; num_enq < num; num_enq++) {
+		aggr->event_tbl[aggr->num_events++] = _odp_event_from_hdr(event_hdr[num_enq]);
+
+		if (aggr->num_events < aggr->max_size)
+			continue;
+
+		evv = odp_event_vector_alloc(aggr->pool);
+		if (odp_unlikely(evv == ODP_EVENT_VECTOR_INVALID)) {
+			aggr->num_events--;
+			odp_ticketlock_unlock(&aggr->lock);
+			return num_enq;
+		}
+
+		odp_event_vector_tbl(evv, &evv_tbl);
+		for (uint16_t i = 0; i < aggr->num_events; i++)
+			evv_tbl[i] = aggr->event_tbl[i];
+
+		odp_event_vector_size_set(evv, aggr->num_events);
+		odp_event_vector_type_set(evv, aggr->event_type);
+
+		if (odp_unlikely(base_queue->enqueue(base_queue->handle,
+						     (_odp_event_hdr_t *)(uintptr_t)evv) != 0)) {
+			aggr->num_events--;
+			odp_ticketlock_unlock(&aggr->lock);
+			odp_event_vector_free(evv);
+			return num_enq;
+		}
+		aggr->num_events = 0;
+	}
+
+	odp_ticketlock_unlock(&aggr->lock);
+
+	return num_enq;
+}
+
+static int event_aggr_enq(odp_queue_t aggr_handle, _odp_event_hdr_t *event_hdr)
+{
+	queue_entry_t *aggr_queue = qentry_from_handle(aggr_handle);
+	int ret;
+
+	/* Make sure events end up in correct order within a vector */
+	if (_odp_sched_fn->ord_enq_multi(aggr_handle, (void **)&event_hdr, 1, &ret))
+		return ret == 1 ? 0 : -1;
+
+	ret = _odp_event_aggr_enq(aggr_queue, &event_hdr, 1);
+	return ret == 1 ? 0 : -1;
+}
+
+static int event_aggr_enq_multi(odp_queue_t aggr_handle, _odp_event_hdr_t *event_hdr[], int num)
+{
+	queue_entry_t *aggr_queue = qentry_from_handle(aggr_handle);
+	int ret;
+
+	/* Make sure events end up in correct order within a vector */
+	if (_odp_sched_fn->ord_enq_multi(aggr_handle, (void **)event_hdr, num, &ret))
+		return ret;
+
+	return _odp_event_aggr_enq(aggr_queue, event_hdr, num);
+}
+
+/* Called inside aggregator locks */
+static int event_aggr_enq_pending(event_aggr_t *aggr)
+{
+	odp_event_t *evv_tbl;
+	odp_event_vector_t evv;
+	queue_entry_t *base_queue = qentry_from_handle(aggr->base_queue);
+
+	if (aggr->num_events == 1) {
+		if (odp_likely(base_queue->enqueue(base_queue->handle,
+						   _odp_event_hdr(aggr->event_tbl[0])) == 0)) {
+			aggr->num_events = 0;
+			return 1;
+		}
+		return 0;
+	}
+
+	evv = odp_event_vector_alloc(aggr->pool);
+	if (odp_unlikely(evv == ODP_EVENT_VECTOR_INVALID))
+		return 0;
+
+	odp_event_vector_tbl(evv, &evv_tbl);
+	for (uint16_t i = 0; i < aggr->num_events; i++)
+		evv_tbl[i] = aggr->event_tbl[i];
+
+	odp_event_vector_size_set(evv, aggr->num_events);
+	odp_event_vector_type_set(evv, aggr->event_type);
+
+	if (odp_unlikely(base_queue->enqueue(base_queue->handle,
+					     (_odp_event_hdr_t *)(uintptr_t)evv)) != 0) {
+		odp_event_vector_free(evv);
+		return 0;
+	}
+	aggr->num_events = 0;
+	return 1;
+}
+
+static int queue_api_enq_aggr(odp_queue_t handle, odp_event_t ev,
+			      const odp_aggr_enq_param_t *param)
+{
+	queue_entry_t *queue = qentry_from_handle(handle);
+	event_aggr_t *aggr = &queue->aggr;
+
+	if (odp_unlikely(queue->type != ODP_QUEUE_TYPE_AGGR))
+		return queue->enqueue(handle, (_odp_event_hdr_t *)(uintptr_t)ev);
+
+	_ODP_ASSERT(param != NULL);
+
+	/* Cannot stash events as ordered_stash_release() ignores odp_aggr_enq_param_t */
+	_odp_sched_fn->ord_stash_release(handle);
+
+	odp_ticketlock_lock(&aggr->lock);
+
+	/* Enqueue earlier events in case of SoV */
+	if (aggr->num_events && param->start_of_vector)
+		if (odp_unlikely(!event_aggr_enq_pending(aggr))) {
+			odp_ticketlock_unlock(&aggr->lock);
+			return -1;
+		}
+
+	aggr->event_tbl[aggr->num_events++] = ev;
+
+	/* Enqueue events in case of full vector or EoV */
+	if (aggr->num_events == aggr->max_size || param->end_of_vector) {
+		if (odp_unlikely(!event_aggr_enq_pending(aggr))) {
+			aggr->num_events--;
+			odp_ticketlock_unlock(&aggr->lock);
+			return -1;
+		}
+	}
+
+	odp_ticketlock_unlock(&aggr->lock);
+
+	return 0;
 }
 
 static int plain_queue_enq(odp_queue_t handle, _odp_event_hdr_t *event_hdr)
@@ -634,9 +944,29 @@ static int queue_info(odp_queue_t handle, odp_queue_info_t *info)
 	queue_entry_t *queue;
 	int status;
 
+	if (odp_unlikely(handle == ODP_QUEUE_INVALID)) {
+		_ODP_ERR("Invalid queue handle\n");
+		return -1;
+	}
+	queue = qentry_from_handle(handle);
+
 	if (odp_unlikely(info == NULL)) {
 		_ODP_ERR("Unable to store info, NULL ptr given\n");
 		return -1;
+	}
+
+	if (queue->type == ODP_QUEUE_TYPE_AGGR) {
+		queue_entry_t *base_queue = qentry_from_handle(queue->aggr.base_queue);
+
+		info->name = base_queue->name;
+		info->param = base_queue->param;
+
+		/* Override some of the base queue parameters */
+		info->param.type = ODP_QUEUE_TYPE_AGGR;
+		info->param.context = NULL;
+		info->param.context_len = 0;
+
+		return 0;
 	}
 
 	queue_id = queue_to_index(handle);
@@ -666,6 +996,37 @@ static int queue_info(odp_queue_t handle, odp_queue_info_t *info)
 	return 0;
 }
 
+static void event_aggr_print(queue_entry_t *aggr_queue)
+{
+	event_aggr_t *aggr = &aggr_queue->aggr;
+	queue_entry_t *base_queue = qentry_from_handle(aggr->base_queue);
+	int len = 0;
+	int max_len = 512;
+	int n = max_len - 1;
+	char str[max_len];
+	uint16_t num_events;
+
+	odp_ticketlock_lock(&aggr->lock);
+	num_events = aggr->num_events;
+	odp_ticketlock_unlock(&aggr->lock);
+
+	len += _odp_snprint(&str[len], n - len, "\nEvent aggregator info\n");
+	len += _odp_snprint(&str[len], n - len, "---------------------\n");
+	len += _odp_snprint(&str[len], n - len, "  handle          %p\n",
+			    (void *)aggr_queue->handle);
+	len += _odp_snprint(&str[len], n - len, "  index           %" PRIu32 "\n",
+			    aggr_queue->index);
+	len += _odp_snprint(&str[len], n - len, "  base queue      %p\n", base_queue->handle);
+	len += _odp_snprint(&str[len], n - len, "  base queue name %s\n", base_queue->name);
+	len += _odp_snprint(&str[len], n - len, "  pool            %p\n", aggr->pool);
+	len += _odp_snprint(&str[len], n - len, "  event type      %" PRIu32 "\n",
+			    aggr->event_type);
+	len += _odp_snprint(&str[len], n - len, "  num events      %" PRIu16 "\n", num_events);
+	len += _odp_snprint(&str[len], n - len, "  max events      %" PRIu32 "\n", aggr->max_size);
+
+	_ODP_PRINT("%s\n", str);
+}
+
 static void queue_print(odp_queue_t handle)
 {
 	odp_pktio_info_t pktio_info;
@@ -674,14 +1035,22 @@ static void queue_print(odp_queue_t handle)
 	int status, prio;
 	int max_prio = odp_schedule_max_prio();
 
-	queue_id = queue_to_index(handle);
+	if (odp_unlikely(handle == ODP_QUEUE_INVALID)) {
+		_ODP_ERR("Invalid queue handle\n");
+		return;
+	}
+	queue = qentry_from_handle(handle);
 
+	if (queue->type == ODP_QUEUE_TYPE_AGGR) {
+		event_aggr_print(queue);
+		return;
+	}
+
+	queue_id = queue_to_index(handle);
 	if (odp_unlikely(queue_id >= CONFIG_MAX_QUEUES)) {
 		_ODP_ERR("Invalid queue handle: 0x%" PRIx64 "\n", odp_queue_to_u64(handle));
 		return;
 	}
-
-	queue = qentry_from_index(queue_id);
 
 	LOCK(queue);
 	status = queue->status;
@@ -737,6 +1106,7 @@ static void queue_print(odp_queue_t handle)
 		if (!odp_pktio_info(queue->pktout.pktio, &pktio_info))
 			_ODP_PRINT("  pktout          %s\n", pktio_info.name);
 	}
+	_ODP_PRINT("  aggregators     %" PRIu32 "\n", queue->param.num_aggr);
 	_ODP_PRINT("  timers          %" PRIu64 "\n", odp_atomic_load_u64(&queue->num_timers));
 	_ODP_PRINT("  status          %s\n",
 		   queue->status == QUEUE_STATUS_READY ? "ready" :
@@ -1009,6 +1379,30 @@ int _odp_sched_queue_empty(uint32_t queue_index)
 	return ret;
 }
 
+static void event_aggr_queue_init(queue_entry_t *aggr_queue, const queue_entry_t *base_queue)
+{
+	event_aggr_t *aggr = &aggr_queue->aggr;
+
+	memcpy(&aggr_queue->param, &base_queue->param, sizeof(odp_queue_param_t));
+
+	if (base_queue->spsc) {
+		_odp_queue_spsc_event_aggr_init(aggr_queue);
+	} else {
+		aggr_queue->enqueue = event_aggr_enq;
+		aggr_queue->enqueue_multi = event_aggr_enq_multi;
+	}
+	aggr_queue->dequeue            = error_dequeue;
+	aggr_queue->dequeue_multi      = error_dequeue_multi;
+	aggr_queue->orig_dequeue_multi = error_dequeue_multi;
+
+	odp_ticketlock_init(&aggr->lock);
+	aggr->num_events = 0;
+	aggr->base_queue = base_queue->handle;
+	aggr->pool = base_queue->param.aggr->pool;
+	aggr->event_type = base_queue->param.aggr->event_type;
+	aggr->max_size = base_queue->param.aggr->max_size;
+}
+
 static int queue_init(queue_entry_t *queue, const char *name,
 		      const odp_queue_param_t *param)
 {
@@ -1179,12 +1573,18 @@ static void queue_timer_add(odp_queue_t handle)
 {
 	queue_entry_t *queue = qentry_from_handle(handle);
 
+	if (odp_unlikely(queue->type == ODP_QUEUE_TYPE_AGGR))
+		queue = qentry_from_handle(queue->aggr.base_queue);
+
 	odp_atomic_inc_u64(&queue->num_timers);
 }
 
 static void queue_timer_rem(odp_queue_t handle)
 {
 	queue_entry_t *queue = qentry_from_handle(handle);
+
+	if (odp_unlikely(queue->type == ODP_QUEUE_TYPE_AGGR))
+		queue = qentry_from_handle(queue->aggr.base_queue);
 
 	odp_atomic_dec_u64(&queue->num_timers);
 }
@@ -1235,8 +1635,10 @@ _odp_queue_api_fn_t _odp_queue_basic_api = {
 	.queue_lookup = queue_lookup,
 	.queue_capability = queue_capability,
 	.queue_context_set = queue_context_set,
+	.queue_aggr = queue_aggr,
 	.queue_enq = queue_api_enq,
 	.queue_enq_multi = queue_api_enq_multi,
+	.queue_enq_aggr = queue_api_enq_aggr,
 	.queue_deq = queue_api_deq,
 	.queue_deq_multi = queue_api_deq_multi,
 	.queue_type = queue_type,

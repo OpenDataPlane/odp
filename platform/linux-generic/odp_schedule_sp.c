@@ -692,6 +692,11 @@ static int ord_enq_multi(odp_queue_t queue, void *buf_hdr[], int num,
 	return 0;
 }
 
+static void ord_stash_release(odp_queue_t queue ODP_UNUSED)
+{
+	/* Nothing to do */
+}
+
 static void pktio_start(int pktio_index,
 			int num,
 			int pktin_idx[],
@@ -1314,6 +1319,7 @@ const schedule_fn_t _odp_schedule_sp_fn = {
 	.destroy_queue = destroy_queue,
 	.sched_queue   = sched_queue,
 	.ord_enq_multi = ord_enq_multi,
+	.ord_stash_release = ord_stash_release,
 	.init_global   = init_global,
 	.term_global   = term_global,
 	.init_local    = init_local,

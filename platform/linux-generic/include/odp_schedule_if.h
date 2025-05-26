@@ -53,6 +53,7 @@ typedef int (*schedule_sched_queue_fn_t)(uint32_t queue_index);
 typedef int (*schedule_unsched_queue_fn_t)(uint32_t queue_index);
 typedef int (*schedule_ord_enq_multi_fn_t)(odp_queue_t queue, void *event_hdr[],
 					   int num, int *ret);
+typedef void (*schedule_ord_stash_release_fn_t)(odp_queue_t dst_queue);
 typedef int (*schedule_init_global_fn_t)(void);
 typedef int (*schedule_term_global_fn_t)(void);
 typedef int (*schedule_init_local_fn_t)(void);
@@ -72,6 +73,7 @@ typedef struct schedule_fn_t {
 	schedule_destroy_queue_fn_t destroy_queue;
 	schedule_sched_queue_fn_t   sched_queue;
 	schedule_ord_enq_multi_fn_t ord_enq_multi;
+	schedule_ord_stash_release_fn_t ord_stash_release;
 	schedule_init_global_fn_t   init_global;
 	schedule_term_global_fn_t   term_global;
 	schedule_init_local_fn_t    init_local;
