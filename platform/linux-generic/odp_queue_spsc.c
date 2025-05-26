@@ -28,6 +28,21 @@ static int queue_spsc_enq(odp_queue_t handle, _odp_event_hdr_t *event_hdr)
 	return -1;
 }
 
+static inline int queue_spsc_enq_aggr(odp_queue_t handle, _odp_event_hdr_t *event_hdr)
+{
+	queue_entry_t *queue = qentry_from_handle(handle);
+
+	if (ODP_DEBUG && odp_unlikely(queue->status < QUEUE_STATUS_READY)) {
+		_ODP_ERR("Bad queue status\n");
+		return -1;
+	}
+
+	if (odp_likely(_odp_event_aggr_enq(queue, &event_hdr, 1)))
+		return 0;
+
+	return -1;
+}
+
 static inline int queue_spsc_enq_multi(odp_queue_t handle, _odp_event_hdr_t *event_hdr[], int num)
 {
 	queue_entry_t *queue = qentry_from_handle(handle);
@@ -40,6 +55,19 @@ static inline int queue_spsc_enq_multi(odp_queue_t handle, _odp_event_hdr_t *eve
 
 	return ring_spsc_ptr_enq_multi(ring_spsc, queue->ring_data,
 				       queue->ring_mask, (uintptr_t *)event_hdr, num);
+}
+
+static inline int queue_spsc_enq_multi_aggr(odp_queue_t handle, _odp_event_hdr_t *event_hdr[],
+					    int num)
+{
+	queue_entry_t *queue = qentry_from_handle(handle);
+
+	if (ODP_DEBUG && odp_unlikely(queue->status < QUEUE_STATUS_READY)) {
+		_ODP_ERR("Bad queue status\n");
+		return -1;
+	}
+
+	return _odp_event_aggr_enq(queue, event_hdr, num);
 }
 
 static _odp_event_hdr_t *queue_spsc_deq(odp_queue_t handle)
@@ -100,4 +128,10 @@ void _odp_queue_spsc_init(queue_entry_t *queue, uint32_t queue_size)
 	queue->ring_data = &_odp_queue_glb->ring_data[offset];
 	queue->ring_mask = queue_size - 1;
 	ring_spsc_ptr_init(&queue->ring_spsc);
+}
+
+void _odp_queue_spsc_event_aggr_init(queue_entry_t *aggr_queue)
+{
+	aggr_queue->enqueue = queue_spsc_enq_aggr;
+	aggr_queue->enqueue_multi = queue_spsc_enq_multi_aggr;
 }
