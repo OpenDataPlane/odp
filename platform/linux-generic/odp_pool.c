@@ -543,6 +543,7 @@ static void init_event_hdr(pool_t *pool, _odp_event_hdr_t *event_hdr, uint32_t e
 
 		event_hdr->event_type = ODP_EVENT_VECTOR;
 		vect_hdr->uarea_addr = uarea;
+		vect_hdr->event_type = ODP_EVENT_ANY;
 	}
 
 	/* Initialize timeout metadata */
