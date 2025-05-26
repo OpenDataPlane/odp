@@ -24,6 +24,7 @@ const _odp_event_vector_inline_offset_t _odp_event_vector_inline ODP_ALIGNED_CAC
 	.event     = offsetof(odp_event_vector_hdr_t, event),
 	.pool      = offsetof(odp_event_vector_hdr_t, event_hdr.pool),
 	.size      = offsetof(odp_event_vector_hdr_t, size),
+	.event_type = offsetof(odp_event_vector_hdr_t, event_type),
 	.uarea_addr = offsetof(odp_event_vector_hdr_t, uarea_addr),
 	.flags     = offsetof(odp_event_vector_hdr_t, flags)
 };
@@ -51,6 +52,7 @@ odp_event_vector_t odp_event_vector_alloc(odp_pool_t pool_hdl)
 		return ODP_EVENT_VECTOR_INVALID;
 
 	_ODP_ASSERT(event_vector_hdr_from_event(event)->size == 0);
+	_ODP_ASSERT(event_vector_hdr_from_event(event)->event_type == ODP_EVENT_ANY);
 
 	return odp_event_vector_from_event(event);
 }
@@ -61,27 +63,9 @@ void odp_event_vector_free(odp_event_vector_t evv)
 
 	evv_hdr->size = 0;
 	evv_hdr->flags.all_flags = 0;
+	evv_hdr->event_type = ODP_EVENT_ANY;
 
 	_odp_event_free(odp_event_vector_to_event(evv));
-}
-
-odp_event_type_t odp_event_vector_type(odp_event_vector_t evv)
-{
-	odp_event_vector_hdr_t *evv_hdr = _odp_event_vector_hdr(evv);
-	uint32_t num = evv_hdr->size;
-	odp_event_type_t type;
-
-	if (odp_unlikely(num == 0))
-		return ODP_EVENT_ANY;
-
-	type = _odp_event_hdr(evv_hdr->event[0])->event_type;
-	for (uint32_t i = 1; i < num; i++) {
-		if (_odp_event_hdr(evv_hdr->event[i])->event_type != (int8_t)type) {
-			type = ODP_EVENT_ANY;
-			break;
-		}
-	}
-	return type;
 }
 
 void odp_event_vector_print(odp_event_vector_t evv)
