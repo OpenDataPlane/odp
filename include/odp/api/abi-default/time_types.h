@@ -11,15 +11,11 @@
 extern "C" {
 #endif
 
-/** @addtogroup odp_time
- *  @{
- **/
-
 /**
  * @internal Time structure used for both POSIX timespec and HW counter
  * implementations.
  */
-typedef struct odp_time_t {
+struct odp_time_s {
 	/** @internal Variant mappings for time type */
 	union {
 		/** @internal Used with generic 64 bit operations */
@@ -32,7 +28,13 @@ typedef struct odp_time_t {
 		uint64_t count;
 
 	};
-} odp_time_t;
+};
+
+/** @addtogroup odp_time
+ *  @{
+ **/
+
+typedef struct odp_time_s odp_time_t;
 
 #define ODP_TIME_NULL ((odp_time_t){.u64 = 0})
 
