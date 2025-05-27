@@ -28,23 +28,21 @@ extern "C" {
 
 #define ODP_CPUMASK_STR_SIZE ((ODP_CPUMASK_SIZE + 3) / 4 + 3)
 
+typedef struct odp_cpumask_s odp_cpumask_t;
+
 /**
- * CPU mask
- *
- * Don't access directly, use access functions.
+ * @}
  */
-typedef struct ODP_ALIGNED(8) odp_cpumask_t {
-	/** @private CPU mask storage
+
+/** @internal */
+struct ODP_ALIGNED(8) odp_cpumask_s {
+	/** @internal CPU mask storage
 	  *
 	  * This is private to the implementation.
 	  * Don't access directly, use access functions.
 	  */
 	uint8_t _u8[ODP_CPUMASK_SIZE / 8];
-} odp_cpumask_t;
-
-/**
- * @}
- */
+};
 
 #ifdef __cplusplus
 }
