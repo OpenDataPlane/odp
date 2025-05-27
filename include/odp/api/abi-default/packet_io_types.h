@@ -31,17 +31,8 @@ typedef struct { char dummy; /**< @internal Dummy */ } _odp_abi_lso_profile_t;
 typedef _odp_abi_pktio_t *odp_pktio_t;
 typedef _odp_abi_lso_profile_t *odp_lso_profile_t;
 
-/** @internal */
-typedef struct odp_pktin_queue_t {
-	odp_pktio_t pktio; /**< @internal pktio handle */
-	int index;         /**< @internal pktio queue index */
-} odp_pktin_queue_t;
-
-/** @internal */
-typedef struct odp_pktout_queue_t {
-	odp_pktio_t pktio; /**< @internal pktio handle */
-	int index;         /**< @internal pktio queue index */
-} odp_pktout_queue_t;
+typedef struct odp_pktin_queue_s odp_pktin_queue_t;
+typedef struct odp_pktout_queue_s odp_pktout_queue_t;
 
 #define ODP_PKTIO_INVALID ((odp_pktio_t)0)
 #define ODP_LSO_PROFILE_INVALID ((odp_lso_profile_t)0)
@@ -61,6 +52,18 @@ typedef struct odp_pktout_queue_t {
 /**
  * @}
  */
+
+/** @internal */
+struct odp_pktin_queue_s {
+	odp_pktio_t pktio; /**< @internal pktio handle */
+	int index;         /**< @internal pktio queue index */
+};
+
+/** @internal */
+struct odp_pktout_queue_s {
+	odp_pktio_t pktio; /**< @internal pktio handle */
+	int index;         /**< @internal pktio queue index */
+};
 
 #ifdef __cplusplus
 }
