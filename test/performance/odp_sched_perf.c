@@ -53,6 +53,7 @@ typedef struct test_options_t {
 	uint32_t max_burst;
 	odp_pool_type_t pool_type;
 	int      queue_type;
+	int      thr_type;
 	int      forward;
 	int      fairness;
 	uint32_t event_size;
@@ -159,6 +160,7 @@ static void print_usage(void)
 	       "                         0: join all groups (default)\n"
 	       "  -b, --burst            Maximum number of events per operation. Default: 100.\n"
 	       "  -t, --type             Queue type. 0: parallel, 1: atomic, 2: ordered. Default: 0.\n"
+	       "  -T, --thr_type         Thread type. 0: worker thread, 1: control thread. Default: 0\n"
 	       "  -f, --forward          0: Keep event in the original queue, 1: Forward event to the next queue. Default: 0.\n"
 	       "  -F, --fairness         0: Don't count events per queue, 1: Count and report events relative to average. Default: 0.\n"
 	       "  -w, --wait_ns          Number of nsec to wait before enqueueing events. Default: 0.\n"
@@ -200,6 +202,7 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 		{"num_join",     required_argument, NULL, 'j'},
 		{"burst",        required_argument, NULL, 'b'},
 		{"type",         required_argument, NULL, 't'},
+		{"thr_type",     required_argument, NULL, 'T'},
 		{"forward",      required_argument, NULL, 'f'},
 		{"fairness",     required_argument, NULL, 'F'},
 		{"wait_ns",      required_argument, NULL, 'w'},
@@ -216,7 +219,7 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+c:q:L:H:d:e:s:g:j:b:t:f:F:w:S:k:l:n:m:p:u:U:vh";
+	static const char *shortopts = "+c:q:L:H:d:e:s:g:j:b:t:T:f:F:w:S:k:l:n:m:p:u:U:vh";
 
 	test_options->num_cpu    = 1;
 	test_options->num_queue  = 1;
@@ -280,6 +283,9 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 			break;
 		case 't':
 			test_options->queue_type = atoi(optarg);
+			break;
+		case 'T':
+			test_options->thr_type = atoi(optarg);
 			break;
 		case 'f':
 			test_options->forward = atoi(optarg);
@@ -507,9 +513,11 @@ static void print_options(test_options_t *options)
 	printf("  pool type                 %s\n", options->pool_type == ODP_POOL_BUFFER ?
 						   "buffer" : "packet");
 
-	printf("  queue type                %s\n\n", options->queue_type == 0 ? "parallel" :
-						     options->queue_type == 1 ? "atomic" :
-						     "ordered");
+	printf("  queue type                %s\n", options->queue_type == 0 ? "parallel" :
+						   options->queue_type == 1 ? "atomic" :
+						   "ordered");
+	printf("  thread type               %s\n\n", options->thr_type == 0 ? "worker" :
+						     "control");
 
 	printf("Extra rd/rw ops per event (queue context + user area + event data)\n");
 	printf("  read                      %u bytes\n", options->tot_rd_size);
@@ -1301,6 +1309,8 @@ static int start_workers(test_global_t *global, odp_instance_t instance)
 	uint32_t num_join  = test_options->num_join;
 	int num_cpu   = test_options->num_cpu;
 	odph_thread_param_t thr_param[num_cpu];
+	odp_thread_type_t thr_type = test_options->thr_type ?
+				     ODP_THREAD_CONTROL : ODP_THREAD_WORKER;
 
 	odp_atomic_init_u32(&global->num_worker, num_cpu);
 
@@ -1314,7 +1324,7 @@ static int start_workers(test_global_t *global, odp_instance_t instance)
 		odph_thread_param_init(&thr_param[i]);
 		thr_param[i].start    = test_sched;
 		thr_param[i].arg      = &global->thread_arg[i];
-		thr_param[i].thr_type = ODP_THREAD_WORKER;
+		thr_param[i].thr_type = thr_type;
 
 		global->thread_arg[i].global = global;
 		global->thread_arg[i].first_group = 0;
