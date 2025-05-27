@@ -16,16 +16,16 @@ extern "C" {
 typedef struct { char dummy; /**< @internal Dummy */ } _odp_abi_packet_t;
 
 /** @internal Dummy  type for strong typing */
-typedef struct { char dummy; /**< *internal Dummy */ } _odp_abi_packet_seg_t;
+typedef struct { char dummy; /**< @internal Dummy */ } _odp_abi_packet_seg_t;
 
 /** @internal Dummy  type for strong typing */
-typedef struct { char dummy; /**< *internal Dummy */ } _odp_abi_packet_buf_t;
+typedef struct { char dummy; /**< @internal Dummy */ } _odp_abi_packet_buf_t;
 
 /** @internal Dummy type for strong typing */
-typedef struct { char dummy; /**< *internal Dummy */ } _odp_abi_packet_vector_t;
+typedef struct { char dummy; /**< @internal Dummy */ } _odp_abi_packet_vector_t;
 
 /** @internal Dummy type for strong typing */
-typedef struct { char dummy; /**< *internal Dummy */ } _odp_abi_packet_tx_compl_t;
+typedef struct { char dummy; /**< @internal Dummy */ } _odp_abi_packet_tx_compl_t;
 
 /** @addtogroup odp_packet
  *  @{
@@ -44,7 +44,6 @@ typedef _odp_abi_packet_tx_compl_t *odp_packet_tx_compl_t;
 #define ODP_PACKET_VECTOR_INVALID   ((odp_packet_vector_t)0)
 #define ODP_PACKET_TX_COMPL_INVALID ((odp_packet_tx_compl_t)0)
 
-/** Packet Color */
 typedef enum {
 	ODP_PACKET_GREEN = 0,
 	ODP_PACKET_YELLOW = 1,
@@ -52,7 +51,6 @@ typedef enum {
 	ODP_PACKET_ALL_COLORS = 3,
 } odp_packet_color_t;
 
-/** Packet Checksum Status */
 typedef enum {
 	ODP_PACKET_CHKSUM_UNKNOWN = 0,
 	ODP_PACKET_CHKSUM_BAD,
