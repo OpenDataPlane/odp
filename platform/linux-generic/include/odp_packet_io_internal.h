@@ -321,7 +321,7 @@ extern const pktio_if_ops_t * const _odp_pktio_if_ops[];
  * @return >=0 on success, number of packets received
  * @return <0 on failure
  */
-int _odp_sock_recv_mq_tmo_try_int_driven(const struct odp_pktin_queue_t queues[],
+int _odp_sock_recv_mq_tmo_try_int_driven(const odp_pktin_queue_t queues[],
 					 uint32_t num_q, uint32_t *from,
 					 odp_packet_t packets[], int num,
 					 uint64_t usecs,
