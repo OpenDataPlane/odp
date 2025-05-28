@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2015-2018 Linaro Limited
+ * Copyright (c) 2025 Nokia
  */
 
 #ifndef ODP_CLASSIFICATION_TESTSUITES_H_
@@ -69,6 +70,10 @@ void configure_default_cos(odp_pktio_t pktio, odp_cos_t *cos,
 int parse_ipv4_string(const char *ipaddress, uint32_t *addr, uint32_t *mask);
 void enqueue_pktio_interface(odp_packet_t pkt, odp_pktio_t pktio);
 odp_packet_t receive_packet(odp_queue_t *queue, uint64_t ns, odp_bool_t enable_pktv);
+odp_packet_t receive_and_check(uint32_t    expected_seqno,
+			       odp_queue_t expected_queue,
+			       odp_pool_t  expected_pool,
+			       odp_bool_t  enable_pktv);
 odp_pool_t pool_create(const char *poolname);
 odp_pool_t pktv_pool_create(const char *poolname);
 odp_queue_t queue_create(const char *queuename, bool sched);

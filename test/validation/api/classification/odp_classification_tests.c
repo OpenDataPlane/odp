@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2015-2018 Linaro Limited
- * Copyright (c) 2020-2024 Nokia
+ * Copyright (c) 2020-2025 Nokia
  */
 
 #include "odp_classification_testsuites.h"
@@ -344,8 +344,6 @@ void test_cls_pmr_chain(odp_bool_t enable_pktv, int src, int dst, const char *sa
 {
 	odp_packet_t pkt;
 	odph_ipv4hdr_t *ip;
-	odp_queue_t queue;
-	odp_pool_t pool;
 	uint32_t addr = 0;
 	uint32_t mask;
 	uint32_t seqno = 0;
@@ -366,13 +364,7 @@ void test_cls_pmr_chain(odp_bool_t enable_pktv, int src, int dst, const char *sa
 	set_first_supported_pmr_port(pkt, port);
 
 	enqueue_pktio_interface(pkt, pktio_loop);
-
-	pkt = receive_packet(&queue, ODP_TIME_SEC_IN_NS, enable_pktv);
-	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
-	CU_ASSERT(queue == queue_list[dst]);
-	CU_ASSERT(seqno == cls_pkt_get_seq(pkt));
-	pool = odp_packet_pool(pkt);
-	CU_ASSERT(pool == pool_list[dst]);
+	pkt = receive_and_check(seqno, queue_list[dst], pool_list[dst], enable_pktv);
 	odp_packet_free(pkt);
 
 	pkt = create_packet(pkt_info);
@@ -386,12 +378,7 @@ void test_cls_pmr_chain(odp_bool_t enable_pktv, int src, int dst, const char *sa
 	odph_ipv4_csum_update(pkt);
 
 	enqueue_pktio_interface(pkt, pktio_loop);
-	pkt = receive_packet(&queue, ODP_TIME_SEC_IN_NS, enable_pktv);
-	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
-	CU_ASSERT(queue == queue_list[src]);
-	CU_ASSERT(seqno == cls_pkt_get_seq(pkt));
-	pool = odp_packet_pool(pkt);
-	CU_ASSERT(pool == pool_list[src]);
+	pkt = receive_and_check(seqno, queue_list[src], pool_list[src], enable_pktv);
 	odp_packet_free(pkt);
 }
 
@@ -439,9 +426,7 @@ void configure_pktio_default_cos(odp_bool_t enable_pktv)
 void test_pktio_default_cos(odp_bool_t enable_pktv)
 {
 	odp_packet_t pkt;
-	odp_queue_t queue;
 	uint32_t seqno = 0;
-	odp_pool_t pool;
 	cls_packet_info_t pkt_info;
 
 	/* create a default packet */
@@ -453,15 +438,9 @@ void test_pktio_default_cos(odp_bool_t enable_pktv)
 	CU_ASSERT(seqno != TEST_SEQ_INVALID);
 
 	enqueue_pktio_interface(pkt, pktio_loop);
-
-	pkt = receive_packet(&queue, ODP_TIME_SEC_IN_NS, enable_pktv);
-	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	/* Default packet should be received in default queue */
-	CU_ASSERT(queue == queue_list[CLS_DEFAULT]);
-	CU_ASSERT(seqno == cls_pkt_get_seq(pkt));
-	pool = odp_packet_pool(pkt);
-	CU_ASSERT(pool == pool_list[CLS_DEFAULT]);
-
+	pkt = receive_and_check(seqno, queue_list[CLS_DEFAULT], pool_list[CLS_DEFAULT],
+				enable_pktv);
 	odp_packet_free(pkt);
 }
 
@@ -765,8 +744,6 @@ void configure_pmr_cos(odp_bool_t enable_pktv)
 void test_pmr_cos(odp_bool_t enable_pktv)
 {
 	odp_packet_t pkt;
-	odp_queue_t queue;
-	odp_pool_t pool;
 	uint32_t seqno = 0;
 	cls_packet_info_t pkt_info;
 
@@ -778,12 +755,7 @@ void test_pmr_cos(odp_bool_t enable_pktv)
 	CU_ASSERT(seqno != TEST_SEQ_INVALID);
 	set_first_supported_pmr_port(pkt, CLS_PMR_PORT);
 	enqueue_pktio_interface(pkt, pktio_loop);
-	pkt = receive_packet(&queue, ODP_TIME_SEC_IN_NS, enable_pktv);
-	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
-	CU_ASSERT(queue == queue_list[CLS_PMR]);
-	pool = odp_packet_pool(pkt);
-	CU_ASSERT(pool == pool_list[CLS_PMR]);
-	CU_ASSERT(seqno == cls_pkt_get_seq(pkt));
+	pkt = receive_and_check(seqno, queue_list[CLS_PMR], pool_list[CLS_PMR], enable_pktv);
 	odp_packet_free(pkt);
 }
 
@@ -861,8 +833,6 @@ void test_pktio_pmr_composite_cos(odp_bool_t enable_pktv)
 	uint32_t mask;
 	odph_ipv4hdr_t *ip;
 	odp_packet_t pkt;
-	odp_pool_t pool;
-	odp_queue_t queue;
 	uint32_t seqno = 0;
 	cls_packet_info_t pkt_info;
 
@@ -880,12 +850,8 @@ void test_pktio_pmr_composite_cos(odp_bool_t enable_pktv)
 
 	set_first_supported_pmr_port(pkt, CLS_PMR_SET_PORT);
 	enqueue_pktio_interface(pkt, pktio_loop);
-	pkt = receive_packet(&queue, ODP_TIME_SEC_IN_NS, enable_pktv);
-	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
-	CU_ASSERT(queue == queue_list[CLS_PMR_SET]);
-	pool = odp_packet_pool(pkt);
-	CU_ASSERT(pool == pool_list[CLS_PMR_SET]);
-	CU_ASSERT(seqno == cls_pkt_get_seq(pkt));
+	pkt = receive_and_check(seqno, queue_list[CLS_PMR_SET], pool_list[CLS_PMR_SET],
+				enable_pktv);
 	odp_packet_free(pkt);
 }
 
