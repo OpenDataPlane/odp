@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2015-2018 Linaro Limited
- * Copyright (c) 2021-2024 Nokia
+ * Copyright (c) 2021-2025 Nokia
  */
 
 #include <odp_cunit_common.h>
@@ -14,6 +14,7 @@ static void test_defaults(uint8_t fill)
 {
 	odp_cls_cos_param_t cos_param;
 	odp_pmr_param_t pmr_param;
+	odp_pmr_create_opt_t pmr_opt;
 
 	memset(&cos_param, fill, sizeof(cos_param));
 	odp_cls_cos_param_init(&cos_param);
@@ -21,6 +22,7 @@ static void test_defaults(uint8_t fill)
 	CU_ASSERT(cos_param.action == ODP_COS_ACTION_ENQUEUE);
 	CU_ASSERT(cos_param.num_queue == 1);
 	CU_ASSERT(cos_param.stats_enable == false);
+	CU_ASSERT(cos_param.pool == ODP_POOL_INVALID);
 	CU_ASSERT(cos_param.red.enable == false);
 	CU_ASSERT(cos_param.bp.enable == false);
 	CU_ASSERT(cos_param.vector.enable == false);
@@ -30,6 +32,10 @@ static void test_defaults(uint8_t fill)
 	memset(&pmr_param, fill, sizeof(pmr_param));
 	odp_cls_pmr_param_init(&pmr_param);
 	CU_ASSERT(pmr_param.range_term == false);
+
+	memset(&pmr_opt, fill, sizeof(pmr_opt));
+	odp_cls_pmr_create_opt_init(&pmr_opt);
+	CU_ASSERT(pmr_opt.mark == 0);
 }
 
 static void cls_default_values(void)
