@@ -522,7 +522,7 @@ void test_pktio_drop_cos(odp_bool_t enable_pktv)
 	set_first_supported_pmr_port(pkt, CLS_DROP_PORT);
 	CU_ASSERT(odp_cls_cos_stats(cos_list[CLS_DROP], &start) == 0);
 	enqueue_pktio_interface(pkt, pktio_loop);
-	pkt = receive_packet(&queue, ODP_TIME_SEC_IN_NS, enable_pktv);
+	pkt = receive_packet(&queue, ODP_TIME_SEC_IN_NS / 10, enable_pktv);
 	CU_ASSERT(odp_cls_cos_stats(cos_list[CLS_DROP], &stop) == 0);
 	CU_ASSERT_FATAL(pkt == ODP_PACKET_INVALID);
 	if (capa.stats.cos.counter.packets)
