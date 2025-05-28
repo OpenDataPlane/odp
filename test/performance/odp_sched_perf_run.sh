@@ -6,6 +6,9 @@
 
 TEST_DIR="${TEST_DIR:-$(dirname $0)}"
 
+# exit codes expected by automake for skipped tests
+TEST_SKIPPED=77
+
 run()
 {
 	# Maximum number of workers may be less than the number of available processors. One worker
@@ -32,6 +35,17 @@ run()
 		$TEST_DIR/odp_sched_perf${EXEEXT} -p 1 -c $1
 		RET_VAL=$?
 		if [ $RET_VAL -ne 0 ]; then
+			echo odp_sched_perf FAILED
+			exit $RET_VAL
+		fi
+
+		echo odp_sched_perf -p 2 -c $1
+		echo ===============================================
+		$TEST_DIR/odp_sched_perf${EXEEXT} -p 2 -c $1
+		RET_VAL=$?
+		if [ $RET_VAL -eq $TEST_SKIPPED ]; then
+			echo "odp_sched_perf -p 2 -c $1 skipped (event vectors not supported)"
+		elif [ $RET_VAL -ne 0 ]; then
 			echo odp_sched_perf FAILED
 			exit $RET_VAL
 		fi
