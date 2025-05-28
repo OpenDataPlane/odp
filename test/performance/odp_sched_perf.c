@@ -100,6 +100,7 @@ typedef struct test_global_t {
 	odp_schedule_config_t schedule_config;
 	odp_barrier_t barrier;
 	odp_pool_t pool;
+	odp_pool_t evv_pool;
 	odp_cpumask_t cpumask;
 	odp_shm_t ctx_shm;
 	odp_queue_t queue[MAX_QUEUES];
@@ -177,7 +178,7 @@ static void print_usage(void)
 	       "  -m, --rw_words         Number of event data words (uint64_t) to modify before enqueueing it. Default: 0.\n"
 	       "  -u, --uarea_rd         Number of user area words (uint64_t) to read on every event. Default: 0.\n"
 	       "  -U, --uarea_rw         Number of user area words (uint64_t) to modify on every event. Default: 0.\n"
-	       "  -p, --pool_type        Pool type. 0: buffer, 1: packet. Default: 0.\n"
+	       "  -p, --pool_type        Pool type. 0: buffer, 1: packet, 2: event vector. Default: 0.\n"
 	       "  -v, --verbose          Verbose output.\n"
 	       "  -h, --help             This help\n"
 	       "\n");
@@ -331,13 +332,20 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 			break;
 		}
 	}
-	if (pool_type == 0) {
+	switch (pool_type) {
+	case 0:
 		test_options->pool_type = ODP_POOL_BUFFER;
-	} else if (pool_type == 1) {
+		break;
+	case 1:
 		test_options->pool_type = ODP_POOL_PACKET;
-	} else {
+		break;
+	case 2:
+		test_options->pool_type = ODP_POOL_EVENT_VECTOR;
+		break;
+	default:
 		ODPH_ERR("Invalid pool type: %d.\n", pool_type);
 		ret = -1;
+		break;
 	}
 
 	test_options->touch_data = test_options->rd_words ||
@@ -510,8 +518,9 @@ static void print_options(test_options_t *options)
 		printf(" (rd: %u, rw: %u)", 8 * options->uarea_rd, 8 * options->uarea_rw);
 	printf("\n");
 
-	printf("  pool type                 %s\n", options->pool_type == ODP_POOL_BUFFER ?
-						   "buffer" : "packet");
+	printf("  pool type                 %s\n", options->pool_type == ODP_POOL_BUFFER ? "buffer"
+						   : options->pool_type == ODP_POOL_PACKET ? "packet"
+						   : "event vector");
 
 	printf("  queue type                %s\n", options->queue_type == 0 ? "parallel" :
 						   options->queue_type == 1 ? "atomic" :
@@ -524,36 +533,35 @@ static void print_options(test_options_t *options)
 	printf("  write                     %u bytes\n\n", options->tot_rw_size);
 }
 
-static int create_pool(test_global_t *global)
+static int create_pool_helper(const char *name, odp_pool_t *pool_ptr, odp_pool_type_t pool_type,
+			      uint32_t tot_event, uint32_t uarea_size,
+			      uint32_t event_size)
 {
 	odp_pool_capability_t pool_capa;
 	odp_pool_param_t pool_param;
-	odp_pool_t pool;
-	uint32_t max_num, max_size, max_uarea;
-	test_options_t *test_options = &global->test_options;
-	uint32_t tot_event = test_options->tot_event;
-	uint32_t event_size = 16;
-	uint32_t uarea_size = test_options->uarea_size;
-
-	if (test_options->touch_data) {
-		event_size = test_options->rd_words + test_options->rw_words;
-		event_size = 8 * event_size;
-	}
-	test_options->event_size = event_size;
+	uint32_t max_num, max_uarea;
+	uint32_t max_vector_size = 0;
+	uint32_t max_size = 0;
+	uint32_t max_vector_pools = 0;
 
 	if (odp_pool_capability(&pool_capa)) {
 		ODPH_ERR("Error: pool capa failed\n");
 		return -1;
 	}
 
-	if (test_options->pool_type == ODP_POOL_BUFFER) {
+	if (pool_type == ODP_POOL_BUFFER) {
 		max_num = pool_capa.buf.max_num;
 		max_size = pool_capa.buf.max_size;
 		max_uarea = pool_capa.buf.max_uarea_size;
-	} else {
+	} else if (pool_type == ODP_POOL_PACKET) {
 		max_num = pool_capa.pkt.max_num;
 		max_size = pool_capa.pkt.max_seg_len;
 		max_uarea = pool_capa.pkt.max_uarea_size;
+	} else {
+		max_num = pool_capa.event_vector.max_num;
+		max_vector_size = pool_capa.event_vector.max_size;
+		max_uarea = pool_capa.event_vector.max_uarea_size;
+		max_vector_pools = pool_capa.event_vector.max_pools;
 	}
 
 	if (max_num && tot_event > max_num) {
@@ -571,29 +579,65 @@ static int create_pool(test_global_t *global)
 		return -1;
 	}
 
-	odp_pool_param_init(&pool_param);
-	if (test_options->pool_type == ODP_POOL_BUFFER) {
-		pool_param.type = ODP_POOL_BUFFER;
-		pool_param.buf.num = tot_event;
-		pool_param.buf.size = event_size;
-		pool_param.buf.align = 8;
-		pool_param.buf.uarea_size = uarea_size;
-	} else {
-		pool_param.type = ODP_POOL_PACKET;
-		pool_param.pkt.num = tot_event;
-		pool_param.pkt.len = event_size;
-		pool_param.pkt.seg_len = event_size;
-		pool_param.pkt.align = 8;
-		pool_param.pkt.uarea_size = uarea_size;
+	if (pool_type == ODP_POOL_EVENT_VECTOR && !max_vector_pools) {
+		ODPH_ERR("Error: event vector pools not supported\n");
+		return 77;
 	}
 
-	pool = odp_pool_create("sched perf", &pool_param);
-	if (pool == ODP_POOL_INVALID) {
-		ODPH_ERR("Error: pool create failed\n");
+	odp_pool_param_init(&pool_param);
+	pool_param.type = pool_type;
+
+	if (pool_param.type == ODP_POOL_BUFFER) {
+		pool_param.buf.num        = tot_event;
+		pool_param.buf.size       = event_size;
+		pool_param.buf.align      = 8;
+		pool_param.buf.uarea_size = uarea_size;
+	} else if (pool_param.type == ODP_POOL_PACKET) {
+		pool_param.pkt.num        = tot_event;
+		pool_param.pkt.len        = event_size;
+		pool_param.pkt.seg_len    = event_size;
+		pool_param.pkt.align      = 8;
+		pool_param.pkt.uarea_size = uarea_size;
+	} else {
+		pool_param.event_vector.num        = tot_event;
+		pool_param.event_vector.uarea_size = uarea_size;
+		pool_param.event_vector.max_size   = max_vector_size;
+	}
+
+	*pool_ptr = odp_pool_create(name, &pool_param);
+	if (*pool_ptr == ODP_POOL_INVALID) {
+		ODPH_ERR("Pool creation failed for type %d (%s)\n", pool_param.type, name);
 		return -1;
 	}
 
-	global->pool = pool;
+	return 0;
+}
+
+static int create_pool(test_global_t *global)
+{
+	test_options_t *test_options = &global->test_options;
+	uint32_t tot_event = test_options->tot_event;
+	uint32_t event_size = 16;
+	uint32_t uarea_size = test_options->uarea_size;
+	int ret;
+
+	if (test_options->touch_data) {
+		event_size = test_options->rd_words + test_options->rw_words;
+		event_size = 8 * event_size;
+	}
+	test_options->event_size = event_size;
+
+	ret = create_pool_helper("sched perf", &global->pool, test_options->pool_type, tot_event,
+				 uarea_size, event_size);
+	if (ret)
+		return ret;
+
+	if (test_options->pool_type == ODP_POOL_EVENT_VECTOR) {
+		ret = create_pool_helper("sched perf event vector content", &global->evv_pool,
+					 ODP_POOL_BUFFER, tot_event, 0, event_size);
+		if (ret)
+			return ret;
+	}
 
 	return 0;
 }
@@ -810,7 +854,7 @@ static int create_queues(test_global_t *global)
 
 				data  = odp_buffer_addr(buf);
 				words = odp_buffer_size(buf) / 8;
-			} else {
+			} else if (test_options->pool_type == ODP_POOL_PACKET) {
 				odp_packet_t pkt = odp_packet_alloc(pool, event_size);
 
 				if (pkt == ODP_PACKET_INVALID) {
@@ -821,6 +865,29 @@ static int create_queues(test_global_t *global)
 
 				data  = odp_packet_data(pkt);
 				words = odp_packet_seg_len(pkt) / 8;
+			} else {
+				odp_event_vector_t evv = odp_event_vector_alloc(pool);
+				odp_event_t *tbl;
+				odp_buffer_t buf;
+
+				if (evv == ODP_EVENT_VECTOR_INVALID) {
+					ODPH_ERR("Error: alloc failed %u/%u\n", i, j);
+					return -1;
+				}
+				odp_event_vector_tbl(evv, &tbl);
+				buf = odp_buffer_alloc(global->evv_pool);
+
+				if (buf == ODP_BUFFER_INVALID) {
+					ODPH_ERR("Error: alloc failed %u/%u\n", i, j);
+					odp_event_vector_free(evv);
+					return -1;
+				}
+				tbl[0] = odp_buffer_to_event(buf);
+				data   = odp_buffer_addr(buf);
+				words  = odp_buffer_size(buf) / 8;
+
+				odp_event_vector_size_set(evv, 1);
+				ev = odp_event_vector_to_event(evv);
 			}
 
 			init_val = init_data(init_val, data, words);
@@ -1010,12 +1077,19 @@ static uint64_t rw_data(odp_event_t ev[], int num, uint32_t rd_words, uint32_t r
 	uint64_t *data;
 	uint32_t j;
 	uint64_t sum = 0;
+	odp_event_vector_t evv;
+	odp_event_t *tbl;
 
 	for (int i = 0; i < num; i++) {
-		if (pool_type == ODP_POOL_BUFFER)
+		if (pool_type == ODP_POOL_BUFFER) {
 			data = odp_buffer_addr(odp_buffer_from_event(ev[i]));
-		else
+		} else if (pool_type == ODP_POOL_PACKET) {
 			data = odp_packet_data(odp_packet_from_event(ev[i]));
+		} else {
+			evv = odp_event_vector_from_event(ev[i]);
+			odp_event_vector_tbl(evv, &tbl);
+			data = odp_buffer_addr(odp_buffer_from_event(tbl[0]));
+		}
 
 		for (j = 0; j < rd_words; j++)
 			sum += data[j];
@@ -1036,12 +1110,19 @@ static uint64_t rw_data_stress(odp_event_t ev[], int num, uint32_t rd_words, uin
 	uint64_t word;
 	uint32_t j;
 	uint64_t sum = 0;
+	odp_event_vector_t evv;
+	odp_event_t *tbl;
 
 	for (int i = 0; i < num; i++) {
-		if (pool_type == ODP_POOL_BUFFER)
+		if (pool_type == ODP_POOL_BUFFER) {
 			data = odp_buffer_addr(odp_buffer_from_event(ev[i]));
-		else
+		} else if (pool_type == ODP_POOL_PACKET) {
 			data = odp_packet_data(odp_packet_from_event(ev[i]));
+		} else {
+			evv = odp_event_vector_from_event(ev[i]);
+			odp_event_vector_tbl(evv, &tbl);
+			data = odp_buffer_addr(odp_buffer_from_event(tbl[0]));
+		}
 
 		for (j = 0; j < rd_words + rw_words; j++) {
 			word = data[j];
@@ -1512,6 +1593,7 @@ int main(int argc, char **argv)
 	odp_shm_t shm;
 	test_global_t *global;
 	test_common_options_t common_options;
+	int ret;
 
 	/* Let helper collect its own arguments (e.g. --odph_proc) */
 	argc = odph_parse_options(argc, argv);
@@ -1598,8 +1680,9 @@ int main(int argc, char **argv)
 	if (set_num_cpu(global))
 		return -1;
 
-	if (create_pool(global))
-		return -1;
+	ret = create_pool(global);
+	if (ret)
+		return ret;
 
 	if (create_groups(global))
 		return -1;
@@ -1631,6 +1714,12 @@ int main(int argc, char **argv)
 
 	if (odp_pool_destroy(global->pool)) {
 		printf("Error: Pool destroy failed.\n");
+		return -1;
+	}
+
+	if (global->test_options.pool_type == ODP_POOL_EVENT_VECTOR &&
+	    odp_pool_destroy(global->evv_pool)) {
+		printf("Error: Event vector content pool destroy failed.\n");
 		return -1;
 	}
 
