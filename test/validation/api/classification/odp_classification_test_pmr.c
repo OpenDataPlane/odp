@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2015-2018 Linaro Limited
- * Copyright (c) 2019-2023 Nokia
+ * Copyright (c) 2019-2025 Nokia
  */
 
 #include "odp_classification_testsuites.h"
@@ -102,6 +102,25 @@ int classification_suite_pmr_term(void)
 	return ret;
 }
 
+static uint32_t send_packet(odp_packet_t pkt, odp_pktio_t pktio)
+{
+	uint32_t seqno;
+	odph_ethhdr_t *eth;
+	uint32_t len;
+
+	seqno = cls_pkt_get_seq(pkt);
+	CU_ASSERT(seqno != TEST_SEQ_INVALID);
+
+	eth = (odph_ethhdr_t *)odp_packet_l2_ptr(pkt, &len);
+	CU_ASSERT_FATAL(len >= sizeof(*eth));
+	odp_pktio_mac_addr(pktio, eth->src.addr, ODPH_ETHADDR_LEN);
+	odp_pktio_mac_addr(pktio, eth->dst.addr, ODPH_ETHADDR_LEN);
+
+	enqueue_pktio_interface(pkt, pktio);
+
+	return seqno;
+}
+
 static void cls_pktin_classifier_flag(void)
 {
 	odp_packet_t pkt;
@@ -123,7 +142,6 @@ static void cls_pktin_classifier_flag(void)
 	odp_pool_t pool;
 	odp_pool_t pool_recv;
 	odp_pmr_param_t pmr_param;
-	odph_ethhdr_t *eth;
 
 	val  = odp_cpu_to_be_16(CLS_DEFAULT_DPORT);
 	mask = odp_cpu_to_be_16(0xffff);
@@ -163,16 +181,10 @@ static void cls_pktin_classifier_flag(void)
 
 	pkt = create_packet(default_pkt_info);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
-	seqno = cls_pkt_get_seq(pkt);
-	CU_ASSERT(seqno != TEST_SEQ_INVALID);
-	eth = (odph_ethhdr_t *)odp_packet_l2_ptr(pkt, NULL);
-	odp_pktio_mac_addr(pktio, eth->src.addr, ODPH_ETHADDR_LEN);
-	odp_pktio_mac_addr(pktio, eth->dst.addr, ODPH_ETHADDR_LEN);
-
 	tcp = (odph_tcphdr_t *)odp_packet_l4_ptr(pkt, NULL);
 	tcp->dst_port = val;
 
-	enqueue_pktio_interface(pkt, pktio);
+	seqno = send_packet(pkt, pktio);
 
 	/* since classifier flag is disabled in pktin queue configuration
 	packet will not be delivered in classifier queues */
@@ -220,7 +232,7 @@ static void cls_pmr_term_tcp_dport_n(int num_pkt)
 	odp_pool_t pool;
 	odp_pool_t pool_recv;
 	odp_pmr_param_t pmr_param;
-	odph_ethhdr_t *eth;
+
 	val  = odp_cpu_to_be_16(CLS_DEFAULT_DPORT);
 	mask = odp_cpu_to_be_16(0xffff);
 
@@ -258,16 +270,10 @@ static void cls_pmr_term_tcp_dport_n(int num_pkt)
 	for (i = 0; i < num_pkt; i++) {
 		pkt = create_packet(default_pkt_info);
 		CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
-		seqno[i] = cls_pkt_get_seq(pkt);
-		CU_ASSERT(seqno[i] != TEST_SEQ_INVALID);
-		eth = (odph_ethhdr_t *)odp_packet_l2_ptr(pkt, NULL);
-		odp_pktio_mac_addr(pktio, eth->src.addr, ODPH_ETHADDR_LEN);
-		odp_pktio_mac_addr(pktio, eth->dst.addr, ODPH_ETHADDR_LEN);
-
 		tcp = (odph_tcphdr_t *)odp_packet_l4_ptr(pkt, NULL);
 		tcp->dst_port = val;
 
-		enqueue_pktio_interface(pkt, pktio);
+		seqno[i] = send_packet(pkt, pktio);
 	}
 
 	for (i = 0; i < num_pkt; i++) {
@@ -285,16 +291,10 @@ static void cls_pmr_term_tcp_dport_n(int num_pkt)
 	for (i = 0; i < num_pkt; i++) {
 		pkt = create_packet(default_pkt_info);
 		CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
-		seqno[i] = cls_pkt_get_seq(pkt);
-		CU_ASSERT(seqno[i] != TEST_SEQ_INVALID);
-		eth = (odph_ethhdr_t *)odp_packet_l2_ptr(pkt, NULL);
-		odp_pktio_mac_addr(pktio, eth->src.addr, ODPH_ETHADDR_LEN);
-		odp_pktio_mac_addr(pktio, eth->dst.addr, ODPH_ETHADDR_LEN);
-
 		tcp = (odph_tcphdr_t *)odp_packet_l4_ptr(pkt, NULL);
 		tcp->dst_port = odp_cpu_to_be_16(CLS_DEFAULT_DPORT + 1);
 
-		enqueue_pktio_interface(pkt, pktio);
+		seqno[i] = send_packet(pkt, pktio);
 	}
 
 	for (i = 0; i < num_pkt; i++) {
@@ -315,9 +315,6 @@ static void cls_pmr_term_tcp_dport_n(int num_pkt)
 	for (i = 0; i < 2 * num_pkt; i++) {
 		pkt = create_packet(default_pkt_info);
 		CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
-		eth = (odph_ethhdr_t *)odp_packet_l2_ptr(pkt, NULL);
-		odp_pktio_mac_addr(pktio, eth->src.addr, ODPH_ETHADDR_LEN);
-		odp_pktio_mac_addr(pktio, eth->dst.addr, ODPH_ETHADDR_LEN);
 
 		tcp = (odph_tcphdr_t *)odp_packet_l4_ptr(pkt, NULL);
 
@@ -329,7 +326,7 @@ static void cls_pmr_term_tcp_dport_n(int num_pkt)
 			tcp->dst_port = odp_cpu_to_be_16(CLS_DEFAULT_DPORT + 1);
 		}
 
-		enqueue_pktio_interface(pkt, pktio);
+		(void)send_packet(pkt, pktio);
 	}
 
 	recv_queue = 0;
@@ -396,7 +393,6 @@ static void test_pmr(const odp_pmr_param_t *pmr_param, odp_packet_t pkt,
 	odp_pmr_t pmr;
 	odp_cos_t cos;
 	odp_cls_cos_param_t cls_param;
-	odph_ethhdr_t *eth;
 
 	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED, pkt_pool, true);
 	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
@@ -422,14 +418,7 @@ static void test_pmr(const odp_pmr_param_t *pmr_param, odp_packet_t pkt,
 	pmr = odp_cls_pmr_create(pmr_param, 1, default_cos, cos);
 	CU_ASSERT(pmr != ODP_PMR_INVALID);
 
-	eth = (odph_ethhdr_t *)odp_packet_l2_ptr(pkt, NULL);
-	odp_pktio_mac_addr(pktio, eth->src.addr, ODPH_ETHADDR_LEN);
-	odp_pktio_mac_addr(pktio, eth->dst.addr, ODPH_ETHADDR_LEN);
-
-	seqno = cls_pkt_get_seq(pkt);
-	CU_ASSERT(seqno != TEST_SEQ_INVALID);
-
-	enqueue_pktio_interface(pkt, pktio);
+	seqno = send_packet(pkt, pktio);
 	pkt = receive_packet(&retqueue, ODP_TIME_SEC_IN_NS, false);
 
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
@@ -999,7 +988,6 @@ static void cls_pmr_pool_set(void)
 	char cosname[ODP_COS_NAME_LEN];
 	odp_cls_cos_param_t cls_param;
 	odp_pmr_param_t pmr_param;
-	odph_ethhdr_t *eth;
 	cls_packet_info_t pkt_info;
 
 	val = ODPH_IPPROTO_UDP;
@@ -1048,13 +1036,8 @@ static void cls_pmr_pool_set(void)
 	pkt_info.l4_type = CLS_PKT_L4_UDP;
 	pkt = create_packet(pkt_info);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
-	seqno = cls_pkt_get_seq(pkt);
-	CU_ASSERT(seqno != TEST_SEQ_INVALID);
-	eth = (odph_ethhdr_t *)odp_packet_l2_ptr(pkt, NULL);
-	odp_pktio_mac_addr(pktio, eth->src.addr, ODPH_ETHADDR_LEN);
-	odp_pktio_mac_addr(pktio, eth->dst.addr, ODPH_ETHADDR_LEN);
 
-	enqueue_pktio_interface(pkt, pktio);
+	seqno = send_packet(pkt, pktio);
 
 	pkt = receive_packet(&retqueue, ODP_TIME_SEC_IN_NS, false);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
@@ -1098,7 +1081,6 @@ static void cls_pmr_queue_set(void)
 	char cosname[ODP_COS_NAME_LEN];
 	odp_cls_cos_param_t cls_param;
 	odp_pmr_param_t pmr_param;
-	odph_ethhdr_t *eth;
 	cls_packet_info_t pkt_info;
 
 	val = ODPH_IPPROTO_UDP;
@@ -1146,13 +1128,8 @@ static void cls_pmr_queue_set(void)
 	pkt_info.l4_type = CLS_PKT_L4_UDP;
 	pkt = create_packet(pkt_info);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
-	seqno = cls_pkt_get_seq(pkt);
-	CU_ASSERT(seqno != TEST_SEQ_INVALID);
-	eth = (odph_ethhdr_t *)odp_packet_l2_ptr(pkt, NULL);
-	odp_pktio_mac_addr(pktio, eth->src.addr, ODPH_ETHADDR_LEN);
-	odp_pktio_mac_addr(pktio, eth->dst.addr, ODPH_ETHADDR_LEN);
 
-	enqueue_pktio_interface(pkt, pktio);
+	seqno = send_packet(pkt, pktio);
 
 	pkt = receive_packet(&retqueue, ODP_TIME_SEC_IN_NS, false);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
@@ -1399,7 +1376,6 @@ static void test_pmr_series(const int num_udp, int marking)
 	odp_pmr_param_t pmr_param;
 	odp_cls_cos_param_t cls_param;
 	odp_pmr_create_opt_t create_opt;
-	odph_ethhdr_t *eth;
 	odph_ipv4hdr_t *ip;
 	odph_udphdr_t *udp;
 	odp_cos_t cos_udp[num_udp];
@@ -1497,18 +1473,11 @@ static void test_pmr_series(const int num_udp, int marking)
 	pkt = create_packet(pkt_info);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 
-	eth = (odph_ethhdr_t *)odp_packet_l2_ptr(pkt, NULL);
 	ip  = (odph_ipv4hdr_t *)odp_packet_l3_ptr(pkt, NULL);
-
-	odp_pktio_mac_addr(pktio, eth->src.addr, ODPH_ETHADDR_LEN);
-	odp_pktio_mac_addr(pktio, eth->dst.addr, ODPH_ETHADDR_LEN);
 	ip->dst_addr  = dst_addr_be;
 	odph_ipv4_csum_update(pkt);
 
-	seqno = cls_pkt_get_seq(pkt);
-	CU_ASSERT(seqno != TEST_SEQ_INVALID);
-
-	enqueue_pktio_interface(pkt, pktio);
+	seqno = send_packet(pkt, pktio);
 
 	pkt = receive_packet(&retqueue, ODP_TIME_SEC_IN_NS, false);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
@@ -1534,20 +1503,14 @@ static void test_pmr_series(const int num_udp, int marking)
 		pkt = create_packet(pkt_info);
 		CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 
-		eth = (odph_ethhdr_t *)odp_packet_l2_ptr(pkt, NULL);
 		ip  = (odph_ipv4hdr_t *)odp_packet_l3_ptr(pkt, NULL);
 		udp = (odph_udphdr_t *)odp_packet_l4_ptr(pkt, NULL);
 
-		odp_pktio_mac_addr(pktio, eth->src.addr, ODPH_ETHADDR_LEN);
-		odp_pktio_mac_addr(pktio, eth->dst.addr, ODPH_ETHADDR_LEN);
 		ip->dst_addr  = dst_addr_be;
 		odph_ipv4_csum_update(pkt);
 		udp->dst_port = odp_cpu_to_be_16(dst_port + i);
 
-		seqno = cls_pkt_get_seq(pkt);
-		CU_ASSERT(seqno != TEST_SEQ_INVALID);
-
-		enqueue_pktio_interface(pkt, pktio);
+		seqno = send_packet(pkt, pktio);
 
 		pkt = receive_packet(&retqueue, ODP_TIME_SEC_IN_NS, false);
 		CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
@@ -1567,13 +1530,8 @@ static void test_pmr_series(const int num_udp, int marking)
 	/* Other packets delivered to default queue */
 	pkt = create_packet(default_pkt_info);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
-	seqno = cls_pkt_get_seq(pkt);
-	CU_ASSERT(seqno != TEST_SEQ_INVALID);
-	eth = (odph_ethhdr_t *)odp_packet_l2_ptr(pkt, NULL);
-	odp_pktio_mac_addr(pktio, eth->src.addr, ODPH_ETHADDR_LEN);
-	odp_pktio_mac_addr(pktio, eth->dst.addr, ODPH_ETHADDR_LEN);
 
-	enqueue_pktio_interface(pkt, pktio);
+	seqno = send_packet(pkt, pktio);
 
 	pkt = receive_packet(&retqueue, ODP_TIME_SEC_IN_NS, false);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
