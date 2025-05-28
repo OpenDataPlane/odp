@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2015-2018 Linaro Limited
- * Copyright (c) 2020-2024 Nokia
+ * Copyright (c) 2020-2025 Nokia
  */
 
 #include "odp_classification_testsuites.h"
@@ -229,6 +229,22 @@ odp_packet_t receive_packet(odp_queue_t *queue, uint64_t ns, odp_bool_t enable_p
 	odp_event_free(ev);
 	return ODP_PACKET_INVALID;
 
+}
+
+odp_packet_t receive_and_check(uint32_t    expected_seqno,
+			       odp_queue_t expected_queue,
+			       odp_pool_t  expected_pool,
+			       odp_bool_t  enable_pktv)
+{
+	odp_packet_t pkt;
+	odp_queue_t queue;
+
+	pkt = receive_packet(&queue, ODP_TIME_SEC_IN_NS, enable_pktv);
+	CU_ASSERT(queue == expected_queue);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+	CU_ASSERT(cls_pkt_get_seq(pkt) == expected_seqno);
+	CU_ASSERT(odp_packet_pool(pkt) == expected_pool);
+	return pkt;
 }
 
 odp_queue_t queue_create(const char *queuename, bool sched)
