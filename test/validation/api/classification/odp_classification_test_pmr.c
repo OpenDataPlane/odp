@@ -21,6 +21,20 @@ static odp_atomic_u32_t seq;
 static cls_packet_info_t default_pkt_info;
 static odp_cls_capability_t cls_capa;
 
+/* Common things initialized in common_test_init() */
+typedef struct test_state_t {
+	odp_pktio_t pktio;
+	odp_queue_t pktin_queue;
+	odp_pool_t  default_pool;
+	odp_cos_t   default_cos;
+	odp_queue_t default_queue;
+} test_state_t;
+
+typedef enum cls_flag_t {
+	DISABLE_CLS,
+	ENABLE_CLS
+} cls_flag_t;
+
 int classification_suite_pmr_init(void)
 {
 	memset(&cls_capa, 0, sizeof(odp_cls_capability_t));
@@ -102,6 +116,30 @@ int classification_suite_pmr_term(void)
 	return ret;
 }
 
+/* We do not do this in suite init to make things start fresh in each test */
+static test_state_t test_init(cls_flag_t cls)
+{
+	test_state_t ts;
+
+	ts.pktio = create_pktio(ODP_QUEUE_TYPE_SCHED, pkt_pool, cls == ENABLE_CLS);
+	CU_ASSERT_FATAL(ts.pktio != ODP_PKTIO_INVALID);
+	CU_ASSERT(odp_pktin_event_queue(ts.pktio, &ts.pktin_queue, 1) == 1);
+	CU_ASSERT(start_pktio(ts.pktio) == 0);
+
+	configure_default_cos(ts.pktio, &ts.default_cos, &ts.default_queue, &ts.default_pool);
+	return ts;
+}
+
+static void test_term(const test_state_t *ts)
+{
+	CU_ASSERT(odp_pktio_default_cos_set(ts->pktio, ODP_COS_INVALID) == 0);
+	CU_ASSERT(odp_cos_destroy(ts->default_cos) == 0);
+	CU_ASSERT(stop_pktio(ts->pktio) == 0);
+	CU_ASSERT(odp_queue_destroy(ts->default_queue) == 0);
+	CU_ASSERT(odp_pool_destroy(ts->default_pool) == 0);
+	CU_ASSERT(odp_pktio_close(ts->pktio) == 0);
+}
+
 static uint32_t send_packet(odp_packet_t pkt, odp_pktio_t pktio)
 {
 	uint32_t seqno;
@@ -123,18 +161,13 @@ static uint32_t send_packet(odp_packet_t pkt, odp_pktio_t pktio)
 
 static void cls_pktin_classifier_flag(void)
 {
+	const test_state_t ts = test_init(DISABLE_CLS);
 	odp_packet_t pkt;
 	odph_tcphdr_t *tcp;
 	uint32_t seqno;
 	uint16_t val;
 	uint16_t mask;
-	int retval;
-	odp_pktio_t pktio;
-	odp_queue_t pktin_queue;
 	odp_queue_t queue;
-	odp_queue_t default_queue;
-	odp_cos_t default_cos;
-	odp_pool_t default_pool;
 	odp_pmr_t pmr;
 	odp_cos_t cos;
 	char cosname[ODP_COS_NAME_LEN];
@@ -146,16 +179,6 @@ static void cls_pktin_classifier_flag(void)
 	mask = odp_cpu_to_be_16(0xffff);
 	seqno = 0;
 
-	/* classifier is disabled in pktin queue configuration */
-	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED, pkt_pool, false);
-	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
-	CU_ASSERT(odp_pktin_event_queue(pktio, &pktin_queue, 1) == 1);
-	retval = start_pktio(pktio);
-	CU_ASSERT(retval == 0);
-
-	configure_default_cos(pktio, &default_cos,
-			      &default_queue, &default_pool);
-
 	queue = queue_create("tcp_dport1", true);
 	CU_ASSERT(queue != ODP_QUEUE_INVALID);
 
@@ -176,7 +199,7 @@ static void cls_pktin_classifier_flag(void)
 	pmr_param.match.mask = &mask;
 	pmr_param.val_sz = sizeof(val);
 
-	pmr = odp_cls_pmr_create(&pmr_param, 1, default_cos, cos);
+	pmr = odp_cls_pmr_create(&pmr_param, 1, ts.default_cos, cos);
 	CU_ASSERT(pmr != ODP_PMR_INVALID);
 
 	pkt = create_packet(default_pkt_info);
@@ -184,39 +207,32 @@ static void cls_pktin_classifier_flag(void)
 	tcp = (odph_tcphdr_t *)odp_packet_l4_ptr(pkt, NULL);
 	tcp->dst_port = val;
 
-	seqno = send_packet(pkt, pktio);
+	seqno = send_packet(pkt, ts.pktio);
 
 	/* since classifier flag is disabled in pktin queue configuration
 	packet will not be delivered in classifier queues */
-	pkt = receive_and_check(seqno, pktin_queue, pkt_pool, false);
+	pkt = receive_and_check(seqno, ts.pktin_queue, pkt_pool, false);
 	odp_packet_free(pkt);
 
 	odp_cls_pmr_destroy(pmr);
 	odp_cos_destroy(cos);
-	odp_pktio_default_cos_set(pktio, ODP_COS_INVALID);
-	odp_cos_destroy(default_cos);
-	stop_pktio(pktio);
 	odp_queue_destroy(queue);
-	odp_queue_destroy(default_queue);
 	odp_pool_destroy(pool);
-	odp_pool_destroy(default_pool);
-	odp_pktio_close(pktio);
+
+	test_term(&ts);
 }
 
 static void cls_pmr_term_tcp_dport_n(int num_pkt)
 {
+	const test_state_t ts = test_init(ENABLE_CLS);
 	odp_packet_t pkt;
 	odph_tcphdr_t *tcp;
 	uint32_t seqno[num_pkt];
 	uint16_t val;
 	uint16_t mask;
-	int retval, i, sent_queue, recv_queue, sent_default, recv_default;
-	odp_pktio_t pktio;
+	int i, sent_queue, recv_queue, sent_default, recv_default;
 	odp_queue_t queue;
 	odp_queue_t retqueue;
-	odp_queue_t default_queue;
-	odp_cos_t default_cos;
-	odp_pool_t default_pool;
 	odp_pmr_t pmr;
 	odp_cos_t cos;
 	char cosname[ODP_COS_NAME_LEN];
@@ -227,14 +243,6 @@ static void cls_pmr_term_tcp_dport_n(int num_pkt)
 	val  = odp_cpu_to_be_16(CLS_DEFAULT_DPORT);
 	mask = odp_cpu_to_be_16(0xffff);
 
-	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED, pkt_pool, true);
-	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
-	retval = start_pktio(pktio);
-	CU_ASSERT(retval == 0);
-
-	configure_default_cos(pktio, &default_cos,
-			      &default_queue, &default_pool);
-
 	queue = queue_create("tcp_dport1", true);
 	CU_ASSERT(queue != ODP_QUEUE_INVALID);
 
@@ -255,7 +263,7 @@ static void cls_pmr_term_tcp_dport_n(int num_pkt)
 	pmr_param.match.mask = &mask;
 	pmr_param.val_sz = sizeof(val);
 
-	pmr = odp_cls_pmr_create(&pmr_param, 1, default_cos, cos);
+	pmr = odp_cls_pmr_create(&pmr_param, 1, ts.default_cos, cos);
 	CU_ASSERT(pmr != ODP_PMR_INVALID);
 
 	for (i = 0; i < num_pkt; i++) {
@@ -264,7 +272,7 @@ static void cls_pmr_term_tcp_dport_n(int num_pkt)
 		tcp = (odph_tcphdr_t *)odp_packet_l4_ptr(pkt, NULL);
 		tcp->dst_port = val;
 
-		seqno[i] = send_packet(pkt, pktio);
+		seqno[i] = send_packet(pkt, ts.pktio);
 	}
 
 	for (i = 0; i < num_pkt; i++) {
@@ -279,11 +287,11 @@ static void cls_pmr_term_tcp_dport_n(int num_pkt)
 		tcp = (odph_tcphdr_t *)odp_packet_l4_ptr(pkt, NULL);
 		tcp->dst_port = odp_cpu_to_be_16(CLS_DEFAULT_DPORT + 1);
 
-		seqno[i] = send_packet(pkt, pktio);
+		seqno[i] = send_packet(pkt, ts.pktio);
 	}
 
 	for (i = 0; i < num_pkt; i++) {
-		pkt = receive_and_check(seqno[i], default_queue, default_pool, false);
+		pkt = receive_and_check(seqno[i], ts.default_queue, ts.default_pool, false);
 		odp_packet_free(pkt);
 	}
 
@@ -305,7 +313,7 @@ static void cls_pmr_term_tcp_dport_n(int num_pkt)
 			tcp->dst_port = odp_cpu_to_be_16(CLS_DEFAULT_DPORT + 1);
 		}
 
-		(void)send_packet(pkt, pktio);
+		(void)send_packet(pkt, ts.pktio);
 	}
 
 	recv_queue = 0;
@@ -314,14 +322,14 @@ static void cls_pmr_term_tcp_dport_n(int num_pkt)
 	for (i = 0; i < 2 * num_pkt; i++) {
 		pkt = receive_packet(&retqueue, ODP_TIME_SEC_IN_NS, false);
 		CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
-		CU_ASSERT(retqueue == queue || retqueue == default_queue);
+		CU_ASSERT(retqueue == queue || retqueue == ts.default_queue);
 
 		tcp = (odph_tcphdr_t *)odp_packet_l4_ptr(pkt, NULL);
 
 		if (retqueue == queue) {
 			recv_queue++;
 			CU_ASSERT(tcp->dst_port == val);
-		} else if (retqueue == default_queue) {
+		} else if (retqueue == ts.default_queue) {
 			recv_default++;
 			CU_ASSERT(tcp->dst_port ==
 				  odp_cpu_to_be_16(CLS_DEFAULT_DPORT + 1));
@@ -334,14 +342,10 @@ static void cls_pmr_term_tcp_dport_n(int num_pkt)
 
 	odp_cls_pmr_destroy(pmr);
 	odp_cos_destroy(cos);
-	odp_pktio_default_cos_set(pktio, ODP_COS_INVALID);
-	odp_cos_destroy(default_cos);
-	stop_pktio(pktio);
 	odp_queue_destroy(queue);
-	odp_queue_destroy(default_queue);
 	odp_pool_destroy(pool);
-	odp_pool_destroy(default_pool);
-	odp_pktio_close(pktio);
+
+	test_term(&ts);
 }
 
 typedef enum match_t {
@@ -359,25 +363,13 @@ typedef enum match_t {
 static void test_pmr(const odp_pmr_param_t *pmr_param, odp_packet_t pkt,
 		     match_t match)
 {
+	const test_state_t ts = test_init(ENABLE_CLS);
 	uint32_t seqno;
-	int retval;
-	odp_pktio_t pktio;
 	odp_queue_t queue;
-	odp_queue_t default_queue;
-	odp_cos_t default_cos;
-	odp_pool_t default_pool;
 	odp_pool_t pool;
 	odp_pmr_t pmr;
 	odp_cos_t cos;
 	odp_cls_cos_param_t cls_param;
-
-	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED, pkt_pool, true);
-	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
-	retval = start_pktio(pktio);
-	CU_ASSERT(retval == 0);
-
-	configure_default_cos(pktio, &default_cos,
-			      &default_queue, &default_pool);
 
 	queue = queue_create("PMR test queue", true);
 	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
@@ -392,26 +384,22 @@ static void test_pmr(const odp_pmr_param_t *pmr_param, odp_packet_t pkt,
 	cos = odp_cls_cos_create("PMR test cos", &cls_param);
 	CU_ASSERT_FATAL(cos != ODP_COS_INVALID);
 
-	pmr = odp_cls_pmr_create(pmr_param, 1, default_cos, cos);
+	pmr = odp_cls_pmr_create(pmr_param, 1, ts.default_cos, cos);
 	CU_ASSERT(pmr != ODP_PMR_INVALID);
 
-	seqno = send_packet(pkt, pktio);
+	seqno = send_packet(pkt, ts.pktio);
 	if (match == MATCH)
 		pkt = receive_and_check(seqno, queue, pool, false);
 	else
-		pkt = receive_and_check(seqno, default_queue, default_pool, false);
+		pkt = receive_and_check(seqno, ts.default_queue, ts.default_pool, false);
 	odp_packet_free(pkt);
 
 	odp_cls_pmr_destroy(pmr);
 	odp_cos_destroy(cos);
-	odp_pktio_default_cos_set(pktio, ODP_COS_INVALID);
-	odp_cos_destroy(default_cos);
-	stop_pktio(pktio);
-	odp_pool_destroy(default_pool);
 	odp_pool_destroy(pool);
 	odp_queue_destroy(queue);
-	odp_queue_destroy(default_queue);
-	odp_pktio_close(pktio);
+
+	test_term(&ts);
 }
 
 static void cls_pmr_term_tcp_sport(void)
@@ -603,14 +591,10 @@ static void cls_pmr_term_ipv6_dscp(void)
 
 static void cls_pmr_term_dmac(void)
 {
+	const test_state_t ts = test_init(ENABLE_CLS);
 	odp_packet_t pkt;
 	uint32_t seqno;
-	int retval;
-	odp_pktio_t pktio;
 	odp_queue_t queue;
-	odp_queue_t default_queue;
-	odp_cos_t default_cos;
-	odp_pool_t default_pool;
 	odp_pool_t pool;
 	odp_pmr_t pmr;
 	odp_cos_t cos;
@@ -622,14 +606,6 @@ static void cls_pmr_term_dmac(void)
 	uint8_t val[]  = {0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee};
 	uint8_t mask[] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 	seqno = 0;
-
-	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED, pkt_pool, true);
-	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
-	retval = start_pktio(pktio);
-	CU_ASSERT(retval == 0);
-
-	configure_default_cos(pktio, &default_cos,
-			      &default_queue, &default_pool);
 
 	queue = queue_create("dmac", true);
 	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
@@ -651,7 +627,7 @@ static void cls_pmr_term_dmac(void)
 	pmr_param.match.mask = &mask;
 	pmr_param.val_sz = ODPH_ETHADDR_LEN;
 
-	pmr = odp_cls_pmr_create(&pmr_param, 1, default_cos, cos);
+	pmr = odp_cls_pmr_create(&pmr_param, 1, ts.default_cos, cos);
 	CU_ASSERT(pmr != ODP_PMR_INVALID);
 
 	pkt_info = default_pkt_info;
@@ -663,7 +639,7 @@ static void cls_pmr_term_dmac(void)
 	seqno = cls_pkt_get_seq(pkt);
 	CU_ASSERT(seqno != TEST_SEQ_INVALID);
 
-	enqueue_pktio_interface(pkt, pktio);
+	enqueue_pktio_interface(pkt, ts.pktio);
 	pkt = receive_and_check(seqno, queue, pool, false);
 	odp_packet_free(pkt);
 
@@ -673,20 +649,16 @@ static void cls_pmr_term_dmac(void)
 	seqno = cls_pkt_get_seq(pkt);
 	CU_ASSERT(seqno != TEST_SEQ_INVALID);
 
-	enqueue_pktio_interface(pkt, pktio);
-	pkt = receive_and_check(seqno, default_queue, default_pool, false);
+	enqueue_pktio_interface(pkt, ts.pktio);
+	pkt = receive_and_check(seqno, ts.default_queue, ts.default_pool, false);
 	odp_packet_free(pkt);
 
 	odp_cls_pmr_destroy(pmr);
 	odp_cos_destroy(cos);
-	odp_pktio_default_cos_set(pktio, ODP_COS_INVALID);
-	odp_cos_destroy(default_cos);
-	stop_pktio(pktio);
-	odp_pool_destroy(default_pool);
 	odp_pool_destroy(pool);
 	odp_queue_destroy(queue);
-	odp_queue_destroy(default_queue);
-	odp_pktio_close(pktio);
+
+	test_term(&ts);
 }
 
 static void cls_pmr_term_packet_len(void)
@@ -923,16 +895,13 @@ static void cls_pmr_term_eth_type_x(void)
 
 static void cls_pmr_pool_set(void)
 {
+	const test_state_t ts = test_init(ENABLE_CLS);
 	odp_packet_t pkt;
 	uint32_t seqno;
 	uint8_t val;
 	uint8_t mask;
 	int retval;
-	odp_pktio_t pktio;
 	odp_queue_t queue;
-	odp_queue_t default_queue;
-	odp_cos_t default_cos;
-	odp_pool_t default_pool;
 	odp_pool_t pool;
 	odp_pool_t pool_new;
 	odp_pmr_t pmr;
@@ -945,14 +914,6 @@ static void cls_pmr_pool_set(void)
 	val = ODPH_IPPROTO_UDP;
 	mask = 0xff;
 	seqno = 0;
-
-	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED, pkt_pool, true);
-	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
-	retval = start_pktio(pktio);
-	CU_ASSERT(retval == 0);
-
-	configure_default_cos(pktio, &default_cos,
-			      &default_queue, &default_pool);
 
 	queue = queue_create("ipproto1", true);
 	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
@@ -981,7 +942,7 @@ static void cls_pmr_pool_set(void)
 	pmr_param.match.mask = &mask;
 	pmr_param.val_sz = sizeof(val);
 
-	pmr = odp_cls_pmr_create(&pmr_param, 1, default_cos, cos);
+	pmr = odp_cls_pmr_create(&pmr_param, 1, ts.default_cos, cos);
 	CU_ASSERT(pmr != ODP_PMR_INVALID);
 
 	pkt_info = default_pkt_info;
@@ -989,35 +950,28 @@ static void cls_pmr_pool_set(void)
 	pkt = create_packet(pkt_info);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 
-	seqno = send_packet(pkt, pktio);
+	seqno = send_packet(pkt, ts.pktio);
 	pkt = receive_and_check(seqno, queue, pool_new, false);
 	odp_packet_free(pkt);
 
 	odp_cls_pmr_destroy(pmr);
 	odp_cos_destroy(cos);
-	odp_pktio_default_cos_set(pktio, ODP_COS_INVALID);
-	odp_cos_destroy(default_cos);
-	stop_pktio(pktio);
-	odp_pool_destroy(default_pool);
 	odp_pool_destroy(pool);
 	odp_pool_destroy(pool_new);
 	odp_queue_destroy(queue);
-	odp_queue_destroy(default_queue);
-	odp_pktio_close(pktio);
+
+	test_term(&ts);
 }
 
 static void cls_pmr_queue_set(void)
 {
+	const test_state_t ts = test_init(ENABLE_CLS);
 	odp_packet_t pkt;
 	uint32_t seqno;
 	uint8_t val;
 	uint8_t mask;
 	int retval;
-	odp_pktio_t pktio;
 	odp_queue_t queue;
-	odp_queue_t default_queue;
-	odp_cos_t default_cos;
-	odp_pool_t default_pool;
 	odp_pool_t pool;
 	odp_queue_t queue_new;
 	odp_pmr_t pmr;
@@ -1030,14 +984,6 @@ static void cls_pmr_queue_set(void)
 	val = ODPH_IPPROTO_UDP;
 	mask = 0xff;
 	seqno = 0;
-
-	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED, pkt_pool, true);
-	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
-	retval = start_pktio(pktio);
-	CU_ASSERT(retval == 0);
-
-	configure_default_cos(pktio, &default_cos,
-			      &default_queue, &default_pool);
 
 	queue = queue_create("ipproto1", true);
 	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
@@ -1066,28 +1012,24 @@ static void cls_pmr_queue_set(void)
 	pmr_param.match.mask = &mask;
 	pmr_param.val_sz = sizeof(val);
 
-	pmr = odp_cls_pmr_create(&pmr_param, 1, default_cos, cos);
+	pmr = odp_cls_pmr_create(&pmr_param, 1, ts.default_cos, cos);
 	CU_ASSERT(pmr != ODP_PMR_INVALID);
 	pkt_info = default_pkt_info;
 	pkt_info.l4_type = CLS_PKT_L4_UDP;
 	pkt = create_packet(pkt_info);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 
-	seqno = send_packet(pkt, pktio);
+	seqno = send_packet(pkt, ts.pktio);
 	pkt = receive_and_check(seqno, queue_new, pool, false);
 	odp_packet_free(pkt);
 
 	odp_cls_pmr_destroy(pmr);
 	odp_cos_destroy(cos);
-	odp_pktio_default_cos_set(pktio, ODP_COS_INVALID);
-	odp_cos_destroy(default_cos);
-	stop_pktio(pktio);
-	odp_pool_destroy(default_pool);
 	odp_pool_destroy(pool);
 	odp_queue_destroy(queue_new);
 	odp_queue_destroy(queue);
-	odp_queue_destroy(default_queue);
-	odp_pktio_close(pktio);
+
+	test_term(&ts);
 }
 
 static void test_pmr_term_ipv4_addr(int dst)
@@ -1295,15 +1237,12 @@ static void test_pmr_term_custom(int custom_l3)
  */
 static void test_pmr_series(const int num_udp, int marking)
 {
+	const test_state_t ts = test_init(ENABLE_CLS);
 	odp_packet_t pkt;
 	uint32_t seqno;
-	int i, retval;
+	int i;
 	cls_packet_info_t pkt_info;
-	odp_pktio_t pktio;
 	odp_pool_t pool;
-	odp_queue_t default_queue;
-	odp_pool_t default_pool;
-	odp_cos_t default_cos;
 	odp_pmr_t pmr_ip;
 	odp_queue_t queue_ip;
 	odp_cos_t cos_ip;
@@ -1319,13 +1258,6 @@ static void test_pmr_series(const int num_udp, int marking)
 	odp_queue_t queue_udp[num_udp];
 	odp_pmr_t pmr_udp[num_udp];
 	uint16_t dst_port = 1000;
-
-	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED, pkt_pool, true);
-	retval = start_pktio(pktio);
-	CU_ASSERT(retval == 0);
-
-	configure_default_cos(pktio, &default_cos,
-			      &default_queue, &default_pool);
 
 	pool = pool_create("pmr_series");
 	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
@@ -1358,9 +1290,9 @@ static void test_pmr_series(const int num_udp, int marking)
 		create_opt.num_terms = 1;
 		create_opt.mark      = MARK_IP;
 
-		pmr_ip = odp_cls_pmr_create_opt(&create_opt, default_cos, cos_ip);
+		pmr_ip = odp_cls_pmr_create_opt(&create_opt, ts.default_cos, cos_ip);
 	} else {
-		pmr_ip = odp_cls_pmr_create(&pmr_param, 1, default_cos, cos_ip);
+		pmr_ip = odp_cls_pmr_create(&pmr_param, 1, ts.default_cos, cos_ip);
 	}
 
 	CU_ASSERT_FATAL(pmr_ip != ODP_PMR_INVALID);
@@ -1414,7 +1346,7 @@ static void test_pmr_series(const int num_udp, int marking)
 	ip->dst_addr  = dst_addr_be;
 	odph_ipv4_csum_update(pkt);
 
-	seqno = send_packet(pkt, pktio);
+	seqno = send_packet(pkt, ts.pktio);
 	pkt = receive_and_check(seqno, queue_ip, pool, false);
 
 	if (marking) {
@@ -1443,7 +1375,7 @@ static void test_pmr_series(const int num_udp, int marking)
 		odph_ipv4_csum_update(pkt);
 		udp->dst_port = odp_cpu_to_be_16(dst_port + i);
 
-		seqno = send_packet(pkt, pktio);
+		seqno = send_packet(pkt, ts.pktio);
 		pkt = receive_and_check(seqno, queue_udp[i], pool, false);
 
 		if (marking) {
@@ -1460,8 +1392,8 @@ static void test_pmr_series(const int num_udp, int marking)
 	pkt = create_packet(default_pkt_info);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 
-	seqno = send_packet(pkt, pktio);
-	pkt = receive_and_check(seqno, default_queue, default_pool, false);
+	seqno = send_packet(pkt, ts.pktio);
+	pkt = receive_and_check(seqno, ts.default_queue, ts.default_pool, false);
 	odp_packet_free(pkt);
 
 	odp_cls_pmr_destroy(pmr_ip);
@@ -1472,18 +1404,14 @@ static void test_pmr_series(const int num_udp, int marking)
 	}
 
 	odp_cos_destroy(cos_ip);
-	odp_pktio_default_cos_set(pktio, ODP_COS_INVALID);
-	odp_cos_destroy(default_cos);
-	stop_pktio(pktio);
-	odp_pool_destroy(default_pool);
 	odp_pool_destroy(pool);
 
 	for (i = 0; i < num_udp; i++)
 		odp_queue_destroy(queue_udp[i]);
 
 	odp_queue_destroy(queue_ip);
-	odp_queue_destroy(default_queue);
-	odp_pktio_close(pktio);
+
+	test_term(&ts);
 }
 
 static void cls_pmr_term_sctp_port(bool is_dport)
