@@ -38,6 +38,7 @@ odp_packet_vector_t odp_packet_vector_alloc(odp_pool_t pool_hdl)
 		return ODP_PACKET_VECTOR_INVALID;
 
 	_ODP_ASSERT(event_vector_hdr_from_event(event)->size == 0);
+	_ODP_ASSERT(event_vector_hdr_from_event(event)->event_hdr.user_flag == 0);
 
 	return odp_packet_vector_from_event(event);
 }
@@ -47,8 +48,7 @@ void odp_packet_vector_free(odp_packet_vector_t pktv)
 	odp_event_vector_hdr_t *pktv_hdr = _odp_packet_vector_hdr(pktv);
 
 	pktv_hdr->size = 0;
-	pktv_hdr->flags.all_flags = 0;
-
+	pktv_hdr->event_hdr.user_flag = 0;
 	_odp_event_free(odp_packet_vector_to_event(pktv));
 }
 
@@ -98,8 +98,8 @@ void odp_packet_vector_print(odp_packet_vector_t pktv)
 	len += _odp_snprint(&str[len], n - len, "  handle         0x%" PRIx64 "\n",
 			    odp_packet_vector_to_u64(pktv));
 	len += _odp_snprint(&str[len], n - len, "  size           %" PRIu32 "\n", pktv_hdr->size);
-	len += _odp_snprint(&str[len], n - len, "  flags          0x%" PRIx32 "\n",
-			    pktv_hdr->flags.all_flags);
+	len += _odp_snprint(&str[len], n - len, "  user flag      %d\n",
+			    pktv_hdr->event_hdr.user_flag);
 	len += _odp_snprint(&str[len], n - len, "  user area      %p\n",
 			    pktv_hdr->event_hdr.user_area);
 

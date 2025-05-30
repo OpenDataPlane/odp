@@ -18,6 +18,7 @@ _odp_event_inline_offset ODP_ALIGNED_CACHE = {
 	.subtype    = offsetof(_odp_event_hdr_t, subtype),
 	.flow_id    = offsetof(_odp_event_hdr_t, flow_id),
 	.pool       = offsetof(_odp_event_hdr_t, pool),
+	.user_flag  = offsetof(_odp_event_hdr_t, user_flag),
 };
 
 #include <odp/visibility_end.h>

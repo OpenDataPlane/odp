@@ -501,6 +501,7 @@ static void init_event_hdr(pool_t *pool, _odp_event_hdr_t *event_hdr, uint32_t e
 	event_hdr->subtype      = ODP_EVENT_NO_SUBTYPE;
 	event_hdr->pool         = _odp_pool_handle(pool);
 	event_hdr->user_area    = uarea;
+	event_hdr->user_flag    = -1;
 
 	/* Store base values for fast init */
 	if (type == ODP_POOL_BUFFER || type == ODP_POOL_PACKET) {
@@ -525,11 +526,13 @@ static void init_event_hdr(pool_t *pool, _odp_event_hdr_t *event_hdr, uint32_t e
 	/* Initialize packet vector metadata */
 	if (type == ODP_POOL_VECTOR) {
 		event_hdr->event_type = ODP_EVENT_PACKET_VECTOR;
+		event_hdr->user_flag = 0;
 	}
 
 	/* Initialize event vector metadata */
 	if (type == ODP_POOL_EVENT_VECTOR) {
 		event_hdr->event_type = ODP_EVENT_VECTOR;
+		event_hdr->user_flag = 0;
 	}
 }
 

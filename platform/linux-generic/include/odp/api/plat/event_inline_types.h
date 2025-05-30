@@ -30,6 +30,7 @@ typedef struct _odp_event_inline_offset_t {
 	uint16_t subtype;
 	uint16_t flow_id;
 	uint16_t pool;
+	uint16_t user_flag;
 
 } _odp_event_inline_offset_t;
 

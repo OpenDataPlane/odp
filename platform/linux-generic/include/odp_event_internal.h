@@ -69,6 +69,9 @@ typedef struct _odp_event_hdr_t {
 	/* Event flow id */
 	uint8_t   flow_id;
 
+	/* User flag (0 or 1, or -1 if not supported) */
+	int8_t user_flag;
+
 } _odp_event_hdr_t;
 
 static inline odp_event_t _odp_event_from_hdr(_odp_event_hdr_t *hdr)

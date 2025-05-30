@@ -1509,6 +1509,8 @@ void odp_packet_print(odp_packet_t pkt)
 	len += _odp_snprint(&str[len], n - len,
 			    "  cls_mark       %" PRIu64 "\n", odp_packet_cls_mark(pkt));
 	len += _odp_snprint(&str[len], n - len,
+			    "  user flag      %d\n", hdr->event_hdr.user_flag);
+	len += _odp_snprint(&str[len], n - len,
 			    "  user ptr       %p\n", hdr->user_ptr);
 	len += _odp_snprint(&str[len], n - len,
 			    "  user area      %p\n", hdr->event_hdr.user_area);
