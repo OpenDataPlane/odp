@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2013-2018 Linaro Limited
- * Copyright (c) 2019-2022 Nokia
+ * Copyright (c) 2019-2025 Nokia
  */
 
 #include <odp_parse_internal.h>
@@ -406,26 +406,14 @@ int _odp_packet_parse_common_l3_l4(packet_parser_t *prs,
 	if (layer == ODP_PROTO_LAYER_L3)
 		return prs->flags.all.error != 0;
 
-	/* Set l4 flag only for known ip_proto */
 	prs->input_flags.l4 = 1;
+	prs->l4_type = ip_proto;
 
 	/* Parse Layer 4 headers */
 	switch (ip_proto) {
-	case _ODP_IPPROTO_ICMPV4:
-	/* Fall through */
-
-	case _ODP_IPPROTO_ICMPV6:
-		prs->input_flags.icmp = 1;
-		break;
-
-	case _ODP_IPPROTO_IPIP:
-		/* Do nothing */
-		break;
-
 	case _ODP_IPPROTO_TCP:
 		if (odp_unlikely(offset + _ODP_TCPHDR_LEN > seg_end))
 			return -1;
-		prs->input_flags.tcp = 1;
 		parse_tcp(prs, &parseptr, frame_len - prs->l4_offset, opt,
 			  l4_part_sum);
 		if (prs->flags.tcp_err && opt.bit.drop_tcp_err)
@@ -435,36 +423,24 @@ int _odp_packet_parse_common_l3_l4(packet_parser_t *prs,
 	case _ODP_IPPROTO_UDP:
 		if (odp_unlikely(offset + _ODP_UDPHDR_LEN > seg_end))
 			return -1;
-		prs->input_flags.udp = 1;
 		parse_udp(prs, &parseptr, opt, l4_part_sum);
 		if (prs->flags.udp_err && opt.bit.drop_udp_err)
 			return -1; /* drop */
 		break;
 
 	case _ODP_IPPROTO_AH:
-		prs->input_flags.ipsec = 1;
-		prs->input_flags.ipsec_ah = 1;
-		break;
-
 	case _ODP_IPPROTO_ESP:
 		prs->input_flags.ipsec = 1;
-		prs->input_flags.ipsec_esp = 1;
 		break;
 
 	case _ODP_IPPROTO_SCTP:
-		prs->input_flags.sctp = 1;
 		parse_sctp(prs, &parseptr, frame_len - prs->l4_offset, opt,
 			   l4_part_sum);
 		if (prs->flags.sctp_err && opt.bit.drop_sctp_err)
 			return -1; /* drop */
 		break;
 
-	case _ODP_IPPROTO_NO_NEXT:
-		prs->input_flags.no_next_hdr = 1;
-		break;
-
 	default:
-		prs->input_flags.l4 = 0;
 		break;
 	}
 

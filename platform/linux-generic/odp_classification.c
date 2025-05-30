@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2014-2018 Linaro Limited
- * Copyright (c) 2019-2024 Nokia
+ * Copyright (c) 2019-2025 Nokia
  */
 
 #include <odp/api/classification.h>
@@ -1001,7 +1001,7 @@ static inline int verify_pmr_tcp_sport(const uint8_t *pkt_addr,
 	uint16_t sport;
 	const _odp_tcphdr_t *tcp;
 
-	if (!pkt_hdr->p.input_flags.tcp)
+	if (pkt_hdr->p.l4_type != ODP_PROTO_L4_TYPE_TCP)
 		return 0;
 	tcp = (const _odp_tcphdr_t *)(pkt_addr + pkt_hdr->p.l4_offset);
 	sport = tcp->src_port;
@@ -1018,7 +1018,7 @@ static inline int verify_pmr_tcp_dport(const uint8_t *pkt_addr,
 	uint16_t dport;
 	const _odp_tcphdr_t *tcp;
 
-	if (!pkt_hdr->p.input_flags.tcp)
+	if (pkt_hdr->p.l4_type != ODP_PROTO_L4_TYPE_TCP)
 		return 0;
 	tcp = (const _odp_tcphdr_t *)(pkt_addr + pkt_hdr->p.l4_offset);
 	dport = tcp->dst_port;
@@ -1035,7 +1035,7 @@ static inline int verify_pmr_udp_dport(const uint8_t *pkt_addr,
 	uint16_t dport;
 	const _odp_udphdr_t *udp;
 
-	if (!pkt_hdr->p.input_flags.udp)
+	if (pkt_hdr->p.l4_type != ODP_PROTO_L4_TYPE_UDP)
 		return 0;
 	udp = (const _odp_udphdr_t *)(pkt_addr + pkt_hdr->p.l4_offset);
 	dport = udp->dst_port;
@@ -1052,7 +1052,7 @@ static inline int verify_pmr_udp_sport(const uint8_t *pkt_addr,
 	uint16_t sport;
 	const _odp_udphdr_t *udp;
 
-	if (!pkt_hdr->p.input_flags.udp)
+	if (pkt_hdr->p.l4_type != ODP_PROTO_L4_TYPE_UDP)
 		return 0;
 	udp = (const _odp_udphdr_t *)(pkt_addr + pkt_hdr->p.l4_offset);
 	sport = udp->src_port;
@@ -1212,9 +1212,9 @@ static inline int verify_pmr_ipsec_spi(const uint8_t *pkt_addr,
 
 	pkt_addr += pkt_hdr->p.l4_offset;
 
-	if (pkt_hdr->p.input_flags.ipsec_ah)
+	if (pkt_hdr->p.l4_type == ODP_PROTO_L4_TYPE_AH)
 		spi = ((const _odp_ahhdr_t *)pkt_addr)->spi;
-	else if (pkt_hdr->p.input_flags.ipsec_esp)
+	else if (pkt_hdr->p.l4_type == ODP_PROTO_L4_TYPE_ESP)
 		spi = ((const _odp_esphdr_t *)pkt_addr)->spi;
 	else
 		return 0;
@@ -1774,14 +1774,14 @@ static uint32_t packet_rss_hash(odp_packet_hdr_t *pkt_hdr,
 			tuple_len += 2;
 		}
 
-		if (pkt_hdr->p.input_flags.tcp && hash_proto.tcp) {
+		if (hash_proto.tcp && pkt_hdr->p.l4_type == ODP_PROTO_L4_TYPE_TCP) {
 			/* add tcp */
 			tcp = (const _odp_tcphdr_t *)(base +
 			       pkt_hdr->p.l4_offset);
 			tuple.v4.sport = tcp->src_port;
 			tuple.v4.dport = tcp->dst_port;
 			tuple_len += 1;
-		} else if (pkt_hdr->p.input_flags.udp && hash_proto.udp) {
+		} else if (hash_proto.udp && pkt_hdr->p.l4_type == ODP_PROTO_L4_TYPE_UDP) {
 			/* add udp */
 			udp = (const _odp_udphdr_t *)(base +
 			       pkt_hdr->p.l4_offset);
@@ -1797,13 +1797,13 @@ static uint32_t packet_rss_hash(odp_packet_hdr_t *pkt_hdr,
 			thash_load_ipv6_addr(ipv6, &tuple);
 			tuple_len += 8;
 		}
-		if (pkt_hdr->p.input_flags.tcp && hash_proto.tcp) {
+		if (hash_proto.tcp && pkt_hdr->p.l4_type == ODP_PROTO_L4_TYPE_TCP) {
 			tcp = (const _odp_tcphdr_t *)(base +
 			       pkt_hdr->p.l4_offset);
 			tuple.v6.sport = tcp->src_port;
 			tuple.v6.dport = tcp->dst_port;
 			tuple_len += 1;
-		} else if (pkt_hdr->p.input_flags.udp && hash_proto.udp) {
+		} else if (hash_proto.udp && pkt_hdr->p.l4_type == ODP_PROTO_L4_TYPE_UDP) {
 			/* add udp */
 			udp = (const _odp_udphdr_t *)(base +
 			       pkt_hdr->p.l4_offset);

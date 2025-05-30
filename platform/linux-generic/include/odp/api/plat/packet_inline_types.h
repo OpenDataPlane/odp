@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2015-2018 Linaro Limited
- * Copyright (c) 2019-2022 Nokia
+ * Copyright (c) 2019-2025 Nokia
  */
 
 
@@ -48,6 +48,7 @@ typedef struct _odp_packet_inline_offset_t {
 	uint16_t timestamp;
 	uint16_t input_flags;
 	uint16_t flags;
+	uint16_t l4_type;
 	uint16_t cls_mark;
 	uint16_t ipsec_ctx;
 	uint16_t crypto_op;
@@ -90,14 +91,6 @@ typedef union {
 
 		uint64_t ipsec:1;     /* IPSec packet. Required by the
 					   odp_packet_has_ipsec_set() func. */
-		uint64_t ipsec_ah:1;  /* IPSec authentication header */
-		uint64_t ipsec_esp:1; /* IPSec encapsulating security
-					   payload */
-		uint64_t udp:1;       /* UDP */
-		uint64_t tcp:1;       /* TCP */
-		uint64_t sctp:1;      /* SCTP */
-		uint64_t icmp:1;      /* ICMP */
-		uint64_t no_next_hdr:1; /* No Next Header */
 
 		uint64_t color:2;     /* Packet color for traffic mgmt */
 		uint64_t nodrop:1;    /* Drop eligibility status */
