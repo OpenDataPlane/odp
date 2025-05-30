@@ -24,7 +24,6 @@ const _odp_event_vector_inline_offset_t _odp_event_vector_inline ODP_ALIGNED_CAC
 	.event     = offsetof(odp_event_vector_hdr_t, event),
 	.pool      = offsetof(odp_event_vector_hdr_t, event_hdr.pool),
 	.size      = offsetof(odp_event_vector_hdr_t, size),
-	.uarea_addr = offsetof(odp_event_vector_hdr_t, uarea_addr),
 	.flags     = offsetof(odp_event_vector_hdr_t, flags)
 };
 
@@ -109,7 +108,8 @@ void odp_event_vector_print(odp_event_vector_t evv)
 	len += _odp_snprint(&str[len], n - len, "  size           %" PRIu32 "\n", evv_hdr->size);
 	len += _odp_snprint(&str[len], n - len, "  flags          0x%" PRIx32 "\n",
 			    evv_hdr->flags.all_flags);
-	len += _odp_snprint(&str[len], n - len, "  user area      %p\n", evv_hdr->uarea_addr);
+	len += _odp_snprint(&str[len], n - len, "  user area      %p\n",
+			    evv_hdr->event_hdr.user_area);
 
 	for (i = 0; i < evv_hdr->size; i++) {
 		odp_event_t ev = evv_hdr->event[i];

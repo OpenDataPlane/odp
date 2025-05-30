@@ -114,7 +114,6 @@ _odp_timeout_inline_offset ODP_ALIGNED_CACHE = {
 	.expiration = offsetof(odp_timeout_hdr_t, expiration),
 	.timer = offsetof(odp_timeout_hdr_t, timer),
 	.user_ptr = offsetof(odp_timeout_hdr_t, user_ptr),
-	.uarea_addr = offsetof(odp_timeout_hdr_t, uarea_addr),
 };
 
 #include <odp/visibility_end.h>
@@ -1968,7 +1967,8 @@ void odp_timeout_print(odp_timeout_t tmo)
 	len += _odp_snprint(&str[len], n - len, "  expiration     %" PRIu64 "\n",
 			    tmo_hdr->expiration);
 	len += _odp_snprint(&str[len], n - len, "  user ptr       %p\n", tmo_hdr->user_ptr);
-	len += _odp_snprint(&str[len], n - len, "  user area      %p\n", tmo_hdr->uarea_addr);
+	len += _odp_snprint(&str[len], n - len, "  user area      %p\n",
+			    tmo_hdr->event_hdr.user_area);
 
 	if (timer != ODP_TIMER_INVALID) {
 		timer_pool_t *tp = handle_to_tp(timer);

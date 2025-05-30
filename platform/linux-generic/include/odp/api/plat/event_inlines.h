@@ -6,18 +6,14 @@
 #ifndef ODP_PLAT_EVENT_INLINES_H_
 #define ODP_PLAT_EVENT_INLINES_H_
 
-#include <odp/api/buffer_types.h>
 #include <odp/api/event_types.h>
 #include <odp/api/packet_types.h>
 #include <odp/api/pool_types.h>
-#include <odp/api/timer_types.h>
 
-#include <odp/api/plat/buffer_inline_types.h>
 #include <odp/api/plat/debug_inlines.h>
 #include <odp/api/plat/event_inline_types.h>
 #include <odp/api/plat/event_vector_inline_types.h>
 #include <odp/api/plat/packet_inline_types.h>
-#include <odp/api/plat/timer_inline_types.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -99,28 +95,13 @@ _ODP_INLINE odp_pool_t odp_event_pool(odp_event_t event)
 
 _ODP_INLINE void *odp_event_user_area(odp_event_t event)
 {
-	const odp_event_type_t type = __odp_event_type_get(event);
-
-	switch (type) {
-	case ODP_EVENT_BUFFER:
-	case ODP_EVENT_ML_COMPL:
-	case ODP_EVENT_DMA_COMPL:
-		return _odp_buffer_get((odp_buffer_t)event, void *, uarea_addr);
-	case ODP_EVENT_PACKET:
-		return _odp_pkt_get((odp_packet_t)event, void *, user_area);
-	case ODP_EVENT_VECTOR:
-	case ODP_EVENT_PACKET_VECTOR:
-		return _odp_event_vect_get(event, void *, uarea_addr);
-	case ODP_EVENT_TIMEOUT:
-		return _odp_timeout_hdr_field((odp_timeout_t)event, void *, uarea_addr);
-	default:
-		return NULL;
-	}
+	return _odp_event_hdr_field(event, void *, user_area);
 }
 
 _ODP_INLINE void *odp_event_user_area_and_flag(odp_event_t event, int *flag)
 {
 	const odp_event_type_t type = __odp_event_type_get(event);
+	void *uarea = _odp_event_hdr_field(event, void *, user_area);
 
 	_ODP_ASSERT(flag != NULL);
 
@@ -129,7 +110,7 @@ _ODP_INLINE void *odp_event_user_area_and_flag(odp_event_t event, int *flag)
 	case ODP_EVENT_DMA_COMPL:
 	case ODP_EVENT_ML_COMPL:
 		*flag = -1;
-		return _odp_buffer_get((odp_buffer_t)event, void *, uarea_addr);
+		return uarea;
 	case ODP_EVENT_PACKET:
 	{
 		_odp_packet_flags_t pkt_flags;
@@ -138,7 +119,7 @@ _ODP_INLINE void *odp_event_user_area_and_flag(odp_event_t event, int *flag)
 		pkt_flags.all_flags = _odp_pkt_get(pkt, uint32_t, flags);
 		*flag = pkt_flags.user_flag;
 
-		return _odp_pkt_get(pkt, void *, user_area);
+		return uarea;
 	}
 	case ODP_EVENT_VECTOR:
 	case ODP_EVENT_PACKET_VECTOR:
@@ -148,11 +129,11 @@ _ODP_INLINE void *odp_event_user_area_and_flag(odp_event_t event, int *flag)
 		v_flags.all_flags = _odp_event_vect_get(event, uint32_t, flags);
 		*flag = v_flags.user_flag;
 
-		return _odp_event_vect_get(event, void *, uarea_addr);
+		return uarea;
 	}
 	case ODP_EVENT_TIMEOUT:
 		*flag = -1;
-		return _odp_timeout_hdr_field((odp_timeout_t)event, void *, uarea_addr);
+		return uarea;
 	default:
 		*flag = -1;
 		return NULL;

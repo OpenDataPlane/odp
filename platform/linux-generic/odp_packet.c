@@ -57,7 +57,6 @@ const _odp_packet_inline_offset_t _odp_packet_inline ODP_ALIGNED_CACHE = {
 	.input          = offsetof(odp_packet_hdr_t, input),
 	.seg_count      = offsetof(odp_packet_hdr_t, seg_count),
 	.user_ptr       = offsetof(odp_packet_hdr_t, user_ptr),
-	.user_area      = offsetof(odp_packet_hdr_t, uarea_addr),
 	.l2_offset      = offsetof(odp_packet_hdr_t, p.l2_offset),
 	.l3_offset      = offsetof(odp_packet_hdr_t, p.l3_offset),
 	.l4_offset      = offsetof(odp_packet_hdr_t, p.l4_offset),
@@ -1512,7 +1511,7 @@ void odp_packet_print(odp_packet_t pkt)
 	len += _odp_snprint(&str[len], n - len,
 			    "  user ptr       %p\n", hdr->user_ptr);
 	len += _odp_snprint(&str[len], n - len,
-			    "  user area      %p\n", hdr->uarea_addr);
+			    "  user area      %p\n", hdr->event_hdr.user_area);
 	len += _odp_snprint(&str[len], n - len,
 			    "  l2_offset      %" PRIu32 "\n", hdr->p.l2_offset);
 	len += _odp_snprint(&str[len], n - len,

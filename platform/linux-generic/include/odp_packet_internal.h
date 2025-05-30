@@ -88,8 +88,6 @@ typedef struct ODP_ALIGNED_CACHE odp_packet_hdr_t {
 
 	packet_parser_t p;
 
-	uint64_t unused_padding;
-
 	/* --- 64-byte cache line boundary --- */
 
 	odp_pktio_t input;
@@ -123,16 +121,13 @@ typedef struct ODP_ALIGNED_CACHE odp_packet_hdr_t {
 	/* Flow hash value */
 	uint32_t flow_hash;
 
-	/* User area pointer */
-	void *uarea_addr;
-
 	/* User context pointer */
 	const void *user_ptr;
 
-	/* --- 64-byte cache line boundary --- */
-
 	/* Timestamp value */
 	odp_time_t timestamp;
+
+	/* --- 64-byte cache line boundary --- */
 
 	/* Classifier mark */
 	uint16_t cls_mark;
@@ -349,26 +344,27 @@ static inline void _odp_packet_copy_md(odp_packet_hdr_t *dst_hdr,
 
 	dst_hdr->p = src_hdr->p;
 
-	if (src_hdr->uarea_addr) {
+	if (src_hdr->event_hdr.user_area) {
 		if (uarea_copy) {
 			const pool_t *src_pool = _odp_pool_entry(src_hdr->event_hdr.pool);
 			const pool_t *dst_pool = _odp_pool_entry(dst_hdr->event_hdr.pool);
 			const uint32_t src_uarea_size = src_pool->param_uarea_size;
 			const uint32_t dst_uarea_size = dst_pool->param_uarea_size;
 
-			_ODP_ASSERT(dst_hdr->uarea_addr != NULL);
+			_ODP_ASSERT(dst_hdr->event_hdr.user_area != NULL);
 			_ODP_ASSERT(dst_uarea_size >= src_uarea_size);
 
-			memcpy(dst_hdr->uarea_addr, src_hdr->uarea_addr, src_uarea_size);
+			memcpy(dst_hdr->event_hdr.user_area,
+			       src_hdr->event_hdr.user_area, src_uarea_size);
 		} else {
-			void *src_uarea = src_hdr->uarea_addr;
+			void *src_uarea = src_hdr->event_hdr.user_area;
 
 			/* If user area exists, packets should always be from the same pool, so
 			 * user area pointers can simply be swapped. */
 			_ODP_ASSERT(dst_hdr->event_hdr.pool == src_hdr->event_hdr.pool);
 
-			src_hdr->uarea_addr = dst_hdr->uarea_addr;
-			dst_hdr->uarea_addr = src_uarea;
+			src_hdr->event_hdr.user_area = dst_hdr->event_hdr.user_area;
+			dst_hdr->event_hdr.user_area = src_uarea;
 		}
 	}
 

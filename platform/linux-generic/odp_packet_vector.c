@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright (c) 2020-2022 Nokia
+ * Copyright (c) 2020-2025 Nokia
  */
 
 #include <odp/api/align.h>
@@ -100,7 +100,8 @@ void odp_packet_vector_print(odp_packet_vector_t pktv)
 	len += _odp_snprint(&str[len], n - len, "  size           %" PRIu32 "\n", pktv_hdr->size);
 	len += _odp_snprint(&str[len], n - len, "  flags          0x%" PRIx32 "\n",
 			    pktv_hdr->flags.all_flags);
-	len += _odp_snprint(&str[len], n - len, "  user area      %p\n", pktv_hdr->uarea_addr);
+	len += _odp_snprint(&str[len], n - len, "  user area      %p\n",
+			    pktv_hdr->event_hdr.user_area);
 
 	for (i = 0; i < pktv_hdr->size; i++) {
 		odp_packet_t pkt = odp_packet_from_event(pktv_hdr->event[i]);

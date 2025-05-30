@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2018 Linaro Limited
- * Copyright (c) 2022 Nokia
+ * Copyright (c) 2022-2025 Nokia
  */
 
 #ifndef ODP_PLAT_EVENT_INLINE_TYPES_H_
@@ -26,6 +26,7 @@ extern "C" {
 typedef struct _odp_event_inline_offset_t {
 	uint16_t event_type;
 	uint16_t base_data;
+	uint16_t user_area;
 	uint16_t subtype;
 	uint16_t flow_id;
 	uint16_t pool;
