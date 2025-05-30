@@ -57,9 +57,6 @@ typedef struct _odp_event_hdr_t {
 	/* Combined pool and event index */
 	_odp_event_index_t index;
 
-	/* Pool type */
-	int8_t    type;
-
 	/* Event type. Maybe different than pool type (crypto compl event) */
 	int8_t    event_type;
 
