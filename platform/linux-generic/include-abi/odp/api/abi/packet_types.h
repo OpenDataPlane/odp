@@ -61,41 +61,6 @@ typedef enum {
 	ODP_PACKET_CHKSUM_OK
 } odp_packet_chksum_status_t;
 
-typedef struct odp_packet_parse_result_flag_t {
-	union {
-		uint64_t all;
-
-		struct {
-			uint64_t has_error    : 1;
-			uint64_t has_l2_error : 1;
-			uint64_t has_l3_error : 1;
-			uint64_t has_l4_error : 1;
-			uint64_t has_l2 : 1;
-			uint64_t has_l3 : 1;
-			uint64_t has_l4 : 1;
-			uint64_t has_eth : 1;
-			uint64_t has_eth_bcast : 1;
-			uint64_t has_eth_mcast : 1;
-			uint64_t has_jumbo : 1;
-			uint64_t has_vlan : 1;
-			uint64_t has_vlan_qinq : 1;
-			uint64_t has_arp : 1;
-			uint64_t has_ipv4 : 1;
-			uint64_t has_ipv6 : 1;
-			uint64_t has_ip_bcast : 1;
-			uint64_t has_ip_mcast : 1;
-			uint64_t has_ipfrag : 1;
-			uint64_t has_ipopt : 1;
-			uint64_t has_ipsec : 1;
-			uint64_t has_udp : 1;
-			uint64_t has_tcp : 1;
-			uint64_t has_sctp : 1;
-			uint64_t has_icmp : 1;
-		};
-	};
-
-} odp_packet_parse_result_flag_t;
-
 /**
  * @}
  */
