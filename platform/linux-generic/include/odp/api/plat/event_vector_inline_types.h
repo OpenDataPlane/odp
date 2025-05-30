@@ -33,7 +33,6 @@ typedef struct _odp_event_vector_inline_offset_t {
 	uint16_t event;
 	uint16_t pool;
 	uint16_t size;
-	uint16_t uarea_addr;
 	uint16_t flags;
 
 } _odp_event_vector_inline_offset_t;

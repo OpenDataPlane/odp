@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright (c) 2020-2022 Nokia
+ * Copyright (c) 2020-2025 Nokia
  */
 
 /**
@@ -16,6 +16,7 @@
 #include <odp/api/pool_types.h>
 
 #include <odp/api/plat/debug_inlines.h>
+#include <odp/api/plat/event_inline_types.h>
 #include <odp/api/plat/event_vector_inline_types.h>
 
 #include <stdint.h>
@@ -81,7 +82,7 @@ _ODP_INLINE void odp_packet_vector_size_set(odp_packet_vector_t pktv, uint32_t s
 
 _ODP_INLINE void *odp_packet_vector_user_area(odp_packet_vector_t pktv)
 {
-	return _odp_event_vect_get(pktv, void *, uarea_addr);
+	return _odp_event_hdr_field((odp_event_t)(uintptr_t)pktv, void *, user_area);
 }
 
 _ODP_INLINE int odp_packet_vector_user_flag(odp_packet_vector_t pktv)

@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright (c) 2019-2023 Nokia
+ * Copyright (c) 2019-2025 Nokia
  */
 
 #ifndef ODP_PLAT_BUFFER_INLINES_H_
@@ -78,7 +78,7 @@ _ODP_INLINE odp_pool_t odp_buffer_pool(odp_buffer_t buf)
 
 _ODP_INLINE void *odp_buffer_user_area(odp_buffer_t buf)
 {
-	return _odp_buffer_get(buf, void *, uarea_addr);
+	return _odp_event_hdr_field((odp_event_t)(uintptr_t)buf, void *, user_area);
 }
 
 /** @endcond */

@@ -204,7 +204,7 @@ _ODP_INLINE void odp_packet_user_ptr_set(odp_packet_t pkt, const void *ptr)
 
 _ODP_INLINE void *odp_packet_user_area(odp_packet_t pkt)
 {
-	return _odp_pkt_get(pkt, void *, user_area);
+	return _odp_event_hdr_field((odp_event_t)(uintptr_t)pkt, void *, user_area);
 }
 
 _ODP_INLINE uint32_t odp_packet_user_area_size(odp_packet_t pkt)
