@@ -1740,7 +1740,6 @@ int _odp_cls_classify_packet(pktio_entry_t *entry, const uint8_t *base,
 	if (*pool == ODP_POOL_INVALID)
 		*pool = entry->pool;
 
-	pkt_hdr->p.input_flags.dst_queue = 1;
 	pkt_hdr->cos = cos->index;
 
 	if (!cos->queue_group) {
