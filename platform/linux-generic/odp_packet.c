@@ -65,6 +65,7 @@ const _odp_packet_inline_offset_t _odp_packet_inline ODP_ALIGNED_CACHE = {
 	.timestamp      = offsetof(odp_packet_hdr_t, timestamp),
 	.input_flags    = offsetof(odp_packet_hdr_t, p.input_flags),
 	.flags          = offsetof(odp_packet_hdr_t, p.flags),
+	.l4_type        = offsetof(odp_packet_hdr_t, p.l4_type),
 	.cls_mark       = offsetof(odp_packet_hdr_t, cls_mark),
 	.ipsec_ctx      = offsetof(odp_packet_hdr_t, ipsec_ctx),
 	.crypto_op      = offsetof(odp_packet_hdr_t, crypto_op_result),
@@ -1474,14 +1475,6 @@ static int packet_print_input_flags(odp_packet_hdr_t *hdr, char *str, int max)
 		len += _odp_snprint(&str[len], max - len, "ipv6 ");
 	if (hdr->p.input_flags.ipsec)
 		len += _odp_snprint(&str[len], max - len, "ipsec ");
-	if (hdr->p.input_flags.udp)
-		len += _odp_snprint(&str[len], max - len, "udp ");
-	if (hdr->p.input_flags.tcp)
-		len += _odp_snprint(&str[len], max - len, "tcp ");
-	if (hdr->p.input_flags.sctp)
-		len += _odp_snprint(&str[len], max - len, "sctp ");
-	if (hdr->p.input_flags.icmp)
-		len += _odp_snprint(&str[len], max - len, "icmp ");
 
 	return len;
 }
@@ -1512,6 +1505,8 @@ void odp_packet_print(odp_packet_t pkt)
 	}
 	len += _odp_snprint(&str[len], n - len,
 			    "  flags          0x%" PRIx32 "\n", hdr->p.flags.all_flags);
+	len += _odp_snprint(&str[len], n - len,
+			    "  l4_type        %u\n", hdr->p.l4_type);
 	len += _odp_snprint(&str[len], n - len,
 			    "  cls_mark       %" PRIu64 "\n", odp_packet_cls_mark(pkt));
 	len += _odp_snprint(&str[len], n - len,
@@ -1908,7 +1903,7 @@ int _odp_packet_l4_chksum(odp_packet_hdr_t *pkt_hdr,
 {
 	/* UDP chksum == 0 case is covered in parse_udp() */
 	if (opt.bit.udp_chksum &&
-	    pkt_hdr->p.input_flags.udp &&
+	    pkt_hdr->p.l4_type == _ODP_IPPROTO_UDP &&
 	    !pkt_hdr->p.input_flags.ipfrag &&
 	    !pkt_hdr->p.input_flags.udp_chksum_zero) {
 		uint16_t sum = ~packet_sum(pkt_hdr,
@@ -1929,7 +1924,7 @@ int _odp_packet_l4_chksum(odp_packet_hdr_t *pkt_hdr,
 	}
 
 	if (opt.bit.tcp_chksum &&
-	    pkt_hdr->p.input_flags.tcp &&
+	    pkt_hdr->p.l4_type == _ODP_IPPROTO_TCP &&
 	    !pkt_hdr->p.input_flags.ipfrag) {
 		uint16_t sum = ~packet_sum(pkt_hdr,
 					   pkt_hdr->p.l3_offset,
@@ -1949,7 +1944,7 @@ int _odp_packet_l4_chksum(odp_packet_hdr_t *pkt_hdr,
 	}
 
 	if (opt.bit.sctp_chksum &&
-	    pkt_hdr->p.input_flags.sctp &&
+	    pkt_hdr->p.l4_type == _ODP_IPPROTO_SCTP &&
 	    !pkt_hdr->p.input_flags.ipfrag) {
 		uint32_t seg_len = 0;
 		_odp_sctphdr_t hdr_copy;

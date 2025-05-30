@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2013-2018 Linaro Limited
- * Copyright (c) 2019-2022 Nokia
+ * Copyright (c) 2019-2025 Nokia
  */
 
 /**
@@ -67,6 +67,9 @@ typedef struct {
 
 	/* offset to L4 hdr (TCP, UDP, SCTP, also ICMP) */
 	uint16_t l4_offset;
+
+	/* l4 protocol type (TCP, UDP, ...) */
+	odp_proto_l4_type_t l4_type;
 } packet_parser_t;
 
 /**
@@ -224,6 +227,7 @@ static inline void _odp_packet_reset_md(odp_packet_hdr_t *pkt_hdr)
 	/* Clear all flags. Resets also return value of cls_mark, user_ptr, etc. */
 	pkt_hdr->p.input_flags.all = 0;
 	pkt_hdr->p.flags.all_flags = 0;
+	pkt_hdr->p.l4_type = ODP_PROTO_L4_TYPE_NONE;
 
 	pkt_hdr->p.l2_offset = 0;
 	pkt_hdr->p.l3_offset = ODP_PACKET_OFFSET_INVALID;

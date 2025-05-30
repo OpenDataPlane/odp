@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2017-2018 Linaro Limited
- * Copyright (c) 2019-2022 Nokia
+ * Copyright (c) 2019-2025 Nokia
  */
 
 /**
@@ -362,28 +362,7 @@ _ODP_INLINE odp_proto_l3_type_t odp_packet_l3_type(odp_packet_t pkt)
 
 _ODP_INLINE odp_proto_l4_type_t odp_packet_l4_type(odp_packet_t pkt)
 {
-	_odp_packet_input_flags_t input_flags;
-
-	input_flags.all = _odp_pkt_get(pkt, uint64_t, input_flags);
-
-	if (input_flags.tcp)
-		return ODP_PROTO_L4_TYPE_TCP;
-	else if (input_flags.udp)
-		return ODP_PROTO_L4_TYPE_UDP;
-	else if (input_flags.sctp)
-		return ODP_PROTO_L4_TYPE_SCTP;
-	else if (input_flags.ipsec_ah)
-		return ODP_PROTO_L4_TYPE_AH;
-	else if (input_flags.ipsec_esp)
-		return ODP_PROTO_L4_TYPE_ESP;
-	else if (input_flags.icmp && input_flags.ipv4)
-		return ODP_PROTO_L4_TYPE_ICMPV4;
-	else if (input_flags.icmp && input_flags.ipv6)
-		return ODP_PROTO_L4_TYPE_ICMPV6;
-	else if (input_flags.no_next_hdr)
-		return ODP_PROTO_L4_TYPE_NO_NEXT;
-
-	return ODP_PROTO_L4_TYPE_NONE;
+	return _odp_pkt_get(pkt, uint8_t, l4_type);
 }
 
 _ODP_INLINE odp_packet_chksum_status_t odp_packet_l3_chksum_status(odp_packet_t pkt)
