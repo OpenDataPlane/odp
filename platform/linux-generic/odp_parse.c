@@ -59,7 +59,6 @@ uint16_t _odp_parse_eth(packet_parser_t *prs, const uint8_t **parseptr,
 
 	/* Check for SNAP vs. DIX */
 	if (odp_unlikely(ethtype < _ODP_ETH_LEN_MAX)) {
-		input_flags.snap = 1;
 		if (ethtype > frame_len - *offset) {
 			prs->flags.snap_len_err = 1;
 			ethtype = 0;
@@ -312,10 +311,8 @@ static inline void parse_udp(packet_parser_t *prs, const uint8_t **parseptr,
 		uint32_t val;
 
 		memcpy(&val, udp + 1, 4);
-		if (val != 0) {
+		if (val != 0)
 			prs->input_flags.ipsec = 1;
-			prs->input_flags.ipsec_udp = 1;
-		}
 	}
 
 	*parseptr += sizeof(_odp_udphdr_t);
