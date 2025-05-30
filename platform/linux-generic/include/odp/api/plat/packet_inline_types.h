@@ -63,7 +63,6 @@ typedef union {
 
 	/* Individual input flags */
 	struct {
-		uint64_t dst_queue:1; /* Dst queue present */
 		uint64_t cls_mark: 1; /* Classifier mark value present*/
 
 		uint64_t flow_hash:1; /* Flow hash present */
@@ -80,7 +79,6 @@ typedef union {
 		uint64_t vlan:1;      /* VLAN hdr found */
 		uint64_t vlan_qinq:1; /* Stacked VLAN found, QinQ */
 
-		uint64_t snap:1;      /* SNAP */
 		uint64_t arp:1;       /* ARP */
 
 		uint64_t ipv4:1;      /* IPv4 */
@@ -106,7 +104,6 @@ typedef union {
 
 		uint64_t l3_chksum_done:1; /* L3 checksum validation done */
 		uint64_t l4_chksum_done:1; /* L4 checksum validation done */
-		uint64_t ipsec_udp:1; /* UDP-encapsulated IPsec packet */
 		uint64_t udp_chksum_zero:1; /* UDP header had 0 as chksum */
 	};
 
