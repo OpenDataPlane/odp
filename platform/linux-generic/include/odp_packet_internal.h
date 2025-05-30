@@ -221,7 +221,7 @@ static inline void packet_subtype_set(odp_packet_t pkt, int subtype)
  */
 static inline void _odp_packet_reset_md(odp_packet_hdr_t *pkt_hdr)
 {
-	/* Clear all flags. Resets also return value of cls_mark, user_ptr, etc. */
+	/* Clear all flags. Resets also return value of cls_mark, etc. */
 	pkt_hdr->p.input_flags.all = 0;
 	pkt_hdr->p.flags.all_flags = 0;
 	pkt_hdr->p.l4_type = ODP_PROTO_L4_TYPE_NONE;
@@ -230,9 +230,8 @@ static inline void _odp_packet_reset_md(odp_packet_hdr_t *pkt_hdr)
 	pkt_hdr->p.l3_offset = ODP_PACKET_OFFSET_INVALID;
 	pkt_hdr->p.l4_offset = ODP_PACKET_OFFSET_INVALID;
 
-	if (odp_unlikely(pkt_hdr->event_hdr.subtype != ODP_EVENT_PACKET_BASIC))
-		pkt_hdr->event_hdr.subtype = ODP_EVENT_PACKET_BASIC;
-
+	pkt_hdr->event_hdr.subtype = ODP_EVENT_PACKET_BASIC;
+	pkt_hdr->event_hdr.user_flag = 0;
 	pkt_hdr->input = ODP_PKTIO_INVALID;
 }
 
@@ -323,6 +322,7 @@ static inline void _odp_packet_copy_md(odp_packet_hdr_t *dst_hdr,
 	 */
 	dst_hdr->input = src_hdr->input;
 	dst_hdr->event_hdr.subtype = subtype;
+	dst_hdr->event_hdr.user_flag = src_hdr->event_hdr.user_flag;
 	dst_hdr->dst_queue = src_hdr->dst_queue;
 	dst_hdr->cos = src_hdr->cos;
 	dst_hdr->cls_mark = src_hdr->cls_mark;

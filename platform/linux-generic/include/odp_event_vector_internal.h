@@ -32,9 +32,6 @@ typedef struct ODP_ALIGNED_CACHE odp_event_vector_hdr_t {
 	/* Event vector size */
 	uint32_t size;
 
-	/* Flags */
-	_odp_event_vector_flags_t flags;
-
 	/* Vector of event handles */
 	odp_event_t event[];
 

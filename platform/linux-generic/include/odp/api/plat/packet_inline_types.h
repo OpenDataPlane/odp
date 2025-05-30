@@ -109,13 +109,12 @@ typedef union {
 	uint32_t all_flags;
 
 	struct {
-		uint32_t reserved1:      4;
+		uint32_t reserved1:      5;
 
 	/*
 	 * Init flags
 	 */
 		uint32_t user_ptr_set:   1; /* User has set a non-NULL value */
-		uint32_t user_flag:      1;
 
 	/*
 	 * Packet output flags
@@ -147,8 +146,8 @@ typedef union {
 
 	/* Flag groups */
 	struct {
-		uint32_t reserved2:      4;
-		uint32_t other:         21; /* All other flags */
+		uint32_t reserved2:      5;
+		uint32_t other:         20; /* All other flags */
 		uint32_t error:          7; /* All error flags */
 	} all;
 

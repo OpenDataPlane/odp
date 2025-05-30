@@ -87,19 +87,15 @@ _ODP_INLINE void *odp_packet_vector_user_area(odp_packet_vector_t pktv)
 
 _ODP_INLINE int odp_packet_vector_user_flag(odp_packet_vector_t pktv)
 {
-	_odp_event_vector_flags_t flags;
-
-	flags.all_flags = _odp_event_vect_get(pktv, uint32_t, flags);
-
-	return flags.user_flag;
+	return _odp_event_hdr_field((odp_event_t)(uintptr_t)pktv, int8_t, user_flag);
 }
 
 _ODP_INLINE void odp_packet_vector_user_flag_set(odp_packet_vector_t pktv, int val)
 {
-	_odp_event_vector_flags_t *flags = _odp_event_vect_get_ptr(pktv, _odp_event_vector_flags_t,
-								   flags);
+	odp_event_t event = (odp_event_t)(uintptr_t)pktv;
+	int8_t *user_flag = _odp_event_hdr_ptr(event, int8_t, user_flag);
 
-	flags->user_flag = !!val;
+	*user_flag = !!val;
 }
 
 /** @endcond */

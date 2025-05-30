@@ -24,7 +24,6 @@ const _odp_event_vector_inline_offset_t _odp_event_vector_inline ODP_ALIGNED_CAC
 	.event     = offsetof(odp_event_vector_hdr_t, event),
 	.pool      = offsetof(odp_event_vector_hdr_t, event_hdr.pool),
 	.size      = offsetof(odp_event_vector_hdr_t, size),
-	.flags     = offsetof(odp_event_vector_hdr_t, flags)
 };
 
 #include <odp/visibility_end.h>
@@ -50,6 +49,7 @@ odp_event_vector_t odp_event_vector_alloc(odp_pool_t pool_hdl)
 		return ODP_EVENT_VECTOR_INVALID;
 
 	_ODP_ASSERT(event_vector_hdr_from_event(event)->size == 0);
+	_ODP_ASSERT(event_vector_hdr_from_event(event)->event_hdr.user_flag == 0);
 
 	return odp_event_vector_from_event(event);
 }
@@ -59,8 +59,7 @@ void odp_event_vector_free(odp_event_vector_t evv)
 	odp_event_vector_hdr_t *evv_hdr = _odp_event_vector_hdr(evv);
 
 	evv_hdr->size = 0;
-	evv_hdr->flags.all_flags = 0;
-
+	evv_hdr->event_hdr.user_flag = 0;
 	_odp_event_free(odp_event_vector_to_event(evv));
 }
 
@@ -106,8 +105,8 @@ void odp_event_vector_print(odp_event_vector_t evv)
 	evv_hdr = _odp_event_vector_hdr(evv);
 
 	len += _odp_snprint(&str[len], n - len, "  size           %" PRIu32 "\n", evv_hdr->size);
-	len += _odp_snprint(&str[len], n - len, "  flags          0x%" PRIx32 "\n",
-			    evv_hdr->flags.all_flags);
+	len += _odp_snprint(&str[len], n - len, "  user flag      %d\n",
+			    evv_hdr->event_hdr.user_flag);
 	len += _odp_snprint(&str[len], n - len, "  user area      %p\n",
 			    evv_hdr->event_hdr.user_area);
 
