@@ -339,7 +339,7 @@ _ODP_INLINE odp_proto_l2_type_t odp_packet_l2_type(odp_packet_t pkt)
 {
 	_odp_packet_input_flags_t input_flags;
 
-	input_flags.all = _odp_pkt_get(pkt, uint64_t, input_flags);
+	input_flags.all = _odp_pkt_get(pkt, uint32_t, input_flags);
 
 	return input_flags.eth ? ODP_PROTO_L2_TYPE_ETH : ODP_PROTO_L2_TYPE_NONE;
 }
@@ -348,7 +348,7 @@ _ODP_INLINE odp_proto_l3_type_t odp_packet_l3_type(odp_packet_t pkt)
 {
 	_odp_packet_input_flags_t input_flags;
 
-	input_flags.all = _odp_pkt_get(pkt, uint64_t, input_flags);
+	input_flags.all = _odp_pkt_get(pkt, uint32_t, input_flags);
 
 	if (input_flags.ipv4)
 		return ODP_PROTO_L3_TYPE_IPV4;
@@ -371,7 +371,7 @@ _ODP_INLINE odp_packet_chksum_status_t odp_packet_l3_chksum_status(odp_packet_t 
 	_odp_packet_input_flags_t input_flags;
 
 	flags.all_flags = _odp_pkt_get(pkt, uint32_t, flags);
-	input_flags.all = _odp_pkt_get(pkt, uint64_t, input_flags);
+	input_flags.all = _odp_pkt_get(pkt, uint32_t, input_flags);
 
 	if (!input_flags.l3_chksum_done)
 		return ODP_PACKET_CHKSUM_UNKNOWN;
@@ -388,7 +388,7 @@ _ODP_INLINE odp_packet_chksum_status_t odp_packet_l4_chksum_status(odp_packet_t 
 	_odp_packet_input_flags_t input_flags;
 
 	flags.all_flags = _odp_pkt_get(pkt, uint32_t, flags);
-	input_flags.all = _odp_pkt_get(pkt, uint64_t, input_flags);
+	input_flags.all = _odp_pkt_get(pkt, uint32_t, input_flags);
 
 	if (!input_flags.l4_chksum_done)
 		return ODP_PACKET_CHKSUM_UNKNOWN;
@@ -574,7 +574,7 @@ _ODP_INLINE odp_packet_color_t odp_packet_color(odp_packet_t pkt)
 {
 	_odp_packet_input_flags_t input_flags;
 
-	input_flags.all = _odp_pkt_get(pkt, uint64_t, input_flags);
+	input_flags.all = _odp_pkt_get(pkt, uint32_t, input_flags);
 
 	return (odp_packet_color_t)input_flags.color;
 }
@@ -583,7 +583,7 @@ _ODP_INLINE odp_bool_t odp_packet_drop_eligible(odp_packet_t pkt)
 {
 	_odp_packet_input_flags_t input_flags;
 
-	input_flags.all = _odp_pkt_get(pkt, uint64_t, input_flags);
+	input_flags.all = _odp_pkt_get(pkt, uint32_t, input_flags);
 
 	return !input_flags.nodrop;
 }
@@ -601,7 +601,7 @@ _ODP_INLINE uint64_t odp_packet_cls_mark(odp_packet_t pkt)
 {
 	_odp_packet_input_flags_t input_flags;
 
-	input_flags.all = _odp_pkt_get(pkt, uint64_t, input_flags);
+	input_flags.all = _odp_pkt_get(pkt, uint32_t, input_flags);
 
 	return input_flags.cls_mark ? _odp_pkt_get(pkt, uint16_t, cls_mark) : 0;
 }

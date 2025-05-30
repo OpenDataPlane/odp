@@ -22,9 +22,9 @@ extern "C" {
 
 /** @cond _ODP_HIDE_FROM_DOXYGEN_ */
 
-static inline uint64_t _odp_packet_input_flags(odp_packet_t pkt)
+static inline uint32_t _odp_packet_input_flags(odp_packet_t pkt)
 {
-	return _odp_pkt_get(pkt, uint64_t, input_flags);
+	return _odp_pkt_get(pkt, uint32_t, input_flags);
 }
 
 #ifndef _ODP_NO_INLINE

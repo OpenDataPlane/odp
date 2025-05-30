@@ -38,7 +38,7 @@ extern "C" {
 #include <stdint.h>
 #include <string.h>
 
-ODP_STATIC_ASSERT(sizeof(_odp_packet_input_flags_t) == sizeof(uint64_t),
+ODP_STATIC_ASSERT(sizeof(_odp_packet_input_flags_t) == sizeof(uint32_t),
 		  "INPUT_FLAGS_SIZE_ERROR");
 
 ODP_STATIC_ASSERT(sizeof(_odp_packet_flags_t) == sizeof(uint32_t),
@@ -87,6 +87,8 @@ typedef struct ODP_ALIGNED_CACHE odp_packet_hdr_t {
 	uint8_t *seg_data;
 
 	packet_parser_t p;
+
+	uint64_t unused_padding;
 
 	/* --- 64-byte cache line boundary --- */
 
