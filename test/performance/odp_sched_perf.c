@@ -234,26 +234,9 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 
 	test_options->num_cpu    = 1;
 	test_options->num_def    = 1;
-	test_options->num_low    = 0;
-	test_options->num_high   = 0;
-	test_options->num_dummy  = 0;
 	test_options->num_event  = 100;
 	test_options->num_sched  = 100000;
-	test_options->num_group  = 0;
-	test_options->num_join   = 0;
 	test_options->max_burst  = 100;
-	test_options->queue_type = 0;
-	test_options->forward    = 0;
-	test_options->fairness   = 0;
-	test_options->stress     = 0;
-	test_options->ctx_rd_words = 0;
-	test_options->ctx_rw_words = 0;
-	test_options->rd_words   = 0;
-	test_options->rw_words   = 0;
-	test_options->uarea_rd   = 0;
-	test_options->uarea_rw   = 0;
-	test_options->wait_ns    = 0;
-	test_options->verbose    = 0;
 
 	while (1) {
 		opt = getopt_long(argc, argv, shortopts, longopts, NULL);
