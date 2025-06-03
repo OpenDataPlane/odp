@@ -1208,6 +1208,8 @@ int main(int argc, char **argv)
 	printf("  SCHEDULER\n");
 	printf("    max_ordered_locks:    %u\n", schedule_capa.max_ordered_locks);
 	printf("    max_groups:           %u\n", schedule_capa.max_groups);
+	printf("    max_group_prios:      %u\n", schedule_capa.max_group_prios);
+	printf("    min_prio:             %u\n", schedule_capa.min_prio);
 	printf("    max_prios:            %u\n", schedule_capa.max_prios);
 	printf("    max_queues:           %u\n", schedule_capa.max_queues);
 	printf("    max_queue_size:       %u\n", schedule_capa.max_queue_size);
