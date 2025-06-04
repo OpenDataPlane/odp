@@ -470,26 +470,64 @@ typedef struct odp_dma_seg_t {
 	/** Segment hints
 	 *
 	 *  Depending on the implementation, setting these hints may improve performance.
-	 *  Initialize all unused bits to zero.
 	 */
-	union {
-		/** Segment hints bit field */
-		struct {
-			/** Allow full cache line access
+	struct {
+		union {
+			/** Segment hints bit field
 			 *
-			 *  When set to 1, data on the same cache line with the destination segment
-			 *  is allowed to be overwritten. This hint is ignored on source segments.
+			 *  Initialize all unused bits to zero.
 			 */
-			uint16_t full_lines : 1;
+			struct {
+				/** Allow full cache line access
+				 *
+				 *  When set to 1, data on the same cache line with the destination
+				 *  segment is allowed to be overwritten. This hint is ignored on
+				 *  source segments.
+				 */
+				uint16_t full_lines : 1;
+
+				/** Enable L3 cache stashing
+				 *
+				 *  When set to 1, enables potential cache stashing of destination
+				 *  segment data to L3 according to 'cache_stash'.
+				 */
+				uint16_t cache_stash_l3 : 1;
+			} bit;
+
+			/** All bits of the bit field structure
+			 *
+			 *  This can be used to set/clear all bits, or to perform bitwise
+			 *  operations on those.
+			 */
+			uint16_t all_bits;
 		};
 
-		/** All bits of the bit field structure
+		/** Cache stashing hints
 		 *
-		 *  This can be used to set/clear all bits, or to perform bitwise operations
-		 *  on those.
+		 *  Applicable only to destination segments. Ignored for source segments. Hints
+		 *  implementation to bring specififed cache lines into cache as part of successful
+		 *  transfer completion.
 		 */
-		uint16_t all_hints;
-	};
+		struct {
+			/** L3 cache stashing */
+			struct {
+				/** Byte offset into the segment data to start caching from
+				 *
+				 *  Depending on the implementation, this might be rounded down
+				 *  to a more suitable boundary. In case of #ODP_DMA_FORMAT_PACKET,
+				 *  offset is in addition to the packet data starting offset.
+				 */
+				uint32_t offset;
+
+				/** Length in bytes to cache
+				 *
+				 *  Depending on the implementation, this might be rounded up
+				 *  to a more suitable boundary.
+				 */
+				uint32_t len;
+			} l3;
+		} cache_stash;
+	} hints;
 
 } odp_dma_seg_t;
 
