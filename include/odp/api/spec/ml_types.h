@@ -329,6 +329,13 @@ typedef struct odp_ml_capability_t {
 
 /** Machine learning configuration parameters */
 typedef struct odp_ml_config_t {
+	/** Engine ID to be configured.
+	 *
+	 * In a system with multiple ML engines, this parameter selects the engine to be configured.
+	 * The default value is 0.
+	 */
+	uint32_t engine_id;
+
 	/**
 	 * Maximum number of models
 	 *
@@ -603,6 +610,9 @@ typedef struct odp_ml_model_info_t {
 	 */
 	uint64_t interface_version;
 
+	/** Engine ID to which the model is assigned */
+	uint32_t engine_id;
+
 	/** Model index assigned by the implementation */
 	uint32_t index;
 
@@ -672,6 +682,13 @@ typedef struct odp_ml_data_format_t {
  * Use odp_ml_model_param_init() to initialize the structure to its default values.
  */
 typedef struct odp_ml_model_param_t {
+	/**
+	 * Engine ID
+	 *
+	 * Engine ID to be used with the model. The default value is 0.
+	 */
+	uint32_t engine_id;
+
 	/**
 	 * Model binary
 	 *
