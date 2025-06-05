@@ -139,14 +139,14 @@ static void test_event_vector_print(void)
 
 /*
  * Test odp_event_vector_size{_set}(), odp_event_vector_tbl() and
- * odp_event_vector_type() in several ways.
+ * odp_event_vector_type[_set}() in several ways.
  */
 static void test_table_ops(void)
 {
 	odp_pool_t pkt_pool;
 	odp_pool_t buf_pool;
 	odp_packet_t pkt;
-	odp_buffer_t buf, buf2;
+	odp_buffer_t buf;
 	odp_event_vector_t evv;
 	odp_event_t *ev_tbl, *ev_tbl2;
 	uint32_t size;
@@ -155,11 +155,9 @@ static void test_table_ops(void)
 	pkt = odp_packet_alloc(pkt_pool, PKT_LEN);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 
-	buf_pool = create_buffer_pool(2);
+	buf_pool = create_buffer_pool(1);
 	buf = odp_buffer_alloc(buf_pool);
 	CU_ASSERT_FATAL(buf != ODP_BUFFER_INVALID);
-	buf2 = odp_buffer_alloc(buf_pool);
-	CU_ASSERT_FATAL(buf2 != ODP_BUFFER_INVALID);
 
 	evv = odp_event_vector_alloc(evv_pool);
 	CU_ASSERT_FATAL(evv != ODP_EVENT_VECTOR_INVALID);
@@ -171,65 +169,41 @@ static void test_table_ops(void)
 	CU_ASSERT(size == 0);
 	CU_ASSERT(ev_tbl != NULL);
 
-	/* put one packet handle in the vector */
+	/* must be able to set event type of an empty vector */
+	odp_event_vector_type_set(evv, ODP_EVENT_BUFFER);
+	CU_ASSERT(odp_event_vector_type(evv) == ODP_EVENT_BUFFER);
+
+	/* put packet handle in the vector */
 	ev_tbl[0] = odp_packet_to_event(pkt);
 	odp_event_vector_size_set(evv, 1);
-	/* tbl[] == {packet} */
 	CU_ASSERT(odp_event_vector_size(evv) == 1);
-	CU_ASSERT(odp_event_vector_type(evv) == ODP_EVENT_PACKET);
 	size = odp_event_vector_tbl(evv, &ev_tbl2);
 	CU_ASSERT(size == 1);
 	CU_ASSERT(ev_tbl == ev_tbl2);
-
-	/* change the packet handle to a buffer handle */
-	ev_tbl[0] = odp_buffer_to_event(buf);
-	/* tbl[] == {buffer} */
-	CU_ASSERT(odp_event_vector_size(evv) == 1);
 	CU_ASSERT(odp_event_vector_type(evv) == ODP_EVENT_BUFFER);
-	size = odp_event_vector_tbl(evv, &ev_tbl2);
-	CU_ASSERT(size == 1);
-	CU_ASSERT(ev_tbl == ev_tbl2);
+	odp_event_vector_type_set(evv, ODP_EVENT_PACKET);
+	CU_ASSERT(odp_event_vector_type(evv) == ODP_EVENT_PACKET);
 
-	/* append a packet handle in the vector */
-	ev_tbl[1] = odp_packet_to_event(pkt);
+	/* add a buffer in the vector */
+	ev_tbl[1] = odp_buffer_to_event(buf);
 	odp_event_vector_size_set(evv, 2);
-	/* tbl[] == {buffer, packet} */
-	CU_ASSERT(odp_event_vector_size(evv) == 2);
-	CU_ASSERT(odp_event_vector_type(evv) == ODP_EVENT_ANY);
 	size = odp_event_vector_tbl(evv, &ev_tbl2);
 	CU_ASSERT(size == 2);
 	CU_ASSERT(ev_tbl == ev_tbl2);
-
-	/* change the packet handle to a buffer handle */
-	ev_tbl[1] = odp_buffer_to_event(buf2);
-	/* tbl[] == {buffer, buffer} */
-	CU_ASSERT(odp_event_vector_size(evv) == 2);
-	CU_ASSERT(odp_event_vector_type(evv) == ODP_EVENT_BUFFER);
-	size = odp_event_vector_tbl(evv, &ev_tbl2);
-	CU_ASSERT(size == 2);
-	CU_ASSERT(ev_tbl == ev_tbl2);
-
-	/* change first handle to packet and truncate */
-	ev_tbl[0] = odp_packet_to_event(pkt);
-	odp_event_vector_size_set(evv, 1);
-	/* tbl[] == {packet} */
 	CU_ASSERT(odp_event_vector_type(evv) == ODP_EVENT_PACKET);
-	size = odp_event_vector_tbl(evv, &ev_tbl2);
-	CU_ASSERT(size == 1);
-	CU_ASSERT(ev_tbl == ev_tbl2);
+	odp_event_vector_type_set(evv, ODP_EVENT_ANY);
+	CU_ASSERT(odp_event_vector_type(evv) == ODP_EVENT_ANY);
 
 	/* truncate to zero length */
+	odp_event_vector_type_set(evv, ODP_EVENT_PACKET);
 	odp_event_vector_size_set(evv, 0);
-	/* tbl[] == {} */
-	CU_ASSERT(odp_event_vector_type(evv) == ODP_EVENT_ANY);
+	CU_ASSERT(odp_event_vector_type(evv) == ODP_EVENT_PACKET);
 	size = odp_event_vector_tbl(evv, &ev_tbl2);
 	CU_ASSERT(size == 0);
 	CU_ASSERT(ev_tbl == ev_tbl2);
-
 	odp_event_vector_free(evv);
 	odp_packet_free(pkt);
 	odp_buffer_free(buf);
-	odp_buffer_free(buf2);
 
 	CU_ASSERT(odp_pool_destroy(pkt_pool) == 0);
 	CU_ASSERT(odp_pool_destroy(buf_pool) == 0);
@@ -302,8 +276,7 @@ static void test_content_freeing(void)
 	evv = alloc_and_fill_vector(ev, num_bufs);
 	size = odp_event_vector_tbl(evv, &ev_tbl);
 	CU_ASSERT(size == num_bufs);
-	ev_tbl[num_bufs] = odp_packet_to_event(pkt); /* no size increment yet */
-	CU_ASSERT(odp_event_vector_type(evv) == ODP_EVENT_BUFFER);
+	ev_tbl[num_bufs] = odp_packet_to_event(pkt);
 	odp_event_vector_size_set(evv, num_bufs + 1);
 	CU_ASSERT(odp_event_vector_type(evv) == ODP_EVENT_ANY);
 
@@ -368,8 +341,7 @@ static void test_vector_freeing(void)
 
 /*
  * Test that two event vectors allocated from the same pool have
- * different handles, user areas (if supported), user flags, sizes
- * and event tables.
+ * different handles, user areas (if supported) and metadata.
  */
 static void test_uniqueness(void)
 {
@@ -404,6 +376,12 @@ static void test_uniqueness(void)
 	CU_ASSERT(odp_event_vector_size(evv1) == 1);
 	CU_ASSERT(odp_event_vector_size(evv2) == 0);
 	odp_event_vector_size_set(evv1, 0);
+
+	CU_ASSERT(odp_event_vector_type(evv1) == ODP_EVENT_ANY);
+	CU_ASSERT(odp_event_vector_type(evv2) == ODP_EVENT_ANY);
+	odp_event_vector_type_set(evv1, ODP_EVENT_PACKET);
+	CU_ASSERT(odp_event_vector_type(evv1) == ODP_EVENT_PACKET);
+	CU_ASSERT(odp_event_vector_type(evv2) == ODP_EVENT_ANY);
 
 	odp_event_vector_free(evv1);
 	odp_event_vector_free(evv2);
