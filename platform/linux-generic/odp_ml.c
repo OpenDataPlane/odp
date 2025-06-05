@@ -2336,7 +2336,7 @@ int odp_ml_run_multi(odp_ml_model_t model, const odp_ml_data_t data[],
 		     const odp_ml_run_param_t param[], int num)
 {
 	int i;
-	int ret;
+	int ret = -1;
 
 	if (odp_unlikely(num < 1)) {
 		_ODP_ERR("Bad number of runs\n");
