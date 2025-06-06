@@ -1,0 +1,4 @@
+<map id="odp_tm_queue_info_t" name="odp_tm_queue_info_t">
+<area shape="rect" id="node1" title="The odp_tm_queue_info_t record type is used to return various bits of information about a given tm_qu..." alt="" coords="5,95,168,121"/>
+<area shape="rect" id="node2" href="$struct__odp__abi__packet__t.html" title=" " alt="" coords="15,5,158,32"/>
+</map>
