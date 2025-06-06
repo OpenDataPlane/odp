@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2017-2018 Linaro Limited
- * Copyright (c) 2022-2024 Nokia
+ * Copyright (c) 2022-2025 Nokia
  */
 
 /**
@@ -12,8 +12,8 @@
 #ifndef _ODP_PLAT_PACKET_FLAG_INLINES_H_
 #define _ODP_PLAT_PACKET_FLAG_INLINES_H_
 
-#include <odp/api/abi/packet_types.h>
 #include <odp/api/plat/packet_inline_types.h>
+#include <odp/api/packet_types.h>
 #include <odp/api/hints.h>
 
 #ifdef __cplusplus
@@ -22,9 +22,9 @@ extern "C" {
 
 /** @cond _ODP_HIDE_FROM_DOXYGEN_ */
 
-static inline uint64_t _odp_packet_input_flags(odp_packet_t pkt)
+static inline uint32_t _odp_packet_input_flags(odp_packet_t pkt)
 {
-	return _odp_pkt_get(pkt, uint64_t, input_flags);
+	return _odp_pkt_get(pkt, uint32_t, input_flags);
 }
 
 #ifndef _ODP_NO_INLINE
@@ -225,34 +225,25 @@ _ODP_INLINE int odp_packet_has_ipopt(odp_packet_t pkt)
 
 _ODP_INLINE int odp_packet_has_udp(odp_packet_t pkt)
 {
-	_odp_packet_input_flags_t flags;
-
-	flags.all = _odp_packet_input_flags(pkt);
-	return flags.udp;
+	return _odp_pkt_get(pkt, odp_proto_l4_type_t, l4_type) == ODP_PROTO_L4_TYPE_UDP;
 }
 
 _ODP_INLINE int odp_packet_has_tcp(odp_packet_t pkt)
 {
-	_odp_packet_input_flags_t flags;
-
-	flags.all = _odp_packet_input_flags(pkt);
-	return flags.tcp;
+	return _odp_pkt_get(pkt, odp_proto_l4_type_t, l4_type) == ODP_PROTO_L4_TYPE_TCP;
 }
 
 _ODP_INLINE int odp_packet_has_sctp(odp_packet_t pkt)
 {
-	_odp_packet_input_flags_t flags;
-
-	flags.all = _odp_packet_input_flags(pkt);
-	return flags.sctp;
+	return _odp_pkt_get(pkt, odp_proto_l4_type_t, l4_type) == ODP_PROTO_L4_TYPE_SCTP;
 }
 
 _ODP_INLINE int odp_packet_has_icmp(odp_packet_t pkt)
 {
-	_odp_packet_input_flags_t flags;
+	odp_proto_l4_type_t l4_type = _odp_pkt_get(pkt, odp_proto_l4_type_t, l4_type);
 
-	flags.all = _odp_packet_input_flags(pkt);
-	return flags.icmp;
+	return (l4_type == ODP_PROTO_L4_TYPE_ICMPV4 ||
+		l4_type == ODP_PROTO_L4_TYPE_ICMPV6);
 }
 
 _ODP_INLINE int odp_packet_has_error(odp_packet_t pkt)

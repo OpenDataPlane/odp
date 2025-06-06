@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright (c) 2022-2023 Nokia
+ * Copyright (c) 2022-2025 Nokia
  */
 
 #ifndef ODP_PLAT_TIMER_INLINES_H_
@@ -11,6 +11,7 @@
 #include <odp/api/abi/time_inlines.h>
 
 #include <odp/api/plat/debug_inlines.h>
+#include <odp/api/plat/event_inline_types.h>
 #include <odp/api/plat/timer_inline_types.h>
 
 #include <stdint.h>
@@ -55,7 +56,7 @@ _ODP_INLINE void *odp_timeout_user_ptr(odp_timeout_t tmo)
 
 _ODP_INLINE void *odp_timeout_user_area(odp_timeout_t tmo)
 {
-	return _odp_timeout_hdr_field(tmo, void *, uarea_addr);
+	return _odp_event_hdr_field((odp_event_t)(uintptr_t)tmo, void *, user_area);
 }
 
 _ODP_INLINE uint64_t odp_timer_current_tick(odp_timer_pool_t tpid)

@@ -497,10 +497,11 @@ static void init_event_hdr(pool_t *pool, _odp_event_hdr_t *event_hdr, uint32_t e
 	/* Initialize common event metadata */
 	event_hdr->index.pool   = pool->pool_idx;
 	event_hdr->index.event  = event_index;
-	event_hdr->type         = type;
 	event_hdr->event_type   = type;
 	event_hdr->subtype      = ODP_EVENT_NO_SUBTYPE;
 	event_hdr->pool         = _odp_pool_handle(pool);
+	event_hdr->user_area    = uarea;
+	event_hdr->user_flag    = -1;
 
 	/* Store base values for fast init */
 	if (type == ODP_POOL_BUFFER || type == ODP_POOL_PACKET) {
@@ -509,18 +510,11 @@ static void init_event_hdr(pool_t *pool, _odp_event_hdr_t *event_hdr, uint32_t e
 		_odp_event_endmark_set(_odp_event_from_hdr(event_hdr));
 	}
 
-	if (type == ODP_POOL_BUFFER) {
-		odp_buffer_hdr_t *buf_hdr = (void *)event_hdr;
-
-		buf_hdr->uarea_addr = uarea;
-	}
-
 	/* Initialize segmentation metadata */
 	if (type == ODP_POOL_PACKET) {
 		odp_packet_hdr_t *pkt_hdr = (void *)event_hdr;
 
 		pkt_hdr->user_ptr  = NULL;
-		pkt_hdr->uarea_addr = uarea;
 		pkt_hdr->seg_data  = data_ptr;
 		pkt_hdr->seg_len   = pool->seg_len;
 		pkt_hdr->seg_count = 1;
@@ -531,25 +525,14 @@ static void init_event_hdr(pool_t *pool, _odp_event_hdr_t *event_hdr, uint32_t e
 
 	/* Initialize packet vector metadata */
 	if (type == ODP_POOL_VECTOR) {
-		odp_event_vector_hdr_t *vect_hdr = (void *)event_hdr;
-
 		event_hdr->event_type = ODP_EVENT_PACKET_VECTOR;
-		vect_hdr->uarea_addr = uarea;
+		event_hdr->user_flag = 0;
 	}
 
 	/* Initialize event vector metadata */
 	if (type == ODP_POOL_EVENT_VECTOR) {
-		odp_event_vector_hdr_t *vect_hdr = (void *)event_hdr;
-
 		event_hdr->event_type = ODP_EVENT_VECTOR;
-		vect_hdr->uarea_addr = uarea;
-	}
-
-	/* Initialize timeout metadata */
-	if (type == ODP_POOL_TIMEOUT) {
-		odp_timeout_hdr_t *tmo_hdr = (void *)event_hdr;
-
-		tmo_hdr->uarea_addr = uarea;
+		event_hdr->user_flag = 0;
 	}
 }
 
