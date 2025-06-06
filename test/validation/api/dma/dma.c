@@ -823,8 +823,14 @@ static void test_dma_addr_to_addr(odp_dma_compl_mode_t compl_mode_mask, uint32_t
 
 		src_seg[i].addr = src + offset;
 		src_seg[i].len  = cur_len;
+		src_seg[i].hints.bit.cache_stash_l3 = 1;
+		src_seg[i].hints.cache_stash.l3.offset = 0;
+		src_seg[i].hints.cache_stash.l3.len = ODP_CACHE_LINE_SIZE;
 		dst_seg[i].addr = dst + offset;
 		dst_seg[i].len  = cur_len;
+		dst_seg[i].hints.bit.cache_stash_l3 = 1;
+		dst_seg[i].hints.cache_stash.l3.offset = 0;
+		dst_seg[i].hints.cache_stash.l3.len = ODP_CACHE_LINE_SIZE;
 		offset += cur_len;
 	}
 
@@ -1150,9 +1156,15 @@ static void test_dma_pkt_to_pkt(odp_dma_compl_mode_t compl_mode_mask, int multi)
 	src_seg.packet = pkt;
 	src_seg.offset = OFFSET;
 	src_seg.len    = len;
+	src_seg.hints.bit.cache_stash_l3 = 1;
+	src_seg.hints.cache_stash.l3.offset = 0;
+	src_seg.hints.cache_stash.l3.len = ODP_CACHE_LINE_SIZE;
 	dst_seg.packet = pkt_2;
 	dst_seg.offset = OFFSET;
 	dst_seg.len    = len;
+	dst_seg.hints.bit.cache_stash_l3 = 1;
+	dst_seg.hints.cache_stash.l3.offset = 0;
+	dst_seg.hints.cache_stash.l3.len = ODP_CACHE_LINE_SIZE;
 
 	odp_dma_transfer_param_init(&trs_param);
 	trs_param.src_format = ODP_DMA_FORMAT_PACKET;
@@ -1847,6 +1859,9 @@ static void setup_segs(odp_dma_seg_t segs[], odp_packet_t pkt, uint32_t len, uin
 		if (use_idx) {
 			seg->pkt_index = 0;
 			seg->pkt_len = len;
+			seg->hints.bit.cache_stash_l3 = 1;
+			seg->hints.cache_stash.l3.offset = 0;
+			seg->hints.cache_stash.l3.len = ODP_CACHE_LINE_SIZE;
 		} else {
 			seg->packet = pkt;
 		}
