@@ -780,7 +780,6 @@ static void run_model_batch_add(void)
 
 	data.num_output_seg = 1;
 	data.output_seg = output_segs;
-	output_segs[0].size = sizeof(y);
 	output_segs[0].addr = y;
 
 	/* Test different batch sizes */
@@ -788,6 +787,7 @@ static void run_model_batch_add(void)
 		run_param.batch_size = batch_size;
 		input_segs[0].size = sizeof(double) * NUM_COLUMN * batch_size;
 		input_segs[1].size = sizeof(double) * NUM_COLUMN * batch_size;
+		output_segs[0].size = sizeof(double) * NUM_COLUMN * batch_size;
 		ret = odp_ml_run(model, &data, &run_param);
 		CU_ASSERT(ret == 1);
 		if (ret != 1)
