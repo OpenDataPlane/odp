@@ -20,6 +20,7 @@ static odp_atomic_u32_t seq;
 
 static cls_packet_info_t default_pkt_info;
 static odp_cls_capability_t cls_capa;
+static odp_schedule_capability_t sched_capa;
 
 /* Common things initialized in common_test_init() */
 typedef struct test_state_t {
@@ -37,10 +38,15 @@ typedef enum cls_flag_t {
 
 int classification_suite_pmr_init(void)
 {
-	memset(&cls_capa, 0, sizeof(odp_cls_capability_t));
+	memset(&cls_capa,   0, sizeof(cls_capa));
+	memset(&sched_capa, 0, sizeof(sched_capa));
 
 	if (odp_cls_capability(&cls_capa)) {
 		ODPH_ERR("Classifier capability call failed\n");
+		return -1;
+	}
+	if (odp_schedule_capability(&sched_capa)) {
+		ODPH_ERR("Scheduler capability call failed\n");
 		return -1;
 	}
 
@@ -346,6 +352,314 @@ static void cls_pmr_term_tcp_dport_n(int num_pkt)
 	odp_pool_destroy(pool);
 
 	test_term(&ts);
+}
+
+static odp_cos_t cos_create(odp_pool_t pool)
+{
+	odp_queue_t queue;
+	odp_cls_cos_param_t cos_param;
+	odp_cos_t cos;
+
+	queue = queue_create("CoS queue", true);
+	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
+
+	odp_cls_cos_param_init(&cos_param);
+	cos_param.pool = pool;
+	cos_param.queue = queue;
+	cos = odp_cls_cos_create("CoS", &cos_param);
+	CU_ASSERT_FATAL(cos != ODP_COS_INVALID);
+	CU_ASSERT(odp_cos_queue(cos) == queue);
+
+	return cos;
+}
+
+static void cos_destroy(odp_cos_t cos)
+{
+	odp_queue_t queue = odp_cos_queue(cos);
+
+	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
+	CU_ASSERT(odp_queue_destroy(queue) == 0);
+	CU_ASSERT(odp_cos_destroy(cos) == 0);
+}
+
+static odp_packet_t create_udp_packet(uint16_t port)
+{
+	cls_packet_info_t pkt_info;
+	odp_packet_t pkt;
+	odph_udphdr_t *udp;
+	uint32_t len;
+
+	pkt_info = default_pkt_info;
+	pkt_info.l4_type = CLS_PKT_L4_UDP;
+	pkt = create_packet(pkt_info);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+	udp = (odph_udphdr_t *)odp_packet_l4_ptr(pkt, &len);
+	CU_ASSERT_FATAL(len >= sizeof(*udp));
+	udp->dst_port = odp_cpu_to_be_16(port);
+	return pkt;
+}
+
+static void classify_and_check_result(const test_state_t *ts, odp_queue_t expected_queue)
+{
+	odp_packet_t pkt;
+	uint32_t seqno;
+
+	pkt = create_udp_packet(CLS_DEFAULT_DPORT);
+	seqno = send_packet(pkt, ts->pktio);
+	pkt = receive_and_check(seqno, expected_queue, ts->default_pool, false);
+	odp_packet_free(pkt);
+}
+
+#define USE_PMR_CREATE 1  /* Use odp_cls_pmr_create() if possible */
+
+static odp_pmr_t create_pmr_with_prio(uint32_t priority,
+				      uint16_t udp_dst_port,
+				      odp_cos_t src_cos,
+				      odp_cos_t dst_cos,
+				      uint32_t flags)
+{
+	uint16_t val  = odp_cpu_to_be_16(udp_dst_port);
+	uint16_t mask = odp_cpu_to_be_16(0xffff);
+	odp_pmr_param_t pmr_param;
+	odp_pmr_create_opt_t pmr_opt;
+	odp_pmr_t pmr;
+
+	odp_cls_pmr_param_init(&pmr_param);
+	pmr_param.term = ODP_PMR_UDP_DPORT;
+	pmr_param.match.value = &val;
+	pmr_param.match.mask = &mask;
+	pmr_param.val_sz = sizeof(val);
+
+	if (flags & USE_PMR_CREATE && priority == 0) {
+		pmr = odp_cls_pmr_create(&pmr_param, 1, src_cos, dst_cos);
+	} else {
+		odp_cls_pmr_create_opt_init(&pmr_opt);
+		pmr_opt.terms = &pmr_param;
+		pmr_opt.num_terms = 1;
+		pmr_opt.priority = priority;
+		pmr = odp_cls_pmr_create_opt(&pmr_opt, src_cos, dst_cos);
+	}
+	CU_ASSERT_FATAL(pmr != ODP_PMR_INVALID);
+
+	return pmr;
+}
+
+static void test_pmr_priority(const test_state_t *ts,
+			      uint32_t prio_1, odp_cos_t cos_1,
+			      uint32_t prio_2, odp_cos_t cos_2,
+			      uint32_t flags)
+{
+	odp_pmr_t pmr_1;
+	odp_pmr_t pmr_2;
+	odp_queue_t expected_queue;
+
+	pmr_1 = create_pmr_with_prio(prio_1, CLS_DEFAULT_DPORT, ts->default_cos, cos_1, flags);
+	pmr_2 = create_pmr_with_prio(prio_2, CLS_DEFAULT_DPORT, ts->default_cos, cos_2, flags);
+
+	if (prio_1 > prio_2)
+		expected_queue = odp_cos_queue(cos_1);
+	else
+		expected_queue = odp_cos_queue(cos_2);
+	CU_ASSERT(expected_queue != ODP_QUEUE_INVALID);
+
+	classify_and_check_result(ts, expected_queue);
+
+	CU_ASSERT(odp_cls_pmr_destroy(pmr_1) == 0);
+	CU_ASSERT(odp_cls_pmr_destroy(pmr_2) == 0);
+}
+
+static void cls_pmr_priority(void)
+{
+	const test_state_t ts = test_init(ENABLE_CLS);
+	odp_cos_t cos_1 = cos_create(ts.default_pool);
+	odp_cos_t cos_2 = cos_create(ts.default_pool);
+	const uint32_t max_exhaustive = 260;
+	uint32_t max = cls_capa.max_pmr_priority;
+
+	/* test that odp_cls_pmr_create() creates a PMR with priority 0 */
+	test_pmr_priority(&ts,   0, cos_1,   1, cos_2, USE_PMR_CREATE);
+	test_pmr_priority(&ts,   1, cos_1,   0, cos_2, USE_PMR_CREATE);
+	/* test PMR prioritization between 0 and maximum priority */
+	test_pmr_priority(&ts,   0, cos_1, max, cos_2, 0);
+	test_pmr_priority(&ts, max, cos_1,   0, cos_2, 0);
+
+	/* test PMR prioritization between several pairs of priority values */
+	for (uint64_t prio = 0; prio < max; prio++) {
+		test_pmr_priority(&ts, prio,     cos_1, prio + 1, cos_2, 0);
+		test_pmr_priority(&ts, prio + 1, cos_1, prio,     cos_2, 0);
+		if (prio > max_exhaustive)
+			prio += prio / 3;
+	}
+
+	cos_destroy(cos_1);
+	cos_destroy(cos_2);
+	test_term(&ts);
+}
+
+/*
+ * Test that PMR deletion does not break the priority order of the
+ * remaining PMRs. Delete the high priority PMR that was created first.
+ */
+static void test_pmr_priority_after_pmr_del_1(const test_state_t *ts,
+					      odp_cos_t cos_1,
+					      odp_cos_t cos_2,
+					      odp_cos_t cos_3)
+{
+	odp_pmr_t pmr_1;
+	odp_pmr_t pmr_2;
+	odp_pmr_t pmr_3;
+	odp_queue_t expected_queue;
+
+	pmr_1 = create_pmr_with_prio(1, CLS_DEFAULT_DPORT, ts->default_cos, cos_1, 0);
+	pmr_2 = create_pmr_with_prio(0, CLS_DEFAULT_DPORT, ts->default_cos, cos_2, 0);
+	pmr_3 = create_pmr_with_prio(1, CLS_DEFAULT_DPORT, ts->default_cos, cos_3, 0);
+	CU_ASSERT(odp_cls_pmr_destroy(pmr_1) == 0);
+
+	expected_queue = odp_cos_queue(cos_3);
+	CU_ASSERT(expected_queue != ODP_QUEUE_INVALID);
+
+	classify_and_check_result(ts, expected_queue);
+
+	CU_ASSERT(odp_cls_pmr_destroy(pmr_2) == 0);
+	CU_ASSERT(odp_cls_pmr_destroy(pmr_3) == 0);
+}
+
+/*
+ * Test that PMR deletion does not break the priority order of the
+ * remaining PMRs. Delete the high priority PMR that was created last.
+ */
+static void test_pmr_priority_after_pmr_del_2(const test_state_t *ts,
+					      odp_cos_t cos_1,
+					      odp_cos_t cos_2,
+					      odp_cos_t cos_3)
+{
+	odp_pmr_t pmr_1;
+	odp_pmr_t pmr_2;
+	odp_pmr_t pmr_3;
+	odp_queue_t expected_queue;
+
+	pmr_1 = create_pmr_with_prio(1, CLS_DEFAULT_DPORT, ts->default_cos, cos_1, 0);
+	pmr_2 = create_pmr_with_prio(0, CLS_DEFAULT_DPORT, ts->default_cos, cos_2, 0);
+	pmr_3 = create_pmr_with_prio(1, CLS_DEFAULT_DPORT, ts->default_cos, cos_3, 0);
+	CU_ASSERT(odp_cls_pmr_destroy(pmr_3) == 0);
+
+	expected_queue = odp_cos_queue(cos_1);
+	CU_ASSERT(expected_queue != ODP_QUEUE_INVALID);
+
+	classify_and_check_result(ts, expected_queue);
+
+	CU_ASSERT(odp_cls_pmr_destroy(pmr_1) == 0);
+	CU_ASSERT(odp_cls_pmr_destroy(pmr_2) == 0);
+}
+
+static void cls_pmr_priority_after_del(void)
+{
+	const test_state_t ts = test_init(ENABLE_CLS);
+	odp_cos_t cos_1 = cos_create(ts.default_pool);
+	odp_cos_t cos_2 = cos_create(ts.default_pool);
+	odp_cos_t cos_3 = cos_create(ts.default_pool);
+
+	test_pmr_priority_after_pmr_del_1(&ts, cos_1, cos_2, cos_3);
+	test_pmr_priority_after_pmr_del_2(&ts, cos_1, cos_2, cos_3);
+
+	cos_destroy(cos_1);
+	cos_destroy(cos_2);
+	cos_destroy(cos_3);
+	test_term(&ts);
+}
+
+/* Test that a higher priority rule is ignored if it does not match */
+static void cls_pmr_priority_no_match(void)
+{
+	const test_state_t ts = test_init(ENABLE_CLS);
+	odp_cos_t cos_1 = cos_create(ts.default_pool);
+	odp_cos_t cos_2 = cos_create(ts.default_pool);
+	odp_pmr_t pmr_1;
+	odp_pmr_t pmr_2;
+	odp_queue_t expected_queue;
+
+	pmr_1 = create_pmr_with_prio(1, CLS_DEFAULT_DPORT + 1, ts.default_cos, cos_1, 0);
+	pmr_2 = create_pmr_with_prio(0, CLS_DEFAULT_DPORT,     ts.default_cos, cos_2, 0);
+
+	expected_queue = odp_cos_queue(cos_2);
+	CU_ASSERT(expected_queue != ODP_QUEUE_INVALID);
+
+	classify_and_check_result(&ts, expected_queue);
+
+	CU_ASSERT(odp_cls_pmr_destroy(pmr_1) == 0);
+	CU_ASSERT(odp_cls_pmr_destroy(pmr_2) == 0);
+	cos_destroy(cos_1);
+	cos_destroy(cos_2);
+	test_term(&ts);
+}
+
+/* Test priorities in a CoS hierarchy:
+ *
+ * [default_cos]---(pri 0)--->[cos_1]---(pri hi)--->[cos_1a]
+ *              \--(pri 1)--->[cos_2]---(pri 0)---->[cos_2a]
+ *
+ * Packets should end up through cos_2 in cos_2a.
+ */
+static void cls_pmr_priority_in_cos_hierarchy(void)
+{
+	const test_state_t ts = test_init(ENABLE_CLS);
+	odp_cos_t cos_1  = cos_create(ts.default_pool);
+	odp_cos_t cos_2  = cos_create(ts.default_pool);
+	odp_cos_t cos_1a = cos_create(ts.default_pool);
+	odp_cos_t cos_2a = cos_create(ts.default_pool);
+	odp_pmr_t pmr_1, pmr_2, pmr_1a, pmr_2a;
+	odp_queue_t expected_queue;
+	uint32_t hipri = cls_capa.max_pmr_priority;
+
+	pmr_1  = create_pmr_with_prio(0,     CLS_DEFAULT_DPORT, ts.default_cos, cos_1, 0);
+	pmr_2  = create_pmr_with_prio(1,     CLS_DEFAULT_DPORT, ts.default_cos, cos_2, 0);
+	pmr_1a = create_pmr_with_prio(hipri, CLS_DEFAULT_DPORT, cos_1, cos_1a, 0);
+	pmr_2a = create_pmr_with_prio(0,     CLS_DEFAULT_DPORT, cos_2, cos_2a, 0);
+
+	expected_queue = odp_cos_queue(cos_2a);
+	CU_ASSERT(expected_queue != ODP_QUEUE_INVALID);
+
+	classify_and_check_result(&ts, expected_queue);
+
+	CU_ASSERT(odp_cls_pmr_destroy(pmr_1) == 0);
+	CU_ASSERT(odp_cls_pmr_destroy(pmr_2) == 0);
+	CU_ASSERT(odp_cls_pmr_destroy(pmr_1a) == 0);
+	CU_ASSERT(odp_cls_pmr_destroy(pmr_2a) == 0);
+	cos_destroy(cos_1);
+	cos_destroy(cos_2);
+	cos_destroy(cos_1a);
+	cos_destroy(cos_2a);
+	test_term(&ts);
+}
+
+static int check_capa_pmr_prio(void)
+{
+	return (sched_capa.max_queues >= 2 &&
+		cls_capa.max_cos >= 2 &&
+		cls_capa.max_pmr >= 2 &&
+		cls_capa.max_pmr_per_cos >= 2 &&
+		cls_capa.max_pmr_priority >= 1 &&
+		cls_capa.supported_terms.bit.udp_dport);
+}
+
+static int check_capa_pmr_prio_after_del(void)
+{
+	return (sched_capa.max_queues >= 3 &&
+		cls_capa.max_cos >= 3 &&
+		cls_capa.max_pmr >= 3 &&
+		cls_capa.max_pmr_per_cos >= 3 &&
+		cls_capa.max_pmr_priority >= 1 &&
+		cls_capa.supported_terms.bit.udp_dport);
+}
+
+static int check_capa_pmr_prio_hierarchy(void)
+{
+	return (sched_capa.max_queues >= 4 &&
+		cls_capa.max_cos >= 4 &&
+		cls_capa.max_pmr >= 4 &&
+		cls_capa.max_pmr_per_cos >= 2 &&
+		cls_capa.max_pmr_priority >= 1 &&
+		cls_capa.supported_terms.bit.udp_dport);
 }
 
 typedef enum match_t {
@@ -1992,5 +2306,10 @@ odp_testinfo_t classification_suite_pmr[] = {
 	ODP_TEST_INFO(cls_pktin_classifier_flag),
 	ODP_TEST_INFO(cls_pmr_term_tcp_dport_multi),
 	ODP_TEST_INFO_CONDITIONAL(cls_pmr_marking, check_capa_pmr_marking),
+	ODP_TEST_INFO_CONDITIONAL(cls_pmr_priority, check_capa_pmr_prio),
+	ODP_TEST_INFO_CONDITIONAL(cls_pmr_priority_after_del, check_capa_pmr_prio_after_del),
+	ODP_TEST_INFO_CONDITIONAL(cls_pmr_priority_no_match, check_capa_pmr_prio),
+	ODP_TEST_INFO_CONDITIONAL(cls_pmr_priority_in_cos_hierarchy,
+				  check_capa_pmr_prio_hierarchy),
 	ODP_TEST_INFO_NULL,
 };

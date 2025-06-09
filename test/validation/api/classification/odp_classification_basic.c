@@ -36,6 +36,7 @@ static void test_defaults(uint8_t fill)
 	memset(&pmr_opt, fill, sizeof(pmr_opt));
 	odp_cls_pmr_create_opt_init(&pmr_opt);
 	CU_ASSERT(pmr_opt.mark == 0);
+	CU_ASSERT(pmr_opt.priority == 0);
 }
 
 static void cls_default_values(void)
