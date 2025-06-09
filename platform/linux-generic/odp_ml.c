@@ -1082,6 +1082,10 @@ static const char *data_type_str(odp_ml_data_type_t data_type)
 		return "uint16";
 	case ODP_ML_DATA_TYPE_INT16:
 		return "int16";
+	case ODP_ML_DATA_TYPE_INT24:
+		return "int24";
+	case ODP_ML_DATA_TYPE_UINT24:
+		return "uint24";
 	case ODP_ML_DATA_TYPE_INT32:
 		return "int32";
 	case ODP_ML_DATA_TYPE_UINT32:
@@ -1094,6 +1098,8 @@ static const char *data_type_str(odp_ml_data_type_t data_type)
 		return "fp16";
 	case ODP_ML_DATA_TYPE_FP32:
 		return "fp32";
+	case ODP_ML_DATA_TYPE_FP64:
+		return "fp64";
 	case ODP_ML_DATA_TYPE_BFP16:
 		return "bfp16";
 	default:
