@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2014-2018 Linaro Limited
- * Copyright (c) 2021-2023 Nokia
+ * Copyright (c) 2021-2025 Nokia
  */
 
 /**
@@ -124,6 +124,16 @@ int odp_crypto_session_destroy(odp_crypto_session_t session);
  * an odp_crypto_session_t handle.
  */
 uint64_t odp_crypto_session_to_u64(odp_crypto_session_t hdl);
+
+/**
+ * Print debug information about crypto session
+ *
+ * Print implementation defined information about crypto session to the ODP log.
+ * The information is intended to be used for debugging.
+ *
+ * @param hdl  Crypto session handle
+ */
+void odp_crypto_session_print(odp_crypto_session_t hdl);
 
 /**
  * Initialize crypto session parameters
