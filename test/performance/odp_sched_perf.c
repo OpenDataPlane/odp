@@ -53,6 +53,7 @@ typedef struct test_options_t {
 	uint32_t num_join;
 	uint32_t num_prefetch;
 	uint32_t max_burst;
+	odp_cache_stash_config_t cache_stash_config;
 	odp_pool_type_t pool_type;
 	int      queue_type;
 	int      thr_type;
@@ -145,6 +146,65 @@ static int setup_sig_handler(void)
 	return 0;
 }
 
+static void set_cache_stash(odp_cache_stash_region_t *region, uint32_t level, uint32_t len,
+			    uint32_t offset)
+{
+	if (level == 0) {
+		region->l2.len = len;
+		region->l2.offset = offset;
+	} else {
+		region->l3.len = len;
+		region->l3.offset = offset;
+	}
+}
+
+static int parse_cache_stash_config(char *optarg, test_options_t *test_options)
+{
+	uint32_t region, level, offset, len;
+	odp_cache_stash_config_t *stash_config = &test_options->cache_stash_config;
+
+	if (sscanf(optarg, "%u,%u,%u,%u", &region, &level, &offset, &len) != 4) {
+		ODPH_ERR("Invalid number of arguments for cache stashing\n");
+		return -1;
+	}
+
+	if (region > 3) {
+		ODPH_ERR("Invalid region for cache stashing: %u\n", region);
+		return -1;
+	}
+
+	if (level > 1) {
+		ODPH_ERR("Invalid cache level for cache stashing: %u\n", level);
+		return -1;
+	}
+
+	if (len == 0) {
+		ODPH_ERR("Invalid len for cache stashing: %u\n", len);
+		return -1;
+	}
+
+	stash_config->regions.all |= (1U << (region * 2 + level));
+
+	switch (region) {
+	case 0:
+		set_cache_stash(&stash_config->event_metadata, level, len, offset);
+		break;
+	case 1:
+		set_cache_stash(&stash_config->event_data, level, len, offset);
+		break;
+	case 2:
+		set_cache_stash(&stash_config->event_user_area, level, len, offset);
+		break;
+	case 3:
+		set_cache_stash(&stash_config->queue_context, level, len, offset);
+		break;
+	default:
+		break;
+	}
+
+	return 0;
+}
+
 static void print_usage(void)
 {
 	printf("\n"
@@ -167,6 +227,12 @@ static void print_usage(void)
 	       "                         if num_cpu is multiple of num_group and num_group is multiple of num_join.\n"
 	       "                         0: join all groups (default)\n"
 	       "  -b, --burst            Maximum number of events per operation. Default: 100.\n"
+	       "  -C, --cache_stash      Enable common group level cache stashing. Format: region,level,offset,len\n"
+	       "                         region: 0: Event metadata, 1: Event data, 2: Event user area, 3: Queue context\n"
+	       "                         level: 0: L2, 1: L3\n"
+	       "                         offset/len: in bytes\n"
+	       "                         E.g.: 1,0,16,32 enables 32-byte L2 stash on event data with a 16-byte offset\n"
+	       "                         For stashing multiple regions, use -C multiple times\n"
 	       "  -t, --type             Queue type. 0: parallel, 1: atomic, 2: ordered. Default: 0.\n"
 	       "  -T, --thr_type         Thread type. 0: worker thread, 1: control thread. Default: 0\n"
 	       "  -f, --forward          0: Keep event in the original queue (default)\n"
@@ -214,6 +280,7 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 		{"num_group",    required_argument, NULL, 'g'},
 		{"num_join",     required_argument, NULL, 'j'},
 		{"burst",        required_argument, NULL, 'b'},
+		{"cache_stash",  required_argument, NULL, 'C'},
 		{"type",         required_argument, NULL, 't'},
 		{"thr_type",     required_argument, NULL, 'T'},
 		{"forward",      required_argument, NULL, 'f'},
@@ -233,7 +300,7 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+c:q:L:H:d:e:s:g:j:b:t:T:f:F:w:S:k:l:n:m:p:P:u:U:vh";
+	static const char *shortopts = "+c:q:L:H:d:e:s:g:j:b:C:t:T:f:F:w:S:k:l:n:m:p:P:u:U:vh";
 
 	test_options->num_cpu    = 1;
 	test_options->num_def    = 1;
@@ -274,6 +341,10 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 			break;
 		case 'j':
 			test_options->num_join = atoi(optarg);
+			break;
+		case 'C':
+			if (parse_cache_stash_config(optarg, test_options))
+				ret = -1;
 			break;
 		case 'b':
 			test_options->max_burst = atoi(optarg);
@@ -654,6 +725,7 @@ static int create_groups(test_global_t *global)
 	uint32_t i;
 	test_options_t *test_options = &global->test_options;
 	uint32_t num_group = test_options->num_group;
+	odp_schedule_group_param_t group_param;
 
 	if (test_options->num_group <= 0)
 		return 0;
@@ -669,11 +741,13 @@ static int create_groups(test_global_t *global)
 	}
 
 	odp_thrmask_zero(&thrmask);
+	odp_schedule_group_param_init(&group_param);
+	group_param.cache_stash_hints.common = test_options->cache_stash_config;
 
 	for (i = 0; i < num_group; i++) {
 		odp_schedule_group_t group;
 
-		group = odp_schedule_group_create("test_group", &thrmask);
+		group = odp_schedule_group_create_2("test_group", &thrmask, &group_param);
 
 		if (group == ODP_SCHED_GROUP_INVALID) {
 			ODPH_ERR("Group create failed %u\n", i);
@@ -989,6 +1063,23 @@ static int create_all_queues(test_global_t *global)
 	}
 
 	return 0;
+}
+
+static int schedule_config(test_global_t *global)
+{
+	test_options_t *test_options = &global->test_options;
+	odp_schedule_group_param_t group_param;
+
+	odp_schedule_config_init(&global->schedule_config);
+	odp_schedule_group_param_init(&group_param);
+	group_param.cache_stash_hints.common = test_options->cache_stash_config;
+
+	if (test_options->num_group == -1)
+		global->schedule_config.sched_group.worker_param = group_param;
+	else if (test_options->num_group == 0)
+		global->schedule_config.sched_group.all_param = group_param;
+
+	return odp_schedule_config(&global->schedule_config);
 }
 
 static int join_group(test_global_t *global, int grp_index, int thr)
@@ -1763,8 +1854,8 @@ int main(int argc, char **argv)
 		}
 	}
 
-	odp_schedule_config_init(&global->schedule_config);
-	odp_schedule_config(&global->schedule_config);
+	if (schedule_config(global))
+		return -1;
 
 	if (set_num_cpu(global))
 		return -1;
