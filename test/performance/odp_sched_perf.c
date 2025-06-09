@@ -51,6 +51,7 @@ typedef struct test_options_t {
 	uint32_t num_sched;
 	int      num_group;
 	uint32_t num_join;
+	uint32_t num_prefetch;
 	uint32_t max_burst;
 	odp_pool_type_t pool_type;
 	int      queue_type;
@@ -189,6 +190,7 @@ static void print_usage(void)
 	       "  -u, --uarea_rd         Number of user area words (uint64_t) to read on every event. Default: 0.\n"
 	       "  -U, --uarea_rw         Number of user area words (uint64_t) to modify on every event. Default: 0.\n"
 	       "  -p, --pool_type        Pool type. 0: buffer, 1: packet, 2: event vector. Default: 0.\n"
+	       "  -P, --prefetch         Number of events to be prefetched. Default: 0.\n"
 	       "  -v, --verbose          Verbose output.\n"
 	       "  -h, --help             This help\n"
 	       "\n");
@@ -225,12 +227,13 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 		{"uarea_rd",     required_argument, NULL, 'u'},
 		{"uarea_rw",     required_argument, NULL, 'U'},
 		{"pool_type",    required_argument, NULL, 'p'},
+		{"prefetch",     required_argument, NULL, 'P'},
 		{"verbose",      no_argument,       NULL, 'v'},
 		{"help",         no_argument,       NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+c:q:L:H:d:e:s:g:j:b:t:T:f:F:w:S:k:l:n:m:p:u:U:vh";
+	static const char *shortopts = "+c:q:L:H:d:e:s:g:j:b:t:T:f:F:w:S:k:l:n:m:p:P:u:U:vh";
 
 	test_options->num_cpu    = 1;
 	test_options->num_def    = 1;
@@ -310,6 +313,9 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 			break;
 		case 'p':
 			pool_type = atoi(optarg);
+			break;
+		case 'P':
+			test_options->num_prefetch = atoi(optarg);
 			break;
 		case 'w':
 			test_options->wait_ns = atoll(optarg);
@@ -1252,6 +1258,7 @@ static int test_sched(void *arg)
 	const uint32_t uarea_rd = test_options->uarea_rd;
 	const uint32_t uarea_rw = test_options->uarea_rw;
 	const odp_pool_type_t pool_type = test_options->pool_type;
+	const uint32_t num_prefetch = test_options->num_prefetch;
 	int touch_ctx = ctx_rd_words || ctx_rw_words;
 	odp_atomic_u32_t *exit_threads = &global->exit_threads;
 	uint32_t ctx_offset = 0;
@@ -1356,6 +1363,9 @@ static int test_sched(void *arg)
 				waits++;
 				odp_time_wait_ns(wait_ns);
 			}
+
+			if (num_prefetch)
+				odp_schedule_prefetch(num_prefetch);
 
 			while (num) {
 				num_enq = odp_queue_enq_multi(queue, &ev[i],
