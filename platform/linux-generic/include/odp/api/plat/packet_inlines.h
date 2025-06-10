@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2017-2018 Linaro Limited
- * Copyright (c) 2019-2022 Nokia
+ * Copyright (c) 2019-2025 Nokia
  */
 
 /**
@@ -204,7 +204,7 @@ _ODP_INLINE void odp_packet_user_ptr_set(odp_packet_t pkt, const void *ptr)
 
 _ODP_INLINE void *odp_packet_user_area(odp_packet_t pkt)
 {
-	return _odp_pkt_get(pkt, void *, user_area);
+	return _odp_event_hdr_field((odp_event_t)(uintptr_t)pkt, void *, user_area);
 }
 
 _ODP_INLINE uint32_t odp_packet_user_area_size(odp_packet_t pkt)
@@ -216,18 +216,15 @@ _ODP_INLINE uint32_t odp_packet_user_area_size(odp_packet_t pkt)
 
 _ODP_INLINE int odp_packet_user_flag(odp_packet_t pkt)
 {
-	_odp_packet_flags_t flags;
-
-	flags.all_flags = _odp_pkt_get(pkt, uint32_t, flags);
-
-	return flags.user_flag;
+	return _odp_event_hdr_field((odp_event_t)(uintptr_t)pkt, int8_t, user_flag);
 }
 
 _ODP_INLINE void odp_packet_user_flag_set(odp_packet_t pkt, int val)
 {
-	_odp_packet_flags_t *flags = _odp_pkt_get_ptr(pkt, _odp_packet_flags_t, flags);
+	odp_event_t event = (odp_event_t)(uintptr_t)pkt;
+	int8_t *user_flag = _odp_event_hdr_ptr(event, int8_t, user_flag);
 
-	flags->user_flag = !!val;
+	*user_flag = !!val;
 }
 
 _ODP_INLINE uint32_t odp_packet_l2_offset(odp_packet_t pkt)
@@ -339,7 +336,7 @@ _ODP_INLINE odp_proto_l2_type_t odp_packet_l2_type(odp_packet_t pkt)
 {
 	_odp_packet_input_flags_t input_flags;
 
-	input_flags.all = _odp_pkt_get(pkt, uint64_t, input_flags);
+	input_flags.all = _odp_pkt_get(pkt, uint32_t, input_flags);
 
 	return input_flags.eth ? ODP_PROTO_L2_TYPE_ETH : ODP_PROTO_L2_TYPE_NONE;
 }
@@ -348,7 +345,7 @@ _ODP_INLINE odp_proto_l3_type_t odp_packet_l3_type(odp_packet_t pkt)
 {
 	_odp_packet_input_flags_t input_flags;
 
-	input_flags.all = _odp_pkt_get(pkt, uint64_t, input_flags);
+	input_flags.all = _odp_pkt_get(pkt, uint32_t, input_flags);
 
 	if (input_flags.ipv4)
 		return ODP_PROTO_L3_TYPE_IPV4;
@@ -362,28 +359,7 @@ _ODP_INLINE odp_proto_l3_type_t odp_packet_l3_type(odp_packet_t pkt)
 
 _ODP_INLINE odp_proto_l4_type_t odp_packet_l4_type(odp_packet_t pkt)
 {
-	_odp_packet_input_flags_t input_flags;
-
-	input_flags.all = _odp_pkt_get(pkt, uint64_t, input_flags);
-
-	if (input_flags.tcp)
-		return ODP_PROTO_L4_TYPE_TCP;
-	else if (input_flags.udp)
-		return ODP_PROTO_L4_TYPE_UDP;
-	else if (input_flags.sctp)
-		return ODP_PROTO_L4_TYPE_SCTP;
-	else if (input_flags.ipsec_ah)
-		return ODP_PROTO_L4_TYPE_AH;
-	else if (input_flags.ipsec_esp)
-		return ODP_PROTO_L4_TYPE_ESP;
-	else if (input_flags.icmp && input_flags.ipv4)
-		return ODP_PROTO_L4_TYPE_ICMPV4;
-	else if (input_flags.icmp && input_flags.ipv6)
-		return ODP_PROTO_L4_TYPE_ICMPV6;
-	else if (input_flags.no_next_hdr)
-		return ODP_PROTO_L4_TYPE_NO_NEXT;
-
-	return ODP_PROTO_L4_TYPE_NONE;
+	return _odp_pkt_get(pkt, uint8_t, l4_type);
 }
 
 _ODP_INLINE odp_packet_chksum_status_t odp_packet_l3_chksum_status(odp_packet_t pkt)
@@ -392,7 +368,7 @@ _ODP_INLINE odp_packet_chksum_status_t odp_packet_l3_chksum_status(odp_packet_t 
 	_odp_packet_input_flags_t input_flags;
 
 	flags.all_flags = _odp_pkt_get(pkt, uint32_t, flags);
-	input_flags.all = _odp_pkt_get(pkt, uint64_t, input_flags);
+	input_flags.all = _odp_pkt_get(pkt, uint32_t, input_flags);
 
 	if (!input_flags.l3_chksum_done)
 		return ODP_PACKET_CHKSUM_UNKNOWN;
@@ -409,7 +385,7 @@ _ODP_INLINE odp_packet_chksum_status_t odp_packet_l4_chksum_status(odp_packet_t 
 	_odp_packet_input_flags_t input_flags;
 
 	flags.all_flags = _odp_pkt_get(pkt, uint32_t, flags);
-	input_flags.all = _odp_pkt_get(pkt, uint64_t, input_flags);
+	input_flags.all = _odp_pkt_get(pkt, uint32_t, input_flags);
 
 	if (!input_flags.l4_chksum_done)
 		return ODP_PACKET_CHKSUM_UNKNOWN;
@@ -595,7 +571,7 @@ _ODP_INLINE odp_packet_color_t odp_packet_color(odp_packet_t pkt)
 {
 	_odp_packet_input_flags_t input_flags;
 
-	input_flags.all = _odp_pkt_get(pkt, uint64_t, input_flags);
+	input_flags.all = _odp_pkt_get(pkt, uint32_t, input_flags);
 
 	return (odp_packet_color_t)input_flags.color;
 }
@@ -604,7 +580,7 @@ _ODP_INLINE odp_bool_t odp_packet_drop_eligible(odp_packet_t pkt)
 {
 	_odp_packet_input_flags_t input_flags;
 
-	input_flags.all = _odp_pkt_get(pkt, uint64_t, input_flags);
+	input_flags.all = _odp_pkt_get(pkt, uint32_t, input_flags);
 
 	return !input_flags.nodrop;
 }
@@ -622,7 +598,7 @@ _ODP_INLINE uint64_t odp_packet_cls_mark(odp_packet_t pkt)
 {
 	_odp_packet_input_flags_t input_flags;
 
-	input_flags.all = _odp_pkt_get(pkt, uint64_t, input_flags);
+	input_flags.all = _odp_pkt_get(pkt, uint32_t, input_flags);
 
 	return input_flags.cls_mark ? _odp_pkt_get(pkt, uint16_t, cls_mark) : 0;
 }

@@ -17,15 +17,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <odp/visibility_begin.h>
-
-/* Buffer header field offsets for inline functions */
-const _odp_buffer_inline_offset_t _odp_buffer_inline_offset ODP_ALIGNED_CACHE = {
-	.uarea_addr = offsetof(odp_buffer_hdr_t, uarea_addr)
-};
-
-#include <odp/visibility_end.h>
-
 void odp_buffer_print(odp_buffer_t buf)
 {
 	int len = 0;

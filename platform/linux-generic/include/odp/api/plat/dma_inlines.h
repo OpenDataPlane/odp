@@ -51,7 +51,7 @@ _ODP_INLINE odp_event_t odp_dma_compl_to_event(odp_dma_compl_t dma_compl)
 
 _ODP_INLINE void *odp_dma_compl_user_area(odp_dma_compl_t dma_compl)
 {
-	return odp_buffer_user_area((odp_buffer_t)(uintptr_t)dma_compl);
+	return _odp_event_hdr_field((odp_event_t)(uintptr_t)dma_compl, void *, user_area);
 }
 
 _ODP_INLINE void odp_dma_transfer_param_init(odp_dma_transfer_param_t *trs_param)

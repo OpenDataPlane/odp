@@ -63,7 +63,7 @@
 #define TEST_DEF_BURST 8
 
 /** Maximum number of results to be held */
-#define TEST_MAX_BENCH 100
+#define TEST_MAX_BENCH 200
 
 #define TEST_MAX_SIZES 7
 
@@ -105,6 +105,12 @@ typedef struct {
 	bench_suite_t suite;
 	/** Packet pool */
 	odp_pool_t pool;
+	/** Buffer pool */
+	odp_pool_t pool_buf;
+	/** Timeout pool */
+	odp_pool_t pool_tmo;
+	/** Event vector pool */
+	odp_pool_t pool_evv;
 	struct {
 		/** Test packet length */
 		uint32_t len;
@@ -286,6 +292,67 @@ static void alloc_packets_twice(void)
 			      TEST_REPEAT_COUNT);
 }
 
+typedef struct test_packet_t {
+	const uint8_t *data;
+	int len;
+} test_packet_t;
+
+test_packet_t test_packets[] = {
+	{test_packet_arp, sizeof(test_packet_arp)},
+	{test_packet_ipv4_icmp, sizeof(test_packet_ipv4_icmp)},
+	{test_packet_ipv6_icmp, sizeof(test_packet_ipv6_icmp)},
+	{test_packet_ipv4_tcp, sizeof(test_packet_ipv4_tcp)},
+	{test_packet_ipv6_tcp, sizeof(test_packet_ipv6_tcp)},
+	{test_packet_ipv4_udp, sizeof(test_packet_ipv4_udp)},
+	{test_packet_ipv6_udp, sizeof(test_packet_ipv6_udp)},
+	{test_packet_ipv4_sctp, sizeof(test_packet_ipv4_sctp)},
+	{test_packet_ipv6_sctp, sizeof(test_packet_ipv6_sctp)},
+	{test_packet_vlan_ipv4_udp, sizeof(test_packet_vlan_ipv4_udp)},
+	{test_packet_mcast_eth_ipv4_udp, sizeof(test_packet_mcast_eth_ipv4_udp)},
+	{test_packet_mcast_eth_ipv6_udp, sizeof(test_packet_mcast_eth_ipv6_udp)},
+	{test_packet_ipv4_udp_last_frag, sizeof(test_packet_ipv4_udp_last_frag)},
+};
+
+static uint32_t rnd(void)
+{
+	static uint64_t s = 1;
+	uint64_t prime = 0x7fffffff;
+
+	s = (0x12345678 * s) % prime;
+	return s;
+}
+
+static void create_packets_misc(void)
+{
+	int num_types = ODPH_ARRAY_SIZE(test_packets);
+
+	for (int i = 0; i < TEST_REPEAT_COUNT; i++) {
+		test_packet_t *tp = &test_packets[rnd() % num_types];
+		odp_packet_t *pkt = &gbl_args->pkt_tbl[i];
+
+		*pkt = odp_packet_alloc(gbl_args->pool, tp->len);
+		if (*pkt == ODP_PACKET_INVALID)
+			ODPH_ABORT("Allocating test packets failed\n");
+		if (odp_packet_copy_from_mem(*pkt, 0, tp->len, tp->data))
+			ODPH_ABORT("Copying test packet failed\n");
+	}
+}
+
+static void create_packets_misc_parsed(void)
+{
+	odp_packet_parse_param_t param = {
+		.proto = ODP_PROTO_ETH,
+		.last_layer = ODP_PROTO_LAYER_ALL,
+		.chksums.all_chksum = 0
+	};
+
+	create_packets_misc();
+	for (int i = 0; i < TEST_REPEAT_COUNT; i++) {
+		if (odp_packet_parse(gbl_args->pkt_tbl[i], 0, &param))
+			ODPH_ABORT("Packet parsing failed\n");
+	}
+}
+
 static void alloc_parse_packets(const void *pkt_data, uint32_t len)
 {
 	int i;
@@ -401,6 +468,54 @@ static void create_packets(void)
 	gbl_args->pkt.headroom = min_headroom;
 	gbl_args->pkt.tailroom = min_tailroom;
 	gbl_args->pkt.seg_len = min_seg_len;
+}
+
+static int num_misc_event_types = 4;
+
+static void create_events_misc(void)
+{
+	odp_packet_t pkt;
+	odp_buffer_t buf;
+	odp_timeout_t tmo;
+	odp_event_vector_t evv;
+	odp_event_t events[num_misc_event_types];
+	int i;
+
+	pkt = odp_packet_alloc(gbl_args->pool, gbl_args->pkt.len);
+	if (pkt == ODP_PACKET_INVALID)
+		ODPH_ABORT("Packet alloc failed\n");
+
+	buf = odp_buffer_alloc(gbl_args->pool_buf);
+	if (buf == ODP_BUFFER_INVALID)
+		ODPH_ABORT("Buffer alloc failed\n");
+
+	tmo = odp_timeout_alloc(gbl_args->pool_tmo);
+	if (tmo == ODP_TIMEOUT_INVALID)
+		ODPH_ABORT("Timeout alloc failed\n");
+
+	events[0] = odp_packet_to_event(pkt);
+	events[1] = odp_buffer_to_event(buf);
+	events[2] = odp_timeout_to_event(tmo);
+
+	if (gbl_args->pool_evv != ODP_POOL_INVALID) {
+		evv = odp_event_vector_alloc(gbl_args->pool_evv);
+		if (evv == ODP_EVENT_VECTOR_INVALID)
+			ODPH_ABORT("Event vector alloc failed\n");
+		events[3] = odp_event_vector_to_event(evv);
+	} else {
+		num_misc_event_types = 3;
+	}
+
+	for (i = 0; i < num_misc_event_types; i++)
+		gbl_args->event_tbl[i] = events[i];
+	for (; i < TEST_REPEAT_COUNT; i++)
+		gbl_args->event_tbl[i] = events[rnd() % num_misc_event_types];
+}
+
+static void free_events_misc(void)
+{
+	for (int i = 0; i < num_misc_event_types; i++)
+		odp_event_free(gbl_args->event_tbl[i]);
 }
 
 static void create_events(void)
@@ -1265,6 +1380,55 @@ static int event_user_flag_set(void)
 	return i;
 }
 
+#define DEF_FLAG_TEST_FUN(name, func)	                           \
+static int name(void)                                              \
+{                                                                  \
+	uint32_t ret = 0;                                          \
+								   \
+	for (int i = 0; i < TEST_REPEAT_COUNT; i++)                \
+		ret += func(gbl_args->pkt_tbl[i]); \
+								   \
+	return ret <= TEST_REPEAT_COUNT;                           \
+}
+
+DEF_FLAG_TEST_FUN(packet_has_error,     odp_packet_has_error)
+DEF_FLAG_TEST_FUN(packet_has_l2_error,  odp_packet_has_l2_error)
+DEF_FLAG_TEST_FUN(packet_has_l3_error,  odp_packet_has_l3_error)
+DEF_FLAG_TEST_FUN(packet_has_l4_error,  odp_packet_has_l4_error)
+DEF_FLAG_TEST_FUN(packet_has_l2,        odp_packet_has_l2)
+DEF_FLAG_TEST_FUN(packet_has_l3,        odp_packet_has_l3)
+DEF_FLAG_TEST_FUN(packet_has_l4,        odp_packet_has_l4)
+DEF_FLAG_TEST_FUN(packet_has_eth,       odp_packet_has_eth)
+DEF_FLAG_TEST_FUN(packet_has_eth_bcast, odp_packet_has_eth_bcast)
+DEF_FLAG_TEST_FUN(packet_has_eth_mcast, odp_packet_has_eth_mcast)
+DEF_FLAG_TEST_FUN(packet_has_jumbo,     odp_packet_has_jumbo)
+DEF_FLAG_TEST_FUN(packet_has_vlan,      odp_packet_has_vlan)
+DEF_FLAG_TEST_FUN(packet_has_vlan_qinq, odp_packet_has_vlan_qinq)
+DEF_FLAG_TEST_FUN(packet_has_arp,       odp_packet_has_arp)
+DEF_FLAG_TEST_FUN(packet_has_ipv4,      odp_packet_has_ipv4)
+DEF_FLAG_TEST_FUN(packet_has_ipv6,      odp_packet_has_ipv6)
+DEF_FLAG_TEST_FUN(packet_has_ip_bcast,  odp_packet_has_ip_bcast)
+DEF_FLAG_TEST_FUN(packet_has_ip_mcast,  odp_packet_has_ip_mcast)
+DEF_FLAG_TEST_FUN(packet_has_ipfrag,    odp_packet_has_ipfrag)
+DEF_FLAG_TEST_FUN(packet_has_ipopt,     odp_packet_has_ipopt)
+DEF_FLAG_TEST_FUN(packet_has_ipsec,     odp_packet_has_ipsec)
+DEF_FLAG_TEST_FUN(packet_has_udp,       odp_packet_has_udp)
+DEF_FLAG_TEST_FUN(packet_has_tcp,       odp_packet_has_tcp)
+DEF_FLAG_TEST_FUN(packet_has_sctp,      odp_packet_has_sctp)
+DEF_FLAG_TEST_FUN(packet_has_icmp,      odp_packet_has_icmp)
+DEF_FLAG_TEST_FUN(packet_has_flow_hash, odp_packet_has_flow_hash)
+DEF_FLAG_TEST_FUN(packet_has_ts,        odp_packet_has_ts)
+
+static int packet_l2_type(void)
+{
+	uint32_t ret = 0;
+
+	for (int i = 0; i < TEST_REPEAT_COUNT; i++)
+		ret += odp_packet_l2_type(gbl_args->pkt_tbl[i]);
+
+	return ret;
+}
+
 static int packet_l2_ptr(void)
 {
 	int i;
@@ -1298,6 +1462,16 @@ static int packet_l2_offset_set(void)
 	return !ret;
 }
 
+static int packet_l3_type(void)
+{
+	uint32_t ret = 0;
+
+	for (int i = 0; i < TEST_REPEAT_COUNT; i++)
+		ret += odp_packet_l3_type(gbl_args->pkt_tbl[i]);
+
+	return ret;
+}
+
 static int packet_l3_ptr(void)
 {
 	int i;
@@ -1329,6 +1503,16 @@ static int packet_l3_offset_set(void)
 		ret += odp_packet_l3_offset_set(gbl_args->pkt_tbl[i], offset);
 
 	return !ret;
+}
+
+static int packet_l4_type(void)
+{
+	uint32_t ret = 0;
+
+	for (int i = 0; i < TEST_REPEAT_COUNT; i++)
+		ret += odp_packet_l4_type(gbl_args->pkt_tbl[i]);
+
+	return ret;
 }
 
 static int packet_l4_ptr(void)
@@ -1478,7 +1662,7 @@ static int event_subtype(void)
 	return i;
 }
 
-static int packet_parse(void)
+static int do_packet_parse(int chksum)
 {
 	odp_packet_parse_param_t param;
 	odp_packet_t *pkt_tbl = gbl_args->pkt_tbl;
@@ -1488,14 +1672,24 @@ static int packet_parse(void)
 	memset(&param, 0, sizeof(odp_packet_parse_param_t));
 	param.proto = ODP_PROTO_ETH;
 	param.last_layer = ODP_PROTO_LAYER_ALL;
-	param.chksums.chksum.ipv4 = 1;
-	param.chksums.chksum.tcp = 1;
-	param.chksums.chksum.udp = 1;
+	param.chksums.chksum.ipv4 = !!chksum;
+	param.chksums.chksum.tcp = !!chksum;
+	param.chksums.chksum.udp = !!chksum;
 
 	for (i = 0; i < TEST_REPEAT_COUNT; i++)
 		ret += odp_packet_parse(pkt_tbl[i], 0, &param);
 
 	return !ret;
+}
+
+static int packet_parse(void)
+{
+	return do_packet_parse(1);
+}
+
+static int packet_parse_no_chksum(void)
+{
+	return do_packet_parse(0);
 }
 
 static int packet_parse_multi(void)
@@ -1699,17 +1893,56 @@ bench_info_t test_suite[] = {
 	BENCH_INFO(packet_user_ptr_set, create_packets, free_packets, NULL),
 	BENCH_INFO(packet_user_area, create_packets, free_packets, NULL),
 	BENCH_INFO(event_user_area, create_events, free_packets, NULL),
+	BENCH_INFO(event_user_area, create_events_misc, free_events_misc,
+		   "event_user_area misc"),
 	BENCH_INFO(packet_user_area_size, create_packets, free_packets, NULL),
 	BENCH_INFO(packet_user_flag, create_packets, free_packets, NULL),
 	BENCH_INFO(event_user_area_and_flag, create_events, free_packets, NULL),
+	BENCH_INFO(event_user_area_and_flag, create_events_misc, free_events_misc,
+		   "event_user_area_and_flag misc"),
 	BENCH_INFO(packet_user_flag_set, create_packets, free_packets, NULL),
 	BENCH_INFO(event_user_flag_set, create_events, free_packets, NULL),
+	BENCH_INFO(event_user_flag_set, create_events_misc, free_events_misc,
+		   "event user_flag_set misc"),
+
+#define BINFO(fun) BENCH_INFO(fun, create_packets_misc_parsed, free_packets, NULL)
+	BINFO(packet_has_error),
+	BINFO(packet_has_l2_error),
+	BINFO(packet_has_l3_error),
+	BINFO(packet_has_l4_error),
+	BINFO(packet_has_l2),
+	BINFO(packet_has_l3),
+	BINFO(packet_has_l4),
+	BINFO(packet_has_eth),
+	BINFO(packet_has_eth_bcast),
+	BINFO(packet_has_eth_mcast),
+	BINFO(packet_has_jumbo),
+	BINFO(packet_has_vlan),
+	BINFO(packet_has_vlan_qinq),
+	BINFO(packet_has_arp),
+	BINFO(packet_has_ipv4),
+	BINFO(packet_has_ipv6),
+	BINFO(packet_has_ip_bcast),
+	BINFO(packet_has_ip_mcast),
+	BINFO(packet_has_ipfrag),
+	BINFO(packet_has_ipopt),
+	BINFO(packet_has_ipsec),
+	BINFO(packet_has_udp),
+	BINFO(packet_has_tcp),
+	BINFO(packet_has_sctp),
+	BINFO(packet_has_icmp),
+	BINFO(packet_has_flow_hash),
+	BINFO(packet_has_ts),
+
+	BENCH_INFO(packet_l2_type, create_packets_misc_parsed, free_packets, NULL),
 	BENCH_INFO(packet_l2_ptr, create_packets, free_packets, NULL),
 	BENCH_INFO(packet_l2_offset, create_packets, free_packets, NULL),
 	BENCH_INFO(packet_l2_offset_set, create_packets, free_packets, NULL),
+	BENCH_INFO(packet_l3_type, create_packets_misc_parsed, free_packets, NULL),
 	BENCH_INFO(packet_l3_ptr, create_packets, free_packets, NULL),
 	BENCH_INFO(packet_l3_offset, create_packets, free_packets, NULL),
 	BENCH_INFO(packet_l3_offset_set, create_packets, free_packets, NULL),
+	BENCH_INFO(packet_l4_type, create_packets_misc_parsed, free_packets, NULL),
 	BENCH_INFO(packet_l4_ptr, create_packets, free_packets, NULL),
 	BENCH_INFO(packet_l4_offset, create_packets, free_packets, NULL),
 	BENCH_INFO(packet_l4_offset_set, create_packets, free_packets, NULL),
@@ -1731,6 +1964,10 @@ bench_info_t test_suite[] = {
 		   "packet_parse ipv6/tcp"),
 	BENCH_INFO(packet_parse, alloc_parse_packets_ipv6_udp, free_packets,
 		   "packet_parse ipv6/udp"),
+	BENCH_INFO(packet_parse, create_packets_misc, free_packets,
+		   "packet_parse misc"),
+	BENCH_INFO(packet_parse_no_chksum, create_packets_misc, free_packets,
+		   "packet_parse misc no csum"),
 	BENCH_INFO(packet_parse_multi, alloc_parse_packets_multi_ipv4_tcp, free_packets_multi,
 		   "packet_parse_multi ipv4/tcp"),
 	BENCH_INFO(packet_parse_multi, alloc_parse_packets_multi_ipv4_udp, free_packets_multi,
@@ -1743,6 +1980,55 @@ bench_info_t test_suite[] = {
 
 ODP_STATIC_ASSERT(ODPH_ARRAY_SIZE(test_suite) < TEST_MAX_BENCH,
 		  "Result array is too small to hold all the results");
+
+static odp_pool_t create_pool(const char *name, const odp_pool_param_t *param)
+{
+	odp_pool_t pool = odp_pool_create(name, param);
+
+	if (pool == ODP_POOL_INVALID) {
+		ODPH_ERR("Error: %s pool creation failed.\n", name);
+		exit(EXIT_FAILURE);
+	}
+	return pool;
+}
+
+static odp_pool_t create_buffer_pool(const odp_pool_capability_t *capa)
+{
+	odp_pool_param_t param;
+
+	odp_pool_param_init(&param);
+	param.type = ODP_POOL_BUFFER;
+	param.buf.num = 1;
+	param.buf.size = 1;
+	param.buf.uarea_size = capa->buf.max_uarea_size > 0 ? 1 : 0;
+	return create_pool("buf", &param);
+}
+
+static odp_pool_t create_timeout_pool(const odp_pool_capability_t *capa)
+{
+	odp_pool_param_t param;
+
+	odp_pool_param_init(&param);
+	param.type = ODP_POOL_TIMEOUT;
+	param.tmo.num = 1;
+	param.tmo.uarea_size = capa->tmo.max_uarea_size > 0 ? 1 : 0;
+	return create_pool("tmo", &param);
+}
+
+static odp_pool_t create_evv_pool(const odp_pool_capability_t *capa)
+{
+	odp_pool_param_t param;
+
+	if (capa->event_vector.max_pools == 0)
+		return ODP_POOL_INVALID;
+
+	odp_pool_param_init(&param);
+	param.type = ODP_POOL_EVENT_VECTOR;
+	param.event_vector.num = 1;
+	param.event_vector.max_size = capa->event_vector.max_size;
+	param.event_vector.uarea_size = capa->event_vector.max_uarea_size > 0 ? 1 : 0;
+	return create_pool("evv", &param);
+}
 
 /**
  * ODP packet microbenchmark application
@@ -1887,11 +2173,13 @@ int main(int argc, char *argv[])
 	params.type        = ODP_POOL_PACKET;
 
 	gbl_args->pool = odp_pool_create("packet pool", &params);
-
 	if (gbl_args->pool == ODP_POOL_INVALID) {
 		ODPH_ERR("Error: packet pool create failed.\n");
 		exit(EXIT_FAILURE);
 	}
+	gbl_args->pool_buf = create_buffer_pool(&capa);
+	gbl_args->pool_tmo = create_timeout_pool(&capa);
+	gbl_args->pool_evv = create_evv_pool(&capa);
 
 	printf("CPU:               %i\n", odp_cpumask_first(&cpumask));
 	printf("CPU mask:          %s\n", cpumaskstr);
@@ -1934,7 +2222,10 @@ int main(int argc, char *argv[])
 
 	ret = gbl_args->suite.retval;
 
-	if (odp_pool_destroy(gbl_args->pool)) {
+	if (odp_pool_destroy(gbl_args->pool) ||
+	    odp_pool_destroy(gbl_args->pool_buf) ||
+	    odp_pool_destroy(gbl_args->pool_tmo) ||
+	    (gbl_args->pool_evv != ODP_POOL_INVALID && odp_pool_destroy(gbl_args->pool_evv))) {
 		ODPH_ERR("Error: pool destroy\n");
 		exit(EXIT_FAILURE);
 	}
