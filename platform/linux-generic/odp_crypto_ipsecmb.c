@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2014-2018 Linaro Limited
  * Copyright (c) 2021 ARM Limited
- * Copyright (c) 2022-2024 Nokia
+ * Copyright (c) 2022-2025 Nokia
  */
 
 #include <odp_posix_extensions.h>
@@ -19,6 +19,7 @@
 #include <odp/api/plat/queue_inlines.h>
 #include <odp/api/plat/thread_inlines.h>
 
+#include <odp_crypto_internal.h>
 #include <odp_debug_internal.h>
 #include <odp_global_data.h>
 #include <odp_init_internal.h>
@@ -742,6 +743,20 @@ void odp_crypto_session_param_init(odp_crypto_session_param_t *param)
 uint64_t odp_crypto_session_to_u64(odp_crypto_session_t hdl)
 {
 	return (uint64_t)hdl;
+}
+
+void odp_crypto_session_print(odp_crypto_session_t hdl)
+{
+	odp_crypto_generic_session_t *session;
+
+	if (hdl == ODP_CRYPTO_SESSION_INVALID) {
+		_ODP_ERR("Invalid crypto session\n");
+		return;
+	}
+
+	session = (odp_crypto_generic_session_t *)(uintptr_t)hdl;
+
+	_odp_crypto_session_print("ipsecmb", session->idx, &session->p);
 }
 
 #if ODP_DEPRECATED_API

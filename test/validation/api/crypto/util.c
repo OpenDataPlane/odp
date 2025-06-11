@@ -82,6 +82,14 @@ const char *auth_alg_name(odp_auth_alg_t auth)
 		return "ODP_AUTH_ALG_SHA384";
 	case ODP_AUTH_ALG_SHA512:
 		return "ODP_AUTH_ALG_SHA512";
+	case ODP_AUTH_ALG_SHA3_224:
+		return "ODP_AUTH_ALG_SHA3_224";
+	case ODP_AUTH_ALG_SHA3_256:
+		return "ODP_AUTH_ALG_SHA3_256";
+	case ODP_AUTH_ALG_SHA3_384:
+		return "ODP_AUTH_ALG_SHA3_384";
+	case ODP_AUTH_ALG_SHA3_512:
+		return "ODP_AUTH_ALG_SHA3_512";
 	case ODP_AUTH_ALG_SM3:
 		return "ODP_AUTH_ALG_SM3";
 	default:
