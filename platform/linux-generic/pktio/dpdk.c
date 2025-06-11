@@ -88,7 +88,7 @@ ODP_STATIC_ASSERT((DPDK_NB_MBUF % DPDK_MEMPOOL_CACHE_SIZE == 0) &&
 		  , "DPDK mempool cache size failure");
 
 /* Minimum RX burst size */
-#define DPDK_MIN_RX_BURST 4
+#define DPDK_MIN_RX_BURST 8
 
 ODP_STATIC_ASSERT(DPDK_MIN_RX_BURST <= UINT8_MAX, "DPDK_MIN_RX_BURST too large");
 
