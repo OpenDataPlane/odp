@@ -12,7 +12,7 @@
 #define MAX_POOL_SIZE		(1024 * 1024)
 #define MSG_POOL_SIZE		(64 * 1024)
 #define QUEUES_PER_PRIO		16
-#define BUF_SIZE		64
+#define BUF_SIZE		64U
 #define BUFS_PER_QUEUE          100
 #define BUFS_PER_QUEUE_EXCL     10000
 #define BURST_BUF_SIZE		4
@@ -130,6 +130,7 @@ typedef struct {
 	odp_buffer_t ctx_handle;
 	odp_queue_t pq_handle;
 	uint64_t sequence;
+	uint64_t num_sched;
 	uint64_t lock_sequence[MAX_ORDERED_LOCKS];
 } queue_context;
 
@@ -1591,6 +1592,8 @@ static int schedule_common_(void *arg)
 			if (num == 0)
 				continue;
 
+			qctx = odp_queue_context(from);
+
 			if (sync == ODP_SCHED_SYNC_ORDERED) {
 				uint32_t ndx;
 				uint32_t ndx_max;
@@ -1598,8 +1601,6 @@ static int schedule_common_(void *arg)
 
 				ndx_max = odp_queue_lock_count(from);
 				CU_ASSERT_FATAL(ndx_max > 0);
-
-				qctx = odp_queue_context(from);
 
 				for (j = 0; j < num; j++) {
 					bctx = odp_buffer_addr(
@@ -1631,6 +1632,13 @@ static int schedule_common_(void *arg)
 					qctx->lock_sequence[ndx] += num;
 					odp_schedule_order_unlock(ndx);
 				}
+			} else if (sync == ODP_SCHED_SYNC_ATOMIC) {
+				for (j = 0; j < num; j++) {
+					/* Check that events are scheduled in enqueue order */
+					bctx = odp_buffer_addr(odp_buffer_from_event(events[j]));
+					CU_ASSERT(bctx->sequence == qctx->num_sched);
+					qctx->num_sched++;
+				}
 			}
 
 			for (j = 0; j < num; j++) {
@@ -1645,6 +1653,8 @@ static int schedule_common_(void *arg)
 
 			CU_ASSERT(odp_event_is_valid(ev) == 1);
 			buf = odp_buffer_from_event(ev);
+			qctx = odp_queue_context(from);
+			bctx = odp_buffer_addr(buf);
 			num = 1;
 			if (sync == ODP_SCHED_SYNC_ORDERED) {
 				uint32_t ndx;
@@ -1655,8 +1665,6 @@ static int schedule_common_(void *arg)
 				ndx_max = odp_queue_lock_count(from);
 				CU_ASSERT_FATAL(ndx_max > 0);
 
-				qctx = odp_queue_context(from);
-				bctx = odp_buffer_addr(buf);
 				buf_cpy = odp_buffer_alloc(pool);
 				CU_ASSERT_FATAL(buf_cpy != ODP_BUFFER_INVALID);
 				bctx_cpy = odp_buffer_addr(buf_cpy);
@@ -1675,6 +1683,10 @@ static int schedule_common_(void *arg)
 					qctx->lock_sequence[ndx] += num;
 					odp_schedule_order_unlock(ndx);
 				}
+			} else if (sync == ODP_SCHED_SYNC_ATOMIC) {
+				/* Check that events are scheduled in enqueue order */
+				CU_ASSERT(bctx->sequence == qctx->num_sched);
+				qctx->num_sched++;
 			}
 
 			odp_buffer_free(buf);
@@ -1813,15 +1825,20 @@ static void fill_queues(thread_args_t *args)
 			CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
 
 			for (k = 0; k < args->num_bufs; k++) {
+				buf_contents *bctx;
+
 				buf = odp_buffer_alloc(pool);
 				CU_ASSERT_FATAL(buf != ODP_BUFFER_INVALID);
+
 				ev = odp_buffer_to_event(buf);
+				bctx = odp_buffer_addr(buf);
+
 				if (sync == ODP_SCHED_SYNC_ORDERED) {
-					queue_context *qctx =
-						odp_queue_context(queue);
-					buf_contents *bctx =
-						odp_buffer_addr(buf);
+					queue_context *qctx = odp_queue_context(queue);
+
 					bctx->sequence = qctx->sequence++;
+				} else {
+					bctx->sequence = k;
 				}
 
 				ret = odp_queue_enq(queue, ev);
@@ -1841,31 +1858,35 @@ static void fill_queues(thread_args_t *args)
 
 static void reset_queues(thread_args_t *args)
 {
-	int i, j, k;
+	int i, j;
 	int num_prio = args->num_prio;
 	int num_queues = args->num_queues;
 	char name[32];
 
+	/* No queue context to reset for parallel queues */
+	if (args->sync == ODP_SCHED_SYNC_PARALLEL)
+		return;
+
 	for (i = 0; i < num_prio; i++) {
 		for (j = 0; j < num_queues; j++) {
+			queue_context *qctx;
 			odp_queue_t queue;
 
-			snprintf(name, sizeof(name),
-				 "sched_%d_%d_o", i, j);
+			snprintf(name, sizeof(name), "sched_%d_%d_%s", i, j,
+				 args->sync == ODP_SCHED_SYNC_ORDERED ? "o" : "a");
 			queue = odp_queue_lookup(name);
 			CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
+			qctx = odp_queue_context(queue);
 
-			for (k = 0; k < args->num_bufs; k++) {
-				queue_context *qctx =
-					odp_queue_context(queue);
-				uint32_t ndx;
-				uint32_t ndx_max;
+			if (args->sync == ODP_SCHED_SYNC_ORDERED) {
+				uint32_t ndx_max = odp_queue_lock_count(queue);
 
-				ndx_max = odp_queue_lock_count(queue);
 				CU_ASSERT_FATAL(ndx_max > 0);
 				qctx->sequence = 0;
-				for (ndx = 0; ndx < ndx_max; ndx++)
+				for (uint32_t ndx = 0; ndx < ndx_max; ndx++)
 					qctx->lock_sequence[ndx] = 0;
+			} else if (args->sync == ODP_SCHED_SYNC_ATOMIC) {
+				qctx->num_sched = 0;
 			}
 		}
 	}
@@ -1896,8 +1917,8 @@ static void schedule_common(odp_schedule_sync_t sync, int num_queues,
 	fill_queues(&args);
 
 	schedule_common_(&args);
-	if (sync == ODP_SCHED_SYNC_ORDERED)
-		reset_queues(&args);
+
+	reset_queues(&args);
 }
 
 static void parallel_execute(odp_schedule_sync_t sync, int num_queues,
@@ -1943,9 +1964,7 @@ static void parallel_execute(odp_schedule_sync_t sync, int num_queues,
 	/* Wait for worker threads to terminate */
 	odp_cunit_thread_join(globals->num_workers);
 
-	/* Cleanup ordered queues for next pass */
-	if (sync == ODP_SCHED_SYNC_ORDERED)
-		reset_queues(args);
+	reset_queues(args);
 }
 
 /* 1 queue 1 thread ODP_SCHED_SYNC_PARALLEL */
@@ -3180,17 +3199,37 @@ static void scheduler_test_atomicity(void)
 	odp_queue_destroy(globals->atomicity_q.handle);
 }
 
+static int init_queue_context(odp_queue_t queue, odp_pool_t ctx_pool, odp_queue_t pq_handle)
+{
+	odp_buffer_t queue_ctx_buf;
+	queue_context *qctx;
+
+	queue_ctx_buf = odp_buffer_alloc(ctx_pool);
+	if (queue_ctx_buf == ODP_BUFFER_INVALID) {
+		ODPH_ERR("Cannot allocate queue ctx buf\n");
+		return -1;
+	}
+
+	qctx = odp_buffer_addr(queue_ctx_buf);
+	memset(qctx, 0, sizeof(queue_context));
+	qctx->ctx_handle = queue_ctx_buf;
+	qctx->pq_handle = pq_handle;
+
+	if (odp_queue_context_set(queue, qctx, sizeof(queue_context))) {
+		ODPH_ERR("Cannot set queue context\n");
+		return -1;
+	}
+	return 0;
+}
+
 static int create_queues(test_globals_t *globals)
 {
-	int i, j, prios, rc;
+	int i, j, prios;
 	odp_queue_capability_t queue_capa;
 	odp_schedule_capability_t sched_capa;
 	odp_schedule_config_t default_config;
 	odp_pool_t queue_ctx_pool;
 	odp_pool_param_t params;
-	odp_buffer_t queue_ctx_buf;
-	queue_context *qctx, *pqctx;
-	uint32_t ndx;
 	odp_queue_param_t p;
 	unsigned int num_sched;
 	unsigned int num_plain;
@@ -3248,7 +3287,8 @@ static int create_queues(test_globals_t *globals)
 
 	odp_pool_param_init(&params);
 	params.buf.size = sizeof(queue_context);
-	params.buf.num  = prios * queues_per_prio * 2;
+	/* Queue context required for 3 queue types */
+	params.buf.num  = prios * queues_per_prio * 3;
 	params.type     = ODP_POOL_BUFFER;
 
 	queue_ctx_pool = odp_pool_create(QUEUE_CTX_POOL_NAME, &params);
@@ -3287,6 +3327,8 @@ static int create_queues(test_globals_t *globals)
 				ODPH_ERR("Atomic queue create failed\n");
 				return -1;
 			}
+			if (init_queue_context(q, queue_ctx_pool, ODP_QUEUE_INVALID))
+				return -1;
 
 			snprintf(name, sizeof(name), "plain_%d_%d_o", i, j);
 			pq = odp_queue_create(name, NULL);
@@ -3294,24 +3336,8 @@ static int create_queues(test_globals_t *globals)
 				ODPH_ERR("Plain queue create failed\n");
 				return -1;
 			}
-
-			queue_ctx_buf = odp_buffer_alloc(queue_ctx_pool);
-
-			if (queue_ctx_buf == ODP_BUFFER_INVALID) {
-				ODPH_ERR("Cannot allocate plain queue ctx buf\n");
+			if (init_queue_context(pq, queue_ctx_pool, ODP_QUEUE_INVALID))
 				return -1;
-			}
-
-			pqctx = odp_buffer_addr(queue_ctx_buf);
-			pqctx->ctx_handle = queue_ctx_buf;
-			pqctx->sequence = 0;
-
-			rc = odp_queue_context_set(pq, pqctx, 0);
-
-			if (rc != 0) {
-				ODPH_ERR("Cannot set plain queue context\n");
-				return -1;
-			}
 
 			snprintf(name, sizeof(name), "sched_%d_%d_o", i, j);
 			p.sched.sync = ODP_SCHED_SYNC_ORDERED;
@@ -3333,30 +3359,8 @@ static int create_queues(test_globals_t *globals)
 				return -1;
 			}
 
-			queue_ctx_buf = odp_buffer_alloc(queue_ctx_pool);
-
-			if (queue_ctx_buf == ODP_BUFFER_INVALID) {
-				ODPH_ERR("Cannot allocate queue ctx buf\n");
+			if (init_queue_context(q, queue_ctx_pool, pq))
 				return -1;
-			}
-
-			qctx = odp_buffer_addr(queue_ctx_buf);
-			qctx->ctx_handle = queue_ctx_buf;
-			qctx->pq_handle = pq;
-			qctx->sequence = 0;
-
-			for (ndx = 0;
-			     ndx < sched_capa.max_ordered_locks;
-			     ndx++) {
-				qctx->lock_sequence[ndx] = 0;
-			}
-
-			rc = odp_queue_context_set(q, qctx, 0);
-
-			if (rc != 0) {
-				ODPH_ERR("Cannot set queue context\n");
-				return -1;
-			}
 		}
 	}
 
@@ -3607,7 +3611,7 @@ static int scheduler_test_global_init(void)
 	odp_spinlock_init(&globals->atomic_lock);
 
 	odp_pool_param_init(&params);
-	params.buf.size  = BUF_SIZE;
+	params.buf.size  = ODPH_MAX(BUF_SIZE, sizeof(buf_contents));
 	params.buf.align = 0;
 	params.buf.num   = MSG_POOL_SIZE;
 	params.type      = ODP_POOL_BUFFER;
