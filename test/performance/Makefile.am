@@ -4,6 +4,7 @@ TESTS_ENVIRONMENT += TEST_DIR=${builddir}
 
 EXECUTABLES = odp_atomic_perf \
 	      odp_bench_buffer \
+	      odp_bench_event_vector \
 	      odp_bench_misc \
 	      odp_bench_packet \
 	      odp_bench_pktio_sp \
@@ -76,6 +77,7 @@ bin_PROGRAMS = $(EXECUTABLES) $(COMPILE_ONLY)
 
 odp_atomic_perf_SOURCES = odp_atomic_perf.c
 odp_bench_buffer_SOURCES = odp_bench_buffer.c
+odp_bench_event_vector_SOURCES = odp_bench_event_vector.c
 odp_bench_misc_SOURCES = odp_bench_misc.c
 odp_bench_packet_SOURCES = odp_bench_packet.c
 odp_bench_pktio_sp_SOURCES = odp_bench_pktio_sp.c
