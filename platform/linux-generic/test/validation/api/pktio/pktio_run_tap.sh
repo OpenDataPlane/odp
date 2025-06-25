@@ -110,8 +110,7 @@ if [ $ret -ne 0 ]; then
 	exit $TEST_SKIPPED
 fi
 
-# Using ODP_WAIT_FOR_NETWORK to prevent fail if tap still not enabled in bridge
-ODP_WAIT_FOR_NETWORK=yes pktio_main${EXEEXT} $*
+pktio_main${EXEEXT} $*
 ret=$?
 
 exit $ret
