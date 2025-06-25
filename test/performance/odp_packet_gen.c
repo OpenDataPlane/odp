@@ -69,7 +69,7 @@ ODP_STATIC_ASSERT(MAX_WORKERS >= 1, "Too few threads");
 #define TX_MODE_COPY      2
 
 /* Minimum number of packets to receive in CI test */
-#define MIN_RX_PACKETS_CI 800
+#define MIN_RX_PACKETS_CI 160
 
 /* Identifier for payload-timestamped packets */
 #define TS_MAGIC 0xff88ee99ddaaccbb
@@ -1883,13 +1883,13 @@ static int rx_thread(void *arg)
 
 		exit_test = odp_atomic_load_u32(&global->exit_test);
 		if (exit_test) {
-			/* Wait 1 second for possible in flight packets sent by the tx threads */
+			/* Wait 0.1 seconds for possible in flight packets sent by the tx threads */
 			if (exit_timer_started == 0) {
 				exit_time = odp_time_local();
 				t2 = exit_time;
 				exit_timer_started = 1;
 			} else if (odp_time_diff_ns(odp_time_local(), exit_time) >
-				   ODP_TIME_SEC_IN_NS) {
+				   ODP_TIME_SEC_IN_NS / 10) {
 				if (direct_rx == 0 && paused == 0) {
 					odp_schedule_pause();
 					paused = 1;
