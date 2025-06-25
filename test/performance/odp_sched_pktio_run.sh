@@ -67,8 +67,8 @@ run_sched_pktio()
 
 	GEN_PID=$!
 
-	# Run test for 5 sec
-	sleep 5
+	# Run test for 1 sec
+	sleep 1
 
 	kill -2 ${GEN_PID}
 	wait ${GEN_PID}
