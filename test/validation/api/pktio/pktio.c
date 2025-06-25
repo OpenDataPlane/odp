@@ -119,9 +119,9 @@ odp_pool_t pktv_pool[MAX_NUM_IFACES] = {ODP_POOL_INVALID, ODP_POOL_INVALID};
 
 static inline void _pktio_wait_linkup(odp_pktio_t pktio)
 {
-	/* wait 1 second for link up */
+	/* wait up to 2 seconds for link up */
 	uint64_t wait_ns = (10 * ODP_TIME_MSEC_IN_NS);
-	int wait_num = 100;
+	int wait_num = 200;
 	int i;
 	int ret = -1;
 
