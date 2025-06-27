@@ -8,6 +8,8 @@
 
 #include "model_read.h"
 
+#define ENGINE_ID 0
+
 /**
  * Read basic model information, e.g. inputs/outputs.
  */
@@ -19,6 +21,7 @@ int main(int argc, char *argv[])
 	odp_ml_capability_t capa;
 	odp_ml_config_t ml_config;
 	odp_ml_model_param_t model_param;
+	int num_engines;
 	int ret = 0;
 
 	if (argc != 2) {
@@ -40,7 +43,20 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
-	if (odp_ml_capability(&capa)) {
+	num_engines = odp_ml_num_engines();
+	if (num_engines < 0) {
+		printf("odp_ml_num_engines() failed\n");
+		ret = num_engines;
+		goto odp_term;
+	}
+
+	if (num_engines == 0) {
+		printf("ML engine not available\n");
+		ret = -1;
+		goto odp_term;
+	}
+
+	if (odp_ml_capability(ENGINE_ID, &capa)) {
 		printf("odp_ml_capability() failed\n");
 		ret = -1;
 		goto odp_term;
