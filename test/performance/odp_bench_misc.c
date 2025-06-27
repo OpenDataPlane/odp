@@ -33,7 +33,7 @@
 #define ROUNDS 1000u
 
 /* Maximum number of results to be held */
-#define TEST_MAX_BENCH 60
+#define TEST_MAX_BENCH 70
 
 #define BENCH_INFO(run_fn, init_fn, max, alt_name) \
 	{.name = #run_fn, .run = run_fn, .init = init_fn, .max_rounds = max, .desc = alt_name}
@@ -746,14 +746,16 @@ static int mb_full(void)
 	return i;
 }
 
-static int prefetch(void)
+typedef void (*prefetch_fn_t)(const void *addr);
+
+static int run_prefetch(prefetch_fn_t fn)
 {
 	uint64_t *a1 = gbl_args->a1;
 	uint32_t index = 0;
 	int i;
 
 	for (i = 0; i < REPEAT_COUNT; i++) {
-		odp_prefetch(&a1[index]);
+		fn(&a1[index]);
 
 		/* Prefetch every 64B */
 		index += 8;
@@ -764,23 +766,18 @@ static int prefetch(void)
 	return i;
 }
 
-static int prefetch_store(void)
-{
-	uint64_t *a1 = gbl_args->a1;
-	uint32_t index = 0;
-	int i;
+static int prefetch(void)              { return run_prefetch(odp_prefetch); }
+static int prefetch_l1(void)           { return run_prefetch(odp_prefetch_l1); }
+static int prefetch_l2(void)           { return run_prefetch(odp_prefetch_l2); }
+static int prefetch_l3(void)           { return run_prefetch(odp_prefetch_l3); }
+static int prefetch_strm_l1(void)      { return run_prefetch(odp_prefetch_strm_l1); }
+static int prefetch_l1i(void)          { return run_prefetch(odp_prefetch_l1i); }
 
-	for (i = 0; i < REPEAT_COUNT; i++) {
-		odp_prefetch_store(&a1[index]);
-
-		/* Prefetch every 64B */
-		index += 8;
-		if (odp_unlikely(index >= REPEAT_COUNT))
-			index = 0;
-	}
-
-	return i;
-}
+static int prefetch_store(void)        { return run_prefetch(odp_prefetch_store); }
+static int prefetch_store_l1(void)     { return run_prefetch(odp_prefetch_store_l1); }
+static int prefetch_store_l2(void)     { return run_prefetch(odp_prefetch_store_l2); }
+static int prefetch_store_l3(void)     { return run_prefetch(odp_prefetch_store_l3); }
+static int prefetch_store_strm_l1(void){ return run_prefetch(odp_prefetch_store_strm_l1); }
 
 static int bench_misc_export(void *data)
 {
@@ -862,7 +859,16 @@ bench_info_t test_suite[] = {
 	BENCH_INFO(mb_acquire, NULL, 0, NULL),
 	BENCH_INFO(mb_full, NULL, 0, NULL),
 	BENCH_INFO(prefetch, NULL, 0, NULL),
+	BENCH_INFO(prefetch_l1, NULL, 0, NULL),
+	BENCH_INFO(prefetch_l2, NULL, 0, NULL),
+	BENCH_INFO(prefetch_l3, NULL, 0, NULL),
+	BENCH_INFO(prefetch_strm_l1, NULL, 0, NULL),
+	BENCH_INFO(prefetch_l1i, NULL, 0, NULL),
 	BENCH_INFO(prefetch_store, NULL, 0, NULL),
+	BENCH_INFO(prefetch_store_l1, NULL, 0, NULL),
+	BENCH_INFO(prefetch_store_l2, NULL, 0, NULL),
+	BENCH_INFO(prefetch_store_l3, NULL, 0, NULL),
+	BENCH_INFO(prefetch_store_strm_l1, NULL, 0, NULL),
 };
 
 ODP_STATIC_ASSERT(ODPH_ARRAY_SIZE(test_suite) < TEST_MAX_BENCH,

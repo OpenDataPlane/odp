@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright (c) 2023 Nokia
+ * Copyright (c) 2023-2025 Nokia
  */
 
 /** @cond _ODP_HIDE_FROM_DOXYGEN_ */
@@ -87,14 +87,14 @@ int bench_run(void *arg)
 			if (meas_time)
 				t1 = odp_time_local_strict();
 			else
-				c1 = odp_cpu_cycles();
+				c1 = odp_cpu_cycles_strict();
 
 			ret = bench->run();
 
 			if (meas_time)
 				t2 = odp_time_local_strict();
 			else
-				c2 = odp_cpu_cycles();
+				c2 = odp_cpu_cycles_strict();
 
 			if (bench->term != NULL)
 				bench->term();
