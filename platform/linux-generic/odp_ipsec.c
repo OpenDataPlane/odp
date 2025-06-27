@@ -2368,7 +2368,6 @@ int _odp_ipsec_try_inline(odp_packet_t *pkt)
 	result->flag.inline_mode = 1;
 
 	pkt_hdr = packet_hdr(*pkt);
-	pkt_hdr->p.input_flags.dst_queue = 1;
 	pkt_hdr->dst_queue = ipsec_sa->queue;
 	/* Distinguish inline IPsec packets from classifier packets */
 	pkt_hdr->cos = CLS_COS_IDX_NONE;

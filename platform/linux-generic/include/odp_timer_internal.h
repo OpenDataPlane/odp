@@ -39,9 +39,6 @@ typedef struct ODP_ALIGNED_CACHE odp_timeout_hdr_t {
 	/* User ptr inherited from parent timer */
 	const void *user_ptr;
 
-	/* User area pointer */
-	void *uarea_addr;
-
 	/* Parent timer */
 	odp_timer_t timer;
 

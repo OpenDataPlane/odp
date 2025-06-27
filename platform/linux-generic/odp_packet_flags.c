@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2014-2018 Linaro Limited
+ * Copyright (c) 2025 Nokia
  */
 
 #include <odp/api/plat/packet_flag_inlines.h>
@@ -119,24 +120,38 @@ void odp_packet_has_ipsec_set(odp_packet_t pkt, int val)
 	setflag(pkt, input_flags.ipsec, val);
 }
 
+static inline void set_type(odp_packet_t pkt, odp_proto_l4_type_t type, int val)
+{
+	packet_hdr(pkt)->p.l4_type = val ? type : ODP_PROTO_L4_TYPE_NONE;
+}
+
 void odp_packet_has_udp_set(odp_packet_t pkt, int val)
 {
-	setflag(pkt, input_flags.udp, val);
+	set_type(pkt, ODP_PROTO_L4_TYPE_UDP, val);
 }
 
 void odp_packet_has_tcp_set(odp_packet_t pkt, int val)
 {
-	setflag(pkt, input_flags.tcp, val);
+	set_type(pkt, ODP_PROTO_L4_TYPE_TCP, val);
 }
 
 void odp_packet_has_sctp_set(odp_packet_t pkt, int val)
 {
-	setflag(pkt, input_flags.sctp, val);
+	set_type(pkt, ODP_PROTO_L4_TYPE_SCTP, val);
 }
 
 void odp_packet_has_icmp_set(odp_packet_t pkt, int val)
 {
-	setflag(pkt, input_flags.icmp, val);
+	odp_proto_l4_type_t type = ODP_PROTO_L4_TYPE_NONE;
+	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
+
+	if (val) {
+		if (pkt_hdr->p.input_flags.ipv6)
+			type = ODP_PROTO_L4_TYPE_ICMPV6;
+		else
+			type = ODP_PROTO_L4_TYPE_ICMPV4;
+	}
+	pkt_hdr->p.l4_type = type;
 }
 
 void odp_packet_has_ts_clr(odp_packet_t pkt)
