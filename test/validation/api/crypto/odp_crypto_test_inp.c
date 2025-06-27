@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2014-2018 Linaro Limited
- * Copyright (c) 2021-2024 Nokia
+ * Copyright (c) 2021-2025 Nokia
  */
 
 #include <string.h>
@@ -170,6 +170,7 @@ static void alg_test_op(crypto_op_test_param_t *param)
 
 static int combo_warning_shown;
 static int oop_warning_shown;
+static int session_print_shown;
 
 typedef enum {
 	HASH_NO_OVERLAP,
@@ -273,6 +274,11 @@ static int session_create(crypto_session_t *session,
 	CU_ASSERT(status == ODP_CRYPTO_SES_ERR_NONE);
 	CU_ASSERT(odp_crypto_session_to_u64(session->session) !=
 		  odp_crypto_session_to_u64(ODP_CRYPTO_SESSION_INVALID));
+
+	if (!session_print_shown) {
+		odp_crypto_session_print(session->session);
+		session_print_shown = 1;
+	}
 
 	/*
 	 * Clear session creation parameters so that we might notice if
