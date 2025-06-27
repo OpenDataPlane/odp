@@ -24,6 +24,11 @@ extern "C" {
  */
 
 /**
+ * @typedef odp_thrmask_t
+ * ODP Thread mask
+ */
+
+/**
  * @def ODP_THRMASK_STR_SIZE
  * The maximum number of characters needed to record any thread mask as
  * a string (output of odp_thrmask_to_str()).

@@ -47,7 +47,7 @@ static int sock_recv_mq_tmo_select(pktio_entry_t * const *entry,
 	return 0;
 }
 
-int _odp_sock_recv_mq_tmo_try_int_driven(const struct odp_pktin_queue_t queues[],
+int _odp_sock_recv_mq_tmo_try_int_driven(const odp_pktin_queue_t queues[],
 					 uint32_t num_q, uint32_t *from,
 					 odp_packet_t packets[], int num,
 					 uint64_t usecs, int *trial_successful)

@@ -23,6 +23,11 @@ extern "C" {
  */
 
 /**
+ * @typedef odp_cpumask_t
+ * ODP CPU mask
+ */
+
+/**
  * @def ODP_CPUMASK_SIZE
  * Maximum cpumask size, this definition limits the number of individual CPUs
  * that can be accessed in this system.
