@@ -35,6 +35,8 @@ extern "C" {
 	#define odp_event_vector_pool __odp_event_vector_pool
 	#define odp_event_vector_size __odp_event_vector_size
 	#define odp_event_vector_size_set __odp_event_vector_size_set
+	#define odp_event_vector_type __odp_event_vector_type
+	#define odp_event_vector_type_set __odp_event_vector_type_set
 	#define odp_event_vector_user_area __odp_event_vector_user_area
 	#define odp_event_vector_user_flag __odp_event_vector_user_flag
 	#define odp_event_vector_user_flag_set __odp_event_vector_user_flag_set
@@ -77,6 +79,18 @@ _ODP_INLINE void odp_event_vector_size_set(odp_event_vector_t evv, uint32_t size
 	uint32_t *vector_size = _odp_event_vect_get_ptr(evv, uint32_t, size);
 
 	*vector_size = size;
+}
+
+_ODP_INLINE odp_event_type_t odp_event_vector_type(odp_event_vector_t evv)
+{
+	return _odp_event_vect_get(evv, odp_event_type_t, event_type);
+}
+
+_ODP_INLINE void odp_event_vector_type_set(odp_event_vector_t evv, odp_event_type_t type)
+{
+	odp_event_type_t *evv_type = _odp_event_vect_get_ptr(evv, odp_event_type_t, event_type);
+
+	*evv_type = type;
 }
 
 _ODP_INLINE void *odp_event_vector_user_area(odp_event_vector_t evv)
