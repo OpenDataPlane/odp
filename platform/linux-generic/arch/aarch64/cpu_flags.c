@@ -992,6 +992,13 @@ static void _odp_sys_info_print_acle_flags(void)
 	_ODP_PRINT("%s\n", ndef);
 #endif
 
+	_ODP_PRINT("  __ARM_FEATURE_WFXT               ");
+#ifdef __ARM_FEATURE_WFXT
+	_ODP_PRINT("%i\n", __ARM_FEATURE_WFXT);
+#else
+	_ODP_PRINT("%s\n", ndef);
+#endif
+
 	_ODP_PRINT("\n");
 }
 
