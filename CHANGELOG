@@ -1,3 +1,115 @@
+== OpenDataPlane (1.48.0.0)
+
+=== Backward incompatible API changes
+
+==== DMA
+* Move `odp_dma_seg_t` struct's segment hints from an anonymous union to
+`odp_dma_seg_t.hints` struct.
+
+==== Event Vector
+* Change `odp_event_vector_type()` function to not return the type of events
+actually stored in the event vector, but the event type stored in event vector
+metadata.
+* Change `odp_event_vector_tbl()` function specification to require that
+applications use `odp_event_vector_type_set()` to update the event type of
+vector after vector table modifications.
+
+=== Backward compatible API changes
+
+==== Classifier
+* Add configurable priority `odp_pmr_create_opt_t.priority` to PMRs, so that
+when multiple PMRs match a packet, a PMR with the highest priority is selected.
+* Add `odp_cls_capability_t.max_pmr_priority` capability for the maximum
+priority value.
+
+==== CPU Mask
+* Add missing documentation for `odp_cpumask_t` type.
+
+==== Crypto
+* Add `odp_crypto_session_print()` function for printing implementation defined
+information about a crypto session to the ODP log.
+
+==== DMA
+* Add possibility to configure cache stashing for destination segments
+using segment hints (`odp_dma_seg_t.hints`).
+
+==== Event Vector
+* Add `odp_event_vector_type_set()` function for setting the type of events
+stored in an event vector.
+* Clarify that event aggregators try to set the event type according to the
+event types they put in the event vector.
+
+==== ML
+* Change ML API to support systems with multiple ML engines:
+** Add `odp_ml_num_engines()` function for querying the number of supported ML
+engines.
+** Add `odp_ml_engine_capability()` function for exposing engine specific
+capabilities.
+** Change `odp_ml_config()` function specification to state that it must be
+called once per used ML engine ID (`odp_ml_config_t.engine_id`).
+** Add `ODP_ML_ENGINE_ANY` define for letting implementation pick the used
+engine (enables backward compatibility).
+** Add `engine_id` field to `odp_ml_config_t` struct.
+** Add `engine_id` field to `odp_ml_model_param_t` struct.
+** Add `engine_id` field to `odp_ml_model_info_t` struct.
+
+==== Packet
+* Move `odp_packet_parse_result_flag_t` struct definition from ABI to API
+header to guarantee application portability between different platforms.
+
+==== Scheduler
+* Clarify that priority level `odp_schedule_prio_t` is always a non-negative
+integer value.
+* Add global (`odp_schedule_config_t`) and group level
+(`odp_schedule_group_param_t`) scheduler configuration options and related
+capabilities to signal maximum number of groups and priorities that need to be
+supported.
+
+==== Thread
+* Add missing documentation for `odp_thrmask_t` type.
+
+=== Implementation
+* Add extra padding to implementation internal ring struct to avoid false
+sharing-like effects from hardware prefetchers. These rings are used within
+pool, stash, and scheduler API implementations, so their performance may be
+affected. The amount of added extra padding can be adjusted with
+`CONFIG_CACHE_PAD_LINES` config option.
+* Optimize single event `odp_queue_enq()` and `odp_queue_deq()` function
+implementations for plain queues.
+* Optimize single event `odp_queue_enq()` function implementation for scheduled
+queues.
+* Optimize queue implementation by storing pointers to events instead of
+indices.
+* Add support for DPDK v24.11 packet IO and drop support for EOL DPDK v21.11.
+
+=== Performance Tests
+
+==== bench_event_vector
+* Add new microbenchmark application for event vector fast path API functions.
+
+==== bench_misc
+* Add support for `odp_prefetch_x()` functions.
+
+==== l2fwd
+* Add option `-W, --wait_ns` for adding extra wait time
+(`odp_time_wait_ns()`) per receive burst before forwarding the packets.
+* Add option `-E, --memcpy` for performing extra memcpy per receive burst
+before forwarding the packets.
+
+==== queue_perf
+* Add option `-b 0` for testing `odp_queue_enq()` and `odp_queue_deq()`
+functions.
+
+==== sched_perf
+* Add new event forwarding mode `-f N`, where N > 1, for forwarding events
+within N identical queue groups.
+* Change `-q` parameter to be the number of default priority queues.
+* Add option `-T, --thr_type` for running the application with control threads
+instead of worker threads.
+* Add option `-p 2` for using event vector pool.
+* Add option `-P, --prefetch` for prefetching a selected number of events.
+* Add option `-C, --cache-stash` for enabling cache stashing.
+
 == OpenDataPlane (1.47.0.0)
 
 === Backward incompatible API changes
