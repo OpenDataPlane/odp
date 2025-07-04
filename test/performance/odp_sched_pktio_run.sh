@@ -60,7 +60,7 @@ run_sched_pktio()
 
 	# Run odp_packet_gen with one tx thread
 	GEN_LOG=odp_packet_gen_tmp.log
-	(odp_packet_gen${EXEEXT} --gap 0 -i $IF0 \
+	(odp_packet_gen${EXEEXT} --gap 0 -w 10 -q 100000 -i $IF0 \
 			--ipv4_src 192.168.0.1 --ipv4_dst 192.168.0.2 \
 			-r 0 -t 1 2>&1 > $GEN_LOG) \
 			2>&1 > $GEN_LOG &
