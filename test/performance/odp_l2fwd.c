@@ -32,6 +32,7 @@
 
 #include <odp_api.h>
 #include <odp/helper/odph_api.h>
+#include <pktio_common.h>
 
 /* Maximum number of worker threads */
 #define MAX_WORKERS            (ODP_THREAD_COUNT_MAX - 1)
@@ -158,6 +159,7 @@ typedef struct {
 	int mtu;                /* Interface MTU */
 	int num_om;
 	int num_prio;
+	uint32_t wait_sec;
 
 	struct {
 		odp_packet_tx_compl_mode_t mode;
@@ -297,6 +299,11 @@ typedef struct {
 	uint8_t *memcpy_data; /* Data for memcpy */
 
 } args_t;
+
+/** Long option only settings */
+enum longopt_only {
+	OPT_WAIT_LINK = 256
+};
 
 /* Global pointer to args */
 static args_t *gbl_args;
@@ -1533,6 +1540,56 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx, odp_po
 	return 0;
 }
 
+static int start_pktios(args_t *gbl_args)
+{
+	appl_args_t *appl = &gbl_args->appl;
+	int if_count = appl->if_count;
+	odp_pktio_t pktios[MAX_PKTIOS];
+	const char *names[MAX_PKTIOS];
+
+	for (int i = 0; i < if_count; i++) {
+		if (odp_pktio_start(gbl_args->pktios[i].pktio)) {
+			ODPH_ERR("Error (%s): Pktio start failed.\n", appl->if_names[i]);
+			return -1;
+		}
+
+		pktios[i] = gbl_args->pktios[i].pktio;
+		names[i] = appl->if_names[i];
+	}
+
+	/* Wait until all links are up */
+	if (appl->wait_sec && pktio_common_check_link_status_wait(pktios, names, if_count,
+								  appl->wait_sec) == -1)
+		return -1;
+
+	pktio_common_print_link_info_multi(pktios, names, if_count);
+
+	return 0;
+}
+
+static int stop_pktios(args_t *gbl_args)
+{
+	uint32_t i;
+	odp_pktio_t pktio;
+	int ret = 0;
+	appl_args_t *appl = &gbl_args->appl;
+	uint32_t if_count = appl->if_count;
+
+	for (i = 0; i < if_count; i++) {
+		pktio = gbl_args->pktios[i].pktio;
+
+		if (pktio == ODP_PKTIO_INVALID)
+			continue;
+
+		if (odp_pktio_stop(pktio)) {
+			ODPH_ERR("Error (%s): Pktio stop failed.\n", appl->if_names[i]);
+			ret = -1;
+		}
+	}
+
+	return ret;
+}
+
 /*
  * Print statistics
  *
@@ -1979,6 +2036,8 @@ static void usage(char *progname)
 	       "                                 2: Enable transmission of pause frames\n"
 	       "                                 3: Enable reception and transmission of pause\n"
 	       "                                    frames\n"
+	       "  --wait_link <sec>              Wait up to <sec> seconds for network links to be up.\n"
+	       "                                 Default: 0 (don't check link status)\n"
 	       "  -v, --verbose                  Verbose output.\n"
 	       "  -V, --verbose_pkt              Print debug information on every received\n"
 	       "                                 packet.\n"
@@ -2025,6 +2084,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{"num_pkt", required_argument, NULL, 'n'},
 		{"num_vec", required_argument, NULL, 'w'},
 		{"wait_ns", required_argument, NULL, 'W'},
+		{"wait_link",   required_argument, NULL, OPT_WAIT_LINK},
 		{"vec_size", required_argument, NULL, 'x'},
 		{"vec_tmo_ns", required_argument, NULL, 'z'},
 		{"vector_mode", no_argument, NULL, 'u'},
@@ -2046,36 +2106,13 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	static const char *shortopts = "+c:t:a:i:m:o:O:r:d:s:e:E:k:g:G:I:"
 				       "b:q:p:R:y:n:l:L:w:W:x:X:z:M:F:uPfTC:vVh";
 
-	appl_args->time = 0; /* loop forever if time to run is 0 */
 	appl_args->accuracy = 1; /* get and print pps stats second */
 	appl_args->cpu_count = 1; /* use one worker by default */
 	appl_args->dst_change = 1; /* change eth dst address by default */
 	appl_args->src_change = 1; /* change eth src address by default */
-	appl_args->num_groups = 0; /* use default group */
-	appl_args->group_mode = 0;
-	appl_args->error_check = 0; /* don't check packet errors by default */
-	appl_args->packet_copy = 0;
-	appl_args->burst_rx = 0;
-	appl_args->rx_queues = 0;
-	appl_args->verbose = 0;
-	appl_args->verbose_pkt = 0;
-	appl_args->chksum = 0; /* don't use checksum offload by default */
-	appl_args->pool_per_if = 0;
-	appl_args->num_pkt = 0;
 	appl_args->packet_len = POOL_PKT_LEN;
 	appl_args->seg_len = UINT32_MAX;
-	appl_args->mtu = 0;
-	appl_args->promisc_mode = 0;
-	appl_args->vector_mode = 0;
-	appl_args->num_vec = 0;
-	appl_args->vec_size = 0;
-	appl_args->vec_tmo_ns = 0;
-	appl_args->flow_aware = 0;
-	appl_args->input_ts = 0;
-	appl_args->num_prio = 0;
 	appl_args->prefetch = 1;
-	appl_args->data_rd = 0;
-	appl_args->flow_control = 0;
 
 	while (1) {
 		opt = getopt_long(argc, argv, shortopts, longopts, NULL);
@@ -2326,6 +2363,9 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 			break;
 		case 'z':
 			appl_args->vec_tmo_ns = atoi(optarg);
+			break;
+		case OPT_WAIT_LINK:
+			appl_args->wait_sec = atoi(optarg);
 			break;
 		case 'F':
 			appl_args->prefetch = atoi(optarg);
@@ -3088,27 +3128,14 @@ int main(int argc, char *argv[])
 	if (gbl_args->appl.verbose)
 		odp_shm_print_all();
 
-	/* Start packet receive and transmit */
-	for (i = 0; i < if_count; ++i) {
-		odp_pktio_t pktio;
-
-		pktio = gbl_args->pktios[i].pktio;
-		ret   = odp_pktio_start(pktio);
-		if (ret) {
-			ODPH_ERR("Pktio start failed: %s\n", gbl_args->appl.if_names[i]);
-			exit(EXIT_FAILURE);
-		}
-	}
+	if (start_pktios(gbl_args))
+		exit(EXIT_FAILURE);
 
 	ret = print_speed_stats(num_workers, stats, gbl_args->appl.time,
 				gbl_args->appl.accuracy);
 
-	for (i = 0; i < if_count; ++i) {
-		if (odp_pktio_stop(gbl_args->pktios[i].pktio)) {
-			ODPH_ERR("Pktio stop failed: %s\n", gbl_args->appl.if_names[i]);
-			exit(EXIT_FAILURE);
-		}
-	}
+	if (stop_pktios(gbl_args))
+		exit(EXIT_FAILURE);
 
 	odp_atomic_store_u32(&gbl_args->exit_threads, 1);
 	if (gbl_args->appl.in_mode != DIRECT_RECV)
