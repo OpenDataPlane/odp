@@ -17,23 +17,23 @@
 extern "C" {
 #endif
 
+/** @internal */
+struct odp_thrmask_s {
+	/** @internal Thread mask storage
+	  *
+	  * This is private to the implementation.
+	  * Don't access directly, use access functions.
+	  */
+	odp_cpumask_t m;
+};
+
 /** @addtogroup odp_thread
  *  @{
  */
 
-/**
- * Minimum size of output buffer for odp_thrmask_to_str()
- */
-#define ODP_THRMASK_STR_SIZE ODP_CPUMASK_STR_SIZE
+typedef struct odp_thrmask_s odp_thrmask_t;
 
-/**
- * Thread mask
- *
- * Don't access directly, use access functions.
- */
-typedef struct odp_thrmask_t {
-	odp_cpumask_t m; /**< @private Mask*/
-} odp_thrmask_t;
+#define ODP_THRMASK_STR_SIZE ODP_CPUMASK_STR_SIZE
 
 /**
  * @}
