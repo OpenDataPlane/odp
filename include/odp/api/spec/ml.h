@@ -60,18 +60,32 @@ extern "C" {
  */
 
 /**
+ * Query number of ML engines
+ *
+ * Get number of ML engines available in the system. The number of engines may be
+ * different for each ODP instance. The number of engines may be 0 when ML offload
+ * is not available.
+ *
+ * @retval  >= 0 on success
+ * @retval  < 0 on failure
+ */
+int odp_ml_num_engines(void);
+
+/**
  * Query ML capabilities
  *
  * Outputs ML capabilities on success. Use this capability call to check ML offload implementation
  * limits and its support of various ML API features. When ML offload is not available,
  * odp_ml_capability_t.max_models is zero.
  *
+ * @param[in] engine_id Engine ID to query capabilities. Valid range is 0 to num_engines-1,
+ *                      where num_engines can be fetched using odp_ml_num_engines().
  * @param[out] capa     Pointer to a capability structure for output
  *
  * @retval  0 on success
  * @retval <0 on failure
  */
-int odp_ml_capability(odp_ml_capability_t *capa);
+int odp_ml_capability(uint32_t engine_id, odp_ml_capability_t *capa);
 
 /**
  * Initialize ML configuration parameters
@@ -85,10 +99,10 @@ void odp_ml_config_init(odp_ml_config_t *config);
 /**
  * Configure ML offload
  *
- * Initializes and configures ML offload according to the configuration parameters. This function
- * must be called only once and before any ML resources are created. Use odp_ml_capability() to
- * query configuration capabilities and odp_ml_config_init() to initialize configuration
- * parameters into their default values.
+ * Initializes and configures ML offload according to the configuration parameters. This
+ * function must be called only once per engine and before any ML resources are created
+ * for the engine. Use odp_ml_capability() to query configuration capabilities of the engine
+ * and odp_ml_config_init() to initialize configuration parameters into their default values.
  *
  * @param config        ML configuration parameters
  *

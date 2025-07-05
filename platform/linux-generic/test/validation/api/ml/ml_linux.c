@@ -23,6 +23,7 @@
 
 #define COMPL_POOL_NAME "ML compl pool"
 #define NUM_COMPL	10
+#define ENGINE_ID 0
 
 /**
  * About model simple_linear.onnx being tested in this suite
@@ -124,12 +125,25 @@ static int ml_suite_init(void)
 	odp_ml_capability_t *ml_capa = &global.ml_capa;
 	odp_queue_param_t queue_param;
 	odp_ml_compl_pool_param_t ml_pool_param;
+	int num_engines;
 
 	memset(&global, 0, sizeof(global_t));
 	global.queue = ODP_QUEUE_INVALID;
 	global.compl_pool = ODP_POOL_INVALID;
 
-	if (odp_ml_capability(ml_capa)) {
+	num_engines = odp_ml_num_engines();
+	if (num_engines < 0) {
+		ODPH_ERR("ML engine count failed\n");
+		return num_engines;
+	}
+
+	if (num_engines == 0) {
+		global.disabled = 1;
+		ODPH_DBG("ML test disabled\n");
+		return 0;
+	}
+
+	if (odp_ml_capability(ENGINE_ID, ml_capa)) {
 		ODPH_ERR("ML capability failed\n");
 		return -1;
 	}
