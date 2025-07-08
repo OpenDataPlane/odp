@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2013-2018 Linaro Limited
- * Copyright (c) 2019-2022 Nokia
+ * Copyright (c) 2019-2025 Nokia
  */
 
 /**
@@ -38,7 +38,7 @@ extern "C" {
 #include <stdint.h>
 #include <string.h>
 
-ODP_STATIC_ASSERT(sizeof(_odp_packet_input_flags_t) == sizeof(uint64_t),
+ODP_STATIC_ASSERT(sizeof(_odp_packet_input_flags_t) == sizeof(uint32_t),
 		  "INPUT_FLAGS_SIZE_ERROR");
 
 ODP_STATIC_ASSERT(sizeof(_odp_packet_flags_t) == sizeof(uint32_t),
@@ -67,6 +67,9 @@ typedef struct {
 
 	/* offset to L4 hdr (TCP, UDP, SCTP, also ICMP) */
 	uint16_t l4_offset;
+
+	/* l4 protocol type (TCP, UDP, ...) */
+	odp_proto_l4_type_t l4_type;
 } packet_parser_t;
 
 /**
@@ -118,16 +121,13 @@ typedef struct ODP_ALIGNED_CACHE odp_packet_hdr_t {
 	/* Flow hash value */
 	uint32_t flow_hash;
 
-	/* User area pointer */
-	void *uarea_addr;
-
 	/* User context pointer */
 	const void *user_ptr;
 
-	/* --- 64-byte cache line boundary --- */
-
 	/* Timestamp value */
 	odp_time_t timestamp;
+
+	/* --- 64-byte cache line boundary --- */
 
 	/* Classifier mark */
 	uint16_t cls_mark;
@@ -221,17 +221,17 @@ static inline void packet_subtype_set(odp_packet_t pkt, int subtype)
  */
 static inline void _odp_packet_reset_md(odp_packet_hdr_t *pkt_hdr)
 {
-	/* Clear all flags. Resets also return value of cls_mark, user_ptr, etc. */
+	/* Clear all flags. Resets also return value of cls_mark, etc. */
 	pkt_hdr->p.input_flags.all = 0;
 	pkt_hdr->p.flags.all_flags = 0;
+	pkt_hdr->p.l4_type = ODP_PROTO_L4_TYPE_NONE;
 
 	pkt_hdr->p.l2_offset = 0;
 	pkt_hdr->p.l3_offset = ODP_PACKET_OFFSET_INVALID;
 	pkt_hdr->p.l4_offset = ODP_PACKET_OFFSET_INVALID;
 
-	if (odp_unlikely(pkt_hdr->event_hdr.subtype != ODP_EVENT_PACKET_BASIC))
-		pkt_hdr->event_hdr.subtype = ODP_EVENT_PACKET_BASIC;
-
+	pkt_hdr->event_hdr.subtype = ODP_EVENT_PACKET_BASIC;
+	pkt_hdr->event_hdr.user_flag = 0;
 	pkt_hdr->input = ODP_PKTIO_INVALID;
 }
 
@@ -322,6 +322,7 @@ static inline void _odp_packet_copy_md(odp_packet_hdr_t *dst_hdr,
 	 */
 	dst_hdr->input = src_hdr->input;
 	dst_hdr->event_hdr.subtype = subtype;
+	dst_hdr->event_hdr.user_flag = src_hdr->event_hdr.user_flag;
 	dst_hdr->dst_queue = src_hdr->dst_queue;
 	dst_hdr->cos = src_hdr->cos;
 	dst_hdr->cls_mark = src_hdr->cls_mark;
@@ -343,26 +344,27 @@ static inline void _odp_packet_copy_md(odp_packet_hdr_t *dst_hdr,
 
 	dst_hdr->p = src_hdr->p;
 
-	if (src_hdr->uarea_addr) {
+	if (src_hdr->event_hdr.user_area) {
 		if (uarea_copy) {
 			const pool_t *src_pool = _odp_pool_entry(src_hdr->event_hdr.pool);
 			const pool_t *dst_pool = _odp_pool_entry(dst_hdr->event_hdr.pool);
 			const uint32_t src_uarea_size = src_pool->param_uarea_size;
 			const uint32_t dst_uarea_size = dst_pool->param_uarea_size;
 
-			_ODP_ASSERT(dst_hdr->uarea_addr != NULL);
+			_ODP_ASSERT(dst_hdr->event_hdr.user_area != NULL);
 			_ODP_ASSERT(dst_uarea_size >= src_uarea_size);
 
-			memcpy(dst_hdr->uarea_addr, src_hdr->uarea_addr, src_uarea_size);
+			memcpy(dst_hdr->event_hdr.user_area,
+			       src_hdr->event_hdr.user_area, src_uarea_size);
 		} else {
-			void *src_uarea = src_hdr->uarea_addr;
+			void *src_uarea = src_hdr->event_hdr.user_area;
 
 			/* If user area exists, packets should always be from the same pool, so
 			 * user area pointers can simply be swapped. */
 			_ODP_ASSERT(dst_hdr->event_hdr.pool == src_hdr->event_hdr.pool);
 
-			src_hdr->uarea_addr = dst_hdr->uarea_addr;
-			dst_hdr->uarea_addr = src_uarea;
+			src_hdr->event_hdr.user_area = dst_hdr->event_hdr.user_area;
+			dst_hdr->event_hdr.user_area = src_uarea;
 		}
 	}
 

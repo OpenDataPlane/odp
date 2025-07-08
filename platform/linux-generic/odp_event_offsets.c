@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2015-2018 Linaro Limited
- * Copyright (c) 2020-2024 Nokia
+ * Copyright (c) 2020-2025 Nokia
  */
 
 #include <odp_event_internal.h>
@@ -14,9 +14,11 @@ const _odp_event_inline_offset_t
 _odp_event_inline_offset ODP_ALIGNED_CACHE = {
 	.event_type = offsetof(_odp_event_hdr_t, event_type),
 	.base_data  = offsetof(_odp_event_hdr_t, base_data),
+	.user_area  = offsetof(_odp_event_hdr_t, user_area),
 	.subtype    = offsetof(_odp_event_hdr_t, subtype),
 	.flow_id    = offsetof(_odp_event_hdr_t, flow_id),
 	.pool       = offsetof(_odp_event_hdr_t, pool),
+	.user_flag  = offsetof(_odp_event_hdr_t, user_flag),
 };
 
 #include <odp/visibility_end.h>

@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright (c) 2021-2022 Nokia
+ * Copyright (c) 2021-2025 Nokia
  */
 
 /**
@@ -54,11 +54,11 @@ typedef struct _odp_event_hdr_t {
 	/* Initial buffer tail pointer and endmark location (if enabled) */
 	uint8_t  *buf_end;
 
+	/* User area pointer */
+	uint8_t *user_area;
+
 	/* Combined pool and event index */
 	_odp_event_index_t index;
-
-	/* Pool type */
-	int8_t    type;
 
 	/* Event type. Maybe different than pool type (crypto compl event) */
 	int8_t    event_type;
@@ -68,6 +68,9 @@ typedef struct _odp_event_hdr_t {
 
 	/* Event flow id */
 	uint8_t   flow_id;
+
+	/* User flag (0 or 1, or -1 if not supported) */
+	int8_t user_flag;
 
 } _odp_event_hdr_t;
 
