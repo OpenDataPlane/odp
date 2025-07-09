@@ -60,7 +60,7 @@ run_l2fwd_perf()
 	GEN_PID=$!
 	LOG=odp_l2fwd_perf_tmp.log
 	# Max 2 workers
-	odp_l2fwd_perf${EXEEXT} -i $IF1,$IF2 -m 0 -t 1 -c 2 | tee $LOG
+	odp_l2fwd_perf${EXEEXT} -i $IF1,$IF2 -m 0 -t 1 -c 2 --wait_link 10 | tee $LOG
 	ret=${PIPESTATUS[0]}
 	kill -2 ${GEN_PID}
 	wait ${GEN_PID}
