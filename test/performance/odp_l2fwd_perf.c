@@ -122,6 +122,7 @@ typedef struct prog_config_s {
 	uint32_t mtu;
 	uint32_t runtime;
 	uint32_t num_workers;
+	uint32_t wait_sec;
 	uint8_t num_ifs;
 	uint8_t mode;
 	uint8_t orig_is_promisc;
@@ -305,6 +306,8 @@ static void print_usage(const dynamic_defs_t *dyn_defs)
 	       "  -P, --promisc_mode Enable promiscuous mode.\n"
 	       "  -t, --time         Time in seconds to run. 0 means infinite. %u by default.\n"
 	       "  -s, --no_mac_mod   Disable source and destination MAC address modification.\n"
+	       "  -w, --wait <sec>   Wait up to <sec> seconds for network links to be up.\n"
+	       "                     Default: 0 (don't check link status)\n"
 	       "  -c, --worker_count Number of workers. Workers are assigned to handle\n"
 	       "                     interfaces in round-robin fashion. E.g. with two interfaces\n"
 	       "                     eth0 and eth1 and with 5 workers, eth0 would be handled by\n"
@@ -383,6 +386,7 @@ static parse_result_t parse_options(int argc, char **argv, prog_config_t *config
 		{ "num_pkts", required_argument, NULL, 'n' },
 		{ "pkt_len", required_argument, NULL, 'l' },
 		{ "mtu", required_argument, NULL, 'M' },
+		{ "wait", required_argument, NULL, 'w' },
 		{ "promisc_mode", no_argument, NULL, 'P' },
 		{ "time", required_argument, NULL, 't' },
 		{ "no_mac_mod", no_argument, NULL, 's' },
@@ -391,7 +395,7 @@ static parse_result_t parse_options(int argc, char **argv, prog_config_t *config
 		{ NULL, 0, NULL, 0 }
 	};
 
-	static const char *shortopts = "i:m:p:b:n:l:M:Pt:sc:h";
+	static const char *shortopts = "i:m:p:b:n:l:M:Pt:w:sc:h";
 
 	init_config(config);
 
@@ -431,6 +435,9 @@ static parse_result_t parse_options(int argc, char **argv, prog_config_t *config
 			break;
 		case 's':
 			config->is_mac_mod = false;
+			break;
+		case 'w':
+			config->wait_sec = atoi(optarg);
 			break;
 		case 'c':
 			config->num_workers = atoi(optarg);
@@ -591,6 +598,33 @@ static odp_schedule_sync_t get_odp_sync(uint8_t mode)
 	default:
 		return ODP_SCHED_SYNC_PARALLEL;
 	}
+}
+
+static int print_link_info(odp_pktio_t pktio)
+{
+	odp_pktio_link_info_t info;
+
+	if (odp_pktio_link_info(pktio, &info)) {
+		ODPH_ERR("Error: Pktio link info failed.\n");
+		return -1;
+	}
+
+	printf("  autoneg     %s\n",
+	       (info.autoneg == ODP_PKTIO_LINK_AUTONEG_ON ? "on" :
+	       (info.autoneg == ODP_PKTIO_LINK_AUTONEG_OFF ? "off" : "unknown")));
+	printf("  duplex      %s\n",
+	       (info.duplex == ODP_PKTIO_LINK_DUPLEX_HALF ? "half" :
+	       (info.duplex == ODP_PKTIO_LINK_DUPLEX_FULL ? "full" : "unknown")));
+	printf("  media       %s\n", info.media);
+	printf("  pause_rx    %s\n",
+	       (info.pause_rx == ODP_PKTIO_LINK_PAUSE_ON ? "on" :
+	       (info.pause_rx == ODP_PKTIO_LINK_PAUSE_OFF ? "off" : "unknown")));
+	printf("  pause_tx    %s\n",
+	       (info.pause_tx == ODP_PKTIO_LINK_PAUSE_ON ? "on" :
+	       (info.pause_tx == ODP_PKTIO_LINK_PAUSE_OFF ? "off" : "unknown")));
+	printf("  speed(Mbit/s) %" PRIu32 "\n\n", info.speed);
+
+	return 0;
 }
 
 static odp_bool_t setup_pktios(prog_config_t *config)
@@ -768,6 +802,34 @@ static odp_bool_t setup_pktios(prog_config_t *config)
 		if (odp_pktio_start(pktio->handle) < 0) {
 			ODPH_ERR("Error starting packet I/O (%s)\n", pktio->name);
 			return false;
+		}
+	}
+
+	uint32_t i;
+	uint32_t num_ifs = config->num_ifs;
+	uint32_t link_wait = 0;
+
+	/* Wait until all links are up */
+	for (i = 0; config->wait_sec && i < num_ifs; i++) {
+		while (1) {
+			odp_pktio_t handle = prog_conf->pktios[i].handle;
+
+			if (odp_pktio_link_status(handle) == ODP_PKTIO_LINK_STATUS_UP) {
+				printf("pktio:%s\n", config->pktios[i].name);
+				if (print_link_info(handle)) {
+					ODPH_ERR("Error (%s): Printing link info failed.\n",
+						 config->pktios[i].name);
+					return false;
+				}
+				break;
+			}
+			link_wait++;
+			if (link_wait > config->wait_sec) {
+				ODPH_ERR("Error (%s): Pktio link down.\n",
+					 config->pktios[i].name);
+				return false;
+			}
+			odp_time_wait_ns(ODP_TIME_SEC_IN_NS);
 		}
 	}
 

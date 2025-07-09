@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2018 Linaro Limited
+ * Copyright (c) 2025 Nokia
  */
 
 /**
@@ -47,6 +48,7 @@ typedef struct test_options_t {
 	int pipe_queues;
 	uint32_t pipe_queue_size;
 	uint8_t collect_stat;
+	uint32_t wait_sec;
 	char pktio_name[MAX_PKTIOS][MAX_PKTIO_NAME + 1];
 
 } test_options_t;
@@ -572,6 +574,8 @@ static void print_usage(const char *progname)
 	       "  --pipe-queues <number>    Number of queues per pipeline stage\n"
 	       "  --pipe-queue-size <num>   Number of events a pipeline queue must be able to store. Default 256.\n"
 	       "  -m, --sched_mode <mode>   Scheduler synchronization mode for all queues. 1: parallel, 2: atomic, 3: ordered. Default: 2\n"
+	       "  -w, --wait <sec>          Wait up to <sec> seconds for network links to be up.\n"
+	       "                            Default: 0 (don't check link status)\n"
 	       "  -s, --stat                Collect statistics.\n"
 	       "  -h, --help                Display help and exit.\n\n",
 	       NO_PATH(progname));
@@ -589,6 +593,7 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 		{"burst",       required_argument, NULL, 'b'},
 		{"timeout",     required_argument, NULL, 't'},
 		{"sched_mode",  required_argument, NULL, 'm'},
+		{"wait",        required_argument, NULL, 'w'},
 		{"pipe-stages", required_argument, NULL,  0},
 		{"pipe-queues", required_argument, NULL,  1},
 		{"pipe-queue-size", required_argument, NULL,  2},
@@ -596,14 +601,13 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 		{"help",        no_argument,       NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
-	const char *shortopts =  "+i:c:q:b:t:m:sh";
+	const char *shortopts =  "+i:c:q:b:t:m:w:sh";
 	int ret = 0;
 
 	memset(test_options, 0, sizeof(test_options_t));
 
 	test_options->sched_mode = SCHED_MODE_ATOMIC;
 	test_options->num_worker = 1;
-	test_options->num_pktio_queue = 0;
 	test_options->burst_size = 32;
 	test_options->pipe_queue_size = 256;
 
@@ -668,6 +672,9 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 			break;
 		case 'm':
 			test_options->sched_mode = atoi(optarg);
+			break;
+		case 'w':
+			test_options->wait_sec = atoi(optarg);
 			break;
 		case 's':
 			test_options->collect_stat = 1;
@@ -1047,19 +1054,72 @@ static void link_pktios(test_global_t *test_global)
 	printf("\n");
 }
 
+static int print_link_info(odp_pktio_t pktio)
+{
+	odp_pktio_link_info_t info;
+
+	if (odp_pktio_link_info(pktio, &info)) {
+		ODPH_ERR("Error: Pktio link info failed.\n");
+		return -1;
+	}
+
+	printf("  autoneg     %s\n",
+	       (info.autoneg == ODP_PKTIO_LINK_AUTONEG_ON ? "on" :
+	       (info.autoneg == ODP_PKTIO_LINK_AUTONEG_OFF ? "off" : "unknown")));
+	printf("  duplex      %s\n",
+	       (info.duplex == ODP_PKTIO_LINK_DUPLEX_HALF ? "half" :
+	       (info.duplex == ODP_PKTIO_LINK_DUPLEX_FULL ? "full" : "unknown")));
+	printf("  media       %s\n", info.media);
+	printf("  pause_rx    %s\n",
+	       (info.pause_rx == ODP_PKTIO_LINK_PAUSE_ON ? "on" :
+	       (info.pause_rx == ODP_PKTIO_LINK_PAUSE_OFF ? "off" : "unknown")));
+	printf("  pause_tx    %s\n",
+	       (info.pause_tx == ODP_PKTIO_LINK_PAUSE_ON ? "on" :
+	       (info.pause_tx == ODP_PKTIO_LINK_PAUSE_OFF ? "off" : "unknown")));
+	printf("  speed(Mbit/s) %" PRIu32 "\n\n", info.speed);
+
+	return 0;
+}
+
 static int start_pktios(test_global_t *test_global)
 {
-	int i;
+	uint32_t i;
+	test_options_t *test_options = &test_global->opt;
+	uint32_t num_pktio = test_options->num_pktio;
+	uint32_t link_wait = 0;
 
-	for (i = 0; i < test_global->opt.num_pktio; i++) {
+	for (i = 0; i < num_pktio; i++) {
 		if (odp_pktio_start(test_global->pktio[i].pktio)) {
-			printf("Error (%s): Pktio start failed.\n",
-			       test_global->opt.pktio_name[i]);
+			ODPH_ERR("Error (%s): Pktio start failed.\n", test_options->pktio_name[i]);
 
 			return -1;
 		}
 
 		test_global->pktio[i].started = 1;
+	}
+
+	/* Wait until all links are up */
+	for (i = 0; test_options->wait_sec && i < num_pktio; i++) {
+		while (1) {
+			odp_pktio_t pktio = test_global->pktio[i].pktio;
+
+			if (odp_pktio_link_status(pktio) == ODP_PKTIO_LINK_STATUS_UP) {
+				printf("pktio:%s\n", test_options->pktio_name[i]);
+				if (print_link_info(pktio)) {
+					ODPH_ERR("Error (%s): Printing link info failed.\n",
+						 test_options->pktio_name[i]);
+					return -1;
+				}
+				break;
+			}
+			link_wait++;
+			if (link_wait > test_options->wait_sec) {
+				ODPH_ERR("Error (%s): Pktio link down.\n",
+					 test_options->pktio_name[i]);
+				return -1;
+			}
+			odp_time_wait_ns(ODP_TIME_SEC_IN_NS);
+		}
 	}
 
 	return 0;
