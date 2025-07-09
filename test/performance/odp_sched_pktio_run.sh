@@ -52,7 +52,7 @@ run_sched_pktio()
 	fi
 
 	# 1 worker
-	odp_sched_pktio${EXEEXT} -i $IF1,$IF2 -c 1 -s &
+	odp_sched_pktio${EXEEXT} -i $IF1,$IF2 -c 1 --wait_link 10 -s &
 
 	TEST_PID=$!
 
