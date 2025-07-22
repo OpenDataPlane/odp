@@ -736,7 +736,7 @@ static odp_bool_t setup_pktios(prog_config_t *config)
 
 			if (odp_pktio_maxlen_set(pktio->handle, config->mtu, config->mtu) < 0) {
 				config->mtu = 0U;
-				ODPH_ERR("Error setting promiscuous mode (%s)\n", pktio->name);
+				ODPH_ERR("Error setting MTU (%s)\n", pktio->name);
 				return false;
 			}
 		}
