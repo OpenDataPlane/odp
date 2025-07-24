@@ -27,7 +27,8 @@ libthrmask_common_la_CFLAGS = $(AM_CFLAGS) -DTEST_THRMASK
 
 endif
 
-noinst_HEADERS = test_common_macros.h \
+noinst_HEADERS = pktio_common.h \
+		 test_common_macros.h \
 		 test_packet_custom.h \
 		 test_packet_ipsec.h \
 		 test_packet_ipv4.h \
