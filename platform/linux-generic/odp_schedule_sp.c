@@ -977,17 +977,11 @@ static odp_schedule_group_t allocate_group(const char *name, const odp_thrmask_t
 		if (!sched_group->s.group[i].allocated) {
 			char *grp_name = sched_group->s.group[i].name;
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Warray-bounds"
-#if __GNUC__ >= 13
-#pragma GCC diagnostic ignored "-Wstringop-overflow"
-#endif
 			if (name == NULL)
 				grp_name[0] = 0;
 			else
 				_odp_strcpy(grp_name, name,
 					    ODP_SCHED_GROUP_NAME_LEN);
-#pragma GCC diagnostic pop
 
 			odp_thrmask_copy(&sched_group->s.group[i].mask, thrmask);
 			sched_group->s.group[i].allocated = 1;
