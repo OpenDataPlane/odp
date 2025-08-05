@@ -26,6 +26,7 @@
 
 #include <odp_api.h>
 #include <odp/helper/odph_api.h>
+#include <test_common_perf.h>
 
 #if ODP_THREAD_COUNT_MAX > 33
 /* One control thread, even number of workers */
@@ -1662,39 +1663,14 @@ static int open_pktios(test_global_t *global)
 	return 0;
 }
 
-static int print_link_info(odp_pktio_t pktio)
-{
-	odp_pktio_link_info_t info;
-
-	if (odp_pktio_link_info(pktio, &info)) {
-		ODPH_ERR("Error: Pktio link info failed.\n");
-		return -1;
-	}
-
-	printf("  autoneg     %s\n",
-	       (info.autoneg == ODP_PKTIO_LINK_AUTONEG_ON ? "on" :
-	       (info.autoneg == ODP_PKTIO_LINK_AUTONEG_OFF ? "off" : "unknown")));
-	printf("  duplex      %s\n",
-	       (info.duplex == ODP_PKTIO_LINK_DUPLEX_HALF ? "half" :
-	       (info.duplex == ODP_PKTIO_LINK_DUPLEX_FULL ? "full" : "unknown")));
-	printf("  media       %s\n", info.media);
-	printf("  pause_rx    %s\n",
-	       (info.pause_rx == ODP_PKTIO_LINK_PAUSE_ON ? "on" :
-	       (info.pause_rx == ODP_PKTIO_LINK_PAUSE_OFF ? "off" : "unknown")));
-	printf("  pause_tx    %s\n",
-	       (info.pause_tx == ODP_PKTIO_LINK_PAUSE_ON ? "on" :
-	       (info.pause_tx == ODP_PKTIO_LINK_PAUSE_OFF ? "off" : "unknown")));
-	printf("  speed(Mbit/s) %" PRIu32 "\n\n", info.speed);
-
-	return 0;
-}
-
 static int start_pktios(test_global_t *global)
 {
 	uint32_t i;
 	test_options_t *test_options = &global->test_options;
 	uint32_t num_pktio = test_options->num_pktio;
-	uint32_t link_wait = 0;
+	uint32_t wait_sec = test_options->wait_sec;
+	odp_pktio_t pktio;
+	char *name;
 
 	for (i = 0; i < num_pktio; i++) {
 		if (odp_pktio_start(global->pktio[i].pktio)) {
@@ -1707,27 +1683,14 @@ static int start_pktios(test_global_t *global)
 	}
 
 	/* Wait until all links are up */
-	for (i = 0; test_options->wait_sec && i < num_pktio; i++) {
-		while (1) {
-			odp_pktio_t pktio = global->pktio[i].pktio;
+	for (i = 0; i < num_pktio; i++) {
+		pktio = global->pktio[i].pktio;
+		name = test_options->pktio_name[i];
 
-			if (odp_pktio_link_status(pktio) == ODP_PKTIO_LINK_STATUS_UP) {
-				printf("pktio:%s\n", test_options->pktio_name[i]);
-				if (print_link_info(pktio)) {
-					ODPH_ERR("Error (%s): Printing link info failed.\n",
-						 test_options->pktio_name[i]);
-					return -1;
-				}
-				break;
-			}
-			link_wait++;
-			if (link_wait > test_options->wait_sec) {
-				ODPH_ERR("Error (%s): Pktio link down.\n",
-					 test_options->pktio_name[i]);
-				return -1;
-			}
-			odp_time_wait_ns(ODP_TIME_SEC_IN_NS);
-		}
+		if (wait_sec && test_common_check_link_status_wait(pktio, name, wait_sec) == -1)
+			return -1;
+
+		test_common_print_link_info(pktio, name);
 	}
 
 	if (test_options->wait_start_sec)
