@@ -959,7 +959,8 @@ static odp_schedule_group_t allocate_group(const char *name, const odp_thrmask_t
 					   sched_group_t *sched_group, uint32_t num_prio)
 {
 	odp_schedule_group_t group = ODP_SCHED_GROUP_INVALID;
-	int thr;
+	int thr_tbl[NUM_THREAD];
+	int thr, num_thr;
 
 	if (sched_global->num_grps >= sched_global->config_if.max_groups) {
 		_ODP_ERR("Maximum number of groups created\n");
@@ -971,6 +972,23 @@ static odp_schedule_group_t allocate_group(const char *name, const odp_thrmask_t
 			 num_prio,
 			 sched_global->config_if.max_group_prios - sched_global->num_grp_prios);
 		return group;
+	}
+
+	num_thr = odp_thrmask_count(thrmask);
+	if (num_thr < 0 || num_thr > NUM_THREAD) {
+		_ODP_ERR("Bad thread count: %d\n", num_thr);
+		return group;
+	}
+
+	thr = odp_thrmask_first(thrmask);
+	num_thr = 0;
+	while (thr >= 0 && num_thr < NUM_THREAD) {
+		if (thr >= NUM_THREAD) {
+			_ODP_ERR("Invalid thread ID: %d, max: %d\n", thr, NUM_THREAD - 1);
+			return group;
+		}
+		thr_tbl[num_thr++] = thr;
+		thr = odp_thrmask_next(thrmask, thr);
 	}
 
 	for (int i = NUM_STATIC_GROUP; i < NUM_GROUP; i++) {
@@ -990,11 +1008,9 @@ static odp_schedule_group_t allocate_group(const char *name, const odp_thrmask_t
 
 			group = i;
 
-			thr = odp_thrmask_first(thrmask);
-			while (thr >= 0) {
-				add_group(sched_group, thr, group);
-				thr = odp_thrmask_next(thrmask, thr);
-			}
+			for (int j = 0; j < num_thr; j++)
+				add_group(sched_group, thr_tbl[j], group);
+
 			break;
 		}
 	}
