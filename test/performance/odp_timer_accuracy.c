@@ -295,9 +295,12 @@ static int parse_options(int argc, char *argv[], test_opt_t *test_opt)
 			test_opt->mode = atoi(optarg);
 			break;
 		case 'P':
-			sscanf(optarg, "%" SCNu64 ":%" SCNu64 ":%" SCNu64 ":%llu",
-			       &test_opt->freq.integer, &test_opt->freq.numer,
-			       &test_opt->freq.denom, &test_opt->max_multiplier);
+			if (sscanf(optarg, "%" SCNu64 ":%" SCNu64 ":%" SCNu64 ":%llu",
+				   &test_opt->freq.integer, &test_opt->freq.numer,
+				   &test_opt->freq.denom, &test_opt->max_multiplier) != 4) {
+				ODPH_ERR("Invalid periodic timer pool parameters\n");
+				return -1;
+			}
 			break;
 		case 'M':
 			test_opt->multiplier = strtoull(optarg, NULL, 0);
