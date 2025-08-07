@@ -1175,7 +1175,7 @@ static int run_worker_direct_mode(void *arg)
 }
 
 static int set_pktin_vector_params(odp_pktin_queue_param_t *pktin_param, odp_pool_t vec_pool,
-				   odp_pktio_capability_t pktio_capa)
+				   const odp_pktio_capability_t *pktio_capa)
 {
 	uint64_t vec_tmo_ns;
 	uint32_t vec_size;
@@ -1188,15 +1188,15 @@ static int set_pktin_vector_params(odp_pktin_queue_param_t *pktin_param, odp_poo
 	else
 		vec_size = gbl_args->appl.vec_size;
 
-	if (vec_size > pktio_capa.vector.max_size ||
-	    vec_size < pktio_capa.vector.min_size) {
+	if (vec_size > pktio_capa->vector.max_size || vec_size < pktio_capa->vector.min_size) {
 		if (gbl_args->appl.vec_size == 0) {
-			vec_size = (vec_size > pktio_capa.vector.max_size) ?
-				pktio_capa.vector.max_size : pktio_capa.vector.min_size;
+			vec_size = (vec_size > pktio_capa->vector.max_size) ?
+				pktio_capa->vector.max_size : pktio_capa->vector.min_size;
 			printf("\nWarning: Modified vector size to %u\n\n", vec_size);
 		} else {
 			ODPH_ERR("Invalid pktio vector size %u, valid range [%u, %u]\n",
-				 vec_size, pktio_capa.vector.min_size, pktio_capa.vector.max_size);
+				 vec_size, pktio_capa->vector.min_size,
+				 pktio_capa->vector.max_size);
 			return -1;
 		}
 	}
@@ -1207,16 +1207,16 @@ static int set_pktin_vector_params(odp_pktin_queue_param_t *pktin_param, odp_poo
 	else
 		vec_tmo_ns = gbl_args->appl.vec_tmo_ns;
 
-	if (vec_tmo_ns > pktio_capa.vector.max_tmo_ns ||
-	    vec_tmo_ns < pktio_capa.vector.min_tmo_ns) {
+	if (vec_tmo_ns > pktio_capa->vector.max_tmo_ns ||
+	    vec_tmo_ns < pktio_capa->vector.min_tmo_ns) {
 		if (gbl_args->appl.vec_tmo_ns == 0) {
-			vec_tmo_ns = (vec_tmo_ns > pktio_capa.vector.max_tmo_ns) ?
-				pktio_capa.vector.max_tmo_ns : pktio_capa.vector.min_tmo_ns;
+			vec_tmo_ns = (vec_tmo_ns > pktio_capa->vector.max_tmo_ns) ?
+				pktio_capa->vector.max_tmo_ns : pktio_capa->vector.min_tmo_ns;
 			printf("\nWarning: Modified vector timeout to %" PRIu64 "\n\n", vec_tmo_ns);
 		} else {
 			ODPH_ERR("Invalid vector timeout %" PRIu64 ", valid range [%" PRIu64
 				 ", %" PRIu64 "]\n", vec_tmo_ns,
-				 pktio_capa.vector.min_tmo_ns, pktio_capa.vector.max_tmo_ns);
+				 pktio_capa->vector.min_tmo_ns, pktio_capa->vector.max_tmo_ns);
 			return -1;
 		}
 	}
@@ -1466,7 +1466,7 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx, odp_po
 			ODPH_ERR("Packet vector input not supported: %s\n", dev);
 			return -1;
 		}
-		if (set_pktin_vector_params(&pktin_param, vec_pool, pktio_capa))
+		if (set_pktin_vector_params(&pktin_param, vec_pool, &pktio_capa))
 			return -1;
 	}
 
