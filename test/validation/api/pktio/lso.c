@@ -752,7 +752,7 @@ static int send_marker(pktio_info_t *src, pktio_info_t *dst)
 	return -1;
 }
 
-static void lso_test(odp_lso_profile_param_t param, uint32_t max_payload,
+static void lso_test(const odp_lso_profile_param_t *profile_param, uint32_t max_payload,
 		     const uint8_t *test_packet, uint32_t pkt_len,
 		     uint32_t hdr_len, uint32_t l3_offset,
 		     int use_opt,
@@ -766,6 +766,7 @@ static void lso_test(odp_lso_profile_param_t param, uint32_t max_payload,
 	uint8_t orig_hdr[hdr_len];
 	uint32_t offset, len, payload_len, payload_sum;
 	odp_packet_t pkt_out[MAX_NUM_SEG];
+	odp_lso_profile_param_t param = *profile_param;
 	uint32_t sent_payload = pkt_len - hdr_len;
 	const int is_custom_proto = (param.lso_proto == ODP_LSO_PROTO_CUSTOM);
 
@@ -928,7 +929,7 @@ static void lso_send_custom_eth(const uint8_t *test_packet, uint32_t pkt_len, ui
 		odp_lso_profile_param_init(&param);
 		param.lso_proto = ODP_LSO_PROTO_CUSTOM;
 		add_profile_param_custom_segnum(&param);
-		lso_test(param, max_payload, test_packet, pkt_len, hdr_len, l3_offset, use_opt,
+		lso_test(&param, max_payload, test_packet, pkt_len, hdr_len, l3_offset, use_opt,
 			 is_custom_eth_test_pkt,
 			 update_custom_hdr_segnum);
 	}
@@ -936,7 +937,7 @@ static void lso_send_custom_eth(const uint8_t *test_packet, uint32_t pkt_len, ui
 		odp_lso_profile_param_init(&param);
 		param.lso_proto = ODP_LSO_PROTO_CUSTOM;
 		add_profile_param_custom_write_bits(&param);
-		lso_test(param, max_payload, test_packet, pkt_len, hdr_len, l3_offset, use_opt,
+		lso_test(&param, max_payload, test_packet, pkt_len, hdr_len, l3_offset, use_opt,
 			 is_custom_eth_test_pkt,
 			 update_custom_hdr_bits);
 	}
@@ -948,7 +949,7 @@ static void lso_send_custom_eth(const uint8_t *test_packet, uint32_t pkt_len, ui
 		param.lso_proto = ODP_LSO_PROTO_CUSTOM;
 		add_profile_param_custom_segnum(&param);
 		add_profile_param_custom_write_bits(&param);
-		lso_test(param, max_payload, test_packet, pkt_len, hdr_len, l3_offset, use_opt,
+		lso_test(&param, max_payload, test_packet, pkt_len, hdr_len, l3_offset, use_opt,
 			 is_custom_eth_test_pkt,
 			 update_custom_hdr_segnum_bits);
 	}
@@ -1069,14 +1070,14 @@ static void lso_send_ipv4(const uint8_t *test_packet, uint32_t pkt_len, uint32_t
 	odp_lso_profile_param_init(&param);
 	param.lso_proto = ODP_LSO_PROTO_IPV4;
 
-	lso_test(param, max_payload, test_packet, pkt_len, hdr_len, l3_offset, use_opt,
+	lso_test(&param, max_payload, test_packet, pkt_len, hdr_len, l3_offset, use_opt,
 		 is_ipv4_test_pkt,
 		 update_ipv4_hdr);
 
 	/* Same test with DF set */
 	memcpy(pkt2, test_packet, pkt_len);
 	change_ipv4_frag_offset(&pkt2[l3_offset], LSO_TEST_IPV4_FLAG_DF, LSO_TEST_IPV4_FLAG_DF);
-	lso_test(param, max_payload, pkt2, pkt_len, hdr_len, l3_offset, use_opt,
+	lso_test(&param, max_payload, pkt2, pkt_len, hdr_len, l3_offset, use_opt,
 		 is_ipv4_test_pkt,
 		 update_ipv4_hdr);
 }
