@@ -62,6 +62,8 @@ typedef struct {
 	test_stat_t     stats;
 	uint32_t        src_queue_id[MAX_QUEUES];
 	uint32_t        dst_queue_id[MAX_QUEUES];
+	odp_queue_t     src_queue_tbl[MAX_QUEUES];
+	odp_queue_t     dst_queue_tbl[MAX_QUEUES];
 	uint32_t        num_queues;
 } thread_args_t;
 
@@ -585,8 +587,8 @@ static int run_test(void *arg)
 	const uint32_t num_workers = thr_args->options->num_cpu;
 	const uint32_t max_burst = thr_args->options->max_burst;
 	const odp_bool_t single_event = max_burst == 0 ? 1 : 0;
-	odp_queue_t src_queue_tbl[MAX_QUEUES];
-	odp_queue_t dst_queue_tbl[MAX_QUEUES];
+	odp_queue_t *src_queue_tbl = thr_args->src_queue_tbl;
+	odp_queue_t *dst_queue_tbl = thr_args->dst_queue_tbl;
 
 	for (uint32_t i = 0; i < num_queue; i++) {
 		src_queue_tbl[i] = global->queue[thr_args->src_queue_id[i]];
