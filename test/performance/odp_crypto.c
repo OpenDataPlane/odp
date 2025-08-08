@@ -34,8 +34,8 @@
 #define AAD_LEN 8 /* typical AAD length used in IPsec when ESN is not in use */
 #define MAX_AUTH_DIGEST_LEN 32 /* maximum MAC length in bytes */
 
-static uint8_t test_aad[AAD_LEN] = "01234567";
-static uint8_t test_iv[16] = "0123456789abcdef";
+static uint8_t test_aad[AAD_LEN] = {1, 2, 3, 4, 5, 6, 7, 8};
+static uint8_t test_iv[16] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
 
 static uint8_t test_key16[16] = { 0x01, 0x02, 0x03, 0x04, 0x05,
 				  0x06, 0x07, 0x08, 0x09, 0x0a,

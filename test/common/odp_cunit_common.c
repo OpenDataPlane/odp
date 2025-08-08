@@ -240,6 +240,11 @@ int odp_cunit_thread_create(int num, int func_ptr(void *), void *const arg[], in
 
 int odp_cunit_thread_join(int num)
 {
+	if (num <= 0 || num > ODP_THREAD_COUNT_MAX) {
+		fprintf(stderr, "error: odph_thread_join: invalid 'num' parameter: %d\n", num);
+		return -1;
+	}
+
 	odph_thread_join_result_t res[num];
 
 	/* Wait for threads to exit */
