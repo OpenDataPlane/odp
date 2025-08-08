@@ -1299,7 +1299,7 @@ static void _verify_tailroom_shift(odp_packet_t *pkt,
 	odp_packet_seg_t seg;
 	uint32_t room;
 	uint32_t seg_data_len, pkt_data_len, seg_len;
-	void *tail;
+	void *tail = NULL;
 	char *tail_orig;
 	int extended, rc;
 
