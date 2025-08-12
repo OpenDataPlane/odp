@@ -63,6 +63,12 @@
 /* Maximum thread info string length */
 #define EXTRA_STR_LEN          32
 
+/** Long option only settings */
+enum longopt_only {
+	OPT_EVENT_PRESCHEDULE = 256,
+	OPT_CACHE_STASH = 257
+};
+
 /* Packet input mode */
 typedef enum pktin_mode_t {
 	DIRECT_RECV,
@@ -158,6 +164,8 @@ typedef struct {
 	int mtu;                /* Interface MTU */
 	int num_om;
 	int num_prio;
+	uint32_t ev_presched;
+	odp_cache_stash_config_t cache_stash_config;
 
 	struct {
 		odp_packet_tx_compl_mode_t mode;
@@ -721,6 +729,7 @@ static int run_worker_sched_mode_vector(void *arg)
 	state_t *state = appl_args->has_state ? &thr_args->state : NULL;
 	int use_event_queue = gbl_args->appl.out_mode;
 	pktin_mode_t in_mode = gbl_args->appl.in_mode;
+	const uint32_t ev_presched = appl_args->ev_presched;
 
 	max_burst = gbl_args->appl.burst_rx;
 
@@ -801,6 +810,9 @@ static int run_worker_sched_mode_vector(void *arg)
 			dst_idx = gbl_args->dst_port_from_idx[src_idx];
 			fill_eth_addrs(pkt_tbl, pkts, dst_idx);
 
+			if (ev_presched)
+				odp_schedule_prefetch(ev_presched);
+
 			send_packets(pkt_tbl, pkts, use_event_queue, dst_idx, tx_queue[dst_idx],
 				     pktout[dst_idx], state, stats);
 
@@ -875,6 +887,7 @@ static int run_worker_sched_mode(void *arg)
 	state_t *state = appl_args->has_state ? &thr_args->state : NULL;
 	int use_event_queue = gbl_args->appl.out_mode;
 	pktin_mode_t in_mode = gbl_args->appl.in_mode;
+	const uint32_t ev_presched = appl_args->ev_presched;
 
 	max_burst = gbl_args->appl.burst_rx;
 
@@ -955,6 +968,9 @@ static int run_worker_sched_mode(void *arg)
 		dst_idx = gbl_args->dst_port_from_idx[src_idx];
 		fill_eth_addrs(pkt_tbl, pkts, dst_idx);
 
+		if (ev_presched)
+			odp_schedule_prefetch(ev_presched);
+
 		send_packets(pkt_tbl, pkts, use_event_queue, dst_idx, tx_queue[dst_idx],
 			     pktout[dst_idx], state, stats);
 	}
@@ -1022,6 +1038,7 @@ static int run_worker_plain_queue_mode(void *arg)
 		&gbl_args->memcpy_data[thr_idx * 2 * appl_args->memcpy_bytes] : NULL;
 	state_t *state = appl_args->has_state ? &thr_args->state : NULL;
 	int use_event_queue = gbl_args->appl.out_mode;
+	const uint32_t ev_presched = appl_args->ev_presched;
 	int i;
 
 	max_burst = gbl_args->appl.burst_rx;
@@ -1067,6 +1084,9 @@ static int run_worker_plain_queue_mode(void *arg)
 			continue;
 
 		fill_eth_addrs(pkt_tbl, pkts, dst_idx);
+
+		if (ev_presched)
+			odp_schedule_prefetch(ev_presched);
 
 		send_packets(pkt_tbl, pkts, use_event_queue, dst_idx, tx_queue, pktout, state,
 			     stats);
@@ -1123,6 +1143,7 @@ static int run_worker_direct_mode(void *arg)
 		&gbl_args->memcpy_data[thr_idx * 2 * appl_args->memcpy_bytes] : NULL;
 	state_t *state = appl_args->has_state ? &thr_args->state : NULL;
 	int use_event_queue = gbl_args->appl.out_mode;
+	const uint32_t ev_presched = appl_args->ev_presched;
 
 	max_burst = gbl_args->appl.burst_rx;
 
@@ -1163,6 +1184,9 @@ static int run_worker_direct_mode(void *arg)
 			continue;
 
 		fill_eth_addrs(pkt_tbl, pkts, dst_idx);
+
+		if (ev_presched)
+			odp_schedule_prefetch(ev_presched);
 
 		send_packets(pkt_tbl, pkts, use_event_queue, dst_idx, tx_queue, pktout, state,
 			     stats);
@@ -1851,6 +1875,65 @@ static void init_port_lookup_tbl(void)
 	}
 }
 
+static void set_cache_stash(odp_cache_stash_region_t *region, uint32_t level, uint32_t len,
+			    uint32_t offset)
+{
+	if (level == 0) {
+		region->l2.len = len;
+		region->l2.offset = offset;
+	} else {
+		region->l3.len = len;
+		region->l3.offset = offset;
+	}
+}
+
+static int parse_cache_stash_config(char *optarg, appl_args_t *appl)
+{
+	uint32_t region, level, offset, len;
+	odp_cache_stash_config_t *stash_config = &appl->cache_stash_config;
+
+	if (sscanf(optarg, "%u,%u,%u,%u", &region, &level, &offset, &len) != 4) {
+		ODPH_ERR("Invalid number of arguments for cache stashing\n");
+		return -1;
+	}
+
+	if (region > 3) {
+		ODPH_ERR("Invalid region for cache stashing: %u\n", region);
+		return -1;
+	}
+
+	if (level > 1) {
+		ODPH_ERR("Invalid cache level for cache stashing: %u\n", level);
+		return -1;
+	}
+
+	if (len == 0) {
+		ODPH_ERR("Invalid len for cache stashing: %u\n", len);
+		return -1;
+	}
+
+	stash_config->regions.all |= (1U << (region * 2 + level));
+
+	switch (region) {
+	case 0:
+		set_cache_stash(&stash_config->event_metadata, level, len, offset);
+		break;
+	case 1:
+		set_cache_stash(&stash_config->event_data, level, len, offset);
+		break;
+	case 2:
+		set_cache_stash(&stash_config->event_user_area, level, len, offset);
+		break;
+	case 3:
+		set_cache_stash(&stash_config->queue_context, level, len, offset);
+		break;
+	default:
+		break;
+	}
+
+	return 0;
+}
+
 /*
  * Print usage information
  */
@@ -1979,6 +2062,13 @@ static void usage(char *progname)
 	       "                                 2: Enable transmission of pause frames\n"
 	       "                                 3: Enable reception and transmission of pause\n"
 	       "                                    frames\n"
+	       "  --event_presched <num>         Number of events to be prefetched. Default: 0.\n"
+	       "  --cache_stash <num>            Enable common group level cache stashing. Format: region,level,offset,len\n"
+	       "                                 region: 0: Event metadata, 1: Event data, 2: Event user area, 3: Queue context\n"
+	       "                                 level: 0: L2, 1: L3\n"
+	       "                                 offset/len: in bytes\n"
+	       "                                 E.g.: 1,0,16,32 enables 32-byte L2 stash on event data with a 16-byte offset\n"
+	       "                                 For stashing multiple regions, use --cache_stash multiple times\n"
 	       "  -v, --verbose                  Verbose output.\n"
 	       "  -V, --verbose_pkt              Print debug information on every received\n"
 	       "                                 packet.\n"
@@ -2037,6 +2127,8 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{"input_ts", no_argument, NULL, 'T'},
 		{"tx_compl", required_argument, NULL, 'C'},
 		{"flow_control", required_argument, NULL, 'X'},
+		{"event_presched", required_argument, NULL, OPT_EVENT_PRESCHEDULE},
+		{"cache_stash", required_argument, NULL, OPT_CACHE_STASH},
 		{"verbose", no_argument, NULL, 'v'},
 		{"verbose_pkt", no_argument, NULL, 'V'},
 		{"help", no_argument, NULL, 'h'},
@@ -2386,6 +2478,13 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 
 			free(tmp_str);
 			break;
+		case OPT_EVENT_PRESCHEDULE:
+			appl_args->ev_presched = atoi(optarg);
+			break;
+		case OPT_CACHE_STASH:
+			if (parse_cache_stash_config(optarg, appl_args))
+				exit(EXIT_FAILURE);
+			break;
 		case 'v':
 			appl_args->verbose = 1;
 			break;
@@ -2582,16 +2681,20 @@ static void gbl_args_init(args_t *args)
 	args->appl.tx_compl.mode = ODP_PACKET_TX_COMPL_DISABLED;
 }
 
-static void create_groups(int num, odp_schedule_group_t *group)
+static void create_groups(int num, odp_schedule_group_t *group,
+			  odp_cache_stash_config_t *cache_stash_config)
 {
 	int i;
 	odp_thrmask_t zero;
+	odp_schedule_group_param_t group_param;
 
 	odp_thrmask_zero(&zero);
+	odp_schedule_group_param_init(&group_param);
+	group_param.cache_stash_hints.common = *cache_stash_config;
 
 	/* Create groups */
 	for (i = 0; i < num; i++) {
-		group[i] = odp_schedule_group_create(NULL, &zero);
+		group[i] = odp_schedule_group_create_2(NULL, &zero, &group_param);
 
 		if (group[i] == ODP_SCHED_GROUP_INVALID) {
 			ODPH_ERR("Group create failed\n");
@@ -2700,6 +2803,7 @@ int main(int argc, char *argv[])
 	odp_schedule_config_t sched_config;
 	odp_schedule_capability_t sched_capa;
 	uint32_t pkt_len, num_pkt, seg_len;
+	odp_schedule_group_param_t group_param;
 
 	/* Let helper collect its own arguments (e.g. --odph_proc) */
 	argc = odph_parse_options(argc, argv);
@@ -2915,6 +3019,8 @@ int main(int argc, char *argv[])
 	bind_workers();
 
 	odp_schedule_config_init(&sched_config);
+	odp_schedule_group_param_init(&group_param);
+	group_param.cache_stash_hints.common = gbl_args->appl.cache_stash_config;
 
 	if (odp_schedule_capability(&sched_capa)) {
 		ODPH_ERR("Schedule capability failed\n");
@@ -2941,7 +3047,15 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
-	odp_schedule_config(&sched_config);
+	if (num_groups == -1)
+		sched_config.sched_group.worker_param = group_param;
+	else if (num_groups == 0)
+		sched_config.sched_group.all_param = group_param;
+
+	if (odp_schedule_config(&sched_config)) {
+		ODPH_ERR("Schedule configuration failed\n");
+		exit(EXIT_FAILURE);
+	}
 
 	/* Default */
 	if (num_groups == 0) {
@@ -2951,7 +3065,7 @@ int main(int argc, char *argv[])
 		group[0]   = ODP_SCHED_GROUP_WORKER;
 		num_groups = 1;
 	} else {
-		create_groups(num_groups, group);
+		create_groups(num_groups, group, &gbl_args->appl.cache_stash_config);
 	}
 
 	pool = pool_tbl[0];
