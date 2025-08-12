@@ -63,6 +63,11 @@
 /* Maximum thread info string length */
 #define EXTRA_STR_LEN          32
 
+/** Long option only settings */
+enum longopt_only {
+	OPT_EVENT_PRESCHEDULE = 256
+};
+
 /* Packet input mode */
 typedef enum pktin_mode_t {
 	DIRECT_RECV,
@@ -158,6 +163,7 @@ typedef struct {
 	int mtu;                /* Interface MTU */
 	int num_om;
 	int num_prio;
+	uint32_t ev_presched;
 
 	struct {
 		odp_packet_tx_compl_mode_t mode;
@@ -721,6 +727,7 @@ static int run_worker_sched_mode_vector(void *arg)
 	state_t *state = appl_args->has_state ? &thr_args->state : NULL;
 	int use_event_queue = gbl_args->appl.out_mode;
 	pktin_mode_t in_mode = gbl_args->appl.in_mode;
+	const uint32_t ev_presched = appl_args->ev_presched;
 
 	max_burst = gbl_args->appl.burst_rx;
 
@@ -801,6 +808,9 @@ static int run_worker_sched_mode_vector(void *arg)
 			dst_idx = gbl_args->dst_port_from_idx[src_idx];
 			fill_eth_addrs(pkt_tbl, pkts, dst_idx);
 
+			if (ev_presched)
+				odp_schedule_prefetch(ev_presched);
+
 			send_packets(pkt_tbl, pkts, use_event_queue, dst_idx, tx_queue[dst_idx],
 				     pktout[dst_idx], state, stats);
 
@@ -875,6 +885,7 @@ static int run_worker_sched_mode(void *arg)
 	state_t *state = appl_args->has_state ? &thr_args->state : NULL;
 	int use_event_queue = gbl_args->appl.out_mode;
 	pktin_mode_t in_mode = gbl_args->appl.in_mode;
+	const uint32_t ev_presched = appl_args->ev_presched;
 
 	max_burst = gbl_args->appl.burst_rx;
 
@@ -955,6 +966,9 @@ static int run_worker_sched_mode(void *arg)
 		dst_idx = gbl_args->dst_port_from_idx[src_idx];
 		fill_eth_addrs(pkt_tbl, pkts, dst_idx);
 
+		if (ev_presched)
+			odp_schedule_prefetch(ev_presched);
+
 		send_packets(pkt_tbl, pkts, use_event_queue, dst_idx, tx_queue[dst_idx],
 			     pktout[dst_idx], state, stats);
 	}
@@ -1022,6 +1036,7 @@ static int run_worker_plain_queue_mode(void *arg)
 		&gbl_args->memcpy_data[thr_idx * 2 * appl_args->memcpy_bytes] : NULL;
 	state_t *state = appl_args->has_state ? &thr_args->state : NULL;
 	int use_event_queue = gbl_args->appl.out_mode;
+	const uint32_t ev_presched = appl_args->ev_presched;
 	int i;
 
 	max_burst = gbl_args->appl.burst_rx;
@@ -1067,6 +1082,9 @@ static int run_worker_plain_queue_mode(void *arg)
 			continue;
 
 		fill_eth_addrs(pkt_tbl, pkts, dst_idx);
+
+		if (ev_presched)
+			odp_schedule_prefetch(ev_presched);
 
 		send_packets(pkt_tbl, pkts, use_event_queue, dst_idx, tx_queue, pktout, state,
 			     stats);
@@ -1123,6 +1141,7 @@ static int run_worker_direct_mode(void *arg)
 		&gbl_args->memcpy_data[thr_idx * 2 * appl_args->memcpy_bytes] : NULL;
 	state_t *state = appl_args->has_state ? &thr_args->state : NULL;
 	int use_event_queue = gbl_args->appl.out_mode;
+	const uint32_t ev_presched = appl_args->ev_presched;
 
 	max_burst = gbl_args->appl.burst_rx;
 
@@ -1163,6 +1182,9 @@ static int run_worker_direct_mode(void *arg)
 			continue;
 
 		fill_eth_addrs(pkt_tbl, pkts, dst_idx);
+
+		if (ev_presched)
+			odp_schedule_prefetch(ev_presched);
 
 		send_packets(pkt_tbl, pkts, use_event_queue, dst_idx, tx_queue, pktout, state,
 			     stats);
@@ -1979,6 +2001,7 @@ static void usage(char *progname)
 	       "                                 2: Enable transmission of pause frames\n"
 	       "                                 3: Enable reception and transmission of pause\n"
 	       "                                    frames\n"
+	       "  --event_presched <num>         Number of events to be prefetched. Default: 0.\n"
 	       "  -v, --verbose                  Verbose output.\n"
 	       "  -V, --verbose_pkt              Print debug information on every received\n"
 	       "                                 packet.\n"
@@ -2037,6 +2060,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{"input_ts", no_argument, NULL, 'T'},
 		{"tx_compl", required_argument, NULL, 'C'},
 		{"flow_control", required_argument, NULL, 'X'},
+		{"event_presched", required_argument, NULL, OPT_EVENT_PRESCHEDULE},
 		{"verbose", no_argument, NULL, 'v'},
 		{"verbose_pkt", no_argument, NULL, 'V'},
 		{"help", no_argument, NULL, 'h'},
@@ -2385,6 +2409,9 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 			}
 
 			free(tmp_str);
+			break;
+		case OPT_EVENT_PRESCHEDULE:
+			appl_args->ev_presched = atoi(optarg);
 			break;
 		case 'v':
 			appl_args->verbose = 1;
