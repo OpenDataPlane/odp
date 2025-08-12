@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -e
 
 export TARGET_ARCH=riscv64-linux-gnu
