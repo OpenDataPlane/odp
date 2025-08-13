@@ -25,6 +25,7 @@
 
 #include <odp_api.h>
 #include <odp/helper/odph_api.h>
+#include <test_common_perf.h>
 
 #define PROG_NAME "odp_l2fwd_perf"
 #define PAIR_DELIMITER "@"
@@ -122,6 +123,7 @@ typedef struct prog_config_s {
 	uint32_t mtu;
 	uint32_t runtime;
 	uint32_t num_workers;
+	uint32_t wait_sec;
 	uint8_t num_ifs;
 	uint8_t mode;
 	uint8_t orig_is_promisc;
@@ -145,6 +147,11 @@ typedef struct {
 		odph_ethaddr_t dst_mac;
 	 } tbl[ODP_PKTIO_MAX_INDEX + 1];
 } scd_fwd_tbl_t;
+
+/** Long option only settings */
+enum longopt_only {
+	OPT_WAIT_LINK = 256
+};
 
 typedef int (*run_func_t)(void *arg);
 
@@ -305,6 +312,8 @@ static void print_usage(const dynamic_defs_t *dyn_defs)
 	       "  -P, --promisc_mode Enable promiscuous mode.\n"
 	       "  -t, --time         Time in seconds to run. 0 means infinite. %u by default.\n"
 	       "  -s, --no_mac_mod   Disable source and destination MAC address modification.\n"
+	       "  --wait_link <sec>  Wait up to <sec> seconds for each network link to be up.\n"
+	       "                     Default: 0 (don't check link status)\n"
 	       "  -c, --worker_count Number of workers. Workers are assigned to handle\n"
 	       "                     interfaces in round-robin fashion. E.g. with two interfaces\n"
 	       "                     eth0 and eth1 and with 5 workers, eth0 would be handled by\n"
@@ -383,6 +392,7 @@ static parse_result_t parse_options(int argc, char **argv, prog_config_t *config
 		{ "num_pkts", required_argument, NULL, 'n' },
 		{ "pkt_len", required_argument, NULL, 'l' },
 		{ "mtu", required_argument, NULL, 'M' },
+		{ "wait_link",   required_argument, NULL, OPT_WAIT_LINK},
 		{ "promisc_mode", no_argument, NULL, 'P' },
 		{ "time", required_argument, NULL, 't' },
 		{ "no_mac_mod", no_argument, NULL, 's' },
@@ -431,6 +441,9 @@ static parse_result_t parse_options(int argc, char **argv, prog_config_t *config
 			break;
 		case 's':
 			config->is_mac_mod = false;
+			break;
+		case OPT_WAIT_LINK:
+			config->wait_sec = atoi(optarg);
 			break;
 		case 'c':
 			config->num_workers = atoi(optarg);
@@ -603,7 +616,12 @@ static odp_bool_t setup_pktios(prog_config_t *config)
 	uint32_t num_input_qs, num_output_qs;
 	odp_pktin_queue_param_t pktin_param;
 	odp_pktout_queue_param_t pktout_param;
+	uint32_t num_ifs = config->num_ifs;
+	uint32_t wait_sec = config->wait_sec;
+	odp_pktio_t handle;
+	char *name;
 	int ret;
+	uint8_t i;
 
 	odp_pool_param_init(&pool_param);
 	pool_param.pkt.seg_len = config->pkt_len;
@@ -617,7 +635,7 @@ static odp_bool_t setup_pktios(prog_config_t *config)
 		return false;
 	}
 
-	for (uint8_t i = 0U; i < config->num_ifs; ++i) {
+	for (i = 0U; i < config->num_ifs; ++i) {
 		pktio = &config->pktios[i];
 		odp_pktio_param_init(&pktio_param);
 		pktio_param.in_mode = config->mode == DIRECT ?
@@ -769,6 +787,17 @@ static odp_bool_t setup_pktios(prog_config_t *config)
 			ODPH_ERR("Error starting packet I/O (%s)\n", pktio->name);
 			return false;
 		}
+	}
+
+	/* Wait for links to be up and print info */
+	for (i = 0; i < num_ifs; i++) {
+		handle = prog_conf->pktios[i].handle;
+		name = config->pktios[i].name;
+
+		if (wait_sec && test_common_check_link_status_wait(handle, name, wait_sec) == -1)
+			return false;
+
+		test_common_print_link_info(handle, name);
 	}
 
 	return true;
