@@ -66,10 +66,10 @@ extern "C" {
 
 struct ring_mpmc_common {
 	odp_atomic_u32_t r_head ODP_ALIGNED_CACHE;
-	odp_atomic_u32_t r_tail;
+	odp_atomic_u32_t r_tail ODP_ALIGNED_CACHE;
 
 	odp_atomic_u32_t w_head ODP_ALIGNED_CACHE;
-	odp_atomic_u32_t w_tail;
+	odp_atomic_u32_t w_tail ODP_ALIGNED_CACHE;
 };
 
 typedef struct ODP_ALIGNED_CACHE {
