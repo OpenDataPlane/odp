@@ -40,6 +40,10 @@ typedef struct test_options_t {
 	test_mode_t mode;
 	odp_bool_t private_queues;
 	odp_bool_t single;
+	odp_bool_t extra_features_enabled;
+	uint64_t wait_ns;
+	uint8_t *memcpy_src;
+	uint64_t memcpy_bytes;
 
 } test_options_t;
 
@@ -65,6 +69,7 @@ typedef struct {
 	odp_queue_t     src_queue_tbl[MAX_QUEUES];
 	odp_queue_t     dst_queue_tbl[MAX_QUEUES];
 	uint32_t        num_queues;
+	int             thr_idx;
 } thread_args_t;
 
 typedef struct test_global_t {
@@ -77,6 +82,8 @@ typedef struct test_global_t {
 	odp_queue_t      queue[MAX_QUEUES];
 	odph_thread_t    thread_tbl[ODP_THREAD_COUNT_MAX];
 	thread_args_t    thread_args[ODP_THREAD_COUNT_MAX];
+	odp_shm_t        memcpy_shm;
+	uint8_t          *memcpy_data;
 	test_common_options_t common_options;
 
 } test_global_t;
@@ -105,6 +112,10 @@ static void print_usage(void)
 	       "  -l, --lockfree         Lock-free queues\n"
 	       "  -w, --waitfree         Wait-free queues\n"
 	       "  -s, --single           Single producer/consumer queues\n"
+	       "  -M, --memcpy <num>     Number of bytes to memcpy per dequeue burst before\n"
+	       "                         enqueueing events. Default: 0.\n"
+	       "  -W, --wait_ns <ns>     Number of nsecs to wait per dequeue burst before.\n"
+	       "                         enqueueing events. Default: 0.\n"
 	       "  -h, --help             This help\n"
 	       "\n");
 }
@@ -125,11 +136,13 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 		{"lockfree",   no_argument,       NULL, 'l'},
 		{"waitfree",   no_argument,       NULL, 'w'},
 		{"single",     no_argument,       NULL, 's'},
+		{"wait_ns",    required_argument, NULL, 'W'},
+		{"memcpy",     required_argument, NULL, 'M'},
 		{"help",       no_argument,       NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+c:q:e:b:m:pr:lwsh";
+	static const char *shortopts = "+c:q:e:b:m:M:pr:lwW:sh";
 
 	test_options->num_cpu   = 1;
 	test_options->num_queue = 1;
@@ -179,6 +192,12 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 		case 's':
 			test_options->single = true;
 			break;
+		case 'W':
+			test_options->wait_ns = atoll(optarg);
+			break;
+		case 'M':
+			test_options->memcpy_bytes = atoll(optarg);
+			break;
 		case 'h':
 			/* fall through */
 		default:
@@ -221,6 +240,9 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 		return -1;
 	}
 
+	if (test_options->wait_ns || test_options->memcpy_bytes)
+		test_options->extra_features_enabled = true;
+
 	return ret;
 }
 
@@ -256,6 +278,8 @@ static int create_queues(test_global_t *global)
 	printf("  num events per queue %u\n", num_event);
 	printf("  queue size           %u\n", queue_size);
 	printf("  max burst size       %u\n", test_options->max_burst);
+	printf("  wait                 %" PRIu64 " ns\n", test_options->wait_ns);
+	printf("  memcpy               %" PRIu64 " bytes\n", test_options->memcpy_bytes);
 
 	for (i = 0; i < num_queue; i++)
 		queue[i] = ODP_QUEUE_INVALID;
@@ -449,8 +473,60 @@ static inline uint32_t next_queues(odp_queue_t *src_queue, odp_queue_t *dst_queu
 	return queue_idx;
 }
 
+static int reserve_memcpy_memory(test_global_t *global)
+{
+	uint64_t total_bytes;
+	uint8_t *src;
+	uint8_t *dst;
+	const test_options_t *options = &global->options;
+
+	global->memcpy_shm = ODP_SHM_INVALID;
+	if (options->memcpy_bytes == 0)
+		return 0;
+
+	total_bytes = 2 * options->memcpy_bytes * options->num_cpu;
+
+	global->memcpy_shm = odp_shm_reserve("memcpy_shm", total_bytes, ODP_CACHE_LINE_SIZE, 0);
+	if (global->memcpy_shm == ODP_SHM_INVALID) {
+		ODPH_ERR("Reserving %" PRIu64 " bytes for memcpy failed.\n", total_bytes);
+		return -1;
+	}
+
+	global->memcpy_data = odp_shm_addr(global->memcpy_shm);
+	if (global->memcpy_data == NULL) {
+		ODPH_ERR("Shared mem addr for memcpy failed.\n");
+		return -1;
+	}
+
+	for (uint32_t t = 0; t < options->num_cpu; t++) {
+		src = &global->memcpy_data[t * 2 * options->memcpy_bytes];
+		dst = src + options->memcpy_bytes;
+		memset(src, 0xA5, options->memcpy_bytes);
+		memset(dst, 0x00, options->memcpy_bytes);
+	}
+
+	return 0;
+}
+
+static inline void process_features(const test_options_t *test_options)
+{
+	if (test_options->extra_features_enabled) {
+		if (test_options->wait_ns)
+			odp_time_wait_ns(test_options->wait_ns);
+
+		if (test_options->memcpy_bytes) {
+			const uint64_t bytes = test_options->memcpy_bytes;
+			uint8_t *memcpy_src = test_options->memcpy_src;
+			uint8_t *memcpy_dst = memcpy_src + bytes;
+
+			memcpy(memcpy_dst, memcpy_src, bytes);
+		}
+	}
+}
+
 static inline void run_single_event(odp_queue_t src_queue_tbl[], odp_queue_t dst_queue_tbl[],
-				    uint32_t num_queue, uint32_t num_round, test_stat_t *stat)
+				    uint32_t num_queue, uint32_t num_round, test_stat_t *stat,
+				    const test_options_t *test_options)
 {
 	odp_queue_t src_queue, dst_queue;
 	odp_event_t ev;
@@ -467,6 +543,8 @@ static inline void run_single_event(odp_queue_t src_queue_tbl[], odp_queue_t dst
 			}
 			break;
 		};
+
+		process_features(test_options);
 
 		while (1) {
 			int ret = odp_queue_enq(dst_queue, ev);
@@ -510,7 +588,7 @@ static inline void run_single_event_cleanup(odp_queue_t src_queue_tbl[],
 
 static inline void run_multi_event(odp_queue_t src_queue_tbl[], odp_queue_t dst_queue_tbl[],
 				   uint32_t num_queue, uint32_t num_round, uint32_t max_burst,
-				   test_stat_t *stat)
+				   test_stat_t *stat, const test_options_t *test_options)
 {
 	odp_queue_t src_queue, dst_queue;
 	odp_event_t ev[max_burst];
@@ -531,6 +609,8 @@ static inline void run_multi_event(odp_queue_t src_queue_tbl[], odp_queue_t dst_
 				stat->deq_retry++;
 
 		} while (num_ev == 0);
+
+		process_features(test_options);
 
 		while (num_enq < num_ev) {
 			int num = odp_queue_enq_multi(dst_queue, &ev[num_enq], num_ev - num_enq);
@@ -580,6 +660,7 @@ static int run_test(void *arg)
 	odp_time_t t1, t2;
 	thread_args_t *thr_args = arg;
 	test_global_t *global = thr_args->global;
+	test_options_t test_options = global->options; /**< Local copy for each thread */
 	test_stat_t *stat = &thr_args->stats;
 	test_stat_t local_stat = {0};
 	const uint32_t num_queue = thr_args->num_queues;
@@ -589,6 +670,11 @@ static int run_test(void *arg)
 	const odp_bool_t single_event = max_burst == 0 ? 1 : 0;
 	odp_queue_t *src_queue_tbl = thr_args->src_queue_tbl;
 	odp_queue_t *dst_queue_tbl = thr_args->dst_queue_tbl;
+
+	/* Unique memcpy_src for each thread */
+	if (test_options.memcpy_bytes)
+		test_options.memcpy_src = &global->memcpy_data
+			[thr_args->thr_idx * 2 * test_options.memcpy_bytes];
 
 	for (uint32_t i = 0; i < num_queue; i++) {
 		src_queue_tbl[i] = global->queue[thr_args->src_queue_id[i]];
@@ -602,10 +688,11 @@ static int run_test(void *arg)
 	c1 = odp_cpu_cycles_strict();
 
 	if (single_event)
-		run_single_event(src_queue_tbl, dst_queue_tbl, num_queue, num_round, &local_stat);
+		run_single_event(src_queue_tbl, dst_queue_tbl, num_queue, num_round, &local_stat,
+				 &test_options);
 	else
 		run_multi_event(src_queue_tbl, dst_queue_tbl, num_queue, num_round, max_burst,
-				&local_stat);
+				&local_stat, &test_options);
 
 	c2 = odp_cpu_cycles_strict();
 	t2 = odp_time_local_strict();
@@ -730,6 +817,7 @@ static void init_thread_args(test_global_t *global)
 		thread_args->global = global;
 		thread_args->barrier = &global->barrier;
 		thread_args->options = &global->options;
+		thread_args->thr_idx = i;
 	}
 
 	map_queues_to_threads(global);
@@ -944,6 +1032,9 @@ int main(int argc, char **argv)
 	if (create_queues(global))
 		goto destroy;
 
+	if (reserve_memcpy_memory(global))
+		exit(EXIT_FAILURE);
+
 	if (start_workers(global)) {
 		ODPH_ERR("Test start failed.\n");
 		return -1;
@@ -961,6 +1052,11 @@ destroy:
 	if (destroy_queues(global)) {
 		ODPH_ERR("Destroy queues failed.\n");
 		return -1;
+	}
+
+	if (global->memcpy_shm != ODP_SHM_INVALID && odp_shm_free(global->memcpy_shm)) {
+		ODPH_ERR("Shared memory free (memcpy) failed.\n");
+		exit(EXIT_FAILURE);
 	}
 
 	if (odp_shm_free(shm)) {

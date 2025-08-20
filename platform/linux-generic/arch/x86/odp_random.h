@@ -4,7 +4,7 @@
 
 /*
  * These functions implement ODP_RANDOM_CRYPTO random data using rdrand [1],
- * and ODP_RANDOM_TRUE random data using rdseed [1], via compiler builtin
+ * and ODP_RANDOM_TRUE random data using rdseed [1], via GCC builtin
  * functions.
  *
  * Note that there may be issues with the quality or security of rdrand and
@@ -33,7 +33,7 @@ odp_random_kind_t _odp_random_max_kind_generic(void);
 int32_t _odp_random_true_data_generic(uint8_t *buf, uint32_t len);
 int32_t _odp_random_crypto_data_generic(uint8_t *buf, uint32_t len);
 
-#ifdef __RDRND__
+#if defined(__RDRND__) && !defined(__clang__)
 
 static inline int _odp_random_max_kind(void)
 {
@@ -53,7 +53,7 @@ static inline int _odp_random_max_kind(void)
 
 #endif
 
-#ifdef __RDSEED__
+#if defined(__RDSEED__) && !defined(__clang__)
 
 static inline int32_t _odp_random_true_data(uint8_t *buf, uint32_t len)
 {
@@ -102,7 +102,7 @@ static inline int32_t _odp_random_true_data(uint8_t *buf, uint32_t len)
 
 #endif
 
-#ifdef __RDRND__
+#if defined(__RDRND__) && !defined(__clang__)
 
 static inline int32_t _odp_random_crypto_data(uint8_t *buf, uint32_t len)
 {
