@@ -1168,7 +1168,7 @@ static int queue_api_enq_multi(odp_queue_t handle,
 	if (odp_unlikely(num == 0))
 		return 0;
 
-	if (num > QUEUE_MULTI_MAX)
+	if (odp_unlikely(num > QUEUE_MULTI_MAX))
 		num = QUEUE_MULTI_MAX;
 
 	return queue->enqueue_multi(handle,
@@ -1202,7 +1202,7 @@ static int queue_api_deq_multi(odp_queue_t handle, odp_event_t ev[], int num)
 	queue_entry_t *queue = qentry_from_handle(handle);
 	int ret;
 
-	if (num > QUEUE_MULTI_MAX)
+	if (odp_unlikely(num > QUEUE_MULTI_MAX))
 		num = QUEUE_MULTI_MAX;
 
 	ret = queue->dequeue_multi(handle, (_odp_event_hdr_t **)ev, num);
