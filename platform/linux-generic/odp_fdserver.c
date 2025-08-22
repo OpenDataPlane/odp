@@ -612,6 +612,13 @@ int _odp_fdserver_init_global(void)
 		return -1;
 	}
 
+	/*
+	 * Flush stdio buffers before fork so that the same buffered
+	 * data does not end up in both the parent and the child
+	 * process and eventually get written out twice.
+	 */
+	fflush(stdout);
+	fflush(stderr);
 	/* fork a server process: */
 	server_pid = fork();
 	if (server_pid == -1) {
@@ -623,6 +630,16 @@ int _odp_fdserver_init_global(void)
 	if (server_pid == 0) { /*child */
 		sigset_t sigset;
 		struct sigaction action;
+
+		/*
+		 * Flush again in case someone wrote something between
+		 * the first flush and fork. The data is already duplicate
+		 * at this point, but it is probably less confusing to output
+		 * it now rather than sometime later (probably at fdserver
+		 * termination time).
+		 */
+		fflush(stdout);
+		fflush(stderr);
 
 		sigfillset(&sigset);
 		/* undefined if these are ignored, as per POSIX */
