@@ -1274,7 +1274,7 @@ static int run_test(void *arg)
 	uint64_t tmo_ns;
 	timer_ctx_t *ctx;
 	odp_thrmask_t mask;
-	uint64_t wait = odp_schedule_wait_time(10 * ODP_TIME_MSEC_IN_NS);
+	const uint64_t wait = odp_schedule_wait_time(4 * test_global->opt.period_ns);
 	odp_schedule_group_t group = ODP_SCHED_GROUP_INVALID;
 	test_log_t *log = test_global->log;
 	enum mode_e mode = test_global->opt.mode;
