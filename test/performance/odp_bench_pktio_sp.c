@@ -296,21 +296,21 @@ static int pktio_capability(bench_tm_result_t *res, int repeat_count)
 	appl_args_t *appl_args = gbl_args;
 	odp_pktio_capability_t *capa = &appl_args->capa;
 	odp_pktio_t pktio = appl_args->pktio;
-	odp_time_t t1, t2;
+	bench_tm_stamp_t s1, s2;
 	int ret;
 	uint8_t id1 = bench_tm_func_register(res, "odp_pktio_capability()");
 
 	for (int i = 0; i < repeat_count; i++) {
-		t1 = odp_time_local_strict();
+		bench_tm_now(res, &s1);
 		ret = odp_pktio_capability(pktio, capa);
-		t2 = odp_time_local_strict();
+		bench_tm_now(res, &s2);
 
 		if (ret) {
 			ODPH_ERR("Reading pktio capa failed: %d\n", ret);
 			return -1;
 		}
 
-		bench_tm_func_record(t2, t1, res, id1);
+		bench_tm_func_record(&s2, &s1, res, id1);
 	}
 	return 0;
 }
@@ -320,20 +320,20 @@ static int pktio_lookup(bench_tm_result_t *res, int repeat_count)
 	appl_args_t *appl_args = gbl_args;
 	const char *name = appl_args->opt.name;
 	odp_pktio_t pktio;
-	odp_time_t t1, t2;
+	bench_tm_stamp_t s1, s2;
 	uint8_t id1 = bench_tm_func_register(res, "odp_pktio_lookup()");
 
 	for (int i = 0; i < repeat_count; i++) {
-		t1 = odp_time_local_strict();
+		bench_tm_now(res, &s1);
 		pktio = odp_pktio_lookup(name);
-		t2 = odp_time_local_strict();
+		bench_tm_now(res, &s2);
 
 		if (pktio == ODP_PKTIO_INVALID) {
 			ODPH_ERR("Pktio lookup failed\n");
 			return -1;
 		}
 
-		bench_tm_func_record(t2, t1, res, id1);
+		bench_tm_func_record(&s2, &s1, res, id1);
 	}
 	return 0;
 }
@@ -346,7 +346,7 @@ static int pktio_open_start_stop_close(bench_tm_result_t *res, int repeat_count)
 	odp_pktout_queue_param_t pktout_param;
 	odp_pktio_t pktio;
 	odp_pool_t pool;
-	odp_time_t t1, t2, t3, t4, t5, t6, t7, t8;
+	bench_tm_stamp_t s1, s2, s3, s4, s5, s6, s7, s8;
 	int ret;
 	uint8_t id1 = bench_tm_func_register(res, "odp_pktio_open()");
 	uint8_t id2 = bench_tm_func_register(res, "odp_pktin_queue_config()");
@@ -372,9 +372,9 @@ static int pktio_open_start_stop_close(bench_tm_result_t *res, int repeat_count)
 	pktout_param.num_queues = appl_args->opt.num_output_queues;
 
 	for (int i = 0; i < repeat_count; i++) {
-		t1 = odp_time_local_strict();
+		bench_tm_now(res, &s1);
 		pktio = odp_pktio_open(appl_args->opt.name, pool, &param);
-		t2 = odp_time_local_strict();
+		bench_tm_now(res, &s2);
 
 		if (pktio == ODP_PKTIO_INVALID) {
 			ODPH_ERR("Opening pktio failed\n");
@@ -382,7 +382,7 @@ static int pktio_open_start_stop_close(bench_tm_result_t *res, int repeat_count)
 		}
 
 		ret = odp_pktin_queue_config(pktio, &pktin_param);
-		t3 = odp_time_local_strict();
+		bench_tm_now(res, &s3);
 
 		if (ret) {
 			ODPH_ERR("Configuring packet input queues failed: %d\n", ret);
@@ -390,7 +390,7 @@ static int pktio_open_start_stop_close(bench_tm_result_t *res, int repeat_count)
 		}
 
 		ret = odp_pktout_queue_config(pktio, &pktout_param);
-		t4 = odp_time_local_strict();
+		bench_tm_now(res, &s4);
 
 		if (ret) {
 			ODPH_ERR("Configuring packet output queues failed: %d\n", ret);
@@ -398,7 +398,7 @@ static int pktio_open_start_stop_close(bench_tm_result_t *res, int repeat_count)
 		}
 
 		ret = odp_pktio_start(pktio);
-		t5 = odp_time_local_strict();
+		bench_tm_now(res, &s5);
 
 		if (ret) {
 			ODPH_ERR("Starting pktio failed: %d\n", ret);
@@ -406,7 +406,7 @@ static int pktio_open_start_stop_close(bench_tm_result_t *res, int repeat_count)
 		}
 
 		ret = odp_pktio_stop(pktio);
-		t6 = odp_time_local_strict();
+		bench_tm_now(res, &s6);
 
 		if (ret) {
 			ODPH_ERR("Stopping pktio failed: %d\n", ret);
@@ -417,20 +417,20 @@ static int pktio_open_start_stop_close(bench_tm_result_t *res, int repeat_count)
 		if (appl_args->opt.in_mode == ODP_PKTIN_MODE_SCHED)
 			clean_pending_events();
 
-		t7 = odp_time_local_strict();
+		bench_tm_now(res, &s7);
 		ret = odp_pktio_close(pktio);
-		t8 = odp_time_local_strict();
+		bench_tm_now(res, &s8);
 		if (ret) {
 			ODPH_ERR("Closing pktio failed: %d\n", ret);
 			return -1;
 		}
 
-		bench_tm_func_record(t2, t1, res, id1);
-		bench_tm_func_record(t3, t2, res, id2);
-		bench_tm_func_record(t4, t3, res, id3);
-		bench_tm_func_record(t5, t4, res, id4);
-		bench_tm_func_record(t6, t5, res, id5);
-		bench_tm_func_record(t8, t7, res, id6);
+		bench_tm_func_record(&s2, &s1, res, id1);
+		bench_tm_func_record(&s3, &s2, res, id2);
+		bench_tm_func_record(&s4, &s3, res, id3);
+		bench_tm_func_record(&s5, &s4, res, id4);
+		bench_tm_func_record(&s6, &s5, res, id5);
+		bench_tm_func_record(&s8, &s7, res, id6);
 	}
 
 	ret = odp_pool_destroy(pool);
@@ -446,21 +446,21 @@ static int pktio_stats(bench_tm_result_t *res, int repeat_count)
 	appl_args_t *appl_args = gbl_args;
 	odp_pktio_stats_t *stats = &appl_args->stats;
 	odp_pktio_t pktio = appl_args->pktio;
-	odp_time_t t1, t2;
+	bench_tm_stamp_t s1, s2;
 	int ret;
 	uint8_t id1 = bench_tm_func_register(res, "odp_pktio_stats()");
 
 	for (int i = 0; i < repeat_count; i++) {
-		t1 = odp_time_local_strict();
+		bench_tm_now(res, &s1);
 		ret = odp_pktio_stats(pktio, stats);
-		t2 = odp_time_local_strict();
+		bench_tm_now(res, &s2);
 
 		if (ret) {
 			ODPH_ERR("Reading pktio stats failed\n");
 			return -1;
 		}
 
-		bench_tm_func_record(t2, t1, res, id1);
+		bench_tm_func_record(&s2, &s1, res, id1);
 	}
 	return 0;
 }
@@ -469,21 +469,21 @@ static int pktio_stats_reset(bench_tm_result_t *res, int repeat_count)
 {
 	appl_args_t *appl_args = gbl_args;
 	odp_pktio_t pktio = appl_args->pktio;
-	odp_time_t t1, t2;
+	bench_tm_stamp_t s1, s2;
 	int ret;
 	int id1 = bench_tm_func_register(res, "odp_pktio_stats_reset()");
 
 	for (int i = 0; i < repeat_count; i++) {
-		t1 = odp_time_local_strict();
+		bench_tm_now(res, &s1);
 		ret = odp_pktio_stats_reset(pktio);
-		t2 = odp_time_local_strict();
+		bench_tm_now(res, &s2);
 
 		if (ret) {
 			ODPH_ERR("Resetting pktio stats failed\n");
 			return -1;
 		}
 
-		bench_tm_func_record(t2, t1, res, id1);
+		bench_tm_func_record(&s2, &s1, res, id1);
 	}
 	return 0;
 }
@@ -494,7 +494,7 @@ static int pktin_queue_stats(bench_tm_result_t *res, int repeat_count)
 	odp_pktin_queue_stats_t *stats = &appl_args->pktin_queue_stats;
 	odp_pktio_t pktio = appl_args->pktio;
 	odp_pktin_queue_t queue;
-	odp_time_t t1, t2;
+	bench_tm_stamp_t s1, s2;
 	int ret;
 	uint8_t id1 = bench_tm_func_register(res, "odp_pktin_queue_stats()");
 
@@ -505,16 +505,16 @@ static int pktin_queue_stats(bench_tm_result_t *res, int repeat_count)
 	}
 
 	for (int i = 0; i < repeat_count; i++) {
-		t1 = odp_time_local_strict();
+		bench_tm_now(res, &s1);
 		ret = odp_pktin_queue_stats(queue, stats);
-		t2 = odp_time_local_strict();
+		bench_tm_now(res, &s2);
 
 		if (ret) {
 			ODPH_ERR("Reading pktio stats failed\n");
 			return -1;
 		}
 
-		bench_tm_func_record(t2, t1, res, id1);
+		bench_tm_func_record(&s2, &s1, res, id1);
 	}
 	return 0;
 }
@@ -525,7 +525,7 @@ static int pktin_event_queue_stats(bench_tm_result_t *res, int repeat_count)
 	odp_pktin_queue_stats_t *stats = &appl_args->pktin_queue_stats;
 	odp_pktio_t pktio = appl_args->pktio;
 	odp_queue_t queue;
-	odp_time_t t1, t2;
+	bench_tm_stamp_t s1, s2;
 	int ret;
 	uint8_t id1 = bench_tm_func_register(res, "odp_pktin_event_queue_stats()");
 
@@ -536,16 +536,16 @@ static int pktin_event_queue_stats(bench_tm_result_t *res, int repeat_count)
 	}
 
 	for (int i = 0; i < repeat_count; i++) {
-		t1 = odp_time_local_strict();
+		bench_tm_now(res, &s1);
 		ret = odp_pktin_event_queue_stats(pktio, queue, stats);
-		t2 = odp_time_local_strict();
+		bench_tm_now(res, &s2);
 
 		if (ret) {
 			ODPH_ERR("Reading pktio stats failed\n");
 			return -1;
 		}
 
-		bench_tm_func_record(t2, t1, res, id1);
+		bench_tm_func_record(&s2, &s1, res, id1);
 	}
 	return 0;
 }
@@ -556,7 +556,7 @@ static int pktout_queue_stats(bench_tm_result_t *res, int repeat_count)
 	odp_pktout_queue_stats_t *stats = &appl_args->pktout_queue_stats;
 	odp_pktio_t pktio = appl_args->pktio;
 	odp_pktout_queue_t queue;
-	odp_time_t t1, t2;
+	bench_tm_stamp_t s1, s2;
 	int ret;
 	uint8_t id1 = bench_tm_func_register(res, "odp_pktout_queue_stats()");
 
@@ -567,16 +567,16 @@ static int pktout_queue_stats(bench_tm_result_t *res, int repeat_count)
 	}
 
 	for (int i = 0; i < repeat_count; i++) {
-		t1 = odp_time_local_strict();
+		bench_tm_now(res, &s1);
 		ret = odp_pktout_queue_stats(queue, stats);
-		t2 = odp_time_local_strict();
+		bench_tm_now(res, &s2);
 
 		if (ret) {
 			ODPH_ERR("Reading pktio stats failed\n");
 			return -1;
 		}
 
-		bench_tm_func_record(t2, t1, res, id1);
+		bench_tm_func_record(&s2, &s1, res, id1);
 	}
 	return 0;
 }
@@ -587,7 +587,7 @@ static int pktout_event_queue_stats(bench_tm_result_t *res, int repeat_count)
 	odp_pktout_queue_stats_t *stats = &appl_args->pktout_queue_stats;
 	odp_pktio_t pktio = appl_args->pktio;
 	odp_queue_t queue;
-	odp_time_t t1, t2;
+	bench_tm_stamp_t s1, s2;
 	int ret;
 	uint8_t id1 = bench_tm_func_register(res, "odp_pktout_event_queue_stats()");
 
@@ -598,16 +598,16 @@ static int pktout_event_queue_stats(bench_tm_result_t *res, int repeat_count)
 	}
 
 	for (int i = 0; i < repeat_count; i++) {
-		t1 = odp_time_local_strict();
+		bench_tm_now(res, &s1);
 		ret = odp_pktout_event_queue_stats(pktio, queue, stats);
-		t2 = odp_time_local_strict();
+		bench_tm_now(res, &s2);
 
 		if (ret) {
 			ODPH_ERR("Reading pktio stats failed\n");
 			return -1;
 		}
 
-		bench_tm_func_record(t2, t1, res, id1);
+		bench_tm_func_record(&s2, &s1, res, id1);
 	}
 	return 0;
 }
@@ -693,7 +693,7 @@ static int cls_pmr_create(bench_tm_result_t *res, int repeat_count)
 	uint16_t val = 1024;
 	uint16_t mask = 0xffff;
 	int ret = 0;
-	odp_time_t t1, t2;
+	bench_tm_stamp_t s1, s2;
 	odp_cos_t cos[num_cos];
 	odp_queue_t queue[num_cos];
 	odp_pmr_t pmr[num_pmr];
@@ -749,27 +749,27 @@ static int cls_pmr_create(bench_tm_result_t *res, int repeat_count)
 		uint32_t pmr_created = 0;
 
 		for (uint32_t j = 0; j < num_pmr; j++) {
-			t1 = odp_time_local_strict();
+			bench_tm_now(res, &s1);
 			pmr[j] = odp_cls_pmr_create(&pmr_param, 1, default_cos, cos[j + 1]);
-			t2 = odp_time_local_strict();
+			bench_tm_now(res, &s2);
 
 			if (pmr[j] == ODP_PMR_INVALID)
 				break;
-			bench_tm_func_record(t2, t1, res, id1);
+			bench_tm_func_record(&s2, &s1, res, id1);
 
 			val++;
 			pmr_created++;
 		}
 
 		for (uint32_t j = 0; j < pmr_created; j++) {
-			t1 = odp_time_local_strict();
+			bench_tm_now(res, &s1);
 			ret = odp_cls_pmr_destroy(pmr[j]);
-			t2 = odp_time_local_strict();
+			bench_tm_now(res, &s2);
 
 			if (ret)
 				ODPH_ABORT("Destroying PMR failed: %d\n", ret);
 
-			bench_tm_func_record(t2, t1, res, id2);
+			bench_tm_func_record(&s2, &s1, res, id2);
 		}
 
 		if (i == 0)
@@ -791,6 +791,7 @@ destroy_cos:
 static int bench_pktio_sp_export(void *data)
 {
 	appl_args_t *gbl_args = data;
+	bench_tm_result_t *res;
 	uint64_t num;
 	int ret = 0;
 
@@ -802,13 +803,15 @@ static int bench_pktio_sp_export(void *data)
 	}
 
 	for (uint32_t i = 0; i < gbl_args->suite.num_bench; i++) {
-		for (int j = 0; j < gbl_args->result[i].num; j++) {
-			num = gbl_args->result[i].func[j].num ? gbl_args->result[i].func[j].num : 1;
+		res = &gbl_args->result[i];
+
+		for (int j = 0; j < res->num; j++) {
+			num = res->func[j].num ? res->func[j].num : 1;
 			if (test_common_write("%s,%" PRIu64 ",%" PRIu64 ",%" PRIu64 "\n",
-					      gbl_args->result[i].func[j].name,
-					      odp_time_to_ns(gbl_args->result[i].func[j].min),
-					      odp_time_to_ns(gbl_args->result[i].func[j].tot) / num,
-					      odp_time_to_ns(gbl_args->result[i].func[j].max))) {
+					      res->func[j].name,
+					      bench_tm_to_u64(res, &res->func[j].min),
+					      bench_tm_to_u64(res, &res->func[j].tot) / num,
+					      bench_tm_to_u64(res, &res->func[j].max))) {
 				ret = -1;
 				goto exit;
 			}
