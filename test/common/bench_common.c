@@ -22,7 +22,7 @@ void bench_suite_init(bench_suite_t *suite)
 	odp_atomic_init_u32(&suite->exit_worker, 0);
 }
 
-void bench_run_indef(bench_info_t *info, odp_atomic_u32_t *exit_thread)
+static void run_indef(bench_info_t *info, odp_atomic_u32_t *exit_thread)
 {
 	const char *desc;
 
@@ -73,7 +73,7 @@ int bench_run(void *arg)
 			if ((i + 1) != suite->indef_idx)
 				continue;
 
-			bench_run_indef(&suite->bench[i], &suite->exit_worker);
+			run_indef(&suite->bench[i], &suite->exit_worker);
 			return 0;
 		}
 
@@ -132,6 +132,8 @@ void bench_tm_suite_init(bench_tm_suite_t *suite)
 {
 	memset(suite, 0, sizeof(bench_tm_suite_t));
 
+	suite->measure_time = true;
+
 	odp_atomic_init_u32(&suite->exit_worker, 0);
 }
 
@@ -148,31 +150,97 @@ uint8_t bench_tm_func_register(bench_tm_result_t *res, const char *func_name)
 	return num_func;
 }
 
-void bench_tm_func_record(odp_time_t t2, odp_time_t t1, bench_tm_result_t *res, uint8_t id)
+void bench_tm_now(bench_tm_result_t *res, bench_tm_stamp_t *stamp)
 {
-	odp_time_t diff = odp_time_diff(t2, t1);
+	res->op.now_fn(stamp);
+}
 
+uint64_t bench_tm_to_u64(bench_tm_result_t *res, const bench_tm_stamp_t *stamp)
+{
+	return res->op.to_u64_fn(stamp);
+}
+
+void bench_tm_func_record(bench_tm_stamp_t *s2, bench_tm_stamp_t *s1, bench_tm_result_t *res,
+			  uint8_t id)
+{
 	ODPH_ASSERT(id < BENCH_TM_MAX_FUNC);
 
-	res->func[id].tot = odp_time_sum(res->func[id].tot, diff);
-
-	if (odp_time_cmp(diff, res->func[id].min) < 0)
-		res->func[id].min = diff;
-
-	if (odp_time_cmp(diff, res->func[id].max) > 0)
-		res->func[id].max = diff;
-
+	res->op.record_fn(s2, s1, &res->func[id]);
 	res->func[id].num++;
 }
 
-static void init_result(bench_tm_result_t *res)
+static void measure_time(bench_tm_stamp_t *stamp)
+{
+	stamp->time = odp_time_local_strict();
+}
+
+static void measure_cycles(bench_tm_stamp_t *stamp)
+{
+	stamp->cycles = odp_cpu_cycles_strict();
+}
+
+static void record_time(const bench_tm_stamp_t *s2, const bench_tm_stamp_t *s1,
+			bench_tm_func_res_t *res)
+{
+	const odp_time_t diff = odp_time_diff(s2->time, s1->time);
+
+	res->tot.time = odp_time_sum(res->tot.time, diff);
+
+	if (odp_time_cmp(diff, res->min.time) < 0)
+		res->min.time = diff;
+
+	if (odp_time_cmp(diff, res->max.time) > 0)
+		res->max.time = diff;
+}
+
+static void record_cycles(const bench_tm_stamp_t *s2, const bench_tm_stamp_t *s1,
+			  bench_tm_func_res_t *res)
+{
+	const uint64_t diff = odp_cpu_cycles_diff(s2->cycles, s1->cycles);
+
+	res->tot.cycles += diff;
+
+	if (diff < res->min.cycles)
+		res->min.cycles = diff;
+
+	if (diff > res->max.cycles)
+		res->max.cycles = diff;
+}
+
+static uint64_t time_to_u64(const bench_tm_stamp_t *stamp)
+{
+	return odp_time_to_ns(stamp->time);
+}
+
+static uint64_t cycles_to_u64(const bench_tm_stamp_t *stamp)
+{
+	return stamp->cycles;
+}
+
+static void init_result(bench_tm_result_t *res, odp_bool_t is_time)
 {
 	memset(res, 0, sizeof(bench_tm_result_t));
 
+	if (is_time) {
+		res->op.now_fn = measure_time;
+		res->op.record_fn = record_time;
+		res->op.to_u64_fn = time_to_u64;
+	} else {
+		res->op.now_fn = measure_cycles;
+		res->op.record_fn = record_cycles;
+		res->op.to_u64_fn = cycles_to_u64;
+	}
+
 	for (int i = 0; i < BENCH_TM_MAX_FUNC; i++) {
-		res->func[i].tot = ODP_TIME_NULL;
-		res->func[i].min = odp_time_local_from_ns(ODP_TIME_HOUR_IN_NS);
-		res->func[i].max = ODP_TIME_NULL;
+		if (is_time) {
+			res->func[i].tot.time = ODP_TIME_NULL;
+			res->func[i].min.time = odp_time_local_from_ns(ODP_TIME_HOUR_IN_NS);
+			res->func[i].max.time = ODP_TIME_NULL;
+		} else {
+			res->func[i].tot.cycles = 0;
+			res->func[i].min.cycles = UINT64_MAX;
+			res->func[i].max.cycles = 0;
+		}
 	}
 }
 
@@ -183,9 +251,9 @@ static void print_results(bench_tm_result_t *res)
 
 		printf("     %-38s    %-12" PRIu64 " %-12" PRIu64 " %-12" PRIu64 "\n",
 		       res->func[i].name,
-		       odp_time_to_ns(res->func[i].min),
-		       odp_time_to_ns(res->func[i].tot) / num,
-		       odp_time_to_ns(res->func[i].max));
+		       res->op.to_u64_fn(&res->func[i].min),
+		       res->op.to_u64_fn(&res->func[i].tot) / num,
+		       res->op.to_u64_fn(&res->func[i].max));
 	}
 }
 
@@ -193,7 +261,8 @@ int bench_tm_run(void *arg)
 {
 	bench_tm_suite_t *suite = arg;
 
-	printf("\nLatency (nsec) per function call               min          avg          max\n");
+	printf("\nLatency per function call %s             min          avg          max\n",
+	       suite->measure_time ? "(nsec)  " : "(cycles)");
 	printf("------------------------------------------------------------------------------\n");
 
 	for (uint32_t j = 0; j < suite->num_bench; j++) {
@@ -222,7 +291,7 @@ int bench_tm_run(void *arg)
 			if (odp_atomic_load_u32(&suite->exit_worker))
 				return 0;
 
-			init_result(&res);
+			init_result(&res, suite->measure_time);
 
 			if (bench->init != NULL)
 				bench->init();
