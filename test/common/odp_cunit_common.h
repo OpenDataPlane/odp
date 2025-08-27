@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2014-2018 Linaro Limited
- * Copyright (c) 2020-2022 Nokia
+ * Copyright (c) 2020-2025 Nokia
  */
 
 /**
@@ -9,8 +9,8 @@
  * ODP test application common headers
  */
 
-#ifndef ODP_CUNICT_COMMON_H
-#define ODP_CUNICT_COMMON_H
+#ifndef ODP_CUNIT_COMMON_H
+#define ODP_CUNIT_COMMON_H
 
 #include <stdint.h>
 #include <inttypes.h>
@@ -77,7 +77,8 @@ int odp_cunit_run(void);
  * Thread arguments table (arg[]) can be set to NULL, when there are no arguments.
  * When 'priv' is 0, the same argument pointer (arg[0]) is passed to all threads. Otherwise,
  * a pointer is passed (from arg[]) to each thread. When 'sync' is 1, thread
- * creation is synchronized (odph_thread_common_param_t.sync). Returns 0 on success.
+ * creation is synchronized (odph_thread_common_param_t.sync).
+ * Returns number of threads created on success, < 0 on error.
  */
 int odp_cunit_thread_create(int num, int func_ptr(void *arg), void *const arg[],
 			    int priv, int sync);
@@ -181,4 +182,4 @@ static inline void odp_cu_assert_fatal(CU_BOOL value, unsigned int line,
 #undef CU_ASSERT_DOUBLE_NOT_EQUAL
 #undef CU_ASSERT_DOUBLE_NOT_EQUAL_FATAL
 
-#endif /* ODP_CUNICT_COMMON_H */
+#endif /* ODP_CUNIT_COMMON_H */
