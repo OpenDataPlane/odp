@@ -65,6 +65,9 @@ typedef struct {
 
 		/* Number of PMRs */
 		uint32_t num_pmr;
+
+		/* Measure time vs. CPU cycles */
+		int time;
 	} opt;
 
 	/* Packet IO device */
@@ -794,10 +797,11 @@ static int bench_pktio_sp_export(void *data)
 	bench_tm_result_t *res;
 	uint64_t num;
 	int ret = 0;
+	const char *unit = gbl_args->opt.time ? "nsec" : "cycles";
 
-	if (test_common_write("%s", "function name,latency (nsec) per function call (min),"
-			      "latency (nsec) per function call (avg),"
-			      "latency (nsec) per function call (max)\n")) {
+	if (test_common_write("function name,latency (%s) per function call (min),"
+			      "latency (%s) per function call (avg),"
+			      "latency (%s) per function call (max)\n", unit, unit, unit)) {
 		ret = -1;
 		goto exit;
 	}
@@ -860,6 +864,7 @@ static void usage(void)
 	       "  -t, --tx_queues <num>   Number of packet output queues (default 1)\n"
 	       "  -r, --rounds <num>      Run each test case 'num' times (default %u).\n"
 	       "  -s, --select <idx>      Run only selected test case.\n"
+	       "  -T, --time <opt>        Time measurement. 0: measure CPU cycles (default), 1: measure time\n"
 	       "  -h, --help              Display help and exit.\n\n"
 	       "\n", ROUNDS);
 }
@@ -888,11 +893,12 @@ static int parse_args(int argc, char *argv[])
 		{"tx_queues", required_argument, NULL, 't'},
 		{"rounds", required_argument, NULL, 'r'},
 		{"select", required_argument, NULL, 's'},
+		{"time", required_argument, NULL, 'T'},
 		{"help", no_argument, NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts =  "i:m:o:p:q:r:s:t:h";
+	static const char *shortopts =  "i:m:o:p:q:r:s:t:T:h";
 
 	odph_strcpy(gbl_args->opt.name, "loop", MAX_NAME_LEN);
 	gbl_args->opt.rounds = ROUNDS;
@@ -941,6 +947,9 @@ static int parse_args(int argc, char *argv[])
 			break;
 		case 't':
 			gbl_args->opt.num_output_queues = atoi(optarg);
+			break;
+		case 'T':
+			gbl_args->opt.time = atoi(optarg);
 			break;
 		case 'h':
 			usage();
@@ -1047,6 +1056,7 @@ static void print_info(appl_args_t *appl_args)
 	printf("Input queues:      %u\n", gbl_args->opt.num_input_queues);
 	printf("Output queues:     %u\n", gbl_args->opt.num_output_queues);
 	printf("PMRs:              %u\n", gbl_args->opt.num_pmr);
+	printf("Measurement unit:  %s\n", gbl_args->opt.time ? "nsec" : "CPU cycles");
 	printf("Test rounds:       %d\n", gbl_args->opt.rounds);
 	printf("\n");
 }
@@ -1132,6 +1142,7 @@ int main(int argc, char *argv[])
 	gbl_args->suite.num_bench = ODPH_ARRAY_SIZE(test_suite);
 	gbl_args->suite.rounds = gbl_args->opt.rounds;
 	gbl_args->suite.bench_idx = gbl_args->opt.case_idx;
+	gbl_args->suite.measure_time = !!gbl_args->opt.time;
 	if (common_options.is_export)
 		gbl_args->suite.result = gbl_args->result;
 	/* Get default worker cpumask */
