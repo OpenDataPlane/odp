@@ -300,8 +300,12 @@ static void compl_alloc_max(void)
 		CU_ASSERT(odp_event_type(event) == ODP_EVENT_ML_COMPL);
 	}
 
-	for (int i = 0; i < num; i++)
-		odp_ml_compl_free(compl[i]);
+	for (int i = 0; i < num; i++) {
+		if (i % 2)
+			odp_ml_compl_free(compl[i]);
+		else
+			odp_event_free(odp_ml_compl_to_event(compl[i]));
+	}
 
 	free(compl);
 
