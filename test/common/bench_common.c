@@ -296,7 +296,7 @@ int bench_tm_run(void *arg)
 			if (bench->init != NULL)
 				bench->init();
 
-			if (bench->run(&res, rounds)) {
+			if (!bench->run(&res, rounds)) {
 				ODPH_ERR("Benchmark %s failed\n", bench->name);
 				suite->retval = -1;
 				return -1;
