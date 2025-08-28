@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2017-2018 Linaro Limited
- * Copyright (c) 2023 Nokia
+ * Copyright (c) 2023-2025 Nokia
  */
 
 #include <odp_api.h>
@@ -11,6 +11,197 @@
 #define NUM_EVENTS  100
 #define EVENT_SIZE  100
 #define EVENT_BURST 10
+#define MAX_EVENT_TYPES 5
+
+typedef struct {
+	odp_event_type_t event_types[MAX_EVENT_TYPES];
+	odp_pool_type_t pool_types[MAX_EVENT_TYPES];
+	odp_pool_t pools[MAX_EVENT_TYPES];
+	odp_event_t events[MAX_EVENT_TYPES][EVENT_BURST];
+	int num_types;
+} event_type_ctx_t;
+
+static event_type_ctx_t g_type_ctx;
+
+static int pool_index_of(odp_pool_type_t type)
+{
+	event_type_ctx_t *ctx = &g_type_ctx;
+
+	for (int i = 0; i < ctx->num_types; i++) {
+		if (ctx->pool_types[i] == type)
+			return i;
+	}
+
+	return -1;
+}
+
+static odp_event_t event_types_alloc_event(odp_pool_type_t pool_type)
+{
+	event_type_ctx_t *ctx = &g_type_ctx;
+	int idx = pool_index_of(pool_type);
+	odp_buffer_t buf;
+	odp_packet_t pkt;
+	odp_timeout_t tmo;
+	odp_event_vector_t evv;
+	odp_packet_vector_t pv;
+
+	if (idx < 0)
+		return ODP_EVENT_INVALID;
+
+	switch (pool_type) {
+	case ODP_POOL_BUFFER:
+		buf = odp_buffer_alloc(ctx->pools[idx]);
+		if (buf == ODP_BUFFER_INVALID)
+			return ODP_EVENT_INVALID;
+		return odp_buffer_to_event(buf);
+	case ODP_POOL_PACKET:
+		pkt = odp_packet_alloc(ctx->pools[idx], EVENT_SIZE);
+		if (pkt == ODP_PACKET_INVALID)
+			return ODP_EVENT_INVALID;
+		return odp_packet_to_event(pkt);
+	case ODP_POOL_TIMEOUT:
+		tmo = odp_timeout_alloc(ctx->pools[idx]);
+		if (tmo == ODP_TIMEOUT_INVALID)
+			return ODP_EVENT_INVALID;
+		return odp_timeout_to_event(tmo);
+	case ODP_POOL_EVENT_VECTOR:
+		evv = odp_event_vector_alloc(ctx->pools[idx]);
+		if (evv == ODP_EVENT_VECTOR_INVALID)
+			return ODP_EVENT_INVALID;
+		return odp_event_vector_to_event(evv);
+	case ODP_POOL_VECTOR:
+		pv = odp_packet_vector_alloc(ctx->pools[idx]);
+		if (pv == ODP_PACKET_VECTOR_INVALID)
+			return ODP_EVENT_INVALID;
+		return odp_packet_vector_to_event(pv);
+	default:
+		return ODP_EVENT_INVALID;
+	}
+}
+
+static int event_types_suite_init(void)
+{
+	event_type_ctx_t *ctx = &g_type_ctx;
+	int i, j, n = 0;
+	char name[ODP_POOL_NAME_LEN];
+	odp_pool_capability_t capa;
+
+	memset(&capa, 0, sizeof(capa));
+	if (odp_pool_capability(&capa) != 0)
+		return -1;
+
+	ctx->event_types[n] = ODP_EVENT_BUFFER;
+	ctx->pool_types[n++] = ODP_POOL_BUFFER;
+
+	ctx->event_types[n] = ODP_EVENT_PACKET;
+	ctx->pool_types[n++] = ODP_POOL_PACKET;
+
+	ctx->event_types[n] = ODP_EVENT_TIMEOUT;
+	ctx->pool_types[n++] = ODP_POOL_TIMEOUT;
+
+	if (capa.event_vector.max_num > 0) {
+		ctx->event_types[n] = ODP_EVENT_VECTOR;
+		ctx->pool_types[n++] = ODP_POOL_EVENT_VECTOR;
+	}
+
+	if (capa.vector.max_num > 0) {
+		ctx->event_types[n] = ODP_EVENT_PACKET_VECTOR;
+		ctx->pool_types[n++] = ODP_POOL_VECTOR;
+	}
+
+	ctx->num_types = n;
+
+	for (i = 0; i < ctx->num_types; i++) {
+		odp_pool_param_t prm;
+
+		odp_pool_param_init(&prm);
+
+		prm.type = ctx->pool_types[i];
+		switch (ctx->pool_types[i]) {
+		case ODP_POOL_BUFFER:
+			prm.buf.num = NUM_EVENTS;
+			prm.buf.size = EVENT_SIZE;
+			prm.buf.uarea_size = sizeof(uint64_t);
+		break;
+		case ODP_POOL_PACKET:
+			prm.pkt.num = NUM_EVENTS;
+			prm.pkt.len = EVENT_SIZE;
+			prm.pkt.uarea_size = sizeof(uint64_t);
+		break;
+		case ODP_POOL_TIMEOUT:
+			prm.tmo.num = NUM_EVENTS;
+			prm.tmo.uarea_size = sizeof(uint64_t);
+		break;
+		case ODP_POOL_EVENT_VECTOR:
+			prm.event_vector.num = NUM_EVENTS;
+			prm.event_vector.max_size = 1;
+			prm.event_vector.uarea_size = sizeof(uint64_t);
+		break;
+		case ODP_POOL_VECTOR:
+			prm.vector.num = NUM_EVENTS;
+			prm.vector.max_size = 1;
+			prm.vector.uarea_size = sizeof(uint64_t);
+		break;
+		case ODP_POOL_DMA_COMPL:
+		case ODP_POOL_ML_COMPL:
+		break;
+		}
+
+		snprintf(name, ODP_POOL_NAME_LEN, "event_type_compliance_%d", i);
+		ctx->pools[i] = odp_pool_create(name, &prm);
+		if (ctx->pools[i] == ODP_POOL_INVALID)
+			return -1;
+
+		for (j = 0; j < EVENT_BURST; j++) {
+			ctx->events[i][j] = event_types_alloc_event(ctx->pool_types[i]);
+			if (ctx->events[i][j] == ODP_EVENT_INVALID)
+				return -1;
+		}
+	}
+
+	return 0;
+}
+
+static int event_types_suite_term(void)
+{
+	event_type_ctx_t *ctx = &g_type_ctx;
+	int i;
+
+	for (i = 0; i < ctx->num_types; i++) {
+		odp_event_free_multi(ctx->events[i], EVENT_BURST);
+		(void)odp_pool_destroy(ctx->pools[i]);
+		ctx->pools[i] = ODP_POOL_INVALID;
+	}
+
+	return 0;
+}
+
+static void event_test_pool_info_ctx(void)
+{
+	event_type_ctx_t *ctx = &g_type_ctx;
+	odp_event_t ev;
+	odp_event_type_t exp_type;
+	odp_pool_t ev_pool;
+	odp_pool_info_t info;
+	int i, j;
+
+	for (i = 0; i < ctx->num_types; i++) {
+		for (j = 0; j < EVENT_BURST; j++) {
+			ev = ctx->events[i][j];
+			exp_type = ctx->event_types[i];
+			ev_pool = odp_event_pool(ev);
+
+			if (exp_type == ODP_EVENT_TIMEOUT) {
+				CU_ASSERT_FATAL(ev_pool == ODP_POOL_INVALID);
+			} else {
+				CU_ASSERT_FATAL(ev_pool != ODP_POOL_INVALID);
+				CU_ASSERT_FATAL(odp_pool_info(ev_pool, &info) == 0);
+				CU_ASSERT(info.type == ctx->pool_types[i]);
+				CU_ASSERT(odp_event_pool(ev) == ev_pool);
+			}
+		}
+	}
+}
 
 static void event_test_free(void)
 {
@@ -447,8 +638,15 @@ odp_testinfo_t event_suite[] = {
 	ODP_TEST_INFO_NULL,
 };
 
+/* New EventTypes suite using the shared init/term above */
+static odp_testinfo_t event_types_suite[] = {
+	ODP_TEST_INFO(event_test_pool_info_ctx),
+	ODP_TEST_INFO_NULL,
+};
+
 odp_suiteinfo_t event_suites[] = {
 	{"Event", NULL, NULL, event_suite},
+	{"EventTypes", event_types_suite_init, event_types_suite_term, event_types_suite},
 	{"EventVector", evv_suite_init, evv_suite_term, evv_suite},
 	ODP_SUITE_INFO_NULL,
 };
