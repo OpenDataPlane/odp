@@ -310,12 +310,12 @@ static int pktio_capability(bench_tm_result_t *res, int repeat_count)
 
 		if (ret) {
 			ODPH_ERR("Reading pktio capa failed: %d\n", ret);
-			return -1;
+			return 0;
 		}
 
 		bench_tm_func_record(&s2, &s1, res, id1);
 	}
-	return 0;
+	return 1;
 }
 
 static int pktio_lookup(bench_tm_result_t *res, int repeat_count)
@@ -333,12 +333,12 @@ static int pktio_lookup(bench_tm_result_t *res, int repeat_count)
 
 		if (pktio == ODP_PKTIO_INVALID) {
 			ODPH_ERR("Pktio lookup failed\n");
-			return -1;
+			return 0;
 		}
 
 		bench_tm_func_record(&s2, &s1, res, id1);
 	}
-	return 0;
+	return 1;
 }
 
 static int pktio_open_start_stop_close(bench_tm_result_t *res, int repeat_count)
@@ -381,7 +381,7 @@ static int pktio_open_start_stop_close(bench_tm_result_t *res, int repeat_count)
 
 		if (pktio == ODP_PKTIO_INVALID) {
 			ODPH_ERR("Opening pktio failed\n");
-			return -1;
+			return 0;
 		}
 
 		ret = odp_pktin_queue_config(pktio, &pktin_param);
@@ -389,7 +389,7 @@ static int pktio_open_start_stop_close(bench_tm_result_t *res, int repeat_count)
 
 		if (ret) {
 			ODPH_ERR("Configuring packet input queues failed: %d\n", ret);
-			return -1;
+			return 0;
 		}
 
 		ret = odp_pktout_queue_config(pktio, &pktout_param);
@@ -397,7 +397,7 @@ static int pktio_open_start_stop_close(bench_tm_result_t *res, int repeat_count)
 
 		if (ret) {
 			ODPH_ERR("Configuring packet output queues failed: %d\n", ret);
-			return -1;
+			return 0;
 		}
 
 		ret = odp_pktio_start(pktio);
@@ -405,7 +405,7 @@ static int pktio_open_start_stop_close(bench_tm_result_t *res, int repeat_count)
 
 		if (ret) {
 			ODPH_ERR("Starting pktio failed: %d\n", ret);
-			return -1;
+			return 0;
 		}
 
 		ret = odp_pktio_stop(pktio);
@@ -413,7 +413,7 @@ static int pktio_open_start_stop_close(bench_tm_result_t *res, int repeat_count)
 
 		if (ret) {
 			ODPH_ERR("Stopping pktio failed: %d\n", ret);
-			return -1;
+			return 0;
 		}
 
 		/* Clean possible pre-scheduled packets */
@@ -425,7 +425,7 @@ static int pktio_open_start_stop_close(bench_tm_result_t *res, int repeat_count)
 		bench_tm_now(res, &s8);
 		if (ret) {
 			ODPH_ERR("Closing pktio failed: %d\n", ret);
-			return -1;
+			return 0;
 		}
 
 		bench_tm_func_record(&s2, &s1, res, id1);
@@ -439,9 +439,9 @@ static int pktio_open_start_stop_close(bench_tm_result_t *res, int repeat_count)
 	ret = odp_pool_destroy(pool);
 	if (ret) {
 		ODPH_ERR("Destroying pktio pool failed: %d\n", ret);
-		return -1;
+		return 0;
 	}
-	return 0;
+	return 1;
 }
 
 static int pktio_stats(bench_tm_result_t *res, int repeat_count)
@@ -460,12 +460,12 @@ static int pktio_stats(bench_tm_result_t *res, int repeat_count)
 
 		if (ret) {
 			ODPH_ERR("Reading pktio stats failed\n");
-			return -1;
+			return 0;
 		}
 
 		bench_tm_func_record(&s2, &s1, res, id1);
 	}
-	return 0;
+	return 1;
 }
 
 static int pktio_stats_reset(bench_tm_result_t *res, int repeat_count)
@@ -483,12 +483,12 @@ static int pktio_stats_reset(bench_tm_result_t *res, int repeat_count)
 
 		if (ret) {
 			ODPH_ERR("Resetting pktio stats failed\n");
-			return -1;
+			return 0;
 		}
 
 		bench_tm_func_record(&s2, &s1, res, id1);
 	}
-	return 0;
+	return 1;
 }
 
 static int pktin_queue_stats(bench_tm_result_t *res, int repeat_count)
@@ -504,7 +504,7 @@ static int pktin_queue_stats(bench_tm_result_t *res, int repeat_count)
 	ret = odp_pktin_queue(pktio, &queue, 1);
 	if (ret < 1) {
 		ODPH_ERR("Reading pktio input queue failed\n");
-		return -1;
+		return 0;
 	}
 
 	for (int i = 0; i < repeat_count; i++) {
@@ -514,12 +514,12 @@ static int pktin_queue_stats(bench_tm_result_t *res, int repeat_count)
 
 		if (ret) {
 			ODPH_ERR("Reading pktio stats failed\n");
-			return -1;
+			return 0;
 		}
 
 		bench_tm_func_record(&s2, &s1, res, id1);
 	}
-	return 0;
+	return 1;
 }
 
 static int pktin_event_queue_stats(bench_tm_result_t *res, int repeat_count)
@@ -535,7 +535,7 @@ static int pktin_event_queue_stats(bench_tm_result_t *res, int repeat_count)
 	ret = odp_pktin_event_queue(pktio, &queue, 1);
 	if (ret < 1) {
 		ODPH_ERR("Reading pktio input queue failed\n");
-		return -1;
+		return 0;
 	}
 
 	for (int i = 0; i < repeat_count; i++) {
@@ -545,12 +545,12 @@ static int pktin_event_queue_stats(bench_tm_result_t *res, int repeat_count)
 
 		if (ret) {
 			ODPH_ERR("Reading pktio stats failed\n");
-			return -1;
+			return 0;
 		}
 
 		bench_tm_func_record(&s2, &s1, res, id1);
 	}
-	return 0;
+	return 1;
 }
 
 static int pktout_queue_stats(bench_tm_result_t *res, int repeat_count)
@@ -566,7 +566,7 @@ static int pktout_queue_stats(bench_tm_result_t *res, int repeat_count)
 	ret = odp_pktout_queue(pktio, &queue, 1);
 	if (ret < 1) {
 		ODPH_ERR("Reading pktio input queue failed\n");
-		return -1;
+		return 0;
 	}
 
 	for (int i = 0; i < repeat_count; i++) {
@@ -576,12 +576,12 @@ static int pktout_queue_stats(bench_tm_result_t *res, int repeat_count)
 
 		if (ret) {
 			ODPH_ERR("Reading pktio stats failed\n");
-			return -1;
+			return 0;
 		}
 
 		bench_tm_func_record(&s2, &s1, res, id1);
 	}
-	return 0;
+	return 1;
 }
 
 static int pktout_event_queue_stats(bench_tm_result_t *res, int repeat_count)
@@ -597,7 +597,7 @@ static int pktout_event_queue_stats(bench_tm_result_t *res, int repeat_count)
 	ret = odp_pktout_event_queue(pktio, &queue, 1);
 	if (ret < 1) {
 		ODPH_ERR("Reading pktio input queue failed\n");
-		return -1;
+		return 0;
 	}
 
 	for (int i = 0; i < repeat_count; i++) {
@@ -607,12 +607,12 @@ static int pktout_event_queue_stats(bench_tm_result_t *res, int repeat_count)
 
 		if (ret) {
 			ODPH_ERR("Reading pktio stats failed\n");
-			return -1;
+			return 0;
 		}
 
 		bench_tm_func_record(&s2, &s1, res, id1);
 	}
-	return 0;
+	return 1;
 }
 
 static int find_first_supported_l3_pmr(const odp_cls_capability_t *capa, odp_cls_pmr_term_t *term)
@@ -781,14 +781,31 @@ static int cls_pmr_create(bench_tm_result_t *res, int repeat_count)
 
 	ret = odp_pktio_default_cos_set(pktio, ODP_COS_INVALID);
 
+	if (ret < 0) {
+		ODPH_ERR("Setting default CoS failed: %d\n", ret);
+		return 0;
+	}
+
 destroy_cos:
-	for (uint32_t i = 0; i < cos_created; i++)
+	for (uint32_t i = 0; i < cos_created; i++) {
 		ret = odp_cos_destroy(cos[i]);
 
-	for (uint32_t i = 0; i < queue_created; i++)
+		if (ret < 0) {
+			ODPH_ERR("Destroying CoS failed: %d\n", ret);
+			return 0;
+		}
+	}
+
+	for (uint32_t i = 0; i < queue_created; i++) {
 		ret = odp_queue_destroy(queue[i]);
 
-	return ret;
+		if (ret < 0) {
+			ODPH_ERR("Destroying queue failed: %d\n", ret);
+			return 0;
+		}
+	}
+
+	return 1;
 }
 
 static int bench_pktio_sp_export(void *data)

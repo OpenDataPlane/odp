@@ -31,7 +31,7 @@ typedef void (*bench_init_fn_t)(void);
 /**
  * Run benchmark
  *
- * Returns >0 on success.
+ * Returns >0 on success and 0 on failure.
  */
 typedef int (*bench_run_fn_t)(void);
 
@@ -178,7 +178,7 @@ typedef struct bench_tm_results_s {
 /**
  * Timed benchmark test case
  *
- * Returns 0 on success and <0 on failure.
+ * Returns >0 on success and 0 on failure.
  */
 typedef int (*bench_tm_run_fn_t)(bench_tm_result_t *res, int repeat_count);
 
