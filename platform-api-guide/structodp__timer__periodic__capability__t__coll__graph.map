@@ -1,0 +1,4 @@
+<map id="odp_timer_periodic_capability_t" name="odp_timer_periodic_capability_t">
+<area shape="rect" id="node1" title="Periodic timer capability." alt="" coords="5,95,152,136"/>
+<area shape="rect" id="node2" href="$structodp__fract__u64__t.html" title="Unsigned 64 bit fractional number." alt="" coords="15,5,142,32"/>
+</map>
