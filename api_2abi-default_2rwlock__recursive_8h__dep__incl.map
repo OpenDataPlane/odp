@@ -1,0 +1,9 @@
+<map id="rwlock_recursive.h" name="rwlock_recursive.h">
+<area shape="rect" id="node1" title="ODP recursive read/write lock." alt="" coords="425,5,569,32"/>
+<area shape="rect" id="node2" href="$arch_2arm32-linux_2odp_2api_2abi_2rwlock__recursive_8h_source.html" title=" " alt="" coords="5,80,149,107"/>
+<area shape="rect" id="node3" href="$arch_2arm64-linux_2odp_2api_2abi_2rwlock__recursive_8h_source.html" title=" " alt="" coords="173,80,317,107"/>
+<area shape="rect" id="node4" href="$arch_2default-linux_2odp_2api_2abi_2rwlock__recursive_8h_source.html" title=" " alt="" coords="341,80,485,107"/>
+<area shape="rect" id="node5" href="$arch_2power64-linux_2odp_2api_2abi_2rwlock__recursive_8h_source.html" title=" " alt="" coords="509,80,653,107"/>
+<area shape="rect" id="node6" href="$arch_2x86__32-linux_2odp_2api_2abi_2rwlock__recursive_8h_source.html" title=" " alt="" coords="677,80,821,107"/>
+<area shape="rect" id="node7" href="$arch_2x86__64-linux_2odp_2api_2abi_2rwlock__recursive_8h_source.html" title=" " alt="" coords="845,80,989,107"/>
+</map>
