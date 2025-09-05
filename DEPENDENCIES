@@ -286,24 +286,31 @@ Prerequisites for building the OpenDataPlane (ODP) API
    Runtime version 1.16.3.
 
 3.7.1 Prebuilt onnxruntime download
-   Download a default CPU version onnxruntime-linux-x64-*.tgz and unzip it to
-   any folder.
+   Download the default CPU version of `onnxruntime-linux-<arch>-<version>.tgz`
+   and extract it to any directory. Use `x64` for x86_64 and `aarch64` for arm64
+   as the `<arch>` value.
 
-   $ wget -P ~ https://github.com/microsoft/onnxruntime/releases/download/v<version>/onnxruntime-linux-x64-<version>.tgz
+   $ wget -P ~ https://github.com/microsoft/onnxruntime/releases/download/v<version>/onnxruntime-linux-<arch>-<version>.tgz
    $ mkdir <onnxruntime path>
    $ cd <onnxruntime path>/
-   $ tar --strip=1 -zxvf ~/onnxruntime-linux-x64-<version>.tgz
+   $ tar --strip=1 -zxvf ~/onnxruntime-linux-<arch>-<version>.tgz
 
-3.7.1 Build onnxruntime from source
+3.7.2 Build onnxruntime for x86_64 from source
    $ git clone --recursive https://github.com/Microsoft/onnxruntime.git
    $ cd onnxruntime
 
    # Configure
    $ ./build.sh --config RelWithDebInfo --build_shared_lib --parallel
-   $ tools/ci_build/github/linux/copy_strip_binary.sh -r build/Linux/ -a onnxruntime -l libonnxruntime.so.1.14.0 -c RelWithDebInfo -s . -t <commit id>
-   $ cp -r build/Linux/onnxruntime/ <onnxruntime path>
+   $ cmake --install build/Linux/RelWithDebInfo/ --prefix <onnxruntime path>
+   $ mv <onnxruntime path>/include/onnxruntime/* <onnxruntime path>/include/
+   $ rm -r <onnxruntime path>/include/onnxruntime
 
-3.7.2 Build ODP with ML support
+   The --config 'RelWithDebInfo' is slower than 'Release' because it includes
+   debug information and disables certain inlining optimizations. For additional
+   build options, such as targeting arm64 or reviewing tool prerequisites,
+   see: https://onnxruntime.ai/docs/build/inferencing.html.
+
+3.7.3 Build ODP with ML support
    After installing onnxruntime and example dependencies, ODP can be configured to be
    built with ML support by giving onnxruntime path with --with-ort-path.
 
