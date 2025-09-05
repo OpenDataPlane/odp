@@ -300,8 +300,10 @@ Prerequisites for building the OpenDataPlane (ODP) API
 
    # Configure
    $ ./build.sh --config RelWithDebInfo --build_shared_lib --parallel
-   $ tools/ci_build/github/linux/copy_strip_binary.sh -r build/Linux/ -a onnxruntime -l libonnxruntime.so.1.14.0 -c RelWithDebInfo -s . -t <commit id>
-   $ cp -r build/Linux/onnxruntime/ <onnxruntime path>
+   $ cmake --install build/Linux/RelWithDebInfo/ --prefix build/Linux/RelWithDebInfo/installed
+   $ mv build/Linux/RelWithDebInfo/installed/include/onnxruntime/* build/Linux/RelWithDebInfo/installed/include/
+   $ rm -r build/Linux/RelWithDebInfo/installed/include/onnxruntime
+   $ cp -r build/Linux/RelWithDebInfo/installed/ <onnxruntime path>
 
 3.7.2 Build ODP with ML support
    After installing onnxruntime and example dependencies, ODP can be configured to be
