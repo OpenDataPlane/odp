@@ -28,7 +28,10 @@
 #include <odp_pool_internal.h>
 #include <odp_string_internal.h>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-prototypes"
 #include <onnxruntime_c_api.h>
+#pragma GCC diagnostic pop
 
 #include <inttypes.h>
 #include <stdint.h>
