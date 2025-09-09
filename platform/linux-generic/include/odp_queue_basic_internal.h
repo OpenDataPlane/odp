@@ -134,6 +134,10 @@ int _odp_sched_queue_empty(uint32_t queue_index);
 /* Functions by schedulers */
 int _odp_sched_basic_get_spread(uint32_t queue_index);
 
+/* Functions for pktio */
+odp_event_vector_t _odp_event_vector_create(odp_queue_t aggr_handle, odp_packet_t pkt_tbl[],
+					    uint32_t num);
+
 /* Functions for SPSC queue */
 int _odp_event_aggr_enq(queue_entry_t *aggr_queue, _odp_event_hdr_t *event_hdr[], uint32_t num);
 

@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2013-2018 Linaro Limited
- * Copyright (c) 2019-2024 Nokia
+ * Copyright (c) 2019-2025 Nokia
  */
 
 #include <odp_posix_extensions.h>
@@ -33,6 +33,7 @@
 #include <odp_string_internal.h>
 #include <odp_pcapng.h>
 #include <odp_queue_if.h>
+#include <odp_queue_basic_internal.h>
 #include <odp_schedule_if.h>
 
 #include <ifaddrs.h>
@@ -852,28 +853,43 @@ static inline odp_packet_vector_t packet_vector_create(odp_packet_t packets[], u
 static inline int pktin_recv_buf(pktio_entry_t *entry, int pktin_index,
 				 _odp_event_hdr_t *event_hdrs[], int num)
 {
-	const odp_bool_t vector_enabled = entry->in_queue[pktin_index].vector.enable;
-	odp_pool_t pool = ODP_POOL_INVALID;
+	const odp_event_type_t vector_type = entry->in_queue[pktin_index].vector.type;
+	const odp_bool_t vector_enabled = !!vector_type;
+	odp_packet_t pkt_tbl[_ODP_MAX(CONFIG_PACKET_VECTOR_MAX_SIZE, CONFIG_EVENT_VECTOR_MAX_SIZE)];
 	int num_rx;
 
-	if (vector_enabled) {
-		/* Make sure all packets will fit into a single packet vector */
-		if ((int)entry->in_queue[pktin_index].vector.max_size < num)
-			num = entry->in_queue[pktin_index].vector.max_size;
-		pool = entry->in_queue[pktin_index].vector.pool;
-	}
+	if (!vector_enabled)
+		return entry->ops->recv(entry, pktin_index, (odp_packet_t *)event_hdrs, num);
 
-	num_rx = entry->ops->recv(entry, pktin_index, (odp_packet_t *)event_hdrs, num);
+	/* Always try to receive full vectors */
+	num = entry->in_queue[pktin_index].vector.max_size;
 
-	if (!vector_enabled || num_rx < 2)
+	num_rx = entry->ops->recv(entry, pktin_index, pkt_tbl, num);
+	if (num_rx <= 0)
 		return num_rx;
 
-	odp_packet_vector_t pktv = packet_vector_create((odp_packet_t *)event_hdrs, num_rx, pool);
+	if (vector_type == ODP_EVENT_VECTOR) {
+		odp_queue_t aggr_queue = entry->in_queue[pktin_index].vector.aggr_queue;
+		odp_event_vector_t evv = _odp_event_vector_create(aggr_queue, pkt_tbl, num_rx);
 
-	if (odp_unlikely(pktv == ODP_PACKET_VECTOR_INVALID))
-		return 0;
+		if (evv == ODP_EVENT_VECTOR_INVALID)
+			return 0;
+		event_hdrs[0] = _odp_event_vector_to_event_hdr(evv);
+	} else {
+		odp_pool_t pool = entry->in_queue[pktin_index].vector.pool;
+		odp_packet_vector_t pktv;
 
-	event_hdrs[0] = _odp_packet_vector_to_event_hdr(pktv);
+		if (num_rx == 1) {
+			event_hdrs[0] = packet_to_event_hdr(pkt_tbl[0]);
+			return 1;
+		}
+
+		pktv = packet_vector_create(pkt_tbl, num_rx, pool);
+		if (odp_unlikely(pktv == ODP_PACKET_VECTOR_INVALID))
+			return 0;
+		event_hdrs[0] = _odp_packet_vector_to_event_hdr(pktv);
+	}
+
 	return 1;
 }
 
@@ -2091,11 +2107,25 @@ int odp_pktin_queue_config(odp_pktio_t pktio, const odp_pktin_queue_param_t *par
 		}
 	}
 
+	/* Validate event aggregator parameters */
+	if (!param->classifier_enable && param->queue_param.num_aggr) {
+		if (param->vector.enable) {
+			_ODP_ERR("Packet and event vectoring enabled simultaneously\n");
+			return -1;
+		}
+		if (mode == ODP_PKTIN_MODE_DIRECT) {
+			_ODP_ERR("Packet vectors not supported with ODP_PKTIN_MODE_DIRECT\n");
+			return -1;
+		}
+	}
+
 	/* If re-configuring, destroy old queues */
 	if (entry->num_in_queue)
 		destroy_in_queues(entry, entry->num_in_queue);
 
 	for (i = 0; i < num_queues; i++) {
+		entry->in_queue[i].vector.type = 0;
+
 		if (mode == ODP_PKTIN_MODE_QUEUE ||
 		    mode == ODP_PKTIN_MODE_SCHED) {
 			odp_queue_param_t queue_param;
@@ -2142,13 +2172,22 @@ int odp_pktin_queue_config(odp_pktio_t pktio, const odp_pktin_queue_param_t *par
 
 			entry->in_queue[i].queue = queue;
 
+			if (queue_param.num_aggr) {
+				entry->in_queue[i].vector.type = ODP_EVENT_VECTOR;
+				entry->in_queue[i].vector.max_size = queue_param.aggr[0].max_size;
+				entry->in_queue[i].vector.pool = queue_param.aggr[0].pool;
+				entry->in_queue[i].vector.aggr_queue = odp_queue_aggr(queue, 0);
+			} else if (param->vector.enable) {
+				entry->in_queue[i].vector.type = ODP_EVENT_PACKET_VECTOR;
+				entry->in_queue[i].vector.max_size = param->vector.max_size;
+				entry->in_queue[i].vector.pool = param->vector.pool;
+			}
 		} else {
 			entry->in_queue[i].queue = ODP_QUEUE_INVALID;
 		}
 
 		entry->in_queue[i].pktin.index = i;
 		entry->in_queue[i].pktin.pktio = entry->handle;
-		entry->in_queue[i].vector = param->vector;
 	}
 
 	entry->num_in_queue = num_queues;

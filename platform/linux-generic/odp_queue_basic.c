@@ -677,6 +677,57 @@ static odp_queue_t queue_lookup(const char *name)
 	return ODP_QUEUE_INVALID;
 }
 
+/* Used by packet IO with at most 'odp_event_aggr_config_t.max_size' packets. Always consumes
+ * 'pkt_tbl'. */
+odp_event_vector_t _odp_event_vector_create(odp_queue_t aggr_handle,
+					    odp_packet_t pkt_tbl[],
+					    uint32_t num)
+{
+	event_aggr_t *aggr = &qentry_from_handle(aggr_handle)->aggr;
+	odp_event_t *evv_tbl;
+	odp_event_vector_t evv;
+	uint32_t num_aggr = 0;
+
+	_ODP_ASSERT(qentry_from_handle(aggr_handle)->type == ODP_QUEUE_TYPE_AGGR);
+	_ODP_ASSERT(num <= aggr->max_size);
+
+	odp_ticketlock_lock(&aggr->lock);
+
+	while (num_aggr < num && aggr->num_events < aggr->max_size)
+		aggr->event_tbl[aggr->num_events++] = odp_packet_to_event(pkt_tbl[num_aggr++]);
+
+	if (aggr->num_events < aggr->max_size) {
+		odp_ticketlock_unlock(&aggr->lock);
+		return ODP_EVENT_VECTOR_INVALID;
+	}
+
+	evv = odp_event_vector_alloc(aggr->pool);
+	if (odp_unlikely(evv == ODP_EVENT_VECTOR_INVALID)) {
+		/* Always leave room in aggregator to work in same manner as
+		 * _odp_event_aggr_enq() */
+		aggr->num_events--;
+		num_aggr--;
+		odp_packet_free_multi(&pkt_tbl[num_aggr], num - num_aggr);
+		odp_ticketlock_unlock(&aggr->lock);
+		return ODP_EVENT_VECTOR_INVALID;
+	}
+
+	odp_event_vector_tbl(evv, &evv_tbl);
+	for (uint16_t i = 0; i < aggr->num_events; i++)
+		evv_tbl[i] = aggr->event_tbl[i];
+
+	odp_event_vector_size_set(evv, aggr->num_events);
+	odp_event_vector_type_set(evv, aggr->event_type);
+	aggr->num_events = 0;
+
+	while (num_aggr < num)
+		aggr->event_tbl[aggr->num_events++] = odp_packet_to_event(pkt_tbl[num_aggr++]);
+
+	odp_ticketlock_unlock(&aggr->lock);
+
+	return evv;
+}
+
 /* Used by queue enqueue functions */
 int _odp_event_aggr_enq(queue_entry_t *aggr_queue, _odp_event_hdr_t *event_hdr[], uint32_t num)
 {
@@ -687,6 +738,11 @@ int _odp_event_aggr_enq(queue_entry_t *aggr_queue, _odp_event_hdr_t *event_hdr[]
 	uint32_t num_enq;
 
 	_ODP_ASSERT(aggr_queue->type == ODP_QUEUE_TYPE_AGGR);
+
+	/* Packet input may later drop a vector if the base queue is full, so enqueue events to the
+	 * base queue directly. */
+	if (odp_unlikely(base_queue->pktin.pktio != ODP_PKTIO_INVALID))
+		return base_queue->enqueue_multi(base_queue->handle, event_hdr, num);
 
 	odp_ticketlock_lock(&aggr->lock);
 
@@ -789,6 +845,7 @@ static int event_aggr_enq_pending(event_aggr_t *aggr)
 static int queue_api_enq_aggr(odp_queue_t handle, odp_event_t ev,
 			      const odp_aggr_enq_param_t *param)
 {
+	queue_entry_t *base_queue;
 	queue_entry_t *queue = qentry_from_handle(handle);
 	event_aggr_t *aggr = &queue->aggr;
 
@@ -796,6 +853,12 @@ static int queue_api_enq_aggr(odp_queue_t handle, odp_event_t ev,
 		return queue->enqueue(handle, (_odp_event_hdr_t *)(uintptr_t)ev);
 
 	_ODP_ASSERT(param != NULL);
+	base_queue = qentry_from_handle(aggr->base_queue);
+
+	/* Packet input may later drop a vector if the base queue is full, so enqueue events to the
+	 * base queue directly. */
+	if (odp_unlikely(base_queue->pktin.pktio != ODP_PKTIO_INVALID))
+		return base_queue->enqueue(base_queue->handle, (_odp_event_hdr_t *)(uintptr_t)ev);
 
 	/* Cannot stash events as ordered_stash_release() ignores odp_aggr_enq_param_t */
 	_odp_sched_fn->ord_stash_release(handle);
