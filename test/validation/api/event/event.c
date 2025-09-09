@@ -19,6 +19,7 @@ typedef struct {
 	odp_pool_t pools[MAX_EVENT_TYPES];
 	odp_event_t events[MAX_EVENT_TYPES][EVENT_BURST];
 	int num_types;
+	odp_queue_t queue;
 } event_type_ctx_t;
 
 static event_type_ctx_t g_type_ctx;
@@ -84,7 +85,14 @@ static int event_types_suite_init(void)
 	event_type_ctx_t *ctx = &g_type_ctx;
 	int i, j, n = 0;
 	char name[ODP_POOL_NAME_LEN];
+	odp_queue_param_t queue_prm;
 	odp_pool_capability_t capa;
+
+	odp_queue_param_init(&queue_prm);
+	queue_prm.type = ODP_QUEUE_TYPE_PLAIN;
+	ctx->queue = odp_queue_create("event_types_queue", &queue_prm);
+	if (ctx->queue == ODP_QUEUE_INVALID)
+		return -1;
 
 	memset(&capa, 0, sizeof(capa));
 	if (odp_pool_capability(&capa) != 0)
@@ -148,7 +156,9 @@ static int event_types_suite_init(void)
 		}
 
 		snprintf(name, ODP_POOL_NAME_LEN, "event_type_compliance_%d", i);
+
 		ctx->pools[i] = odp_pool_create(name, &prm);
+
 		if (ctx->pools[i] == ODP_POOL_INVALID)
 			return -1;
 
@@ -167,6 +177,8 @@ static int event_types_suite_term(void)
 	event_type_ctx_t *ctx = &g_type_ctx;
 	int i;
 
+	odp_queue_destroy(ctx->queue);
+
 	for (i = 0; i < ctx->num_types; i++) {
 		odp_event_free_multi(ctx->events[i], EVENT_BURST);
 		(void)odp_pool_destroy(ctx->pools[i]);
@@ -174,6 +186,95 @@ static int event_types_suite_term(void)
 	}
 
 	return 0;
+}
+
+static void event_test_roundtrip_convert_ctx(void)
+{
+	event_type_ctx_t *ctx = &g_type_ctx;
+	odp_event_t ev;
+	odp_buffer_t b;
+	odp_packet_t p;
+	odp_timeout_t t;
+	odp_event_vector_t v;
+	odp_packet_vector_t pv;
+	int i, j;
+
+	for (i = 0; i < MAX_EVENT_TYPES; i++) {
+		for (j = 0; j < EVENT_BURST; j++) {
+			ev = ctx->events[i][j];
+			switch (ctx->event_types[i]) {
+			case ODP_EVENT_BUFFER:
+				b = odp_buffer_from_event(ev);
+				CU_ASSERT_FATAL(b != ODP_BUFFER_INVALID);
+				CU_ASSERT(odp_buffer_to_event(b) == ev);
+			break;
+			case ODP_EVENT_PACKET:
+				p = odp_packet_from_event(ev);
+				CU_ASSERT_FATAL(p != ODP_PACKET_INVALID);
+				CU_ASSERT(odp_packet_to_event(p) == ev);
+			break;
+			case ODP_EVENT_TIMEOUT:
+				t = odp_timeout_from_event(ev);
+				CU_ASSERT_FATAL(t != ODP_TIMEOUT_INVALID);
+				CU_ASSERT(odp_timeout_to_event(t) == ev);
+			break;
+			case ODP_EVENT_VECTOR:
+				v = odp_event_vector_from_event(ev);
+				CU_ASSERT_FATAL(v != ODP_EVENT_VECTOR_INVALID);
+				CU_ASSERT(odp_event_vector_to_event(v) == ev);
+			break;
+			case ODP_EVENT_PACKET_VECTOR:
+				pv = odp_packet_vector_from_event(ev);
+				CU_ASSERT_FATAL(pv != ODP_PACKET_VECTOR_INVALID);
+				CU_ASSERT(odp_packet_vector_to_event(pv) == ev);
+			break;
+			default:
+				CU_FAIL("Unexpected event type");
+			break;
+			}
+		}
+	}
+}
+
+static void event_test_types_and_subtypes_ctx(void)
+{
+	event_type_ctx_t *ctx = &g_type_ctx;
+	odp_event_type_t exp_type;
+	odp_event_type_t type;
+	odp_event_type_t types_out[EVENT_BURST];
+	odp_event_subtype_t exp_sub;
+	odp_event_subtype_t sub;
+	odp_event_subtype_t subs_out[EVENT_BURST];
+	odp_event_t ev;
+	int i, j, k;
+
+	for (i = 0; i < MAX_EVENT_TYPES; i++) {
+		exp_type = ctx->event_types[i];
+		exp_sub = (exp_type == ODP_EVENT_PACKET) ? ODP_EVENT_PACKET_BASIC
+							 : ODP_EVENT_NO_SUBTYPE;
+
+		for (j = 0; j < EVENT_BURST; j++) {
+			ev = ctx->events[i][j];
+
+			CU_ASSERT(odp_event_type(ev) == exp_type);
+			CU_ASSERT(odp_event_subtype(ev) == exp_sub);
+
+			sub = ODP_EVENT_NO_SUBTYPE;
+			CU_ASSERT(odp_event_types(ev, &sub) == exp_type);
+			CU_ASSERT(sub == exp_sub);
+		}
+
+		odp_event_types_multi(ctx->events[i], types_out, subs_out, EVENT_BURST);
+		for (k = 0; k < EVENT_BURST; k++) {
+			CU_ASSERT(types_out[k] == exp_type);
+			CU_ASSERT(subs_out[k] == exp_sub);
+		}
+
+		type = ODP_EVENT_BUFFER;
+		CU_ASSERT(odp_event_type_multi(ctx->events[i], EVENT_BURST, &type)
+			  == EVENT_BURST);
+		CU_ASSERT(type == exp_type);
+	}
 }
 
 static void event_test_pool_info_ctx(void)
@@ -201,6 +302,186 @@ static void event_test_pool_info_ctx(void)
 			}
 		}
 	}
+}
+
+static void event_test_user_area_and_flag_ctx(void)
+{
+	event_type_ctx_t *ctx = &g_type_ctx;
+	odp_event_t ev;
+	odp_event_type_t ev_t;
+	int i, j, flag;
+	void *user_area;
+
+	for (i = 0; i < MAX_EVENT_TYPES; i++) {
+		for (j = 0; j < EVENT_BURST; j++) {
+			ev = ctx->events[i][j];
+			user_area = odp_event_user_area(ev);
+			CU_ASSERT(user_area != NULL);
+
+			flag = 1;
+			odp_event_user_flag_set(ev, flag);
+			CU_ASSERT(odp_event_user_area_and_flag(ev, &flag) != NULL);
+
+			ev_t = ctx->event_types[i];
+			if (ev_t == ODP_EVENT_PACKET)
+				CU_ASSERT(flag > 0);
+		}
+	}
+}
+
+static void event_test_misc_ctx(void)
+{
+	event_type_ctx_t *ctx = &g_type_ctx;
+	odp_event_t ev;
+	int i, j;
+
+	for (i = 0; i < MAX_EVENT_TYPES; i++) {
+		for (j = 0; j < EVENT_BURST; j++) {
+			ev = ctx->events[i][j];
+
+			CU_ASSERT(odp_event_to_u64(ev) != 0);
+			CU_ASSERT(odp_event_is_valid(ev) == 1);
+
+			if (ctx->event_types[i] == ODP_EVENT_PACKET) {
+				odp_event_flow_id_set(ev, 3);
+				CU_ASSERT(odp_event_flow_id(ev) == 3);
+			}
+		}
+	}
+}
+
+static void event_test_filter_packet_ctx(void)
+{
+	event_type_ctx_t *ctx = &g_type_ctx;
+	const int n = MAX_EVENT_TYPES * MAX_EVENT_TYPES;
+
+	odp_event_t mixed[MAX_EVENT_TYPES * MAX_EVENT_TYPES];
+	odp_packet_t packets[MAX_EVENT_TYPES * MAX_EVENT_TYPES];
+	odp_event_t remain[MAX_EVENT_TYPES * MAX_EVENT_TYPES];
+	odp_event_t expected[MAX_EVENT_TYPES * MAX_EVENT_TYPES];
+
+	int i, j, num_pkt, num_rem;
+	int idx = 0;
+
+	for (i = 0; i < MAX_EVENT_TYPES; i++) {
+		for (j = 0; j < MAX_EVENT_TYPES; j++)
+			mixed[idx++] = ctx->events[j][i];
+	}
+
+	num_pkt = odp_event_filter_packet(mixed, packets, remain, n);
+	CU_ASSERT(num_pkt == MAX_EVENT_TYPES);
+
+	int pkt_idx = -1;
+
+	for (j = 0; j < MAX_EVENT_TYPES; j++)
+		if (ctx->event_types[j] == ODP_EVENT_PACKET)
+			pkt_idx = j;
+	CU_ASSERT_FATAL(pkt_idx >= 0);
+
+	for (i = 0; i < num_pkt; i++) {
+		CU_ASSERT_FATAL(packets[i] != ODP_PACKET_INVALID);
+		CU_ASSERT(odp_packet_to_event(packets[i]) == ctx->events[pkt_idx][i]);
+	}
+
+	num_rem = n - num_pkt;
+	idx = 0;
+	for (i = 0; i < MAX_EVENT_TYPES; i++) {
+		for (j = 0; j < MAX_EVENT_TYPES; j++) {
+			if (j == pkt_idx)
+				continue;
+			expected[idx++] = ctx->events[j][i];
+		}
+	}
+	CU_ASSERT(idx == num_rem);
+
+	for (i = 0; i < num_rem; i++)
+		CU_ASSERT(remain[i] == expected[i]);
+}
+
+static void event_test_event_frees_ctx(void)
+{
+	event_type_ctx_t *ctx = &g_type_ctx;
+	odp_event_t sorted_events_multi[EVENT_BURST];
+	odp_event_t mixed_events_single[MAX_EVENT_TYPES];
+	odp_event_t mixed_events_multi[MAX_EVENT_TYPES];
+	int i, j;
+
+	for (i = 0; i < MAX_EVENT_TYPES; i++) {
+		for (j = 0; j < EVENT_BURST; j++) {
+			sorted_events_multi[j] = event_types_alloc_event(ctx->pool_types[i]);
+			CU_ASSERT(sorted_events_multi[j] != ODP_EVENT_INVALID);
+		}
+
+		odp_event_free_sp(sorted_events_multi, EVENT_BURST);
+	}
+
+	for (i = 0; i < MAX_EVENT_TYPES; i++) {
+		mixed_events_single[i] = event_types_alloc_event(ctx->pool_types[i]);
+		mixed_events_multi[i] = event_types_alloc_event(ctx->pool_types[i]);
+		CU_ASSERT(mixed_events_single[i] != ODP_EVENT_INVALID);
+		CU_ASSERT(mixed_events_multi[i] != ODP_EVENT_INVALID);
+	}
+
+	for (i = 0; i < MAX_EVENT_TYPES; i++)
+		odp_event_free(mixed_events_single[i]);
+
+	odp_event_free_multi(mixed_events_multi, MAX_EVENT_TYPES);
+}
+
+static void event_test_queue_enq_deq_ctx(void)
+{
+	event_type_ctx_t *ctx = &g_type_ctx;
+	odp_event_t ev;
+	odp_event_t ev_tbl[MAX_EVENT_TYPES];
+	odp_event_type_t types_seen[MAX_EVENT_TYPES] = {0};
+	odp_event_type_t ev_type;
+	int i, num, total = 0;
+
+	for (i = 0; i < MAX_EVENT_TYPES; i++) {
+		ev = ctx->events[i][0];
+		CU_ASSERT(odp_queue_enq(ctx->queue, ev) == 0);
+	}
+
+	while (1) {
+		ev = odp_queue_deq(ctx->queue);
+		if (ev == ODP_EVENT_INVALID)
+			break;
+
+		ev_type = odp_event_type(ev);
+		for (i = 0; i < MAX_EVENT_TYPES; i++)
+			if (ctx->event_types[i] == ev_type)
+				types_seen[i]++;
+		total++;
+	}
+
+	CU_ASSERT(total == MAX_EVENT_TYPES);
+	for (i = 0; i < MAX_EVENT_TYPES; i++)
+		CU_ASSERT(types_seen[i] == 1);
+
+	for (i = 0; i < MAX_EVENT_TYPES; i++)
+		ev_tbl[i] = ctx->events[i][1];
+
+	CU_ASSERT(odp_queue_enq_multi(ctx->queue, ev_tbl, MAX_EVENT_TYPES) == MAX_EVENT_TYPES);
+
+	memset(types_seen, 0, sizeof(types_seen));
+	total = 0;
+	while (1) {
+		num = odp_queue_deq_multi(ctx->queue, ev_tbl, MAX_EVENT_TYPES);
+		if (num <= 0)
+			break;
+
+		for (i = 0; i < num; i++) {
+			ev_type = odp_event_type(ev_tbl[i]);
+			for (int j = 0; j < MAX_EVENT_TYPES; j++)
+				if (ctx->event_types[j] == ev_type)
+					types_seen[j]++;
+			total++;
+		}
+	}
+
+	CU_ASSERT(total == MAX_EVENT_TYPES);
+	for (i = 0; i < MAX_EVENT_TYPES; i++)
+		CU_ASSERT(types_seen[i] == 1);
 }
 
 static void event_test_free(void)
@@ -640,7 +921,14 @@ odp_testinfo_t event_suite[] = {
 
 /* New EventTypes suite using the shared init/term above */
 static odp_testinfo_t event_types_suite[] = {
+	ODP_TEST_INFO(event_test_roundtrip_convert_ctx),
+	ODP_TEST_INFO(event_test_types_and_subtypes_ctx),
 	ODP_TEST_INFO(event_test_pool_info_ctx),
+	ODP_TEST_INFO(event_test_user_area_and_flag_ctx),
+	ODP_TEST_INFO(event_test_misc_ctx),
+	ODP_TEST_INFO(event_test_filter_packet_ctx),
+	ODP_TEST_INFO(event_test_event_frees_ctx),
+	ODP_TEST_INFO(event_test_queue_enq_deq_ctx),
 	ODP_TEST_INFO_NULL,
 };
 
