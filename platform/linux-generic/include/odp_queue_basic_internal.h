@@ -154,6 +154,10 @@ static inline uint32_t _odp_event_aggr_max_size(odp_queue_t aggr_handle)
 	return aggr_queue->aggr.max_size;
 }
 
+/* Functions for pktio */
+odp_event_vector_t _odp_event_vector_create(odp_queue_t aggr_handle, odp_packet_t pkt_tbl[],
+					    uint32_t num);
+
 /* Functions for SPSC queue */
 int _odp_event_aggr_enq(queue_entry_t *aggr_queue, _odp_event_hdr_t *event_hdr[], uint32_t num);
 
