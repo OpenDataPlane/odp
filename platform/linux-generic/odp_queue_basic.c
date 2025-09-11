@@ -700,7 +700,7 @@ static odp_queue_t queue_lookup(const char *name)
 }
 
 /* Used by packet IO and classifier with at most 'odp_event_aggr_config_t.max_size' packets. Always
- * returns all available events. */
+ * consumes 'pkt_tbl' and returns all available events. */
 odp_event_vector_t _odp_event_vector_create(odp_queue_t aggr_handle,
 					    odp_packet_t pkt_tbl[],
 					    uint32_t num)
