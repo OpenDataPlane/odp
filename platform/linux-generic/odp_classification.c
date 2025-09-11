@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2014-2018 Linaro Limited
- * Copyright (c) 2019-2024 Nokia
+ * Copyright (c) 2019-2025 Nokia
  */
 
 #include <odp/api/classification.h>
@@ -237,6 +237,7 @@ odp_cos_t odp_cls_cos_create(const char *name, const odp_cls_cos_param_t *param_
 	cos_t *cos;
 	uint32_t tbl_index;
 	odp_cls_cos_param_t param = *param_in;
+	odp_bool_t event_aggr_enabled;
 
 	if (param.action == ODP_COS_ACTION_DROP) {
 		param.num_queue = 1;
@@ -252,10 +253,20 @@ odp_cos_t odp_cls_cos_create(const char *name, const odp_cls_cos_param_t *param_
 	if (param.num_queue > CLS_COS_QUEUE_MAX || param.num_queue < 1)
 		return ODP_COS_INVALID;
 
+	event_aggr_enabled = (param.num_queue == 1 && param.queue != ODP_QUEUE_INVALID &&
+			      odp_queue_type(param.queue) == ODP_QUEUE_TYPE_AGGR) ||
+			     (param.num_queue > 1 && param.queue_param.num_aggr);
+
 	/* Validate packet vector parameters */
 	if (param.vector.enable) {
 		odp_pool_t pool = param.vector.pool;
 		odp_pool_info_t pool_info;
+
+		/* Check that packet and event vectors are not enabled simultaneously */
+		if (event_aggr_enabled) {
+			_ODP_ERR("Packet and event vectoring enabled simultaneously\n");
+			return ODP_COS_INVALID;
+		}
 
 		if (pool == ODP_POOL_INVALID || odp_pool_info(pool, &pool_info)) {
 			_ODP_ERR("invalid packet vector pool\n");
@@ -339,7 +350,14 @@ odp_cos_t odp_cls_cos_create(const char *name, const odp_cls_cos_param_t *param_
 			cos->valid = 1;
 			odp_atomic_init_u32(&cos->num_rule, 0);
 			cos->index = i;
-			cos->vector = param.vector;
+
+			if (param.vector.enable) {
+				cos->vector.pool = param.vector.pool;
+				cos->vector.max_size = param.vector.max_size;
+			}
+			cos->vector.use_std_enq = !param.vector.enable;
+			cos->vector.use_aggr = event_aggr_enabled && param.num_queue > 1;
+
 			cos->stats_enable = param.stats_enable;
 			UNLOCK(&cos->lock);
 			return _odp_cos_from_ndx(i);

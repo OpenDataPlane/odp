@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2014-2018 Linaro Limited
- * Copyright (c) 2021-2023 Nokia
+ * Copyright (c) 2021-2025 Nokia
  */
 
 /**
@@ -20,6 +20,7 @@ extern "C" {
 #include <odp/api/atomic.h>
 #include <odp/api/classification.h>
 #include <odp/api/event.h>
+#include <odp/api/event_vector.h>
 #include <odp/api/hints.h>
 #include <odp/api/packet.h>
 #include <odp/api/pool.h>
@@ -27,8 +28,10 @@ extern "C" {
 #include <odp/api/std_types.h>
 
 #include <odp_debug_internal.h>
+#include <odp_macros_internal.h>
 #include <odp_packet_internal.h>
 #include <odp_packet_io_internal.h>
+#include <odp_queue_basic_internal.h>
 #include <odp_classification_datamodel.h>
 
 #include <stdint.h>
@@ -143,9 +146,17 @@ static inline void _odp_cos_enq(uint16_t cos_id, odp_queue_t dst, odp_packet_t p
 
 	cos_t *cos = _odp_cos_entry_from_idx(cos_id);
 
-	if (num < 2 || !cos->vector.enable) {
-		int ret = odp_queue_enq_multi(dst, (odp_event_t *)packets, num);
+	if (num < 2 || cos->vector.use_std_enq) {
+		odp_queue_t dst_queue = dst;
+		int ret;
 
+		if (odp_unlikely(cos->vector.use_aggr)) {
+			dst_queue = odp_queue_aggr(dst, 0);
+
+			_ODP_ASSERT(dst_queue != ODP_QUEUE_INVALID);
+		}
+
+		ret = odp_queue_enq_multi(dst_queue, (odp_event_t *)packets, num);
 		if (odp_unlikely(ret != num)) {
 			if (ret < 0)
 				ret = 0;
