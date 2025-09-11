@@ -21,6 +21,7 @@ extern "C" {
 #include <odp/api/hints.h>
 #include <odp/api/ticketlock.h>
 #include <odp_config_internal.h>
+#include <odp_debug_internal.h>
 #include <odp_macros_internal.h>
 #include <odp_ring_mpmc_ptr_internal.h>
 #include <odp_ring_st_ptr_internal.h>
@@ -133,6 +134,25 @@ int _odp_sched_queue_empty(uint32_t queue_index);
 
 /* Functions by schedulers */
 int _odp_sched_basic_get_spread(uint32_t queue_index);
+
+/* Functions for classifier */
+static inline odp_queue_t _odp_event_aggr_base_queue(odp_queue_t aggr_handle)
+{
+	queue_entry_t *aggr_queue = qentry_from_handle(aggr_handle);
+
+	_ODP_ASSERT(aggr_queue->type == ODP_QUEUE_TYPE_AGGR);
+
+	return aggr_queue->aggr.base_queue;
+}
+
+static inline uint32_t _odp_event_aggr_max_size(odp_queue_t aggr_handle)
+{
+	queue_entry_t *aggr_queue = qentry_from_handle(aggr_handle);
+
+	_ODP_ASSERT(aggr_queue->type == ODP_QUEUE_TYPE_AGGR);
+
+	return aggr_queue->aggr.max_size;
+}
 
 /* Functions for SPSC queue */
 int _odp_event_aggr_enq(queue_entry_t *aggr_queue, _odp_event_hdr_t *event_hdr[], uint32_t num);
