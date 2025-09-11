@@ -714,7 +714,14 @@ typedef struct odp_cls_cos_param {
 		/** Mapping used when num_queue > 1, hashing is enabled in
 		 * this case and queues are created by the implementation */
 		struct {
-			/** Queue parameters */
+			/** Queue parameters
+			 *
+			 * If event aggregation is enabled in queue parameters,
+			 * aggregator with index 0 is automatically used for
+			 * classified packets. However, the accessor functions
+			 * (e.g. odp_cos_queue()) still return handles of base
+			 * queues, not handles of event aggregators.
+			 */
 			odp_queue_param_t queue_param;
 
 			/** Protocol header fields which are included in
