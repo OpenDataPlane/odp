@@ -1929,6 +1929,9 @@ int _odp_event_is_valid(odp_event_t event)
 
 int odp_buffer_is_valid(odp_buffer_t buf)
 {
+	if (odp_unlikely(buf == ODP_BUFFER_INVALID))
+		return 0;
+
 	if (_odp_event_is_valid(odp_buffer_to_event(buf)) == 0)
 		return 0;
 
