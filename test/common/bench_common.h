@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright (c) 2023 Nokia
+ * Copyright (c) 2023-2025 Nokia
  */
 
 /** @cond _ODP_HIDE_FROM_DOXYGEN_ */
@@ -31,7 +31,7 @@ typedef void (*bench_init_fn_t)(void);
 /**
  * Run benchmark
  *
- * Returns >0 on success.
+ * Returns >0 on success and 0 on failure.
  */
 typedef int (*bench_run_fn_t)(void);
 
@@ -105,11 +105,6 @@ typedef struct {
 void bench_suite_init(bench_suite_t *suite);
 
 /**
- * Run selected test indefinitely
- */
-void bench_run_indef(bench_info_t *info, odp_atomic_u32_t *exit_thread);
-
-/**
  * Run test suite and print results
  *
  * The argument is of type 'bench_suite_t *'. Returns 0 on success and <0 on failure.
@@ -126,26 +121,54 @@ int bench_run(void *arg);
 /* Maximum number of benchmarked functions per test case */
 #define BENCH_TM_MAX_FUNC 8
 
+/* Stamp type for recording current instant in ODP time or cycles based on suite configuration */
+typedef union {
+	odp_time_t time;
+	uint64_t cycles;
+
+} bench_tm_stamp_t;
+
+/* Function specific statistics */
+typedef struct {
+	/* Name of function */
+	const char *name;
+
+	/* Total duration of all function calls */
+	bench_tm_stamp_t tot;
+
+	/* Minimum duration */
+	bench_tm_stamp_t min;
+
+	/* Maximum duration */
+	bench_tm_stamp_t max;
+
+	/* Number of measurements */
+	uint64_t num;
+
+} bench_tm_func_res_t;
+
+/* Get current instant */
+typedef void (*bench_tm_now_fn_t)(bench_tm_stamp_t *stamp);
+
+/* Record results of two stamps */
+typedef void (*bench_tm_record_fn_t)(const bench_tm_stamp_t *s2, const bench_tm_stamp_t *s1,
+				     bench_tm_func_res_t *res);
+
+/* Get uint64_t representation of stamp */
+typedef uint64_t (*bench_tm_to_u64_fn_t)(const bench_tm_stamp_t *stamp);
+
 /* Timed benchmark results */
 typedef struct bench_tm_results_s {
-	/* Results per function */
+	/* Configured measurement operations */
 	struct {
-		/* Name of function */
-		const char *name;
+		bench_tm_now_fn_t now_fn;
+		bench_tm_record_fn_t record_fn;
+		bench_tm_to_u64_fn_t to_u64_fn;
 
-		/* Total duration of all function calls */
-		odp_time_t tot;
+	} op;
 
-		/* Minimum duration */
-		odp_time_t min;
-
-		/* Maximum duration */
-		odp_time_t max;
-
-		/* Number of measurements */
-		uint64_t num;
-
-	} func[BENCH_TM_MAX_FUNC];
+	/* Results per function */
+	bench_tm_func_res_t func[BENCH_TM_MAX_FUNC];
 
 	/* Number of registered test functions */
 	uint8_t num;
@@ -155,7 +178,7 @@ typedef struct bench_tm_results_s {
 /**
  * Timed benchmark test case
  *
- * Returns 0 on success and <0 on failure.
+ * Returns >0 on success and 0 on failure.
  */
 typedef int (*bench_tm_run_fn_t)(bench_tm_result_t *res, int repeat_count);
 
@@ -198,6 +221,9 @@ typedef struct {
 	/* Number of rounds per test case */
 	uint64_t rounds;
 
+	/* Measure time vs. CPU cycles */
+	odp_bool_t measure_time;
+
 	/* Break worker loop if set to 1 */
 	odp_atomic_u32_t exit_worker;
 
@@ -221,12 +247,23 @@ void bench_tm_suite_init(bench_tm_suite_t *suite);
 uint8_t bench_tm_func_register(bench_tm_result_t *res, const char *func_name);
 
 /**
+ * Record current instant
+ */
+void bench_tm_now(bench_tm_result_t *res, bench_tm_stamp_t *stamp);
+
+/**
+ * Get stamp as uint64_t
+ */
+uint64_t bench_tm_to_u64(bench_tm_result_t *res, const bench_tm_stamp_t *stamp);
+
+/**
  * Record results for previously registered function
  *
  * Test case must call this function every test round for each registered
  * function.
  */
-void bench_tm_func_record(odp_time_t t2, odp_time_t t1, bench_tm_result_t *res, uint8_t id);
+void bench_tm_func_record(bench_tm_stamp_t *s2, bench_tm_stamp_t *s1, bench_tm_result_t *res,
+			  uint8_t id);
 
 /**
  * Run timed test suite and print results
