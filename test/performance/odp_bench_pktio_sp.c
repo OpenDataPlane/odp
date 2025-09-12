@@ -65,6 +65,9 @@ typedef struct {
 
 		/* Number of PMRs */
 		uint32_t num_pmr;
+
+		/* Measure time vs. CPU cycles */
+		int time;
 	} opt;
 
 	/* Packet IO device */
@@ -296,23 +299,23 @@ static int pktio_capability(bench_tm_result_t *res, int repeat_count)
 	appl_args_t *appl_args = gbl_args;
 	odp_pktio_capability_t *capa = &appl_args->capa;
 	odp_pktio_t pktio = appl_args->pktio;
-	odp_time_t t1, t2;
+	bench_tm_stamp_t s1, s2;
 	int ret;
 	uint8_t id1 = bench_tm_func_register(res, "odp_pktio_capability()");
 
 	for (int i = 0; i < repeat_count; i++) {
-		t1 = odp_time_local_strict();
+		bench_tm_now(res, &s1);
 		ret = odp_pktio_capability(pktio, capa);
-		t2 = odp_time_local_strict();
+		bench_tm_now(res, &s2);
 
 		if (ret) {
 			ODPH_ERR("Reading pktio capa failed: %d\n", ret);
-			return -1;
+			return 0;
 		}
 
-		bench_tm_func_record(t2, t1, res, id1);
+		bench_tm_func_record(&s2, &s1, res, id1);
 	}
-	return 0;
+	return 1;
 }
 
 static int pktio_lookup(bench_tm_result_t *res, int repeat_count)
@@ -320,22 +323,22 @@ static int pktio_lookup(bench_tm_result_t *res, int repeat_count)
 	appl_args_t *appl_args = gbl_args;
 	const char *name = appl_args->opt.name;
 	odp_pktio_t pktio;
-	odp_time_t t1, t2;
+	bench_tm_stamp_t s1, s2;
 	uint8_t id1 = bench_tm_func_register(res, "odp_pktio_lookup()");
 
 	for (int i = 0; i < repeat_count; i++) {
-		t1 = odp_time_local_strict();
+		bench_tm_now(res, &s1);
 		pktio = odp_pktio_lookup(name);
-		t2 = odp_time_local_strict();
+		bench_tm_now(res, &s2);
 
 		if (pktio == ODP_PKTIO_INVALID) {
 			ODPH_ERR("Pktio lookup failed\n");
-			return -1;
+			return 0;
 		}
 
-		bench_tm_func_record(t2, t1, res, id1);
+		bench_tm_func_record(&s2, &s1, res, id1);
 	}
-	return 0;
+	return 1;
 }
 
 static int pktio_open_start_stop_close(bench_tm_result_t *res, int repeat_count)
@@ -346,7 +349,7 @@ static int pktio_open_start_stop_close(bench_tm_result_t *res, int repeat_count)
 	odp_pktout_queue_param_t pktout_param;
 	odp_pktio_t pktio;
 	odp_pool_t pool;
-	odp_time_t t1, t2, t3, t4, t5, t6, t7, t8;
+	bench_tm_stamp_t s1, s2, s3, s4, s5, s6, s7, s8;
 	int ret;
 	uint8_t id1 = bench_tm_func_register(res, "odp_pktio_open()");
 	uint8_t id2 = bench_tm_func_register(res, "odp_pktin_queue_config()");
@@ -372,73 +375,73 @@ static int pktio_open_start_stop_close(bench_tm_result_t *res, int repeat_count)
 	pktout_param.num_queues = appl_args->opt.num_output_queues;
 
 	for (int i = 0; i < repeat_count; i++) {
-		t1 = odp_time_local_strict();
+		bench_tm_now(res, &s1);
 		pktio = odp_pktio_open(appl_args->opt.name, pool, &param);
-		t2 = odp_time_local_strict();
+		bench_tm_now(res, &s2);
 
 		if (pktio == ODP_PKTIO_INVALID) {
 			ODPH_ERR("Opening pktio failed\n");
-			return -1;
+			return 0;
 		}
 
 		ret = odp_pktin_queue_config(pktio, &pktin_param);
-		t3 = odp_time_local_strict();
+		bench_tm_now(res, &s3);
 
 		if (ret) {
 			ODPH_ERR("Configuring packet input queues failed: %d\n", ret);
-			return -1;
+			return 0;
 		}
 
 		ret = odp_pktout_queue_config(pktio, &pktout_param);
-		t4 = odp_time_local_strict();
+		bench_tm_now(res, &s4);
 
 		if (ret) {
 			ODPH_ERR("Configuring packet output queues failed: %d\n", ret);
-			return -1;
+			return 0;
 		}
 
 		ret = odp_pktio_start(pktio);
-		t5 = odp_time_local_strict();
+		bench_tm_now(res, &s5);
 
 		if (ret) {
 			ODPH_ERR("Starting pktio failed: %d\n", ret);
-			return -1;
+			return 0;
 		}
 
 		ret = odp_pktio_stop(pktio);
-		t6 = odp_time_local_strict();
+		bench_tm_now(res, &s6);
 
 		if (ret) {
 			ODPH_ERR("Stopping pktio failed: %d\n", ret);
-			return -1;
+			return 0;
 		}
 
 		/* Clean possible pre-scheduled packets */
 		if (appl_args->opt.in_mode == ODP_PKTIN_MODE_SCHED)
 			clean_pending_events();
 
-		t7 = odp_time_local_strict();
+		bench_tm_now(res, &s7);
 		ret = odp_pktio_close(pktio);
-		t8 = odp_time_local_strict();
+		bench_tm_now(res, &s8);
 		if (ret) {
 			ODPH_ERR("Closing pktio failed: %d\n", ret);
-			return -1;
+			return 0;
 		}
 
-		bench_tm_func_record(t2, t1, res, id1);
-		bench_tm_func_record(t3, t2, res, id2);
-		bench_tm_func_record(t4, t3, res, id3);
-		bench_tm_func_record(t5, t4, res, id4);
-		bench_tm_func_record(t6, t5, res, id5);
-		bench_tm_func_record(t8, t7, res, id6);
+		bench_tm_func_record(&s2, &s1, res, id1);
+		bench_tm_func_record(&s3, &s2, res, id2);
+		bench_tm_func_record(&s4, &s3, res, id3);
+		bench_tm_func_record(&s5, &s4, res, id4);
+		bench_tm_func_record(&s6, &s5, res, id5);
+		bench_tm_func_record(&s8, &s7, res, id6);
 	}
 
 	ret = odp_pool_destroy(pool);
 	if (ret) {
 		ODPH_ERR("Destroying pktio pool failed: %d\n", ret);
-		return -1;
+		return 0;
 	}
-	return 0;
+	return 1;
 }
 
 static int pktio_stats(bench_tm_result_t *res, int repeat_count)
@@ -446,46 +449,46 @@ static int pktio_stats(bench_tm_result_t *res, int repeat_count)
 	appl_args_t *appl_args = gbl_args;
 	odp_pktio_stats_t *stats = &appl_args->stats;
 	odp_pktio_t pktio = appl_args->pktio;
-	odp_time_t t1, t2;
+	bench_tm_stamp_t s1, s2;
 	int ret;
 	uint8_t id1 = bench_tm_func_register(res, "odp_pktio_stats()");
 
 	for (int i = 0; i < repeat_count; i++) {
-		t1 = odp_time_local_strict();
+		bench_tm_now(res, &s1);
 		ret = odp_pktio_stats(pktio, stats);
-		t2 = odp_time_local_strict();
+		bench_tm_now(res, &s2);
 
 		if (ret) {
 			ODPH_ERR("Reading pktio stats failed\n");
-			return -1;
+			return 0;
 		}
 
-		bench_tm_func_record(t2, t1, res, id1);
+		bench_tm_func_record(&s2, &s1, res, id1);
 	}
-	return 0;
+	return 1;
 }
 
 static int pktio_stats_reset(bench_tm_result_t *res, int repeat_count)
 {
 	appl_args_t *appl_args = gbl_args;
 	odp_pktio_t pktio = appl_args->pktio;
-	odp_time_t t1, t2;
+	bench_tm_stamp_t s1, s2;
 	int ret;
 	int id1 = bench_tm_func_register(res, "odp_pktio_stats_reset()");
 
 	for (int i = 0; i < repeat_count; i++) {
-		t1 = odp_time_local_strict();
+		bench_tm_now(res, &s1);
 		ret = odp_pktio_stats_reset(pktio);
-		t2 = odp_time_local_strict();
+		bench_tm_now(res, &s2);
 
 		if (ret) {
 			ODPH_ERR("Resetting pktio stats failed\n");
-			return -1;
+			return 0;
 		}
 
-		bench_tm_func_record(t2, t1, res, id1);
+		bench_tm_func_record(&s2, &s1, res, id1);
 	}
-	return 0;
+	return 1;
 }
 
 static int pktin_queue_stats(bench_tm_result_t *res, int repeat_count)
@@ -494,29 +497,29 @@ static int pktin_queue_stats(bench_tm_result_t *res, int repeat_count)
 	odp_pktin_queue_stats_t *stats = &appl_args->pktin_queue_stats;
 	odp_pktio_t pktio = appl_args->pktio;
 	odp_pktin_queue_t queue;
-	odp_time_t t1, t2;
+	bench_tm_stamp_t s1, s2;
 	int ret;
 	uint8_t id1 = bench_tm_func_register(res, "odp_pktin_queue_stats()");
 
 	ret = odp_pktin_queue(pktio, &queue, 1);
 	if (ret < 1) {
 		ODPH_ERR("Reading pktio input queue failed\n");
-		return -1;
+		return 0;
 	}
 
 	for (int i = 0; i < repeat_count; i++) {
-		t1 = odp_time_local_strict();
+		bench_tm_now(res, &s1);
 		ret = odp_pktin_queue_stats(queue, stats);
-		t2 = odp_time_local_strict();
+		bench_tm_now(res, &s2);
 
 		if (ret) {
 			ODPH_ERR("Reading pktio stats failed\n");
-			return -1;
+			return 0;
 		}
 
-		bench_tm_func_record(t2, t1, res, id1);
+		bench_tm_func_record(&s2, &s1, res, id1);
 	}
-	return 0;
+	return 1;
 }
 
 static int pktin_event_queue_stats(bench_tm_result_t *res, int repeat_count)
@@ -525,29 +528,29 @@ static int pktin_event_queue_stats(bench_tm_result_t *res, int repeat_count)
 	odp_pktin_queue_stats_t *stats = &appl_args->pktin_queue_stats;
 	odp_pktio_t pktio = appl_args->pktio;
 	odp_queue_t queue;
-	odp_time_t t1, t2;
+	bench_tm_stamp_t s1, s2;
 	int ret;
 	uint8_t id1 = bench_tm_func_register(res, "odp_pktin_event_queue_stats()");
 
 	ret = odp_pktin_event_queue(pktio, &queue, 1);
 	if (ret < 1) {
 		ODPH_ERR("Reading pktio input queue failed\n");
-		return -1;
+		return 0;
 	}
 
 	for (int i = 0; i < repeat_count; i++) {
-		t1 = odp_time_local_strict();
+		bench_tm_now(res, &s1);
 		ret = odp_pktin_event_queue_stats(pktio, queue, stats);
-		t2 = odp_time_local_strict();
+		bench_tm_now(res, &s2);
 
 		if (ret) {
 			ODPH_ERR("Reading pktio stats failed\n");
-			return -1;
+			return 0;
 		}
 
-		bench_tm_func_record(t2, t1, res, id1);
+		bench_tm_func_record(&s2, &s1, res, id1);
 	}
-	return 0;
+	return 1;
 }
 
 static int pktout_queue_stats(bench_tm_result_t *res, int repeat_count)
@@ -556,29 +559,29 @@ static int pktout_queue_stats(bench_tm_result_t *res, int repeat_count)
 	odp_pktout_queue_stats_t *stats = &appl_args->pktout_queue_stats;
 	odp_pktio_t pktio = appl_args->pktio;
 	odp_pktout_queue_t queue;
-	odp_time_t t1, t2;
+	bench_tm_stamp_t s1, s2;
 	int ret;
 	uint8_t id1 = bench_tm_func_register(res, "odp_pktout_queue_stats()");
 
 	ret = odp_pktout_queue(pktio, &queue, 1);
 	if (ret < 1) {
 		ODPH_ERR("Reading pktio input queue failed\n");
-		return -1;
+		return 0;
 	}
 
 	for (int i = 0; i < repeat_count; i++) {
-		t1 = odp_time_local_strict();
+		bench_tm_now(res, &s1);
 		ret = odp_pktout_queue_stats(queue, stats);
-		t2 = odp_time_local_strict();
+		bench_tm_now(res, &s2);
 
 		if (ret) {
 			ODPH_ERR("Reading pktio stats failed\n");
-			return -1;
+			return 0;
 		}
 
-		bench_tm_func_record(t2, t1, res, id1);
+		bench_tm_func_record(&s2, &s1, res, id1);
 	}
-	return 0;
+	return 1;
 }
 
 static int pktout_event_queue_stats(bench_tm_result_t *res, int repeat_count)
@@ -587,29 +590,29 @@ static int pktout_event_queue_stats(bench_tm_result_t *res, int repeat_count)
 	odp_pktout_queue_stats_t *stats = &appl_args->pktout_queue_stats;
 	odp_pktio_t pktio = appl_args->pktio;
 	odp_queue_t queue;
-	odp_time_t t1, t2;
+	bench_tm_stamp_t s1, s2;
 	int ret;
 	uint8_t id1 = bench_tm_func_register(res, "odp_pktout_event_queue_stats()");
 
 	ret = odp_pktout_event_queue(pktio, &queue, 1);
 	if (ret < 1) {
 		ODPH_ERR("Reading pktio input queue failed\n");
-		return -1;
+		return 0;
 	}
 
 	for (int i = 0; i < repeat_count; i++) {
-		t1 = odp_time_local_strict();
+		bench_tm_now(res, &s1);
 		ret = odp_pktout_event_queue_stats(pktio, queue, stats);
-		t2 = odp_time_local_strict();
+		bench_tm_now(res, &s2);
 
 		if (ret) {
 			ODPH_ERR("Reading pktio stats failed\n");
-			return -1;
+			return 0;
 		}
 
-		bench_tm_func_record(t2, t1, res, id1);
+		bench_tm_func_record(&s2, &s1, res, id1);
 	}
-	return 0;
+	return 1;
 }
 
 static int find_first_supported_l3_pmr(const odp_cls_capability_t *capa, odp_cls_pmr_term_t *term)
@@ -693,7 +696,7 @@ static int cls_pmr_create(bench_tm_result_t *res, int repeat_count)
 	uint16_t val = 1024;
 	uint16_t mask = 0xffff;
 	int ret = 0;
-	odp_time_t t1, t2;
+	bench_tm_stamp_t s1, s2;
 	odp_cos_t cos[num_cos];
 	odp_queue_t queue[num_cos];
 	odp_pmr_t pmr[num_pmr];
@@ -749,27 +752,27 @@ static int cls_pmr_create(bench_tm_result_t *res, int repeat_count)
 		uint32_t pmr_created = 0;
 
 		for (uint32_t j = 0; j < num_pmr; j++) {
-			t1 = odp_time_local_strict();
+			bench_tm_now(res, &s1);
 			pmr[j] = odp_cls_pmr_create(&pmr_param, 1, default_cos, cos[j + 1]);
-			t2 = odp_time_local_strict();
+			bench_tm_now(res, &s2);
 
 			if (pmr[j] == ODP_PMR_INVALID)
 				break;
-			bench_tm_func_record(t2, t1, res, id1);
+			bench_tm_func_record(&s2, &s1, res, id1);
 
 			val++;
 			pmr_created++;
 		}
 
 		for (uint32_t j = 0; j < pmr_created; j++) {
-			t1 = odp_time_local_strict();
+			bench_tm_now(res, &s1);
 			ret = odp_cls_pmr_destroy(pmr[j]);
-			t2 = odp_time_local_strict();
+			bench_tm_now(res, &s2);
 
 			if (ret)
 				ODPH_ABORT("Destroying PMR failed: %d\n", ret);
 
-			bench_tm_func_record(t2, t1, res, id2);
+			bench_tm_func_record(&s2, &s1, res, id2);
 		}
 
 		if (i == 0)
@@ -778,37 +781,58 @@ static int cls_pmr_create(bench_tm_result_t *res, int repeat_count)
 
 	ret = odp_pktio_default_cos_set(pktio, ODP_COS_INVALID);
 
+	if (ret < 0) {
+		ODPH_ERR("Setting default CoS failed: %d\n", ret);
+		return 0;
+	}
+
 destroy_cos:
-	for (uint32_t i = 0; i < cos_created; i++)
+	for (uint32_t i = 0; i < cos_created; i++) {
 		ret = odp_cos_destroy(cos[i]);
 
-	for (uint32_t i = 0; i < queue_created; i++)
+		if (ret < 0) {
+			ODPH_ERR("Destroying CoS failed: %d\n", ret);
+			return 0;
+		}
+	}
+
+	for (uint32_t i = 0; i < queue_created; i++) {
 		ret = odp_queue_destroy(queue[i]);
 
-	return ret;
+		if (ret < 0) {
+			ODPH_ERR("Destroying queue failed: %d\n", ret);
+			return 0;
+		}
+	}
+
+	return 1;
 }
 
 static int bench_pktio_sp_export(void *data)
 {
 	appl_args_t *gbl_args = data;
+	bench_tm_result_t *res;
 	uint64_t num;
 	int ret = 0;
+	const char *unit = gbl_args->opt.time ? "nsec" : "cycles";
 
-	if (test_common_write("%s", "function name,latency (nsec) per function call (min),"
-			      "latency (nsec) per function call (avg),"
-			      "latency (nsec) per function call (max)\n")) {
+	if (test_common_write("function name,latency (%s) per function call (min),"
+			      "latency (%s) per function call (avg),"
+			      "latency (%s) per function call (max)\n", unit, unit, unit)) {
 		ret = -1;
 		goto exit;
 	}
 
 	for (uint32_t i = 0; i < gbl_args->suite.num_bench; i++) {
-		for (int j = 0; j < gbl_args->result[i].num; j++) {
-			num = gbl_args->result[i].func[j].num ? gbl_args->result[i].func[j].num : 1;
+		res = &gbl_args->result[i];
+
+		for (int j = 0; j < res->num; j++) {
+			num = res->func[j].num ? res->func[j].num : 1;
 			if (test_common_write("%s,%" PRIu64 ",%" PRIu64 ",%" PRIu64 "\n",
-					      gbl_args->result[i].func[j].name,
-					      odp_time_to_ns(gbl_args->result[i].func[j].min),
-					      odp_time_to_ns(gbl_args->result[i].func[j].tot) / num,
-					      odp_time_to_ns(gbl_args->result[i].func[j].max))) {
+					      res->func[j].name,
+					      bench_tm_to_u64(res, &res->func[j].min),
+					      bench_tm_to_u64(res, &res->func[j].tot) / num,
+					      bench_tm_to_u64(res, &res->func[j].max))) {
 				ret = -1;
 				goto exit;
 			}
@@ -857,6 +881,7 @@ static void usage(void)
 	       "  -t, --tx_queues <num>   Number of packet output queues (default 1)\n"
 	       "  -r, --rounds <num>      Run each test case 'num' times (default %u).\n"
 	       "  -s, --select <idx>      Run only selected test case.\n"
+	       "  -T, --time <opt>        Time measurement. 0: measure CPU cycles (default), 1: measure time\n"
 	       "  -h, --help              Display help and exit.\n\n"
 	       "\n", ROUNDS);
 }
@@ -885,11 +910,12 @@ static int parse_args(int argc, char *argv[])
 		{"tx_queues", required_argument, NULL, 't'},
 		{"rounds", required_argument, NULL, 'r'},
 		{"select", required_argument, NULL, 's'},
+		{"time", required_argument, NULL, 'T'},
 		{"help", no_argument, NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts =  "i:m:o:p:q:r:s:t:h";
+	static const char *shortopts =  "i:m:o:p:q:r:s:t:T:h";
 
 	odph_strcpy(gbl_args->opt.name, "loop", MAX_NAME_LEN);
 	gbl_args->opt.rounds = ROUNDS;
@@ -938,6 +964,9 @@ static int parse_args(int argc, char *argv[])
 			break;
 		case 't':
 			gbl_args->opt.num_output_queues = atoi(optarg);
+			break;
+		case 'T':
+			gbl_args->opt.time = atoi(optarg);
 			break;
 		case 'h':
 			usage();
@@ -1044,6 +1073,7 @@ static void print_info(appl_args_t *appl_args)
 	printf("Input queues:      %u\n", gbl_args->opt.num_input_queues);
 	printf("Output queues:     %u\n", gbl_args->opt.num_output_queues);
 	printf("PMRs:              %u\n", gbl_args->opt.num_pmr);
+	printf("Measurement unit:  %s\n", gbl_args->opt.time ? "nsec" : "CPU cycles");
 	printf("Test rounds:       %d\n", gbl_args->opt.rounds);
 	printf("\n");
 }
@@ -1129,6 +1159,7 @@ int main(int argc, char *argv[])
 	gbl_args->suite.num_bench = ODPH_ARRAY_SIZE(test_suite);
 	gbl_args->suite.rounds = gbl_args->opt.rounds;
 	gbl_args->suite.bench_idx = gbl_args->opt.case_idx;
+	gbl_args->suite.measure_time = !!gbl_args->opt.time;
 	if (common_options.is_export)
 		gbl_args->suite.result = gbl_args->result;
 	/* Get default worker cpumask */
