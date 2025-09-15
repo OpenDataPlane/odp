@@ -716,17 +716,6 @@ typedef struct odp_crypto_key {
 typedef enum odp_crypto_op_type_t {
 	/**
 	 * Input packet data and metadata are copied to the output packet
-	 * and then processed. Output packet is allocated by the caller
-	 * or by ODP.
-	 *
-	 * @deprecated Use another crypto op type instead.
-	 */
-#if ODP_DEPRECATED_API
-	ODP_CRYPTO_OP_TYPE_LEGACY,
-#endif
-
-	/**
-	 * Input packet data and metadata are copied to the output packet
 	 * and then processed. Output packet is allocated by ODP.
 	 */
 	ODP_CRYPTO_OP_TYPE_BASIC,
@@ -930,10 +919,6 @@ typedef struct odp_crypto_session_param_t {
 	odp_queue_t compl_queue;
 
 	/** Output pool
-	 *
-	 *  When the output packet is not specified during the call to
-	 *  crypto operation in the legacy operation type, the output
-	 *  packet will be allocated from this pool.
 	 *
 	 *  In ODP_CRYPTO_OP_TYPE_BASIC and ODP_CRYPTO_OP_TYPE_OOP
 	 *  operation types this must be set to ODP_POOL_INVALID.
