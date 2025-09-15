@@ -215,26 +215,6 @@ int odp_crypto_result(odp_crypto_packet_result_t *result,
  * Use of the pkt_out parameter depends on the configured crypto operation
  * type as described below.
  *
- * ODP_CRYPTO_OP_TYPE_LEGACY:
- *
- * Caller should initialize each element of pkt_out either with the desired
- * output packet handle or with ODP_PACKET_INVALID to make ODP allocate a new
- * packet from provided pool.
- *
- * All packet data and metadata are copied from the input packet to the output
- * packet before the requested crypto operation is performed to the output
- * packet. If an output packet is given to the operation, it must be at least
- * as long as the input packet and, in encode operations, long enough for the
- * hash result to be fully inside the packet data. Memory layout of the output
- * packet may change during the crypto operation. If the output packet is
- * longer than needed, it is not truncated and the extra data bytes retain
- * their content.
- *
- * It is ok to pass the same packet handle as both the input packet and the
- * output packet for the same crypto operation. In that case the input packet
- * is consumed but returned as the output packet (with possibly different
- * memory layout).
- *
  * ODP_CRYPTO_OP_TYPE_BASIC:
  *
  * ODP allocates the output packet from the pool from which the input
@@ -299,9 +279,8 @@ int odp_crypto_op(const odp_packet_t pkt_in[],
  * creation on the packets. Behaves otherwise like odp_crypto_op() but
  * returns output packets through events.
  *
- * With operation types other than ODP_CRYPTO_OP_TYPE_LEGACY, packet
- * data of processed packets may not be valid before odp_crypto_result()
- * has been called.
+ * Packet data of processed packets may not be valid before
+ * odp_crypto_result() has been called.
  *
  * With ODP_CRYPTO_OP_TYPE_OOP, an enqueued input packet is consumed but
  * returned back unmodified after the crypto operation is complete. The
