@@ -1326,6 +1326,189 @@ static int check_sched_queue_aggr(void)
 	return capa.aggr.max_num > 0 ? ODP_TEST_ACTIVE : ODP_TEST_INACTIVE;
 }
 
+typedef struct {
+	odp_bool_t from_aggr;
+	uint32_t seq_num;
+} aggr_test_event_t;
+
+static void verify_event_seq(odp_event_t event, odp_bool_t from_vector, uint32_t *num_from_queue,
+			     uint32_t *num_from_aggr)
+{
+	aggr_test_event_t *test_event = odp_buffer_addr(odp_buffer_from_event(event));
+
+	if (test_event->from_aggr) {
+		CU_ASSERT(test_event->seq_num == *num_from_aggr);
+		(*num_from_aggr)++;
+	} else {
+		CU_ASSERT(!from_vector); /* Normal queue should not aggregate events */
+		CU_ASSERT(test_event->seq_num == *num_from_queue);
+		(*num_from_queue)++;
+	}
+}
+
+static void aggr_queue_test(const odp_event_aggr_capability_t *capa, odp_queue_type_t queue_type)
+{
+	odp_pool_t buf_pool, evv_pool;
+	odp_pool_param_t pool_param;
+	odp_pool_capability_t pool_capa;
+	odp_queue_param_t param;
+	odp_queue_t queue, aggr_queue;
+	odp_event_aggr_config_t aggr;
+	uint32_t max_vectors = 64;
+	uint32_t vector_size = 2;
+	uint32_t uarea_size = 64;
+	uint32_t num_from_queue = 0, num_from_aggr = 0, seq_num = 0;
+	uint32_t num_events;
+	uint64_t timeout = ODP_TIME_MSEC_IN_NS;
+
+	CU_ASSERT_FATAL(odp_pool_capability(&pool_capa) == 0);
+	if (uarea_size > pool_capa.event_vector.max_uarea_size)
+		uarea_size = pool_capa.event_vector.max_uarea_size;
+
+	CU_ASSERT(capa->max_size <= pool_capa.event_vector.max_size);
+
+	if (max_vectors > capa->max_num)
+		max_vectors = capa->max_num;
+
+	if (vector_size < capa->min_size)
+		vector_size = capa->min_size;
+
+	if (timeout > capa->max_tmo_ns)
+		timeout = capa->max_tmo_ns;
+
+	/* Send events to both normal and aggregator queue */
+	num_events = 2 * (ODPH_MAX((max_vectors / vector_size), vector_size));
+
+	odp_pool_param_init(&pool_param);
+	pool_param.buf.size = sizeof(aggr_test_event_t);
+	pool_param.buf.num = num_events;
+	pool_param.type = ODP_POOL_BUFFER;
+	buf_pool = odp_pool_create(NULL, &pool_param);
+	CU_ASSERT_FATAL(buf_pool != ODP_POOL_INVALID);
+
+	odp_pool_param_init(&pool_param);
+	pool_param.type = ODP_POOL_EVENT_VECTOR;
+	pool_param.event_vector.num = max_vectors;
+	pool_param.event_vector.max_size = vector_size;
+	pool_param.event_vector.uarea_size = uarea_size;
+	evv_pool = odp_pool_create(NULL, &pool_param);
+	CU_ASSERT_FATAL(evv_pool != ODP_POOL_INVALID);
+
+	aggr.pool = evv_pool;
+	aggr.max_size = vector_size;
+	aggr.event_type = ODP_EVENT_BUFFER;
+	aggr.max_tmo_ns = timeout;
+
+	odp_queue_param_init(&param);
+	param.type = queue_type;
+	param.size = num_events;
+	param.num_aggr = 1;
+	param.aggr = &aggr;
+
+	queue = odp_queue_create("queue_test_aggr", &param);
+	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
+
+	/* Implementation shouldn't use parameters after odp_queue_create() call */
+	memset(&param, 0, sizeof(param));
+	memset(&aggr, 0, sizeof(aggr));
+
+	aggr_queue = odp_queue_aggr(queue, 0);
+	CU_ASSERT_FATAL(aggr_queue != ODP_QUEUE_INVALID);
+	CU_ASSERT(odp_queue_type(aggr_queue) == ODP_QUEUE_TYPE_AGGR);
+
+	for (uint32_t i = 0; i < num_events; i++) {
+		aggr_test_event_t *test_event;
+		const odp_bool_t use_aggr = i % 2;
+		odp_queue_t dst_queue = use_aggr ? aggr_queue : queue;
+		odp_buffer_t buf = odp_buffer_alloc(buf_pool);
+
+		CU_ASSERT_FATAL(buf != ODP_BUFFER_INVALID);
+
+		test_event = odp_buffer_addr(buf);
+		test_event->from_aggr = use_aggr;
+		test_event->seq_num = seq_num;
+
+		/* Separate sequence numbers for queue and aggregator */
+		if (use_aggr)
+			seq_num++;
+
+		CU_ASSERT_FATAL(odp_queue_enq(dst_queue, odp_buffer_to_event(buf)) == 0);
+	}
+
+	odp_time_wait_ns(timeout);
+
+	while (1) {
+		odp_queue_t src_queue;
+		odp_event_t event;
+
+		if (queue_type == ODP_QUEUE_TYPE_PLAIN) {
+			src_queue = queue;
+			event = odp_queue_deq(queue);
+		} else {
+			event = odp_schedule(&src_queue, odp_schedule_wait_time(timeout));
+		}
+
+		if (event == ODP_EVENT_INVALID)
+			break;
+
+		CU_ASSERT(src_queue == queue);
+
+		if (odp_event_type(event) == ODP_EVENT_VECTOR) {
+			odp_event_t *event_tbl;
+			odp_event_vector_t evv = odp_event_vector_from_event(event);
+			uint32_t num = odp_event_vector_tbl(evv, &event_tbl);
+
+			CU_ASSERT(odp_event_vector_size(evv) == num);
+			CU_ASSERT(num <= vector_size);
+			CU_ASSERT(odp_event_vector_type(evv) == ODP_EVENT_BUFFER);
+
+			if (uarea_size)
+				CU_ASSERT(odp_event_vector_user_area(evv) != NULL);
+			CU_ASSERT(odp_event_vector_user_flag(evv) == 0);
+			CU_ASSERT(odp_event_vector_pool(evv) == evv_pool);
+
+			for (uint32_t i = 0; i < num; i++) {
+				CU_ASSERT_FATAL(odp_event_is_valid(event_tbl[i]));
+				verify_event_seq(event_tbl[i], true, &num_from_queue,
+						 &num_from_aggr);
+			}
+		} else if (odp_event_type(event) == ODP_EVENT_BUFFER) {
+			CU_ASSERT(odp_event_pool(event) == buf_pool);
+			verify_event_seq(event, false, &num_from_queue, &num_from_aggr);
+		} else {
+			CU_FAIL("Invalid event type");
+		}
+		odp_event_free(event);
+	}
+	/* Assume at least one vector was generated */
+	CU_ASSERT(num_from_aggr >= vector_size);
+
+	/* Some events may be still pending in aggregation queue */
+	CU_ASSERT(num_from_queue + num_from_aggr >= num_events - vector_size);
+	CU_ASSERT(num_from_queue + num_from_aggr <= num_events);
+
+	/* Assuming the queue can be destroyed regardless of possibly pending events */
+	CU_ASSERT(odp_queue_destroy(queue) == 0);
+	CU_ASSERT(odp_pool_destroy(evv_pool) == 0);
+	CU_ASSERT(odp_pool_destroy(buf_pool) == 0);
+}
+
+static void queue_test_aggr_plain_queue(void)
+{
+	odp_queue_capability_t capa;
+
+	CU_ASSERT_FATAL(odp_queue_capability(&capa) == 0);
+	aggr_queue_test(&capa.plain.aggr, ODP_QUEUE_TYPE_PLAIN);
+}
+
+static void queue_test_aggr_sched_queue(void)
+{
+	odp_schedule_capability_t capa;
+
+	CU_ASSERT_FATAL(odp_schedule_capability(&capa) == 0);
+	aggr_queue_test(&capa.aggr, ODP_QUEUE_TYPE_SCHED);
+}
+
 odp_testinfo_t queue_suite[] = {
 	ODP_TEST_INFO(queue_test_capa),
 	ODP_TEST_INFO(queue_test_param_init),
@@ -1362,6 +1545,8 @@ odp_testinfo_t queue_suite[] = {
 	ODP_TEST_INFO(queue_test_aggr_cfg_none_sched),
 	ODP_TEST_INFO_CONDITIONAL(queue_test_aggr_cfg_max_plain, check_plain_queue_aggr),
 	ODP_TEST_INFO_CONDITIONAL(queue_test_aggr_cfg_max_sched, check_sched_queue_aggr),
+	ODP_TEST_INFO_CONDITIONAL(queue_test_aggr_plain_queue, check_plain_queue_aggr),
+	ODP_TEST_INFO_CONDITIONAL(queue_test_aggr_sched_queue, check_sched_queue_aggr),
 	ODP_TEST_INFO_NULL,
 };
 
