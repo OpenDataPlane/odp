@@ -340,11 +340,32 @@ typedef struct odp_queue_param_t {
 
 /**
  * Queue information
- * Retrieve information about a queue with odp_queue_info()
  */
 typedef struct odp_queue_info_t {
-	const char *name;         /**< queue name */
-	odp_queue_param_t param;  /**< queue parameters */
+	/** Queue name */
+	const char *name;
+
+	/** Queue type */
+	odp_queue_type_t type;
+
+	/** Queue parameters
+	 *
+	 * Contains the parameters used in queue creation, except that the
+	 * values of odp_queue_param_t.aggr pointer, and fields ignored by the
+	 * particular queue type are undefined.
+	 *
+	 * Base queue parameters are also returned for aggregator queues.
+	 */
+	odp_queue_param_t param;
+
+	/**
+	 * Event aggregator configuration
+	 *
+	 * The struct contents are undefined if queue type is other than
+	 * ODP_QUEUE_TYPE_AGGR.
+	 */
+	odp_event_aggr_config_t aggr_config;
+
 } odp_queue_info_t;
 
 /**
