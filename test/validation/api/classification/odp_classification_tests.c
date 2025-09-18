@@ -25,6 +25,7 @@ static odp_cls_testcase_u tc;
 #define NUM_COS_PMR	1
 #define NUM_COS_COMPOSITE	1
 #define PKTV_DEFAULT_SIZE	8
+#define EVV_DEFAULT_SIZE	8
 
 /** sequence number of IP packets */
 static odp_atomic_u32_t seq;
@@ -35,7 +36,18 @@ static cls_packet_info_t default_pkt_info;
 /* Packet vector configuration */
 static odp_pktin_vector_config_t pktv_config;
 
-static int classification_suite_common_init(odp_bool_t enable_pktv)
+typedef struct {
+	struct {
+		odp_event_aggr_config_t config;
+		uint64_t max_tmo;
+		odp_bool_t enabled;
+	} event_aggr;
+
+} global_data_t;
+
+static global_data_t global;
+
+static int classification_suite_common_init(vector_mode_t vector_mode)
 {
 	int i;
 	int ret;
@@ -76,7 +88,7 @@ static int classification_suite_common_init(odp_bool_t enable_pktv)
 	pktin_param.classifier_enable = true;
 	pktin_param.hash_enable = false;
 
-	if (enable_pktv) {
+	if (vector_mode == VECTOR_MODE_PACKET) {
 		odp_pktio_capability_t capa;
 		odp_pool_t pktv_pool;
 
@@ -104,6 +116,40 @@ static int classification_suite_common_init(odp_bool_t enable_pktv)
 
 			/* Copy packet vector config for global access */
 			pktv_config = pktin_param.vector;
+		}
+	}
+
+	if (vector_mode == VECTOR_MODE_EVENT) {
+		odp_schedule_capability_t sched_capa;
+
+		if (odp_schedule_capability(&sched_capa)) {
+			ODPH_ERR("Schedule capability failed\n");
+			return -1;
+		}
+		global.event_aggr.enabled = !!sched_capa.aggr.max_num;
+		if (!global.event_aggr.enabled) {
+			printf("\nEvent vector mode not supported. Test suite skipped.\n");
+		} else {
+			odp_event_aggr_config_t aggr;
+
+			memset(&aggr, 0, sizeof(odp_event_aggr_config_t));
+
+			aggr.pool = evv_pool_create("event_vector_pool");
+			if (aggr.pool == ODP_POOL_INVALID) {
+				ODPH_ERR("Event vector pool creation failed\n");
+				return -1;
+			}
+
+			aggr.max_size = sched_capa.aggr.max_size < EVV_DEFAULT_SIZE ?
+					sched_capa.aggr.max_size : EVV_DEFAULT_SIZE;
+			aggr.max_tmo_ns = sched_capa.aggr.min_tmo_ns;
+			aggr.event_type = ODP_EVENT_PACKET;
+			/* Copy for global access */
+			global.event_aggr.config = aggr;
+			global.event_aggr.max_tmo = sched_capa.aggr.max_tmo_ns;
+
+			pktin_param.queue_param.aggr = &aggr;
+			pktin_param.queue_param.num_aggr = 1;
 		}
 	}
 
@@ -140,7 +186,7 @@ static int classification_suite_common_init(odp_bool_t enable_pktv)
 	return 0;
 }
 
-static int classification_suite_common_term(odp_bool_t enable_pktv)
+static int classification_suite_common_term(vector_mode_t vector_mode)
 {
 	int i;
 	int retcode = 0;
@@ -170,9 +216,16 @@ static int classification_suite_common_term(odp_bool_t enable_pktv)
 		retcode = -1;
 	}
 
-	if (enable_pktv) {
+	if (vector_mode == VECTOR_MODE_PACKET) {
 		if (odp_pool_destroy(pktv_config.pool)) {
 			ODPH_ERR("Packet vector pool destroy failed\n");
+			retcode = -1;
+		}
+	}
+
+	if (vector_mode == VECTOR_MODE_EVENT && global.event_aggr.enabled) {
+		if (odp_pool_destroy(global.event_aggr.config.pool)) {
+			ODPH_ERR("Event vector pool destroy failed\n");
 			retcode = -1;
 		}
 	}
@@ -195,22 +248,32 @@ static int classification_suite_common_term(odp_bool_t enable_pktv)
 
 int classification_suite_init(void)
 {
-	return classification_suite_common_init(false);
+	return classification_suite_common_init(VECTOR_MODE_DISABLED);
 }
 
 int classification_suite_term(void)
 {
-	return classification_suite_common_term(false);
+	return classification_suite_common_term(VECTOR_MODE_DISABLED);
 }
 
 int classification_suite_pktv_init(void)
 {
-	return classification_suite_common_init(true);
+	return classification_suite_common_init(VECTOR_MODE_PACKET);
 }
 
 int classification_suite_pktv_term(void)
 {
-	return classification_suite_common_term(true);
+	return classification_suite_common_term(VECTOR_MODE_PACKET);
+}
+
+int classification_suite_evv_init(void)
+{
+	return classification_suite_common_init(VECTOR_MODE_EVENT);
+}
+
+int classification_suite_evv_term(void)
+{
+	return classification_suite_common_term(VECTOR_MODE_EVENT);
 }
 
 static void configure_cls_pmr_chain_create_saddr_pmr(int src, int dst, const char *saddr)
@@ -253,7 +316,7 @@ static void configure_cls_pmr_chain_create_port_pmr(int src, int dst, uint16_t p
 	CU_ASSERT_FATAL(pmr_list[dst] != ODP_PMR_INVALID);
 }
 
-void configure_cls_pmr_chain(odp_bool_t enable_pktv, int src, int dst, const char *saddr,
+void configure_cls_pmr_chain(vector_mode_t vector_mode, int src, int dst, const char *saddr,
 			     uint16_t port, odp_bool_t saddr_first)
 {
 	/* PKTIO --> PMR_SRC(SRC IP ADDR) --> PMR_DST (TCP SPORT) */
@@ -279,6 +342,11 @@ void configure_cls_pmr_chain(odp_bool_t enable_pktv, int src, int dst, const cha
 	qparam.sched.lock_count = schedule_capa.max_ordered_locks;
 	sprintf(queuename, "%s", "SrcQueue");
 
+	if (vector_mode == VECTOR_MODE_EVENT) {
+		qparam.aggr = &global.event_aggr.config;
+		qparam.num_aggr = 1;
+	}
+
 	queue_list[src] = odp_queue_create(queuename, &qparam);
 
 	CU_ASSERT_FATAL(queue_list[src] != ODP_QUEUE_INVALID);
@@ -292,7 +360,7 @@ void configure_cls_pmr_chain(odp_bool_t enable_pktv, int src, int dst, const cha
 	cls_param.pool = pool_list[src];
 	cls_param.queue = queue_list[src];
 
-	if (enable_pktv) {
+	if (vector_mode == VECTOR_MODE_PACKET) {
 		cls_param.vector.enable = true;
 		cls_param.vector.pool = pktv_config.pool;
 		cls_param.vector.max_size = pktv_config.max_size;
@@ -309,6 +377,11 @@ void configure_cls_pmr_chain(odp_bool_t enable_pktv, int src, int dst, const cha
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
 	sprintf(queuename, "%s", "DstQueue");
 
+	if (vector_mode == VECTOR_MODE_EVENT) {
+		qparam.aggr = &global.event_aggr.config;
+		qparam.num_aggr = 1;
+	}
+
 	queue_list[dst] = odp_queue_create(queuename, &qparam);
 	CU_ASSERT_FATAL(queue_list[dst] != ODP_QUEUE_INVALID);
 
@@ -321,7 +394,7 @@ void configure_cls_pmr_chain(odp_bool_t enable_pktv, int src, int dst, const cha
 	cls_param.pool = pool_list[dst];
 	cls_param.queue = queue_list[dst];
 
-	if (enable_pktv) {
+	if (vector_mode == VECTOR_MODE_PACKET) {
 		cls_param.vector.enable = true;
 		cls_param.vector.pool = pktv_config.pool;
 		cls_param.vector.max_size = pktv_config.max_size;
@@ -340,7 +413,8 @@ void configure_cls_pmr_chain(odp_bool_t enable_pktv, int src, int dst, const cha
 	}
 }
 
-void test_cls_pmr_chain(odp_bool_t enable_pktv, int src, int dst, const char *saddr, uint16_t port)
+void test_cls_pmr_chain(vector_mode_t vector_mode, int src, int dst, const char *saddr,
+			uint16_t port)
 {
 	odp_packet_t pkt;
 	odph_ipv4hdr_t *ip;
@@ -364,7 +438,7 @@ void test_cls_pmr_chain(odp_bool_t enable_pktv, int src, int dst, const char *sa
 	set_first_supported_pmr_port(pkt, port);
 
 	enqueue_pktio_interface(pkt, pktio_loop);
-	pkt = receive_and_check(seqno, queue_list[dst], pool_list[dst], enable_pktv);
+	pkt = receive_and_check(seqno, queue_list[dst], pool_list[dst], vector_mode);
 	odp_packet_free(pkt);
 
 	pkt = create_packet(pkt_info);
@@ -378,11 +452,11 @@ void test_cls_pmr_chain(odp_bool_t enable_pktv, int src, int dst, const char *sa
 	odph_ipv4_csum_update(pkt);
 
 	enqueue_pktio_interface(pkt, pktio_loop);
-	pkt = receive_and_check(seqno, queue_list[src], pool_list[src], enable_pktv);
+	pkt = receive_and_check(seqno, queue_list[src], pool_list[src], vector_mode);
 	odp_packet_free(pkt);
 }
 
-void configure_pktio_default_cos(odp_bool_t enable_pktv)
+void configure_pktio_default_cos(vector_mode_t vector_mode)
 {
 	int retval;
 	odp_queue_param_t qparam;
@@ -397,6 +471,12 @@ void configure_pktio_default_cos(odp_bool_t enable_pktv)
 	qparam.sched.sync = ODP_SCHED_SYNC_PARALLEL;
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
 	sprintf(queuename, "%s", "DefaultQueue");
+
+	if (vector_mode == VECTOR_MODE_EVENT) {
+		qparam.aggr = &global.event_aggr.config;
+		qparam.num_aggr = 1;
+	}
+
 	queue_list[CLS_DEFAULT] = odp_queue_create(queuename, &qparam);
 	CU_ASSERT_FATAL(queue_list[CLS_DEFAULT] != ODP_QUEUE_INVALID);
 
@@ -407,9 +487,13 @@ void configure_pktio_default_cos(odp_bool_t enable_pktv)
 	sprintf(cosname, "DefaultCoS");
 	odp_cls_cos_param_init(&cls_param);
 	cls_param.pool = pool_list[CLS_DEFAULT];
-	cls_param.queue = queue_list[CLS_DEFAULT];
 
-	if (enable_pktv) {
+	cls_param.queue = vector_mode == VECTOR_MODE_EVENT ?
+				odp_queue_aggr(queue_list[CLS_DEFAULT], 0) :
+				queue_list[CLS_DEFAULT];
+	CU_ASSERT_FATAL(cls_param.queue != ODP_QUEUE_INVALID);
+
+	if (vector_mode == VECTOR_MODE_PACKET) {
 		cls_param.vector.enable = true;
 		cls_param.vector.pool = pktv_config.pool;
 		cls_param.vector.max_size = pktv_config.max_size;
@@ -423,7 +507,7 @@ void configure_pktio_default_cos(odp_bool_t enable_pktv)
 	CU_ASSERT(retval == 0);
 }
 
-void test_pktio_default_cos(odp_bool_t enable_pktv)
+void test_pktio_default_cos(vector_mode_t vector_mode)
 {
 	odp_packet_t pkt;
 	uint32_t seqno = 0;
@@ -440,11 +524,11 @@ void test_pktio_default_cos(odp_bool_t enable_pktv)
 	enqueue_pktio_interface(pkt, pktio_loop);
 	/* Default packet should be received in default queue */
 	pkt = receive_and_check(seqno, queue_list[CLS_DEFAULT], pool_list[CLS_DEFAULT],
-				enable_pktv);
+				vector_mode);
 	odp_packet_free(pkt);
 }
 
-void configure_pktio_drop_cos(odp_bool_t enable_pktv, uint32_t max_cos_stats)
+void configure_pktio_drop_cos(vector_mode_t vector_mode, uint32_t max_cos_stats)
 {
 	uint16_t val;
 	uint16_t mask;
@@ -458,7 +542,7 @@ void configure_pktio_drop_cos(odp_bool_t enable_pktv, uint32_t max_cos_stats)
 	cls_param.action = ODP_COS_ACTION_DROP;
 	cls_param.stats_enable = max_cos_stats > 0;
 
-	if (enable_pktv) {
+	if (vector_mode == VECTOR_MODE_PACKET) {
 		cls_param.vector.enable = true;
 		cls_param.vector.pool = pktv_config.pool;
 		cls_param.vector.max_size = pktv_config.max_size;
@@ -482,7 +566,7 @@ void configure_pktio_drop_cos(odp_bool_t enable_pktv, uint32_t max_cos_stats)
 	CU_ASSERT_FATAL(pmr_list[CLS_DROP] != ODP_PMR_INVALID);
 }
 
-void test_pktio_drop_cos(odp_bool_t enable_pktv)
+void test_pktio_drop_cos(vector_mode_t vector_mode)
 {
 	odp_packet_t pkt;
 	odp_queue_t queue;
@@ -501,7 +585,7 @@ void test_pktio_drop_cos(odp_bool_t enable_pktv)
 	set_first_supported_pmr_port(pkt, CLS_DROP_PORT);
 	CU_ASSERT(odp_cls_cos_stats(cos_list[CLS_DROP], &start) == 0);
 	enqueue_pktio_interface(pkt, pktio_loop);
-	pkt = receive_packet(&queue, ODP_TIME_SEC_IN_NS / 10, enable_pktv);
+	pkt = receive_packet(&queue, ODP_TIME_SEC_IN_NS / 10, vector_mode);
 	CU_ASSERT(odp_cls_cos_stats(cos_list[CLS_DROP], &stop) == 0);
 	CU_ASSERT_FATAL(pkt == ODP_PACKET_INVALID);
 	if (capa.stats.cos.counter.packets)
@@ -525,7 +609,7 @@ static int check_queue_stats(void)
 	return ODP_TEST_INACTIVE;
 }
 
-static void cls_queue_stats(odp_bool_t enable_pktv)
+static void cls_queue_stats(vector_mode_t vector_mode)
 {
 	odp_cls_capability_t capa;
 	odp_cls_queue_stats_t stats_start;
@@ -548,7 +632,7 @@ static void cls_queue_stats(odp_bool_t enable_pktv)
 
 	CU_ASSERT(odp_cls_queue_stats(cos, queue, &stats_start) == 0);
 
-	test_pktio_default_cos(enable_pktv);
+	test_pktio_default_cos(vector_mode);
 
 	CU_ASSERT(odp_cls_queue_stats(cos, queue, &stats_stop) == 0);
 
@@ -578,15 +662,20 @@ static void cls_queue_stats(odp_bool_t enable_pktv)
 
 static void cls_queue_stats_pkt(void)
 {
-	cls_queue_stats(false);
+	cls_queue_stats(VECTOR_MODE_DISABLED);
 }
 
 static void cls_queue_stats_pktv(void)
 {
-	cls_queue_stats(true);
+	cls_queue_stats(VECTOR_MODE_PACKET);
 }
 
-void configure_pktio_error_cos(odp_bool_t enable_pktv)
+static void cls_queue_stats_evv(void)
+{
+	cls_queue_stats(VECTOR_MODE_EVENT);
+}
+
+void configure_pktio_error_cos(vector_mode_t vector_mode)
 {
 	int retval;
 	odp_queue_param_t qparam;
@@ -602,6 +691,11 @@ void configure_pktio_error_cos(odp_bool_t enable_pktv)
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
 	sprintf(queuename, "%s", "ErrorCos");
 
+	if (vector_mode == VECTOR_MODE_EVENT) {
+		qparam.aggr = &global.event_aggr.config;
+		qparam.num_aggr = 1;
+	}
+
 	queue_list[CLS_ERROR] = odp_queue_create(queuename, &qparam);
 	CU_ASSERT_FATAL(queue_list[CLS_ERROR] != ODP_QUEUE_INVALID);
 
@@ -614,7 +708,7 @@ void configure_pktio_error_cos(odp_bool_t enable_pktv)
 	cls_param.pool = pool_list[CLS_ERROR];
 	cls_param.queue = queue_list[CLS_ERROR];
 
-	if (enable_pktv) {
+	if (vector_mode == VECTOR_MODE_PACKET) {
 		cls_param.vector.enable = true;
 		cls_param.vector.pool = pktv_config.pool;
 		cls_param.vector.max_size = pktv_config.max_size;
@@ -628,7 +722,7 @@ void configure_pktio_error_cos(odp_bool_t enable_pktv)
 	CU_ASSERT(retval == 0);
 }
 
-void test_pktio_error_cos(odp_bool_t enable_pktv)
+void test_pktio_error_cos(vector_mode_t vector_mode)
 {
 	odp_queue_t queue;
 	odp_packet_t pkt;
@@ -647,7 +741,7 @@ void test_pktio_error_cos(odp_bool_t enable_pktv)
 	ip->chksum = 0;
 	enqueue_pktio_interface(pkt, pktio_loop);
 
-	pkt = receive_packet(&queue, ODP_TIME_SEC_IN_NS, enable_pktv);
+	pkt = receive_packet(&queue, ODP_TIME_SEC_IN_NS, vector_mode);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	/* Error packet should be received in error queue */
 	CU_ASSERT(queue == queue_list[CLS_ERROR]);
@@ -687,7 +781,7 @@ static void cls_pktio_set_headroom(void)
 	CU_ASSERT(retval < 0);
 }
 
-void configure_pmr_cos(odp_bool_t enable_pktv)
+void configure_pmr_cos(vector_mode_t vector_mode)
 {
 	uint16_t val;
 	uint16_t mask;
@@ -705,6 +799,11 @@ void configure_pmr_cos(odp_bool_t enable_pktv)
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
 	sprintf(queuename, "%s", "PMR_CoS");
 
+	if (vector_mode == VECTOR_MODE_EVENT) {
+		qparam.aggr = &global.event_aggr.config;
+		qparam.num_aggr = 1;
+	}
+
 	queue_list[CLS_PMR] = odp_queue_create(queuename, &qparam);
 	CU_ASSERT_FATAL(queue_list[CLS_PMR] != ODP_QUEUE_INVALID);
 
@@ -717,7 +816,7 @@ void configure_pmr_cos(odp_bool_t enable_pktv)
 	cls_param.pool = pool_list[CLS_PMR];
 	cls_param.queue = queue_list[CLS_PMR];
 
-	if (enable_pktv) {
+	if (vector_mode == VECTOR_MODE_PACKET) {
 		cls_param.vector.enable = true;
 		cls_param.vector.pool = pktv_config.pool;
 		cls_param.vector.max_size = pktv_config.max_size;
@@ -741,7 +840,7 @@ void configure_pmr_cos(odp_bool_t enable_pktv)
 	CU_ASSERT_FATAL(pmr_list[CLS_PMR] != ODP_PMR_INVALID);
 }
 
-void test_pmr_cos(odp_bool_t enable_pktv)
+void test_pmr_cos(vector_mode_t vector_mode)
 {
 	odp_packet_t pkt;
 	uint32_t seqno = 0;
@@ -755,11 +854,11 @@ void test_pmr_cos(odp_bool_t enable_pktv)
 	CU_ASSERT(seqno != TEST_SEQ_INVALID);
 	set_first_supported_pmr_port(pkt, CLS_PMR_PORT);
 	enqueue_pktio_interface(pkt, pktio_loop);
-	pkt = receive_and_check(seqno, queue_list[CLS_PMR], pool_list[CLS_PMR], enable_pktv);
+	pkt = receive_and_check(seqno, queue_list[CLS_PMR], pool_list[CLS_PMR], vector_mode);
 	odp_packet_free(pkt);
 }
 
-void configure_pktio_pmr_composite(odp_bool_t enable_pktv)
+void configure_pktio_pmr_composite(vector_mode_t vector_mode)
 {
 	odp_pmr_param_t pmr_params[2];
 	uint16_t val;
@@ -780,6 +879,11 @@ void configure_pktio_pmr_composite(odp_bool_t enable_pktv)
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
 	sprintf(queuename, "%s", "cos_pmr_composite_queue");
 
+	if (vector_mode == VECTOR_MODE_EVENT) {
+		qparam.aggr = &global.event_aggr.config;
+		qparam.num_aggr = 1;
+	}
+
 	queue_list[CLS_PMR_SET] = odp_queue_create(queuename, &qparam);
 	CU_ASSERT_FATAL(queue_list[CLS_PMR_SET] != ODP_QUEUE_INVALID);
 
@@ -792,7 +896,7 @@ void configure_pktio_pmr_composite(odp_bool_t enable_pktv)
 	cls_param.pool = pool_list[CLS_PMR_SET];
 	cls_param.queue = queue_list[CLS_PMR_SET];
 
-	if (enable_pktv) {
+	if (vector_mode == VECTOR_MODE_PACKET) {
 		cls_param.vector.enable = true;
 		cls_param.vector.pool = pktv_config.pool;
 		cls_param.vector.max_size = pktv_config.max_size;
@@ -827,7 +931,7 @@ void configure_pktio_pmr_composite(odp_bool_t enable_pktv)
 	CU_ASSERT_FATAL(pmr_list[CLS_PMR_SET] != ODP_PMR_INVALID);
 }
 
-void test_pktio_pmr_composite_cos(odp_bool_t enable_pktv)
+void test_pktio_pmr_composite_cos(vector_mode_t vector_mode)
 {
 	uint32_t addr = 0;
 	uint32_t mask;
@@ -851,11 +955,11 @@ void test_pktio_pmr_composite_cos(odp_bool_t enable_pktv)
 	set_first_supported_pmr_port(pkt, CLS_PMR_SET_PORT);
 	enqueue_pktio_interface(pkt, pktio_loop);
 	pkt = receive_and_check(seqno, queue_list[CLS_PMR_SET], pool_list[CLS_PMR_SET],
-				enable_pktv);
+				vector_mode);
 	odp_packet_free(pkt);
 }
 
-static void cls_pktio_configure_common(odp_bool_t enable_pktv)
+static void cls_pktio_configure_common(vector_mode_t vector_mode)
 {
 	odp_cls_capability_t capa;
 	int num_cos;
@@ -868,39 +972,39 @@ static void cls_pktio_configure_common(odp_bool_t enable_pktv)
 
 	/* Configure the Different CoS for the pktio interface */
 	if (num_cos >= NUM_COS_DEFAULT && TEST_DEFAULT) {
-		configure_pktio_default_cos(enable_pktv);
+		configure_pktio_default_cos(vector_mode);
 		tc.default_cos = 1;
 		num_cos -= NUM_COS_DEFAULT;
 	}
 	if (num_cos >= NUM_COS_DEFAULT && TEST_DROP) {
-		configure_pktio_drop_cos(enable_pktv, capa.max_cos_stats);
+		configure_pktio_drop_cos(vector_mode, capa.max_cos_stats);
 		tc.drop_cos = 1;
 		num_cos -= NUM_COS_DROP;
 	}
 	if (num_cos >= NUM_COS_ERROR && TEST_ERROR) {
-		configure_pktio_error_cos(enable_pktv);
+		configure_pktio_error_cos(vector_mode);
 		tc.error_cos = 1;
 		num_cos -= NUM_COS_ERROR;
 	}
 	if (num_cos >= NUM_COS_PMR_CHAIN && TEST_PMR_CHAIN) {
-		configure_cls_pmr_chain(enable_pktv, CLS_PMR_CHAIN_SRC, CLS_PMR_CHAIN_DST,
+		configure_cls_pmr_chain(vector_mode, CLS_PMR_CHAIN_SRC, CLS_PMR_CHAIN_DST,
 					CLS_PMR_CHAIN_SADDR, CLS_PMR_CHAIN_PORT, true);
 		tc.pmr_chain = 1;
 		num_cos -= NUM_COS_PMR_CHAIN;
 	}
 	if (num_cos >= NUM_COS_PMR_CHAIN && TEST_PMR_CHAIN_REV) {
-		configure_cls_pmr_chain(enable_pktv, CLS_PMR_CHAIN_REV_SRC, CLS_PMR_CHAIN_REV_DST,
+		configure_cls_pmr_chain(vector_mode, CLS_PMR_CHAIN_REV_SRC, CLS_PMR_CHAIN_REV_DST,
 					CLS_PMR_CHAIN_REV_SADDR, CLS_PMR_CHAIN_REV_PORT, false);
 		tc.pmr_chain_rev = 1;
 		num_cos -= NUM_COS_PMR_CHAIN;
 	}
 	if (num_cos >= NUM_COS_PMR && TEST_PMR) {
-		configure_pmr_cos(enable_pktv);
+		configure_pmr_cos(vector_mode);
 		tc.pmr_cos = 1;
 		num_cos -= NUM_COS_PMR;
 	}
 	if (num_cos >= NUM_COS_COMPOSITE && TEST_PMR_SET) {
-		configure_pktio_pmr_composite(enable_pktv);
+		configure_pktio_pmr_composite(vector_mode);
 		tc.pmr_composite_cos = 1;
 		num_cos -= NUM_COS_COMPOSITE;
 	}
@@ -910,48 +1014,83 @@ static void cls_pktio_configure_common(odp_bool_t enable_pktv)
 
 static void cls_pktio_configure(void)
 {
-	cls_pktio_configure_common(false);
+	cls_pktio_configure_common(VECTOR_MODE_DISABLED);
 }
 
 static void cls_pktio_configure_pktv(void)
 {
-	cls_pktio_configure_common(true);
+	cls_pktio_configure_common(VECTOR_MODE_PACKET);
 }
 
-static void cls_pktio_test_common(odp_bool_t enable_pktv)
+static void cls_pktio_configure_evv(void)
+{
+	cls_pktio_configure_common(VECTOR_MODE_EVENT);
+}
+
+static void cls_pktio_test_common(vector_mode_t vector_mode)
 {
 	/* Test Different CoS on the pktio interface */
 	if (tc.default_cos && TEST_DEFAULT)
-		test_pktio_default_cos(enable_pktv);
+		test_pktio_default_cos(vector_mode);
 	if (tc.drop_cos && TEST_DROP)
-		test_pktio_drop_cos(enable_pktv);
+		test_pktio_drop_cos(vector_mode);
 	if (tc.error_cos && TEST_ERROR)
-		test_pktio_error_cos(enable_pktv);
+		test_pktio_error_cos(vector_mode);
 	if (tc.pmr_chain && TEST_PMR_CHAIN)
-		test_cls_pmr_chain(enable_pktv, CLS_PMR_CHAIN_SRC, CLS_PMR_CHAIN_DST,
+		test_cls_pmr_chain(vector_mode, CLS_PMR_CHAIN_SRC, CLS_PMR_CHAIN_DST,
 				   CLS_PMR_CHAIN_SADDR, CLS_PMR_CHAIN_PORT);
 	if (tc.pmr_chain_rev && TEST_PMR_CHAIN_REV)
-		test_cls_pmr_chain(enable_pktv, CLS_PMR_CHAIN_REV_SRC, CLS_PMR_CHAIN_REV_DST,
+		test_cls_pmr_chain(vector_mode, CLS_PMR_CHAIN_REV_SRC, CLS_PMR_CHAIN_REV_DST,
 				   CLS_PMR_CHAIN_REV_SADDR, CLS_PMR_CHAIN_REV_PORT);
 	if (tc.pmr_cos && TEST_PMR)
-		test_pmr_cos(enable_pktv);
+		test_pmr_cos(vector_mode);
 	if (tc.pmr_composite_cos && TEST_PMR_SET)
-		test_pktio_pmr_composite_cos(enable_pktv);
+		test_pktio_pmr_composite_cos(vector_mode);
 }
 
 static void cls_pktio_test(void)
 {
-	cls_pktio_test_common(false);
+	cls_pktio_test_common(VECTOR_MODE_DISABLED);
 }
 
 static void cls_pktio_test_pktv(void)
 {
-	cls_pktio_test_common(true);
+	cls_pktio_test_common(VECTOR_MODE_PACKET);
+}
+
+static void cls_pktio_test_evv(void)
+{
+	cls_pktio_test_common(VECTOR_MODE_EVENT);
 }
 
 static int check_pktv(void)
 {
 	return pktv_config.enable ? ODP_TEST_ACTIVE : ODP_TEST_INACTIVE;
+}
+
+static int check_pktv_queue_stats(void)
+{
+	if (!pktv_config.enable)
+		return ODP_TEST_INACTIVE;
+	return check_queue_stats();
+}
+
+static int check_evv(void)
+{
+	return global.event_aggr.enabled ? ODP_TEST_ACTIVE : ODP_TEST_INACTIVE;
+}
+
+static int check_evv_tmo(void)
+{
+	return global.event_aggr.enabled && global.event_aggr.max_tmo ?
+		ODP_TEST_ACTIVE : ODP_TEST_INACTIVE;
+}
+
+static int check_evv_tmo_queue_stats(void)
+{
+	if (!global.event_aggr.enabled || !global.event_aggr.max_tmo)
+		return ODP_TEST_INACTIVE;
+	return check_queue_stats();
 }
 
 static int check_capa_skip_offset(void)
@@ -971,6 +1110,13 @@ odp_testinfo_t classification_suite[] = {
 odp_testinfo_t classification_suite_pktv[] = {
 	ODP_TEST_INFO_CONDITIONAL(cls_pktio_configure_pktv, check_pktv),
 	ODP_TEST_INFO_CONDITIONAL(cls_pktio_test_pktv, check_pktv),
-	ODP_TEST_INFO_CONDITIONAL(cls_queue_stats_pktv, check_queue_stats),
+	ODP_TEST_INFO_CONDITIONAL(cls_queue_stats_pktv, check_pktv_queue_stats),
+	ODP_TEST_INFO_NULL,
+};
+
+odp_testinfo_t classification_suite_evv[] = {
+	ODP_TEST_INFO_CONDITIONAL(cls_pktio_configure_evv, check_evv),
+	ODP_TEST_INFO_CONDITIONAL(cls_pktio_test_evv, check_evv_tmo),
+	ODP_TEST_INFO_CONDITIONAL(cls_queue_stats_evv, check_evv_tmo_queue_stats),
 	ODP_TEST_INFO_NULL,
 };
