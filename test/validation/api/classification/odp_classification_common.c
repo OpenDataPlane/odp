@@ -197,7 +197,7 @@ void enqueue_pktio_interface(odp_packet_t pkt, odp_pktio_t pktio)
 	CU_ASSERT(odp_pktout_send(pktout, &pkt, 1) == 1);
 }
 
-odp_packet_t receive_packet(odp_queue_t *queue, uint64_t ns, odp_bool_t enable_pktv)
+odp_packet_t receive_packet(odp_queue_t *queue, uint64_t ns, vector_mode_t vector_mode)
 {
 	odp_event_t ev;
 	uint64_t wait = odp_schedule_wait_time(ns);
@@ -208,7 +208,8 @@ odp_packet_t receive_packet(odp_queue_t *queue, uint64_t ns, odp_bool_t enable_p
 
 	if (odp_event_type(ev) == ODP_EVENT_PACKET) {
 		return odp_packet_from_event(ev);
-	} else if (enable_pktv && odp_event_type(ev) == ODP_EVENT_PACKET_VECTOR) {
+	} else if (vector_mode == VECTOR_MODE_PACKET &&
+		   odp_event_type(ev) == ODP_EVENT_PACKET_VECTOR) {
 		odp_packet_vector_t pktv;
 		odp_packet_t *pkt_tbl;
 		odp_packet_t pkt;
@@ -224,6 +225,24 @@ odp_packet_t receive_packet(odp_queue_t *queue, uint64_t ns, odp_bool_t enable_p
 			odp_packet_free_multi(&pkt_tbl[1], pktv_len - 1);
 		odp_packet_vector_free(pktv);
 		return pkt;
+	} else if (vector_mode == VECTOR_MODE_EVENT &&
+		   odp_event_type(ev) == ODP_EVENT_VECTOR) {
+		odp_event_vector_t evv;
+		odp_event_t *event_tbl;
+		odp_packet_t pkt;
+		uint32_t evv_len;
+
+		evv = odp_event_vector_from_event(ev);
+		evv_len = odp_event_vector_tbl(evv, &event_tbl);
+
+		CU_ASSERT_FATAL(evv_len > 0);
+		CU_ASSERT(odp_event_vector_type(evv) == ODP_EVENT_PACKET);
+
+		pkt = odp_packet_from_event(event_tbl[0]);
+		if (evv_len > 1)
+			odp_event_free_multi(&event_tbl[1], evv_len - 1);
+		odp_event_vector_free(evv);
+		return pkt;
 	}
 
 	odp_event_free(ev);
@@ -234,14 +253,14 @@ odp_packet_t receive_packet(odp_queue_t *queue, uint64_t ns, odp_bool_t enable_p
 odp_packet_t receive_and_check(uint32_t    expected_seqno,
 			       odp_queue_t expected_queue,
 			       odp_pool_t  expected_pool,
-			       odp_bool_t  enable_pktv)
+			       vector_mode_t vector_mode)
 {
 	odp_packet_t pkt;
 	odp_queue_t queue;
 
-	pkt = receive_packet(&queue, ODP_TIME_SEC_IN_NS, enable_pktv);
-	CU_ASSERT(queue == expected_queue);
+	pkt = receive_packet(&queue, ODP_TIME_SEC_IN_NS, vector_mode);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+	CU_ASSERT(queue == expected_queue);
 	CU_ASSERT(cls_pkt_get_seq(pkt) == expected_seqno);
 	CU_ASSERT(odp_packet_pool(pkt) == expected_pool);
 	return pkt;
@@ -305,6 +324,35 @@ odp_pool_t pktv_pool_create(const char *poolname)
 	param.type = ODP_POOL_VECTOR;
 	param.vector.num = SHM_PKT_NUM_BUFS;
 	param.vector.max_size = capa.vector.max_size;
+
+	return odp_pool_create(poolname, &param);
+}
+
+odp_pool_t evv_pool_create(const char *poolname)
+{
+	odp_pool_capability_t capa;
+	odp_pool_param_t param;
+
+	if (odp_pool_capability(&capa)) {
+		ODPH_ERR("Pool capability failed\n");
+		return ODP_POOL_INVALID;
+	}
+
+	if (capa.event_vector.max_pools == 0) {
+		ODPH_ERR("No event vector pools available\n");
+		return ODP_POOL_INVALID;
+	}
+
+	if (capa.event_vector.max_num && capa.event_vector.max_num < SHM_PKT_NUM_BUFS) {
+		ODPH_ERR("Unable to create large enough (%d) event vector pool\n",
+			 SHM_PKT_NUM_BUFS);
+		return ODP_POOL_INVALID;
+	}
+
+	odp_pool_param_init(&param);
+	param.type = ODP_POOL_EVENT_VECTOR;
+	param.event_vector.num = SHM_PKT_NUM_BUFS;
+	param.event_vector.max_size = capa.event_vector.max_size;
 
 	return odp_pool_create(poolname, &param);
 }
