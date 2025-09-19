@@ -41,12 +41,11 @@
 /* Maximum number of results to be held */
 #define TEST_MAX_BENCH 20
 
-#define BENCH_INFO(run_fn, max, alt_name) \
-	{.name = #run_fn, .run = run_fn, .max_rounds = max, .desc = alt_name}
+#define BENCH_INFO(run_fn, init_fn, term_fn) \
+	{.name = #run_fn, .run = run_fn, .init = init_fn, .term = term_fn}
 
-#define BENCH_INFO_TM(run_fn) \
-	{.name = #run_fn, .run = run_fn, .init = NULL, .term = NULL, .cond = NULL, \
-	 .max_rounds = 0}
+#define BENCH_INFO_TM(run_fn, init_fn, term_fn) \
+	{.name = #run_fn, .run = run_fn, .init = init_fn, .term = term_fn}
 
 typedef enum {
 	M_TPUT,
@@ -92,6 +91,7 @@ typedef struct {
 		uint64_t dummy;
 	} suite;
 
+	odp_timer_start_t start_param;
 	odp_timer_pool_t timer_pool;
 	odp_timer_t timer;
 	odp_queue_t queue;
@@ -108,7 +108,8 @@ typedef struct {
 	uint64_t      a1[REPEAT_COUNT];
 	odp_event_t   ev[REPEAT_COUNT];
 	odp_timeout_t tmo[REPEAT_COUNT];
-	odp_timer_t   tim[REPEAT_COUNT];
+	odp_timer_t   tim_src[REPEAT_COUNT];
+	odp_timer_t   tim_dst[REPEAT_COUNT];
 
 	/* CPU mask as string */
 	char cpumask_str[ODP_CPUMASK_STR_SIZE];
@@ -148,6 +149,34 @@ static int setup_sig_handler(void)
 		return -1;
 
 	return 0;
+}
+
+static void cancel_timers(void)
+{
+	odp_timer_t *tim = gbl_args->tim_src;
+	odp_event_t ev;
+	int ret;
+
+	for (int i = 0; i < REPEAT_COUNT; i++) {
+		ret = odp_timer_cancel(tim[i], &ev);
+
+		if (ret == ODP_TIMER_FAIL)
+			ODPH_ABORT("Failed to cancel timer, ret: %d, index: %d\n", ret, i);
+	}
+}
+
+static void start_timers(void)
+{
+	odp_timer_t *tim = gbl_args->tim_src;
+	const odp_timer_start_t *start = &gbl_args->start_param;
+	int ret;
+
+	for (int i = 0; i < REPEAT_COUNT; i++) {
+		ret = odp_timer_start(tim[i], start);
+
+		if (ret != ODP_TIMER_SUCCESS)
+			ODPH_ABORT("Failed to start timer, ret: %d, index: %d\n", ret, i);
+	}
 }
 
 static int timer_current_tick(void)
@@ -316,7 +345,7 @@ static int timeout_timer(void)
 {
 	int i;
 	odp_timeout_t timeout = gbl_args->timeout;
-	odp_timer_t *tim = gbl_args->tim;
+	odp_timer_t *tim = gbl_args->tim_dst;
 
 	for (i = 0; i < REPEAT_COUNT; i++)
 		tim[i] = odp_timeout_timer(timeout);
@@ -330,7 +359,7 @@ static int timeout_timer_tm(bench_tm_result_t *res, int repeat_count)
 {
 	int i;
 	odp_timeout_t timeout = gbl_args->timeout;
-	odp_timer_t *tim = gbl_args->tim;
+	odp_timer_t *tim = gbl_args->tim_dst;
 	const uint8_t id1 = bench_tm_func_register(res, "odp_timeout_timer()");
 	bench_tm_stamp_t s1, s2;
 
@@ -526,6 +555,124 @@ static int timer_pool_to_u64_tm(bench_tm_result_t *res, int repeat_count)
 	return i;
 }
 
+static int timer_start(void)
+{
+	int i, ret;
+	odp_timer_t *tim = gbl_args->tim_src;
+	const odp_timer_start_t *start = &gbl_args->start_param;
+
+	for (i = 0; i < REPEAT_COUNT; i++) {
+		ret = odp_timer_start(tim[i], start);
+
+		ODPH_ASSERT(ret == ODP_TIMER_SUCCESS);
+	}
+
+	return i;
+}
+
+static int timer_start_tm(bench_tm_result_t *res, int repeat_count)
+{
+	int i, ret;
+	odp_timer_t *tim = gbl_args->tim_src;
+	const odp_timer_start_t *start = &gbl_args->start_param;
+	const uint8_t id1 = bench_tm_func_register(res, "odp_timer_start()");
+	bench_tm_stamp_t s1, s2;
+
+	for (i = 0; i < repeat_count; i++) {
+		bench_tm_now(res, &s1);
+		ret = odp_timer_start(tim[i], start);
+
+		ODPH_ASSERT(ret == ODP_TIMER_SUCCESS);
+
+		bench_tm_now(res, &s2);
+		bench_tm_func_record(&s2, &s1, res, id1);
+	}
+
+	return i;
+}
+
+static int timer_cancel(void)
+{
+	int i, ret;
+	odp_timer_t *tim = gbl_args->tim_src;
+	odp_event_t ev;
+
+	for (i = 0; i < REPEAT_COUNT; i++) {
+		ret = odp_timer_cancel(tim[i], &ev);
+
+		ODPH_ASSERT(ret == ODP_TIMER_SUCCESS);
+	}
+
+	return i;
+}
+
+static int timer_cancel_tm(bench_tm_result_t *res, int repeat_count)
+{
+	int i, ret;
+	odp_timer_t *tim = gbl_args->tim_src;
+	odp_event_t ev;
+	const uint8_t id1 = bench_tm_func_register(res, "odp_timer_cancel()");
+	bench_tm_stamp_t s1, s2;
+
+	for (i = 0; i < repeat_count; i++) {
+		bench_tm_now(res, &s1);
+		ret = odp_timer_cancel(tim[i], &ev);
+
+		ODPH_ASSERT(ret == ODP_TIMER_SUCCESS);
+
+		bench_tm_now(res, &s2);
+		bench_tm_func_record(&s2, &s1, res, id1);
+	}
+
+	return i;
+}
+
+static int timer_start_cancel(void)
+{
+	int i, ret;
+	odp_timer_t *tim = gbl_args->tim_src;
+	const odp_timer_start_t *start = &gbl_args->start_param;
+	odp_event_t ev;
+
+	for (i = 0; i < REPEAT_COUNT; i++) {
+		ret = odp_timer_start(tim[i], start);
+
+		ODPH_ASSERT(ret == ODP_TIMER_SUCCESS);
+
+		ret = odp_timer_cancel(tim[i], &ev);
+
+		ODPH_ASSERT(ret == ODP_TIMER_SUCCESS);
+	}
+
+	return i;
+}
+
+static int timer_start_cancel_tm(bench_tm_result_t *res, int repeat_count)
+{
+	int i, ret;
+	odp_timer_t *tim = gbl_args->tim_src;
+	const odp_timer_start_t *start = &gbl_args->start_param;
+	odp_event_t ev;
+	const uint8_t id1 = bench_tm_func_register(res, "odp_timer_start()/_cancel()");
+	bench_tm_stamp_t s1, s2;
+
+	for (i = 0; i < repeat_count; i++) {
+		bench_tm_now(res, &s1);
+		ret = odp_timer_start(tim[i], start);
+
+		ODPH_ASSERT(ret == ODP_TIMER_SUCCESS);
+
+		ret = odp_timer_cancel(tim[i], &ev);
+
+		ODPH_ASSERT(ret == ODP_TIMER_SUCCESS);
+
+		bench_tm_now(res, &s2);
+		bench_tm_func_record(&s2, &s1, res, id1);
+	}
+
+	return i;
+}
+
 static int bench_timer_tm_export(void *data)
 {
 	gbl_args_t *gbl_args = data;
@@ -591,36 +738,42 @@ exit:
 }
 
 bench_info_t test_suite[] = {
-	BENCH_INFO(timer_current_tick, 0, NULL),
-	BENCH_INFO(timer_tick_to_ns, 0, NULL),
-	BENCH_INFO(timer_ns_to_tick, 0, NULL),
-	BENCH_INFO(timeout_to_event, 0, NULL),
-	BENCH_INFO(timeout_from_event, 0, NULL),
-	BENCH_INFO(timeout_timer, 0, NULL),
-	BENCH_INFO(timeout_tick, 0, NULL),
-	BENCH_INFO(timeout_user_ptr, 0, NULL),
-	BENCH_INFO(timeout_user_area, 0, NULL),
-	BENCH_INFO(timeout_to_u64, 0, NULL),
-	BENCH_INFO(timer_to_u64, 0, NULL),
-	BENCH_INFO(timer_pool_to_u64, 0, NULL),
+	BENCH_INFO(timer_current_tick, NULL, NULL),
+	BENCH_INFO(timer_tick_to_ns, NULL, NULL),
+	BENCH_INFO(timer_ns_to_tick, NULL, NULL),
+	BENCH_INFO(timeout_to_event, NULL, NULL),
+	BENCH_INFO(timeout_from_event, NULL, NULL),
+	BENCH_INFO(timeout_timer, NULL, NULL),
+	BENCH_INFO(timeout_tick, NULL, NULL),
+	BENCH_INFO(timeout_user_ptr, NULL, NULL),
+	BENCH_INFO(timeout_user_area, NULL, NULL),
+	BENCH_INFO(timeout_to_u64, NULL, NULL),
+	BENCH_INFO(timer_to_u64, NULL, NULL),
+	BENCH_INFO(timer_pool_to_u64, NULL, NULL),
+	BENCH_INFO(timer_start, NULL, cancel_timers),
+	BENCH_INFO(timer_cancel, start_timers, NULL),
+	BENCH_INFO(timer_start_cancel, NULL, NULL),
 };
 
 ODP_STATIC_ASSERT(ODPH_ARRAY_SIZE(test_suite) < TEST_MAX_BENCH,
 		  "Result array is too small to hold all the results");
 
 bench_tm_info_t test_suite_tm[] = {
-	BENCH_INFO_TM(timer_current_tick_tm),
-	BENCH_INFO_TM(timer_tick_to_ns_tm),
-	BENCH_INFO_TM(timer_ns_to_tick_tm),
-	BENCH_INFO_TM(timeout_to_event_tm),
-	BENCH_INFO_TM(timeout_from_event_tm),
-	BENCH_INFO_TM(timeout_timer_tm),
-	BENCH_INFO_TM(timeout_tick_tm),
-	BENCH_INFO_TM(timeout_user_ptr_tm),
-	BENCH_INFO_TM(timeout_user_area_tm),
-	BENCH_INFO_TM(timeout_to_u64_tm),
-	BENCH_INFO_TM(timer_to_u64_tm),
-	BENCH_INFO_TM(timer_pool_to_u64_tm),
+	BENCH_INFO_TM(timer_current_tick_tm, NULL, NULL),
+	BENCH_INFO_TM(timer_tick_to_ns_tm, NULL, NULL),
+	BENCH_INFO_TM(timer_ns_to_tick_tm, NULL, NULL),
+	BENCH_INFO_TM(timeout_to_event_tm, NULL, NULL),
+	BENCH_INFO_TM(timeout_from_event_tm, NULL, NULL),
+	BENCH_INFO_TM(timeout_timer_tm, NULL, NULL),
+	BENCH_INFO_TM(timeout_tick_tm, NULL, NULL),
+	BENCH_INFO_TM(timeout_user_ptr_tm, NULL, NULL),
+	BENCH_INFO_TM(timeout_user_area_tm, NULL, NULL),
+	BENCH_INFO_TM(timeout_to_u64_tm, NULL, NULL),
+	BENCH_INFO_TM(timer_to_u64_tm, NULL, NULL),
+	BENCH_INFO_TM(timer_pool_to_u64_tm, NULL, NULL),
+	BENCH_INFO_TM(timer_start_tm, NULL, cancel_timers),
+	BENCH_INFO_TM(timer_cancel_tm, start_timers, NULL),
+	BENCH_INFO_TM(timer_start_cancel_tm, NULL, NULL),
 };
 
 ODP_STATIC_ASSERT(ODPH_ARRAY_SIZE(test_suite_tm) < TEST_MAX_BENCH,
@@ -739,7 +892,7 @@ static void print_info(void)
 	printf("\n");
 }
 
-static int create_timer(void)
+static int create_timers(void)
 {
 	odp_pool_capability_t pool_capa;
 	odp_timer_capability_t timer_capa;
@@ -751,8 +904,9 @@ static int create_timer(void)
 	odp_timeout_t tmo;
 	odp_queue_param_t queue_param;
 	odp_queue_t queue;
-	odp_timer_t timer;
+	odp_timer_t timer, *tim_src = gbl_args->tim_src;
 	uint64_t t1, t2, diff, tick1, tick2;
+	const uint32_t num_timers = REPEAT_COUNT + 1;
 
 	if (odp_pool_capability(&pool_capa)) {
 		ODPH_ERR("Pool capa failed\n");
@@ -765,12 +919,17 @@ static int create_timer(void)
 		return -1;
 	}
 
+	if (timer_capa.max_timers != 0 && timer_capa.max_timers < num_timers) {
+		ODPH_ERR("Not enough timers supported\n");
+		return -1;
+	}
+
 	odp_timer_pool_param_init(&tp_param);
 	tp_param.clk_src    = clk_src;
 	tp_param.res_ns     = timer_capa.max_res.res_ns;
 	tp_param.min_tmo    = timer_capa.max_res.min_tmo;
 	tp_param.max_tmo    = timer_capa.max_res.max_tmo;
-	tp_param.num_timers = 10;
+	tp_param.num_timers = num_timers;
 
 	tp = odp_timer_pool_create("bench_timer", &tp_param);
 
@@ -859,12 +1018,21 @@ static int create_timer(void)
 
 	gbl_args->timer = timer;
 
+	for (int i = 0; i < REPEAT_COUNT; i++) {
+		tim_src[i] = odp_timer_alloc(tp, queue, NULL);
+
+		if (tim_src[i] == ODP_TIMER_INVALID) {
+			ODPH_ERR("Timer alloc failed\n");
+			return -1;
+		}
+	}
+
 	return 0;
 }
 
 static int wait_timer(void)
 {
-	odp_timer_start_t start_param;
+	odp_timer_start_t *start_param = &gbl_args->start_param;
 	odp_timer_t timer = gbl_args->timer;
 	odp_timer_pool_t tp = gbl_args->timer_pool;
 	uint64_t wait_nsec = 2 * gbl_args->timer_nsec;
@@ -872,11 +1040,11 @@ static int wait_timer(void)
 	odp_event_t ev;
 	uint64_t start;
 
-	start_param.tick_type = ODP_TIMER_TICK_REL;
-	start_param.tick      = odp_timer_ns_to_tick(tp, gbl_args->timer_nsec);
-	start_param.tmo_ev    = odp_timeout_to_event(gbl_args->timeout);
+	start_param->tick_type = ODP_TIMER_TICK_REL;
+	start_param->tick      = odp_timer_ns_to_tick(tp, gbl_args->timer_nsec);
+	start_param->tmo_ev    = odp_timeout_to_event(gbl_args->timeout);
 
-	if (odp_timer_start(timer, &start_param) != ODP_TIMER_SUCCESS) {
+	if (odp_timer_start(timer, start_param) != ODP_TIMER_SUCCESS) {
 		ODPH_ERR("Timer start failed\n");
 		return -1;
 	}
@@ -959,6 +1127,23 @@ static void init_suite(gbl_args_t *gbl_args)
 	}
 }
 
+static void drain_timeouts(void)
+{
+	const int is_plain = gbl_args->plain_queue;
+	odp_queue_t q = gbl_args->queue;
+	odp_event_t ev;
+	const uint64_t wait = odp_schedule_wait_time(2 * gbl_args->timer_nsec);
+
+	while (true) {
+		ev = is_plain ? odp_queue_deq(q) : odp_schedule(NULL, wait);
+
+		if (ev == ODP_EVENT_INVALID)
+			break;
+
+		/* The used tmo event will be freed in tester teardown. */
+	}
+}
+
 int main(int argc, char *argv[])
 {
 	odph_helper_options_t helper_options;
@@ -1032,7 +1217,8 @@ int main(int argc, char *argv[])
 		gbl_args->a1[i] = i;
 		gbl_args->ev[i] = ODP_EVENT_INVALID;
 		gbl_args->tmo[i] = ODP_TIMEOUT_INVALID;
-		gbl_args->tim[i] = ODP_TIMER_INVALID;
+		gbl_args->tim_src[i] = ODP_TIMER_INVALID;
+		gbl_args->tim_dst[i] = ODP_TIMER_INVALID;
 	}
 
 	/* Parse and store the application arguments */
@@ -1052,8 +1238,8 @@ int main(int argc, char *argv[])
 	(void)odp_cpumask_to_str(&default_mask, gbl_args->cpumask_str,
 				 sizeof(gbl_args->cpumask_str));
 
-	/* Create timer and other resources */
-	ret = create_timer();
+	/* Create timers and other resources */
+	ret = create_timers();
 	if (ret)
 		goto exit;
 
@@ -1086,6 +1272,8 @@ int main(int argc, char *argv[])
 	odph_thread_create(&worker_thread, &thr_common, &thr_param, 1);
 
 	odph_thread_join(&worker_thread, 1);
+	/* Drain those timeouts that were not successfully cancelled for some reason. */
+	drain_timeouts();
 
 	if (gbl_args->suite.dummy)
 		printf("(dummy result: 0x%" PRIx64 ")\n\n", gbl_args->suite.dummy);
@@ -1110,6 +1298,15 @@ exit:
 		if (odp_timer_free(gbl_args->timer)) {
 			ODPH_ERR("Timer free failed\n");
 			exit(EXIT_FAILURE);
+		}
+	}
+
+	for (i = 0; i < REPEAT_COUNT; i++) {
+		if (gbl_args->tim_src[i] != ODP_TIMER_INVALID) {
+			if (odp_timer_free(gbl_args->tim_src[i])) {
+				ODPH_ERR("Timer free failed\n");
+				exit(EXIT_FAILURE);
+			}
 		}
 	}
 
