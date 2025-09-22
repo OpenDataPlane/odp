@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2014-2018 Linaro Limited
- * Copyright (c) 2019-2024 Nokia
+ * Copyright (c) 2019-2025 Nokia
  * Copyright (c) 2020 Marvell
  */
 
@@ -2258,6 +2258,65 @@ static void packet_test_concat_extend_trunc(void)
 
 	odp_packet_free(pkt);
 
+	CU_ASSERT(odp_pool_destroy(pool) == 0);
+}
+
+static void packet_test_trunc_3_seg(void)
+{
+	odp_pool_param_t param;
+	odp_pool_t pool;
+	odp_packet_t pkt1, pkt2, pkt3;
+	const uint32_t len1 = 50;
+	const uint32_t len2 = len1 + 1;
+	const uint32_t len3 = len1 + 2;
+	const uint32_t extra_trunc_len = 1;
+	int ret, layout_changed = 0;
+	uint32_t tailroom_before, tailroom_after;
+
+	odp_pool_param_init(&param);
+	param.type    = ODP_POOL_PACKET;
+	param.pkt.len = len3;
+	param.pkt.num = PACKET_POOL_NUM;
+	pool = odp_pool_create("packet_pool_trunc_3_seg", &param);
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+
+	pkt1 = odp_packet_alloc(pool, len1);
+	pkt2 = odp_packet_alloc(pool, len2);
+	pkt3 = odp_packet_alloc(pool, len3);
+	CU_ASSERT_FATAL(pkt1 != ODP_PACKET_INVALID);
+	CU_ASSERT_FATAL(pkt2 != ODP_PACKET_INVALID);
+	CU_ASSERT_FATAL(pkt3 != ODP_PACKET_INVALID);
+
+	/* Create a (hopefully) 2-segment packet and record tailroom */
+	ret = odp_packet_concat(&pkt1, pkt2);
+	CU_ASSERT(ret >= 0);
+	if (!odp_packet_is_segmented(pkt1))
+		printf("Could not create segmented packet, test coverage reduced\n");
+	tailroom_before = odp_packet_tailroom(pkt1);
+
+	/*
+	 * Concatenate another packet to the tail and truncate its length
+	 * plus extra_trunc_len. If packet layout does not change, the tail
+	 * segment remains the same and packet tailroom changes only by
+	 * extra_trunc_len.
+	 */
+	ret = odp_packet_concat(&pkt1, pkt3);
+	CU_ASSERT(ret >= 0);
+	if (ret > 0)
+		layout_changed = 1;
+	ret = odp_packet_trunc_tail(&pkt1, len3 + extra_trunc_len, NULL, NULL);
+	CU_ASSERT(ret >= 0);
+	if (ret > 0)
+		layout_changed = 1;
+
+	if (!layout_changed) {
+		tailroom_after = odp_packet_tailroom(pkt1);
+		CU_ASSERT(tailroom_after == tailroom_before + extra_trunc_len);
+	} else {
+		printf("Packet layout changed, test coverage reduced\n");
+	}
+
+	odp_packet_free(pkt1);
 	CU_ASSERT(odp_pool_destroy(pool) == 0);
 }
 
@@ -4629,6 +4688,7 @@ odp_testinfo_t packet_suite[] = {
 	ODP_TEST_INFO(packet_test_concatsplit),
 	ODP_TEST_INFO(packet_test_concat_small),
 	ODP_TEST_INFO(packet_test_concat_extend_trunc),
+	ODP_TEST_INFO(packet_test_trunc_3_seg),
 	ODP_TEST_INFO(packet_test_extend_small),
 	ODP_TEST_INFO(packet_test_extend_large),
 	ODP_TEST_INFO(packet_test_extend_mix),
