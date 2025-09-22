@@ -584,7 +584,7 @@ static inline odp_packet_hdr_t *free_segments(odp_packet_hdr_t *pkt_hdr,
 
 		pkt_hdr->seg_count = num_remain;
 		pkt_hdr->frame_len -= free_len;
-		pkt_hdr->tailroom = seg_tailroom(pkt_hdr);
+		pkt_hdr->tailroom = seg_tailroom(last_hdr);
 
 		pull_tail(pkt_hdr, pull_len);
 	}
