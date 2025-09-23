@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2013-2018 Linaro Limited
- * Copyright (c) 2021-2022 Nokia
+ * Copyright (c) 2021-2025 Nokia
  */
 
 /**
@@ -89,7 +89,6 @@ typedef struct {
 	appl_args_t appl;
 	odp_shm_t shm;
 	odp_pool_t ctx_pool;
-	odp_pool_t out_pool;
 	odp_pool_t pkt_pool;
 	/** ATOMIC queue for IPsec sequence number assignment */
 	odp_queue_t seqnumq;
@@ -115,13 +114,6 @@ static void usage(char *progname);
 #define SHM_PKT_POOL_BUF_COUNT 1024
 #define SHM_PKT_POOL_BUF_SIZE  4096
 #define SHM_PKT_POOL_SIZE      (SHM_PKT_POOL_BUF_COUNT * SHM_PKT_POOL_BUF_SIZE)
-
-/**
- * Buffer pool for crypto session output packets
- */
-#define SHM_OUT_POOL_BUF_COUNT 1024
-#define SHM_OUT_POOL_BUF_SIZE  4096
-#define SHM_OUT_POOL_SIZE      (SHM_OUT_POOL_BUF_COUNT * SHM_OUT_POOL_BUF_SIZE)
 
 /**
  * Packet processing states/steps
@@ -183,7 +175,7 @@ typedef struct {
 } pkt_ctx_t;
 
 #define SHM_CTX_POOL_BUF_SIZE  (sizeof(pkt_ctx_t))
-#define SHM_CTX_POOL_BUF_COUNT (SHM_PKT_POOL_BUF_COUNT + SHM_OUT_POOL_BUF_COUNT)
+#define SHM_CTX_POOL_BUF_COUNT (SHM_PKT_POOL_BUF_COUNT)
 #define SHM_CTX_POOL_SIZE      (SHM_CTX_POOL_BUF_COUNT * SHM_CTX_POOL_BUF_SIZE)
 
 static global_data_t *global;
@@ -324,7 +316,6 @@ static
 void ipsec_init_pre(void)
 {
 	odp_queue_param_t qparam;
-	odp_pool_param_t params;
 
 	/*
 	 * Create queues
@@ -352,20 +343,6 @@ void ipsec_init_pre(void)
 	global->seqnumq = queue_create("seqnum", &qparam);
 	if (ODP_QUEUE_INVALID == global->seqnumq) {
 		ODPH_ERR("Error: sequence number queue creation failed\n");
-		exit(EXIT_FAILURE);
-	}
-
-	/* Create output buffer pool */
-	odp_pool_param_init(&params);
-	params.pkt.seg_len = SHM_OUT_POOL_BUF_SIZE;
-	params.pkt.len     = SHM_OUT_POOL_BUF_SIZE;
-	params.pkt.num     = SHM_PKT_POOL_BUF_COUNT;
-	params.type        = ODP_POOL_PACKET;
-
-	global->out_pool = odp_pool_create("out_pool", &params);
-
-	if (ODP_POOL_INVALID == global->out_pool) {
-		ODPH_ERR("Error: message pool create failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -415,8 +392,7 @@ void ipsec_init_post(crypto_api_mode_e api_mode)
 						     tun,
 						     api_mode,
 						     entry->input,
-						     global->completionq,
-						     global->out_pool)) {
+						     global->completionq)) {
 				ODPH_ERR("Error: IPSec cache entry failed.\n"
 						);
 				exit(EXIT_FAILURE);
@@ -1419,8 +1395,6 @@ main(int argc, char *argv[])
 	if (odp_pool_destroy(global->pkt_pool))
 		ODPH_ERR("Error: pool destroy failed\n");
 	if (odp_pool_destroy(global->ctx_pool))
-		ODPH_ERR("Error: pool destroy failed\n");
-	if (odp_pool_destroy(global->out_pool))
 		ODPH_ERR("Error: pool destroy failed\n");
 
 	shm = odp_shm_lookup("shm_ipsec_cache");
