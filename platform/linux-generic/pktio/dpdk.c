@@ -10,7 +10,6 @@
 #include <odp_posix_extensions.h>
 
 #include <odp/api/cpumask.h>
-#include <odp/api/deprecated.h>
 #include <odp/api/hints.h>
 #include <odp/api/packet.h>
 #include <odp/api/packet_io.h>
@@ -1768,9 +1767,6 @@ static int dpdk_init_capability(pktio_entry_t *pktio_entry,
 	capa->config.pktout.bit.ts_ena = 1;
 
 	if (!_ODP_DPDK_ZERO_COPY) {
-#if ODP_DEPRECATED_API
-		capa->tx_compl.mode_all = 1;
-#endif
 		capa->tx_compl.mode_event = 1;
 		capa->tx_compl.mode_poll = 1;
 		capa->free_ctrl.dont_free = 1;
