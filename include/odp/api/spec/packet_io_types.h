@@ -13,7 +13,6 @@
 #define ODP_API_SPEC_PACKET_IO_TYPES_H_
 #include <odp/visibility_begin.h>
 
-#include <odp/api/deprecated.h>
 #include <odp/api/packet_types.h>
 #include <odp/api/packet_io_stats.h>
 #include <odp/api/pool_types.h>
@@ -1117,13 +1116,6 @@ typedef struct odp_pktio_capability_t {
 		 * @see odp_packet_tx_compl_request()
 		 */
 		odp_bool_t queue_type_plain;
-
-		/**
-		 * For backwards compatibility, mode_all is synonym of mode_event.
-		 *
-		 * @deprecated Use mode_event instead.
-		 */
-		uint32_t ODP_DEPRECATE(mode_all)   : 1;
 
 		/** Packet transmit completion mode ODP_PACKET_TX_COMPL_EVENT support */
 		uint32_t mode_event : 1;
