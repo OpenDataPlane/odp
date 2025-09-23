@@ -13,7 +13,6 @@
 #define ODP_API_SPEC_TIMER_H_
 #include <odp/visibility_begin.h>
 
-#include <odp/api/deprecated.h>
 #include <odp/api/timer_types.h>
 #include <odp/api/event_types.h>
 #include <odp/api/pool_types.h>
@@ -133,18 +132,6 @@ void odp_timer_pool_param_init(odp_timer_pool_param_t *param);
  * @retval ODP_TIMER_POOL_INVALID on failure
  */
 odp_timer_pool_t odp_timer_pool_create(const char *name, const odp_timer_pool_param_t *params);
-
-/**
- * Start a timer pool
- *
- * Start all created timer pools, enabling the allocation of timers.
- * The purpose of this call is to coordinate the creation of multiple timer
- * pools that may use the same underlying HW resources.
- * This function may be called multiple times.
- *
- * @deprecated Use odp_timer_pool_start_multi() instead
- */
-void ODP_DEPRECATE(odp_timer_pool_start)(void);
 
 /**
  * Start timer pools
