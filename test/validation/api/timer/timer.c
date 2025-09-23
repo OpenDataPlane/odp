@@ -1276,12 +1276,7 @@ static void timer_pool_current_tick(void)
 	tp = odp_timer_pool_create("cur_tick", &tp_param);
 	CU_ASSERT_FATAL(tp != ODP_TIMER_POOL_INVALID);
 
-	/* API to be deprecated */
-#if ODP_DEPRECATED_API
-	odp_timer_pool_start();
-#else
 	CU_ASSERT_FATAL(odp_timer_pool_start_multi(&tp, 1) == 1);
-#endif
 
 	/* Allow +-10% error margin */
 	min = odp_timer_ns_to_tick(tp, 0.9 * nsec);
