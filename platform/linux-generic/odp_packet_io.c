@@ -652,13 +652,10 @@ int odp_pktio_config(odp_pktio_t hdl, const odp_pktio_config_t *config)
 	entry->config = *config;
 
 	entry->enabled.tx_ts = config->pktout.bit.ts_ena;
-	entry->enabled.tx_compl = (config->pktout.bit.ODP_DEPRECATE(tx_compl_ena) ||
-				   config->tx_compl.mode_event ||
-				   config->tx_compl.mode_poll);
+	entry->enabled.tx_compl = (config->tx_compl.mode_event || config->tx_compl.mode_poll);
 
 	if (entry->enabled.tx_compl) {
-		if ((config->pktout.bit.ODP_DEPRECATE(tx_compl_ena) ||
-		     config->tx_compl.mode_event) && configure_tx_event_compl(entry)) {
+		if (config->tx_compl.mode_event && configure_tx_event_compl(entry)) {
 			unlock_entry(entry);
 			_ODP_ERR("Unable to configure Tx event completion\n");
 			return -1;

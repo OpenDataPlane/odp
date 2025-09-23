@@ -1769,7 +1769,6 @@ static int dpdk_init_capability(pktio_entry_t *pktio_entry,
 
 	if (!_ODP_DPDK_ZERO_COPY) {
 #if ODP_DEPRECATED_API
-		capa->config.pktout.bit.tx_compl_ena = 1;
 		capa->tx_compl.mode_all = 1;
 #endif
 		capa->tx_compl.mode_event = 1;
