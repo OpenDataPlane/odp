@@ -87,6 +87,7 @@ typedef struct {
 						  test events */
 	} prio[NUM_PRIOS];
 	odp_bool_t sample_per_prio; /**< Allocate a separate sample for each priority */
+	uint64_t wait_ns;	/**< Number of nsec to wait after scheduling events */
 } test_args_t;
 
 /** Latency measurements statistics */
@@ -450,6 +451,7 @@ static int test_schedule_single(int thr, test_globals_t *globals)
 {
 	const int warm_up_rounds = globals->args.warm_up_rounds;
 	const uint64_t test_rounds = globals->args.test_rounds * (uint64_t)1000000;
+	const uint64_t wait_ns = globals->args.wait_ns;
 	odp_event_t ev;
 	odp_buffer_t buf;
 	odp_queue_t dst_queue;
@@ -464,6 +466,9 @@ static int test_schedule_single(int thr, test_globals_t *globals)
 		time = odp_time_global_strict();
 		buf = odp_buffer_from_event(ev);
 		event = odp_buffer_addr(buf);
+
+		if (odp_unlikely(wait_ns))
+			odp_time_wait_ns(wait_ns);
 
 		stats = &globals->core_stat[thr].prio[event->prio];
 
@@ -613,6 +618,7 @@ static int test_schedule_burst(int thr, test_globals_t *globals)
 	const int warm_up_rounds = globals->args.warm_up_rounds;
 	const uint64_t test_rounds = globals->args.test_rounds * (uint64_t)1000000;
 	const uint32_t burst_size = globals->args.burst_size;
+	const uint64_t wait_ns = globals->args.wait_ns;
 	uint32_t num_sched_ev;
 	odp_event_t ev_burst[MAX_BURST_SIZE];
 	odp_event_t traffic_collector[MAX_BURST_SIZE];
@@ -628,6 +634,9 @@ static int test_schedule_burst(int thr, test_globals_t *globals)
 		num_sched_ev = odp_schedule_multi(NULL, ODP_SCHED_WAIT,
 						  ev_burst, burst_size);
 		time = odp_time_global_strict();
+
+		if (odp_unlikely(wait_ns))
+			odp_time_wait_ns(wait_ns);
 
 		for (j = 0; j < num_sched_ev; j++) {
 			ev = ev_burst[j];
@@ -835,6 +844,7 @@ static void usage(void)
 	       "               1: ODP_SCHED_SYNC_ATOMIC\n"
 	       "               2: ODP_SCHED_SYNC_ORDERED\n"
 	       "  -w, --warm-up <number> Number of warm-up rounds, default=100, min=1\n"
+	       "  -W, --wait-ns <number> Number of nsec to wait per schedule round to simulate work (default=0)\n"
 	       "  -h, --help   Display help and exit.\n\n");
 }
 
@@ -865,12 +875,13 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 		{"hi-prio-events", required_argument, NULL, 'p'},
 		{"sync", required_argument, NULL, 's'},
 		{"warm-up", required_argument, NULL, 'w'},
+		{"wait-ns", required_argument, NULL, 'W'},
 		{"sample-per-prio", no_argument, NULL, 'r'},
 		{"help", no_argument, NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+c:b:d:f:g:i:l:t:m:n:o:p:s:w:rh";
+	static const char *shortopts = "+c:b:d:f:g:i:l:t:m:n:o:p:s:w:W:rh";
 
 	args->cpu_count = 1;
 	args->forward_mode = EVENT_FORWARD_RAND;
@@ -947,6 +958,9 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 			break;
 		case 'w':
 			args->warm_up_rounds = atoi(optarg);
+			break;
+		case 'W':
+			args->wait_ns = atoll(optarg);
 			break;
 		case 'b':
 			args->burst_size = atoi(optarg);
@@ -1297,6 +1311,7 @@ int main(int argc, char *argv[])
 	printf("  CPU mask:         %s\n", cpumaskstr);
 	printf("  Test rounds:      %iM\n", args.test_rounds);
 	printf("  Warm-up rounds:   %i\n", args.warm_up_rounds);
+	printf("  Wait nsec:        %" PRIu64 "\n", args.wait_ns);
 	printf("  Isolated groups:  %i\n", args.isolate);
 	printf("  Number of groups: %i\n", num_group);
 	printf("  Created groups:   %i\n", tot_group);
