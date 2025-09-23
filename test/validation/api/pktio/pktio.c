@@ -3881,13 +3881,10 @@ static void pktio_test_pktout_compl_event(bool use_plain_queue, uint32_t test_fl
 	/* Disabled by default */
 	CU_ASSERT(odp_packet_has_tx_compl_request(pkt_tbl[0]) == 0);
 
-	/* Check that disable works. Also COMPL_ALL should be still supported. */
+	/* Check that disable works */
 	opt.queue = compl_queue[0];
-#if ODP_DEPRECATED_API
-	opt.mode = ODP_PACKET_TX_COMPL_ALL;
-#else
 	opt.mode = ODP_PACKET_TX_COMPL_EVENT;
-#endif
+
 	odp_packet_tx_compl_request(pkt_tbl[0], &opt);
 	CU_ASSERT(odp_packet_has_tx_compl_request(pkt_tbl[0]) != 0);
 	opt.mode = ODP_PACKET_TX_COMPL_DISABLED;
