@@ -7,7 +7,6 @@
 
 #include <odp/api/buffer.h>
 #include <odp/api/debug.h>
-#include <odp/api/deprecated.h>
 #include <odp/api/packet.h>
 #include <odp/api/packet_io.h>
 #include <odp/api/proto_stats.h>

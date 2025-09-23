@@ -4,7 +4,6 @@
  */
 
 #include <odp/api/debug.h>
-#include <odp/api/deprecated.h>
 #include <odp/api/event.h>
 #include <odp/api/hash.h>
 #include <odp/api/hints.h>
@@ -696,9 +695,7 @@ static int loopback_init_capability(pktio_entry_t *pktio_entry)
 	capa->config.pktout.bit.udp_chksum = 1;
 	capa->config.pktout.bit.sctp_chksum = 1;
 	capa->config.pktout.bit.ts_ena = 1;
-#if ODP_DEPRECATED_API
-	capa->tx_compl.mode_all = 1;
-#endif
+
 	capa->tx_compl.mode_event = 1;
 	capa->tx_compl.mode_poll = 1;
 
