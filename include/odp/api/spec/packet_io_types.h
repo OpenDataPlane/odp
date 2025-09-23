@@ -538,14 +538,6 @@ typedef union odp_pktout_config_opt_t {
 		 */
 		uint64_t aging_ena  : 1;
 
-		/**
-		 * For backwards compatibility, setting this flag is the same as setting
-		 * tx_compl.mode_event in odp_pktio_config_t. The default value is zero.
-		 *
-		 * @deprecated Use odp_pktio_config_t::mode_event instead.
-		 */
-		uint64_t ODP_DEPRECATE(tx_compl_ena) : 1;
-
 		/** Enable packet protocol stats update */
 		uint64_t proto_stats_ena : 1;
 
