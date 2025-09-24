@@ -12,7 +12,7 @@
 #define NUM_EVENTS  100
 #define EVENT_SIZE  100
 #define EVENT_BURST 10
-#define MAX_EVENT_TYPES 5
+#define MAX_EVENT_TYPES 6
 
 typedef struct {
 	struct {
@@ -49,6 +49,7 @@ static odp_event_t event_types_alloc_event(odp_pool_type_t pool_type)
 	odp_timeout_t tmo;
 	odp_event_vector_t evv;
 	odp_packet_vector_t pv;
+	odp_dma_compl_t dma_compl;
 
 	if (idx < 0)
 		return ODP_EVENT_INVALID;
@@ -79,6 +80,11 @@ static odp_event_t event_types_alloc_event(odp_pool_type_t pool_type)
 		if (pv == ODP_PACKET_VECTOR_INVALID)
 			return ODP_EVENT_INVALID;
 		return odp_packet_vector_to_event(pv);
+	case ODP_POOL_DMA_COMPL:
+		dma_compl = odp_dma_compl_alloc(ctx->type[idx].pool);
+		if (dma_compl == ODP_DMA_COMPL_INVALID)
+			return ODP_EVENT_INVALID;
+		return odp_dma_compl_to_event(dma_compl);
 	default:
 		return ODP_EVENT_INVALID;
 	}
@@ -133,6 +139,7 @@ static int event_types_suite_init(void)
 	odp_queue_capability_t queue_capa;
 	odp_queue_param_t queue_prm;
 	odp_pool_capability_t p_capa;
+	odp_dma_capability_t dma_capa;
 
 	if (odp_queue_capability(&queue_capa) != 0)
 		return -1;
@@ -149,6 +156,9 @@ static int event_types_suite_init(void)
 		return -1;
 
 	if (odp_pool_capability(&p_capa) != 0)
+		return -1;
+
+	if (odp_dma_capability(&dma_capa) != 0)
 		return -1;
 
 	ctx->type[n].event_type = ODP_EVENT_BUFFER;
@@ -170,10 +180,17 @@ static int event_types_suite_init(void)
 		ctx->type[n++].pool_type = ODP_POOL_VECTOR;
 	}
 
+	if (dma_capa.max_sessions && (dma_capa.compl_mode_mask & ODP_DMA_COMPL_EVENT) &&
+	    dma_capa.pool.max_num > 0) {
+		ctx->type[n].event_type = ODP_EVENT_DMA_COMPL;
+		ctx->type[n++].pool_type = ODP_POOL_DMA_COMPL;
+	}
+
 	ctx->num_types = n;
 
 	for (i = 0; i < ctx->num_types; i++) {
 		odp_pool_param_t prm;
+		odp_dma_pool_param_t dma_prm;
 
 		odp_pool_param_init(&prm);
 
@@ -206,12 +223,21 @@ static int event_types_suite_init(void)
 							 p_capa.vector.max_uarea_size);
 		break;
 		case ODP_POOL_DMA_COMPL:
+			odp_dma_pool_param_init(&dma_prm);
+			dma_prm.num = NUM_EVENTS;
+			dma_prm.uarea_size = ODPH_MIN(sizeof(uint64_t),
+						      dma_capa.pool.max_uarea_size);
+		break;
 		case ODP_POOL_ML_COMPL:
 		break;
 		}
 
 		snprintf(name, ODP_POOL_NAME_LEN, "event_type_compliance_%d", i);
-		ctx->type[i].pool = odp_pool_create(name, &prm);
+
+		if (ctx->type[i].pool_type == ODP_POOL_DMA_COMPL)
+			ctx->type[i].pool = odp_dma_pool_create(name, &dma_prm);
+		else
+			ctx->type[i].pool = odp_pool_create(name, &prm);
 
 		if (ctx->type[i].pool == ODP_POOL_INVALID)
 			return -1;
@@ -317,7 +343,8 @@ static void event_test_pool(void)
 			exp_type = ctx->type[i].event_type;
 			ev_pool = odp_event_pool(ev);
 
-			if (exp_type == ODP_EVENT_TIMEOUT)
+			if (exp_type == ODP_EVENT_TIMEOUT ||
+			    exp_type == ODP_EVENT_DMA_COMPL)
 				CU_ASSERT(ev_pool == ODP_POOL_INVALID);
 			else
 				CU_ASSERT(ev_pool == ctx->type[i].pool);
@@ -348,6 +375,7 @@ static void event_test_user_area_flag(void)
 			switch (ctx->type[i].event_type) {
 			case ODP_EVENT_BUFFER:
 			case ODP_EVENT_TIMEOUT:
+			case ODP_EVENT_DMA_COMPL:
 				CU_ASSERT(flag < 0);
 				break;
 			case ODP_EVENT_PACKET:
