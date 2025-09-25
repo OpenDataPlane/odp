@@ -1471,6 +1471,11 @@ static int schedule_ord_enq_multi_no_stash(odp_queue_t dst_queue,
 	return 0;
 }
 
+static inline void schedule_ord_wait(odp_queue_t dst_queue)
+{
+	schedule_ord_enq_multi_no_stash(dst_queue, NULL, 0, NULL);
+}
+
 static inline int queue_is_pktin(uint32_t queue_index)
 {
 	return sched->queue[queue_index].poll_pktin;
@@ -2478,6 +2483,13 @@ static int schedule_capability(odp_schedule_capability_t *capa)
 	capa->max_flow_id = BUF_HDR_MAX_FLOW_ID;
 	capa->order_wait = ODP_SUPPORT_YES;
 
+	capa->aggr.max_num = CONFIG_MAX_EVENT_AGGR;
+	capa->aggr.max_num_per_queue = 1;
+	capa->aggr.max_size = CONFIG_EVENT_VECTOR_MAX_SIZE;
+	capa->aggr.min_size = 2;
+	capa->aggr.max_tmo_ns = 0;
+	capa->aggr.min_tmo_ns = 0;
+
 	return 0;
 }
 
@@ -2589,6 +2601,7 @@ schedule_fn_t _odp_schedule_basic_fn = {
 	.destroy_queue = schedule_destroy_queue,
 	.sched_queue = schedule_sched_queue,
 	.ord_enq_multi = schedule_ord_enq_multi,
+	.ord_wait    = schedule_ord_wait,
 	.init_global = schedule_init_global,
 	.term_global = schedule_term_global,
 	.init_local  = schedule_init_local,

@@ -26,6 +26,11 @@ odp_suiteinfo_t classification_suites[] = {
 	  .init_func    = classification_suite_pktv_init,
 	  .term_func    = classification_suite_pktv_term,
 	},
+	{ .name         = "classification event vector tests",
+	  .testinfo_tbl = classification_suite_evv,
+	  .init_func    = classification_suite_evv_init,
+	  .term_func    = classification_suite_evv_term,
+	},
 	ODP_SUITE_INFO_NULL,
 };
 
