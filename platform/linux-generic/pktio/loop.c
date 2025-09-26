@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2013-2018 Linaro Limited
- * Copyright (c) 2013-2023 Nokia Solutions and Networks
+ * Copyright (c) 2013-2025 Nokia
  */
 
 #include <odp/api/debug.h>
@@ -545,7 +545,9 @@ static int loopback_send(pktio_entry_t *pktio_entry, int index, const odp_packet
 		num = QUEUE_MULTI_MAX;
 
 	for (i = 0; i < num; ++i) {
-		uint32_t pkt_len = odp_packet_len(pkt_tbl[i]);
+		odp_packet_t pkt = pkt_tbl[i];
+		uint32_t refcount = odp_atomic_load_u32(&packet_hdr(pkt)->ref_cnt);
+		uint32_t pkt_len = odp_packet_len(pkt);
 
 		if (odp_unlikely(pkt_len > pkt_loop->mtu)) {
 			if (nb_tx == 0)
@@ -553,21 +555,32 @@ static int loopback_send(pktio_entry_t *pktio_entry, int index, const odp_packet
 			break;
 		}
 
+		if (odp_unlikely(refcount > 1)) {
+			/* Cannot send the original packet, so send a copy */
+			pkt = odp_packet_copy(pkt, odp_packet_pool(pkt));
+			if (pkt == ODP_PACKET_INVALID)
+				break;
+		}
+
 		if (tx_ts_enabled && tx_ts_idx == 0) {
-			if (odp_unlikely(packet_hdr(pkt_tbl[i])->p.flags.ts_set))
+			if (odp_unlikely(packet_hdr(pkt)->p.flags.ts_set))
 				tx_ts_idx = i + 1;
 		}
 
-		packet_subtype_set(pkt_tbl[i], ODP_EVENT_PACKET_BASIC);
-		loopback_fix_checksums(pkt_tbl[i], pktout_cfg, pktout_capa);
-		queue = get_dest_queue(pkt_loop, pkt_tbl[i], index);
-		ret = odp_queue_enq(queue, odp_packet_to_event(pkt_tbl[i]));
+		packet_subtype_set(pkt, ODP_EVENT_PACKET_BASIC);
+		loopback_fix_checksums(pkt, pktout_cfg, pktout_capa);
+		queue = get_dest_queue(pkt_loop, pkt, index);
+		ret = odp_queue_enq(queue, odp_packet_to_event(pkt));
 
 		if (ret < 0) {
 			_ODP_DBG("queue enqueue failed %i to queue: %" PRIu64 "\n", ret,
 				 odp_queue_to_u64(queue));
+			if (odp_unlikely(refcount > 1))
+				odp_packet_free(pkt); /* free the copy */
 			break;
 		}
+		if (odp_unlikely(refcount > 1))
+			odp_packet_free(pkt_tbl[i]); /* consume sent packet */
 
 		nb_tx++;
 		odp_atomic_inc_u64(&stats->out_packets);
