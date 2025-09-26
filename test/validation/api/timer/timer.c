@@ -1462,6 +1462,141 @@ static void timer_pool_tick_info(void)
 	odp_timer_pool_destroy(tp);
 }
 
+static void timer_pool_mixed_params(void)
+{
+	odp_timer_capability_t capa;
+	const uint32_t max_mixed = 5; /* A few differently parameterized pools. */
+	uint32_t num_pools, max_timers = NTIMERS, num_timers;
+	uint64_t min_res_ns, max_res_ns, res_ns, max_tmo, max_steps,
+	steps = 100 /* Just use some stepping value to get different timeout ranges. */, tmo,
+	time_limit;
+	odp_timer_pool_param_t tp_param;
+	int num_config = 0, num_recv = 0;
+	odp_timer_clk_src_t clk_src = test_global->clk_src;
+	odp_queue_param_t queue_param;
+	odp_queue_t queue;
+	odp_pool_t tmo_pool;
+	odp_pool_param_t pool_param;
+	odp_timer_start_t start_param;
+	odp_timer_t tmr;
+	odp_timer_pool_info_t info;
+	odp_timeout_t tmo_ev;
+	odp_event_t ev;
+
+	CU_ASSERT_FATAL(odp_timer_capability(clk_src, &capa) == 0);
+
+	num_pools = capa.max_pools > max_mixed ? max_mixed : capa.max_pools;
+
+	if (capa.max_timers > 0)
+		max_timers = capa.max_timers;
+
+	min_res_ns = capa.max_tmo.res_ns;
+	max_res_ns = capa.max_res.res_ns;
+	res_ns = capa.max_res.res_ns;
+	max_tmo = capa.max_tmo.max_tmo;
+	max_steps = capa.max_res.max_tmo / capa.max_res.res_ns;
+
+	if (steps > max_steps)
+		steps = max_steps;
+
+	odp_timer_pool_t tp[num_pools];
+
+	odp_timer_pool_param_init(&tp_param);
+	tp_param.clk_src = clk_src;
+
+	/* Bump the resolution, min/max range and timer count up for every timer pool, resulting in
+	 * a set of varyingly parameterized timer pools. Subsequently, check that timers from these
+	 * pools work. */
+	for (uint32_t i = 0; i < num_pools; i++) {
+		res_ns = (i + 1) * max_res_ns;
+		tmo = res_ns * steps;
+
+		if (tmo > max_tmo) {
+			res_ns = min_res_ns;
+			tmo = max_tmo;
+		}
+
+		tp_param.res_ns = res_ns;
+		tp_param.min_tmo = res_ns;
+		tp_param.max_tmo = tmo;
+		num_timers = (i + 1) * 10;
+		tp_param.num_timers = num_timers > max_timers ? max_timers : num_timers;
+		printf("Timer pool configuration, res_ns: %" PRIu64 ", min_tmo: %" PRIu64 ", "
+		       "max_tmo: %" PRIu64 ", num_timers: %u\n", tp_param.res_ns, tp_param.min_tmo,
+		       tp_param.max_tmo, tp_param.num_timers);
+		tp[num_config] = odp_timer_pool_create("test_mixed", &tp_param);
+
+		if (tp[num_config] == ODP_TIMER_POOL_INVALID) {
+			ODPH_ERR("Timer pool create failed for configuration\n");
+			continue;
+		}
+
+		num_config++;
+	}
+
+	odp_queue_param_init(&queue_param);
+
+	if (capa.queue_type_sched)
+		queue_param.type = ODP_QUEUE_TYPE_SCHED;
+
+	queue = odp_queue_create("test_mixed", &queue_param);
+
+	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
+
+	odp_pool_param_init(&pool_param);
+	pool_param.type = ODP_POOL_TIMEOUT;
+	pool_param.tmo.num = num_config;
+	tmo_pool = odp_pool_create("test_mixed", &pool_param);
+
+	CU_ASSERT_FATAL(tmo_pool != ODP_POOL_INVALID);
+	CU_ASSERT_FATAL(odp_timer_pool_start_multi(tp, num_config) == num_config);
+
+	start_param.tick_type = ODP_TIMER_TICK_REL;
+
+	for (int i = 0; i < num_config; i++) {
+		tmr = odp_timer_alloc(tp[i], queue, NULL);
+
+		CU_ASSERT_FATAL(tmr != ODP_TIMER_INVALID);
+		CU_ASSERT_FATAL(odp_timer_pool_info(tp[i], &info) == 0);
+
+		tmo_ev = odp_timeout_alloc(tmo_pool);
+
+		CU_ASSERT_FATAL(tmo_ev != ODP_TIMEOUT_INVALID);
+
+		start_param.tick = odp_timer_ns_to_tick(tp[i], info.param.res_ns);
+		start_param.tmo_ev = odp_timeout_to_event(tmo_ev);
+
+		CU_ASSERT_FATAL(odp_timer_start(tmr, &start_param) == ODP_TIMER_SUCCESS);
+	}
+
+	time_limit = odp_time_local_strict_ns() + res_ns * steps;
+
+	while (odp_time_local_strict_ns() < time_limit) {
+		ev = capa.queue_type_sched ? odp_schedule(NULL, ODP_SCHED_NO_WAIT) :
+					     odp_queue_deq(queue);
+
+		if (ev == ODP_EVENT_INVALID)
+			continue;
+
+		CU_ASSERT_FATAL(odp_event_type(ev) == ODP_EVENT_TIMEOUT);
+
+		tmr = odp_timeout_timer(odp_timeout_from_event(ev));
+		odp_timer_free(tmr);
+		odp_event_free(ev);
+		num_recv++;
+
+		if (num_config == num_recv)
+			break;
+	}
+
+	CU_ASSERT(num_config == num_recv);
+	CU_ASSERT(odp_pool_destroy(tmo_pool) == 0);
+	CU_ASSERT(odp_queue_destroy(queue) == 0);
+
+	for (int i = 0; i < num_config; i++)
+		odp_timer_pool_destroy(tp[i]);
+}
+
 static void timer_alloc_max(void)
 {
 	odp_timer_capability_t capa;
@@ -3432,6 +3567,7 @@ odp_testinfo_t timer_suite[] = {
 	ODP_TEST_INFO(timer_pool_current_tick),
 	ODP_TEST_INFO(timer_pool_sample_ticks),
 	ODP_TEST_INFO(timer_pool_tick_info),
+	ODP_TEST_INFO(timer_pool_mixed_params),
 	ODP_TEST_INFO(timer_alloc_max),
 	ODP_TEST_INFO_CONDITIONAL(timer_plain_rel_wait, check_plain_queue_support),
 	ODP_TEST_INFO_CONDITIONAL(timer_plain_abs_wait, check_plain_queue_support),
