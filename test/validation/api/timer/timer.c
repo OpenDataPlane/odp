@@ -19,8 +19,6 @@
 
 #define GLOBAL_SHM_NAME	"GlobalTimerTest"
 
-#define MAX_TIMER_POOLS  1024
-
 /* Timeout range in milliseconds (ms) */
 #define RANGE_MS 2000
 
@@ -782,10 +780,13 @@ static void timer_pool_long_name(void)
 static void timer_pool_create_max(void)
 {
 	odp_timer_capability_t capa;
+	odp_shm_t shm_tp, shm_tmr;
+	odp_timer_pool_t *tp;
+	odp_timer_t *timer;
 	odp_timer_pool_param_t tp_param;
 	odp_queue_param_t queue_param;
 	odp_queue_t queue;
-	uint32_t i;
+	uint32_t num, i;
 	int ret;
 	uint64_t tmo_ns = ODP_TIME_SEC_IN_NS;
 	uint64_t res_ns = ODP_TIME_SEC_IN_NS / 10;
@@ -794,13 +795,18 @@ static void timer_pool_create_max(void)
 	ret = odp_timer_capability(clk_src, &capa);
 	CU_ASSERT_FATAL(ret == 0);
 
-	uint32_t num = capa.max_pools;
+	num = capa.max_pools;
+	shm_tp = odp_shm_reserve("test_max_tp", num * sizeof(*tp), ODP_CACHE_LINE_SIZE, 0);
+	shm_tmr = odp_shm_reserve("test_max_tmr", num * sizeof(*timer), ODP_CACHE_LINE_SIZE, 0);
 
-	if (num > MAX_TIMER_POOLS)
-		num = MAX_TIMER_POOLS;
+	CU_ASSERT_FATAL(shm_tp != ODP_SHM_INVALID);
+	CU_ASSERT_FATAL(shm_tmr != ODP_SHM_INVALID);
 
-	odp_timer_pool_t tp[num];
-	odp_timer_t timer[num];
+	tp = odp_shm_addr(shm_tp);
+	timer = odp_shm_addr(shm_tmr);
+
+	CU_ASSERT_FATAL(tp != NULL);
+	CU_ASSERT_FATAL(timer != NULL);
 
 	if (capa.max_tmo.max_tmo < tmo_ns) {
 		tmo_ns = capa.max_tmo.max_tmo;
@@ -852,6 +858,8 @@ static void timer_pool_create_max(void)
 		odp_timer_pool_destroy(tp[i]);
 
 	CU_ASSERT(odp_queue_destroy(queue) == 0);
+	CU_ASSERT(odp_shm_free(shm_tmr) == 0);
+	CU_ASSERT(odp_shm_free(shm_tp) == 0);
 }
 
 static void timer_pool_max_res(void)
@@ -3177,6 +3185,73 @@ static void timer_test_periodic_event_reuse(void)
 	timer_test_periodic(ODP_QUEUE_TYPE_SCHED, 0, 2, 1, 0);
 }
 
+static void timer_test_periodic_pool_create_max(void)
+{
+	odp_timer_capability_t timer_capa;
+	odp_shm_t shm_tp;
+	odp_timer_periodic_capability_t periodic_capa;
+	odp_timer_pool_param_t timer_param;
+	odp_timer_pool_t *tp;
+	double min_freq, max_freq;
+	uint32_t num;
+	odp_fract_u64_t base_freq = {1000, 0, 0};
+	odp_timer_clk_src_t clk_src = test_global->clk_src;
+
+	CU_ASSERT_FATAL(odp_timer_capability(clk_src, &timer_capa) == 0);
+
+	num = timer_capa.periodic.max_pools;
+	shm_tp = odp_shm_reserve("test_max_periodic", num * sizeof(*tp), ODP_CACHE_LINE_SIZE, 0);
+
+	CU_ASSERT_FATAL(shm_tp != ODP_SHM_INVALID);
+
+	tp = odp_shm_addr(shm_tp);
+
+	CU_ASSERT_FATAL(tp != NULL);
+
+	min_freq = odp_fract_u64_to_dbl(&timer_capa.periodic.min_base_freq_hz);
+	max_freq = odp_fract_u64_to_dbl(&timer_capa.periodic.max_base_freq_hz);
+
+	if (odp_fract_u64_to_dbl(&base_freq) < min_freq)
+		base_freq = timer_capa.periodic.min_base_freq_hz;
+	else if (odp_fract_u64_to_dbl(&base_freq) > max_freq)
+		base_freq = timer_capa.periodic.max_base_freq_hz;
+
+	memset(&periodic_capa, 0, sizeof(odp_timer_periodic_capability_t));
+	periodic_capa.base_freq_hz = base_freq;
+	periodic_capa.max_multiplier = 1;
+
+	if (odp_timer_periodic_capability(clk_src, &periodic_capa) < 0) {
+		(void)odp_shm_free(shm_tp);
+		ODPH_ERR("Periodic timer does not support tested frequency\n");
+		return;
+	}
+
+	base_freq = periodic_capa.base_freq_hz;
+	odp_timer_pool_param_init(&timer_param);
+	timer_param.timer_type = ODP_TIMER_TYPE_PERIODIC;
+	timer_param.res_ns = 2 * periodic_capa.res_ns;
+	timer_param.num_timers = 1;
+	timer_param.clk_src = clk_src;
+	timer_param.periodic.base_freq_hz = periodic_capa.base_freq_hz;
+	timer_param.periodic.max_multiplier = periodic_capa.max_multiplier;
+
+	for (uint32_t i = 0; i < num; i++) {
+		tp[i] = odp_timer_pool_create("test_max_periodic", &timer_param);
+
+		if (tp[i] == ODP_TIMER_POOL_INVALID)
+			ODPH_ERR("Timer pool create failed: %u / %u\n", i, num);
+
+		CU_ASSERT_FATAL(tp[i] != ODP_TIMER_POOL_INVALID);
+	}
+
+	CU_ASSERT(odp_timer_pool_start_multi(tp, num) == (int)num);
+
+	for (uint32_t i = 0; i < num; i++)
+		odp_timer_pool_destroy(tp[i]);
+
+	CU_ASSERT(odp_shm_free(shm_tp) == 0);
+}
+
 odp_testinfo_t timer_general_suite[] = {
 	ODP_TEST_INFO(timer_test_param_init),
 	ODP_TEST_INFO(timer_test_timeout_pool_alloc),
@@ -3289,6 +3364,8 @@ odp_testinfo_t timer_suite[] = {
 				  check_periodic_sched_support),
 	ODP_TEST_INFO_CONDITIONAL(timer_test_periodic_event_reuse,
 				  check_periodic_sched_support),
+	ODP_TEST_INFO_CONDITIONAL(timer_test_periodic_pool_create_max,
+				  check_periodic_support),
 	ODP_TEST_INFO_NULL,
 };
 
