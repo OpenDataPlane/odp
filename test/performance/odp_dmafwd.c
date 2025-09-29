@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright (c) 2023 Nokia
+ * Copyright (c) 2023-2025 Nokia
  */
 
 /**
@@ -157,6 +157,7 @@ typedef struct prog_config_s {
 	uint32_t compl_cache_size;
 	uint32_t stash_cache_size;
 	double time_sec;
+	odp_bool_t seg_free;
 	odp_stash_type_t stash_type;
 	int num_thrs;
 	uint8_t num_ifs;
@@ -256,6 +257,7 @@ static void print_usage(dynamic_defs_t *dyn_defs)
 	       "  -c, --worker_count Amount of workers. %u by default.\n"
 	       "  -C, --cache_size   Maximum cache size for pools. %u by default.\n"
 	       "  -T, --time_sec     Time in seconds to run. 0 means infinite. %u by default.\n"
+	       "  -s, --seg_free     Use DMA source segment free offload. Disabled by default.\n"
 	       "  -h, --help         This help.\n"
 	       "\n", DEF_CPY_TYPE, dyn_defs->burst_size, dyn_defs->num_pkts, dyn_defs->pkt_len,
 	       DEF_WORKERS, dyn_defs->cache_size, DEF_TIME);
@@ -327,6 +329,11 @@ static parse_result_t check_options(prog_config_t *config)
 	if (odp_dma_capability(&dma_capa) < 0) {
 		ODPH_ERR("Error querying DMA capabilities\n");
 		return PRS_NOK;
+	}
+
+	if (config->seg_free && dma_capa.src_seg_free == 0) {
+		ODPH_ERR("Unsupported source segment free by DMA\n");
+		return PRS_NOT_SUP;
 	}
 
 	if ((uint32_t)config->num_thrs > dma_capa.max_sessions) {
@@ -472,11 +479,12 @@ static parse_result_t parse_options(int argc, char **argv, prog_config_t *config
 		{ "worker_count", required_argument, NULL, 'c' },
 		{ "cache_size", required_argument, NULL, 'C' },
 		{ "time_sec", required_argument, NULL, 'T' },
+		{ "seg_free", no_argument, NULL, 's' },
 		{ "help", no_argument, NULL, 'h' },
 		{ NULL, 0, NULL, 0 }
 	};
 
-	static const char *shortopts = "i:t:b:n:l:c:C:T:h";
+	static const char *shortopts = "i:t:b:n:l:c:C:T:sh";
 
 	init_config(config);
 
@@ -510,6 +518,9 @@ static parse_result_t parse_options(int argc, char **argv, prog_config_t *config
 			break;
 		case 'T':
 			config->time_sec = atof(optarg);
+			break;
+		case 's':
+			config->seg_free = 1;
 			break;
 		case 'h':
 			print_usage(&config->dyn_defs);
@@ -607,6 +618,8 @@ static transfer_t *init_dma_ev_trs(odp_dma_transfer_param_t *trs_param,
 	trs_param->num_dst = 0U;
 	trs_param->src_seg = src_segs;
 	trs_param->dst_seg = dst_segs;
+	if (config->prog_config->seg_free)
+		trs_param->opts.seg_free = 1;
 	compl_param->compl_mode = ODP_DMA_COMPL_EVENT;
 	c_ev = odp_dma_compl_alloc(config->compl_pool);
 
@@ -650,6 +663,8 @@ static transfer_t *init_dma_poll_trs(odp_dma_transfer_param_t *trs_param,
 	trs_param->num_dst = 0U;
 	trs_param->src_seg = src_segs;
 	trs_param->dst_seg = dst_segs;
+	if (config->prog_config->seg_free)
+		trs_param->opts.seg_free = 1;
 	compl_param->compl_mode = ODP_DMA_COMPL_POLL;
 	compl_param->transfer_id = odp_dma_transfer_id_alloc(config->dma_handle);
 
@@ -760,6 +775,7 @@ static void drain_events(thread_config_t *config ODP_UNUSED)
 	odp_dma_result_t res;
 	odp_buffer_t buf;
 	transfer_t *trs;
+	const odp_bool_t seg_free = config->prog_config->seg_free;
 
 	while (true) {
 		ev = odp_schedule(NULL, odp_schedule_wait_time(100 * ODP_TIME_MSEC_IN_NS));
@@ -774,7 +790,8 @@ static void drain_events(thread_config_t *config ODP_UNUSED)
 			odp_dma_compl_result(odp_dma_compl_from_event(ev), &res);
 			buf = (odp_buffer_t)res.user_ptr;
 			trs = (transfer_t *)odp_buffer_addr(buf);
-			odp_packet_free_multi(trs->src_pkts, trs->num);
+			if (!seg_free)
+				odp_packet_free_multi(trs->src_pkts, trs->num);
 			odp_packet_free_multi(trs->dst_pkts, trs->num);
 			odp_buffer_free(buf);
 		}
@@ -790,6 +807,7 @@ static void drain_polled(thread_config_t *config)
 	int ret;
 	odp_buffer_t buf;
 	transfer_t *trs;
+	const odp_bool_t seg_free = config->prog_config->seg_free;
 
 	while (true) {
 		if (odp_stash_get(config->inflight_stash, &id, 1) != 1)
@@ -808,7 +826,8 @@ static void drain_polled(thread_config_t *config)
 
 		buf = (odp_buffer_t)res.user_ptr;
 		trs = (transfer_t *)odp_buffer_addr(buf);
-		odp_packet_free_multi(trs->src_pkts, trs->num);
+		if (!seg_free)
+			odp_packet_free_multi(trs->src_pkts, trs->num);
 		odp_packet_free_multi(trs->dst_pkts, trs->num);
 		odp_buffer_free(buf);
 	}
@@ -1025,6 +1044,7 @@ static inline void send_dma_poll_trs_pkts(int burst_size, thread_config_t *confi
 	pktio_t *pktio;
 	int num_sent;
 	stats_t *stats = &config->stats;
+	const odp_bool_t seg_free = config->prog_config->seg_free;
 
 	while (true) {
 		num = odp_stash_get(stash_handle, &ids, burst_size);
@@ -1065,12 +1085,14 @@ static inline void send_dma_poll_trs_pkts(int burst_size, thread_config_t *confi
 				++stats->trs;
 				stats->fwd_pkts += num_sent;
 				stats->discards += trs->num - num_sent;
+				if (!seg_free)
+					odp_packet_free_multi(trs->src_pkts, trs->num);
 			} else {
+				odp_packet_free_multi(trs->src_pkts, trs->num);
 				odp_packet_free_multi(trs->dst_pkts, trs->num);
 				++stats->trs_errs;
 			}
 
-			odp_packet_free_multi(trs->src_pkts, trs->num);
 			odp_buffer_free(buf);
 		}
 	}
@@ -1084,6 +1106,7 @@ static inline void send_dma_ev_trs_pkts(odp_dma_compl_t compl_ev, thread_config_
 	pktio_t *pktio;
 	int num_sent;
 	stats_t *stats = &config->stats;
+	const odp_bool_t seg_free = config->prog_config->seg_free;
 
 	memset(&res, 0, sizeof(res));
 	odp_dma_compl_result(compl_ev, &res);
@@ -1097,12 +1120,15 @@ static inline void send_dma_ev_trs_pkts(odp_dma_compl_t compl_ev, thread_config_
 		++stats->trs;
 		stats->fwd_pkts += num_sent;
 		stats->discards += trs->num - num_sent;
+
+		if (!seg_free)
+			odp_packet_free_multi(trs->src_pkts, trs->num);
 	} else {
+		odp_packet_free_multi(trs->src_pkts, trs->num);
 		odp_packet_free_multi(trs->dst_pkts, trs->num);
 		++stats->trs_errs;
 	}
 
-	odp_packet_free_multi(trs->src_pkts, trs->num);
 	odp_buffer_free(buf);
 	odp_dma_compl_free(compl_ev);
 }
@@ -1319,9 +1345,11 @@ static void print_stats(const prog_config_t *config)
 	       "    copy mode:       %s\n"
 	       "    burst size:      %u\n"
 	       "    packet length:   %u\n"
-	       "    max cache size:  %u\n", config->copy_type == SW_COPY ? "SW" :
+	       "    max cache size:  %u\n"
+	       "    use DMA source segment free: %s\n", config->copy_type == SW_COPY ? "SW" :
 	       config->copy_type == DMA_COPY_EV ? "DMA-event" : "DMA-poll",
-	       config->burst_size, config->pkt_len, config->cache_size);
+	       config->burst_size, config->pkt_len, config->cache_size,
+	       config->seg_free ? "yes" : "no");
 
 	for (int i = 0; i < config->num_thrs; ++i) {
 		stats = &config->thread_config[i].stats;
