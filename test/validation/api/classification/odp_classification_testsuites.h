@@ -46,10 +46,17 @@ typedef union odp_cls_testcase {
 	uint32_t all_bits;
 } odp_cls_testcase_u;
 
+typedef enum vector_mode_t {
+	VECTOR_MODE_DISABLED = 0,
+	VECTOR_MODE_PACKET,
+	VECTOR_MODE_EVENT
+} vector_mode_t;
+
 extern odp_testinfo_t classification_suite[];
 extern odp_testinfo_t classification_suite_basic[];
 extern odp_testinfo_t classification_suite_pmr[];
 extern odp_testinfo_t classification_suite_pktv[];
+extern odp_testinfo_t classification_suite_evv[];
 
 int classification_suite_init(void);
 int classification_suite_term(void);
@@ -60,6 +67,9 @@ int classification_suite_pmr_init(void);
 int classification_suite_pktv_init(void);
 int classification_suite_pktv_term(void);
 
+int classification_suite_evv_init(void);
+int classification_suite_evv_term(void);
+
 odp_packet_t create_packet(cls_packet_info_t pkt_info);
 int cls_pkt_set_seq(odp_packet_t pkt);
 uint32_t cls_pkt_get_seq(odp_packet_t pkt);
@@ -69,29 +79,29 @@ void configure_default_cos(odp_pktio_t pktio, odp_cos_t *cos,
 			   odp_queue_t *queue, odp_pool_t *pool);
 int parse_ipv4_string(const char *ipaddress, uint32_t *addr, uint32_t *mask);
 void enqueue_pktio_interface(odp_packet_t pkt, odp_pktio_t pktio);
-odp_packet_t receive_packet(odp_queue_t *queue, uint64_t ns, odp_bool_t enable_pktv);
+odp_packet_t receive_packet(odp_queue_t *queue, uint64_t ns, vector_mode_t vector_mode);
 odp_packet_t receive_and_check(uint32_t    expected_seqno,
 			       odp_queue_t expected_queue,
 			       odp_pool_t  expected_pool,
-			       odp_bool_t  enable_pktv);
+			       vector_mode_t vector_mode);
 odp_pool_t pool_create(const char *poolname);
 odp_pool_t pktv_pool_create(const char *poolname);
+odp_pool_t evv_pool_create(const char *poolname);
 odp_queue_t queue_create(const char *queuename, bool sched);
-void configure_pktio_default_cos(odp_bool_t enable_pktv);
-void test_pktio_default_cos(odp_bool_t enable_pktv);
-void configure_pktio_drop_cos(odp_bool_t enable_pktv, uint32_t max_cos_stats);
-void test_pktio_drop_cos(odp_bool_t enable_pktv);
-void configure_pktio_error_cos(odp_bool_t enable_pktv);
-void test_pktio_error_cos(odp_bool_t enable_pktv);
-void configure_cls_pmr_chain(odp_bool_t enable_pktv, int src, int dst, const char *saddr,
+void configure_pktio_default_cos(vector_mode_t vector_mode);
+void test_pktio_default_cos(vector_mode_t vector_mode);
+void configure_pktio_drop_cos(vector_mode_t vector_mode, uint32_t max_cos_stats);
+void test_pktio_drop_cos(vector_mode_t vector_mode);
+void configure_pktio_error_cos(vector_mode_t vector_mode);
+void test_pktio_error_cos(vector_mode_t vector_mode);
+void configure_cls_pmr_chain(vector_mode_t vector_mode, int src, int dst, const char *saddr,
 			     uint16_t port, odp_bool_t saddr_first);
-void test_cls_pmr_chain(odp_bool_t enable_pktv, int src, int dst, const char *saddr, uint16_t port);
-void configure_cos_with_l2_priority(odp_bool_t enable_pktv);
-void test_cos_with_l2_priority(odp_bool_t enable_pktv);
-void configure_pmr_cos(odp_bool_t enable_pktv);
-void test_pmr_cos(odp_bool_t enable_pktv);
-void configure_pktio_pmr_composite(odp_bool_t enable_pktv);
-void test_pktio_pmr_composite_cos(odp_bool_t enable_pktv);
+void test_cls_pmr_chain(vector_mode_t vector_mode, int src, int dst, const char *saddr,
+			uint16_t port);
+void configure_pmr_cos(vector_mode_t vector_mode);
+void test_pmr_cos(vector_mode_t vector_mode);
+void configure_pktio_pmr_composite(vector_mode_t vector_mode);
+void test_pktio_pmr_composite_cos(vector_mode_t vector_mode);
 int stop_pktio(odp_pktio_t pktio);
 odp_cls_pmr_term_t find_first_supported_l3_pmr(void);
 cls_packet_l4_info find_first_supported_proto(void);
