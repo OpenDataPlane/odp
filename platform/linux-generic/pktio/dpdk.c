@@ -1860,6 +1860,13 @@ static int dpdk_open(odp_pktio_t id ODP_UNUSED,
 		return -1;
 	pool_entry = _odp_pool_entry(pool);
 
+	/* Initialize DPDK here instead of odp_init_global() to enable running
+	 * 'make check' without root privileges */
+	if (odp_global_rw->dpdk_initialized == 0) {
+		dpdk_pktio_init();
+		odp_global_rw->dpdk_initialized = 1;
+	}
+
 	/* Init pktio entry */
 	memset(pkt_dpdk, 0, sizeof(*pkt_dpdk));
 
@@ -1870,13 +1877,6 @@ static int dpdk_open(odp_pktio_t id ODP_UNUSED,
 	else {
 		_ODP_ERR("Invalid DPDK interface name: %s\n", netdev);
 		return -1;
-	}
-
-	/* Initialize DPDK here instead of odp_init_global() to enable running
-	 * 'make check' without root privileges */
-	if (odp_global_rw->dpdk_initialized == 0) {
-		dpdk_pktio_init();
-		odp_global_rw->dpdk_initialized = 1;
 	}
 
 	pkt_dpdk->pool = pool;
