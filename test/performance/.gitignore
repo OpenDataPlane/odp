@@ -7,6 +7,7 @@ odp_bench_event_vector
 odp_bench_misc
 odp_bench_packet
 odp_bench_pktio_sp
+odp_bench_queue
 odp_bench_timer
 odp_cpu_bench
 odp_crc
