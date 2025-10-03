@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2013-2018 Linaro Limited
- * Copyright (c) 2020-2023 Nokia
+ * Copyright (c) 2020-2025 Nokia
  */
 
 /**
@@ -212,6 +212,10 @@ int odp_pktout_queue_config(odp_pktio_t pktio,
  * larger than 'num', there are more queues than the function was allowed to
  * output. If return value (N) is less than 'num', only queues[0 ... N-1] have
  * been written.
+ *
+ * When event aggregation is enabled for an input queue, this function still
+ * returns the handle of the base input queue, not the handle of the event
+ * aggregator.
  *
  * In addition to packet input, application and other parts of ODP (e.g. timer)
  * may enqueue events into these queues. Depending on the queue mode, application
