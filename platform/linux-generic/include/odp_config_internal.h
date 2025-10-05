@@ -58,6 +58,11 @@ extern "C" {
 			   CONFIG_MAX_SCHED_QUEUES)
 
 /*
+ * Maximum number of event aggregators
+ */
+#define CONFIG_MAX_EVENT_AGGR CONFIG_MAX_QUEUES
+
+/*
  * Maximum number of ordered locks per queue
  */
 #define CONFIG_QUEUE_MAX_ORD_LOCKS 2

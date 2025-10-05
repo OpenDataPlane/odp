@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2013-2018 Linaro Limited
- * Copyright (c) 2019-2023 Nokia
+ * Copyright (c) 2019-2025 Nokia
  */
 
 /**
@@ -154,7 +154,12 @@ typedef struct ODP_ALIGNED_CACHE {
 	struct {
 		odp_queue_t        queue;
 		odp_pktin_queue_t  pktin;
-		odp_pktin_vector_config_t vector;
+		struct {
+			odp_pool_t pool;
+			odp_queue_t aggr_queue;
+			odp_event_type_t type;
+			uint32_t max_size;
+		} vector;
 	} in_queue[ODP_PKTIN_MAX_QUEUES];
 
 	struct {
