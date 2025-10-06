@@ -1,0 +1,15 @@
+<map id="barrier.h" name="barrier.h">
+<area shape="rect" id="node1" title="ODP barrier." alt="" coords="497,5,573,32"/>
+<area shape="rect" id="node2" href="$std__types_8h.html" title="Standard C language types and definitions for ODP." alt="" coords="399,80,549,107"/>
+<area shape="rect" id="node11" href="$atomic_8h.html" title="ODP atomic operations." alt="" coords="563,229,694,256"/>
+<area shape="rect" id="node3" title=" " alt="" coords="387,155,561,181"/>
+<area shape="rect" id="node4" href="$spec_2std__types_8h.html" title="Common types and definitions for ODP API files." alt="" coords="141,155,324,181"/>
+<area shape="rect" id="node5" title=" " alt="" coords="461,379,623,405"/>
+<area shape="rect" id="node6" title=" " alt="" coords="5,229,76,256"/>
+<area shape="rect" id="node7" href="$align_8h.html" title="ODP alignments." alt="" coords="173,229,292,256"/>
+<area shape="rect" id="node10" title=" " alt="" coords="287,379,437,405"/>
+<area shape="rect" id="node8" title=" " alt="" coords="152,304,295,331"/>
+<area shape="rect" id="node9" href="$spec_2align_8h.html" title="ODP alignments." alt="" coords="319,304,471,331"/>
+<area shape="rect" id="node12" title=" " alt="" coords="735,304,890,331"/>
+<area shape="rect" id="node13" href="$spec_2atomic_8h.html" title="ODP atomic operations." alt="" coords="546,304,711,331"/>
+</map>
