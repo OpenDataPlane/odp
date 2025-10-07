@@ -1637,6 +1637,25 @@ static void crypto_test_dec_alg_snow3g_uea2(void)
 		  ODPH_ARRAY_SIZE(snow3g_uea2_reference));
 }
 
+static int check_alg_snow5g_nea4(void)
+{
+	return check_alg_support(ODP_CIPHER_ALG_SNOW5G_NEA4, ODP_AUTH_ALG_NULL);
+}
+
+static void crypto_test_enc_alg_snow5g_nea4(void)
+{
+	check_alg(ODP_CRYPTO_OP_ENCODE,
+		  snow5g_nea4_reference,
+		  ODPH_ARRAY_SIZE(snow5g_nea4_reference));
+}
+
+static void crypto_test_dec_alg_snow5g_nea4(void)
+{
+	check_alg(ODP_CRYPTO_OP_DECODE,
+		  snow5g_nea4_reference,
+		  ODPH_ARRAY_SIZE(snow5g_nea4_reference));
+}
+
 static int check_alg_aes_eea2(void)
 {
 	return check_alg_support(ODP_CIPHER_ALG_AES_EEA2,
@@ -2200,8 +2219,12 @@ odp_testinfo_t crypto_suite[] = {
 				  check_alg_kasumi_f8),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_enc_alg_snow3g_uea2,
 				  check_alg_snow3g_uea2),
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_enc_alg_snow5g_nea4,
+				  check_alg_snow5g_nea4),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_snow3g_uea2,
 				  check_alg_snow3g_uea2),
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_snow5g_nea4,
+				  check_alg_snow5g_nea4),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_enc_alg_aes_eea2,
 				  check_alg_aes_eea2),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_aes_eea2,

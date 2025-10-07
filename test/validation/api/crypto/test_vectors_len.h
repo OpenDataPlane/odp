@@ -92,6 +92,10 @@
 #define SNOW3G_UEA2_KEY_LEN      16
 #define SNOW3G_UEA2_IV_LEN       16
 
+/* SNOW5G_NEA4 */
+#define SNOW5G_NEA4_KEY_LEN      32
+#define SNOW5G_NEA4_IV_LEN       16
+
 /* AES_EEA2 */
 #define AES_EEA2_KEY_LEN        16
 #define AES_EEA2_IV_LEN         16

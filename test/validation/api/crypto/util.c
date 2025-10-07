@@ -128,6 +128,8 @@ const char *cipher_alg_name(odp_cipher_alg_t cipher)
 		return "ODP_CIPHER_ALG_KASUMI_F8";
 	case ODP_CIPHER_ALG_SNOW3G_UEA2:
 		return "ODP_CIPHER_ALG_SNOW3G_UEA2";
+	case ODP_CIPHER_ALG_SNOW5G_NEA4:
+		return "ODP_CIPHER_ALG_SNOW5G_NEA4";
 	case ODP_CIPHER_ALG_AES_EEA2:
 		return "ODP_CIPHER_ALG_AES_EEA2";
 	case ODP_CIPHER_ALG_ZUC_EEA3:
@@ -233,6 +235,10 @@ int check_alg_support(odp_cipher_alg_t cipher, odp_auth_alg_t auth)
 		break;
 	case ODP_CIPHER_ALG_SNOW3G_UEA2:
 		if (!capability.ciphers.bit.snow3g_uea2)
+			return ODP_TEST_INACTIVE;
+		break;
+	case ODP_CIPHER_ALG_SNOW5G_NEA4:
+		if (!capability.ciphers.bit.snow5g_nea4)
 			return ODP_TEST_INACTIVE;
 		break;
 	case ODP_CIPHER_ALG_AES_EEA2:
