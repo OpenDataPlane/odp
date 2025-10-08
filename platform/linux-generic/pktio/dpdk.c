@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2016-2018 Linaro Limited
- * Copyright (c) 2019-2023 Nokia
+ * Copyright (c) 2019-2025 Nokia
  */
 
 #include <odp/autoheader_internal.h>
@@ -1086,11 +1086,12 @@ static inline int pkt_to_mbuf_zero(pktio_entry_t *pktio_entry,
 		odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
 		struct rte_mbuf *mbuf = mbuf_from_pkt_hdr(pkt_hdr);
 		uint16_t pkt_len = odp_packet_len(pkt);
+		uint32_t refcount = odp_atomic_load_u32(&pkt_hdr->ref_cnt);
 
 		if (odp_unlikely(pkt_len > mtu))
 			goto fail;
 
-		if (odp_likely(pkt_hdr->seg_count == 1)) {
+		if (odp_likely(pkt_hdr->seg_count == 1 && refcount <= 1)) {
 			mbuf_update(mbuf, pkt_hdr, pkt_len);
 
 			if (odp_unlikely(chksum_enabled))
