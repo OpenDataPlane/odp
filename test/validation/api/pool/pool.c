@@ -835,7 +835,7 @@ static void pool_test_alloc_packet_subparam(void)
 
 	for (i = 0; i < num_sub; i++) {
 		param.pkt.sub[i].num = PKT_NUM;
-		param.pkt.sub[i].len = PKT_LEN + (i * 100);
+		param.pkt.sub[i].len = PKT_LEN + (i + 1) * 100;
 	}
 
 	pool = odp_pool_create(NULL, &param);
