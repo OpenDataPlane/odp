@@ -1,0 +1,4 @@
+<map id="odp_ml_data_t" name="odp_ml_data_t">
+<area shape="rect" id="node1" title="Model input / output data for a model inference run." alt="" coords="20,109,139,136"/>
+<area shape="rect" id="node2" href="$structodp__ml__data__seg__t.html" title="Model input / output data segment." alt="" coords="5,5,153,32"/>
+</map>
