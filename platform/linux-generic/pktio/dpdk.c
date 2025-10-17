@@ -154,8 +154,10 @@ typedef struct ODP_ALIGNED_CACHE {
 	uint32_t data_room;
 	/* Maximum supported MTU value */
 	uint32_t mtu_max;
-	/* DPDK MTU has been modified */
+	/* DPDK MTU modification has been requested via odp_pktio_maxlen_set */
 	uint8_t mtu_set;
+	/* Device configured (rte_eth_dev_configure done) */
+	uint8_t configured;
 	/* Use system call to get/set vdev promisc mode */
 	uint8_t vdev_sysc_promisc;
 	/* Number of RX descriptors per queue */
@@ -1190,20 +1192,25 @@ static int dpdk_maxlen_set(pktio_entry_t *pktio_entry, uint32_t maxlen_input,
 			   uint32_t maxlen_output ODP_UNUSED)
 {
 	pkt_dpdk_t *pkt_dpdk = pkt_priv(pktio_entry);
-	uint16_t mtu;
 	int ret;
 
-	/* DPDK MTU value does not include Ethernet header */
-	mtu = maxlen_input - _ODP_ETHHDR_LEN;
+	if (pkt_dpdk->configured) {
+		/* DPDK MTU value does not include Ethernet header */
+		uint16_t mtu = mtu = maxlen_input - _ODP_ETHHDR_LEN;
 
-	ret = rte_eth_dev_set_mtu(pkt_dpdk->port_id, mtu);
-	if (odp_unlikely(ret))
-		_ODP_ERR("rte_eth_dev_set_mtu() failed: %d\n", ret);
+		ret = rte_eth_dev_set_mtu(pkt_dpdk->port_id, mtu);
 
-	pkt_dpdk->mtu = maxlen_input;
-	pkt_dpdk->mtu_set = 1;
+		if (odp_unlikely(ret)) {
+			_ODP_ERR("rte_eth_dev_set_mtu() failed: %d\n", ret);
+			return -1;
+		}
+	} else {
+		/* Store the mtu value to be set at pktio start */
+		pkt_dpdk->mtu = maxlen_input;
+		pkt_dpdk->mtu_set = 1;
+	}
 
-	return ret;
+	return 0;
 }
 
 static int dpdk_vdev_promisc_mode_get(uint16_t port_id)
@@ -1339,6 +1346,7 @@ static int dpdk_setup_eth_dev(pktio_entry_t *pktio_entry)
 			 ret, pkt_dpdk->port_id);
 		return -1;
 	}
+	pkt_dpdk->configured = 1;
 	return 0;
 }
 
@@ -1476,7 +1484,7 @@ static int dpdk_pktio_init_global(void)
 {
 	if (getenv("ODP_PKTIO_DISABLE_DPDK")) {
 		_ODP_PRINT("PKTIO: dpdk pktio skipped,"
-			   " enabled export ODP_PKTIO_DISABLE_DPDK=1.\n");
+			   " enabled export ODP_PKTIO_DISABLE_DPDK=0.\n");
 		disable_pktio = 1;
 	} else  {
 		_ODP_PRINT("PKTIO: initialized dpdk pktio,"
@@ -2093,7 +2101,10 @@ static int dpdk_start(pktio_entry_t *pktio_entry)
 	if (dpdk_setup_eth_rx(pktio_entry, pkt_dpdk, &dev_info))
 		return -1;
 
-	/* Restore MTU value reset by dpdk_setup_eth_rx() */
+	/* Restore MTU value reset by dpdk_setup_eth_rx().
+	 * MTU requested earlier (odp_pktio_maxlen_set) is applied only now
+	 * because DPDK requires rte_eth_dev_set_mtu() after configure.
+	 */
 	if (pkt_dpdk->mtu_set && pktio_entry->capa.set_op.op.maxlen) {
 		ret = dpdk_maxlen_set(pktio_entry, pkt_dpdk->mtu, 0);
 		if (ret) {
