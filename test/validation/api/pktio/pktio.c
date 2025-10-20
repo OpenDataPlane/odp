@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2014-2018 Linaro Limited
- * Copyright (c) 2020-2024 Nokia
+ * Copyright (c) 2020-2025 Nokia
  * Copyright (c) 2020 Marvell
  */
 
@@ -116,6 +116,11 @@ pkt_segmented_e pool_segmentation = PKT_POOL_UNSEGMENTED;
 odp_pool_t pool[MAX_NUM_IFACES] = {ODP_POOL_INVALID, ODP_POOL_INVALID};
 
 odp_pool_t pktv_pool[MAX_NUM_IFACES] = {ODP_POOL_INVALID, ODP_POOL_INVALID};
+
+static odp_pool_t expected_rx_pool(void)
+{
+	return pool[num_ifaces - 1];
+}
 
 static inline void _pktio_wait_linkup(odp_pktio_t pktio)
 {
@@ -987,6 +992,7 @@ static void pktio_txrx_multi(pktio_info_t *pktio_info_a,
 		CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 		CU_ASSERT(odp_packet_input(pkt) == pktio_b);
 		CU_ASSERT(odp_packet_input_index(pkt) == pktio_index_b);
+		CU_ASSERT(odp_packet_pool(pkt) == expected_rx_pool());
 		CU_ASSERT(odp_packet_has_error(pkt) == 0);
 		if (parser_l2) {
 			CU_ASSERT(odp_packet_has_l2(pkt));
@@ -3378,6 +3384,7 @@ static void pktio_test_pktin_ts(void)
 			printf("    Test packet %d input delay: %" PRIu64 "ns\n", i, input_delay);
 			CU_FAIL("Packet input delay too long");
 		}
+		CU_ASSERT(odp_packet_pool(pkt_tbl[i]) == expected_rx_pool());
 
 		odp_time_wait_ns(PKTIO_TS_INTERVAL);
 	}
@@ -3496,6 +3503,8 @@ static void pktio_test_pktout_ts(void)
 
 		CU_ASSERT(odp_time_cmp(ts, ts_prev) > 0);
 		ts_prev = ts;
+
+		CU_ASSERT(odp_packet_pool(pkt_tbl[i]) == expected_rx_pool());
 
 		odp_time_wait_ns(PKTIO_TS_INTERVAL);
 	}
@@ -3642,8 +3651,11 @@ static void pktio_test_pktout_compl_event(bool use_plain_queue)
 	num_rx = wait_for_packets(&pktio_rx_info, pkt_tbl, pkt_seq, TX_BATCH_LEN, TXRX_MODE_SINGLE,
 				  ODP_TIME_SEC_IN_NS, false);
 	CU_ASSERT(num_rx == TX_BATCH_LEN);
-	for (i = 0; i < num_rx; i++)
+
+	for (i = 0; i < num_rx; i++) {
+		CU_ASSERT(odp_packet_pool(pkt_tbl[i]) == expected_rx_pool());
 		odp_packet_free(pkt_tbl[i]);
+	}
 
 	wait = odp_schedule_wait_time(ODP_TIME_SEC_IN_NS);
 	memset(seq_found, 0, sizeof(seq_found));
@@ -3847,9 +3859,10 @@ static void pktio_test_pktout_compl_poll(void)
 	num_rx = wait_for_packets(&pktio_rx_info, pkt_tbl, pkt_seq, TX_BATCH_LEN, TXRX_MODE_SINGLE,
 				  ODP_TIME_SEC_IN_NS, false);
 	CU_ASSERT(num_rx == TX_BATCH_LEN);
-	for (i = 0; i < num_rx; i++)
+	for (i = 0; i < num_rx; i++) {
+		CU_ASSERT(odp_packet_pool(pkt_tbl[i]) == expected_rx_pool());
 		odp_packet_free(pkt_tbl[i]);
-
+	}
 	for (i = 0; i < num_rx; i++) {
 		/* Transmits should be complete since we received the packets already */
 		CU_ASSERT(odp_packet_tx_compl_done(pktio_tx, i) > 0);
@@ -3995,6 +4008,7 @@ static void pktio_test_pktout_dont_free(void)
 		if (num_rx != num_pkt)
 			break;
 
+		CU_ASSERT(odp_packet_pool(rx_pkt) == expected_rx_pool());
 		CU_ASSERT(odp_packet_len(pkt) == odp_packet_len(rx_pkt));
 		odp_packet_free(rx_pkt);
 	}
@@ -4096,6 +4110,7 @@ static void pktio_test_chksum(void (*config_fn)(odp_pktio_t, odp_pktio_t),
 				  ODP_TIME_SEC_IN_NS, false);
 	CU_ASSERT(num_rx == TX_BATCH_LEN);
 	for (i = 0; i < num_rx; i++) {
+		CU_ASSERT(odp_packet_pool(pkt_tbl[i]) == expected_rx_pool());
 		test_fn(pkt_tbl[i]);
 		odp_packet_free(pkt_tbl[i]);
 	}
@@ -4171,6 +4186,7 @@ static void pktio_test_chksum_sctp(void (*config_fn)(odp_pktio_t, odp_pktio_t),
 				      ODP_TIME_SEC_IN_NS, ODPH_SCTPHDR_LEN, false);
 	CU_ASSERT(num_rx == TX_BATCH_LEN);
 	for (i = 0; i < num_rx; i++) {
+		CU_ASSERT(odp_packet_pool(pkt_tbl[i]) == expected_rx_pool());
 		test_fn(pkt_tbl[i]);
 		odp_packet_free(pkt_tbl[i]);
 	}
@@ -4986,6 +5002,11 @@ static void pktio_test_recv_maxlen_set(void)
 	num_rx = i;
 	CU_ASSERT(num_rx == TX_BATCH_LEN);
 
+	for (i = 0; i < num_rx; i++) {
+		/* CU_ASSERT needs braces */
+		CU_ASSERT(odp_packet_pool(pkt_tbl[i]) == expected_rx_pool());
+	}
+
 	if (num_rx)
 		odp_packet_free_multi(pkt_tbl, num_rx);
 
@@ -5094,8 +5115,10 @@ static void pktio_test_pktout_aging_tmo(void)
 	num_rx = wait_for_packets(&pktio_rx_info, pkt_tbl, pkt_seq, TX_BATCH_LEN, TXRX_MODE_SINGLE,
 				  ODP_TIME_SEC_IN_NS, false);
 	CU_ASSERT(num_rx == TX_BATCH_LEN);
-	for (i = 0; i < num_rx; i++)
+	for (i = 0; i < num_rx; i++) {
+		CU_ASSERT(odp_packet_pool(pkt_tbl[i]) == expected_rx_pool());
 		odp_packet_free(pkt_tbl[i]);
+	}
 
 	for (i = 0; i < num_ifaces; i++) {
 		CU_ASSERT_FATAL(odp_pktio_stop(pktio[i]) == 0);
