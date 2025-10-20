@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2013-2018 Linaro Limited
- * Copyright (c) 2013-2023 Nokia Solutions and Networks
+ * Copyright (c) 2013-2025 Nokia Solutions and Networks
  */
 
 #include <odp/api/debug.h>
@@ -77,6 +77,8 @@ typedef struct {
 	uint32_t num_qs;
 	/* link MTU */
 	uint16_t mtu;
+	/* default packet pool */
+	odp_pool_t pool;
 	/* index of "loop" device */
 	uint8_t idx;
 	/* create or re-create queue during start */
@@ -97,7 +99,7 @@ static const uint8_t pktio_loop_mac[] = {0x02, 0xe9, 0x34, 0x80, 0x73, 0x01};
 static int loopback_init_capability(pktio_entry_t *pktio_entry);
 
 static int loopback_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
-			 const char *devname, odp_pool_t pool ODP_UNUSED)
+			 const char *devname, odp_pool_t pool)
 {
 	pkt_loop_t *pkt_loop = pkt_priv(pktio_entry);
 	long idx;
@@ -114,8 +116,14 @@ static int loopback_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 		return -1;
 	}
 
+	if (pool == ODP_POOL_INVALID || _odp_pool_entry(pool)->type != ODP_POOL_PACKET) {
+		_ODP_ERR("Invalid pool\n");
+		return -1;
+	}
+
 	memset(pkt_loop, 0, sizeof(pkt_loop_t));
 	pkt_loop->mtu = LOOP_MTU_MAX;
+	pkt_loop->pool = pool;
 	pkt_loop->idx = idx;
 	pkt_loop->queue_create = 1;
 	loopback_init_capability(pktio_entry);
@@ -545,29 +553,43 @@ static int loopback_send(pktio_entry_t *pktio_entry, int index, const odp_packet
 		num = QUEUE_MULTI_MAX;
 
 	for (i = 0; i < num; ++i) {
-		uint32_t pkt_len = odp_packet_len(pkt_tbl[i]);
+		odp_packet_t pkt = pkt_tbl[i];
+		uint32_t pkt_len = odp_packet_len(pkt);
+		int copied = 0;
 
 		if (odp_unlikely(pkt_len > pkt_loop->mtu)) {
 			if (nb_tx == 0)
 				return -1;
 			break;
 		}
+		if (odp_unlikely(odp_packet_pool(pkt) != pkt_loop->pool)) {
+			pkt = odp_packet_copy(pkt, pkt_loop->pool);
+			if (odp_unlikely(pkt == ODP_PACKET_INVALID)) {
+				_ODP_DBG("odp_packet_copy() failed\n");
+				break;
+			}
+			copied = 1;
+		}
 
 		if (tx_ts_enabled && tx_ts_idx == 0) {
-			if (odp_unlikely(packet_hdr(pkt_tbl[i])->p.flags.ts_set))
+			if (odp_unlikely(packet_hdr(pkt)->p.flags.ts_set))
 				tx_ts_idx = i + 1;
 		}
 
-		packet_subtype_set(pkt_tbl[i], ODP_EVENT_PACKET_BASIC);
-		loopback_fix_checksums(pkt_tbl[i], pktout_cfg, pktout_capa);
-		queue = get_dest_queue(pkt_loop, pkt_tbl[i], index);
-		ret = odp_queue_enq(queue, odp_packet_to_event(pkt_tbl[i]));
+		packet_subtype_set(pkt, ODP_EVENT_PACKET_BASIC);
+		loopback_fix_checksums(pkt, pktout_cfg, pktout_capa);
+		queue = get_dest_queue(pkt_loop, pkt, index);
+		ret = odp_queue_enq(queue, odp_packet_to_event(pkt));
 
 		if (ret < 0) {
 			_ODP_DBG("queue enqueue failed %i to queue: %" PRIu64 "\n", ret,
 				 odp_queue_to_u64(queue));
+			if (copied)
+				odp_packet_free(pkt);
 			break;
 		}
+		if (copied)
+			odp_packet_free(pkt_tbl[i]); /* consume sent packet */
 
 		nb_tx++;
 		odp_atomic_inc_u64(&stats->out_packets);
