@@ -32,7 +32,7 @@
 #define PKTV_DEFAULT_SIZE      8
 #define MAX_QUEUES             128
 
-#define PKTIO_TS_INTERVAL      (50 * ODP_TIME_MSEC_IN_NS)
+#define PKTIO_TS_INTERVAL      (10 * ODP_TIME_MSEC_IN_NS)
 #define PKTIO_TS_MIN_RES       1000
 #define PKTIO_TS_MAX_RES       10000000000
 
