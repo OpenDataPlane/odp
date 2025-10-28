@@ -42,6 +42,7 @@ typedef enum {
 	_ODP_EV_PACKET_IS_VALID,
 	_ODP_EV_QUEUE_ENQ,
 	_ODP_EV_QUEUE_ENQ_MULTI,
+	_ODP_EV_QUEUE_ENQ_AGGR,
 	_ODP_EV_MAX
 } _odp_ev_id_t;
 

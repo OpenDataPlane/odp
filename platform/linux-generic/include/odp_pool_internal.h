@@ -112,7 +112,7 @@ typedef struct pool_t {
 	uint8_t         *uarea_base_addr;
 	uint32_t         align;
 	uint32_t         num_populated;
-	odp_pool_type_t  type_2;
+	odp_pool_type_t  type_2; /* Pool type from application PoV */
 	uint8_t          mem_from_huge_pages;
 	char             name[ODP_POOL_NAME_LEN];
 
@@ -167,6 +167,11 @@ static inline pool_t *_odp_pool_entry(odp_pool_t pool_hdl)
 static inline odp_pool_t _odp_pool_handle(pool_t *pool)
 {
 	return (odp_pool_t)(uintptr_t)pool;
+}
+
+static inline odp_pool_type_t _odp_pool_type(odp_pool_t pool_hdl)
+{
+	return _odp_pool_entry(pool_hdl)->type_2;
 }
 
 static inline _odp_event_hdr_t *event_hdr_from_index(pool_t *pool,
