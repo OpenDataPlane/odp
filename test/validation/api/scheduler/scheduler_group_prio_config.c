@@ -61,7 +61,7 @@ static void schedule_config_limits_max_prios(void)
 	def_prio = odp_schedule_default_prio(), num_prio = odp_schedule_num_prio();
 
 	CU_ASSERT(num_prio == (int)test_info.num_prios);
-	CU_ASSERT(min_prio == test_info.min_prio)
+	CU_ASSERT(min_prio == test_info.min_prio);
 	CU_ASSERT(max_prio == min_prio + num_prio - 1);
 	CU_ASSERT(def_prio >= min_prio && def_prio <= max_prio);
 

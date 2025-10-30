@@ -622,7 +622,7 @@ static void lso_capability(void)
 		CU_ASSERT(pktio_a->capa.lso.mod_op.add_segment_num ||
 			  pktio_a->capa.lso.mod_op.add_payload_len ||
 			  pktio_a->capa.lso.mod_op.add_payload_offset ||
-			  pktio_a->capa.lso.mod_op.write_bits)
+			  pktio_a->capa.lso.mod_op.write_bits);
 	}
 }
 

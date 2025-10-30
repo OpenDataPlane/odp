@@ -83,8 +83,7 @@ static void test_pool_alloc_free(const odp_pool_param_t *param)
 			break;
 		num_buf++;
 
-		CU_ASSERT(odp_buffer_is_valid(buffer[i]) == 1)
-
+		CU_ASSERT(odp_buffer_is_valid(buffer[i]) == 1);
 		CU_ASSERT(odp_buffer_pool(buffer[i]) == pool);
 
 		ev = odp_buffer_to_event(buffer[i]);
@@ -180,8 +179,7 @@ static void test_pool_alloc_free_multi(const odp_pool_param_t *param)
 		if (buffer[i] == ODP_BUFFER_INVALID)
 			break;
 
-		CU_ASSERT(odp_buffer_is_valid(buffer[i]) == 1)
-
+		CU_ASSERT(odp_buffer_is_valid(buffer[i]) == 1);
 		CU_ASSERT(odp_buffer_pool(buffer[i]) == pool);
 
 		ev = odp_buffer_to_event(buffer[i]);
@@ -243,7 +241,7 @@ static void test_pool_single_pool(odp_pool_param_t *param)
 	CU_ASSERT(buffer != ODP_BUFFER_INVALID);
 
 	/* Pool should be empty */
-	CU_ASSERT(odp_buffer_alloc(pool) == ODP_BUFFER_INVALID)
+	CU_ASSERT(odp_buffer_alloc(pool) == ODP_BUFFER_INVALID);
 
 	if (buffer != ODP_BUFFER_INVALID) {
 		odp_event_t ev = odp_buffer_to_event(buffer);
