@@ -376,7 +376,6 @@ static void event_test_types_multi(void)
 	odp_event_types_multi(event, event_types, NULL, 2 * NUM_TYPE_TEST);
 	for (i = 0; i < 2 * NUM_TYPE_TEST; i++) {
 		if (i == 0 || i == 2 || i == 3 || i == 6 || i == 7 || i == 8) {
-			/* CU_ASSERT requires extra brackets */
 			CU_ASSERT(event_types[i] == ODP_EVENT_BUFFER);
 		} else {
 			CU_ASSERT(event_types[i] == ODP_EVENT_PACKET);

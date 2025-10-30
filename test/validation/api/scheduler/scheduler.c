@@ -1333,7 +1333,6 @@ static void scheduler_test_groups(void)
 			u32 = odp_buffer_addr(buf);
 
 			if (from == queue_grp1) {
-				/* CU_ASSERT_FATAL needs these brackets */
 				CU_ASSERT_FATAL(u32[0] == MAGIC1);
 			} else {
 				CU_ASSERT_FATAL(u32[0] == MAGIC2);

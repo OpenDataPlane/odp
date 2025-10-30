@@ -1133,7 +1133,6 @@ static void timer_single_shot(odp_queue_type_t queue_type, odp_timer_tick_type_t
 
 			if (!cancel) {
 				if (tick_type == ODP_TIMER_TICK_ABS) {
-					/* CU_ASSERT needs these extra brackets */
 					CU_ASSERT(odp_timeout_tick(tmo) == tick);
 				} else {
 					CU_ASSERT(odp_timeout_tick(tmo) > tick);

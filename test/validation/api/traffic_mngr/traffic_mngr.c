@@ -4438,12 +4438,10 @@ static void test_packet_aging(uint64_t tmo_ns, uint32_t pkt_len, odp_bool_t is_d
 	CU_ASSERT(send_pkts(tm_queue, num_pkts) == num_pkts);
 	recv_pkts = receive_pkts(odp_tm_systems[0], rcv_pktin, num_pkts, MBPS);
 
-	if (is_dropping) {
-		/* CU_ASSERT needs braces */
+	if (is_dropping)
 		CU_ASSERT(recv_pkts < num_pkts);
-	} else {
+	else
 		CU_ASSERT(recv_pkts == num_pkts);
-	}
 
 	set_shaper(node_name, NULL, 0, 0);
 	flush_leftover_pkts(odp_tm_systems[0], rcv_pktin);
