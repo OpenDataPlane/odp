@@ -481,7 +481,7 @@ static int test_overall_capabilities(void)
 		/* At least one pkt priority mode needs to be supported */
 		prio_modes = cap_ptr->pkt_prio_modes;
 		CU_ASSERT((prio_modes[ODP_TM_PKT_PRIO_MODE_PRESERVE] != 0) ||
-			  (prio_modes[ODP_TM_PKT_PRIO_MODE_OVERWRITE] != 0))
+			  (prio_modes[ODP_TM_PKT_PRIO_MODE_OVERWRITE] != 0));
 	}
 
 	return 0;
@@ -4438,10 +4438,12 @@ static void test_packet_aging(uint64_t tmo_ns, uint32_t pkt_len, odp_bool_t is_d
 	CU_ASSERT(send_pkts(tm_queue, num_pkts) == num_pkts);
 	recv_pkts = receive_pkts(odp_tm_systems[0], rcv_pktin, num_pkts, MBPS);
 
-	if (is_dropping)
-		CU_ASSERT(recv_pkts < num_pkts)
-	else
+	if (is_dropping) {
+		/* CU_ASSERT needs braces */
+		CU_ASSERT(recv_pkts < num_pkts);
+	} else {
 		CU_ASSERT(recv_pkts == num_pkts);
+	}
 
 	set_shaper(node_name, NULL, 0, 0);
 	flush_leftover_pkts(odp_tm_systems[0], rcv_pktin);
@@ -5058,7 +5060,7 @@ static void traffic_mngr_test_lso_ipv4(void)
 
 	/* As packet size is small, there should not be a reason to
 	 * split each packet into more than two segments. */
-	CU_ASSERT(ret == expect)
+	CU_ASSERT(ret == expect);
 	if (ret != expect) {
 		ODPH_ERR("\nReceived %i packets, expected %i\n", ret, expect);
 

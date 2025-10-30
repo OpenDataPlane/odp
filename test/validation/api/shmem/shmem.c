@@ -1052,14 +1052,12 @@ static int run_test_stress(void *arg ODP_UNUSED)
 			align = glob_data->stress[index].align;
 			if (align) {
 				align = glob_data->stress[index].align;
-				CU_ASSERT(((uintptr_t)address & (align - 1))
-									== 0)
+				CU_ASSERT(((uintptr_t)address & (align - 1)) == 0);
 			}
 
 			flags = glob_data->stress[index].flags;
 			if (flags & ODP_SHM_SINGLE_VA)
-				CU_ASSERT(glob_data->stress[index].address ==
-							address)
+				CU_ASSERT(glob_data->stress[index].address == address);
 
 			/* check that data is reachable and correct: */
 			data = glob_data->stress[index].data_val;

@@ -1816,7 +1816,7 @@ static void test_multi_out_in(odp_ipsec_sa_t out_sa,
 		if (reass_status == ODP_PACKET_REASS_COMPLETE) {
 			pkt_len = odp_packet_len(pkt);
 			l3_off = odp_packet_l3_offset(pkt);
-			CU_ASSERT(ODP_PACKET_OFFSET_INVALID != l3_off)
+			CU_ASSERT(ODP_PACKET_OFFSET_INVALID != l3_off);
 
 			orig_ip_len += pkt_len - l3_off;
 		}

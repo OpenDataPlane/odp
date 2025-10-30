@@ -167,15 +167,15 @@ static void cls_create_cos_multi(void)
 	param_single.action = ODP_COS_ACTION_DROP;
 
 	num_created = cos_create_multi(NULL, &param_single, cos, 1);
-	CU_ASSERT(num_created == 1)
+	CU_ASSERT(num_created == 1);
 	cos_destroy_multi(cos, num_created);
 
 	num_created = cos_create_multi(name, param, cos, num);
-	CU_ASSERT(num_created == num)
+	CU_ASSERT(num_created == num);
 	cos_destroy_multi(cos, num_created);
 
 	num_created = cos_create_multi(NULL, param, cos, num);
-	CU_ASSERT(num_created == num)
+	CU_ASSERT(num_created == num);
 	cos_destroy_multi(cos, num_created);
 	free(param);
 }

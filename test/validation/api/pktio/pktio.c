@@ -2927,7 +2927,7 @@ static void pktio_test_extra_stats(void)
 	int num_info, num_stats, i, ret;
 
 	pktio = create_pktio(0, ODP_PKTIN_MODE_DIRECT, ODP_PKTOUT_MODE_DIRECT);
-	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID)
+	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
 	CU_ASSERT_FATAL(odp_pktio_start(pktio) == 0);
 
 	num_info = odp_pktio_extra_stat_info(pktio, NULL, 0);

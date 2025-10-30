@@ -604,7 +604,7 @@ static void check_dst_alloc(odp_dma_result_t *res, odp_pool_t dst_pool)
 {
 	odp_packet_t dst;
 
-	CU_ASSERT(res->num_dst == 1)
+	CU_ASSERT(res->num_dst == 1);
 
 	if (res->num_dst == 1) {
 		dst = res->dst_pkt[0];

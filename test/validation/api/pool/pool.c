@@ -2472,7 +2472,7 @@ static void test_packet_pool_ext_disassemble(void)
 		}
 
 		CU_ASSERT(odp_packet_data(pkt) == seg_data[0]);
-		CU_ASSERT(odp_packet_seg_len(pkt) == seg_len[0])
+		CU_ASSERT(odp_packet_seg_len(pkt) == seg_len[0]);
 
 		/* Disassemble packet */
 		num_pkt_buf = odp_packet_disassemble(pkt, pkt_buf, num_seg);

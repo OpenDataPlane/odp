@@ -513,7 +513,7 @@ static void timer_test_timeout_pool_alloc_multi(void)
 		num_retries = (ret == 0) ? num_retries + 1 : 0;
 		num_allocated += ret;
 	} while (num_allocated < num_timeouts && num_retries < 100);
-	CU_ASSERT(num_allocated == num_timeouts)
+	CU_ASSERT(num_allocated == num_timeouts);
 
 	if (num_allocated) {
 		do {
@@ -595,7 +595,7 @@ static void timer_test_timeout_pool_free(void)
 	CU_ASSERT_FATAL(tmo != ODP_TIMEOUT_INVALID);
 
 	/* Pool should have only one timeout */
-	CU_ASSERT_FATAL(odp_timeout_alloc(pool) == ODP_TIMEOUT_INVALID)
+	CU_ASSERT_FATAL(odp_timeout_alloc(pool) == ODP_TIMEOUT_INVALID);
 
 	odp_timeout_free(tmo);
 
@@ -2842,7 +2842,7 @@ static void timer_test_periodic_capa(void)
 			} else if (ret == 0) {
 				CU_ASSERT(capa.base_freq_hz.integer != base_freq.integer ||
 					  capa.base_freq_hz.numer   != base_freq.numer ||
-					  capa.base_freq_hz.denom   != base_freq.denom)
+					  capa.base_freq_hz.denom   != base_freq.denom);
 
 				if (capa.base_freq_hz.numer) {
 					CU_ASSERT_FATAL(capa.base_freq_hz.denom);
