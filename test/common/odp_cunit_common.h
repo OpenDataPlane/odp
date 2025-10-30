@@ -139,19 +139,19 @@ static inline void odp_cu_assert_fatal(CU_BOOL value, unsigned int line,
 
 #undef CU_ASSERT
 #define CU_ASSERT(value) \
-	{ odp_cu_assert((value), __LINE__, #value, __FILE__, CU_FALSE); }
+	odp_cu_assert((value), __LINE__, #value, __FILE__, CU_FALSE)
 
 #undef CU_ASSERT_FATAL
 #define CU_ASSERT_FATAL(value) \
-	{ odp_cu_assert_fatal((value), __LINE__, #value, __FILE__); }
+	odp_cu_assert_fatal((value), __LINE__, #value, __FILE__)
 
 #undef CU_FAIL
 #define CU_FAIL(msg) \
-	{ odp_cu_assert(CU_FALSE, __LINE__, ("CU_FAIL(" #msg ")"), __FILE__, CU_FALSE); }
+	odp_cu_assert(CU_FALSE, __LINE__, ("CU_FAIL(" #msg ")"), __FILE__, CU_FALSE)
 
 #undef CU_FAIL_FATAL
 #define CU_FAIL_FATAL(msg) \
-	{ odp_cu_assert_fatal(CU_FALSE, __LINE__, ("CU_FAIL_FATAL(" #msg ")"), __FILE__); }
+	odp_cu_assert_fatal(CU_FALSE, __LINE__, ("CU_FAIL_FATAL(" #msg ")"), __FILE__)
 
 #undef CU_ASSERT_TRUE
 #undef CU_ASSERT_TRUE_FATAL
