@@ -134,6 +134,16 @@ typedef enum {
 	 */
 	ODP_CIPHER_ALG_SNOW3G_UEA2,
 
+	/** Confidentiality NEA4 algorithm
+	 *
+	 *  SNOW 5G-based NEA4 algorithm.
+	 *
+	 *  IV (128 bits) should be formatted according to the ETSI/SAGE
+	 *  NEA4 & NIA4 specification:
+	 *  COUNT || BEARER || DIRECTION || 0...0
+	 */
+	ODP_CIPHER_ALG_SNOW5G_NEA4,
+
 	/** Confidentiality 128-EEA2 algorithm
 	 *
 	 *  AES-CTR-based 128-EEA2 algorithm.
@@ -340,6 +350,15 @@ typedef enum {
 	 */
 	ODP_AUTH_ALG_SNOW3G_UIA2,
 
+	/** Integrity NIA4 algorithm
+	 *
+	 *  SNOW 5G-based NIA4 algorithm.
+	 *  IV (128 bits) should be formatted according to the ETSI/SAGE
+	 *  NEA4 & NIA4 specification:
+	 *  COUNT || BEARER || DIRECTION || 0....0
+	 */
+	ODP_AUTH_ALG_SNOW5G_NIA4,
+
 	/** Integrity 128-EIA2 algorithm
 	 *
 	 *  AES_CMAC-based 128-EIA2 algorithm.
@@ -511,6 +530,9 @@ typedef union odp_crypto_cipher_algos_t {
 		/** ODP_CIPHER_ALG_SNOW3G_UEA2 */
 		uint32_t snow3g_uea2 : 1;
 
+		/** ODP_CIPHER_ALG_SNOW5G_NEA4 */
+		uint32_t snow5g_nea4 : 1;
+
 		/** ODP_CIPHER_ALG_AES_EEA2 */
 		uint32_t aes_eea2 : 1;
 
@@ -609,6 +631,9 @@ typedef union odp_crypto_auth_algos_t {
 
 		/** ODP_AUTH_ALG_SNOW3G_UIA2 */
 		uint32_t snow3g_uia2 : 1;
+
+		/** ODP_AUTH_ALG_SNOW5G_NIA4 */
+		uint32_t snow5g_nia4 : 1;
 
 		/** ODP_AUTH_ALG_AES_EIA2 */
 		uint32_t aes_eia2 : 1;
