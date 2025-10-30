@@ -477,14 +477,12 @@ static void stash_stats_u32(void)
 	CU_ASSERT_FATAL(odp_stash_stats(stash, &stats) == 0);
 
 	if (capa_count) {
-		/* CU_ASSERT needs extra brackets */
 		CU_ASSERT(stats.count <= num_put);
 	} else {
 		CU_ASSERT(stats.count == 0);
 	}
 
 	if (capa_cache_count) {
-		/* CU_ASSERT needs extra brackets */
 		CU_ASSERT(stats.cache_count <= num_put);
 	} else {
 		CU_ASSERT(stats.cache_count == 0);
@@ -693,7 +691,6 @@ static void stash_default_put(uint32_t size, int32_t burst, stash_op_t op, int b
 		if (ret) {
 			for (i = 0; i < ret; i++) {
 				if (size == sizeof(uint64_t)) {
-					/* CU_ASSERT needs brackets around it */
 					CU_ASSERT(output_u64[i + 1] == VAL_U64);
 				} else if (size == sizeof(uint32_t)) {
 					CU_ASSERT(output_u32[i + 1] == VAL_U32);

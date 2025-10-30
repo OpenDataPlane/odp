@@ -582,7 +582,6 @@ static int flush_input_queue(odp_pktio_t pktio, odp_pktin_mode_t imode)
 	odp_queue_t queue = ODP_QUEUE_INVALID;
 
 	if (imode == ODP_PKTIN_MODE_QUEUE) {
-		/* Assert breaks else-if without brackets */
 		CU_ASSERT_FATAL(odp_pktin_event_queue(pktio, &queue, 1) == 1);
 	} else if (imode == ODP_PKTIN_MODE_DIRECT) {
 		return 0;
@@ -3677,7 +3676,6 @@ static void pktio_test_pktout_compl_event(bool use_plain_queue, uint32_t test_fl
 					pktio_capa.tx_compl.mode_event);
 #endif
 			if (use_plain_queue) {
-				/* CU_ASSERT needs these extra braces */
 				CU_ASSERT_FATAL(pktio_capa.tx_compl.queue_type_plain != 0);
 			} else {
 				CU_ASSERT_FATAL(pktio_capa.tx_compl.queue_type_sched != 0);
@@ -5169,7 +5167,6 @@ static void pktio_test_recv_maxlen_set(void)
 	CU_ASSERT(num_rx == TX_BATCH_LEN);
 
 	for (i = 0; i < num_rx; i++) {
-		/* CU_ASSERT needs braces */
 		CU_ASSERT(odp_packet_pool(pkt_tbl[i]) == expected_rx_pool(0));
 	}
 

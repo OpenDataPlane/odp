@@ -2371,7 +2371,6 @@ static void packet_test_extend_small(void)
 				break;
 
 			if (tail) {
-				/* assert needs brackets */
 				CU_ASSERT(seg_len == 1);
 			} else {
 				CU_ASSERT(seg_len > 0);
@@ -2478,7 +2477,6 @@ static void packet_test_extend_large(void)
 				break;
 
 			if (tail) {
-				/* assert needs brackets */
 				CU_ASSERT((seg_len > 0) &&
 					  (seg_len <= ext_len));
 				ret = fill_data_forward(pkt, cur_len, ext_len,
@@ -3078,7 +3076,6 @@ static void packet_test_ref(void)
 	CU_ASSERT_FATAL(ref_pkt[0] != ODP_PACKET_INVALID);
 
 	if (odp_packet_has_ref(ref_pkt[0]) == 1) {
-		/* CU_ASSERT needs braces */
 		CU_ASSERT(odp_packet_has_ref(segmented_base_pkt) == 1);
 	}
 
@@ -3086,7 +3083,6 @@ static void packet_test_ref(void)
 	CU_ASSERT_FATAL(ref_pkt[1] != ODP_PACKET_INVALID);
 
 	if (odp_packet_has_ref(ref_pkt[1]) == 1) {
-		/* CU_ASSERT needs braces */
 		CU_ASSERT(odp_packet_has_ref(segmented_base_pkt) == 1);
 	}
 
@@ -3658,7 +3654,6 @@ static void packet_test_user_area(void)
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	CU_ASSERT(odp_packet_user_area_size(pkt) <= pool_capa.pkt.max_uarea_size);
 	if (odp_packet_user_area_size(pkt)) {
-		/* CU_ASSERT needs these extra bracets */
 		CU_ASSERT(odp_packet_user_area(pkt) != NULL);
 	} else {
 		CU_ASSERT(odp_packet_user_area(pkt) == NULL);
