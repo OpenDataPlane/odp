@@ -1128,56 +1128,6 @@ static int dpdk_netdev_is_valid(const char *s)
 	return 1;
 }
 
-static uint32_t dpdk_vdev_mtu_get(uint16_t port_id)
-{
-	struct rte_eth_dev_info dev_info;
-	struct ifreq ifr;
-	int sockfd;
-	uint32_t mtu;
-	int ret;
-
-	memset(&dev_info, 0, sizeof(struct rte_eth_dev_info));
-
-	ret = rte_eth_dev_info_get(port_id, &dev_info);
-	if (ret != 0) {
-		_ODP_ERR("DPDK: rte_eth_dev_info_get() failed with return value: %d, port: %u\n",
-			 ret, port_id);
-		return 0;
-	}
-	if_indextoname(dev_info.if_index, ifr.ifr_name);
-
-	sockfd = socket(AF_INET, SOCK_DGRAM, 0);
-	if (sockfd < 0) {
-		_ODP_ERR("Failed to create control socket\n");
-		return 0;
-	}
-
-	mtu = _odp_mtu_get_fd(sockfd, ifr.ifr_name);
-	close(sockfd);
-	return mtu;
-}
-
-static uint32_t dpdk_mtu_get(pktio_entry_t *pktio_entry)
-{
-	pkt_dpdk_t *pkt_dpdk = pkt_priv(pktio_entry);
-	uint32_t mtu = 0;
-
-	if (rte_eth_dev_get_mtu(pkt_dpdk->port_id, (uint16_t *)&mtu))
-		return 0;
-
-	/* Some DPDK PMD virtual devices do not support getting MTU size.
-	 * Try to use system call if DPDK cannot get MTU value.
-	 */
-	if (mtu == 0)
-		mtu = dpdk_vdev_mtu_get(pkt_dpdk->port_id);
-
-	/* Mbuf chaining not yet supported */
-	if (pkt_dpdk->data_room && pkt_dpdk->data_room < mtu)
-		return pkt_dpdk->data_room;
-
-	return mtu;
-}
-
 static uint32_t dpdk_maxlen(pktio_entry_t *pktio_entry)
 {
 	pkt_dpdk_t *pkt_dpdk = pkt_priv(pktio_entry);
@@ -1910,9 +1860,9 @@ static int dpdk_open(odp_pktio_t id ODP_UNUSED,
 	}
 	pkt_dpdk->flags.set_flow_hash = pkt_dpdk->opt.set_flow_hash; /* Copy for fast path access */
 
-	mtu = dpdk_mtu_get(pktio_entry);
-	if (mtu == 0) {
-		_ODP_ERR("Failed to read interface MTU\n");
+	ret = rte_eth_dev_get_mtu(pkt_dpdk->port_id, (uint16_t *)&mtu);
+	if (ret) {
+		_ODP_ERR("Failed to read interface MTU: err=%d\n", ret);
 		return -1;
 	}
 	pkt_dpdk->mtu = mtu + _ODP_ETHHDR_LEN;
