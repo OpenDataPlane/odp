@@ -47,7 +47,7 @@
 #define MAX_PKT_BURST          32
 
 /* Maximum number of pktio queues per interface */
-#define MAX_QUEUES             32
+#define MAX_QUEUES             2048
 
 /* Maximum number of schedule groups */
 #define MAX_GROUPS             32
@@ -1455,8 +1455,8 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx, odp_po
 		}
 	}
 
-	if (num_rx > (int)pktio_capa.max_input_queues) {
-		num_rx  = pktio_capa.max_input_queues;
+	if (num_rx > (int)pktio_capa.max_input_queues || num_rx > MAX_QUEUES) {
+		num_rx  = ODPH_MIN((int)pktio_capa.max_input_queues, MAX_QUEUES);
 		mode_rx = ODP_PKTIO_OP_MT;
 		printf("Warning: %s: maximum number of input queues: %i\n", dev, num_rx);
 	}
@@ -1465,10 +1465,12 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx, odp_po
 		printf("Warning: %s: sharing %i input queues between %i workers\n",
 		       dev, num_rx, gbl_args->appl.num_workers);
 
-	if (num_tx > (int)pktio_capa.max_output_queues) {
+	if (num_tx > (int)pktio_capa.max_output_queues || num_tx > MAX_QUEUES) {
+		int num_tx_orig = num_tx;
+
+		num_tx  = ODPH_MIN((int)pktio_capa.max_output_queues, MAX_QUEUES);
 		printf("Warning: %s: sharing %i output queues between %i workers\n",
-		       dev, pktio_capa.max_output_queues, num_tx);
-		num_tx  = pktio_capa.max_output_queues;
+		       dev, num_tx, num_tx_orig);
 		mode_tx = ODP_PKTIO_OP_MT;
 	}
 
@@ -2567,6 +2569,12 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	if (appl_args->burst_rx > MAX_PKT_BURST) {
 		ODPH_ERR("Burst size (%i) too large. Maximum is %i.\n",
 			 appl_args->burst_rx, MAX_PKT_BURST);
+		exit(EXIT_FAILURE);
+	}
+
+	if (appl_args->rx_queues > MAX_QUEUES) {
+		ODPH_ERR("Number of RX queues per interface (%i) too large. Maximum is %i.\n",
+			 appl_args->rx_queues, MAX_QUEUES);
 		exit(EXIT_FAILURE);
 	}
 

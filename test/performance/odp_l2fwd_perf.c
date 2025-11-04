@@ -33,7 +33,7 @@
 #define MAC_COMMON 0x2
 
 #define MAX_IFS 8U
-#define MAX_QS 32U
+#define MAX_QS 2048U
 #define MAX_WORKERS ((uint32_t)(ODP_THREAD_COUNT_MAX - 1))
 
 enum {
