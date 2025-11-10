@@ -15,6 +15,7 @@
 #include <odp/api/plat/cpu_inlines.h>
 
 #include <odp_ring_common.h>
+#include <odp_macros_internal.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -65,11 +66,23 @@ extern "C" {
  */
 
 struct ring_mpmc_common {
-	odp_atomic_u32_t r_head ODP_ALIGNED_CACHE;
-	odp_atomic_u32_t r_tail;
+	_ODP_CACHE_PAD
 
-	odp_atomic_u32_t w_head ODP_ALIGNED_CACHE;
-	odp_atomic_u32_t w_tail;
+	/* Reader head and tail */
+	struct ODP_ALIGNED_CACHE {
+		odp_atomic_u32_t r_head;
+		odp_atomic_u32_t r_tail;
+	};
+
+	_ODP_CACHE_PAD
+
+	/* Writer head and tail */
+	struct ODP_ALIGNED_CACHE {
+		odp_atomic_u32_t w_head;
+		odp_atomic_u32_t w_tail;
+	};
+
+	_ODP_CACHE_PAD
 };
 
 typedef struct ODP_ALIGNED_CACHE {
