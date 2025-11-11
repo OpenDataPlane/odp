@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2013-2018 Linaro Limited
- * Copyright (c) 2021-2023 Nokia
+ * Copyright (c) 2021-2026 Nokia
  */
 
 /**
@@ -247,6 +247,21 @@ typedef enum odp_proto_layer_t {
 	ODP_PROTO_LAYER_ALL
 
 } odp_proto_layer_t;
+
+/**
+ * Set of packet types that involve packet references. Used in various capabilities.
+ */
+typedef struct odp_packet_ref_types_t {
+	/** Static reference */
+	uint8_t static_ref :1;
+
+	/** Referencing packet, created using odp_packet_ref() */
+	uint8_t referencing_pkt :1;
+
+	/** A packet referenced by another packet (excluding static references) */
+	uint8_t referenced_pkt :1;
+
+} odp_packet_ref_types_t;
 
 /**
  * Packet API data range specifier

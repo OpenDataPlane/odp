@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2015-2018 Linaro Limited
- * Copyright (c) 2021-2022 Nokia
+ * Copyright (c) 2021-2026 Nokia
  * Copyright (c) 2022-2025 Marvell
  */
 
@@ -609,6 +609,16 @@ typedef struct {
 	 * The value can vary between 0 and ODP_TM_MAX_PRIORITIES.
 	 */
 	uint8_t max_schedulers_per_node;
+
+	/** Supported packet reference types
+	 *
+	 *  Types of packet references and referenced packets that can be
+	 *  enqueued to TM. If a bit is not set for a packet type, then
+	 *  packets of that type must not be enqueued to TM. Normal packets
+	 *  can always be enqueued.
+	 */
+	odp_packet_ref_types_t packet_ref;
+
 } odp_tm_capabilities_t;
 
 /** Per Level Requirements
@@ -2023,6 +2033,10 @@ int odp_tm_queue_disconnect(odp_tm_queue_t tm_queue);
  *
  * The pkt_color bits are a result of some earlier Metering/Marking/Policing
  * processing.
+ *
+ * Sending packets that reference or are referenced by other packets may
+ * only be sent if the relevant TM capabilities are set.
+ * See odp_tm_capabilities_t::packet_ref.
  *
  * @param tm_queue  Specifies the tm_queue (and indirectly the TM system).
  * @param pkt       Handle to a packet.
