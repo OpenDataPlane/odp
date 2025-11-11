@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2013-2018 Linaro Limited
- * Copyright (c) 2021-2024 Nokia
+ * Copyright (c) 2021-2025 Nokia
  */
 
 /**
@@ -1120,63 +1120,96 @@ odp_packet_t odp_packet_reassemble(odp_pool_t pool, odp_packet_buf_t pkt_buf[], 
 odp_packet_t odp_packet_ref_static(odp_packet_t pkt);
 
 /**
- * Create a reference to a packet
+ * Create a packet that references packet data of another packet
  *
- * Returns a new (dynamic) reference to a packet starting the shared part of
- * the data at a specified byte offset. Metadata and data before the offset
- * are not shared with other references of the packet. The rest of the data is
- * shared and must be treated as read only. Initially the returned reference
- * has metadata initialized to default values and does not contain unshared
- * data.  Packet (head) manipulation functions may be used normally to, e.g.,
- * add a unique header onto the shared payload. The shared part of the packet
- * may be modified again when there is a single reference left. Static and
- * dynamic references must not be mixed. Results are undefined if these
- * restrictions are not observed.
+ * Return a packet that shares packet data with the given base packet.
+ * The shared data starts at the given offset of the base packet and
+ * continues to the end of the base packet. The packet is allocated from
+ * the same pool as the base packet.
  *
- * The packet handle 'pkt' may itself be a (dynamic) reference to a packet.
+ * Packet metadata is not shared. The new packet has its metadata initialized
+ * to the default values.
  *
- * If the caller does not intend to modify either the packet or the new
- * reference to it, odp_packet_ref_static() may be used to create
- * a static reference that is more optimized for that use case.
+ * Packet data and data layout of the base packet must not be modified
+ * as long as any packet that references the base packet exists.
+ * In particular, a referenced base packet must not by passed to
+ * odp_packet_{push,pull,extend,trunc}_{head,tail}(), odp_packet_split(),
+ * or as the destination packet to odp_packet_concat().
  *
- * Packet is not modified on failure.
+ * odp_packet_has_ref() returns 1 for the base packet as long as it is
+ * being referenced by other packets and 0 for the newly created packet.
  *
- * @param pkt    Handle of the packet for which a reference is to be
- *               created.
+ * The base packet and any packets referencing it can be freed in any order.
+ * ODP ensures that the packets or packet segments backing the shared packet
+ * data is put back to the packet pool only after there are no references left.
+ * An ODP implementation may implement this using per-packet or per-segment
+ * reference counting or by other means.
  *
- * @param offset Byte offset in the packet at which the shared part is to
- *               begin. This must be in the range 0 ... odp_packet_len(pkt)-1.
+ * Packet data and packet data layout of the returned packet can be modified
+ * as long as the packet data bytes that are shared are not written to. Such
+ * packet manipulation operations do not affect the base packet or its layout.
  *
- * @return New reference to the packet
+ * Packet data layout manipulation functions can be used for the returned
+ * packet (but not for the base packet) as follows:
+ *
+ *   odp_packet_{pull,trunc}_{head,tail}() functions can be used normally.
+ *   Pulling and truncation can include shared packet data, in which case
+ *   the shared packet data area shrinks. It is possible to pull or truncate
+ *   the packet so much that it no longer shares any packet data, with the
+ *   base packet, but the packet still continues to reference the base packet
+ *   and cannot be used in contexts where referencing packets may not be used.
+ *
+ *   odp_packet_{push,extend}_{head,tail}() functions can be used normally.
+ *   The new packet data created by the functions is always private, even if
+ *   extending after truncating or pulling shared data. Because of this,
+ *   odp_packet_headroom() and odp_packet_tailroom() likely return 0 for the
+ *   newly created packet even if the base packet has headroom or tailroom.
+ *
+ *   odp_packet_concat() can be used normally but concatenating packet data
+ *   to a destination packet that shares data with another packet may require
+ *   packet data copying if also the source packet shares data with another
+ *   packet. This is because, depending on the ODP implementation, a packet
+ *   may be able to reference only one other packet.
+ *
+ * Packets returned by this function can be used normally in ODP API functions
+ * unless otherwise noted. There are restrictions in packet output.
+ *
+ * Referenced packets can be used in ODP API functions that treat packet data
+ * and layoyt as read-only. Referenced packets can be used in ODP API functions
+ * that consume packets, unless otherwise noted. Consuming a packet behaves
+ * the same way as freeing a packet with respect to shared packet data.
+ *
+ * The 'base_pkt' passed to this function must not reference another packet
+ * or be a static reference (see odp_packet_ref_static()).
+ *
+ * @param base_pkt Handle of the packet to which a reference is to be
+ *                 created.
+ *
+ * @param offset   Byte offset in the packet at which the shared part is to
+ *                 begin. This must be in the range 0 ... odp_packet_len(pkt)-1.
+ *
+ * @return Handle of the newly created packet
  * @retval ODP_PACKET_INVALID On failure
  */
-odp_packet_t odp_packet_ref(odp_packet_t pkt, uint32_t offset);
+odp_packet_t odp_packet_ref(odp_packet_t base_pkt, uint32_t offset);
 
 /**
- * Create a reference to a packet with a header packet
+ * Create a packet with a header and shared data
  *
- * This operation is otherwise identical to odp_packet_ref(), but it prepends
- * a supplied 'hdr' packet as the head of the new reference. The resulting
- * packet consists metadata and data of the 'hdr' packet, followed by the
- * shared part of packet 'pkt'.
- *
- * The packet handle ('pkt') may itself be a (dynamic) reference to a packet,
- * but the header packet handle ('hdr') must be unique. Both packets must be
- * have been allocated from the same pool and the handles must not refer to
- * the same packet. Results are undefined if these restrictions are not
- * observed.
+ * This operation is identical to odp_packet_ref(pkt, offset) followed by
+ * odp_packet_concat(&hdr, pkt). The resulting packet consists of metadata and
+ * data of the 'hdr' packet, followed by the shared part of packet 'pkt'.
  *
  * Packets are not modified on failure. The header packet 'hdr' is consumed
  * on success.
  *
- * @param pkt    Handle of the packet for which a reference is to be
+ * @param pkt    Handle of the packet to which a reference is to be
  *               created.
  *
  * @param offset Byte offset in 'pkt' at which the shared part is to
  *               begin. Must be in the range 0 ... odp_packet_len(pkt)-1.
  *
- * @param hdr    Handle of the header packet to be prefixed onto the new
- *               reference. Must be a unique reference.
+ * @param hdr    Handle of the header packet to be prefixed
  *
  * @return New reference the reference packet
  * @retval ODP_PACKET_INVALID On failure
@@ -1188,16 +1221,18 @@ odp_packet_t odp_packet_ref_pkt(odp_packet_t pkt, uint32_t offset,
  * Test if packet has multiple references
  *
  * A packet that has multiple references share data with other packets. In case
- * of a static reference it also shares metadata. Shared parts must be treated
- * as read only.
+ * of a static reference it also shares metadata. Packet data and data layout
+ * of packet that have references must be treated as read only.
  *
- * New references are created with odp_packet_ref_static(), odp_packet_ref() and
- * odp_packet_ref_pkt() calls. The intent of multiple references is to avoid
- * packet copies, however some implementations may do a packet copy for some of
- * the calls. If a copy is done, the new reference is actually a new, unique
- * packet and this function returns '0' for it. When a real reference is
- * created (instead of a copy), this function returns '1' for both packets
- * (the original packet and the new reference).
+ * Packets created through odp_packet_ref() or odp_packet_ref_hdr() share data
+ * with other packets by they are not referenced by other packets. This function
+ * returns 0 for such packets and 1 for packet referenced by those packets
+ * (i.e. the base packets passed to the functions, as long as references exist).
+ *
+ * Static packet references are created using odp_packet_ref_static(). Static
+ * packet references reference the original packet and vice versa, so this
+ * function returns 1 for the original packet and all static references to
+ * it as long as more than one such packet exists.
  *
  * @param pkt Packet handle
  *
