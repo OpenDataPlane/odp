@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2013-2018 Linaro Limited
- * Copyright (c) 2020-2023 Nokia
+ * Copyright (c) 2020-2025 Nokia
  */
 
 /**
@@ -260,6 +260,10 @@ int odp_pktin_queue(odp_pktio_t pktio, odp_pktin_queue_t queues[], int num);
  * odp_queue_enq_multi(). Behaviour is undefined if other events than packets
  * are enqueued. Application cannot dequeue from these queues.
  *
+ * Static references, referencing and referenced packets may be sent without
+ * the dont_free option only if the relevant shared_pkt capability is set
+ * (see odp_pktout_shared_packet_capability_t).
+ *
  * @param      pktio    Packet IO handle
  * @param[out] queues   Points to an array of queue handles for output
  * @param      num      Maximum number of queue handles to output
@@ -464,6 +468,10 @@ uint64_t odp_pktin_wait_time(uint64_t nsec);
  * specified e.g. for protocol offload purposes. Link protocol specific frame
  * checksum and padding are added to frames before transmission.
  *
+ * Static references, referencing and referenced packets may be sent without
+ * the dont_free option only if the relevant shared_pkt capability is set
+ * (see odp_pktout_shared_packet_capability_t).
+ *
  * @param queue        Packet output queue handle for sending packets
  * @param packets[]    Array of packets to send
  * @param num          Number of packets to send
@@ -538,6 +546,10 @@ int odp_lso_profile_destroy(odp_lso_profile_t lso_profile);
  * odp_pktout_send() should be more optimal for those than this function.
  *
  * Check LSO support level from packet IO capabilities (odp_pktio_capability_t).
+ *
+ * Packets that share data with other packets may be sent without the
+ * dont_free option only if the relevant shared_pkt capability is set
+ * (see odp_pktout_shared_packet_capability_t).
  *
  * @param queue     Packet output queue handle
  * @param packet[]  Array of packets to be LSO processed and sent
