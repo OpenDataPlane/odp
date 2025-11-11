@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2013-2018 Linaro Limited
- * Copyright (c) 2020-2025 Nokia
+ * Copyright (c) 2020-2026 Nokia
  */
 
 /**
@@ -519,9 +519,16 @@ typedef union odp_pktout_config_opt_t {
 		/** Packet references not used on packet output
 		 *
 		 * When set, application indicates that it will not transmit
-		 * packet references on this packet IO interface.
-		 * Since every ODP implementation supports it, it is always
-		 * ok to set this flag.
+		 * static packet references, referenced or referencing packets
+		 * on this packet IO interface.
+		 *
+		 * Even if this flag is set to zero, packets which can share
+		 * data may not be sent unless the relevant packet I/O
+		 * capability is set or the packet I/O supports the dont_free
+		 * option and the option is set for the packet being sent.
+		 * See odp_pktio_capability_t::packet_ref
+		 * See odp_pktio_capability_t::free_ctrl
+		 * See odp_packet_free_ctrl_set()
 		 *
 		 * 0: Packet references may be transmitted on the
 		 *    interface (the default value).
@@ -1062,6 +1069,15 @@ typedef struct odp_pktio_capability_t {
 
 	/** LSO capabilities */
 	odp_lso_capability_t lso;
+
+	/** Supported packet reference types
+	 *
+	 *  Types of packet references and referenced packets that can be
+	 *  consumed by the pktio. If a bit is not set for a packet type,
+	 *  then packets of that type may be sent only if the pktout supports
+	 *  the 'dont_free' option and the option is set for the packet.
+	 */
+	odp_packet_ref_types_t packet_ref;
 
 	/** Supported frame lengths for odp_pktio_maxlen_set()
 	 *
