@@ -362,8 +362,8 @@ int _odp_time_cpu_global_freq_is_const(void)
 	    cpu_get_flag_enabled(RTE_CPUFLAG_INVTSC) > 0)
 		return 1;
 
-	_ODP_ERR("WARN: assuming constant TSC based on CPU arch, but could not confirm from CPU "
-		 "flags\n");
+	_ODP_WARN("Assuming constant TSC based on CPU arch, but could not confirm from CPU "
+		  "flags\n");
 
 	return 1;
 }
