@@ -1015,6 +1015,19 @@ typedef struct odp_pktin_vector_capability_t {
 
 } odp_pktin_vector_capability_t;
 
+/** Packet output capabilities regarding packets with shared data
+ *
+ *  These capabilities indicate whether packets that share packet data
+ *  (or have shared packet data) with other packets can be sent to a pktio
+ *  without setting the dont_free flag. Sending with the dont_free flag set
+ *  is always allowed.
+ */
+typedef struct {
+	uint8_t static_ref  :1; /** Static packet references */
+	uint8_t ref         :1; /** Any referencing or referenced packet */
+
+} odp_pktout_shared_packet_capability_t;
+
 /**
  * Packet IO capabilities
  *
@@ -1067,6 +1080,9 @@ typedef struct odp_pktio_capability_t {
 
 	/** LSO capabilities */
 	odp_lso_capability_t lso;
+
+	/** Capabilities to send and consume packets that share packet data */
+	odp_pktout_shared_packet_capability_t shared_pkt;
 
 	/** Supported frame lengths for odp_pktio_maxlen_set()
 	 *
