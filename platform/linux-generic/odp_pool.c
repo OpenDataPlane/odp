@@ -803,11 +803,6 @@ odp_pool_t _odp_pool_create(const char *name, const odp_pool_param_t *params,
 		break;
 
 	case ODP_POOL_PACKET:
-		if (params->pkt.headroom > CONFIG_PACKET_HEADROOM) {
-			_ODP_ERR("Packet headroom size not supported\n");
-			return ODP_POOL_INVALID;
-		}
-
 		num = params->pkt.num;
 		seg_len = CONFIG_PACKET_MAX_SEG_LEN;
 		max_len = _odp_pool_glb->config.pkt_max_len;
