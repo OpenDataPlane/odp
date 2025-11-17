@@ -1,5 +1,7 @@
 include $(top_srcdir)/test/Makefile.inc
 
+SUBDIRS = pipeline
+
 TESTS_ENVIRONMENT += TEST_DIR=${builddir}
 
 EXECUTABLES = odp_atomic_perf \
