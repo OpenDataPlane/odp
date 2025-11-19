@@ -565,6 +565,101 @@ static void scheduler_test_queue_size(void)
 	CU_ASSERT_FATAL(odp_pool_destroy(pool) == 0);
 }
 
+static void test_queue_priority(odp_schedule_sync_t sync, odp_bool_t mixed_sync)
+{
+	odp_schedule_capability_t sched_capa;
+	odp_schedule_prio_t prev_prio;
+	odp_queue_param_t queue_param;
+	const int max_prios = 128;
+	odp_queue_t queue[max_prios];
+	const uint64_t wait_time = odp_schedule_wait_time(WAIT_TIMEOUT);
+	const uint32_t event_per_prio = 4;
+	uint32_t num_events_prio[max_prios];
+	uint32_t tot_events;
+	uint32_t num_events = 0;
+	int num_prios = ODPH_MIN(odp_schedule_num_prio(), max_prios);
+	odp_schedule_sync_t sync_tbl[] = {ODP_SCHED_SYNC_PARALLEL,
+					  ODP_SCHED_SYNC_ATOMIC,
+					  ODP_SCHED_SYNC_ORDERED};
+
+	memset(num_events_prio, 0, sizeof(num_events_prio));
+
+	CU_ASSERT_FATAL(odp_schedule_capability(&sched_capa) == 0);
+	if ((uint32_t)num_prios > sched_capa.max_queues)
+		num_prios = sched_capa.max_queues;
+	tot_events = event_per_prio * num_prios;
+
+	sched_queue_param_init(&queue_param);
+	queue_param.sched.sync = sync;
+
+	/* Try to prevent possible event pre-scheduling */
+	odp_schedule_pause();
+
+	for (int i = 0; i < num_prios; i++) {
+		odp_schedule_prio_t cur_prio = odp_schedule_min_prio() + i;
+
+		CU_ASSERT_FATAL(cur_prio <= odp_schedule_max_prio());
+		queue_param.sched.prio = cur_prio;
+
+		if (mixed_sync)
+			queue_param.sched.sync = sync_tbl[i % ODPH_ARRAY_SIZE(sync_tbl)];
+
+		queue[i] = odp_queue_create("test_queue_priority", &queue_param);
+		CU_ASSERT_FATAL(queue[i] != ODP_QUEUE_INVALID);
+
+		for (uint32_t j = 0; j < event_per_prio; j++) {
+			odp_buffer_t buf = odp_buffer_alloc(globals->pool);
+
+			CU_ASSERT_FATAL(buf != ODP_BUFFER_INVALID);
+			CU_ASSERT_FATAL(odp_queue_enq(queue[i], odp_buffer_to_event(buf)) == 0);
+		}
+	}
+
+	odp_schedule_resume();
+	odp_time_wait_ns(50 * ODP_TIME_MSEC_IN_NS);
+
+	prev_prio = queue_param.sched.prio;
+
+	/* Check that events are received in priority order */
+	while (num_events < tot_events) {
+		odp_schedule_prio_t cur_prio;
+		odp_queue_t src_queue;
+		odp_event_t ev;
+
+		ev = odp_schedule(&src_queue, wait_time);
+		if (ev == ODP_EVENT_INVALID)
+			break;
+
+		cur_prio = odp_queue_sched_prio(src_queue);
+		CU_ASSERT(cur_prio <= prev_prio);
+
+		num_events++;
+		num_events_prio[cur_prio % max_prios]++;
+
+		prev_prio = cur_prio;
+		odp_event_free(ev);
+	}
+
+	CU_ASSERT(num_events == tot_events);
+
+	for (int i = 0; i < num_prios; i++)
+		CU_ASSERT(num_events_prio[(odp_schedule_min_prio() + i) % max_prios] ==
+			  event_per_prio);
+
+	CU_ASSERT(drain_queues() == 0);
+
+	for (int i = 0; i < num_prios; i++)
+		CU_ASSERT_FATAL(odp_queue_destroy(queue[i]) == 0);
+}
+
+static void scheduler_test_queue_priority(void)
+{
+	test_queue_priority(ODP_SCHED_SYNC_PARALLEL, false);
+	test_queue_priority(ODP_SCHED_SYNC_ATOMIC, false);
+	test_queue_priority(ODP_SCHED_SYNC_ORDERED, false);
+	test_queue_priority(ODP_SCHED_SYNC_PARALLEL, true);
+}
+
 static void scheduler_test_full_queues(void)
 {
 	odp_schedule_config_t default_config;
@@ -3880,6 +3975,7 @@ odp_testinfo_t scheduler_basic_suite[] = {
 	ODP_TEST_INFO(scheduler_test_queue_destroy),
 	ODP_TEST_INFO(scheduler_test_wait),
 	ODP_TEST_INFO(scheduler_test_queue_size),
+	ODP_TEST_INFO(scheduler_test_queue_priority),
 	ODP_TEST_INFO(scheduler_test_full_queues),
 	ODP_TEST_INFO(scheduler_test_max_queues_p),
 	ODP_TEST_INFO(scheduler_test_max_queues_a),
