@@ -645,6 +645,7 @@ static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 			 "%d/%" PRIu16 " allocated\n", num, mbuf_num);
 		for (i = num; i < mbuf_num; i++)
 			rte_pktmbuf_free(mbuf_table[i]);
+		odp_atomic_add_u64(&pktio_entry->stats_extra.in_discards, mbuf_num - num);
 	}
 
 	for (i = 0; i < num; i++) {
@@ -673,6 +674,7 @@ static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 			if (ret < 0) {
 				odp_packet_free(pkt);
 				rte_pktmbuf_free(mbuf);
+				odp_atomic_inc_u64(&pktio_entry->stats_extra.in_discards);
 				continue;
 			}
 
@@ -736,6 +738,7 @@ fail:
 
 	for (j = i; j < num; j++)
 		rte_pktmbuf_free(mbuf_table[j]);
+	odp_atomic_add_u64(&pktio_entry->stats_extra.in_discards, num - i);
 
 	return (i > 0 ? i : -1);
 }
@@ -948,6 +951,7 @@ static inline int mbuf_to_pkt_zero(pktio_entry_t *pktio_entry,
 		if (odp_unlikely(mbuf->nb_segs != 1)) {
 			_ODP_ERR("Segmented buffers not supported\n");
 			rte_pktmbuf_free(mbuf);
+			odp_atomic_inc_u64(&pktio_entry->stats_extra.in_discards);
 			continue;
 		}
 
@@ -974,6 +978,7 @@ static inline int mbuf_to_pkt_zero(pktio_entry_t *pktio_entry,
 
 		if (ret < 0) {
 			rte_pktmbuf_free(mbuf);
+			odp_atomic_inc_u64(&pktio_entry->stats_extra.in_discards);
 			continue;
 		}
 
@@ -1042,6 +1047,7 @@ static inline int mbuf_to_pkt_zero_minimal(pktio_entry_t *pktio_entry,
 		if (odp_unlikely(mbuf->nb_segs != 1)) {
 			_ODP_ERR("Segmented buffers not supported\n");
 			rte_pktmbuf_free(mbuf);
+			odp_atomic_inc_u64(&pktio_entry->stats_extra.in_discards);
 			continue;
 		}
 
