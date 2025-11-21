@@ -641,10 +641,9 @@ static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 	num = _odp_packet_alloc_multi(pool, max_len + frame_offset,
 				      pkt_table, mbuf_num);
 	if (num != mbuf_num) {
-		_ODP_DBG("_odp_packet_alloc_multi() unable to allocate all packets: "
-			 "%d/%" PRIu16 " allocated\n", num, mbuf_num);
 		for (i = num; i < mbuf_num; i++)
 			rte_pktmbuf_free(mbuf_table[i]);
+		odp_atomic_add_u64(&pktio_entry->stats_extra.in_discards, mbuf_num - num);
 	}
 
 	for (i = 0; i < num; i++) {
@@ -736,6 +735,7 @@ fail:
 
 	for (j = i; j < num; j++)
 		rte_pktmbuf_free(mbuf_table[j]);
+	odp_atomic_add_u64(&pktio_entry->stats_extra.in_discards, num - i);
 
 	return (i > 0 ? i : -1);
 }
@@ -948,6 +948,7 @@ static inline int mbuf_to_pkt_zero(pktio_entry_t *pktio_entry,
 		if (odp_unlikely(mbuf->nb_segs != 1)) {
 			_ODP_ERR("Segmented buffers not supported\n");
 			rte_pktmbuf_free(mbuf);
+			odp_atomic_inc_u64(&pktio_entry->stats_extra.in_discards);
 			continue;
 		}
 
@@ -1042,6 +1043,7 @@ static inline int mbuf_to_pkt_zero_minimal(pktio_entry_t *pktio_entry,
 		if (odp_unlikely(mbuf->nb_segs != 1)) {
 			_ODP_ERR("Segmented buffers not supported\n");
 			rte_pktmbuf_free(mbuf);
+			odp_atomic_inc_u64(&pktio_entry->stats_extra.in_discards);
 			continue;
 		}
 
