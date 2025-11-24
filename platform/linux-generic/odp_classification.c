@@ -1710,8 +1710,6 @@ done:
  *
  * @param pktio_entry	Ingress pktio
  * @param base		Packet data
- * @param pkt_len	Packet length
- * @param seg_leg	Segment length
  * @param pool[out]	Packet pool
  * @param pkt_hdr[out]	Packet header
  *
