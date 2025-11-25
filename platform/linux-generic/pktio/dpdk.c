@@ -74,6 +74,9 @@ ODP_STATIC_ASSERT(CONFIG_PACKET_HEADROOM == RTE_PKTMBUF_HEADROOM,
 /* DPDK poll mode drivers requiring minimum RX burst size DPDK_MIN_RX_BURST */
 #define IXGBE_DRV_NAME "net_ixgbe"
 #define I40E_DRV_NAME "net_i40e"
+#define IAVF_DRV_NAME "net_iavf"
+#define ICE_DRV_NAME "net_ice"
+#define VIRTIO_DRV_NAME "net_virtio"
 
 #define PCAP_DRV_NAME "net_pcap"
 
@@ -87,8 +90,13 @@ ODP_STATIC_ASSERT((DPDK_NB_MBUF % DPDK_MEMPOOL_CACHE_SIZE == 0) &&
 		  (DPDK_MEMPOOL_CACHE_SIZE <= DPDK_MBUF_BUF_SIZE * 10 / 15)
 		  , "DPDK mempool cache size failure");
 
-/* Minimum RX burst size */
-#define DPDK_MIN_RX_BURST 4
+/* Minimum RX burst size
+ * The same drivers might require different minimum burst sizes depending
+ * on the underlying hardware (e.g., for net_i40e, i40e_rxtx_vec_neon.c
+ * requires 4 while i40e_rxtx_vec_avx2.c and i40e_rxtx_vec_avx512.c require 8).
+ * Here a common minimum value is set for all such drivers.
+ */
+#define DPDK_MIN_RX_BURST 8
 
 ODP_STATIC_ASSERT(DPDK_MIN_RX_BURST <= UINT8_MAX, "DPDK_MIN_RX_BURST too large");
 
@@ -100,6 +108,7 @@ ODP_STATIC_ASSERT(DPDK_MIN_RX_BURST <= UINT8_MAX, "DPDK_MIN_RX_BURST too large")
 typedef struct {
 	int num_rx_desc_default;
 	int num_tx_desc_default;
+	int min_rx_burst;
 	uint8_t multicast_en;
 	uint8_t rx_drop_en;
 	uint8_t set_flow_hash;
@@ -243,12 +252,21 @@ static int init_options(pktio_entry_t *pktio_entry,
 		return -1;
 	opt->multicast_en = !!val;
 
+	if (!lookup_opt("min_rx_burst", dev_info->driver_name, &val))
+		return -1;
+
+	if (val < 0) {
+		_ODP_ERR("min_rx_burst value %d must be non-negative\n", val);
+		return -1;
+	}
+
 	_ODP_DBG("DPDK interface (%s): %" PRIu16 "\n", dev_info->driver_name,
 		 pkt_priv(pktio_entry)->port_id);
 	_ODP_DBG("  multicast_en: %d\n", opt->multicast_en);
 	_ODP_DBG("  num_rx_desc: %d\n", opt->num_rx_desc_default);
 	_ODP_DBG("  num_tx_desc: %d\n", opt->num_tx_desc_default);
 	_ODP_DBG("  rx_drop_en: %d\n", opt->rx_drop_en);
+	_ODP_DBG("  min_rx_burst: %d\n", opt->min_rx_burst);
 
 	return 0;
 }
@@ -1893,15 +1911,21 @@ static int dpdk_open(odp_pktio_t id ODP_UNUSED,
 	if (ret)
 		_ODP_DBG("Configuring multicast reception not supported by the PMD\n");
 
-	/* Drivers requiring minimum burst size. Supports also *_vf versions
-	 * of the drivers. */
-	if (!strncmp(dev_info.driver_name, IXGBE_DRV_NAME,
-		     strlen(IXGBE_DRV_NAME)) ||
-	    !strncmp(dev_info.driver_name, I40E_DRV_NAME,
-		     strlen(I40E_DRV_NAME)))
+	/* Use user provided value */
+	if (pkt_dpdk->opt.min_rx_burst > 0) {
+		pkt_dpdk->min_rx_burst = pkt_dpdk->opt.min_rx_burst;
+	} else if (!strncmp(dev_info.driver_name, IXGBE_DRV_NAME, strlen(IXGBE_DRV_NAME)) ||
+		   !strncmp(dev_info.driver_name, I40E_DRV_NAME, strlen(I40E_DRV_NAME)) ||
+		   !strncmp(dev_info.driver_name, IAVF_DRV_NAME, strlen(IAVF_DRV_NAME)) ||
+		   !strncmp(dev_info.driver_name, ICE_DRV_NAME, strlen(ICE_DRV_NAME)) ||
+		   !strncmp(dev_info.driver_name, VIRTIO_DRV_NAME, strlen(VIRTIO_DRV_NAME))) {
+		/* Drivers requiring minimum burst size. Supports also *_vf versions
+		 * of the drivers.
+		 */
 		pkt_dpdk->min_rx_burst = DPDK_MIN_RX_BURST;
-	else
-		pkt_dpdk->min_rx_burst = 0;
+		_ODP_WARN("DPDK PMD %s requires the number of packets to retrieve\n"
+			  "be divisible by %d\n", dev_info.driver_name, DPDK_MIN_RX_BURST);
+	}
 
 	if (_ODP_DPDK_ZERO_COPY) {
 		mem_src_data_t *mem_src_data = mem_src_priv(pool_entry->mem_src_data);
