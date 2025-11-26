@@ -14,6 +14,7 @@
 #include <odp/api/packet_io.h>
 #include <odp/api/proto_stats.h>
 #include <odp/api/timer.h>
+#include <odp/api/sync.h>
 
 #include <odp_parse_internal.h>
 #include <odp_chksum_internal.h>
@@ -449,9 +450,21 @@ static inline void segment_ref_inc(odp_packet_hdr_t *seg_hdr)
 		odp_atomic_inc_u32(&seg_hdr->ref_cnt);
 }
 
-static inline uint32_t segment_ref_dec(odp_packet_hdr_t *seg_hdr)
+static uint32_t segment_ref_dec(odp_packet_hdr_t *seg_hdr)
 {
-	return odp_atomic_fetch_dec_u32(&seg_hdr->ref_cnt);
+	uint32_t ref_cnt;
+
+	ref_cnt =  __atomic_fetch_sub(&seg_hdr->ref_cnt.v, 1, __ATOMIC_RELEASE);
+
+	if (ref_cnt == 1) {
+		/*
+		 * Synchronize with the release store above to make sure
+		 * other users of the segment are done with it before
+		 * this thread frees the segment.
+		 */
+		odp_mb_acquire();
+	}
+	return ref_cnt;
 }
 
 static inline uint32_t segment_ref(odp_packet_hdr_t *seg_hdr)
