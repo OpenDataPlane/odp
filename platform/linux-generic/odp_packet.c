@@ -442,12 +442,10 @@ static inline odp_packet_hdr_t *add_segments(odp_packet_hdr_t *pkt_hdr,
 
 static inline void segment_ref_inc(odp_packet_hdr_t *seg_hdr)
 {
-	uint32_t ref_cnt = odp_atomic_load_u32(&seg_hdr->ref_cnt);
+	uint32_t ref_cnt = odp_atomic_fetch_inc_u32(&seg_hdr->ref_cnt);
 
 	/* First count increment after alloc */
-	if (odp_likely(ref_cnt == 0))
-		odp_atomic_store_u32(&seg_hdr->ref_cnt, 2);
-	else
+	if (ref_cnt == 0)
 		odp_atomic_inc_u32(&seg_hdr->ref_cnt);
 }
 
