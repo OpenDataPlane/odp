@@ -1,0 +1,68 @@
+# L2FWD, packets are received from packet I/O and sent back
+
+queues: (
+	{
+		name: "pktio1.in.0";
+		type: "pktios";
+	},
+	{
+		name: "pktio1.out.0";
+		type: "pktios";
+	}
+);
+
+pools: (
+	{
+		name: "pool1";
+		type: "packet";
+		size: 1024;
+		num: 10240;
+	}
+);
+
+pktios: (
+	{
+		name: "pktio1";
+		iface: "veth1";
+		pool: "pool1";
+		inmode: "schedule";
+		outmode: "queue";
+		num_in_queues: 1;
+		num_out_queues: 1;
+		hash_enable: 1;
+		hash_ipv4_udp: 1;
+		hash_ipv4_tcp: 1;
+		hash_ipv4: 1;
+		hash_ipv6_udp: 1;
+		hash_ipv6_tcp: 1;
+		hash_ipv6: 1;
+		promisc: 1;
+	}
+);
+
+flows: (
+	{
+		name: "flow1";
+		input: "pktio1.in.0";
+		work: (
+			{
+				type: "forward";
+				param: ( "pktio1.out.0" );
+			}
+		);
+	}
+);
+
+workers: (
+	{
+		name: "worker1";
+		type: "schedule";
+	}
+)
+
+cpumap: {
+	cpumask: "0x10";
+	workers: [
+		"worker1"
+	];
+};
