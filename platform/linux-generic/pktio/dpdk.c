@@ -88,7 +88,7 @@ ODP_STATIC_ASSERT((DPDK_NB_MBUF % DPDK_MEMPOOL_CACHE_SIZE == 0) &&
 		  , "DPDK mempool cache size failure");
 
 /* Minimum RX burst size */
-#define DPDK_MIN_RX_BURST 4
+#define DPDK_MIN_RX_BURST 8
 
 ODP_STATIC_ASSERT(DPDK_MIN_RX_BURST <= UINT8_MAX, "DPDK_MIN_RX_BURST too large");
 
@@ -1301,14 +1301,14 @@ static int dpdk_setup_eth_dev(pktio_entry_t *pktio_entry)
 static int dpdk_close(pktio_entry_t *pktio_entry)
 {
 	pkt_dpdk_t *pkt_dpdk = pkt_priv(pktio_entry);
-	unsigned idx;
-	unsigned i, j;
+
+	rte_eth_dev_stop(pkt_dpdk->port_id);
 
 	/* Free cache packets */
-	for (i = 0; i < ODP_PKTIN_MAX_QUEUES; i++) {
-		idx = pkt_dpdk->rx_cache[i].idx;
+	for (uint32_t i = 0; i < ODP_PKTIN_MAX_QUEUES; i++) {
+		uint8_t idx = pkt_dpdk->rx_cache[i].idx;
 
-		for (j = 0; j < pkt_dpdk->rx_cache[i].count; j++)
+		for (uint8_t j = 0; j < pkt_dpdk->rx_cache[i].count; j++)
 			rte_pktmbuf_free(pkt_dpdk->rx_cache[i].pkt[idx++]);
 	}
 
@@ -2031,6 +2031,11 @@ static int dpdk_start(pktio_entry_t *pktio_entry)
 	uint16_t port_id = pkt_dpdk->port_id;
 	int ret;
 
+	/* Stop previously started DPDK device to enable reconfiguration */
+	if (pktio_entry->state == PKTIO_STATE_STOPPED ||
+	    pktio_entry->state == PKTIO_STATE_STOP_PENDING)
+		rte_eth_dev_stop(port_id);
+
 	ret = rte_eth_dev_info_get(port_id, &dev_info);
 	if (ret != 0) {
 		_ODP_ERR("DPDK: rte_eth_dev_info_get() failed with return value: %d, port: %u\n",
@@ -2085,10 +2090,8 @@ static int dpdk_start(pktio_entry_t *pktio_entry)
 	return 0;
 }
 
-static int dpdk_stop(pktio_entry_t *pktio_entry)
+static int dpdk_stop(pktio_entry_t *pktio_entry ODP_UNUSED)
 {
-	rte_eth_dev_stop(pkt_priv(pktio_entry)->port_id);
-
 	return 0;
 }
 
