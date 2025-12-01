@@ -641,7 +641,7 @@ static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 	uint16_t pkt_len;
 	struct rte_mbuf *mbuf;
 	void *data;
-	int i, j, num;
+	int i, num;
 	uint32_t max_len;
 	int nb_pkts = 0;
 	int nb_cls = 0;
@@ -659,8 +659,7 @@ static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 	num = _odp_packet_alloc_multi(pool, max_len + frame_offset,
 				      pkt_table, mbuf_num);
 	if (num != mbuf_num) {
-		for (i = num; i < mbuf_num; i++)
-			rte_pktmbuf_free(mbuf_table[i]);
+		rte_pktmbuf_free_bulk(&mbuf_table[num], mbuf_num - num);
 		odp_atomic_add_u64(&pktio_entry->stats_extra.in_discards, mbuf_num - num);
 	}
 
@@ -750,9 +749,7 @@ static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 
 fail:
 	odp_packet_free_multi(&pkt_table[i], num - i);
-
-	for (j = i; j < num; j++)
-		rte_pktmbuf_free(mbuf_table[j]);
+	rte_pktmbuf_free_bulk(&mbuf_table[i], num - i);
 	odp_atomic_add_u64(&pktio_entry->stats_extra.in_discards, num - i);
 
 	return (i > 0 ? i : -1);
@@ -876,7 +873,7 @@ static inline int pkt_to_mbuf(pktio_entry_t *pktio_entry,
 {
 	pkt_dpdk_t *pkt_dpdk = pkt_priv(pktio_entry);
 	char *data;
-	uint16_t i, j, pkt_len;
+	uint16_t i, pkt_len;
 	uint8_t chksum_enabled = pktio_entry->enabled.chksum_insert;
 	uint8_t tx_ts_enabled = _odp_pktio_tx_ts_enabled(pktio_entry);
 	odp_pktout_config_opt_t *pktout_cfg = &pktio_entry->config.pktout;
@@ -911,8 +908,7 @@ static inline int pkt_to_mbuf(pktio_entry_t *pktio_entry,
 	return i;
 
 fail:
-	for (j = i; j < num; j++)
-		rte_pktmbuf_free(mbuf_table[j]);
+	rte_pktmbuf_free_bulk(&mbuf_table[i], num - i);
 
 	return i > 0 ? i : -1;
 }
@@ -1322,14 +1318,14 @@ static int dpdk_close(pktio_entry_t *pktio_entry)
 {
 	pkt_dpdk_t *pkt_dpdk = pkt_priv(pktio_entry);
 	unsigned idx;
-	unsigned i, j;
+	unsigned int i;
 
 	/* Free cache packets */
 	for (i = 0; i < ODP_PKTIN_MAX_QUEUES; i++) {
 		idx = pkt_dpdk->rx_cache[i].idx;
 
-		for (j = 0; j < pkt_dpdk->rx_cache[i].count; j++)
-			rte_pktmbuf_free(pkt_dpdk->rx_cache[i].pkt[idx++]);
+		rte_pktmbuf_free_bulk(&pkt_dpdk->rx_cache[i].pkt[idx],
+				      pkt_dpdk->rx_cache[i].count);
 	}
 
 	return 0;
@@ -2236,10 +2232,8 @@ static int dpdk_send(pktio_entry_t *pktio_entry, int index,
 		int i;
 		int first = tx_pkts;
 
-		if (odp_unlikely(tx_pkts < mbufs)) {
-			for (i = tx_pkts; i < mbufs; i++)
-				rte_pktmbuf_free(tx_mbufs[i]);
-		}
+		if (odp_unlikely(tx_pkts < mbufs))
+			rte_pktmbuf_free_bulk(&tx_mbufs[tx_pkts], mbufs - tx_pkts);
 
 		if (odp_unlikely(tx_pkts == 0))
 			return 0;
