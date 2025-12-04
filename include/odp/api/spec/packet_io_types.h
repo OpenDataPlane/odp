@@ -516,9 +516,13 @@ typedef union odp_pktout_config_opt_t {
 		/** Packet references not used on packet output
 		 *
 		 * When set, application indicates that it will not transmit
-		 * packet references on this packet IO interface.
-		 * Since every ODP implementation supports it, it is always
-		 * ok to set this flag.
+		 * static packet references, referenced or referencing packets
+		 * on this packet IO interface.
+		 *
+		 * Even if this flag is set to zero, packets which can share
+		 * data may not be sent without the dont_free flag unless the
+		 * relevant packet I/O capability is set.
+		 * See odp_pktio_capability_t::shared_pkt_consume.
 		 *
 		 * 0: Packet references may be transmitted on the
 		 *    interface (the default value).
@@ -1015,6 +1019,20 @@ typedef struct odp_pktin_vector_capability_t {
 
 } odp_pktin_vector_capability_t;
 
+/** Packet output capabilities regarding packets with shared data
+ *
+ *  These capabilities indicate whether packets that may share packet data
+ *  with other packets can be sent to a pktio without setting the dont_free
+ *  flag. Sending with the dont_free flag set is always allowed as then
+ *  the sent packets are not consumed nor modified.
+ */
+typedef struct {
+	uint8_t static_ref  :1; /**< Static packet references allowed */
+	uint8_t referenced  :1; /**< Referenced packets allowed */
+	uint8_t referencing :1; /**< Referencing packets allowed */
+
+} odp_pktout_shared_packet_capability_t;
+
 /**
  * Packet IO capabilities
  *
@@ -1067,6 +1085,9 @@ typedef struct odp_pktio_capability_t {
 
 	/** LSO capabilities */
 	odp_lso_capability_t lso;
+
+	/** Capabilities to send and consume packets that share packet data */
+	odp_pktout_shared_packet_capability_t shared_pkt_consume;
 
 	/** Supported frame lengths for odp_pktio_maxlen_set()
 	 *
