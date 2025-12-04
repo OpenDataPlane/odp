@@ -287,7 +287,11 @@ typedef struct odp_pktin_queue_param_t {
 	  * odp_queue_param_t documentation. The type field is ignored
 	  * and the queue type is deduced from the pktio input mode.
 	  * When classifier is enabled in odp_pktin_queue_config() this
-	  * value is ignored. */
+	  * value is ignored.
+	  *
+	  * If event aggregation is enabled in queue parameters, aggregator
+	  * with index 0 is automatically used for incoming packets.
+	  */
 	odp_queue_param_t queue_param;
 
 	/** Queue parameters override
