@@ -22,6 +22,8 @@ typedef enum {
 
 flow_t flow_create_flow(char *queue);
 
+uint32_t flow_get_data_size(void);
+
 odp_bool_t flow_add_input(flow_t flow,  work_t *work, uint32_t num);
 
 odp_bool_t flow_add_output(flow_t flow,  work_t *work, uint32_t num);

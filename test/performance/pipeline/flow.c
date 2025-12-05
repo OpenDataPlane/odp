@@ -31,6 +31,11 @@ flow_t flow_create_flow(char *queue)
 	return (flow_t)flow;
 }
 
+uint32_t flow_get_data_size(void)
+{
+	return sizeof(flow_priv_t);
+}
+
 odp_bool_t flow_add_input(flow_t flow,  work_t *work, uint32_t num)
 {
 	flow_sub_t *sub = &((flow_priv_t *)flow)->sub[F_IN];

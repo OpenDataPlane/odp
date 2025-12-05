@@ -466,6 +466,7 @@ static odp_bool_t flow_parser_init(config_t *config)
 
 			if (ret == -1) {
 				ODPH_ERR("Invalid \"" FLOW_DOMAIN "\" entry (%d)\n", i);
+				free_flow_template(&templ);
 				return false;
 			}
 
@@ -529,29 +530,27 @@ static odp_bool_t flow_parser_deploy(void)
 			else
 				(void)flow_add_output(parse->flow, work, parse->num);
 
-			if (odp_queue_context_set(queue, parse->flow, sizeof(parse->flow)) < 0) {
+			if (odp_queue_context_set(queue, (void *)parse->flow, flow_get_data_size())
+			    < 0) {
 				ODPH_ERR("Error setting queue context\n");
 				return false;
 			}
 		} else {
-			if (parse->input != NULL &&
-			    !flow_add_input(flow, work, parse->num)) {
+			if (parse->input != NULL && !flow_add_input(flow, work, parse->num)) {
 				ODPH_ERR("Error setting input flow\n");
 
-				for (uint32_t j = 0U; j < parse->num; ++j) {
+				for (uint32_t j = 0U; j < parse->num; ++j)
 					work_destroy_work(work[j]);
-					free(work);
-				}
 
+				free(work);
 				return false;
 			} else if (!flow_add_output(flow, work, parse->num)) {
 				ODPH_ERR("Error setting output flow\n");
 
-				for (uint32_t j = 0U; j < parse->num; ++j) {
+				for (uint32_t j = 0U; j < parse->num; ++j)
 					work_destroy_work(work[j]);
-					free(work);
-				}
 
+				free(work);
 				return false;
 			}
 		}
