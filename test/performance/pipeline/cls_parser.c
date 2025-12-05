@@ -1075,6 +1075,7 @@ static odp_bool_t classifier_parser_init(config_t *config)
 
 			if (ret == -1) {
 				ODPH_ERR("Invalid \"" CONF_STR_COS "\" entry (%d)\n", i);
+				free_cos_template(&cos_templ);
 				return false;
 			}
 
@@ -1128,6 +1129,7 @@ static odp_bool_t classifier_parser_init(config_t *config)
 
 			if (ret == -1) {
 				ODPH_ERR("Invalid \"" CONF_STR_PMR "\" entry (%d)\n", i);
+				free_pmr_template(&pmr_templ);
 				return false;
 			}
 

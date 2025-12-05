@@ -337,6 +337,7 @@ static odp_bool_t queue_parser_init(config_t *config)
 
 			if (ret == -1) {
 				ODPH_ERR("Invalid \"" QUEUE_DOMAIN "\" entry (%d)\n", i);
+				free_queue_template(&templ);
 				return false;
 			}
 
