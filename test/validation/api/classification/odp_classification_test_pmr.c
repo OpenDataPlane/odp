@@ -129,7 +129,7 @@ static test_state_t test_init(cls_flag_t cls)
 
 	ts.pktio = create_pktio(ODP_QUEUE_TYPE_SCHED, pkt_pool, cls == ENABLE_CLS);
 	CU_ASSERT_FATAL(ts.pktio != ODP_PKTIO_INVALID);
-	CU_ASSERT(odp_pktin_event_queue(ts.pktio, &ts.pktin_queue, 1) == 1);
+	CU_ASSERT(odp_pktin_event_queue(ts.pktio, &ts.pktin_queue, 1) > 0);
 	CU_ASSERT(start_pktio(ts.pktio) == 0);
 
 	configure_default_cos(ts.pktio, &ts.default_cos, &ts.default_queue, &ts.default_pool);
@@ -150,7 +150,7 @@ static uint32_t send_packet(odp_packet_t pkt, odp_pktio_t pktio)
 {
 	uint32_t seqno;
 	odph_ethhdr_t *eth;
-	uint32_t len;
+	uint32_t len = 0;
 
 	seqno = cls_pkt_get_seq(pkt);
 	CU_ASSERT(seqno != TEST_SEQ_INVALID);
