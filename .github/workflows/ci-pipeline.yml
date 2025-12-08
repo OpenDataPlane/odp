@@ -228,6 +228,21 @@ jobs:
       - if: ${{ failure() }}
         uses: ./.github/actions/build-failure-log
 
+  Build_gcc_15:
+    runs-on: ubuntu-22.04
+    env:
+      OS: ubuntu_25.10
+    strategy:
+      fail-fast: false
+      matrix:
+        conf: ['', '--enable-abi-compat']
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="gcc-15" -e CXX="g++-15"
+               -e CONF="${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/build_${ARCH}.sh
+      - if: ${{ failure() }}
+        uses: ./.github/actions/build-failure-log
+
   Build_out-of-tree:
     runs-on: ubuntu-22.04
     steps:
