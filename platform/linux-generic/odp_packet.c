@@ -874,16 +874,14 @@ int odp_packet_extend_head(odp_packet_t *pkt, uint32_t len,
 			   void **data_ptr, uint32_t *seg_len)
 {
 	odp_packet_hdr_t *pkt_hdr = packet_hdr(*pkt);
-	uint32_t frame_len = pkt_hdr->frame_len;
-	uint32_t headroom  = pkt_hdr->headroom;
-	int ret = 0;
+	const uint32_t headroom  = pkt_hdr->headroom;
 
 	if (len > headroom) {
 		pool_t *pool = _odp_pool_entry(pkt_hdr->event_hdr.pool);
 		int num;
 		void *ptr;
 
-		if (odp_unlikely((frame_len + len) > pool->max_len))
+		if (odp_unlikely((pkt_hdr->frame_len + len) > pool->max_len))
 			return -1;
 
 		num = num_segments(len - headroom, pool->seg_len);
@@ -911,7 +909,7 @@ int odp_packet_extend_head(odp_packet_t *pkt, uint32_t len,
 	if (seg_len)
 		*seg_len = packet_first_seg_len(pkt_hdr);
 
-	return ret;
+	return 0;
 }
 
 void *odp_packet_pull_head(odp_packet_t pkt, uint32_t len)
@@ -980,10 +978,8 @@ int odp_packet_extend_tail(odp_packet_t *pkt, uint32_t len,
 			   void **data_ptr, uint32_t *seg_len_out)
 {
 	odp_packet_hdr_t *pkt_hdr = packet_hdr(*pkt);
-	uint32_t frame_len = pkt_hdr->frame_len;
-	uint32_t tailroom  = pkt_hdr->tailroom;
-	uint32_t tail_off  = frame_len;
-	int ret = 0;
+	const uint32_t frame_len = pkt_hdr->frame_len;
+	const uint32_t tailroom  = pkt_hdr->tailroom;
 
 	_ODP_ASSERT(odp_packet_has_ref(*pkt) == 0);
 
@@ -1012,9 +1008,9 @@ int odp_packet_extend_tail(odp_packet_t *pkt, uint32_t len,
 	}
 
 	if (data_ptr)
-		*data_ptr = packet_map(pkt_hdr, tail_off, seg_len_out, NULL);
+		*data_ptr = packet_map(pkt_hdr, frame_len, seg_len_out, NULL);
 
-	return ret;
+	return 0;
 }
 
 void *odp_packet_pull_tail(odp_packet_t pkt, uint32_t len)
@@ -1035,7 +1031,6 @@ void *odp_packet_pull_tail(odp_packet_t pkt, uint32_t len)
 int odp_packet_trunc_tail(odp_packet_t *pkt, uint32_t len,
 			  void **tail_ptr, uint32_t *tailroom)
 {
-	int last;
 	uint32_t seg_len;
 	odp_packet_hdr_t *last_seg;
 	odp_packet_hdr_t *pkt_hdr = packet_hdr(*pkt);
@@ -1045,13 +1040,13 @@ int odp_packet_trunc_tail(odp_packet_t *pkt, uint32_t len,
 
 	_ODP_ASSERT(odp_packet_has_ref(*pkt) == 0);
 
-	last     = pkt_hdr->seg_count - 1;
 	last_seg = packet_last_seg(pkt_hdr);
 	seg_len  = last_seg->seg_len;
 
 	if (len < seg_len) {
 		pull_tail(pkt_hdr, len);
 	} else {
+		const int last = pkt_hdr->seg_count - 1;
 		int num = 0;
 		uint32_t pull_len = 0;
 
