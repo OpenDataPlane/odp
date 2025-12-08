@@ -403,8 +403,7 @@ static inline odp_packet_hdr_t *add_segments(odp_packet_hdr_t *pkt_hdr,
 	uint32_t seg_len, offset;
 
 	new_hdr = alloc_segments(pool, num);
-
-	if (new_hdr == NULL)
+	if (odp_unlikely(new_hdr == NULL))
 		return NULL;
 
 	seg_len = len - ((num - 1) * pool->seg_len);
@@ -864,7 +863,7 @@ void *odp_packet_push_head(odp_packet_t pkt, uint32_t len)
 {
 	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
 
-	if (len > pkt_hdr->headroom)
+	if (odp_unlikely(len > pkt_hdr->headroom))
 		return NULL;
 
 	push_head(pkt_hdr, len);
@@ -894,7 +893,7 @@ int odp_packet_extend_head(odp_packet_t *pkt, uint32_t len,
 		push_head(pkt_hdr, headroom);
 		ptr = add_segments(pkt_hdr, pool, len - headroom, num, 1);
 
-		if (ptr == NULL) {
+		if (odp_unlikely(ptr == NULL)) {
 			/* segment alloc failed, rollback changes */
 			pull_head(pkt_hdr, headroom);
 			return -1;
@@ -919,7 +918,7 @@ void *odp_packet_pull_head(odp_packet_t pkt, uint32_t len)
 {
 	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
 
-	if (len >= pkt_hdr->seg_len)
+	if (odp_unlikely(len >= pkt_hdr->seg_len))
 		return NULL;
 
 	pull_head(pkt_hdr, len);
@@ -932,7 +931,7 @@ int odp_packet_trunc_head(odp_packet_t *pkt, uint32_t len,
 	odp_packet_hdr_t *pkt_hdr = packet_hdr(*pkt);
 	uint32_t seg_len = packet_first_seg_len(pkt_hdr);
 
-	if (len >= pkt_hdr->frame_len)
+	if (odp_unlikely(len >= pkt_hdr->frame_len))
 		return -1;
 
 	if (len < seg_len) {
@@ -966,7 +965,7 @@ void *odp_packet_push_tail(odp_packet_t pkt, uint32_t len)
 	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
 	void *old_tail;
 
-	if (len > pkt_hdr->tailroom)
+	if (odp_unlikely(len > pkt_hdr->tailroom))
 		return NULL;
 
 	_ODP_ASSERT(odp_packet_has_ref(pkt) == 0);
@@ -1003,7 +1002,7 @@ int odp_packet_extend_tail(odp_packet_t *pkt, uint32_t len,
 		push_tail(pkt_hdr, tailroom);
 		ptr = add_segments(pkt_hdr, pool, len - tailroom, num, 0);
 
-		if (ptr == NULL) {
+		if (odp_unlikely(ptr == NULL)) {
 			/* segment alloc failed, rollback changes */
 			pull_tail(pkt_hdr, tailroom);
 			return -1;
@@ -1025,7 +1024,7 @@ void *odp_packet_pull_tail(odp_packet_t pkt, uint32_t len)
 
 	_ODP_ASSERT(odp_packet_has_ref(pkt) == 0);
 
-	if (len >= last_seg->seg_len)
+	if (odp_unlikely(len >= last_seg->seg_len))
 		return NULL;
 
 	pull_tail(pkt_hdr, len);
@@ -1041,7 +1040,7 @@ int odp_packet_trunc_tail(odp_packet_t *pkt, uint32_t len,
 	odp_packet_hdr_t *last_seg;
 	odp_packet_hdr_t *pkt_hdr = packet_hdr(*pkt);
 
-	if (len >= pkt_hdr->frame_len)
+	if (odp_unlikely(len >= pkt_hdr->frame_len))
 		return -1;
 
 	_ODP_ASSERT(odp_packet_has_ref(*pkt) == 0);
