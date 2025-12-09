@@ -28,7 +28,7 @@ jobs:
                '--enable-pcapng-support --enable-icache-perf-test']
     steps:
       - uses: OpenDataPlane/action-clean-up@main
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC=gcc
                -e CONF="${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-graviton3 /odp/scripts/ci/build_${ARCH}.sh
       - if: ${{ failure() }}
@@ -53,7 +53,7 @@ jobs:
                '--enable-wfe-locks']
     steps:
       - uses: OpenDataPlane/action-clean-up@main
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC=clang
                 -e CONF="${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-graviton3 /odp/scripts/ci/build_${ARCH}.sh
       - if: ${{ failure() }}
@@ -71,7 +71,7 @@ jobs:
         conf: ['', '--enable-lto']
     steps:
       - uses: OpenDataPlane/action-clean-up@main
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="gcc-${{matrix.cc_ver}}" -e CXX="g++-${{matrix.cc_ver}}"
                -e CONF="${CONF} ${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-graviton3 /odp/scripts/ci/build_static.sh
       - if: ${{ failure() }}
@@ -87,7 +87,7 @@ jobs:
         os: ['rocky_linux_8']
     steps:
       - uses: OpenDataPlane/action-clean-up@main
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}"
                -e CONF="${CONF}" $CONTAINER_NAMESPACE/odp-ci-${{matrix.os}}-${ARCH}-graviton3 /odp/scripts/ci/build_${ARCH}.sh
       - if: ${{ failure() }}
@@ -103,7 +103,7 @@ jobs:
         conf: ['', '--enable-abi-compat']
     steps:
       - uses: OpenDataPlane/action-clean-up@main
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="gcc-${{matrix.cc_ver}}" -e CXX="g++-${{matrix.cc_ver}}"
                -e CONF="${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-graviton3 /odp/scripts/ci/build_${ARCH}.sh
       - if: ${{ failure() }}
@@ -120,7 +120,7 @@ jobs:
         conf: ['', '--enable-abi-compat']
     steps:
       - uses: OpenDataPlane/action-clean-up@main
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="gcc-15" -e CXX="g++-15"
                -e CONF="${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-graviton3 /odp/scripts/ci/build_${ARCH}.sh
       - if: ${{ failure() }}
@@ -131,7 +131,7 @@ jobs:
     runs-on: ah-ubuntu_22_04-c7g_2x-50
     steps:
       - uses: OpenDataPlane/action-clean-up@main
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}"
                -e CONF="${CONF}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-graviton3 /odp/scripts/ci/out_of_tree.sh
       - if: ${{ failure() }}
@@ -148,7 +148,7 @@ jobs:
         cc: [gcc, clang]
     steps:
       - uses: OpenDataPlane/action-clean-up@main
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}"
                -e CONF="${CONF}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-graviton3 /odp/scripts/ci/build_${ARCH}.sh
       - if: ${{ failure() }}
@@ -163,7 +163,7 @@ jobs:
         conf: ['--enable-user-guides', '--enable-user-guides --enable-abi-compat']
     steps:
       - uses: OpenDataPlane/action-clean-up@main
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}"
                -e CONF="${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-graviton3 /odp/scripts/ci/distcheck.sh
       - if: ${{ failure() }}
@@ -187,7 +187,7 @@ jobs:
                '--enable-wfe-locks']
     steps:
       - uses: OpenDataPlane/action-clean-up@main
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC=gcc -e ARCH="${ARCH}"
                -e CONF="${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-graviton3 /odp/scripts/ci/check.sh
       - if: ${{ failure() }}
@@ -209,7 +209,7 @@ jobs:
                '--disable-host-optimization --enable-abi-compat']
     steps:
       - uses: OpenDataPlane/action-clean-up@main
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC=clang -e ARCH="${ARCH}"
                -e CONF="${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-graviton3 /odp/scripts/ci/check.sh
       - if: ${{ failure() }}
@@ -225,7 +225,7 @@ jobs:
         cflags: ['-march=armv8.4-a -O2', '-march=armv8.4-a+crypto -O2']
     steps:
       - uses: OpenDataPlane/action-clean-up@main
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}" -e ARCH="${ARCH}"
                -e CXX=g++-10 -e CFLAGS="${{matrix.cflags}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-graviton3 /odp/scripts/ci/check.sh
       - if: ${{ failure() }}
@@ -240,7 +240,7 @@ jobs:
         os: ['ubuntu_22.04']
     steps:
       - uses: OpenDataPlane/action-clean-up@main
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}" -e ARCH="${ARCH}"
                -e CONF="${CONF}" $CONTAINER_NAMESPACE/odp-ci-${{matrix.os}}-${ARCH}-graviton3 /odp/scripts/ci/check.sh
       - if: ${{ failure() }}
@@ -251,7 +251,7 @@ jobs:
     runs-on: ah-ubuntu_22_04-c7g_2x-50
     steps:
       - uses: OpenDataPlane/action-clean-up@main
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}" -e ARCH="${ARCH}"
                -e CONF="${CONF}" -e ODP_CONFIG_FILE=/odp/platform/linux-generic/test/sched-basic.conf $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-graviton3 /odp/scripts/ci/check.sh
       - if: ${{ failure() }}
@@ -262,7 +262,7 @@ jobs:
     runs-on: ah-ubuntu_22_04-c7g_2x-50
     steps:
       - uses: OpenDataPlane/action-clean-up@main
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}" -e ARCH="${ARCH}"
                -e CONF="${CONF}" -e ODP_CONFIG_FILE=/odp/platform/linux-generic/test/stash-custom.conf $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-graviton3 /odp/scripts/ci/check.sh
       - if: ${{ failure() }}
@@ -273,7 +273,7 @@ jobs:
     runs-on: ah-ubuntu_22_04-c7g_2x-50
     steps:
       - uses: OpenDataPlane/action-clean-up@main
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}" -e ARCH="${ARCH}"
                -e CONF="${CONF}" -e ODP_SCHEDULER=sp $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-graviton3 /odp/scripts/ci/check.sh
       - if: ${{ failure() }}
@@ -284,7 +284,7 @@ jobs:
     runs-on: ah-ubuntu_22_04-c7g_2x-50
     steps:
       - uses: OpenDataPlane/action-clean-up@main
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}" -e ARCH="${ARCH}"
                -e CONF="${CONF}" -e ODP_CONFIG_FILE=/odp/platform/linux-generic/test/process-mode.conf
                -e ODPH_PROC_MODE=1 $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-graviton3 /odp/scripts/ci/check.sh
@@ -296,7 +296,7 @@ jobs:
     runs-on: ah-ubuntu_22_04-c7g_2x-50
     steps:
       - uses: OpenDataPlane/action-clean-up@main
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}" -e ARCH="${ARCH}"
                -e CONF="${CONF}" -e ODP_CONFIG_FILE=/odp/platform/linux-generic/test/inline-timer.conf
                $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-graviton3 /odp/scripts/ci/check_inline_timer.sh
@@ -308,7 +308,7 @@ jobs:
     runs-on: ah-ubuntu_22_04-c7g_2x-50
     steps:
       - uses: OpenDataPlane/action-clean-up@main
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}" -e ARCH="${ARCH}"
                -e CONF="${CONF}" -e ODP_CONFIG_FILE=/odp/platform/linux-generic/test/packet_align.conf
                $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-graviton3 /odp/scripts/ci/check_pktio.sh
@@ -320,7 +320,7 @@ jobs:
     runs-on: ah-ubuntu_22_04-c7g_2x-50
     steps:
       - uses: OpenDataPlane/action-clean-up@main
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}" -e ARCH="${ARCH}"
                -e CONF="${CONF}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-graviton3-dpdk_22.11 /odp/scripts/ci/check.sh
       - if: ${{ failure() }}
@@ -331,7 +331,7 @@ jobs:
     runs-on: ah-ubuntu_22_04-c7g_2x-50
     steps:
       - uses: OpenDataPlane/action-clean-up@main
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}" -e ARCH="${ARCH}"
                -e CONF="${CONF}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-graviton3-dpdk_24.11 /odp/scripts/ci/check.sh
       - if: ${{ failure() }}
