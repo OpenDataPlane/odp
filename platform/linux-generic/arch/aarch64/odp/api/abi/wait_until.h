@@ -33,6 +33,32 @@ _odp_wait_until_equal_acq_u32(odp_atomic_u32_t *addr, uint32_t expected)
 	} while (expected != value);
 }
 
+static inline void
+_odp_wait_until_equal_rel_u32(odp_atomic_u32_t *addr, uint32_t expected)
+{
+	uint32_t value;
+	uint32_t *var = &addr->v;
+
+	__asm__ volatile("sevl" : : : "memory");
+	do {
+    #ifdef __ARM_FEATURE_WFXT
+	__asm__ volatile("wfet %x0" : : "r"(100) : "memory");
+    #else
+		__asm__ volatile("wfe" : : : "memory");
+    #endif
+		__asm__ volatile("ldxr %w0, [%1]"
+					 : "=&r" (value)
+					 : "r" (var)
+					 : "memory");
+	} while (expected != value);
+}
+
+static inline void
+_odp_wait_until_equal_32(odp_atomic_u32_t *addr, uint32_t expected)
+{
+	_odp_wait_until_equal_rel_u32(addr, expected);
+}
+
 #ifdef __cplusplus
 }
 #endif

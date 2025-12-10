@@ -18,6 +18,12 @@ _odp_wait_until_equal_acq_u32(odp_atomic_u32_t *addr, uint32_t expected)
 		odp_cpu_pause();
 }
 
+static inline void
+_odp_wait_until_equal_u32(odp_atomic_u32_t *addr, uint32_t expected)
+{
+	while (odp_atomic_load_u32(addr) != expected)
+		odp_cpu_pause();
+}
 #ifdef __cplusplus
 }
 #endif
