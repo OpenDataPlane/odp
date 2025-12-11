@@ -1,0 +1,7 @@
+<map id="odp_schedule_config_t" name="odp_schedule_config_t">
+<area shape="rect" id="node1" title="Schedule configuration." alt="" coords="17,465,187,492"/>
+<area shape="rect" id="node2" href="$structodp__schedule__group__param__t.html" title="Schedule group parameters." alt="" coords="25,332,179,373"/>
+<area shape="rect" id="node3" href="$structodp__cache__stash__config__t.html" title="Cache stashing configuration." alt="" coords="7,139,197,165"/>
+<area shape="rect" id="node5" href="$structodp__cache__stash__prio__config__t.html" title="Priority specific cache stashing configuration." alt="" coords="166,228,331,269"/>
+<area shape="rect" id="node4" href="$structodp__cache__stash__region__t.html" title="Region specific cache stashing configuration." alt="" coords="5,5,199,32"/>
+</map>

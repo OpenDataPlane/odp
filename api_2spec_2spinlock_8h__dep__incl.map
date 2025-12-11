@@ -1,0 +1,12 @@
+<map id="spinlock.h" name="spinlock.h">
+<area shape="rect" id="node1" title="ODP spinlock." alt="" coords="557,5,645,32"/>
+<area shape="rect" id="node2" href="$api_2spinlock_8h.html" title="ODP spinlock." alt="" coords="557,80,645,107"/>
+<area shape="rect" id="node3" href="$api_2abi-default_2spinlock__recursive_8h.html" title="ODP recursive spinlock." alt="" coords="452,155,607,181"/>
+<area shape="rect" id="node10" href="$odp__api_8h.html" title="The OpenDataPlane API." alt="" coords="631,155,716,181"/>
+<area shape="rect" id="node4" href="$arch_2arm32-linux_2odp_2api_2abi_2spinlock__recursive_8h_source.html" title=" " alt="" coords="5,229,160,256"/>
+<area shape="rect" id="node5" href="$arch_2arm64-linux_2odp_2api_2abi_2spinlock__recursive_8h_source.html" title=" " alt="" coords="184,229,339,256"/>
+<area shape="rect" id="node6" href="$arch_2default-linux_2odp_2api_2abi_2spinlock__recursive_8h_source.html" title=" " alt="" coords="363,229,517,256"/>
+<area shape="rect" id="node7" href="$arch_2power64-linux_2odp_2api_2abi_2spinlock__recursive_8h_source.html" title=" " alt="" coords="541,229,696,256"/>
+<area shape="rect" id="node8" href="$arch_2x86__32-linux_2odp_2api_2abi_2spinlock__recursive_8h_source.html" title=" " alt="" coords="720,229,875,256"/>
+<area shape="rect" id="node9" href="$arch_2x86__64-linux_2odp_2api_2abi_2spinlock__recursive_8h_source.html" title=" " alt="" coords="899,229,1053,256"/>
+</map>
