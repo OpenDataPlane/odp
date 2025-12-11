@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -e
 
 CONFIG_OPT="--prefix=/opt/odp ${CONF}"

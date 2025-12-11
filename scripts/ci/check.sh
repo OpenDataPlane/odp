@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -e
 
 echo 1500 | tee /proc/sys/vm/nr_hugepages
