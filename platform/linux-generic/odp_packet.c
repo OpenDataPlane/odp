@@ -73,24 +73,6 @@ const _odp_packet_inline_offset_t _odp_packet_inline ODP_ALIGNED_CACHE = {
 
 #include <odp/visibility_end.h>
 
-/* Check that invalid values are the same. Some versions of Clang  and pedantic
- * build have trouble with the strong type casting, and complain that these
- * invalid values are not integral constants.
- *
- * Invalid values are required to be equal for _odp_buffer_is_valid() to work
- * properly. */
-#ifndef __clang__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wpedantic"
-ODP_STATIC_ASSERT(ODP_PACKET_INVALID == 0, "Packet invalid not 0");
-ODP_STATIC_ASSERT(ODP_BUFFER_INVALID == 0, "Buffer invalid not 0");
-ODP_STATIC_ASSERT(ODP_EVENT_INVALID  == 0, "Event invalid not 0");
-ODP_STATIC_ASSERT(ODP_PACKET_VECTOR_INVALID == 0, "Packet vector invalid not 0");
-ODP_STATIC_ASSERT(ODP_PACKET_TX_COMPL_INVALID == 0, "Packet TX completion invalid not 0");
-ODP_STATIC_ASSERT(ODP_TIMEOUT_INVALID == 0, "Timeout invalid not 0");
-#pragma GCC diagnostic pop
-#endif
-
 static inline odp_packet_hdr_t *packet_seg_to_hdr(odp_packet_seg_t seg)
 {
 	return (odp_packet_hdr_t *)(uintptr_t)seg;

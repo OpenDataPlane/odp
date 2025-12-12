@@ -217,7 +217,7 @@ static void cls_pktin_classifier_flag(void)
 
 	/* since classifier flag is disabled in pktin queue configuration
 	packet will not be delivered in classifier queues */
-	pkt = receive_and_check(seqno, ts.pktin_queue, pkt_pool, false);
+	pkt = receive_and_check(seqno, ts.pktin_queue, pkt_pool, VECTOR_MODE_DISABLED);
 	odp_packet_free(pkt);
 
 	odp_cls_pmr_destroy(pmr);
@@ -282,7 +282,7 @@ static void cls_pmr_term_tcp_dport_n(int num_pkt)
 	}
 
 	for (i = 0; i < num_pkt; i++) {
-		pkt = receive_and_check(seqno[i], queue, pool, false);
+		pkt = receive_and_check(seqno[i], queue, pool, VECTOR_MODE_DISABLED);
 		odp_packet_free(pkt);
 	}
 
@@ -297,7 +297,8 @@ static void cls_pmr_term_tcp_dport_n(int num_pkt)
 	}
 
 	for (i = 0; i < num_pkt; i++) {
-		pkt = receive_and_check(seqno[i], ts.default_queue, ts.default_pool, false);
+		pkt = receive_and_check(seqno[i], ts.default_queue, ts.default_pool,
+					VECTOR_MODE_DISABLED);
 		odp_packet_free(pkt);
 	}
 
@@ -326,7 +327,7 @@ static void cls_pmr_term_tcp_dport_n(int num_pkt)
 	recv_default = 0;
 
 	for (i = 0; i < 2 * num_pkt; i++) {
-		pkt = receive_packet(&retqueue, ODP_TIME_SEC_IN_NS, false);
+		pkt = receive_packet(&retqueue, ODP_TIME_SEC_IN_NS, VECTOR_MODE_DISABLED);
 		CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 		CU_ASSERT(retqueue == queue || retqueue == ts.default_queue);
 
@@ -406,7 +407,7 @@ static void classify_and_check_result(const test_state_t *ts, odp_queue_t expect
 
 	pkt = create_udp_packet(CLS_DEFAULT_DPORT);
 	seqno = send_packet(pkt, ts->pktio);
-	pkt = receive_and_check(seqno, expected_queue, ts->default_pool, false);
+	pkt = receive_and_check(seqno, expected_queue, ts->default_pool, VECTOR_MODE_DISABLED);
 	odp_packet_free(pkt);
 }
 
@@ -703,9 +704,10 @@ static void test_pmr(const odp_pmr_param_t *pmr_param, odp_packet_t pkt,
 
 	seqno = send_packet(pkt, ts.pktio);
 	if (match == MATCH)
-		pkt = receive_and_check(seqno, queue, pool, false);
+		pkt = receive_and_check(seqno, queue, pool, VECTOR_MODE_DISABLED);
 	else
-		pkt = receive_and_check(seqno, ts.default_queue, ts.default_pool, false);
+		pkt = receive_and_check(seqno, ts.default_queue, ts.default_pool,
+					VECTOR_MODE_DISABLED);
 	odp_packet_free(pkt);
 
 	odp_cls_pmr_destroy(pmr);
@@ -954,7 +956,7 @@ static void cls_pmr_term_dmac(void)
 	CU_ASSERT(seqno != TEST_SEQ_INVALID);
 
 	enqueue_pktio_interface(pkt, ts.pktio);
-	pkt = receive_and_check(seqno, queue, pool, false);
+	pkt = receive_and_check(seqno, queue, pool, VECTOR_MODE_DISABLED);
 	odp_packet_free(pkt);
 
 	/* Other packets delivered to default queue */
@@ -964,7 +966,7 @@ static void cls_pmr_term_dmac(void)
 	CU_ASSERT(seqno != TEST_SEQ_INVALID);
 
 	enqueue_pktio_interface(pkt, ts.pktio);
-	pkt = receive_and_check(seqno, ts.default_queue, ts.default_pool, false);
+	pkt = receive_and_check(seqno, ts.default_queue, ts.default_pool, VECTOR_MODE_DISABLED);
 	odp_packet_free(pkt);
 
 	odp_cls_pmr_destroy(pmr);
@@ -1265,7 +1267,7 @@ static void cls_pmr_pool_set(void)
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 
 	seqno = send_packet(pkt, ts.pktio);
-	pkt = receive_and_check(seqno, queue, pool_new, false);
+	pkt = receive_and_check(seqno, queue, pool_new, VECTOR_MODE_DISABLED);
 	odp_packet_free(pkt);
 
 	odp_cls_pmr_destroy(pmr);
@@ -1334,7 +1336,7 @@ static void cls_pmr_queue_set(void)
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 
 	seqno = send_packet(pkt, ts.pktio);
-	pkt = receive_and_check(seqno, queue_new, pool, false);
+	pkt = receive_and_check(seqno, queue_new, pool, VECTOR_MODE_DISABLED);
 	odp_packet_free(pkt);
 
 	odp_cls_pmr_destroy(pmr);
@@ -1661,7 +1663,7 @@ static void test_pmr_series(const int num_udp, int marking)
 	odph_ipv4_csum_update(pkt);
 
 	seqno = send_packet(pkt, ts.pktio);
-	pkt = receive_and_check(seqno, queue_ip, pool, false);
+	pkt = receive_and_check(seqno, queue_ip, pool, VECTOR_MODE_DISABLED);
 
 	if (marking) {
 		CU_ASSERT(odp_packet_cls_mark(pkt) == MARK_IP);
@@ -1690,7 +1692,7 @@ static void test_pmr_series(const int num_udp, int marking)
 		udp->dst_port = odp_cpu_to_be_16(dst_port + i);
 
 		seqno = send_packet(pkt, ts.pktio);
-		pkt = receive_and_check(seqno, queue_udp[i], pool, false);
+		pkt = receive_and_check(seqno, queue_udp[i], pool, VECTOR_MODE_DISABLED);
 
 		if (marking) {
 			CU_ASSERT(odp_packet_cls_mark(pkt) == (uint64_t)(MARK_UDP + i));
@@ -1707,7 +1709,7 @@ static void test_pmr_series(const int num_udp, int marking)
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 
 	seqno = send_packet(pkt, ts.pktio);
-	pkt = receive_and_check(seqno, ts.default_queue, ts.default_pool, false);
+	pkt = receive_and_check(seqno, ts.default_queue, ts.default_pool, VECTOR_MODE_DISABLED);
 	odp_packet_free(pkt);
 
 	odp_cls_pmr_destroy(pmr_ip);
