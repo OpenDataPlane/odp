@@ -1266,6 +1266,46 @@ void ipsec_test_packet_from_pkt(ipsec_test_packet *test_pkt, odp_packet_t *pkt)
 	odp_packet_free(*pkt);
 }
 
+void rebuild_ethernet_header(ipsec_test_packet *pkt)
+{
+	odph_ethhdr_t eth = {
+		.dst.addr = {0x02, 0x00, 0x00, 0x00, 0x00, 0x01},
+		.src.addr = {0x02, 0x00, 0x00, 0x00, 0x00, 0x02},
+	};
+	uint32_t l3_len;
+
+	CU_ASSERT_FATAL(pkt->l3_offset != ODP_PACKET_OFFSET_INVALID);
+	CU_ASSERT_FATAL(pkt->len > pkt->l3_offset);
+	l3_len = pkt->len - pkt->l3_offset;
+	CU_ASSERT_FATAL(ODPH_ETHHDR_LEN + l3_len < sizeof(pkt->data));
+
+	if (pkt->l3_offset != ODPH_ETHHDR_LEN)
+		memmove(&pkt->data[ODPH_ETHHDR_LEN], &pkt->data[pkt->l3_offset], l3_len);
+
+	switch (ODPH_IPV4HDR_VER(pkt->data[ODPH_ETHHDR_LEN])) {
+	case ODPH_IPV4:
+		eth.type = odp_cpu_to_be_16(ODPH_ETHTYPE_IPV4);
+		break;
+	case ODPH_IPV6:
+		eth.type = odp_cpu_to_be_16(ODPH_ETHTYPE_IPV6);
+		break;
+	default:
+		CU_FAIL("Unexpected IP version\n");
+		break;
+	}
+	memcpy(pkt->data, &eth, sizeof(eth));
+
+	if (pkt->l4_offset != ODP_PACKET_OFFSET_INVALID) {
+		if (pkt->l4_offset < pkt->l3_offset)
+			pkt->l4_offset = ODP_PACKET_OFFSET_INVALID;
+		else
+			pkt->l4_offset += ODPH_ETHHDR_LEN - pkt->l3_offset;
+	}
+	pkt->l2_offset = 0;
+	pkt->l3_offset = ODPH_ETHHDR_LEN;
+	pkt->len = ODPH_ETHHDR_LEN + l3_len;
+}
+
 int ipsec_suite_term(void)
 {
 	if (suite_context.pktio != ODP_PKTIO_INVALID)

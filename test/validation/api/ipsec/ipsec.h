@@ -130,6 +130,7 @@ int ipsec_check_out(const ipsec_test_part *part,
 void ipsec_check_out_one(const ipsec_test_part *part, odp_ipsec_sa_t sa);
 int ipsec_test_sa_update_seq_num(odp_ipsec_sa_t sa, uint32_t seq_num);
 void ipsec_test_packet_from_pkt(ipsec_test_packet *test_pkt, odp_packet_t *pkt);
+void rebuild_ethernet_header(ipsec_test_packet *pkt);
 int ipsec_check(odp_bool_t ah,
 		odp_cipher_alg_t cipher,
 		uint32_t cipher_bits,

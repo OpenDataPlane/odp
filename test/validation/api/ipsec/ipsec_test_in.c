@@ -1829,8 +1829,9 @@ static void test_multi_out_in(odp_ipsec_sa_t out_sa,
 			test_in.out[0].orig_ip_len = orig_ip_len;
 		}
 		ipsec_test_packet_from_pkt(&test_pkt, &pkt);
-		test_in.pkt_in = &test_pkt;
+		rebuild_ethernet_header(&test_pkt);
 
+		test_in.pkt_in = &test_pkt;
 		ipsec_check_in_one(&test_in, in_sa);
 	}
 }
