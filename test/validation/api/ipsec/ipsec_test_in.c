@@ -2364,5 +2364,7 @@ odp_testinfo_t ipsec_in_suite[] = {
 				  ipsec_check_esp_aes_gcm_128_reass_ipv6),
 	ODP_TEST_INFO_CONDITIONAL(test_in_ipv4_null_aes_xcbc_esp,
 				  ipsec_check_esp_null_aes_xcbc),
+	ODP_TEST_INFO(test_ipsec_proto_err),
+	ODP_TEST_INFO(test_ipsec_auth_err),
 	ODP_TEST_INFO_NULL,
 };

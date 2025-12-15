@@ -17,6 +17,7 @@
 /* test arrays: */
 extern odp_testinfo_t ipsec_in_suite[];
 extern odp_testinfo_t ipsec_out_suite[];
+extern odp_testinfo_t ipsec_out_in_suite[];
 
 int ipsec_init(odp_instance_t *inst);
 int ipsec_term(odp_instance_t inst);
@@ -159,5 +160,8 @@ int ipsec_check_esp_aes_gcm_128_reass_ipv6(void);
 int ipsec_check_esp_null_aes_xcbc(void);
 void ipsec_status_event_get(odp_ipsec_sa_t sa,
 			    enum ipsec_test_sa_expiry sa_expiry);
+
+void test_ipsec_proto_err(void);
+void test_ipsec_auth_err(void);
 
 #endif

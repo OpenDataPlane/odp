@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2017-2018 Linaro Limited
- * Copyright (c) 2024 Nokia
+ * Copyright (c) 2024-2025 Nokia
  */
 
 #include <odp_api.h>
@@ -10,6 +10,7 @@
 odp_suiteinfo_t ipsec_sync_suites[] = {
 	{"IPsec-in",  ipsec_suite_sync_init, ipsec_suite_term, ipsec_in_suite},
 	{"IPsec-out", ipsec_suite_sync_init, ipsec_suite_term, ipsec_out_suite},
+	{"out-in",    ipsec_suite_sync_init, ipsec_suite_term, ipsec_out_in_suite},
 	ODP_SUITE_INFO_NULL,
 };
 
@@ -18,18 +19,24 @@ odp_suiteinfo_t ipsec_async_suites[] = {
 	{"IPsec-sched-in",  ipsec_suite_sched_init, ipsec_suite_term, ipsec_in_suite},
 	{"IPsec-plain-out", ipsec_suite_plain_init, ipsec_suite_term, ipsec_out_suite},
 	{"IPsec-sched-out", ipsec_suite_sched_init, ipsec_suite_term, ipsec_out_suite},
+	{"plain-out-in",    ipsec_suite_plain_init, ipsec_suite_term, ipsec_out_in_suite},
+	{"sched-out-in",    ipsec_suite_sched_init, ipsec_suite_term, ipsec_out_in_suite},
 	ODP_SUITE_INFO_NULL,
 };
 
 odp_suiteinfo_t ipsec_inline_in_suites[] = {
 	{"IPsec-plain-in", ipsec_suite_plain_init, ipsec_suite_term, ipsec_in_suite},
 	{"IPsec-sched-in", ipsec_suite_sched_init, ipsec_suite_term, ipsec_in_suite},
+	{"plain-out-in",   ipsec_suite_plain_init, ipsec_suite_term, ipsec_out_in_suite},
+	{"sched-out-in",   ipsec_suite_sched_init, ipsec_suite_term, ipsec_out_in_suite},
 	ODP_SUITE_INFO_NULL,
 };
 
 odp_suiteinfo_t ipsec_inline_out_suites[] = {
 	{"IPsec-plain-out", ipsec_suite_plain_init, ipsec_suite_term, ipsec_out_suite},
 	{"IPsec-sched-out", ipsec_suite_sched_init, ipsec_suite_term, ipsec_out_suite},
+	{"plain-out-in",    ipsec_suite_plain_init, ipsec_suite_term, ipsec_out_in_suite},
+	{"sched-out-in",    ipsec_suite_sched_init, ipsec_suite_term, ipsec_out_in_suite},
 	ODP_SUITE_INFO_NULL,
 };
 

@@ -1910,23 +1910,33 @@ static void ipsec_test_default_values(void)
 
 static void test_ipsec_stats(void)
 {
-	ipsec_test_flags flags;
+	ipsec_test_flags flags = {.stats = IPSEC_TEST_STATS_SUCCESS};
 
-	memset(&flags, 0, sizeof(flags));
-
-	printf("\n    Stats : success");
-	flags.stats = IPSEC_TEST_STATS_SUCCESS;
 	test_out_in_all(&flags);
+}
 
-	printf("\n    Stats : proto err");
-	flags.stats = IPSEC_TEST_STATS_PROTO_ERR;
+/* inbound test only, outbound part is the same as in test_ipsec_stats() */
+void test_ipsec_proto_err(void)
+{
+	ipsec_test_flags flags = {.stats = IPSEC_TEST_STATS_PROTO_ERR};
+	/*
+	 * This test cannot be run in inline inbound mode since incorrect
+	 * IPsec protocol would cause SA search failure and the packet might
+	 * then not be consumed by inline IPsec at all. And the test is not
+	 * prepared for that.
+	 */
+	if (suite_context.inbound_op_mode == ODP_IPSEC_OP_MODE_INLINE)
+		return;
+
 	test_out_in_all(&flags);
+}
 
-	printf("\n    Stats : auth err");
-	flags.stats = IPSEC_TEST_STATS_AUTH_ERR;
+/* inbound test only, outbound part is the same as in test_ipsec_stats() */
+void test_ipsec_auth_err(void)
+{
+	ipsec_test_flags flags = {.stats = IPSEC_TEST_STATS_AUTH_ERR};
+
 	test_out_in_all(&flags);
-
-	printf("\n  ");
 }
 
 static void test_udp_encap(void)
@@ -2115,11 +2125,15 @@ odp_testinfo_t ipsec_out_suite[] = {
 				  ipsec_check_esp_null_sha256),
 	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_null_aes_xcbc,
 				  ipsec_check_esp_null_aes_xcbc),
-	ODP_TEST_INFO_CONDITIONAL(test_sa_info,
-				  ipsec_check_esp_aes_cbc_128_sha1),
 	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_esp_sa_pkt_expiry,
 				  ipsec_check_esp_aes_cbc_128_sha1),
 	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_esp_sa_byte_expiry,
+				  ipsec_check_esp_aes_cbc_128_sha1),
+	ODP_TEST_INFO_NULL,
+};
+
+odp_testinfo_t ipsec_out_in_suite[] = {
+	ODP_TEST_INFO_CONDITIONAL(test_sa_info,
 				  ipsec_check_esp_aes_cbc_128_sha1),
 	ODP_TEST_INFO_CONDITIONAL(test_test_sa_update_seq_num,
 				  ipsec_check_test_sa_update_seq_num),
