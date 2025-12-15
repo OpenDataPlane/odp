@@ -4,6 +4,8 @@
  * Copyright (c) 2020-2025 Nokia
  */
 
+#include <stddef.h>
+
 #include <odp/helper/odph_api.h>
 
 #include "ipsec.h"
@@ -129,6 +131,12 @@ static struct cipher_auth_comb_param cipher_auth_comb[] = {
 		ALG(ODP_AUTH_ALG_CHACHA20_POLY1305, NULL, NULL),
 	},
 };
+
+static int is_outer_header_ipv6(const ipsec_test_flags *flags)
+{
+	return ((flags->tunnel && flags->tunnel_is_v6) ||
+		(!flags->tunnel && flags->v6));
+}
 
 static void test_out_ipv4_ah_sha256(void)
 {
@@ -418,44 +426,60 @@ static void test_ipsec_stats_test_assert(odp_ipsec_stats_t *stats,
 	CU_ASSERT(stats->hard_exp_pkts_err == 0);
 }
 
-static void ipsec_pkt_proto_err_set(odp_packet_t pkt)
+static void ipsec_pkt_proto_err_set(ipsec_test_packet *pkt, const ipsec_test_flags *flags)
 {
-	uint32_t l3_off = odp_packet_l3_offset(pkt);
-	odph_ipv4hdr_t ip;
+	uint32_t proto_off;
+	uint8_t *proto;
 
-	memset(&ip, 0, sizeof(ip));
+	if (is_outer_header_ipv6(flags)) {
+		proto_off = pkt->l3_offset + offsetof(odph_ipv6hdr_t, next_hdr);
+		CU_ASSERT_FATAL(proto_off < MAX_PKT_LEN);
+		if (pkt->data[proto_off] == ODPH_IPPROTO_HOPOPTS)
+			proto_off = pkt->l3_offset + sizeof(odph_ipv6hdr_t) +
+				offsetof(odph_ipv6hdr_ext_t, next_hdr);
+	} else {
+		proto_off = pkt->l3_offset + offsetof(odph_ipv4hdr_t, proto);
+	}
+	CU_ASSERT(proto_off < pkt->len);
+	CU_ASSERT_FATAL(proto_off < MAX_PKT_LEN);
+	proto = &pkt->data[proto_off];
 
 	/* Simulate proto error by corrupting protocol field */
-
-	odp_packet_copy_to_mem(pkt, l3_off, sizeof(ip), &ip);
-
-	if (ip.proto == ODPH_IPPROTO_ESP)
-		ip.proto = ODPH_IPPROTO_AH;
-	else
-		ip.proto = ODPH_IPPROTO_ESP;
-
-	odp_packet_copy_from_mem(pkt, l3_off, sizeof(ip), &ip);
+	switch (*proto) {
+	case ODPH_IPPROTO_ESP:
+		*proto = ODPH_IPPROTO_AH;
+		break;
+	case ODPH_IPPROTO_AH:
+		*proto = ODPH_IPPROTO_ESP;
+		break;
+	default:
+		CU_FAIL("Unexpected IPsec protocol");
+		break;
+	}
 }
 
-static void ipsec_pkt_auth_err_set(odp_packet_t pkt)
+static void ipsec_pkt_auth_err_set(ipsec_test_packet *pkt, const ipsec_test_flags *flags)
 {
-	uint32_t data, len;
+	uint32_t offset_into_icv; /* offset to some ICV octet */
+
+	if (flags->ah) {
+		offset_into_icv = pkt->l4_offset + offsetof(odph_ahhdr_t, icv);
+	} else {
+		/* ICV is at the end of ESP packets */
+		offset_into_icv = pkt->len - 1;
+	}
+	CU_ASSERT_FATAL(offset_into_icv < MAX_PKT_LEN);
 
 	/* Simulate auth error by corrupting ICV */
-
-	len = odp_packet_len(pkt);
-	odp_packet_copy_to_mem(pkt, len - sizeof(data), sizeof(data), &data);
-	data = ~data;
-	odp_packet_copy_from_mem(pkt, len - sizeof(data), sizeof(data), &data);
+	pkt->data[offset_into_icv] = ~pkt->data[offset_into_icv];
 }
 
-static void ipsec_pkt_update(odp_packet_t pkt, const ipsec_test_flags *flags)
+static void ipsec_pkt_update(ipsec_test_packet *pkt, const ipsec_test_flags *flags)
 {
 	if (flags && flags->stats == IPSEC_TEST_STATS_PROTO_ERR)
-		ipsec_pkt_proto_err_set(pkt);
-
+		ipsec_pkt_proto_err_set(pkt, flags);
 	if (flags && flags->stats == IPSEC_TEST_STATS_AUTH_ERR)
-		ipsec_pkt_auth_err_set(pkt);
+		ipsec_pkt_auth_err_set(pkt, flags);
 }
 
 static void ipsec_check_out_in_one(const ipsec_test_part *part_outbound,
@@ -474,9 +498,9 @@ static void ipsec_check_out_in_one(const ipsec_test_part *part_outbound,
 		ipsec_test_part part_in = *part_inbound;
 		ipsec_test_packet pkt_in;
 
-		ipsec_pkt_update(pkto[i], flags);
-
 		ipsec_test_packet_from_pkt(&pkt_in, &pkto[i]);
+		ipsec_pkt_update(&pkt_in, flags);
+
 		part_in.pkt_in = &pkt_in;
 
 		ipsec_check_in_one(&part_in, sa_in);
@@ -589,8 +613,7 @@ static void test_out_in_common(const ipsec_test_flags *flags,
 
 	CU_ASSERT_FATAL(ODP_IPSEC_SA_INVALID != sa_in);
 
-	if ((flags->tunnel && flags->tunnel_is_v6) ||
-	    (!flags->tunnel && flags->v6))
+	if (is_outer_header_ipv6(flags))
 		out_l3_type = ODP_PROTO_L3_TYPE_IPV6;
 	if (flags->ah)
 		out_l4_type = ODP_PROTO_L4_TYPE_AH;
