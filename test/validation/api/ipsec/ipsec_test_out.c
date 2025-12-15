@@ -1635,15 +1635,12 @@ static void test_sa_info(void)
 
 static void test_test_sa_update_seq_num(void)
 {
-	ipsec_test_flags flags;
+	struct cipher_param cipher = {"NULL", ODP_CIPHER_ALG_NULL, NULL, NULL};
+	struct auth_param auth = {"SHA1-HMAC", ODP_AUTH_ALG_SHA1_HMAC, &key_5a_160, NULL};
+	ipsec_test_flags flags = {.part_flags.test_sa_seq_num = true};
 
-	memset(&flags, 0, sizeof(flags));
-	flags.display_algo = true;
-	flags.part_flags.test_sa_seq_num = true;
-
-	test_out_in_all(&flags);
-
-	printf("\n  ");
+	test_esp_out_in(&cipher, &auth, &flags);
+	test_ah_out_in(&auth, &flags);
 }
 
 #define SOFT_LIMIT_PKT_CNT 1024UL
