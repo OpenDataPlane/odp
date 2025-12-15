@@ -11,6 +11,8 @@
 #include "ipsec.h"
 #include "test_vectors.h"
 
+#define MAX_FAILURES 100
+
 /*
  * Miscellaneous parameters for combined out+in tests
  */
@@ -407,11 +409,12 @@ static void test_ipsec_stats_zero_assert(odp_ipsec_stats_t *stats)
 
 static void test_ipsec_stats_test_assert(odp_ipsec_stats_t *stats,
 					 enum ipsec_test_stats test,
-					 uint64_t succ_bytes)
+					 uint64_t succ_bytes,
+					 uint32_t num_pkts)
 {
 	if (test == IPSEC_TEST_STATS_SUCCESS) {
-		CU_ASSERT(stats->success == 1);
-		CU_ASSERT(stats->success_bytes >= succ_bytes);
+		CU_ASSERT(stats->success == num_pkts);
+		CU_ASSERT(stats->success_bytes >= succ_bytes * num_pkts);
 	} else {
 		CU_ASSERT(stats->success == 0);
 		CU_ASSERT(stats->success_bytes == 0);
@@ -419,7 +422,7 @@ static void test_ipsec_stats_test_assert(odp_ipsec_stats_t *stats,
 
 	if (test == IPSEC_TEST_STATS_PROTO_ERR) {
 		/* Braces needed by CU macro */
-		CU_ASSERT(stats->proto_err == 1);
+		CU_ASSERT(stats->proto_err == num_pkts);
 	} else {
 		/* Braces needed by CU macro */
 		CU_ASSERT(stats->proto_err == 0);
@@ -427,7 +430,7 @@ static void test_ipsec_stats_test_assert(odp_ipsec_stats_t *stats,
 
 	if (test == IPSEC_TEST_STATS_AUTH_ERR) {
 		/* Braces needed by CU macro */
-		CU_ASSERT(stats->auth_err == 1);
+		CU_ASSERT(stats->auth_err == num_pkts);
 	} else {
 		/* Braces needed by CU macro */
 		CU_ASSERT(stats->auth_err == 0);
@@ -496,14 +499,15 @@ static void ipsec_pkt_update(ipsec_test_packet *pkt, const ipsec_test_flags *fla
 		ipsec_pkt_auth_err_set(pkt, flags);
 }
 
-static void ipsec_check_out_in_one(const ipsec_test_part *part_outbound,
-				   const ipsec_test_part *part_inbound,
-				   odp_ipsec_sa_t sa,
-				   odp_ipsec_sa_t sa_in,
-				   const ipsec_test_flags *flags)
+static uint32_t ipsec_check_out_in_one(const ipsec_test_part *part_outbound,
+				       const ipsec_test_part *part_inbound,
+				       odp_ipsec_sa_t sa,
+				       odp_ipsec_sa_t sa_in,
+				       const ipsec_test_flags *flags)
 {
 	int num_out = part_outbound->num_pkt;
 	odp_packet_t pkto[num_out];
+	uint32_t max_len = 0;
 	int i;
 
 	num_out = ipsec_check_out(part_outbound, sa, pkto);
@@ -513,12 +517,63 @@ static void ipsec_check_out_in_one(const ipsec_test_part *part_outbound,
 		ipsec_test_packet pkt_in;
 
 		ipsec_test_packet_from_pkt(&pkt_in, &pkto[i]);
+		if (pkt_in.len > max_len)
+			max_len = pkt_in.len;
 		ipsec_pkt_update(&pkt_in, flags);
 		rebuild_ethernet_header(&pkt_in);
 
 		part_in.pkt_in = &pkt_in;
 		ipsec_check_in_one(&part_in, sa_in);
 	}
+	return max_len;
+}
+
+/*
+ * Invoke the out-in test with and without packet segmentation.
+ *
+ * First we test with unsegmented packets. Then we test with two-segment
+ * packets with all possible segment boundaries in the outbound step and
+ * unsegmented packets in the inbound step and finally vice versa. This
+ * way processing of segmented packets gets checked against processing
+ * of unsegmented packets.
+ */
+static uint32_t test_out_in(const ipsec_test_part *part_outbound,
+			    const ipsec_test_part *part_inbound,
+			    odp_ipsec_sa_t sa,
+			    odp_ipsec_sa_t sa_in,
+			    const ipsec_test_flags *flags)
+{
+	uint32_t seg_len, max_len, num_pkts = 0;
+	ipsec_test_part p_out = *part_outbound;
+	ipsec_test_part p_in = *part_inbound;
+
+	/* CUnit chokes with too many assertions */
+	if (CU_get_number_of_failures() > MAX_FAILURES)
+		return 0;
+
+	for (seg_len = 0; seg_len < p_out.pkt_in->len; seg_len++) {
+		p_out.first_seg_len = seg_len;
+		p_in.first_seg_len = 0;
+		ipsec_check_out_in_one(&p_out, &p_in, sa, sa_in, flags);
+		num_pkts++;
+		p_out.out[0].seq_num++;
+	}
+
+	/* Do not duplicate inbound testing done in the sync or async test suite */
+	if (suite_context.outbound_op_mode == ODP_IPSEC_OP_MODE_INLINE &&
+	    suite_context.inbound_op_mode  != ODP_IPSEC_OP_MODE_INLINE) {
+		return num_pkts;
+	}
+
+	for (seg_len = 1, max_len = UINT32_MAX; seg_len < max_len; seg_len++) {
+		p_out.first_seg_len = 0;
+		p_in.first_seg_len = seg_len;
+		max_len = ipsec_check_out_in_one(&p_out, &p_in, sa, sa_in, flags);
+		num_pkts++;
+		p_out.out[0].seq_num++;
+	}
+
+	return num_pkts;
 }
 
 static int sa_creation_failure_ok(const odp_ipsec_sa_param_t *param)
@@ -695,7 +750,7 @@ static void test_out_in_common(const ipsec_test_flags *flags,
 		}
 	}
 
-	ipsec_check_out_in_one(&test_out, &test_in, sa_out, sa_in, flags);
+	uint32_t num_pkts_sent = test_out_in(&test_out, &test_in, sa_out, sa_in, flags);
 
 	if (flags->stats != IPSEC_TEST_STATS_NONE) {
 		uint64_t succ_bytes = 0;
@@ -723,10 +778,11 @@ static void test_out_in_common(const ipsec_test_flags *flags,
 		 */
 		CU_ASSERT(odp_ipsec_stats(sa_out, &stats) == 0);
 		test_ipsec_stats_test_assert(&stats, IPSEC_TEST_STATS_SUCCESS,
-					     succ_bytes);
+					     succ_bytes, num_pkts_sent);
 
 		CU_ASSERT(odp_ipsec_stats(sa_in, &stats) == 0);
-		test_ipsec_stats_test_assert(&stats, flags->stats, succ_bytes);
+		test_ipsec_stats_test_assert(&stats, flags->stats,
+					     succ_bytes, num_pkts_sent);
 	}
 
 	ipsec_sa_destroy(sa_out);

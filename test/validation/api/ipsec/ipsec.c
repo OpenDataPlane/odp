@@ -527,9 +527,51 @@ void ipsec_sa_destroy(odp_ipsec_sa_t sa)
 	CU_ASSERT(ODP_IPSEC_OK == odp_ipsec_sa_destroy(sa));
 }
 
-odp_packet_t ipsec_packet(const ipsec_test_packet *itp)
+static odp_packet_t alloc_segmented_packet(uint32_t len, uint32_t first_seg_len)
 {
-	odp_packet_t pkt = odp_packet_alloc(suite_context.pool, itp->len);
+	odp_packet_t pkt, seg;
+
+	pkt = odp_packet_alloc(suite_context.pool, first_seg_len);
+	if (pkt == ODP_PACKET_INVALID)
+		return ODP_PACKET_INVALID;
+
+	seg = odp_packet_alloc(suite_context.pool, len - first_seg_len);
+	if (seg == ODP_PACKET_INVALID) {
+		odp_packet_free(pkt);
+		return ODP_PACKET_INVALID;
+	}
+
+	if (odp_packet_concat(&pkt, seg) < 0) {
+		CU_FAIL("odp_packet_concat() failed\n");
+		odp_packet_free(pkt);
+		odp_packet_free(seg);
+		return ODP_PACKET_INVALID;
+	}
+
+	/*
+	 * odp_packet_concat() is not guaranteed to return the kind of
+	 * segmented packet we expect here, but we rely on it anyway
+	 * since it appears to work with current implementations and
+	 * there is no API-sanctioned way to force certain packet layout.
+	 *
+	 * Fail the test if the assumption does not hold so it gets noticed.
+	 */
+	CU_ASSERT(odp_packet_is_segmented(pkt));
+	CU_ASSERT(odp_packet_num_segs(pkt) == 2);
+	CU_ASSERT(odp_packet_seg_len(pkt) == first_seg_len);
+	CU_ASSERT(odp_packet_len(pkt) == len);
+
+	return pkt;
+}
+
+odp_packet_t ipsec_packet(const ipsec_test_packet *itp, uint32_t first_seg_len)
+{
+	odp_packet_t pkt;
+
+	if (first_seg_len == 0 || first_seg_len >= itp->len)
+		pkt = odp_packet_alloc(suite_context.pool, itp->len);
+	else
+		pkt = alloc_segmented_packet(itp->len, first_seg_len);
 
 	CU_ASSERT_FATAL(ODP_PACKET_INVALID != pkt);
 	if (ODP_PACKET_INVALID == pkt)
@@ -648,7 +690,7 @@ static int send_pkts(const ipsec_test_part part[], int num_part)
 	}
 
 	for (i = 0; i < num_part; i++)
-		pkt[i] = ipsec_packet(part[i].pkt_in);
+		pkt[i] = ipsec_packet(part[i].pkt_in, 0);
 
 	CU_ASSERT(num_part == odp_pktout_send(pktout, pkt, num_part));
 
@@ -771,7 +813,7 @@ static int ipsec_process_in(const ipsec_test_part *part,
 	}
 
 	if (ODP_IPSEC_OP_MODE_SYNC == suite_context.inbound_op_mode) {
-		pkt = ipsec_packet(part->pkt_in);
+		pkt = ipsec_packet(part->pkt_in, part->first_seg_len);
 		CU_ASSERT(part->num_pkt == odp_ipsec_in(&pkt, 1, pkto, &num_out, &param));
 		CU_ASSERT(num_out == part->num_pkt);
 		CU_ASSERT_FATAL(*pkto != ODP_PACKET_INVALID);
@@ -779,7 +821,7 @@ static int ipsec_process_in(const ipsec_test_part *part,
 	} else if (ODP_IPSEC_OP_MODE_ASYNC == suite_context.inbound_op_mode) {
 		int consumed;
 
-		pkt = ipsec_packet(part->pkt_in);
+		pkt = ipsec_packet(part->pkt_in, part->first_seg_len);
 		consumed = odp_ipsec_in_enq(&pkt, 1, &param);
 		CU_ASSERT(1 == consumed);
 		if (consumed <= 0)
@@ -856,7 +898,7 @@ static int ipsec_send_out_one(const ipsec_test_part *part,
 	odp_packet_t pkt;
 	int i;
 
-	pkt = ipsec_packet(part->pkt_in);
+	pkt = ipsec_packet(part->pkt_in, part->first_seg_len);
 
 	memset(&param, 0, sizeof(param));
 	param.num_sa = 1;
