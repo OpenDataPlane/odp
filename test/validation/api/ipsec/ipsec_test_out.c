@@ -132,6 +132,20 @@ static struct cipher_auth_comb_param cipher_auth_comb[] = {
 	},
 };
 
+static void print_test_flags(const ipsec_test_flags *flags)
+{
+	const char *tr = "transport";
+
+	if (flags->tunnel)
+		tr = flags->tunnel_is_v6 ? "in-IPv6 tunnel"
+					 : "in-IPv4 tunnel";
+	printf("\n      %s%s %s-%s",
+	       flags->udp_encap ? "UDP " : "",
+	       flags->ah ? "AH" : "ESP",
+	       flags->v6 ? "IPv6" : "IPv4",
+	       tr);
+}
+
 static int is_outer_header_ipv6(const ipsec_test_flags *flags)
 {
 	return ((flags->tunnel && flags->tunnel_is_v6) ||
@@ -731,7 +745,7 @@ static void test_esp_out_in(struct cipher_param *cipher,
 		return;
 
 	if (flags->display_algo)
-		printf("\n    %s (keylen %d) %s (keylen %d) ",
+		printf("\n        %s (keylen %d) %s (keylen %d) ",
 		       cipher->name, cipher_keylen, auth->name, auth_keylen);
 
 	test_out_in_common(flags, cipher->algo, cipher->key,
@@ -739,22 +753,42 @@ static void test_esp_out_in(struct cipher_param *cipher,
 			   cipher->key_extra, auth->key_extra);
 }
 
+static int iterate_flags(ipsec_test_flags *flags, uint32_t *iterator)
+{
+	while (*iterator < 0x8) {
+		flags->v6           = *iterator & 0x4;
+		flags->tunnel       = *iterator & 0x2;
+		flags->tunnel_is_v6 = *iterator & 0x1;
+		*iterator += 1;
+
+		/* Return success if valid flag combination */
+		if (flags->tunnel || !flags->tunnel_is_v6)
+			return 1;
+	}
+	return 0;
+}
+
 static void test_esp_out_in_all(const ipsec_test_flags *flags_in)
 {
+	uint32_t iter = 0;
 	uint32_t c;
 	uint32_t a;
 	ipsec_test_flags flags = *flags_in;
 
 	flags.ah = false;
 
-	for (c = 0; c < ODPH_ARRAY_SIZE(ciphers); c++)
-		for (a = 0; a < ODPH_ARRAY_SIZE(auths); a++)
-			test_esp_out_in(&ciphers[c], &auths[a], &flags);
+	while (iterate_flags(&flags, &iter)) {
+		print_test_flags(&flags);
 
-	for (c = 0; c < ODPH_ARRAY_SIZE(cipher_auth_comb); c++)
-		test_esp_out_in(&cipher_auth_comb[c].cipher,
-				&cipher_auth_comb[c].auth,
-				&flags);
+		for (c = 0; c < ODPH_ARRAY_SIZE(ciphers); c++)
+			for (a = 0; a < ODPH_ARRAY_SIZE(auths); a++)
+				test_esp_out_in(&ciphers[c], &auths[a], &flags);
+
+		for (c = 0; c < ODPH_ARRAY_SIZE(cipher_auth_comb); c++)
+			test_esp_out_in(&cipher_auth_comb[c].cipher,
+					&cipher_auth_comb[c].auth,
+					&flags);
+	}
 }
 
 /*
@@ -766,7 +800,6 @@ static void test_esp_out_in_all_basic(void)
 	ipsec_test_flags flags;
 
 	memset(&flags, 0, sizeof(flags));
-	flags.display_algo = true;
 
 	test_esp_out_in_all(&flags);
 
@@ -787,32 +820,37 @@ static void test_inline_hdr_in_packet(void)
 }
 
 static void test_ah_out_in(struct auth_param *auth,
-			   const ipsec_test_flags *flags_in)
+			   const ipsec_test_flags *flags)
 {
 	int auth_keylen = auth->key ? 8 * auth->key->length : 0;
-	ipsec_test_flags flags = *flags_in;
 
 	if (ipsec_check_ah(auth->algo, auth_keylen) != ODP_TEST_ACTIVE)
 		return;
 
-	if (flags.display_algo)
-		printf("\n    %s (keylen %d) ", auth->name, auth_keylen);
+	if (flags->display_algo)
+		printf("\n        %s (keylen %d) ", auth->name, auth_keylen);
 
-	flags.ah = true;
-
-	test_out_in_common(&flags, ODP_CIPHER_ALG_NULL, NULL,
+	test_out_in_common(flags, ODP_CIPHER_ALG_NULL, NULL,
 			   auth->algo, auth->key,
 			   NULL, auth->key_extra);
 }
 
-static void test_ah_out_in_all(const ipsec_test_flags *flags)
+static void test_ah_out_in_all(const ipsec_test_flags *flags_in)
 {
+	ipsec_test_flags flags = *flags_in;
+	uint32_t iter = 0;
 	uint32_t a;
 
-	for (a = 0; a < ODPH_ARRAY_SIZE(auths); a++)
-		test_ah_out_in(&auths[a], flags);
-	for (a = 0; a < ODPH_ARRAY_SIZE(ah_auths); a++)
-		test_ah_out_in(&ah_auths[a], flags);
+	flags.ah = true;
+
+	while (iterate_flags(&flags, &iter)) {
+		print_test_flags(&flags);
+
+		for (a = 0; a < ODPH_ARRAY_SIZE(auths); a++)
+			test_ah_out_in(&auths[a], &flags);
+		for (a = 0; a < ODPH_ARRAY_SIZE(ah_auths); a++)
+			test_ah_out_in(&ah_auths[a], &flags);
+	}
 }
 
 static void test_ah_out_in_all_basic(void)
@@ -820,7 +858,6 @@ static void test_ah_out_in_all_basic(void)
 	ipsec_test_flags flags;
 
 	memset(&flags, 0, sizeof(flags));
-	flags.display_algo = true;
 
 	test_ah_out_in_all(&flags);
 
@@ -1877,15 +1914,15 @@ static void test_ipsec_stats(void)
 
 	memset(&flags, 0, sizeof(flags));
 
-	printf("\n        Stats : success");
+	printf("\n    Stats : success");
 	flags.stats = IPSEC_TEST_STATS_SUCCESS;
 	test_out_in_all(&flags);
 
-	printf("\n        Stats : proto err");
+	printf("\n    Stats : proto err");
 	flags.stats = IPSEC_TEST_STATS_PROTO_ERR;
 	test_out_in_all(&flags);
 
-	printf("\n        Stats : auth err");
+	printf("\n    Stats : auth err");
 	flags.stats = IPSEC_TEST_STATS_AUTH_ERR;
 	test_out_in_all(&flags);
 
@@ -1898,38 +1935,7 @@ static void test_udp_encap(void)
 
 	memset(&flags, 0, sizeof(flags));
 	flags.udp_encap = 1;
-	flags.tunnel = 0;
-
-	printf("\n        IPv4 Transport");
-	flags.v6 = 0;
 	test_esp_out_in_all(&flags);
-
-	printf("\n        IPv6 Transport");
-	flags.v6 = 1;
-	test_esp_out_in_all(&flags);
-
-	flags.tunnel = 1;
-
-	printf("\n        IPv4-in-IPv4 Tunnel");
-	flags.v6 = 0;
-	flags.tunnel_is_v6 = 0;
-	test_esp_out_in_all(&flags);
-
-	printf("\n        IPv4-in-IPv6 Tunnel");
-	flags.v6 = 0;
-	flags.tunnel_is_v6 = 1;
-	test_esp_out_in_all(&flags);
-
-	printf("\n        IPv6-in-IPv4 Tunnel");
-	flags.v6 = 1;
-	flags.tunnel_is_v6 = 0;
-	test_esp_out_in_all(&flags);
-
-	printf("\n        IPv6-in-IPv6 Tunnel");
-	flags.v6 = 1;
-	flags.tunnel_is_v6 = 1;
-	test_esp_out_in_all(&flags);
-
 	printf("\n  ");
 }
 
