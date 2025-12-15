@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2017-2018 Linaro Limited
- * Copyright (c) 2018-2022 Nokia
+ * Copyright (c) 2018-2025 Nokia
  * Copyright (c) 2020-2021 Marvell
  */
 
@@ -1026,28 +1026,50 @@ static void ipsec_pkt_seq_num_check(odp_packet_t pkt, uint32_t seq_num)
 	uint32_t l3_off = odp_packet_l3_offset(pkt);
 	uint32_t l4_off;
 	odph_ipv4hdr_t ip;
+	uint8_t proto;
 
 	CU_ASSERT_FATAL(ODP_PACKET_OFFSET_INVALID != l3_off);
 	CU_ASSERT_FATAL(0 == odp_packet_copy_to_mem(pkt, l3_off, sizeof(ip), &ip));
 
 	if (ODPH_IPV4HDR_VER(ip.ver_ihl) == ODPH_IPV4) {
 		l4_off = l3_off + (ODPH_IPV4HDR_IHL(ip.ver_ihl) * 4);
+		proto = ip.proto;
+	} else if (ODPH_IPV4HDR_VER(ip.ver_ihl) == ODPH_IPV6) {
+		odph_ipv6hdr_t ip6 = {.next_hdr = 0};
 
-		if (ip.proto == ODPH_IPPROTO_ESP) {
-			odph_esphdr_t esp;
+		l4_off = l3_off + sizeof(ip6);
+		CU_ASSERT(odp_packet_copy_to_mem(pkt, l3_off, sizeof(ip6), &ip6) == 0);
+		proto = ip6.next_hdr;
 
-			odp_packet_copy_to_mem(pkt, l4_off, sizeof(esp), &esp);
-			CU_ASSERT(odp_be_to_cpu_32(esp.seq_no) == seq_num);
-		} else if (ip.proto == ODPH_IPPROTO_AH) {
-			odph_ahhdr_t ah;
+		if (proto == ODPH_IPPROTO_HOPOPTS) {
+			odph_ipv6hdr_ext_t ext = {.next_hdr = 0};
 
-			odp_packet_copy_to_mem(pkt, l4_off, sizeof(ah), &ah);
-			CU_ASSERT(odp_be_to_cpu_32(ah.seq_no) == seq_num);
-		} else {
-			CU_FAIL("Unexpected IP Proto");
+			CU_ASSERT(odp_packet_copy_to_mem(pkt, l4_off, sizeof(ext), &ext) == 0);
+			l4_off += sizeof(ext);
+			proto = ext.next_hdr;
 		}
 	} else {
 		CU_FAIL("Unexpected IP Version");
+		return;
+	}
+
+	if (proto == ODPH_IPPROTO_UDP) {
+		l4_off += sizeof(odph_udphdr_t);
+		proto = ODPH_IPPROTO_ESP; /* The packet must be UDP encapsulated ESP */
+	}
+
+	if (proto == ODPH_IPPROTO_ESP) {
+		odph_esphdr_t esp = {.seq_no = 0};
+
+		CU_ASSERT(odp_packet_copy_to_mem(pkt, l4_off, sizeof(esp), &esp) == 0);
+		CU_ASSERT(odp_be_to_cpu_32(esp.seq_no) == seq_num);
+	} else if (proto == ODPH_IPPROTO_AH) {
+		odph_ahhdr_t ah = {.seq_no = 0};
+
+		CU_ASSERT(odp_packet_copy_to_mem(pkt, l4_off, sizeof(ah), &ah) == 0);
+		CU_ASSERT(odp_be_to_cpu_32(ah.seq_no) == seq_num);
+	} else {
+		CU_FAIL("Unexpected IP Proto");
 	}
 }
 
@@ -1169,7 +1191,7 @@ int ipsec_check_out(const ipsec_test_part *part, odp_ipsec_sa_t sa,
 			parse_ip(pkto[i]);
 		}
 
-		if (part->flags.test_sa_seq_num)
+		if (part->out[i].status.error.all == 0)
 			ipsec_pkt_seq_num_check(pkto[i], part->out[i].seq_num);
 
 		ipsec_check_packet(part->out[i].pkt_res,
