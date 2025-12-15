@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2017-2018 Linaro Limited
- * Copyright (c) 2018-2022 Nokia
+ * Copyright (c) 2018-2025 Nokia
  */
 
 #include <odp/api/byteorder.h>
@@ -44,6 +44,82 @@ typedef struct {
 static ipsec_global_t *ipsec_global;
 
 static odp_ipsec_config_t *ipsec_config;
+
+#define CONTINUOUS_MAX_LEN 40
+
+typedef struct {
+	odp_bool_t copied;	/* data from a packet has been copied to our data buffer */
+	odp_packet_t pkt;	/* packet from which data was copied */
+	uint32_t offset;	/* offset of the copied packet data in the packet */
+	uint32_t len;		/* length of the copied packet data */
+	uint8_t copy[CONTINUOUS_MAX_LEN]; /* copy of packet data, to be written back */
+} continuous_t;
+
+static void *cont_internal_copy(continuous_t *state, odp_packet_t pkt, uint32_t len)
+{
+	uint32_t l3_offset = odp_packet_l3_offset(pkt);
+
+	if (l3_offset + len > odp_packet_len(pkt))
+		return NULL;
+
+	_ODP_ASSERT(len <= sizeof(state->copy));
+
+	if (odp_packet_copy_to_mem(pkt, l3_offset, len, state->copy)) {
+		_ODP_ERR("odp_packet_copy_to_mem() failed\n");
+		return NULL;
+	}
+	state->copied = true;
+	state->pkt = pkt;
+	state->offset = l3_offset;
+	state->len = len;
+	return state->copy;
+}
+
+/*
+ * Return a pointer to 'len' continuous bytes of packet data starting at
+ * L3 offset. If there is a segment boundary in the packet in the area of
+ * interest, packet data is copied to a temporary buffer in 'state' and the
+ * returned pointer points to that buffer.
+ *
+ * 'len' must not exceed CONTINUOUS_MAX_LEN.
+ *
+ * Returns a null pointer on error.
+ */
+static inline void *continuous_copy_l3(continuous_t *state, odp_packet_t pkt, uint32_t len)
+{
+	uint32_t seglen;
+	void *ptr = odp_packet_l3_ptr(pkt, &seglen);
+
+	if (odp_unlikely(seglen < len))
+		return cont_internal_copy(state, pkt, len);
+
+	state->copied = false;
+	return ptr;
+}
+
+static int cont_internal_copy_back(continuous_t *state)
+{
+	if (odp_packet_copy_from_mem(state->pkt, state->offset, state->len, state->copy)) {
+		_ODP_ERR("odp_packet_copy_from_mem() failed\n");
+		return -1;
+	}
+	return 0;
+}
+
+/*
+ * Copy back the copied and possibly modified packet data from 'state' to the
+ * original packet or do nothing if copying was not needed and packet data
+ * could be modified in-place. Does not need to be called if packet data was
+ * only read and not written to.
+ *
+ * Returns nonzero on error.
+ */
+static inline int continuous_copy_back(continuous_t *state)
+{
+	if (odp_unlikely(state->copied))
+		return cont_internal_copy_back(state);
+	return 0;
+}
 
 /*
  * Wait until the ordered scheduling context of this thread corresponds
@@ -761,29 +837,50 @@ static int ipsec_in_ah(odp_packet_t *pkt,
 	state->in.trl_len = 0;
 
 	if (state->is_ipv4) {
-		_odp_ipv4hdr_t *ipv4hdr = state->ip;
+		_odp_ipv4hdr_t *ipv4hdr;
+		continuous_t con;
+
+		ipv4hdr = continuous_copy_l3(&con, *pkt, sizeof(*ipv4hdr));
+		if (odp_unlikely(ipv4hdr == NULL)) {
+			status->error.alg = 1;
+			return -1;
+		}
 
 		/* Save everything to context */
 		state->ah_ipv4.tos = ipv4hdr->tos;
 		state->ah_ipv4.frag_offset = ipv4hdr->frag_offset;
 		state->ah_ipv4.ttl = ipv4hdr->ttl;
 
-		/* FIXME: zero copy of header, passing it to crypto! */
-		/*
-		 * If authenticating, zero the mutable fields build the request
-		 */
+		/* Zero mutable fields */
 		ipv4hdr->chksum = 0;
 		ipv4hdr->tos = 0;
 		ipv4hdr->frag_offset = 0;
 		ipv4hdr->ttl = 0;
+
+		if (odp_unlikely(continuous_copy_back(&con))) {
+			status->error.alg = 1;
+			return -1;
+		}
 	} else {
-		_odp_ipv6hdr_t *ipv6hdr = state->ip;
+		_odp_ipv6hdr_t *ipv6hdr;
+		continuous_t con;
+
+		ipv6hdr = continuous_copy_l3(&con, *pkt, sizeof(*ipv6hdr));
+		if (odp_unlikely(ipv6hdr == NULL)) {
+			status->error.alg = 1;
+			return -1;
+		}
 
 		state->ah_ipv6.ver_tc_flow = ipv6hdr->ver_tc_flow;
 		state->ah_ipv6.hop_limit = ipv6hdr->hop_limit;
 		ipv6hdr->ver_tc_flow =
 			odp_cpu_to_be_32(6 << _ODP_IPV6HDR_VERSION_SHIFT);
 		ipv6hdr->hop_limit = 0;
+
+		if (odp_unlikely(continuous_copy_back(&con))) {
+			status->error.alg = 1;
+			return -1;
+		}
 	}
 
 	state->in.seq_no = odp_be_to_cpu_32(ah.seq_no);
@@ -834,16 +931,32 @@ static int ipsec_in_ah_post(odp_packet_t pkt,
 
 	/* Restore mutable fields */
 	if (state->is_ipv4) {
-		_odp_ipv4hdr_t *ipv4hdr = state->ip;
+		_odp_ipv4hdr_t *ipv4hdr;
+		continuous_t con;
+
+		ipv4hdr = continuous_copy_l3(&con, pkt, sizeof(*ipv4hdr));
+		if (odp_unlikely(ipv4hdr == NULL))
+			return -1;
 
 		ipv4hdr->ttl = state->ah_ipv4.ttl;
 		ipv4hdr->tos = state->ah_ipv4.tos;
 		ipv4hdr->frag_offset = state->ah_ipv4.frag_offset;
+
+		if (odp_unlikely(continuous_copy_back(&con)))
+			return -1;
 	} else {
-		_odp_ipv6hdr_t *ipv6hdr = odp_packet_l3_ptr(pkt, NULL);
+		_odp_ipv6hdr_t *ipv6hdr;
+		continuous_t con;
+
+		ipv6hdr = continuous_copy_l3(&con, pkt, sizeof(*ipv6hdr));
+		if (odp_unlikely(ipv6hdr == NULL))
+			return -1;
 
 		ipv6hdr->ver_tc_flow = state->ah_ipv6.ver_tc_flow;
 		ipv6hdr->hop_limit = state->ah_ipv6.hop_limit;
+
+		if (odp_unlikely(continuous_copy_back(&con)))
+			return -1;
 	}
 	state->ip_next_hdr = ah.next_header;
 
@@ -1082,22 +1195,44 @@ static int ipsec_in_finalize_decap_header(odp_packet_t pkt, ipsec_state_t *state
 	_odp_ipv6hdr_t *ipv6hdr;
 
 	if (state->is_ipv4 && odp_packet_len(pkt) > _ODP_IPV4HDR_LEN) {
-		ipv4hdr = odp_packet_l3_ptr(pkt, NULL);
+		continuous_t con;
+
+		ipv4hdr = continuous_copy_l3(&con, pkt, sizeof(*ipv4hdr));
+		if (odp_unlikely(ipv4hdr == NULL)) {
+			status->error.alg = 1;
+			return -1;
+		}
 
 		if (ODP_IPSEC_MODE_TRANSPORT == ipsec_sa->mode)
 			ipv4hdr->tot_len = odp_cpu_to_be_16(state->ip_tot_len);
 		else
 			ipv4hdr->ttl -= ipsec_sa->dec_ttl;
 
+		if (odp_unlikely(continuous_copy_back(&con))) {
+			status->error.alg = 1;
+			return -1;
+		}
+
 		_odp_packet_ipv4_chksum_insert(pkt);
 	} else if (state->is_ipv6 && odp_packet_len(pkt) > _ODP_IPV6HDR_LEN) {
-		ipv6hdr = odp_packet_l3_ptr(pkt, NULL);
+		continuous_t con;
+
+		ipv6hdr = continuous_copy_l3(&con, pkt, sizeof(*ipv6hdr));
+		if (odp_unlikely(ipv6hdr == NULL)) {
+			status->error.alg = 1;
+			return -1;
+		}
 
 		if (ODP_IPSEC_MODE_TRANSPORT == ipsec_sa->mode)
 			ipv6hdr->payload_len = odp_cpu_to_be_16(state->ip_tot_len -
 								_ODP_IPV6HDR_LEN);
 		else
 			ipv6hdr->hop_limit -= ipsec_sa->dec_ttl;
+
+		if (odp_unlikely(continuous_copy_back(&con))) {
+			status->error.alg = 1;
+			return -1;
+		}
 	} else if (state->ip_next_hdr != _ODP_IPPROTO_NO_NEXT) {
 		status->error.proto = 1;
 
@@ -1219,11 +1354,19 @@ static inline uint32_t ipsec_padded_len(uint32_t len, uint32_t pad_mask)
 	return (len + pad_mask) & ~pad_mask;
 }
 
-static int ipsec_out_tunnel_parse_ipv4(ipsec_state_t *state,
+static int ipsec_out_tunnel_parse_ipv4(odp_packet_t pkt,
+				       ipsec_state_t *state,
 				       ipsec_sa_t *ipsec_sa)
 {
-	_odp_ipv4hdr_t *ipv4hdr = state->ip;
-	uint16_t flags = odp_be_to_cpu_16(ipv4hdr->frag_offset);
+	_odp_ipv4hdr_t *ipv4hdr;
+	continuous_t con;
+	uint16_t flags;
+
+	ipv4hdr = continuous_copy_l3(&con, pkt, sizeof(*ipv4hdr));
+	if (odp_unlikely(ipv4hdr == NULL))
+		return -1;
+
+	flags = odp_be_to_cpu_16(ipv4hdr->frag_offset);
 
 	ipv4hdr->ttl -= ipsec_sa->dec_ttl;
 	state->out_tunnel.ip_tos = ipv4hdr->tos;
@@ -1231,14 +1374,25 @@ static int ipsec_out_tunnel_parse_ipv4(ipsec_state_t *state,
 	state->out_tunnel.ip_flabel = 0;
 	state->ip_next_hdr = ipv4hdr->proto;
 
+	if (odp_unlikely(continuous_copy_back(&con)))
+		return -1;
+
 	return 0;
 }
 
-static int ipsec_out_tunnel_parse_ipv6(ipsec_state_t *state,
+static int ipsec_out_tunnel_parse_ipv6(odp_packet_t pkt,
+				       ipsec_state_t *state,
 				       ipsec_sa_t *ipsec_sa)
 {
-	_odp_ipv6hdr_t *ipv6hdr = state->ip;
-	uint32_t ver_tc_flow = odp_be_to_cpu_32(ipv6hdr->ver_tc_flow);
+	_odp_ipv6hdr_t *ipv6hdr;
+	continuous_t con;
+	uint32_t ver_tc_flow;
+
+	ipv6hdr = continuous_copy_l3(&con, pkt, sizeof(*ipv6hdr));
+	if (odp_unlikely(ipv6hdr == NULL))
+		return -1;
+
+	ver_tc_flow = odp_be_to_cpu_32(ipv6hdr->ver_tc_flow);
 
 	ipv6hdr->hop_limit -= ipsec_sa->dec_ttl;
 	state->out_tunnel.ip_tos = (ver_tc_flow &
@@ -1249,6 +1403,9 @@ static int ipsec_out_tunnel_parse_ipv6(ipsec_state_t *state,
 				       _ODP_IPV6HDR_FLOW_LABEL_MASK) >>
 		_ODP_IPV6HDR_FLOW_LABEL_SHIFT;
 	state->ip_next_hdr = ipv6hdr->next_hdr;
+
+	if (odp_unlikely(continuous_copy_back(&con)))
+		return -1;
 
 	return 0;
 }
@@ -1539,14 +1696,36 @@ static int ipsec_out_esp(odp_packet_t *pkt,
 	odp_packet_copy_from_mem(*pkt, state->ip_next_hdr_offset, 1, &proto);
 	state->ip_tot_len += hdr_len + trl_len;
 	if (state->is_ipv4) {
-		_odp_ipv4hdr_t *ipv4hdr = state->ip;
+		continuous_t con;
+		_odp_ipv4hdr_t *ipv4hdr = continuous_copy_l3(&con, *pkt, sizeof(*ipv4hdr));
+
+		if (odp_unlikely(ipv4hdr == NULL))  {
+			status->error.alg = 1;
+			return -1;
+		}
 
 		ipv4hdr->tot_len = odp_cpu_to_be_16(state->ip_tot_len);
+
+		if (odp_unlikely(continuous_copy_back(&con))) {
+			status->error.alg = 1;
+			return -1;
+		}
 	} else if (state->is_ipv6) {
-		_odp_ipv6hdr_t *ipv6hdr = state->ip;
+		continuous_t con;
+		_odp_ipv6hdr_t *ipv6hdr = continuous_copy_l3(&con, *pkt, sizeof(*ipv6hdr));
+
+		if (odp_unlikely(ipv6hdr == NULL))  {
+			status->error.alg = 1;
+			return -1;
+		}
 
 		ipv6hdr->payload_len = odp_cpu_to_be_16(state->ip_tot_len -
 							 _ODP_IPV6HDR_LEN);
+
+		if (odp_unlikely(continuous_copy_back(&con))) {
+			status->error.alg = 1;
+			return -1;
+		}
 	}
 
 	if (odp_packet_extend_head(pkt, hdr_len, NULL, NULL) < 0) {
@@ -1721,7 +1900,14 @@ static int ipsec_out_ah(odp_packet_t *pkt,
 	odp_packet_copy_from_mem(*pkt, state->ip_next_hdr_offset, 1, &proto);
 	/* Save IP stuff */
 	if (state->is_ipv4) {
-		_odp_ipv4hdr_t *ipv4hdr = state->ip;
+		_odp_ipv4hdr_t *ipv4hdr;
+		continuous_t con;
+
+		ipv4hdr = continuous_copy_l3(&con, *pkt, sizeof(*ipv4hdr));
+		if (odp_unlikely(ipv4hdr == NULL)) {
+			status->error.alg = 1;
+			return -1;
+		}
 
 		state->ah_ipv4.tos = ipv4hdr->tos;
 		state->ah_ipv4.frag_offset = ipv4hdr->frag_offset;
@@ -1733,8 +1919,20 @@ static int ipsec_out_ah(odp_packet_t *pkt,
 		hdr_len = IPSEC_PAD_LEN(hdr_len, 4);
 		state->ip_tot_len += hdr_len;
 		ipv4hdr->tot_len = odp_cpu_to_be_16(state->ip_tot_len);
+
+		if (odp_unlikely(continuous_copy_back(&con))) {
+			status->error.alg = 1;
+			return -1;
+		}
 	} else {
-		_odp_ipv6hdr_t *ipv6hdr = state->ip;
+		_odp_ipv6hdr_t *ipv6hdr;
+		continuous_t con;
+
+		ipv6hdr = continuous_copy_l3(&con, *pkt, sizeof(*ipv6hdr));
+		if (odp_unlikely(ipv6hdr == NULL)) {
+			status->error.alg = 1;
+			return -1;
+		}
 
 		state->ah_ipv6.ver_tc_flow = ipv6hdr->ver_tc_flow;
 		state->ah_ipv6.hop_limit = ipv6hdr->hop_limit;
@@ -1746,6 +1944,11 @@ static int ipsec_out_ah(odp_packet_t *pkt,
 		state->ip_tot_len += hdr_len;
 		ipv6hdr->payload_len = odp_cpu_to_be_16(state->ip_tot_len -
 							 _ODP_IPV6HDR_LEN);
+
+		if (odp_unlikely(continuous_copy_back(&con))) {
+			status->error.alg = 1;
+			return -1;
+		}
 	}
 
 	ah.ah_len = hdr_len / 4 - 2;
@@ -1809,19 +2012,34 @@ static int ipsec_out_ah(odp_packet_t *pkt,
 static int ipsec_out_ah_post(ipsec_state_t *state, odp_packet_t *pkt,
 			     ipsec_sa_t *ipsec_sa)
 {
+	continuous_t con;
+
 	if (state->is_ipv4) {
-		_odp_ipv4hdr_t *ipv4hdr = odp_packet_l3_ptr(*pkt, NULL);
+		_odp_ipv4hdr_t *ipv4hdr = continuous_copy_l3(&con, *pkt, sizeof(*ipv4hdr));
+
+		if (ipv4hdr == NULL)
+			return -1;
 
 		ipv4hdr->ttl = state->ah_ipv4.ttl;
 		ipv4hdr->tos = state->ah_ipv4.tos;
 		ipv4hdr->frag_offset = state->ah_ipv4.frag_offset;
 
+		if (continuous_copy_back(&con))
+			return -1;
+
 		_odp_packet_ipv4_chksum_insert(*pkt);
+
 	} else {
-		_odp_ipv6hdr_t *ipv6hdr = odp_packet_l3_ptr(*pkt, NULL);
+		_odp_ipv6hdr_t *ipv6hdr = continuous_copy_l3(&con, *pkt, sizeof(*ipv6hdr));
+
+		if (ipv6hdr == NULL)
+			return -1;
 
 		ipv6hdr->ver_tc_flow = state->ah_ipv6.ver_tc_flow;
 		ipv6hdr->hop_limit = state->ah_ipv6.hop_limit;
+
+		if (continuous_copy_back(&con))
+			return -1;
 	}
 
 	/* Remove the high order ESN bits that were added in the packet for ICV
@@ -1909,10 +2127,10 @@ static int ipsec_out_tunnel_encap(odp_packet_t *pkt, ipsec_state_t *state, ipsec
 		return -1;
 
 	if (state->is_ipv4) {
-		if (odp_unlikely(ipsec_out_tunnel_parse_ipv4(state, ipsec_sa)))
+		if (odp_unlikely(ipsec_out_tunnel_parse_ipv4(*pkt, state, ipsec_sa)))
 			return -1;
 	} else if (state->is_ipv6) {
-		if (odp_unlikely(ipsec_out_tunnel_parse_ipv6(state, ipsec_sa)))
+		if (odp_unlikely(ipsec_out_tunnel_parse_ipv6(*pkt, state, ipsec_sa)))
 			return -1;
 	} else {
 		state->out_tunnel.ip_tos = 0;
