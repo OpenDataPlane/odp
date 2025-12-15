@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2017-2018 Linaro Limited
  * Copyright (c) 2020 Marvell
- * Copyright (c) 2020-2022 Nokia
+ * Copyright (c) 2020-2025 Nokia
  */
 
 #include <odp/helper/odph_api.h>
@@ -151,7 +151,9 @@ static void test_out_ipv4_ah_sha256(void)
 		.out = {
 			{ .status.warn.all = 0,
 			  .status.error.all = 0,
-			  .pkt_res = &pkt_ipv4_icmp_0_ah_sha256_1 },
+			  .pkt_res = &pkt_ipv4_icmp_0_ah_sha256_1,
+			  .seq_num = 1,
+			},
 		},
 	};
 
@@ -190,7 +192,9 @@ static void test_out_ipv4_ah_sha256_tun_ipv4(void)
 		.out = {
 			{ .status.warn.all = 0,
 			  .status.error.all = 0,
-			  .pkt_res = &pkt_ipv4_icmp_0_ah_tun_ipv4_sha256_1 },
+			  .pkt_res = &pkt_ipv4_icmp_0_ah_tun_ipv4_sha256_1,
+			  .seq_num = 1,
+			},
 		},
 	};
 
@@ -235,7 +239,9 @@ static void test_out_ipv4_ah_sha256_tun_ipv6(void)
 		.out = {
 			{ .status.warn.all = 0,
 			  .status.error.all = 0,
-			  .pkt_res = &pkt_ipv4_icmp_0_ah_tun_ipv6_sha256_1 },
+			  .pkt_res = &pkt_ipv4_icmp_0_ah_tun_ipv6_sha256_1,
+			  .seq_num = 1,
+			},
 		},
 	};
 
@@ -265,7 +271,9 @@ static void test_out_ipv4_esp_null_sha256(void)
 		.out = {
 			{ .status.warn.all = 0,
 			  .status.error.all = 0,
-			  .pkt_res = &pkt_ipv4_icmp_0_esp_null_sha256_1 },
+			  .pkt_res = &pkt_ipv4_icmp_0_esp_null_sha256_1,
+			  .seq_num = 1,
+			},
 		},
 	};
 
@@ -304,8 +312,9 @@ static void test_out_ipv4_esp_null_sha256_tun_ipv4(void)
 		.out = {
 			{ .status.warn.all = 0,
 			  .status.error.all = 0,
-			  .pkt_res =
-				  &pkt_ipv4_icmp_0_esp_tun_ipv4_null_sha256_1 },
+			  .pkt_res = &pkt_ipv4_icmp_0_esp_tun_ipv4_null_sha256_1,
+			  .seq_num = 1,
+			},
 		},
 	};
 
@@ -350,8 +359,9 @@ static void test_out_ipv4_esp_null_sha256_tun_ipv6(void)
 		.out = {
 			{ .status.warn.all = 0,
 			  .status.error.all = 0,
-			  .pkt_res =
-				  &pkt_ipv4_icmp_0_esp_tun_ipv6_null_sha256_1 },
+			  .pkt_res = &pkt_ipv4_icmp_0_esp_tun_ipv6_null_sha256_1,
+			  .seq_num = 1,
+			},
 		},
 	};
 
@@ -595,6 +605,7 @@ static void test_out_in_common(const ipsec_test_flags *flags,
 			  .status.error.all = 0,
 			  .l3_type = out_l3_type,
 			  .l4_type = out_l4_type,
+			  .seq_num = 1,
 			},
 		},
 	};
@@ -821,7 +832,9 @@ static void test_out_ipv4_esp_udp_null_sha256(void)
 		.out = {
 			{ .status.warn.all = 0,
 			  .status.error.all = 0,
-			  .pkt_res = &pkt_ipv4_icmp_0_esp_udp_null_sha256_1 },
+			  .pkt_res = &pkt_ipv4_icmp_0_esp_udp_null_sha256_1,
+			  .seq_num = 1,
+			},
 		},
 	};
 
@@ -864,6 +877,7 @@ static void test_out_ipv4_ah_sha256_frag_check(void)
 	test2.opt.frag_mode = ODP_IPSEC_FRAG_DISABLED;
 	test2.num_pkt = 1;
 	test2.out[0].pkt_res = &pkt_ipv4_icmp_0_ah_sha256_1;
+	test2.out[0].seq_num = 1;
 
 	ipsec_check_out_one(&test, sa);
 
@@ -904,7 +918,9 @@ static void test_out_ipv4_ah_sha256_frag_check_2(void)
 		.out = {
 			{ .status.warn.all = 0,
 			  .status.error.all = 0,
-			  .pkt_res = &pkt_ipv4_icmp_0_ah_sha256_1 },
+			  .pkt_res = &pkt_ipv4_icmp_0_ah_sha256_1,
+			  .seq_num = 1,
+			},
 		},
 	};
 
@@ -952,6 +968,7 @@ static void test_out_ipv4_esp_null_sha256_frag_check(void)
 	test2.opt.frag_mode = ODP_IPSEC_FRAG_DISABLED;
 	test2.num_pkt = 1;
 	test2.out[0].pkt_res = &pkt_ipv4_icmp_0_esp_null_sha256_1;
+	test2.out[0].seq_num = 1;
 
 	ipsec_check_out_one(&test, sa);
 
@@ -993,7 +1010,9 @@ static void test_out_ipv4_esp_null_sha256_frag_check_2(void)
 		.out = {
 			{ .status.warn.all = 0,
 			  .status.error.all = 0,
-			  .pkt_res = &pkt_ipv4_icmp_0_esp_null_sha256_1 },
+			  .pkt_res = &pkt_ipv4_icmp_0_esp_null_sha256_1,
+			  .seq_num = 1,
+			},
 		},
 	};
 
@@ -1027,7 +1046,9 @@ static void test_out_ipv6_ah_sha256(void)
 		.out = {
 			{ .status.warn.all = 0,
 			  .status.error.all = 0,
-			  .pkt_res = &pkt_ipv6_icmp_0_ah_sha256_1 },
+			  .pkt_res = &pkt_ipv6_icmp_0_ah_sha256_1,
+			  .seq_num = 1,
+			},
 		},
 	};
 
@@ -1066,7 +1087,9 @@ static void test_out_ipv6_ah_sha256_tun_ipv4(void)
 		.out = {
 			{ .status.warn.all = 0,
 			  .status.error.all = 0,
-			  .pkt_res = &pkt_ipv6_icmp_0_ah_tun_ipv4_sha256_1 },
+			  .pkt_res = &pkt_ipv6_icmp_0_ah_tun_ipv4_sha256_1,
+			  .seq_num = 1,
+			},
 		},
 	};
 
@@ -1111,7 +1134,9 @@ static void test_out_ipv6_ah_sha256_tun_ipv6(void)
 		.out = {
 			{ .status.warn.all = 0,
 			  .status.error.all = 0,
-			  .pkt_res = &pkt_ipv6_icmp_0_ah_tun_ipv6_sha256_1 },
+			  .pkt_res = &pkt_ipv6_icmp_0_ah_tun_ipv6_sha256_1,
+			  .seq_num = 1,
+			},
 		},
 	};
 
@@ -1141,7 +1166,9 @@ static void test_out_ipv6_esp_null_sha256(void)
 		.out = {
 			{ .status.warn.all = 0,
 			  .status.error.all = 0,
-			  .pkt_res = &pkt_ipv6_icmp_0_esp_null_sha256_1 },
+			  .pkt_res = &pkt_ipv6_icmp_0_esp_null_sha256_1,
+			  .seq_num = 1,
+			},
 		},
 	};
 
@@ -1180,8 +1207,9 @@ static void test_out_ipv6_esp_null_sha256_tun_ipv4(void)
 		.out = {
 			{ .status.warn.all = 0,
 			  .status.error.all = 0,
-			  .pkt_res =
-				  &pkt_ipv6_icmp_0_esp_tun_ipv4_null_sha256_1 },
+			  .pkt_res = &pkt_ipv6_icmp_0_esp_tun_ipv4_null_sha256_1,
+			  .seq_num = 1,
+			},
 		},
 	};
 
@@ -1226,8 +1254,9 @@ static void test_out_ipv6_esp_null_sha256_tun_ipv6(void)
 		.out = {
 			{ .status.warn.all = 0,
 			  .status.error.all = 0,
-			  .pkt_res =
-				  &pkt_ipv6_icmp_0_esp_tun_ipv6_null_sha256_1 },
+			  .pkt_res = &pkt_ipv6_icmp_0_esp_tun_ipv6_null_sha256_1,
+			  .seq_num = 1,
+			},
 		},
 	};
 
@@ -1258,7 +1287,9 @@ static void test_out_ipv6_esp_udp_null_sha256(void)
 		.out = {
 			{ .status.warn.all = 0,
 			  .status.error.all = 0,
-			  .pkt_res = &pkt_ipv6_icmp_0_esp_udp_null_sha256_1 },
+			  .pkt_res = &pkt_ipv6_icmp_0_esp_udp_null_sha256_1,
+			  .seq_num = 1,
+			},
 		},
 	};
 
@@ -1316,6 +1347,7 @@ static void test_out_dummy_esp_null_sha256_tun(odp_ipsec_tunnel_param_t tunnel)
 	test.num_pkt = 1;
 	test.out[0].l3_type = out_l3_type;
 	test.out[0].l4_type = ODP_PROTO_L4_TYPE_ESP;
+	test.out[0].seq_num = 1;
 
 	test_in.num_pkt = 1;
 	test_in.out[0].l3_type = ODP_PROTO_L3_TYPE_IPV4;
@@ -1328,6 +1360,7 @@ static void test_out_dummy_esp_null_sha256_tun(odp_ipsec_tunnel_param_t tunnel)
 	test_empty.num_pkt = 1;
 	test_empty.out[0].l3_type = out_l3_type;
 	test_empty.out[0].l4_type = ODP_PROTO_L4_TYPE_ESP;
+	test_empty.out[0].seq_num = 2;
 
 	ipsec_check_out_in_one(&test, &test_in, sa, sa2, NULL);
 	ipsec_check_out_in_one(&test_empty, &test_in, sa, sa2, NULL);
@@ -1393,7 +1426,9 @@ static void test_out_ipv4_udp_esp_null_sha256(void)
 		.out = {
 			{ .status.warn.all = 0,
 			  .status.error.all = 0,
-			  .pkt_res = &pkt_ipv4_udp_esp_null_sha256 },
+			  .pkt_res = &pkt_ipv4_udp_esp_null_sha256,
+			  .seq_num = 1,
+			},
 		},
 	};
 
@@ -1438,6 +1473,7 @@ static void test_out_ipv4_null_aes_xcbc(void)
 			  .l3_type = ODP_PROTO_L3_TYPE_IPV4,
 			  .l4_type = _ODP_PROTO_L4_TYPE_UNDEF,
 			  .pkt_res = &pkt_ipv4_null_aes_xcbc_esp,
+			  .seq_num = 1,
 			},
 		},
 	};
@@ -1541,6 +1577,7 @@ static void test_sa_info(void)
 			  .status.error.all = 0,
 			  .l3_type = ODP_PROTO_L3_TYPE_IPV4,
 			  .l4_type = ODP_PROTO_L4_TYPE_ESP,
+			  .seq_num = 1,
 			},
 		},
 	};
@@ -1702,20 +1739,25 @@ static void test_out_ipv4_esp_sa_expiry(enum ipsec_test_sa_expiry expiry)
 
 	test_out.out[0].sa_expiry = IPSEC_TEST_EXPIRY_IGNORED;
 
-	for (i = 0; i < limit - delta; i += inc)
+	for (i = 0; i < limit - delta; i += inc) {
+		test_out.out[0].seq_num++;
 		ipsec_check_out_one(&test_out, out_sa);
+	}
 
 	sa_expiry_notified = false;
 	test_out.out[0].sa_expiry = expiry;
 
-	for (; i <= limit && !sa_expiry_notified; i += inc)
+	for (; i <= limit && !sa_expiry_notified; i += inc) {
+		test_out.out[0].seq_num++;
 		ipsec_check_out_one(&test_out, out_sa);
+	}
 
 	CU_ASSERT(sa_expiry_notified);
 
-	for (; i <= limit + delta; i += inc)
+	for (; i <= limit + delta; i += inc) {
+		test_out.out[0].seq_num++;
 		ipsec_check_out_one(&test_out, out_sa);
-
+	}
 	ipsec_sa_destroy(out_sa);
 }
 
@@ -1900,6 +1942,7 @@ static void test_max_num_sa(void)
 			  .status.error.all = 0,
 			  .l3_type = ODP_PROTO_L3_TYPE_IPV4,
 			  .l4_type = ODP_PROTO_L4_TYPE_ESP,
+			  .seq_num = 1,
 			},
 		},
 	};
