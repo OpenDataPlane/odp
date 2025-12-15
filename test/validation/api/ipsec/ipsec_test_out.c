@@ -500,9 +500,9 @@ static void ipsec_check_out_in_one(const ipsec_test_part *part_outbound,
 
 		ipsec_test_packet_from_pkt(&pkt_in, &pkto[i]);
 		ipsec_pkt_update(&pkt_in, flags);
+		rebuild_ethernet_header(&pkt_in);
 
 		part_in.pkt_in = &pkt_in;
-
 		ipsec_check_in_one(&part_in, sa_in);
 	}
 }
