@@ -84,6 +84,9 @@ typedef struct {
 typedef struct {
 	ipsec_test_part_flags_t flags;
 
+	/* if nonzero, use a segmented test packet */
+	uint32_t first_seg_len;
+
 	/* Input for the inbound or outbound IPsec operation */
 	const ipsec_test_packet *pkt_in;
 	int num_opt;
@@ -123,7 +126,7 @@ void ipsec_sa_param_fill(odp_ipsec_sa_param_t *param,
 			 const odp_crypto_key_t *auth_key_extra);
 
 void ipsec_sa_destroy(odp_ipsec_sa_t sa);
-odp_packet_t ipsec_packet(const ipsec_test_packet *itp);
+odp_packet_t ipsec_packet(const ipsec_test_packet *itp, uint32_t first_seg_len);
 void ipsec_check_in_one(const ipsec_test_part *part, odp_ipsec_sa_t sa);
 int ipsec_check_out(const ipsec_test_part *part,
 		    odp_ipsec_sa_t sa,
