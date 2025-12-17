@@ -5343,6 +5343,10 @@ static void pktio_test_evv_pktin_queue_config(odp_pktin_mode_t in_mode)
 	odp_pktin_queue_param_t pktin_param;
 	odp_pktio_capability_t pktio_capa;
 	odp_event_aggr_capability_t aggr_capa;
+	odp_queue_t pktin_queue;
+	odp_queue_info_t queue_info;
+	odp_queue_type_t queue_type = in_mode == ODP_PKTIN_MODE_SCHED ?
+					ODP_QUEUE_TYPE_SCHED : ODP_QUEUE_TYPE_PLAIN;
 	odp_pktio_t pktio;
 	uint32_t num_queues, max_aggr_per_queue;
 	odp_event_type_t event_types[] = {ODP_EVENT_BUFFER, ODP_EVENT_PACKET, ODP_EVENT_TIMEOUT,
@@ -5386,6 +5390,10 @@ static void pktio_test_evv_pktin_queue_config(odp_pktin_mode_t in_mode)
 		aggr_config[i] = aggr_config[0];
 
 	CU_ASSERT(odp_pktin_queue_config(pktio, &pktin_param) == 0);
+
+	CU_ASSERT_FATAL(odp_pktin_event_queue(pktio, &pktin_queue, 1) == (int)num_queues);
+	CU_ASSERT_FATAL(odp_queue_info(pktin_queue, &queue_info) == 0);
+	CU_ASSERT(queue_info.type == queue_type);
 
 	aggr_config[0].max_size = aggr_capa.max_size;
 	CU_ASSERT(odp_pktin_queue_config(pktio, &pktin_param) == 0);
