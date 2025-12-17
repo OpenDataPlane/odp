@@ -60,6 +60,8 @@ static parse_result_t parse_options(int argc, char **argv)
 
 	static const char *shortopts = "f:h";
 
+	memset(&opts, 0, sizeof(opts));
+
 	while (true) {
 		opt = getopt_long(argc, argv, shortopts, longopts, NULL);
 
@@ -68,7 +70,14 @@ static parse_result_t parse_options(int argc, char **argv)
 
 		switch (opt) {
 		case 'f':
+			free(opts.path);
 			opts.path = strdup(optarg);
+
+			if (opts.path == NULL) {
+				ODPH_ERR("Error allocating memory\n");
+				return PRS_NOK;
+			}
+
 			break;
 		case 'h':
 			print_usage();
