@@ -1019,15 +1019,30 @@ static int queue_info(odp_queue_t handle, odp_queue_info_t *info)
 	}
 
 	if (queue->type == ODP_QUEUE_TYPE_AGGR) {
-		queue_entry_t *base_queue = qentry_from_handle(queue->aggr.base_queue);
+		queue_entry_t *base_queue;
 
+		LOCK(queue);
+
+		status = queue->status;
+		if (odp_unlikely(status != QUEUE_STATUS_READY)) {
+			UNLOCK(queue);
+			_ODP_ERR("Invalid aggregator queue status: %d\n", status);
+			return -1;
+		}
+
+		base_queue = qentry_from_handle(queue->aggr.base_queue);
+
+		memset(info, 0, sizeof(*info));
 		info->name = base_queue->name;
+		info->type = queue->type;
 		info->param = base_queue->param;
+		info->param.aggr = NULL;
+		info->aggr_config.pool = queue->aggr.pool;
+		info->aggr_config.max_tmo_ns = 0;
+		info->aggr_config.max_size = queue->aggr.max_size;
+		info->aggr_config.event_type = queue->aggr.event_type;
 
-		/* Override some of the base queue parameters */
-		info->param.type = ODP_QUEUE_TYPE_AGGR;
-		info->param.context = NULL;
-		info->param.context_len = 0;
+		UNLOCK(queue);
 
 		return 0;
 	}
@@ -1051,7 +1066,9 @@ static int queue_info(odp_queue_t handle, odp_queue_info_t *info)
 		return -1;
 	}
 
+	memset(info, 0, sizeof(*info));
 	info->name = queue->name;
+	info->type = queue->type;
 	info->param = queue->param;
 
 	UNLOCK(queue);
