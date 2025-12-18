@@ -923,6 +923,7 @@ static void queue_test_info(void)
 	/* Check info and call print for a plain queue */
 	CU_ASSERT(odp_queue_info(q_plain, &info) == 0);
 	CU_ASSERT(strcmp(nq_plain, info.name) == 0);
+	CU_ASSERT(info.type == ODP_QUEUE_TYPE_PLAIN);
 	CU_ASSERT(info.param.type == ODP_QUEUE_TYPE_PLAIN);
 	CU_ASSERT(info.param.type == odp_queue_type(q_plain));
 	CU_ASSERT(info.param.enq_mode == ODP_QUEUE_OP_MT);
@@ -937,6 +938,7 @@ static void queue_test_info(void)
 	/* Check info and call print for a scheduled ordered queue */
 	CU_ASSERT(odp_queue_info(q_order, &info) == 0);
 	CU_ASSERT(strcmp(nq_order, info.name) == 0);
+	CU_ASSERT(info.type == ODP_QUEUE_TYPE_SCHED);
 	CU_ASSERT(info.param.type == ODP_QUEUE_TYPE_SCHED);
 	CU_ASSERT(info.param.type == odp_queue_type(q_order));
 	CU_ASSERT(info.param.enq_mode == ODP_QUEUE_OP_MT);
@@ -1241,6 +1243,8 @@ static void queue_test_aggr_cfg_max(const odp_event_aggr_capability_t *capa,
 	odp_pool_t evv_pool;
 	odp_queue_param_t param;
 	odp_queue_t queue, prev_aggr_queue = ODP_QUEUE_INVALID;
+	const uint32_t max_size = 2;
+	const uint64_t max_tmo = capa->min_tmo_ns;
 
 	num = capa->max_num_per_queue;
 	if (num > MAX_NUM_AGGR_PER_QUEUE)
@@ -1253,7 +1257,8 @@ static void queue_test_aggr_cfg_max(const odp_event_aggr_capability_t *capa,
 	evv_pool = create_event_vector_pool();
 	for (i = 0; i < num; i++) {
 		aggr[i].pool = evv_pool;
-		aggr[i].max_size = 2;
+		aggr[i].max_size = max_size;
+		aggr[i].max_tmo_ns = max_tmo;
 		aggr[i].event_type = ODP_EVENT_ANY;
 	}
 	odp_queue_param_init(&param);
@@ -1278,6 +1283,12 @@ static void queue_test_aggr_cfg_max(const odp_event_aggr_capability_t *capa,
 		if (i == 0 || i == num - 1)
 			odp_queue_print(aggr_queue);
 		CU_ASSERT(odp_queue_info(aggr_queue, &info) == 0);
+		CU_ASSERT(info.type == ODP_QUEUE_TYPE_AGGR);
+		CU_ASSERT(info.param.type == queue_type);
+		CU_ASSERT(info.aggr_config.pool == evv_pool);
+		CU_ASSERT(info.aggr_config.max_tmo_ns == max_tmo);
+		CU_ASSERT(info.aggr_config.max_size == max_size);
+		CU_ASSERT(info.aggr_config.event_type == ODP_EVENT_ANY);
 	}
 	CU_ASSERT(odp_queue_aggr(queue, num) == ODP_QUEUE_INVALID);
 
