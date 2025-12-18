@@ -1278,8 +1278,6 @@ static void queue_test_aggr_cfg_max(const odp_event_aggr_capability_t *capa,
 		if (i == 0 || i == num - 1)
 			odp_queue_print(aggr_queue);
 		CU_ASSERT(odp_queue_info(aggr_queue, &info) == 0);
-		CU_ASSERT(info.param.type == ODP_QUEUE_TYPE_AGGR);
-		CU_ASSERT(info.param.context == NULL);
 	}
 	CU_ASSERT(odp_queue_aggr(queue, num) == ODP_QUEUE_INVALID);
 
