@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2014-2018 Linaro Limited
- * Copyright (c) 2021-2024 Nokia
+ * Copyright (c) 2021-2025 Nokia
  */
 
 /**
@@ -920,8 +920,10 @@ typedef struct odp_crypto_session_param_t {
 
 	/** Output pool
 	 *
-	 *  In ODP_CRYPTO_OP_TYPE_BASIC and ODP_CRYPTO_OP_TYPE_OOP
-	 *  operation types this must be set to ODP_POOL_INVALID.
+	 *  This field is unused and will be deprecated later.
+	 *  The value must be left to the default value.
+	 *
+	 *  Default value is ODP_POOL_INVALID.
 	 */
 	odp_pool_t output_pool;
 
