@@ -115,7 +115,6 @@ static odp_bool_t parse_crypto_entry(config_setting_t *cs, crypto_parse_t *crypt
 	crypto->param.op_mode = ODP_CRYPTO_ASYNC;
 	crypto->param.cipher_key.data = NULL;
 	crypto->param.auth_key.data = NULL;
-	crypto->param.output_pool = ODP_POOL_INVALID;
 
 	if (config_setting_lookup_string(cs, CONF_STR_NAME, &val_str) == CONFIG_FALSE) {
 		ODPH_ERR("No \"" CONF_STR_NAME "\" found\n");
