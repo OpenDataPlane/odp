@@ -1,5 +1,118 @@
 # Changelog
 
+## OpenDataPlane (1.49.0.0)
+
+### Backward compatible API changes
+
+#### Barrier
+* Clarify that a barrier must be initialized before first use and can be
+reinitialized if not in use.
+* Explicitly state that a barrier can be reused without initializing it again.
+* Clarify that no more than N threads may be inside `odp_barrier_wait()`
+for a barrier of N threads.
+
+#### Classifier
+* Clarify that event aggregation is performed automatically for classified
+packets when aggregation is enabled in CoS parameters.
+* Clarify that classifier accessor functions return always base queue handles,
+not aggregator handles.
+
+#### Crypto
+* Add SNOW5G cipher and integrity algorithms `ODP_CIPHER_ALG_SNOW5G_NEA4` and
+`ODP_AUTH_ALG_SNOW5G_NIA4`.
+* Change the description of `odp_crypto_session_param_t.output_pool` parameter
+to mention that the parameter is not used and will be deprecated. Specify that
+the parameter must be left to the default value and that the default value
+is `ODP_POOL_INVALID`.
+
+#### Packet IO
+* Clarify that event aggregation is performed automatically for incoming packets
+when aggregation is enabled in packet input queue parameters.
+* Clarify that `odp_pktin_event_queue()` returns always base input queue
+handles, not aggregator handles.
+
+#### Queue
+* Add new `type` and `aggr_config` fields to `odp_queue_info_t` and document
+struct contents better for event aggregator queues.
+
+### Remove deprecated APIs
+
+#### Crypto
+* Remove deprecated `ODP_CRYPTO_OP_TYPE_LEGACY` op type.
+
+#### Packet IO
+* Remove deprecated `odp_pktio_capability_t.tx_compl.mode_all` field.
+* Remove deprecated `odp_pktout_config_opt_t.bit.tx_compl_ena` field.
+* Remove deprecated `ODP_PACKET_TX_COMPL_ALL` define.
+
+#### Timer
+* Remove deprecated `odp_timer_pool_start()` function.
+
+### Performance Tests
+
+#### bench_buffer
+* Add `-m, --mode <mode>` option to control measurement mode
+(throughput/latency).
+
+#### bench_packet
+* Add new variants of `odp_packet_parse()` tests with and without L4
+checksumming.
+* Add new variants of `odp_event_user_area()`, `odp_event_user_flag_set()`
+and `odp_event_user_area_and_flag()` tests.
+* Add tests for `odp_packet_l{2,3,4}_type()` functions and for the packet
+flag getter functions.
+* Use packets/events of multiple types in a pseudorandom order in the new tests.
+
+#### bench_pktio_sp
+* Add `-T, --time <opt>` option to choose measurement unit of benchmarked
+latencies. By default, latencies are now measured in cycles instead of
+nanoseconds.
+
+#### bench_queue
+* Add new microbenchmark for testing execution times of queue and related
+functions.
+
+#### bench_timer
+* Add `-m, --mode <mode>` option to control measurement mode
+(throughput/latency).
+* Add tests for `odp_timer_start()` and `odp_timer_cancel()` functions.
+
+#### dmafwd
+* Add `-s, --seg_free` option to use DMA source segment free offload.
+
+#### l2fwd
+* Add `--wait_link <sec>` option to wait for the links to come up before
+proceeding with the test.
+* Add `--schedule_prefetch <num>` option to enable event prefetching.
+* Add `--cache_stash <val>` option to enable cache stashing.
+* Increase maximum supported input/output queue count to 2048.
+
+#### l2fwd_perf
+* Add `--wait_link <sec>` option to wait for the links to come up before
+proceeding with the test.
+* Increase maximum supported input/output queue count to 2048.
+
+#### pipeline
+* Add new pipeline test application, which takes a `libconfig` compatible
+configuration file and based on the configuration builds an ODP
+application.
+
+#### queue_perf
+* Add `-W, --wait_ns <ns>` option to wait a number of nanoseconds between events
+being dequeued and enqueued.
+* Add `-M, --memcpy <num>` option to perform memcpy of N bytes between events
+being dequeued and enqueued.
+
+#### sched_latency
+* Add burst mode `-b/--burst <num>`, where events are enqueued and scheduled in
+bursts with `odp_queue_enq_multi()` and `odp_schedule_multi()`.
+* Add `-W, --wait-ns <num>` option to simulate application work between schedule
+and queue enqueue calls.
+
+#### sched_pktio
+* Add `--wait_link <sec>` option to wait for the links to come up before
+proceeding with the test.
+
 ## OpenDataPlane (1.48.0.0)
 
 ### Backward incompatible API changes
