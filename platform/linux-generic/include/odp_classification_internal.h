@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2014-2018 Linaro Limited
- * Copyright (c) 2021-2023 Nokia
+ * Copyright (c) 2021-2025 Nokia
  */
 
 /**
@@ -20,6 +20,7 @@ extern "C" {
 #include <odp/api/atomic.h>
 #include <odp/api/classification.h>
 #include <odp/api/event.h>
+#include <odp/api/event_vector.h>
 #include <odp/api/hints.h>
 #include <odp/api/packet.h>
 #include <odp/api/pool.h>
@@ -27,8 +28,10 @@ extern "C" {
 #include <odp/api/std_types.h>
 
 #include <odp_debug_internal.h>
+#include <odp_macros_internal.h>
 #include <odp_packet_internal.h>
 #include <odp_packet_io_internal.h>
+#include <odp_queue_basic_internal.h>
 #include <odp_classification_datamodel.h>
 
 #include <stdint.h>
@@ -133,6 +136,23 @@ static inline void _odp_cos_vector_enq(odp_queue_t queue, odp_event_t events[], 
 	}
 }
 
+static inline void _odp_cos_evv_enq(odp_queue_t queue, odp_packet_t packets[], uint32_t num,
+				    cos_t *cos)
+{
+	int ret;
+	odp_queue_t aggr_handle = cos->vector.dst_is_aggr ? queue : odp_queue_aggr(queue, 0);
+
+	_ODP_ASSERT(aggr_handle != ODP_QUEUE_INVALID);
+
+	ret = odp_queue_enq_multi(aggr_handle, (odp_event_t *)packets, num);
+	if (odp_unlikely(ret != (int)num)) {
+		if (ret < 0)
+			ret = 0;
+		odp_packet_free_multi(&packets[ret], num - ret);
+	}
+	_odp_cos_queue_stats_add(cos, queue, ret, num - ret);
+}
+
 /**
  * Enqueue packets into destination CoS
  */
@@ -143,8 +163,17 @@ static inline void _odp_cos_enq(uint16_t cos_id, odp_queue_t dst, odp_packet_t p
 
 	cos_t *cos = _odp_cos_entry_from_idx(cos_id);
 
-	if (num < 2 || !cos->vector.enable) {
-		int ret = odp_queue_enq_multi(dst, (odp_event_t *)packets, num);
+	if (num < 2 || !cos->vector.enabled) {
+		/* In case of event aggregator queues, always use base queue as destination to
+		 * enable passing classifier validation tests. This is necessary as the current
+		 * event aggregation implementation doesn't support timeouts. */
+		odp_queue_t dst_queue = cos->vector.dst_is_aggr ?
+					_odp_event_aggr_base_queue(dst) : dst;
+		int ret;
+
+		_ODP_ASSERT(dst_queue != ODP_QUEUE_INVALID);
+
+		ret = odp_queue_enq_multi(dst_queue, (odp_event_t *)packets, num);
 
 		if (odp_unlikely(ret != num)) {
 			if (ret < 0)
@@ -153,9 +182,13 @@ static inline void _odp_cos_enq(uint16_t cos_id, odp_queue_t dst, odp_packet_t p
 			odp_packet_free_multi(&packets[ret], num - ret);
 		}
 		_odp_cos_queue_stats_add(cos, dst, ret, num - ret);
-	} else {
-		_odp_cos_vector_enq(dst, (odp_event_t *)packets, num, cos);
+		return;
 	}
+
+	if (cos->vector.type == ODP_EVENT_VECTOR)
+		_odp_cos_evv_enq(dst, packets, num, cos);
+	else
+		_odp_cos_vector_enq(dst, (odp_event_t *)packets, num, cos);
 }
 
 /**

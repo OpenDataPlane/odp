@@ -21,6 +21,7 @@ extern "C" {
 #include <odp/api/hints.h>
 #include <odp/api/ticketlock.h>
 #include <odp_config_internal.h>
+#include <odp_debug_internal.h>
 #include <odp_macros_internal.h>
 #include <odp_ring_mpmc_ptr_internal.h>
 #include <odp_ring_st_ptr_internal.h>
@@ -32,6 +33,18 @@ extern "C" {
 #define QUEUE_STATUS_READY        2
 #define QUEUE_STATUS_NOTSCHED     3
 #define QUEUE_STATUS_SCHED        4
+
+typedef struct ODP_ALIGNED_CACHE event_aggr_s {
+	odp_queue_t base_queue;
+	odp_pool_t pool;
+	uint32_t max_size;
+	odp_event_type_t event_type;
+
+	odp_ticketlock_t lock;
+	odp_event_t event_tbl[CONFIG_EVENT_VECTOR_MAX_SIZE];
+	uint16_t num_events;
+
+} event_aggr_t;
 
 typedef struct ODP_ALIGNED_CACHE queue_entry_s {
 	/* The first cache line is read only */
@@ -57,6 +70,9 @@ typedef struct ODP_ALIGNED_CACHE queue_entry_s {
 	odp_atomic_u64_t     num_timers;
 	int                  status;
 
+	event_aggr_t         aggr;       /* Aggregator queue specific fields */
+	queue_entry_t       *aggr_queue; /* Links base queue to aggregator queue */
+
 	queue_deq_multi_fn_t orig_dequeue_multi;
 	odp_queue_param_t param;
 	odp_pktin_queue_t pktin;
@@ -68,6 +84,7 @@ typedef struct ODP_ALIGNED_CACHE queue_entry_s {
 
 typedef struct queue_global_t {
 	queue_entry_t   queue[CONFIG_MAX_QUEUES];
+	queue_entry_t   aggr_queue[CONFIG_MAX_EVENT_AGGR];
 	uintptr_t      *ring_data;
 	uint32_t        queue_lf_num;
 	uint32_t        queue_lf_size;
@@ -107,6 +124,7 @@ static inline queue_entry_t *qentry_from_handle(odp_queue_t handle)
 }
 
 void _odp_queue_spsc_init(queue_entry_t *queue, uint32_t queue_size);
+void _odp_queue_spsc_event_aggr_init(queue_entry_t *aggr_queue);
 
 /* Functions for schedulers */
 void _odp_sched_queue_set_status(uint32_t queue_index, int status);
@@ -116,6 +134,32 @@ int _odp_sched_queue_empty(uint32_t queue_index);
 
 /* Functions by schedulers */
 int _odp_sched_basic_get_spread(uint32_t queue_index);
+
+/* Functions for classifier */
+static inline odp_queue_t _odp_event_aggr_base_queue(odp_queue_t aggr_handle)
+{
+	queue_entry_t *aggr_queue = qentry_from_handle(aggr_handle);
+
+	_ODP_ASSERT(aggr_queue->type == ODP_QUEUE_TYPE_AGGR);
+
+	return aggr_queue->aggr.base_queue;
+}
+
+static inline uint32_t _odp_event_aggr_max_size(odp_queue_t aggr_handle)
+{
+	queue_entry_t *aggr_queue = qentry_from_handle(aggr_handle);
+
+	_ODP_ASSERT(aggr_queue->type == ODP_QUEUE_TYPE_AGGR);
+
+	return aggr_queue->aggr.max_size;
+}
+
+/* Functions for pktio */
+odp_event_vector_t _odp_event_vector_create(odp_queue_t aggr_handle, odp_packet_t pkt_tbl[],
+					    uint32_t num);
+
+/* Functions for SPSC queue */
+int _odp_event_aggr_enq(queue_entry_t *aggr_queue, _odp_event_hdr_t *event_hdr[], uint32_t num);
 
 #ifdef __cplusplus
 }
