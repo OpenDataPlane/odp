@@ -44,6 +44,7 @@ static void test_defaults(uint8_t fill)
 	CU_ASSERT(param.auth_alg == ODP_AUTH_ALG_NULL);
 	CU_ASSERT(param.auth_iv_len == 0);
 	CU_ASSERT(param.auth_aad_len == 0);
+	CU_ASSERT(param.output_pool == ODP_POOL_INVALID);
 }
 
 static void test_default_values(void)
@@ -212,7 +213,6 @@ static int session_create(crypto_session_t *session,
 	ses_params.cipher_alg = ref->cipher;
 	ses_params.auth_alg = ref->auth;
 	ses_params.compl_queue = suite_context.queue;
-	ses_params.output_pool = ODP_POOL_INVALID;
 	ses_params.cipher_key = cipher_key;
 	ses_params.cipher_iv_len = ref->cipher_iv_length;
 	ses_params.auth_iv_len = ref->auth_iv_length;
