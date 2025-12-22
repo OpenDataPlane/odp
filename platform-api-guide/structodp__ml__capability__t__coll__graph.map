@@ -1,0 +1,4 @@
+<map id="odp_ml_capability_t" name="odp_ml_capability_t">
+<area shape="rect" id="node1" title="Machine learning capabilities." alt="" coords="46,95,199,121"/>
+<area shape="rect" id="node2" href="$structodp__ml__compl__pool__capability__t.html" title="ML completion event pool capabilities." alt="" coords="5,5,240,32"/>
+</map>
