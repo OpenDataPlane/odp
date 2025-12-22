@@ -56,7 +56,7 @@ int bench_run(void *arg)
 	double result;
 
 	printf("\nAverage %s per function call\n", meas_time ? "time (nsec)" : "CPU cycles");
-	printf("-------------------------------------------------\n");
+	printf("-----------------------------------------------------\n");
 
 	for (int i = 0; i < suite->num_bench; i++) {
 		int ret;
@@ -116,7 +116,7 @@ int bench_run(void *arg)
 		/* Each benchmark runs internally 'repeat_count' times. */
 		result = ((double)total) / (max_rounds * repeat_count);
 
-		printf("[%02d] odp_%-26s: %12.2f\n", i + 1, desc, result);
+		printf("[%02d] odp_%-30s: %12.2f\n", i + 1, desc, result);
 		if (suite->result)
 			suite->result[i] = result;
 	}

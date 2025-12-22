@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright (c) 2025 Nokia
+ * Copyright (c) 2025-2026 Nokia
  */
 
 /**
@@ -269,7 +269,7 @@ static void term_scheduled_dst_events(void)
 	term_events();
 }
 
-static int context_set_plain(void)
+static int queue_context_set_plain(void)
 {
 	odp_queue_t dst = gbl_args->resources.p_q;
 	uint8_t *context = gbl_args->context;
@@ -282,7 +282,7 @@ static int context_set_plain(void)
 	return !ret;
 }
 
-static int context_set_plain_tm(bench_tm_result_t *res, int repeat_count)
+static int queue_context_set_plain_tm(bench_tm_result_t *res, int repeat_count)
 {
 	bench_tm_stamp_t s1, s2;
 	odp_queue_t dst = gbl_args->resources.p_q;
@@ -301,7 +301,7 @@ static int context_set_plain_tm(bench_tm_result_t *res, int repeat_count)
 	return !ret;
 }
 
-static int context_plain(void)
+static int queue_context_plain(void)
 {
 	odp_queue_t q = gbl_args->resources.p_q;
 	void **dst = gbl_args->data.ptrs;
@@ -312,7 +312,7 @@ static int context_plain(void)
 	return 1;
 }
 
-static int context_plain_tm(bench_tm_result_t *res, int repeat_count)
+static int queue_context_plain_tm(bench_tm_result_t *res, int repeat_count)
 {
 	bench_tm_stamp_t s1, s2;
 	odp_queue_t q = gbl_args->resources.p_q;
@@ -329,7 +329,7 @@ static int context_plain_tm(bench_tm_result_t *res, int repeat_count)
 	return 1;
 }
 
-static int context_set_scheduled(void)
+static int queue_context_set_scheduled(void)
 {
 	odp_queue_t dst = gbl_args->resources.s_q;
 	uint8_t *context = gbl_args->context;
@@ -342,7 +342,7 @@ static int context_set_scheduled(void)
 	return !ret;
 }
 
-static int context_set_scheduled_tm(bench_tm_result_t *res, int repeat_count)
+static int queue_context_set_scheduled_tm(bench_tm_result_t *res, int repeat_count)
 {
 	bench_tm_stamp_t s1, s2;
 	odp_queue_t dst = gbl_args->resources.s_q;
@@ -361,7 +361,7 @@ static int context_set_scheduled_tm(bench_tm_result_t *res, int repeat_count)
 	return !ret;
 }
 
-static int context_scheduled(void)
+static int queue_context_scheduled(void)
 {
 	odp_queue_t q = gbl_args->resources.s_q;
 	void **dst = gbl_args->data.ptrs;
@@ -372,7 +372,7 @@ static int context_scheduled(void)
 	return 1;
 }
 
-static int context_scheduled_tm(bench_tm_result_t *res, int repeat_count)
+static int queue_context_scheduled_tm(bench_tm_result_t *res, int repeat_count)
 {
 	bench_tm_stamp_t s1, s2;
 	odp_queue_t q = gbl_args->resources.s_q;
@@ -389,7 +389,7 @@ static int context_scheduled_tm(bench_tm_result_t *res, int repeat_count)
 	return 1;
 }
 
-static int enqueue_plain(void)
+static int queue_enq_plain(void)
 {
 	odp_queue_t dst = gbl_args->resources.p_q;
 	odp_event_t *src = gbl_args->data.evs;
@@ -401,7 +401,7 @@ static int enqueue_plain(void)
 	return !ret;
 }
 
-static int enqueue_plain_tm(bench_tm_result_t *res, int repeat_count)
+static int queue_enq_plain_tm(bench_tm_result_t *res, int repeat_count)
 {
 	bench_tm_stamp_t s1, s2;
 	odp_queue_t dst = gbl_args->resources.p_q;
@@ -419,7 +419,7 @@ static int enqueue_plain_tm(bench_tm_result_t *res, int repeat_count)
 	return !ret;
 }
 
-static int enqueue_multi_plain(void)
+static int queue_enq_multi_plain(void)
 {
 	odp_queue_t dst = gbl_args->resources.p_q;
 	odp_event_t *src = gbl_args->data.evs;
@@ -437,7 +437,7 @@ static int enqueue_multi_plain(void)
 	return 1;
 }
 
-static int enqueue_multi_plain_tm(bench_tm_result_t *res, int repeat_count)
+static int queue_enq_multi_plain_tm(bench_tm_result_t *res, int repeat_count)
 {
 	bench_tm_stamp_t s1, s2;
 	odp_queue_t dst = gbl_args->resources.p_q;
@@ -460,7 +460,7 @@ static int enqueue_multi_plain_tm(bench_tm_result_t *res, int repeat_count)
 	return 1;
 }
 
-static int dequeue_plain(void)
+static int queue_deq_plain(void)
 {
 	odp_queue_t src = gbl_args->resources.p_q;
 	odp_event_t *dst = gbl_args->data.evs;
@@ -471,7 +471,7 @@ static int dequeue_plain(void)
 	return 1;
 }
 
-static int dequeue_plain_tm(bench_tm_result_t *res, int repeat_count)
+static int queue_deq_plain_tm(bench_tm_result_t *res, int repeat_count)
 {
 	bench_tm_stamp_t s1, s2;
 	odp_queue_t src = gbl_args->resources.p_q;
@@ -488,7 +488,7 @@ static int dequeue_plain_tm(bench_tm_result_t *res, int repeat_count)
 	return 1;
 }
 
-static int dequeue_multi_plain(void)
+static int queue_deq_multi_plain(void)
 {
 	odp_queue_t src = gbl_args->resources.p_q;
 	odp_event_t *dst = gbl_args->data.evs;
@@ -506,7 +506,7 @@ static int dequeue_multi_plain(void)
 	return 1;
 }
 
-static int dequeue_multi_plain_tm(bench_tm_result_t *res, int repeat_count)
+static int queue_deq_multi_plain_tm(bench_tm_result_t *res, int repeat_count)
 {
 	bench_tm_stamp_t s1, s2;
 	odp_queue_t src = gbl_args->resources.p_q;
@@ -529,7 +529,7 @@ static int dequeue_multi_plain_tm(bench_tm_result_t *res, int repeat_count)
 	return 1;
 }
 
-static int enqueue_scheduled(void)
+static int queue_enq_scheduled(void)
 {
 	odp_queue_t dst = gbl_args->resources.s_q;
 	odp_event_t *src = gbl_args->data.evs;
@@ -541,7 +541,7 @@ static int enqueue_scheduled(void)
 	return !ret;
 }
 
-static int enqueue_scheduled_tm(bench_tm_result_t *res, int repeat_count)
+static int queue_enq_scheduled_tm(bench_tm_result_t *res, int repeat_count)
 {
 	bench_tm_stamp_t s1, s2;
 	odp_queue_t dst = gbl_args->resources.s_q;
@@ -559,7 +559,7 @@ static int enqueue_scheduled_tm(bench_tm_result_t *res, int repeat_count)
 	return !ret;
 }
 
-static int enqueue_multi_scheduled(void)
+static int queue_enq_multi_scheduled(void)
 {
 	odp_queue_t dst = gbl_args->resources.s_q;
 	odp_event_t *src = gbl_args->data.evs;
@@ -577,7 +577,7 @@ static int enqueue_multi_scheduled(void)
 	return 1;
 }
 
-static int enqueue_multi_scheduled_tm(bench_tm_result_t *res, int repeat_count)
+static int queue_enq_multi_scheduled_tm(bench_tm_result_t *res, int repeat_count)
 {
 	bench_tm_stamp_t s1, s2;
 	odp_queue_t dst = gbl_args->resources.s_q;
@@ -626,7 +626,7 @@ static int schedule_tm(bench_tm_result_t *res, int repeat_count)
 	return 1;
 }
 
-static int schedule_multi_nw(void)
+static int schedule_multi_no_wait(void)
 {
 	odp_event_t *dst = gbl_args->data.evs;
 	const int num_burst = gbl_args->appl.burst_size;
@@ -638,7 +638,7 @@ static int schedule_multi_nw(void)
 	return 1;
 }
 
-static int schedule_multi_nw_tm(bench_tm_result_t *res, int repeat_count)
+static int schedule_multi_no_wait_tm(bench_tm_result_t *res, int repeat_count)
 {
 	bench_tm_stamp_t s1, s2;
 	odp_event_t *dst = gbl_args->data.evs;
@@ -687,21 +687,22 @@ static int schedule_multi_tm(bench_tm_result_t *res, int repeat_count)
 }
 
 bench_info_t test_suite[] = {
-	BENCH_INFO_1(context_set_plain, NULL, NULL),
-	BENCH_INFO_1(context_plain, NULL, NULL),
-	BENCH_INFO_1(context_set_scheduled, NULL, NULL),
-	BENCH_INFO_1(context_scheduled, NULL, NULL),
-	BENCH_INFO_1(enqueue_plain, init_src_events, term_src_events),
-	BENCH_INFO_1(enqueue_multi_plain, init_src_events, term_src_events),
-	BENCH_INFO_1(dequeue_plain, fill_plain_queues, term_dst_events),
-	BENCH_INFO_1(dequeue_multi_plain, fill_plain_queues, term_dst_events),
-	BENCH_INFO_1(enqueue_scheduled, init_src_events, term_scheduled_src_events),
-	BENCH_INFO_1(enqueue_multi_scheduled, init_src_events, term_scheduled_src_events),
+	BENCH_INFO_1(queue_context_set_plain, NULL, NULL),
+	BENCH_INFO_1(queue_context_plain, NULL, NULL),
+	BENCH_INFO_1(queue_context_set_scheduled, NULL, NULL),
+	BENCH_INFO_1(queue_context_scheduled, NULL, NULL),
+	BENCH_INFO_1(queue_enq_plain, init_src_events, term_src_events),
+	BENCH_INFO_1(queue_enq_multi_plain, init_src_events, term_src_events),
+	BENCH_INFO_1(queue_deq_plain, fill_plain_queues, term_dst_events),
+	BENCH_INFO_1(queue_deq_multi_plain, fill_plain_queues, term_dst_events),
+	BENCH_INFO_1(queue_enq_scheduled, init_src_events, term_scheduled_src_events),
+	BENCH_INFO_1(queue_enq_multi_scheduled, init_src_events, term_scheduled_src_events),
 	BENCH_INFO_2("schedule_empty", schedule, init_events, term_events),
-	BENCH_INFO_2("schedule_multi_nw_empty", schedule_multi_nw, init_events, term_events),
+	BENCH_INFO_2("schedule_multi_no_wait_empty", schedule_multi_no_wait, init_events,
+		     term_events),
 	BENCH_INFO_2("schedule_multi_empty", schedule_multi, init_events, term_events),
 	BENCH_INFO_2("schedule_full", schedule, fill_scheduled_queues, term_scheduled_dst_events),
-	BENCH_INFO_2("schedule_multi_nw_full", schedule_multi_nw, fill_scheduled_queues,
+	BENCH_INFO_2("schedule_multi_no_wait_full", schedule_multi_no_wait, fill_scheduled_queues,
 		     term_scheduled_dst_events),
 	BENCH_INFO_2("schedule_multi_full", schedule_multi, fill_scheduled_queues,
 		     term_scheduled_dst_events),
@@ -711,24 +712,24 @@ ODP_STATIC_ASSERT(ODPH_ARRAY_SIZE(test_suite) < TEST_MAX_BENCH,
 		  "Result array is too small to hold all the results");
 
 bench_tm_info_t test_suite_tm[] = {
-	BENCH_INFO_TM_1(context_set_plain_tm, NULL, NULL),
-	BENCH_INFO_TM_1(context_plain_tm, NULL, NULL),
-	BENCH_INFO_TM_1(context_set_scheduled_tm, NULL, NULL),
-	BENCH_INFO_TM_1(context_scheduled_tm, NULL, NULL),
-	BENCH_INFO_TM_1(enqueue_plain_tm, init_src_events, term_src_events),
-	BENCH_INFO_TM_1(enqueue_multi_plain_tm, init_src_events, term_src_events),
-	BENCH_INFO_TM_1(dequeue_plain_tm, fill_plain_queues, term_dst_events),
-	BENCH_INFO_TM_1(dequeue_multi_plain_tm, fill_plain_queues, term_dst_events),
-	BENCH_INFO_TM_1(enqueue_scheduled_tm, init_src_events, term_scheduled_src_events),
-	BENCH_INFO_TM_1(enqueue_multi_scheduled_tm, init_src_events, term_scheduled_src_events),
+	BENCH_INFO_TM_1(queue_context_set_plain_tm, NULL, NULL),
+	BENCH_INFO_TM_1(queue_context_plain_tm, NULL, NULL),
+	BENCH_INFO_TM_1(queue_context_set_scheduled_tm, NULL, NULL),
+	BENCH_INFO_TM_1(queue_context_scheduled_tm, NULL, NULL),
+	BENCH_INFO_TM_1(queue_enq_plain_tm, init_src_events, term_src_events),
+	BENCH_INFO_TM_1(queue_enq_multi_plain_tm, init_src_events, term_src_events),
+	BENCH_INFO_TM_1(queue_deq_plain_tm, fill_plain_queues, term_dst_events),
+	BENCH_INFO_TM_1(queue_deq_multi_plain_tm, fill_plain_queues, term_dst_events),
+	BENCH_INFO_TM_1(queue_enq_scheduled_tm, init_src_events, term_scheduled_src_events),
+	BENCH_INFO_TM_1(queue_enq_multi_scheduled_tm, init_src_events, term_scheduled_src_events),
 	BENCH_INFO_TM_2("schedule_empty_tm", schedule_tm, init_events, term_events),
-	BENCH_INFO_TM_2("schedule_multi_nw_empty_tm", schedule_multi_nw_tm, init_events,
+	BENCH_INFO_TM_2("schedule_multi_no_wait_empty_tm", schedule_multi_no_wait_tm, init_events,
 			term_events),
 	BENCH_INFO_TM_2("schedule_multi_empty_tm", schedule_multi_tm, init_events, term_events),
 	BENCH_INFO_TM_2("schedule_full_tm", schedule_tm, fill_scheduled_queues,
 			term_scheduled_dst_events),
-	BENCH_INFO_TM_2("schedule_multi_nw_full_tm", schedule_multi_nw_tm, fill_scheduled_queues,
-			term_scheduled_dst_events),
+	BENCH_INFO_TM_2("schedule_multi_no_wait_full_tm", schedule_multi_no_wait_tm,
+			fill_scheduled_queues, term_scheduled_dst_events),
 	BENCH_INFO_TM_2("schedule_multi_full_tm", schedule_multi_tm, fill_scheduled_queues,
 			term_scheduled_dst_events),
 };
