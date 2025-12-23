@@ -389,60 +389,6 @@ void odp_crypto_session_print(odp_crypto_session_t hdl)
 	_odp_crypto_session_print("null", session->idx, &session->p);
 }
 
-#if ODP_DEPRECATED_API
-static int copy_data_and_metadata(odp_packet_t dst, odp_packet_t src)
-{
-	int md_copy;
-	int rc;
-
-	md_copy = _odp_packet_copy_md_possible(odp_packet_pool(dst),
-					       odp_packet_pool(src));
-	if (odp_unlikely(md_copy < 0)) {
-		_ODP_ERR("Unable to copy packet metadata\n");
-		return -1;
-	}
-
-	rc = odp_packet_copy_from_pkt(dst, 0, src, 0, odp_packet_len(src));
-	if (odp_unlikely(rc < 0)) {
-		_ODP_ERR("Unable to copy packet data\n");
-		return -1;
-	}
-
-	_odp_packet_copy_md(packet_hdr(dst), packet_hdr(src), md_copy);
-	return 0;
-}
-
-static odp_packet_t get_output_packet(const odp_crypto_generic_session_t *session,
-				      odp_packet_t pkt_in,
-				      odp_packet_t pkt_out)
-{
-	int rc;
-
-	if (odp_likely(pkt_in == pkt_out))
-		return pkt_out;
-
-	if (pkt_out == ODP_PACKET_INVALID) {
-		odp_pool_t pool = session->p.output_pool;
-
-		_ODP_ASSERT(pool != ODP_POOL_INVALID);
-		if (pool == odp_packet_pool(pkt_in)) {
-			pkt_out = pkt_in;
-		} else {
-			pkt_out = odp_packet_copy(pkt_in, pool);
-			if (odp_likely(pkt_out != ODP_PACKET_INVALID))
-				odp_packet_free(pkt_in);
-		}
-		return pkt_out;
-	}
-	rc = copy_data_and_metadata(pkt_out, pkt_in);
-	if (odp_unlikely(rc < 0))
-		return ODP_PACKET_INVALID;
-
-	odp_packet_free(pkt_in);
-	return pkt_out;
-}
-#endif
-
 static
 int crypto_int(odp_packet_t pkt_in,
 	       odp_packet_t *pkt_out,
@@ -450,18 +396,6 @@ int crypto_int(odp_packet_t pkt_in,
 {
 	odp_packet_t out_pkt = pkt_in;
 	odp_crypto_packet_result_t *op_result;
-
-#if ODP_DEPRECATED_API
-	odp_crypto_generic_session_t *session;
-
-	session = (odp_crypto_generic_session_t *)(intptr_t)param->session;
-
-	if (odp_unlikely(session->p.op_type == ODP_CRYPTO_OP_TYPE_LEGACY)) {
-		out_pkt = get_output_packet(session, pkt_in, *pkt_out);
-		if (odp_unlikely(out_pkt == ODP_PACKET_INVALID))
-			return -1;
-	}
-#endif
 
 	/* Fill in result */
 	packet_subtype_set(out_pkt, ODP_EVENT_PACKET_CRYPTO);
