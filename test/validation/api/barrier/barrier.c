@@ -11,14 +11,12 @@
 
 #define VERBOSE			0
 #define MAX_WORKERS		32
-#define MAX_ITERATIONS		1000
 #define BARRIER_ITERATIONS	64
 
 #define SLOW_BARRIER_DELAY	400
 #define BASE_DELAY		6
 
 #define NUM_TEST_BARRIERS	BARRIER_ITERATIONS
-#define NUM_RESYNC_BARRIERS	100
 
 #define BARRIER_DELAY		10
 
@@ -36,17 +34,14 @@ typedef struct {
 typedef struct {
 	/* Global variables */
 	uint32_t g_num_threads;
-	uint32_t g_iterations;
 	uint32_t g_verbose;
-	uint32_t g_max_num_cores;
 
 	odp_barrier_t test_barriers[NUM_TEST_BARRIERS];
 	custom_barrier_t custom_barrier1[NUM_TEST_BARRIERS];
 	custom_barrier_t custom_barrier2[NUM_TEST_BARRIERS];
-	volatile_u32_t slow_thread_num;
-	volatile_u32_t barrier_cnt1;
-	volatile_u32_t barrier_cnt2;
-	odp_barrier_t global_barrier;
+	odp_atomic_u32_t slow_thread_num;
+	odp_atomic_u32_t barrier_cnt1;
+	odp_atomic_u32_t barrier_cnt2;
 
 } global_shared_mem_t;
 
@@ -156,8 +151,8 @@ static uint32_t barrier_test(per_thread_mem_t *per_thread_mem,
 		/* Wait here until all of the threads reach this point */
 		custom_barrier_wait(&global_mem->custom_barrier1[cnt]);
 
-		barrier_cnt1 = global_mem->barrier_cnt1;
-		barrier_cnt2 = global_mem->barrier_cnt2;
+		barrier_cnt1 = odp_atomic_load_u32(&global_mem->barrier_cnt1);
+		barrier_cnt2 = odp_atomic_load_u32(&global_mem->barrier_cnt2);
 
 		if ((barrier_cnt1 != cnt) || (barrier_cnt2 != cnt)) {
 			printf("thread_num=%" PRIu32 " barrier_cnts of %" PRIu32
@@ -169,7 +164,7 @@ static uint32_t barrier_test(per_thread_mem_t *per_thread_mem,
 		/* Wait here until all of the threads reach this point */
 		custom_barrier_wait(&global_mem->custom_barrier2[cnt]);
 
-		slow_thread_num = global_mem->slow_thread_num;
+		slow_thread_num = odp_atomic_load_u32(&global_mem->slow_thread_num);
 		i_am_slow_thread = thread_num == slow_thread_num;
 		next_slow_thread = slow_thread_num + 1;
 		if (num_threads < next_slow_thread)
@@ -180,15 +175,14 @@ static uint32_t barrier_test(per_thread_mem_t *per_thread_mem,
 		* immediately calling odp_barrier_wait(), and one thread wait a
 		* moderate amount of time and then calling odp_barrier_wait().
 		* The test fails if any of the first group of threads
-		* has not waited for the "slow" thread. The "slow" thread is
-		* responsible for re-initializing the barrier for next trial.
+		* has not waited for the "slow" thread.
 		*/
 		if (i_am_slow_thread) {
 			thread_delay(per_thread_mem, lock_owner_delay);
 			lock_owner_delay += BASE_DELAY;
-			if ((global_mem->barrier_cnt1 != cnt) ||
-			    (global_mem->barrier_cnt2 != cnt) ||
-			    (global_mem->slow_thread_num
+			if ((odp_atomic_load_u32(&global_mem->barrier_cnt1) != cnt) ||
+			    (odp_atomic_load_u32(&global_mem->barrier_cnt2) != cnt) ||
+			    (odp_atomic_load_u32(&global_mem->slow_thread_num)
 					!= slow_thread_num))
 				barrier_errs++;
 		}
@@ -196,15 +190,15 @@ static uint32_t barrier_test(per_thread_mem_t *per_thread_mem,
 		if (no_barrier_test == 0)
 			odp_barrier_wait(&global_mem->test_barriers[cnt]);
 
-		global_mem->barrier_cnt1 = cnt + 1;
+		odp_atomic_store_u32(&global_mem->barrier_cnt1, cnt + 1);
 		odp_mb_full();
 
 		if (i_am_slow_thread) {
-			global_mem->slow_thread_num = next_slow_thread;
-			global_mem->barrier_cnt2 = cnt + 1;
+			odp_atomic_store_u32(&global_mem->slow_thread_num, next_slow_thread);
+			odp_atomic_store_u32(&global_mem->barrier_cnt2, cnt + 1);
 			odp_mb_full();
 		} else {
-			while (global_mem->barrier_cnt2 != (cnt + 1))
+			while (odp_atomic_load_u32(&global_mem->barrier_cnt2) != (cnt + 1))
 				thread_delay(per_thread_mem, BASE_DELAY);
 		}
 	}
@@ -267,9 +261,9 @@ static void barrier_test_init(void)
 				    num_threads);
 	}
 
-	global_mem->slow_thread_num = 1;
-	global_mem->barrier_cnt1 = 1;
-	global_mem->barrier_cnt2 = 1;
+	odp_atomic_init_u32(&global_mem->slow_thread_num, 1);
+	odp_atomic_init_u32(&global_mem->barrier_cnt1, 1);
+	odp_atomic_init_u32(&global_mem->barrier_cnt2, 1);
 }
 
 /* Barrier tests */
@@ -337,7 +331,6 @@ static int barrier_init(odp_instance_t *inst)
 	memset(global_mem, 0, sizeof(global_shared_mem_t));
 
 	global_mem->g_num_threads = MAX_WORKERS;
-	global_mem->g_iterations = MAX_ITERATIONS;
 	global_mem->g_verbose = VERBOSE;
 
 	workers_count = odp_cpumask_default_worker(NULL, 0);
