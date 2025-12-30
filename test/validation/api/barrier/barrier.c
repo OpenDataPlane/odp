@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2014-2018 Linaro Limited
- * Copyright (c) 2022 Nokia
+ * Copyright (c) 2022-2025  Nokia
  */
 
 #include <malloc.h>
@@ -12,9 +12,11 @@
 #define VERBOSE			0
 #define MAX_WORKERS		32
 #define BARRIER_ITERATIONS	64
+#define REUSE_ITERATIONS	500
 
 #define SLOW_BARRIER_DELAY	400
 #define BASE_DELAY		6
+#define REUSE_DELAY		10000
 
 #define NUM_TEST_BARRIERS	BARRIER_ITERATIONS
 
@@ -414,11 +416,74 @@ static void barrier_test_barrier_functional(void)
 	odp_cunit_thread_join(num);
 }
 
+static int barrier_reuse(void *arg ODP_UNUSED)
+{
+	uint32_t cnt1 = 0;
+	uint32_t cnt2 = 0;
+	uint32_t check = 1;
+	int failed = 0;
+
+	for (uint32_t n = 0; n < REUSE_ITERATIONS; n++) {
+		/* delay one thread sometimes */
+		if (n % (2 * global_mem->g_num_threads) == 0) {
+			per_thread_mem_t ptm = {.delay_counter = 0 };
+
+			thread_delay(&ptm, REUSE_DELAY);
+		}
+
+		odp_barrier_wait(&global_mem->test_barriers[0]);
+
+		odp_atomic_add_u32(&global_mem->barrier_cnt1, 1);
+		odp_atomic_add_u32(&global_mem->barrier_cnt2, n);
+		cnt1 += 1 * global_mem->g_num_threads;
+		cnt2 += n * global_mem->g_num_threads;
+
+		/* check at increasing intervals */
+		if (n % check == 0) {
+			uint32_t c1, c2;
+
+			check++;
+			odp_barrier_wait(&global_mem->test_barriers[0]);
+
+			c1 = odp_atomic_load_u32(&global_mem->barrier_cnt1);
+			c2 = odp_atomic_load_u32(&global_mem->barrier_cnt2);
+
+			if ((c1 != cnt1 || c2 != cnt2) && !failed) {
+				CU_FAIL("incorrect count");
+				printf("thread: %3d, n: %" PRIu32 ", "
+				       "cnt1: %" PRIu32 " (expected %" PRIu32 "), "
+				       "cnt2: %" PRIu32 " (expected %" PRIu32 ")\n",
+				       odp_thread_id(), n, c1, cnt1, c2, cnt2);
+				failed = 1;
+			}
+		}
+	}
+	odp_barrier_wait(&global_mem->test_barriers[0]);
+	CU_ASSERT(odp_atomic_load_u32(&global_mem->barrier_cnt1) == cnt1);
+	CU_ASSERT(odp_atomic_load_u32(&global_mem->barrier_cnt2) == cnt2);
+
+	return 0;
+}
+
+static void barrier_test_reuse(void)
+{
+	uint32_t num;
+
+	num = global_mem->g_num_threads;
+	odp_barrier_init(&global_mem->test_barriers[0], num);
+	odp_atomic_init_u32(&global_mem->barrier_cnt1, 0);
+	odp_atomic_init_u32(&global_mem->barrier_cnt2, 0);
+
+	odp_cunit_thread_create(num, barrier_reuse, NULL, 0, 0);
+	odp_cunit_thread_join(num);
+}
+
 odp_testinfo_t barrier_suite_barrier[] = {
 	ODP_TEST_INFO(barrier_test_memory_barrier),
 	ODP_TEST_INFO(barrier_single_thread),
 	ODP_TEST_INFO(barrier_test_no_barrier_functional),
 	ODP_TEST_INFO(barrier_test_barrier_functional),
+	ODP_TEST_INFO(barrier_test_reuse),
 	ODP_TEST_INFO_NULL
 };
 
