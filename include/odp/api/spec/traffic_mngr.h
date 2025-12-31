@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2015-2018 Linaro Limited
- * Copyright (c) 2021-2022 Nokia
+ * Copyright (c) 2021-2025 Nokia
  * Copyright (c) 2022-2025 Marvell
  */
 
@@ -433,6 +433,32 @@ typedef enum odp_tm_pkt_prio_mode {
 	ODP_TM_PKT_PRIO_MODE_MAX,
 } odp_tm_pkt_prio_mode_t;
 
+/** TM capabilities regarding packets with shared data
+ *
+ *  These capabilities indicate whether packets that reference other packets
+ *  or are referenced by other packets can be enqueued to TM. When such a
+ *  packet is consumed by TM, either by the underlying pktout or by TM dropping
+ *  the packet, the packet is handled the same way as in odp_packet_free()
+ *  (i.e. internal reference counts are updated and the packet segments are put
+ *  back to the packet pool when there are no more references left).
+ *
+ *  If these capabilities are not set, then the respective packet types may not
+ *  be enqueued to TM.
+ *
+ *  See odp_packet_ref() and odp_packet_ref_static()
+ */
+typedef struct {
+	/** Static packet references can be enqueued */
+	uint8_t static_ref  :1;
+
+	/** Referenced packets can be enqueued */
+	uint8_t referenced  :1;
+
+	/** Referencing packets can be enqueued */
+	uint8_t referencing :1;
+
+} odp_tm_packet_ref_capability_t;
+
 /** TM Capabilities Record.
  *
  * The odp_tm_capabilities_t record type is used to describe the feature set
@@ -609,6 +635,10 @@ typedef struct {
 	 * The value can vary between 0 and ODP_TM_MAX_PRIORITIES.
 	 */
 	uint8_t max_schedulers_per_node;
+
+	/** Capabilities to process packets that share data with other packets */
+	odp_tm_packet_ref_capability_t packet_ref;
+
 } odp_tm_capabilities_t;
 
 /** Per Level Requirements
@@ -2023,6 +2053,10 @@ int odp_tm_queue_disconnect(odp_tm_queue_t tm_queue);
  *
  * The pkt_color bits are a result of some earlier Metering/Marking/Policing
  * processing.
+ *
+ * Sending packets that reference or are referenced by other packets may
+ * only be sent if the relevant TM capabilities are set.
+ * See odp_tm_capabilities_t::packet_ref.
  *
  * @param tm_queue  Specifies the tm_queue (and indirectly the TM system).
  * @param pkt       Handle to a packet.
