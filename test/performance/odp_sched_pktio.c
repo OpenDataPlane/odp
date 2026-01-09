@@ -30,7 +30,7 @@
 #define MAX_PIPE_STAGES   64
 #define MAX_PIPE_QUEUES   1024
 #define MAX_PKT_LEN       1514
-#define MAX_PKT_NUM       (128 * 1024)
+#define MAX_PKT_NUM       (16 * 1024)
 #define MIN_PKT_SEG_LEN   64
 #define CHECK_PERIOD      10000
 #define TEST_PASSED_LIMIT 5000
