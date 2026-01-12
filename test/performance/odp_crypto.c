@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2015-2018 Linaro Limited
- * Copyright (c) 2021-2024 Nokia
+ * Copyright (c) 2021-2026 Nokia
  */
 
 /**
@@ -689,11 +689,19 @@ create_session_from_config(odp_crypto_session_t *session,
 	odp_crypto_ses_create_err_t ses_create_rc;
 	odp_queue_t out_queue;
 
-	memcpy(&params, &config->session, sizeof(odp_crypto_session_param_t));
+	odp_crypto_session_param_init(&params);
+
+	params.cipher_alg      = config->session.cipher_alg;
+	params.cipher_key      = config->session.cipher_key;
+	params.cipher_iv_len   = config->session.cipher_iv_len;
+	params.auth_alg        = config->session.auth_alg;
+	params.auth_key        = config->session.auth_key;
+	params.auth_digest_len = config->session.auth_digest_len;
+	params.auth_aad_len    = config->session.auth_aad_len;
+
 	params.op = ODP_CRYPTO_OP_ENCODE;
 	params.op_type = ODP_CRYPTO_OP_TYPE_BASIC;
 	params.auth_cipher_text = true;
-	params.output_pool = ODP_POOL_INVALID;
 
 	if (cargs->schedule || cargs->poll) {
 		out_queue = odp_queue_lookup("crypto-out");
