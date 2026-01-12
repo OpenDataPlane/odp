@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2018 Linaro Limited
- * Copyright (c) 2022-2025 Nokia
+ * Copyright (c) 2022-2026 Nokia
  */
 
  /**
@@ -191,6 +191,8 @@ static const char *cipher_alg_name(odp_cipher_alg_t cipher)
 		return "kasumi_f8";
 	case ODP_CIPHER_ALG_SNOW3G_UEA2:
 		return "snow3g_uea2";
+	case ODP_CIPHER_ALG_SNOW5G_NEA4:
+		return "snow5g_nea4";
 	case ODP_CIPHER_ALG_AES_EEA2:
 		return "aes_eea2";
 	case ODP_CIPHER_ALG_ZUC_EEA3:
@@ -255,6 +257,8 @@ static const char *auth_alg_name(odp_auth_alg_t auth)
 		return "kasumi_f9";
 	case ODP_AUTH_ALG_SNOW3G_UIA2:
 		return "snow3g_uia2";
+	case ODP_AUTH_ALG_SNOW5G_NIA4:
+		return "snow5g_nia4";
 	case ODP_AUTH_ALG_AES_EIA2:
 		return "aes_eia2";
 	case ODP_AUTH_ALG_ZUC_EIA3:
@@ -331,6 +335,8 @@ static void foreach_cipher(odp_crypto_cipher_algos_t ciphers, cipher_op_t op)
 		op(ODP_CIPHER_ALG_KASUMI_F8);
 	if (ciphers.bit.snow3g_uea2)
 		op(ODP_CIPHER_ALG_SNOW3G_UEA2);
+	if (ciphers.bit.snow5g_nea4)
+		op(ODP_CIPHER_ALG_SNOW5G_NEA4);
 	if (ciphers.bit.aes_eea2)
 		op(ODP_CIPHER_ALG_AES_EEA2);
 	if (ciphers.bit.zuc_eea3)
@@ -391,6 +397,8 @@ static void foreach_auth(odp_crypto_auth_algos_t auths, auth_op_t op)
 		op(ODP_AUTH_ALG_KASUMI_F9);
 	if (auths.bit.snow3g_uia2)
 		op(ODP_AUTH_ALG_SNOW3G_UIA2);
+	if (auths.bit.snow5g_nia4)
+		op(ODP_AUTH_ALG_SNOW5G_NIA4);
 	if (auths.bit.aes_eia2)
 		op(ODP_AUTH_ALG_AES_EIA2);
 	if (auths.bit.zuc_eia3)
