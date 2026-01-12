@@ -72,7 +72,6 @@ int create_ipsec_cache_entry(sa_db_entry_t *cipher_sa,
 	params.op = (in) ? ODP_CRYPTO_OP_DECODE : ODP_CRYPTO_OP_ENCODE;
 	params.op_type = ODP_CRYPTO_OP_TYPE_BASIC;
 	params.auth_cipher_text = TRUE;
-	params.output_pool = ODP_POOL_INVALID;
 	if (CRYPTO_API_SYNC == api_mode) {
 		params.op_mode = ODP_CRYPTO_SYNC;
 		params.compl_queue = ODP_QUEUE_INVALID;
