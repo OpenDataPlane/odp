@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2014-2018 Linaro Limited
- * Copyright (c) 2021-2025 Nokia
+ * Copyright (c) 2021-2026 Nokia
  */
 
 #include <string.h>
@@ -774,6 +774,7 @@ static odp_cipher_alg_t cipher_algs[] = {
 	ODP_CIPHER_ALG_AES_XTS,
 	ODP_CIPHER_ALG_KASUMI_F8,
 	ODP_CIPHER_ALG_SNOW3G_UEA2,
+	ODP_CIPHER_ALG_SNOW5G_NEA4,
 	ODP_CIPHER_ALG_AES_EEA2,
 	ODP_CIPHER_ALG_ZUC_EEA3,
 	ODP_CIPHER_ALG_SNOW_V,
@@ -803,6 +804,7 @@ static odp_auth_alg_t auth_algs[] = {
 	ODP_AUTH_ALG_AES_XCBC_MAC,
 	ODP_AUTH_ALG_KASUMI_F9,
 	ODP_AUTH_ALG_SNOW3G_UIA2,
+	ODP_AUTH_ALG_SNOW5G_NIA4,
 	ODP_AUTH_ALG_AES_EIA2,
 	ODP_AUTH_ALG_ZUC_EIA3,
 	ODP_AUTH_ALG_SNOW_V_GMAC,
