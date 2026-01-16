@@ -107,6 +107,16 @@ typedef struct pktio_global_t {
 
 	struct {
 		const char *name;
+		struct {
+			/** Direct pktin / pktout */
+			odp_pktio_capability_t direct;
+			/** Sched pktin / direct pktout */
+			odp_pktio_capability_t sched_direct;
+			/** Sched pktin / queue pktout */
+			odp_pktio_capability_t sched_queue;
+			/** Queue pktin / direct pktout */
+			odp_pktio_capability_t queue_direct;
+		} capa;
 		odp_pool_t pool;
 		odp_pool_t evv_pool;
 		odp_pool_t pktv_pool;
@@ -5802,6 +5812,31 @@ static int pktio_check_pktin_event_sched(void)
 	return ODP_TEST_ACTIVE;
 }
 
+static int pktio_capa(int pktio_idx, odp_pktin_mode_t in_mode, odp_pktout_mode_t out_mode,
+		      odp_pktio_capability_t *capa)
+{
+	odp_pktio_t pktio;
+	odp_pktio_param_t pktio_param;
+
+	odp_pktio_param_init(&pktio_param);
+	pktio_param.in_mode = in_mode;
+	pktio_param.out_mode = out_mode;
+
+	pktio = odp_pktio_open(global.iface[pktio_idx].name, global.iface[pktio_idx].pool,
+			       &pktio_param);
+	if (pktio == ODP_PKTIO_INVALID)
+		return -1;
+
+	if (odp_pktio_capability(pktio, capa) != 0) {
+		(void)odp_pktio_close(pktio);
+		return -1;
+	}
+
+	(void)odp_pktio_close(pktio);
+
+	return 0;
+}
+
 static int pktio_suite_init(pkt_segmented_e pool_segmentation)
 {
 	memset(&global, 0, sizeof(global));
@@ -5864,6 +5899,21 @@ static int pktio_suite_init(pkt_segmented_e pool_segmentation)
 		return -1;
 	}
 
+	/* Save pktio capabilities for later use */
+	for (int i = 0; i < global.num_ifaces; i++) {
+		if (pktio_capa(i, ODP_PKTIN_MODE_DIRECT, ODP_PKTOUT_MODE_DIRECT,
+			       &global.iface[i].capa.direct))
+			return -1;
+		if (pktio_capa(i, ODP_PKTIN_MODE_SCHED, ODP_PKTOUT_MODE_DIRECT,
+			       &global.iface[i].capa.sched_direct))
+			return -1;
+		if (pktio_capa(i, ODP_PKTIN_MODE_SCHED, ODP_PKTOUT_MODE_QUEUE,
+			       &global.iface[i].capa.sched_queue))
+			return -1;
+		if (pktio_capa(i, ODP_PKTIN_MODE_QUEUE, ODP_PKTOUT_MODE_DIRECT,
+			       &global.iface[i].capa.queue_direct))
+			return -1;
+	}
 	return 0;
 }
 
