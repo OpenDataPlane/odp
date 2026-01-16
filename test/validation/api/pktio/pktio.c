@@ -1641,25 +1641,7 @@ static void pktio_test_maxlen(void)
 
 static int pktio_check_maxlen_set(void)
 {
-	odp_pktio_t pktio;
-	odp_pktio_capability_t capa;
-	odp_pktio_param_t pktio_param;
-	int ret;
-
-	odp_pktio_param_init(&pktio_param);
-	pktio_param.in_mode = ODP_PKTIN_MODE_DIRECT;
-
-	pktio = odp_pktio_open(global.iface[0].name, global.iface[0].pool, &pktio_param);
-	if (pktio == ODP_PKTIO_INVALID)
-		return ODP_TEST_INACTIVE;
-
-	ret = odp_pktio_capability(pktio, &capa);
-	(void)odp_pktio_close(pktio);
-
-	if (ret < 0 || !capa.set_op.op.maxlen)
-		return ODP_TEST_INACTIVE;
-
-	return ODP_TEST_ACTIVE;
+	return global.iface[0].capa.direct.set_op.op.maxlen ? ODP_TEST_ACTIVE : ODP_TEST_INACTIVE;
 }
 
 static void pktio_test_maxlen_set(void)
@@ -2107,34 +2089,18 @@ static void pktio_test_link_info(void)
 
 static int pktio_check_flow_control(int pfc, int rx)
 {
-	odp_pktio_t pktio;
-	odp_pktio_capability_t capa;
-	odp_pktio_param_t pktio_param;
-	int ret;
+	odp_pktio_capability_t *capa = &global.iface[0].capa.sched_direct;
 
-	odp_pktio_param_init(&pktio_param);
-	pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
-
-	pktio = odp_pktio_open(global.iface[0].name, global.iface[0].pool, &pktio_param);
-	if (pktio == ODP_PKTIO_INVALID)
-		return ODP_TEST_INACTIVE;
-
-	ret = odp_pktio_capability(pktio, &capa);
-	(void)odp_pktio_close(pktio);
-
-	if (ret < 0)
-		return ODP_TEST_INACTIVE;
-
-	if (pfc == 0 && rx == 1 && capa.flow_control.pause_rx == 1)
+	if (pfc == 0 && rx == 1 && capa->flow_control.pause_rx == 1)
 		return ODP_TEST_ACTIVE;
 
-	if (pfc == 1 && rx == 1 && capa.flow_control.pfc_rx == 1)
+	if (pfc == 1 && rx == 1 && capa->flow_control.pfc_rx == 1)
 		return ODP_TEST_ACTIVE;
 
-	if (pfc == 0 && rx == 0 && capa.flow_control.pause_tx == 1)
+	if (pfc == 0 && rx == 0 && capa->flow_control.pause_tx == 1)
 		return ODP_TEST_ACTIVE;
 
-	if (pfc == 1 && rx == 0 && capa.flow_control.pfc_tx == 1)
+	if (pfc == 1 && rx == 0 && capa->flow_control.pfc_tx == 1)
 		return ODP_TEST_ACTIVE;
 
 	return ODP_TEST_INACTIVE;
@@ -2581,25 +2547,8 @@ static void _print_pktio_stats(odp_pktio_stats_t *s, const char *name)
 
 static int pktio_check_statistics_counters(void)
 {
-	odp_pktio_t pktio;
-	odp_pktio_capability_t capa;
-	odp_pktio_param_t pktio_param;
-	int ret;
-
-	odp_pktio_param_init(&pktio_param);
-	pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
-
-	pktio = odp_pktio_open(global.iface[0].name, global.iface[0].pool, &pktio_param);
-	if (pktio == ODP_PKTIO_INVALID)
-		return ODP_TEST_INACTIVE;
-
-	ret = odp_pktio_capability(pktio, &capa);
-	(void)odp_pktio_close(pktio);
-
-	if (ret < 0 || capa.stats.pktio.all_counters == 0)
-		return ODP_TEST_INACTIVE;
-
-	return ODP_TEST_ACTIVE;
+	return global.iface[0].capa.sched_direct.stats.pktio.all_counters ?
+		ODP_TEST_ACTIVE : ODP_TEST_INACTIVE;
 }
 
 static void pktio_test_statistics_counters(void)
@@ -2746,23 +2695,10 @@ static void pktio_test_statistics_counters(void)
 
 static int pktio_check_statistics_counters_bcast(void)
 {
-	odp_pktio_t pktio;
-	odp_pktio_capability_t capa;
-	odp_pktio_param_t pktio_param;
-	int ret;
+	odp_pktio_capability_t *capa = &global.iface[0].capa.sched_direct;
 
-	odp_pktio_param_init(&pktio_param);
-	pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
-
-	pktio = odp_pktio_open(global.iface[0].name, global.iface[0].pool, &pktio_param);
-	if (pktio == ODP_PKTIO_INVALID)
-		return ODP_TEST_INACTIVE;
-
-	ret = odp_pktio_capability(pktio, &capa);
-	(void)odp_pktio_close(pktio);
-
-	if (ret < 0 || (capa.stats.pktio.counter.in_bcast_pkts == 0 &&
-			capa.stats.pktio.counter.out_bcast_pkts == 0))
+	if (capa->stats.pktio.counter.in_bcast_pkts == 0 &&
+	    capa->stats.pktio.counter.out_bcast_pkts == 0)
 		return ODP_TEST_INACTIVE;
 
 	return ODP_TEST_ACTIVE;
@@ -2870,24 +2806,9 @@ static void pktio_test_statistics_counters_bcast(void)
 
 static int pktio_check_queue_statistics_counters(void)
 {
-	odp_pktio_t pktio;
-	odp_pktio_capability_t capa;
-	odp_pktio_param_t pktio_param;
-	int ret;
+	odp_pktio_capability_t *capa = &global.iface[0].capa.direct;
 
-	odp_pktio_param_init(&pktio_param);
-	pktio_param.in_mode = ODP_PKTIN_MODE_DIRECT;
-	pktio_param.out_mode = ODP_PKTOUT_MODE_DIRECT;
-
-	pktio = odp_pktio_open(global.iface[0].name, global.iface[0].pool, &pktio_param);
-	if (pktio == ODP_PKTIO_INVALID)
-		return ODP_TEST_INACTIVE;
-
-	ret = odp_pktio_capability(pktio, &capa);
-	(void)odp_pktio_close(pktio);
-
-	if (ret < 0 || (capa.stats.pktin_queue.all_counters == 0 &&
-			capa.stats.pktout_queue.all_counters == 0))
+	if (capa->stats.pktin_queue.all_counters == 0 && capa->stats.pktout_queue.all_counters == 0)
 		return ODP_TEST_INACTIVE;
 
 	return ODP_TEST_ACTIVE;
@@ -2992,24 +2913,10 @@ static void pktio_test_queue_statistics_counters(void)
 
 static int pktio_check_event_queue_statistics_counters(void)
 {
-	odp_pktio_t pktio;
-	odp_pktio_capability_t capa;
-	odp_pktio_param_t pktio_param;
-	int ret;
+	odp_pktio_capability_t *capa = &global.iface[0].capa.sched_queue;
 
-	odp_pktio_param_init(&pktio_param);
-	pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
-	pktio_param.out_mode = ODP_PKTOUT_MODE_QUEUE;
-
-	pktio = odp_pktio_open(global.iface[0].name, global.iface[0].pool, &pktio_param);
-	if (pktio == ODP_PKTIO_INVALID)
-		return ODP_TEST_INACTIVE;
-
-	ret = odp_pktio_capability(pktio, &capa);
-	(void)odp_pktio_close(pktio);
-
-	if (ret < 0 || (capa.stats.pktin_queue.all_counters == 0 &&
-			capa.stats.pktout_queue.all_counters == 0))
+	if (capa->stats.pktin_queue.all_counters == 0 &&
+	    capa->stats.pktout_queue.all_counters == 0)
 		return ODP_TEST_INACTIVE;
 
 	return ODP_TEST_ACTIVE;
@@ -3528,25 +3435,8 @@ static void pktio_test_send_on_ronly(void)
 
 static int pktio_check_pktin_ts(void)
 {
-	odp_pktio_t pktio;
-	odp_pktio_capability_t capa;
-	odp_pktio_param_t pktio_param;
-	int ret;
-
-	odp_pktio_param_init(&pktio_param);
-	pktio_param.in_mode = ODP_PKTIN_MODE_DIRECT;
-
-	pktio = odp_pktio_open(global.iface[0].name, global.iface[0].pool, &pktio_param);
-	if (pktio == ODP_PKTIO_INVALID)
-		return ODP_TEST_INACTIVE;
-
-	ret = odp_pktio_capability(pktio, &capa);
-	(void)odp_pktio_close(pktio);
-
-	if (ret < 0 || !capa.config.pktin.bit.ts_all)
-		return ODP_TEST_INACTIVE;
-
-	return ODP_TEST_ACTIVE;
+	return global.iface[0].capa.direct.config.pktin.bit.ts_all ?
+		ODP_TEST_ACTIVE : ODP_TEST_INACTIVE;
 }
 
 static void test_pktin_ts(uint32_t test_flags)
@@ -3674,25 +3564,8 @@ static void pktio_test_pktin_ts(void)
 
 static int pktio_check_pktout_ts(void)
 {
-	odp_pktio_t pktio;
-	odp_pktio_capability_t capa;
-	odp_pktio_param_t pktio_param;
-	int ret;
-
-	odp_pktio_param_init(&pktio_param);
-	pktio_param.in_mode = ODP_PKTIN_MODE_DIRECT;
-
-	pktio = odp_pktio_open(global.iface[0].name, global.iface[0].pool, &pktio_param);
-	if (pktio == ODP_PKTIO_INVALID)
-		return ODP_TEST_INACTIVE;
-
-	ret = odp_pktio_capability(pktio, &capa);
-	(void)odp_pktio_close(pktio);
-
-	if (ret < 0 || !capa.config.pktout.bit.ts_ena)
-		return ODP_TEST_INACTIVE;
-
-	return ODP_TEST_ACTIVE;
+	return global.iface[0].capa.direct.config.pktout.bit.ts_ena ?
+		ODP_TEST_ACTIVE : ODP_TEST_INACTIVE;
 }
 
 static void test_pktout_ts(uint32_t test_flags)
@@ -4176,25 +4049,11 @@ static void pktio_test_pktout_compl_poll(void)
 
 static int pktio_check_pktout_compl_event(bool plain)
 {
-	odp_pktio_param_t pktio_param;
-	odp_pktio_capability_t capa;
-	odp_pktio_t pktio;
-	int ret;
+	odp_pktio_capability_t *capa = &global.iface[0].capa.direct;
 
-	odp_pktio_param_init(&pktio_param);
-	pktio_param.in_mode = ODP_PKTIN_MODE_DIRECT;
-	pktio_param.out_mode = ODP_PKTOUT_MODE_DIRECT;
-
-	pktio = odp_pktio_open(global.iface[0].name, global.iface[0].pool, &pktio_param);
-	if (pktio == ODP_PKTIO_INVALID)
-		return ODP_TEST_INACTIVE;
-
-	ret = odp_pktio_capability(pktio, &capa);
-	(void)odp_pktio_close(pktio);
-
-	if (ret < 0 || !capa.tx_compl.mode_event ||
-	    (plain && !capa.tx_compl.queue_type_plain) ||
-	    (!plain && !capa.tx_compl.queue_type_sched))
+	if (!capa->tx_compl.mode_event ||
+	    (plain && !capa->tx_compl.queue_type_plain) ||
+	    (!plain && !capa->tx_compl.queue_type_sched))
 		return ODP_TEST_INACTIVE;
 
 	return ODP_TEST_ACTIVE;
@@ -4202,24 +4061,10 @@ static int pktio_check_pktout_compl_event(bool plain)
 
 static int pktio_check_pktout_compl_poll(void)
 {
-	odp_pktio_param_t pktio_param;
-	odp_pktio_capability_t capa;
-	odp_pktio_t pktio;
-	int ret;
+	odp_pktio_capability_t *capa = &global.iface[0].capa.direct;
 
-	odp_pktio_param_init(&pktio_param);
-	pktio_param.in_mode = ODP_PKTIN_MODE_DIRECT;
-	pktio_param.out_mode = ODP_PKTOUT_MODE_DIRECT;
-
-	pktio = odp_pktio_open(global.iface[0].name, global.iface[0].pool, &pktio_param);
-	if (pktio == ODP_PKTIO_INVALID)
-		return ODP_TEST_INACTIVE;
-
-	ret = odp_pktio_capability(pktio, &capa);
-	(void)odp_pktio_close(pktio);
-
-	if (ret < 0 || capa.tx_compl.mode_poll == 0 ||
-	    capa.tx_compl.max_compl_id < (TX_BATCH_LEN - 1))
+	if (capa->tx_compl.mode_poll == 0 ||
+	    capa->tx_compl.max_compl_id < (TX_BATCH_LEN - 1))
 		return ODP_TEST_INACTIVE;
 
 	return ODP_TEST_ACTIVE;
@@ -4338,26 +4183,8 @@ static void pktio_test_pktout_dont_free(void)
 
 static int pktio_check_pktout_dont_free(void)
 {
-	odp_pktio_param_t pktio_param;
-	odp_pktio_capability_t capa;
-	odp_pktio_t pktio;
-	int ret;
-
-	odp_pktio_param_init(&pktio_param);
-	pktio_param.in_mode = ODP_PKTIN_MODE_DIRECT;
-	pktio_param.out_mode = ODP_PKTOUT_MODE_DIRECT;
-
-	pktio = odp_pktio_open(global.iface[0].name, global.iface[0].pool, &pktio_param);
-	if (pktio == ODP_PKTIO_INVALID)
-		return ODP_TEST_INACTIVE;
-
-	ret = odp_pktio_capability(pktio, &capa);
-	(void)odp_pktio_close(pktio);
-
-	if (ret == 0 && capa.free_ctrl.dont_free == 1)
-		return ODP_TEST_ACTIVE;
-
-	return ODP_TEST_INACTIVE;
+	return global.iface[0].capa.direct.free_ctrl.dont_free ?
+		ODP_TEST_ACTIVE : ODP_TEST_INACTIVE;
 }
 
 static void test_chksum(void (*config_fn)(odp_pktio_t, odp_pktio_t),
@@ -4546,27 +4373,10 @@ static void pktio_test_chksum_sctp(void (*config_fn)(odp_pktio_t, odp_pktio_t),
 
 static int pktio_check_chksum_in_ipv4(void)
 {
-	odp_pktio_t pktio;
-	odp_pktio_capability_t capa;
-	odp_pktio_param_t pktio_param;
 	int idx = (global.num_ifaces == 1) ? 0 : 1;
-	int ret;
 
-	odp_pktio_param_init(&pktio_param);
-	pktio_param.in_mode = ODP_PKTIN_MODE_DIRECT;
-
-	pktio = odp_pktio_open(global.iface[idx].name, global.iface[idx].pool, &pktio_param);
-	if (pktio == ODP_PKTIO_INVALID)
-		return ODP_TEST_INACTIVE;
-
-	ret = odp_pktio_capability(pktio, &capa);
-	(void)odp_pktio_close(pktio);
-
-	if (ret < 0 ||
-	    !capa.config.pktin.bit.ipv4_chksum)
-		return ODP_TEST_INACTIVE;
-
-	return ODP_TEST_ACTIVE;
+	return global.iface[idx].capa.direct.config.pktin.bit.ipv4_chksum ?
+		ODP_TEST_ACTIVE : ODP_TEST_INACTIVE;
 }
 
 static void pktio_test_chksum_in_ipv4_config(odp_pktio_t pktio_tx ODP_UNUSED,
@@ -4602,27 +4412,10 @@ static void pktio_test_chksum_in_ipv4(void)
 
 static int pktio_check_chksum_in_udp(void)
 {
-	odp_pktio_t pktio;
-	odp_pktio_capability_t capa;
-	odp_pktio_param_t pktio_param;
 	int idx = (global.num_ifaces == 1) ? 0 : 1;
-	int ret;
 
-	odp_pktio_param_init(&pktio_param);
-	pktio_param.in_mode = ODP_PKTIN_MODE_DIRECT;
-
-	pktio = odp_pktio_open(global.iface[idx].name, global.iface[idx].pool, &pktio_param);
-	if (pktio == ODP_PKTIO_INVALID)
-		return ODP_TEST_INACTIVE;
-
-	ret = odp_pktio_capability(pktio, &capa);
-	(void)odp_pktio_close(pktio);
-
-	if (ret < 0 ||
-	    !capa.config.pktin.bit.udp_chksum)
-		return ODP_TEST_INACTIVE;
-
-	return ODP_TEST_ACTIVE;
+	return global.iface[idx].capa.direct.config.pktin.bit.udp_chksum ?
+		ODP_TEST_ACTIVE : ODP_TEST_INACTIVE;
 }
 
 static void pktio_test_chksum_in_udp_config(odp_pktio_t pktio_tx ODP_UNUSED,
@@ -4661,27 +4454,10 @@ static void pktio_test_chksum_in_udp(void)
 
 static int pktio_check_chksum_in_sctp(void)
 {
-	odp_pktio_t pktio;
-	odp_pktio_capability_t capa;
-	odp_pktio_param_t pktio_param;
 	int idx = (global.num_ifaces == 1) ? 0 : 1;
-	int ret;
 
-	odp_pktio_param_init(&pktio_param);
-	pktio_param.in_mode = ODP_PKTIN_MODE_DIRECT;
-
-	pktio = odp_pktio_open(global.iface[idx].name, global.iface[idx].pool, &pktio_param);
-	if (pktio == ODP_PKTIO_INVALID)
-		return ODP_TEST_INACTIVE;
-
-	ret = odp_pktio_capability(pktio, &capa);
-	(void)odp_pktio_close(pktio);
-
-	if (ret < 0 ||
-	    !capa.config.pktin.bit.sctp_chksum)
-		return ODP_TEST_INACTIVE;
-
-	return ODP_TEST_ACTIVE;
+	return global.iface[idx].capa.direct.config.pktin.bit.sctp_chksum ?
+		ODP_TEST_ACTIVE : ODP_TEST_INACTIVE;
 }
 
 static void pktio_test_chksum_in_sctp_config(odp_pktio_t pktio_tx ODP_UNUSED,
@@ -4720,24 +4496,10 @@ static void pktio_test_chksum_in_sctp(void)
 
 static int pktio_check_chksum_out_ipv4(void)
 {
-	odp_pktio_t pktio;
-	odp_pktio_capability_t capa;
-	odp_pktio_param_t pktio_param;
-	int ret;
+	odp_pktio_capability_t *capa = &global.iface[0].capa.direct;
 
-	odp_pktio_param_init(&pktio_param);
-	pktio_param.in_mode = ODP_PKTIN_MODE_DIRECT;
-
-	pktio = odp_pktio_open(global.iface[0].name, global.iface[0].pool, &pktio_param);
-	if (pktio == ODP_PKTIO_INVALID)
-		return ODP_TEST_INACTIVE;
-
-	ret = odp_pktio_capability(pktio, &capa);
-	(void)odp_pktio_close(pktio);
-
-	if (ret < 0 ||
-	    !capa.config.pktout.bit.ipv4_chksum_ena ||
-	    !capa.config.pktout.bit.ipv4_chksum)
+	if (!capa->config.pktout.bit.ipv4_chksum_ena ||
+	    !capa->config.pktout.bit.ipv4_chksum)
 		return ODP_TEST_INACTIVE;
 
 	return ODP_TEST_ACTIVE;
@@ -4835,24 +4597,10 @@ static void pktio_test_chksum_out_ipv4_pktio(void)
 
 static int pktio_check_chksum_out_udp(void)
 {
-	odp_pktio_t pktio;
-	odp_pktio_capability_t capa;
-	odp_pktio_param_t pktio_param;
-	int ret;
+	odp_pktio_capability_t *capa = &global.iface[0].capa.direct;
 
-	odp_pktio_param_init(&pktio_param);
-	pktio_param.in_mode = ODP_PKTIN_MODE_DIRECT;
-
-	pktio = odp_pktio_open(global.iface[0].name, global.iface[0].pool, &pktio_param);
-	if (pktio == ODP_PKTIO_INVALID)
-		return ODP_TEST_INACTIVE;
-
-	ret = odp_pktio_capability(pktio, &capa);
-	(void)odp_pktio_close(pktio);
-
-	if (ret < 0 ||
-	    !capa.config.pktout.bit.udp_chksum_ena ||
-	    !capa.config.pktout.bit.udp_chksum)
+	if (!capa->config.pktout.bit.udp_chksum_ena ||
+	    !capa->config.pktout.bit.udp_chksum)
 		return ODP_TEST_INACTIVE;
 
 	return ODP_TEST_ACTIVE;
@@ -4955,24 +4703,10 @@ static void pktio_test_chksum_out_udp_pktio(void)
 
 static int pktio_check_chksum_out_sctp(void)
 {
-	odp_pktio_t pktio;
-	odp_pktio_capability_t capa;
-	odp_pktio_param_t pktio_param;
-	int ret;
+	odp_pktio_capability_t *capa = &global.iface[0].capa.direct;
 
-	odp_pktio_param_init(&pktio_param);
-	pktio_param.in_mode = ODP_PKTIN_MODE_DIRECT;
-
-	pktio = odp_pktio_open(global.iface[0].name, global.iface[0].pool, &pktio_param);
-	if (pktio == ODP_PKTIO_INVALID)
-		return ODP_TEST_INACTIVE;
-
-	ret = odp_pktio_capability(pktio, &capa);
-	(void)odp_pktio_close(pktio);
-
-	if (ret < 0 ||
-	    !capa.config.pktout.bit.sctp_chksum_ena ||
-	    !capa.config.pktout.bit.sctp_chksum)
+	if (!capa->config.pktout.bit.sctp_chksum_ena ||
+	    !capa->config.pktout.bit.sctp_chksum)
 		return ODP_TEST_INACTIVE;
 
 	return ODP_TEST_ACTIVE;
@@ -5159,37 +4893,16 @@ static int create_evv_pool(const char *iface, int num)
 	return 0;
 }
 
-static int pktio_check_pktv(odp_pktin_mode_t in_mode)
-{
-	odp_pktio_t pktio;
-	odp_pktio_capability_t capa;
-	odp_pktio_param_t pktio_param;
-	int ret;
-
-	odp_pktio_param_init(&pktio_param);
-	pktio_param.in_mode = in_mode;
-
-	pktio = odp_pktio_open(global.iface[0].name, global.iface[0].pool, &pktio_param);
-	if (pktio == ODP_PKTIO_INVALID)
-		return ODP_TEST_INACTIVE;
-
-	ret = odp_pktio_capability(pktio, &capa);
-	(void)odp_pktio_close(pktio);
-
-	if (ret < 0 || !capa.vector.supported)
-		return ODP_TEST_INACTIVE;
-
-	return ODP_TEST_ACTIVE;
-}
-
 static int pktio_check_pktv_queue(void)
 {
-	return pktio_check_pktv(ODP_PKTIN_MODE_QUEUE);
+	return global.iface[0].capa.queue_direct.vector.supported ?
+		ODP_TEST_ACTIVE : ODP_TEST_INACTIVE;
 }
 
 static int pktio_check_pktv_sched(void)
 {
-	return pktio_check_pktv(ODP_PKTIN_MODE_SCHED);
+	return global.iface[0].capa.sched_direct.vector.supported ?
+		ODP_TEST_ACTIVE : ODP_TEST_INACTIVE;
 }
 
 static void pktio_test_pktv_recv_plain(void)
@@ -5529,26 +5242,8 @@ static void pktio_test_recv_maxlen_set(void)
 
 static int pktio_check_pktout_aging_tmo(void)
 {
-	odp_pktio_param_t pktio_param;
-	odp_pktio_capability_t capa;
-	odp_pktio_t pktio;
-	int ret;
-
-	odp_pktio_param_init(&pktio_param);
-	pktio_param.in_mode = ODP_PKTIN_MODE_DIRECT;
-	pktio_param.out_mode = ODP_PKTOUT_MODE_DIRECT;
-
-	pktio = odp_pktio_open(global.iface[0].name, global.iface[0].pool, &pktio_param);
-	if (pktio == ODP_PKTIO_INVALID)
-		return ODP_TEST_INACTIVE;
-
-	ret = odp_pktio_capability(pktio, &capa);
-	(void)odp_pktio_close(pktio);
-
-	if (ret < 0 || !capa.max_tx_aging_tmo_ns)
-		return ODP_TEST_INACTIVE;
-
-	return ODP_TEST_ACTIVE;
+	return global.iface[0].capa.direct.max_tx_aging_tmo_ns ?
+		ODP_TEST_ACTIVE : ODP_TEST_INACTIVE;
 }
 
 static void test_pktout_aging_tmo(uint32_t test_flags)
