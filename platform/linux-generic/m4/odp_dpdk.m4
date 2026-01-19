@@ -47,12 +47,6 @@ then
     ODP_DPDK([$pktio_dpdk_min_version], [$dpdk_shared], [],
 	     [AC_MSG_FAILURE([can't find DPDK])])
 
-    case "${host}" in
-      i?86* | x86*)
-	DPDK_CFLAGS="${DPDK_CFLAGS} -msse4.2"
-      ;;
-    esac
-
     ODP_CHECK_CFLAG([-Wno-error=cast-align])
     AC_DEFINE([_ODP_PKTIO_DPDK], [1],
 	      [Define to 1 to enable DPDK packet I/O support])
