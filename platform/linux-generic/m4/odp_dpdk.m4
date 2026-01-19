@@ -5,6 +5,7 @@
 ##########################################################################
 # Enable DPDK support
 ##########################################################################
+pktio_dpdk_min_version=22.11.0
 pktio_dpdk_support=no
 
 AC_ARG_ENABLE([dpdk],
@@ -43,7 +44,7 @@ AC_ARG_ENABLE([dpdk-zero-copy],
 ##########################################################################
 if test x$pktio_dpdk_support = xyes
 then
-    ODP_DPDK([$dpdk_shared], [],
+    ODP_DPDK([$pktio_dpdk_min_version], [$dpdk_shared], [],
 	     [AC_MSG_FAILURE([can't find DPDK])])
 
     case "${host}" in
