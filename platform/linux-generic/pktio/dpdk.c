@@ -2385,7 +2385,14 @@ static int dpdk_link_info(pktio_entry_t *pktio_entry, odp_pktio_link_info_t *inf
 	else
 		info->status = ODP_PKTIO_LINK_STATUS_DOWN;
 
+#if RTE_VERSION >= RTE_VERSION_NUM(25, 11, 0, 0)
+	if (link.link_connector == RTE_ETH_LINK_CONNECTOR_NONE)
+		info->media = "unknown";
+	else
+		info->media = rte_eth_link_connector_to_str(link.link_connector);
+#else
 	info->media = "unknown";
+#endif
 
 	return 0;
 }

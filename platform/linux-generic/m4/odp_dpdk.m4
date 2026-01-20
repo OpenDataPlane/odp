@@ -47,6 +47,9 @@ then
     ODP_DPDK([$pktio_dpdk_min_version], [$dpdk_shared], [],
 	     [AC_MSG_FAILURE([can't find DPDK])])
 
+    # Enable experimental DPDK APIs
+    DPDK_CFLAGS="${DPDK_CFLAGS} -DALLOW_EXPERIMENTAL_API"
+
     ODP_CHECK_CFLAG([-Wno-error=cast-align])
     AC_DEFINE([_ODP_PKTIO_DPDK], [1],
 	      [Define to 1 to enable DPDK packet I/O support])
