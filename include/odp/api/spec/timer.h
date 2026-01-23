@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2013-2018 Linaro Limited
- * Copyright (c) 2019-2023 Nokia
+ * Copyright (c) 2019-2026 Nokia
  */
 
 /**
@@ -246,7 +246,9 @@ int odp_timer_pool_info(odp_timer_pool_t timer_pool,
  *
  * When timer expires, the timeout event defined in timer start parameters (see
  * odp_timer_start_t::tmo_ev or odp_timer_periodic_start_t::tmo_ev) is sent into the provided
- * destination queue.
+ * destination queue. With periodic timers and non-atomic-scheduled destination queues, source
+ * ordering of timeouts may change due to application processing order. In this case, it is up to
+ * the application to ensure acknowledgment of all timeouts.
  *
  * The provided user pointer value is copied into timeout events when the event type is
  * ODP_EVENT_TIMEOUT. The value can be retrieved from an event with odp_timeout_user_ptr() call.
@@ -266,8 +268,9 @@ odp_timer_t odp_timer_alloc(odp_timer_pool_t timer_pool, odp_queue_t queue, cons
  * Frees a previously allocated timer. The timer must be inactive when calling this function.
  * In other words, the application must cancel an active single shot timer (odp_timer_cancel())
  * successfully or wait it to expire before freeing it. Similarly for an active periodic timer, the
- * application must cancel it (odp_timer_periodic_cancel()) and receive the last event from
- * the timer (odp_timer_periodic_ack()) before freeing it.
+ * application must cancel it (odp_timer_periodic_cancel()), handle remaining events delivered by
+ * the timer (odp_timer_periodic_ack()) and finalize the cancellation
+ * (odp_timer_periodic_cancel_finalize()) before freeing it.
  *
  * The call returns failure only on non-recoverable errors. Application must not use the timer
  * handle anymore after the call, regardless of the return value.
@@ -334,8 +337,7 @@ int odp_timer_restart(odp_timer_t timer, const odp_timer_start_t *start_param);
  * Starts a timer that delivers timeout events periodically to the destination queue starting
  * from the first expiration time provided. The timer must have been allocated from a pool of
  * periodic timers. The timer must not be active when calling this function. After a successful
- * call, the timer remains active until it is cancelled and all its timeout events have been
- * acknowledged.
+ * call, the timer remains active until cancellation.
  *
  * Timer expiration frequency (period) is defined as a multiple of the timer pool base frequency
  * (odp_timer_pool_param_t::base_freq_hz). The timeout event type must be ODP_EVENT_TIMEOUT
@@ -344,8 +346,8 @@ int odp_timer_restart(odp_timer_t timer, const odp_timer_start_t *start_param);
  * Periodic timers cannot be restarted. If the period needs to be changed, the timer is first
  * cancelled and then started again with new parameters.
  *
- * Application must acknowledge each timeout event with odp_timer_periodic_ack() call. The call
- * should be made as soon as possible after receiving the event.
+ * Application must acknowledge each event with odp_timer_periodic_ack() call. The call should be
+ * made as soon as possible after receiving the event.
  *
  * The timer is not started when a failure is returned.
  *
@@ -363,48 +365,69 @@ int odp_timer_restart(odp_timer_t timer, const odp_timer_start_t *start_param);
 int odp_timer_periodic_start(odp_timer_t timer, const odp_timer_periodic_start_t *start_param);
 
 /**
- * Acknowledge timeout from a periodic timer
+ * Acknowledge event from a periodic timer
  *
- * This call is valid only for periodic timers. Each timeout event from a periodic timer must be
- * acknowledged with this call. Acknowledgment should be done as soon as possible after receiving
- * the event. A late call may affect accuracy of the following period(s). However, a missing
- * acknowledgment may not stop timeout event delivery to the destination queue, and thus the same
- * event may appear in the destination queue multiple times (when application falls behind).
+ * This call is valid only for periodic timers. Each time a periodic timeout is received, it must
+ * be acknowledged with this call. Acknowledgment should be done as soon as possible after
+ * receiving the event. A late call may affect accuracy of the following period(s). However, a
+ * missing acknowledgment may not stop timeout event delivery to the destination queue, and thus
+ * the same event may appear in the destination queue multiple times (when application falls
+ * behind).
  *
- * Normally, the acknowledgment call returns zero on success and consumes the timeout event.
- * Application must not use the event anymore after this. A greater than zero return value
- * indicates timeout events from a cancelled timer. These events may not arrive at the
- * requested interval, but are used to finalize the timer cancel request. Return value of 2 marks
- * the last event from a cancelled timer. After receiving it application may free the timer and
- * the timeout event.
+ * Normally, the acknowledgment call returns zero. A greater than zero return value indicates
+ * events from a cancelled timer. These events may not arrive at the requested interval, but are
+ * used to finalize the timer cancel request. Return value of 2 marks the last event enqueued by
+ * the cancelled timer (see odp_timer_periodic_start_t::tmo_ev and
+ * odp_timer_periodic_start_t::cancel_ev). After acknowledgment of all events from the timer,
+ * cancellation must be finished with odp_timer_periodic_cancel_finalize().
  *
- * @param timer    Periodic timer
- * @param tmo_ev   Timeout event that was received from the periodic timer
+ * @param timer Periodic timer
+ * @param ev    Timeout event from the periodic timer
  *
- * @retval 2  Success, the last event from a cancelled timer. The call did not consume
- *            the event.
- * @retval 1  Success, an event from a cancelled timer. The call consumed the event.
- * @retval 0  Success, the call consumed the event.
- * @retval <0 Failure, the call did not consume the event.
+ * @retval 2    Success, the last event from a cancelled timer.
+ * @retval 1    Success, an event from a cancelled timer.
+ * @retval 0    Success.
+ * @retval <0   Failure.
  */
-int odp_timer_periodic_ack(odp_timer_t timer, odp_event_t tmo_ev);
+int odp_timer_periodic_ack(odp_timer_t timer, odp_event_t ev);
 
 /**
  * Cancel a periodic timer
  *
- * Cancel a previously started periodic timer. A successful operation stops timer expiration.
- * The timer delivers remaining timeout event(s) into the destination queue. Note that these events
- * may not arrive at the requested interval. Return value of odp_timer_periodic_ack() call
- * will indicate the last timeout event from the timer. Application may free the timer and
- * the timeout event only after receiving the last event.
+ * Start cancellation of a previously started periodic timer. A successful operation stops timer
+ * expiration. The timer delivers remaining event(s) into the destination queue. Note that these
+ * events may not arrive at the requested interval. Return value of odp_timer_periodic_ack() call
+ * will indicate the cancellation status of the timer. Cancellation must be finalized with
+ * odp_timer_periodic_cancel_finalize().
  *
- * @param      timer  Timer
+ * @param timer Periodic timer
  *
- * @retval 0  Periodic timer expiration stopped. The timeout event will be received through
- *            the destination queue.
- * @retval <0 Timer cancel failed.
+ * @retval 0    Periodic timer expiration stopped. The timeout event will be received through
+ *              the destination queue.
+ * @retval <0   Timer cancel failed.
  */
 int odp_timer_periodic_cancel(odp_timer_t timer);
+
+/**
+ * Finalize cancellation of a periodic timer
+ *
+ * Once the cancellation of a periodic timer has been started and all events (including the
+ * odp_timer_periodic_start_t::cancel_ev) delivered by the timer have been acknowledged (see
+ * odp_timer_periodic_ack()), finalize the timer cancellation procedure.
+ * odp_timer_periodic_start_t::tmo_ev and odp_timer_periodic_start_t::cancel_ev ownership is
+ * returned to application and both the events and the timer can be freed.
+ *
+ * @param      timer     Periodic timer
+ * @param[out] tmo_ev    Pointer to an event handle for odp_timer_periodic_start_t::tmo_ev output.
+ *                       Event handle is written only on success.
+ * @param[out] cancel_ev Pointer to an event handle for odp_timer_periodic_start_t::cancel_ev
+ *                       output. Event handle is written only on success.
+ *
+ * @retval 0             Success.
+ * @retval <0            Failure.
+ */
+int odp_timer_periodic_cancel_finalize(odp_timer_t timer, odp_event_t *tmo_ev,
+				       odp_event_t *cancel_ev);
 
 /**
  * Cancel a timer
