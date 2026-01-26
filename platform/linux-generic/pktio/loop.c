@@ -562,7 +562,7 @@ static int loopback_send(pktio_entry_t *pktio_entry, int index, const odp_packet
 			break;
 		}
 		if (odp_unlikely(odp_packet_pool(pkt) != pkt_loop->pool ||
-				 odp_atomic_load_u32(&packet_hdr(pkt)->ref_cnt) > 1)) {
+				 odp_packet_has_ref(pkt))) {
 			pkt = odp_packet_copy(pkt, pkt_loop->pool);
 			if (odp_unlikely(pkt == ODP_PACKET_INVALID)) {
 				_ODP_DBG("odp_packet_copy() failed\n");
