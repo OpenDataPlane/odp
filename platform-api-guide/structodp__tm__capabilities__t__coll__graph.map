@@ -1,0 +1,6 @@
+<map id="odp_tm_capabilities_t" name="odp_tm_capabilities_t">
+<area shape="rect" id="node1" title="TM Capabilities Record." alt="" coords="59,199,224,225"/>
+<area shape="rect" id="node2" href="$structodp__tm__queue__stats__capability__t.html" title="TM queue level statistics capabilities." alt="" coords="5,95,163,136"/>
+<area shape="rect" id="node3" href="$structodp__tm__level__capabilities__t.html" title="Per Level Capabilities." alt="" coords="187,102,391,129"/>
+<area shape="rect" id="node4" href="$structodp__tm__node__stats__capability__t.html" title="TM node statistics capabilities." alt="" coords="173,5,405,32"/>
+</map>
