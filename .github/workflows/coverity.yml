@@ -7,7 +7,7 @@ env:
   CC: gcc
   ARCH: x86_64
   CONTAINER_NAMESPACE: ghcr.io/opendataplane/odp-docker-images
-  OS: ubuntu_20.04
+  OS: ubuntu_24.04
   COVERITY_EMAIL: dummy@opendataplane.org
   COVERITY_PROJECT: ODP
 
