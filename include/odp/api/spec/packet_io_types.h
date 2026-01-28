@@ -519,9 +519,16 @@ typedef union odp_pktout_config_opt_t {
 		/** Packet references not used on packet output
 		 *
 		 * When set, application indicates that it will not transmit
-		 * packet references on this packet IO interface.
-		 * Since every ODP implementation supports it, it is always
-		 * ok to set this flag.
+		 * static packet references, referenced or referencing packets
+		 * on this packet IO interface.
+		 *
+		 * Even if this flag is set to zero, packets which can share
+		 * data may not be sent unless the relevant packet I/O
+		 * capability is set or the packet I/O supports the dont_free
+		 * option and the option is set for the packet being sent.
+		 * See odp_pktio_capability_t::packet_ref
+		 * See odp_pktio_capability_t::free_ctrl
+		 * See odp_packet_free_ctrl_set()
 		 *
 		 * 0: Packet references may be transmitted on the
 		 *    interface (the default value).
@@ -1010,6 +1017,38 @@ typedef struct odp_pktin_vector_capability_t {
 
 } odp_pktin_vector_capability_t;
 
+/** Packet output capabilities regarding packets with shared data
+ *
+ *  These capabilities indicate whether packets that reference other packets
+ *  or are referenced by other packets can be sent so that they get consumed by
+ *  the packet output. When such a packet is consumed by the packet output at
+ *  the completion of packet transmit, the packet is handled the same as in
+ *  odp_packet_free() (i.e. internal reference counts are updated and the packet
+ *  segments are put back to the packet pool when there are no more references
+ *  left).
+ *
+ *  If these capabilities are not set, then the respective packet types may be
+ *  sent only if the pktout supports the 'dont_free' option and the option is
+ *  set for the packets being sent. In that case the packets being sent are
+ *  not consumed nor modified.
+ *
+ *  See odp_pktio_capability_t::free_ctrl
+ *  See odp_packet_free_ctrl_set()
+ *  See odp_packet_ref() and odp_packet_ref_static()
+ */
+typedef struct {
+
+	/** Static packet references can be consumed */
+	uint8_t static_ref  :1;
+
+	/** Referenced packets can be consumed */
+	uint8_t referenced  :1;
+
+	 /** Referencing packets can be consumed */
+	uint8_t referencing :1;
+
+} odp_pktout_packet_ref_capability_t;
+
 /**
  * Packet IO capabilities
  *
@@ -1062,6 +1101,9 @@ typedef struct odp_pktio_capability_t {
 
 	/** LSO capabilities */
 	odp_lso_capability_t lso;
+
+	/** Capabilities to send and consume packets that share packet data */
+	odp_pktout_packet_ref_capability_t packet_ref;
 
 	/** Supported frame lengths for odp_pktio_maxlen_set()
 	 *
