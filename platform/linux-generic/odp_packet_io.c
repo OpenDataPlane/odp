@@ -465,34 +465,6 @@ static void destroy_out_queues(pktio_entry_t *entry, int num)
 	}
 }
 
-static void flush_in_queues(pktio_entry_t *entry)
-{
-	odp_pktin_mode_t mode;
-	int num, i;
-	int max_pkts = 16;
-	odp_packet_t packets[max_pkts];
-
-	mode = entry->param.in_mode;
-	num  = entry->num_in_queue;
-
-	if (mode == ODP_PKTIN_MODE_DIRECT) {
-		for (i = 0; i < num; i++) {
-			int ret;
-			odp_pktin_queue_t pktin = entry->in_queue[i].pktin;
-
-			while ((ret = odp_pktin_recv(pktin, packets,
-						     max_pkts))) {
-				if (ret < 0) {
-					_ODP_ERR("Queue flush failed\n");
-					return;
-				}
-
-				odp_packet_free_multi(packets, ret);
-			}
-		}
-	}
-}
-
 int odp_pktio_close(odp_pktio_t hdl)
 {
 	pktio_entry_t *entry;
@@ -508,9 +480,6 @@ int odp_pktio_close(odp_pktio_t hdl)
 		_ODP_DBG("Missing odp_pktio_stop() before close.\n");
 		return -1;
 	}
-
-	if (entry->state == PKTIO_STATE_STOPPED)
-		flush_in_queues(entry);
 
 	lock_entry(entry);
 
