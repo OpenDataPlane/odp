@@ -291,7 +291,10 @@ int odp_timer_free(odp_timer_t timer);
  * parameter to select between the tick types. Current time of the timer pool can be read with
  * odp_timer_current_tick().
  *
- * The timer is not started when a failure is returned.
+ * The timer is not started when a failure is returned. A failure is returned when expiration time
+ * is too near to the current time (#ODP_TIMER_TOO_NEAR), too far from the current time
+ * (#ODP_TIMER_TOO_FAR) or other failure (#ODP_TIMER_FAIL). The call can also fail due to resources
+ * being temporarily busy. Start is likely to succeed after enough resources are available.
  *
  * @param timer               Timer to be started
  * @param start_param         Timer start parameters
@@ -300,6 +303,7 @@ int odp_timer_free(odp_timer_t timer);
  * @retval ODP_TIMER_TOO_NEAR Failure. The expiration time passed already, or is too near to
  *                            the current time.
  * @retval ODP_TIMER_TOO_FAR  Failure. The expiration time is too far from the current time.
+ * @retval ODP_TIMER_BUSY     Failure. Resources temporarily busy.
  * @retval ODP_TIMER_FAIL     Other failure.
  */
 int odp_timer_start(odp_timer_t timer, const odp_timer_start_t *start_param);
@@ -311,9 +315,11 @@ int odp_timer_start(odp_timer_t timer, const odp_timer_start_t *start_param);
  * is not changed.
  *
  * The timer is not modified when a failure is returned. The call returns #ODP_TIMER_FAIL if
- * the timer has expired already, or is so close to expire that it cannot be restarted anymore.
- * A failure is returned also when the new expiration time is too near to the current time
- * (#ODP_TIMER_TOO_NEAR) or too far from the current time (#ODP_TIMER_TOO_FAR).
+ * the timer has expired already, is so close to expire that it cannot be restarted anymore or
+ * other failure. A failure is returned also when the new expiration time is too near to the
+ * current time (#ODP_TIMER_TOO_NEAR) or too far from the current time (#ODP_TIMER_TOO_FAR). The
+ * call can also fail due to resources being temporarily busy. Restart is likely to succeed after
+ * enough resources are available.
  *
  * The new expiration time is passed the same way as with odp_timer_start() call.
  *
@@ -324,6 +330,7 @@ int odp_timer_start(odp_timer_t timer, const odp_timer_start_t *start_param);
  * @retval ODP_TIMER_TOO_NEAR Failure. The new expiration time passed already, or is too near to
  *                            the current time.
  * @retval ODP_TIMER_TOO_FAR  Failure. The new expiration time is too far from the current time.
+ * @retval ODP_TIMER_BUSY     Failure. Resources temporarily busy.
  * @retval ODP_TIMER_FAIL     Failure. The timer expired already, or other failure.
  */
 int odp_timer_restart(odp_timer_t timer, const odp_timer_start_t *start_param);
@@ -347,7 +354,11 @@ int odp_timer_restart(odp_timer_t timer, const odp_timer_start_t *start_param);
  * Application must acknowledge each timeout event with odp_timer_periodic_ack() call. The call
  * should be made as soon as possible after receiving the event.
  *
- * The timer is not started when a failure is returned.
+ * The timer is not started when a failure is returned. A failure is returned when the first
+ * expiration time is too near to the current time (#ODP_TIMER_TOO_NEAR), too far from the current
+ * time (#ODP_TIMER_TOO_FAR) or other failure (#ODP_TIMER_FAIL). The call can also fail due to
+ * resources being temporarily busy. Periodic start is likely to succeed after enough resources are
+ * available.
  *
  * @param timer               Periodic timer to be started
  * @param start_param         Periodic timer start parameters
@@ -356,6 +367,7 @@ int odp_timer_restart(odp_timer_t timer, const odp_timer_start_t *start_param);
  * @retval ODP_TIMER_TOO_NEAR Failure. The first expiration time passed already, or is too near to
  *                            the current time.
  * @retval ODP_TIMER_TOO_FAR  Failure. The first expiration time is too far from the current time.
+ * @retval ODP_TIMER_BUSY     Failure. Resources temporarily busy.
  * @retval ODP_TIMER_FAIL     Other failure.
  *
  * @see odp_timer_periodic_cancel()
