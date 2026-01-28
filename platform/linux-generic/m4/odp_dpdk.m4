@@ -5,7 +5,7 @@
 ##########################################################################
 # Enable DPDK support
 ##########################################################################
-pktio_dpdk_min_version=22.11.0
+pktio_dpdk_min_version=23.11.0
 pktio_dpdk_support=no
 
 AC_ARG_ENABLE([dpdk],
