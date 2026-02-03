@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright (c) 2021-2025 Nokia
+ * Copyright (c) 2021-2026 Nokia
  */
 
 #include <odp/api/dma.h>
@@ -8,6 +8,7 @@
 #include <odp/api/ticketlock.h>
 #include <odp/api/align.h>
 #include <odp/api/buffer.h>
+#include <odp/api/hints.h>
 #include <odp/api/stash.h>
 #include <odp/api/packet.h>
 #include <odp/api/pool.h>
@@ -914,21 +915,23 @@ odp_pool_t odp_dma_pool_create(const char *name, const odp_dma_pool_param_t *dma
 	return pool;
 }
 
-odp_dma_compl_t odp_dma_compl_alloc(odp_pool_t pool)
+odp_dma_compl_t odp_dma_compl_alloc(odp_pool_t pool_hdl)
 {
 	odp_buffer_t buf;
 	odp_event_t ev;
 	result_t *result;
+	pool_t *pool = _odp_pool_entry(pool_hdl);
 
-	buf = odp_buffer_alloc(pool);
+	_ODP_ASSERT(pool->type_2 == ODP_POOL_DMA_COMPL);
 
-	if (odp_unlikely(buf == ODP_BUFFER_INVALID))
+	ev = _odp_event_alloc(pool);
+	if (odp_unlikely(ev == ODP_EVENT_INVALID))
 		return ODP_DMA_COMPL_INVALID;
 
+	buf = odp_buffer_from_event(ev);
 	result = (result_t *)odp_buffer_addr(buf);
 	memset(result, 0, sizeof(*result));
 
-	ev = odp_buffer_to_event(buf);
 	_odp_event_type_set(ev, ODP_EVENT_DMA_COMPL);
 
 	return (odp_dma_compl_t)(uintptr_t)buf;

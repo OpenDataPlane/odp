@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2013-2018 Linaro Limited
- * Copyright (c) 2019-2025 Nokia
+ * Copyright (c) 2019-2026 Nokia
  */
 
 /**
@@ -189,8 +189,18 @@ static inline _odp_event_hdr_t *event_hdr_from_index(pool_t *pool,
 	return event_hdr;
 }
 
-odp_event_t _odp_event_alloc(pool_t *pool);
 int _odp_event_alloc_multi(pool_t *pool, _odp_event_hdr_t *event_hdr[], int num);
+
+static inline odp_event_t _odp_event_alloc(pool_t *pool)
+{
+	odp_event_t event;
+
+	if (odp_likely(_odp_event_alloc_multi(pool, (_odp_event_hdr_t **)&event, 1) == 1))
+		return event;
+
+	return ODP_EVENT_INVALID;
+}
+
 void _odp_event_free_multi(_odp_event_hdr_t *event_hdr[], int num_free);
 void _odp_event_free_sp(_odp_event_hdr_t *event_hdr[], int num);
 int _odp_event_is_valid(odp_event_t event);
