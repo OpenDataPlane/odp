@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright (c) 2023-2024 Nokia
+ * Copyright (c) 2023-2026 Nokia
  */
 
 #include <odp/autoheader_external.h>
@@ -1347,23 +1347,25 @@ odp_pool_t odp_ml_compl_pool_create(const char *name, const odp_ml_compl_pool_pa
 	return _odp_pool_create(name, &ml_pool_param, ODP_POOL_ML_COMPL);
 }
 
-odp_ml_compl_t odp_ml_compl_alloc(odp_pool_t pool)
+odp_ml_compl_t odp_ml_compl_alloc(odp_pool_t pool_hdl)
 {
 	odp_buffer_t buf;
 	odp_event_t ev;
 	odp_ml_run_result_t *result;
+	pool_t *pool = _odp_pool_entry(pool_hdl);
 	uint32_t buf_size = _ODP_MAX(sizeof(odp_ml_run_result_t),
 				     sizeof(odp_ml_load_result_t));
 
-	buf = odp_buffer_alloc(pool);
+	_ODP_ASSERT(pool->type_2 == ODP_POOL_ML_COMPL);
 
-	if (odp_unlikely(buf == ODP_BUFFER_INVALID))
+	ev = _odp_event_alloc(pool);
+	if (odp_unlikely(ev == ODP_EVENT_INVALID))
 		return ODP_ML_COMPL_INVALID;
 
+	buf = odp_buffer_from_event(ev);
 	result = odp_buffer_addr(buf);
 	memset(result, 0, buf_size);
 
-	ev = odp_buffer_to_event(buf);
 	_odp_event_type_set(ev, ODP_EVENT_ML_COMPL);
 
 	return (odp_ml_compl_t)(uintptr_t)buf;
