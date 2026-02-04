@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2013-2018 Linaro Limited
- * Copyright (c) 2019-2025 Nokia
+ * Copyright (c) 2019-2026 Nokia
  */
 
 /**
@@ -218,6 +218,12 @@ typedef struct {
 		/** Maximum supported base frequency value */
 		odp_fract_u64_t max_base_freq_hz;
 
+		/** Minimum value for odp_timer_pool_param_t::periodic::max_pending_tmo. */
+		uint32_t min_pending_tmo;
+
+		/** Maximum value for odp_timer_pool_param_t::periodic::max_pending_tmo. When zero,
+		 *  timeout event flow control is not supported. */
+		uint32_t max_pending_tmo;
 	} periodic;
 
 } odp_timer_capability_t;
@@ -373,6 +379,22 @@ typedef struct {
 		 */
 		uint64_t max_multiplier;
 
+		/** Maximum number of pending timeout events
+		 *
+		 *  This is the maximum number of timeout events from this pool, which have been
+		 *  sent by timer but have not yet been acknowledged with odp_timer_periodic_ack()
+		 *  calls. When this limit is reached, the timer implementation will start
+		 *  throttling new timeout events until enough pending events have been
+		 *  acknowledged. The precise throttling behavior is implementation specific.
+		 *
+		 *  When value is zero, timeout event flow control is disabled. See
+		 *  odp_timer_capability_t::periodic::min_pending_tmo and
+		 *  odp_timer_capability_t::periodic::max_pending_tmo for supported values.
+		 *
+		 *  The default value is zero. When flow control is not supported, this parameter is
+		 *  ignored.
+		 */
+		uint32_t max_pending_tmo;
 	} periodic;
 
 	/** Number of timers in the pool. */
