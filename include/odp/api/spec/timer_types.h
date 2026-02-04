@@ -279,6 +279,13 @@ typedef struct {
 		 */
 		odp_fract_u64_t max_freq_hz;
 
+		/** Minimum value for odp_timer_pool_param_t::periodic::max_pending_tmo. */
+		uint32_t min_pending_tmo;
+
+		/** Maximum value for odp_timer_pool_param_t::periodic::max_pending_tmo. When zero,
+		 *  timeout event flow control is not supported. */
+		uint32_t max_pending_tmo;
+
 	} periodic;
 
 } odp_timer_capability_t;
@@ -507,6 +514,20 @@ typedef struct {
 		 *  Specify as 0 if no user area is needed. The default value is 0.
 		 */
 		uint32_t uarea_size;
+
+		/** Maximum number of pending timeout events
+		 *
+		 *  This is the maximum number of timeout events from this pool, which have been
+		 *  sent by timer but have not yet been acknowledged with odp_timer_periodic_ack()
+		 *  calls. When this limit is reached, the timer implementation will start
+		 *  throttling new timeout events until enough pending events have been
+		 *  acknowledged. The precise throttling behavior is implementation specific.
+		 *
+		 *  Use non-zero value from 'min_pending_tmo' to 'max_pending_tmo' (see
+		 *  odp_timer_capability_t::periodic) to enable flow control. When value is zero,
+		 *  timeout event flow control is disabled. The default value is zero.
+		 */
+		uint32_t max_pending_tmo;
 
 	} periodic;
 
