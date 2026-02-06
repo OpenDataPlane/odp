@@ -7,7 +7,7 @@ on:
 
 jobs:
   Documentation:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v6
     - name: Install dependencies
