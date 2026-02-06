@@ -978,7 +978,7 @@ static int pktin_deq_multi(odp_queue_t queue, _odp_event_hdr_t *event_hdr[],
 
 			_ODP_DBG("Interface %s dropped %i packets\n",
 				 entry->name, j - num_enq);
-			_odp_event_free_multi(&event_hdr[num_enq], j - num_enq);
+			_odp_event_free_multi(&hdr_tbl[num_enq], j - num_enq);
 		}
 	}
 
