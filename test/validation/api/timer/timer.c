@@ -35,6 +35,7 @@
 #define TICK_INVALID (~(uint64_t)0)
 #define YEAR_IN_NS             (365 * 24 * ODP_TIME_HOUR_IN_NS)
 #define UAREA_DATA 0xaa
+#define MAX_FLOW_CTRL_TMOS 1000
 
 /* Test case options */
 #define PRIV        1
@@ -79,6 +80,9 @@ typedef struct {
 		odp_bool_t queue_type_sched;
 		odp_bool_t queue_type_plain;
 	} param;
+
+	/* Timer capabilities for current clock source */
+	odp_timer_capability_t timer_capa;
 
 	/* Timeout pool handle used by all threads */
 	odp_pool_t tbp;
@@ -205,6 +209,7 @@ static int timer_global_init(odp_instance_t *instance)
 		ODPH_ERR("Timer capability failed\n");
 		return -1;
 	}
+	global_mem->timer_capa = capa;
 
 	global_mem->periodic_base_mul_support = capa.periodic.support.base_mul;
 	global_mem->periodic_freq_support = capa.periodic.support.freq;
@@ -318,6 +323,54 @@ static int check_periodic_freq_plain_support(void)
 	if (global_mem->periodic_freq_support && global_mem->param.queue_type_plain)
 		return ODP_TEST_ACTIVE;
 
+	return ODP_TEST_INACTIVE;
+}
+
+static int check_min_pending_tmo(const char *type_str, uint32_t min_pending_tmo)
+{
+	/* Divide MAX_FLOW_CTRL_TMOS by 2 to give flow control more time to kick in */
+	if (min_pending_tmo >= MAX_FLOW_CTRL_TMOS / 2) {
+		printf("  Flow control test (%s) limited to %" PRIu32 " timeouts when "
+		       "max_pending_tmo is %" PRIu32 ", skip test.\n", type_str, MAX_FLOW_CTRL_TMOS,
+		       min_pending_tmo);
+		return ODP_TEST_INACTIVE;
+	}
+	return ODP_TEST_ACTIVE;
+}
+
+static int check_periodic_freq_sched_flow_control_support(void)
+{
+	if (global_mem->periodic_freq_support && global_mem->timer_capa.queue_type_sched &&
+	    global_mem->timer_capa.periodic.max_pending_tmo)
+		return check_min_pending_tmo("freq_sched",
+					     global_mem->timer_capa.periodic.min_pending_tmo);
+	return ODP_TEST_INACTIVE;
+}
+
+static int check_periodic_freq_plain_flow_control_support(void)
+{
+	if (global_mem->periodic_freq_support && global_mem->timer_capa.queue_type_plain &&
+	    global_mem->timer_capa.periodic.max_pending_tmo)
+		return check_min_pending_tmo("freq_plain",
+					     global_mem->timer_capa.periodic.min_pending_tmo);
+	return ODP_TEST_INACTIVE;
+}
+
+static int check_periodic_base_mul_sched_flow_control_support(void)
+{
+	if (global_mem->periodic_base_mul_support && global_mem->timer_capa.queue_type_sched &&
+	    global_mem->timer_capa.periodic.max_pending_tmo)
+		return check_min_pending_tmo("base_mul_sched",
+					     global_mem->timer_capa.periodic.min_pending_tmo);
+	return ODP_TEST_INACTIVE;
+}
+
+static int check_periodic_base_mul_plain_flow_control_support(void)
+{
+	if (global_mem->periodic_base_mul_support && global_mem->timer_capa.queue_type_plain &&
+	    global_mem->timer_capa.periodic.max_pending_tmo)
+		return check_min_pending_tmo("base_mul_plain",
+					     global_mem->timer_capa.periodic.min_pending_tmo);
 	return ODP_TEST_INACTIVE;
 }
 
@@ -451,6 +504,7 @@ static void test_param_init(uint8_t fill)
 	CU_ASSERT(tp_param.periodic.base_mul.base_freq_hz.integer == 0);
 	CU_ASSERT(tp_param.periodic.base_mul.base_freq_hz.numer == 0);
 	CU_ASSERT(tp_param.periodic.base_mul.base_freq_hz.denom == 0);
+	CU_ASSERT(tp_param.periodic.max_pending_tmo == 0);
 }
 
 static void timer_test_pool_param_init(void)
@@ -3049,6 +3103,7 @@ static void timer_test_periodic_common_capa(void)
 
 	CU_ASSERT(timer_capa.periodic.max_pools);
 	CU_ASSERT(timer_capa.periodic.max_timers);
+	CU_ASSERT(timer_capa.periodic.min_pending_tmo <= timer_capa.periodic.max_pending_tmo);
 
 	if (timer_capa.periodic.support.base_mul == 1)
 		check_freq_values(timer_capa.periodic.min_base_freq_hz,
@@ -3399,6 +3454,7 @@ static odp_bool_t fill_periodic_base_mul_params(periodic_params_t *params)
 	params->pool_param.periodic.base_mul.max_multiplier = multiplier;
 	params->pool_param.periodic.uarea_size =
 					test_global->global_mem.tmo_uarea_support > 0 ? 1 : 0;
+	params->pool_param.periodic.max_pending_tmo = timer_capa.periodic.min_pending_tmo;
 	params->pool_param.priority = timer_capa.periodic.max_priority;
 	odp_timer_periodic_param_init(&params->tmr_param);
 	params->tmr_param.base_mul.multiplier = multiplier;
@@ -3413,6 +3469,7 @@ static odp_bool_t fill_periodic_base_mul_params(periodic_params_t *params)
 	ODPH_DBG("  Max multiplier:    %" PRIu64 "\n",
 		 params->pool_param.periodic.base_mul.max_multiplier);
 	ODPH_DBG("  User area size:    %" PRIu32 "\n", params->pool_param.periodic.uarea_size);
+	ODPH_DBG("  Max pending tmo:   %" PRIu32 "\n", params->pool_param.periodic.max_pending_tmo);
 	ODPH_DBG("Capabilities:\n");
 	ODPH_DBG("  Max multiplier:    %" PRIu64 " (with %f hz)\n",
 		 periodic_capa.base_mul.max_multiplier, freq);
@@ -3420,6 +3477,8 @@ static odp_bool_t fill_periodic_base_mul_params(periodic_params_t *params)
 	ODPH_DBG("  Min base freq:     %f hz\n", min_freq);
 	ODPH_DBG("  Max base freq:     %f hz\n", max_freq);
 	ODPH_DBG("  Max priority:      %" PRIu16 "\n", timer_capa.periodic.max_priority);
+	ODPH_DBG("  Min pending tmo:   %" PRIu32 "\n", timer_capa.periodic.min_pending_tmo);
+	ODPH_DBG("  Max pending tmo:   %" PRIu32 "\n", timer_capa.periodic.max_pending_tmo);
 
 	return true;
 }
@@ -3500,6 +3559,7 @@ static odp_bool_t fill_periodic_freq_params(periodic_params_t *params)
 	params->pool_param.periodic.freq.num = 1;
 	params->pool_param.periodic.uarea_size =
 					test_global->global_mem.tmo_uarea_support > 0 ? 1 : 0;
+	params->pool_param.periodic.max_pending_tmo = timer_capa.periodic.min_pending_tmo;
 	params->pool_param.priority = timer_capa.periodic.max_priority;
 	odp_timer_periodic_param_init(&params->tmr_param);
 	params->tmr_param.freq.freq_hz = params->freq_hz;
@@ -3510,11 +3570,14 @@ static odp_bool_t fill_periodic_freq_params(periodic_params_t *params)
 	ODPH_DBG("  Freq hz:           %" PRIu64 " + %" PRIu64 "/%" PRIu64 " (%f)\n",
 		 params->freq_hz.integer, params->freq_hz.numer, params->freq_hz.denom, freq);
 	ODPH_DBG("  User area size:    %" PRIu32 "\n", params->pool_param.periodic.uarea_size);
+	ODPH_DBG("  Max pending tmo:   %" PRIu32 "\n", params->pool_param.periodic.max_pending_tmo);
 	ODPH_DBG("Capabilities:\n");
 	ODPH_DBG("  Max resolution:    %" PRIu64 " ns (with %f hz)\n", periodic_capa.res_ns, freq);
 	ODPH_DBG("  Min freq:          %f hz\n", min_freq);
 	ODPH_DBG("  Max freq:          %f hz\n", max_freq);
 	ODPH_DBG("  Max priority:      %" PRIu16 "\n", timer_capa.periodic.max_priority);
+	ODPH_DBG("  Min pending tmo:   %" PRIu32 "\n", timer_capa.periodic.min_pending_tmo);
+	ODPH_DBG("  Max pending tmo:   %" PRIu32 "\n", timer_capa.periodic.max_pending_tmo);
 
 	return true;
 }
@@ -3855,6 +3918,183 @@ static void timer_test_periodic_freq_reuse(void)
 	timer_test_periodic(&params, ODP_QUEUE_TYPE_SCHED, 0, 2, 0);
 }
 
+static void timer_test_periodic_flow_control(periodic_params_t *params, odp_queue_type_t queue_type)
+{
+	odp_timer_capability_t *timer_capa = &global_mem->timer_capa;
+	odp_queue_param_t queue_param;
+	odp_timer_pool_t timer_pool;
+	odp_timer_periodic_start_t start_param;
+	odp_queue_t queue;
+	odp_event_t ev;
+	odp_timer_t timer;
+	odp_time_t t1, t2;
+	uint64_t duration_ns, diff_ns;
+	int ret;
+	uint32_t num_tmo = 0, max_pending_tmo;
+	odp_bool_t done = false;
+	odp_event_t tmo_tbl[MAX_FLOW_CTRL_TMOS];
+
+	/* Use minimum supported value for pending timeouts */
+	duration_ns = MAX_FLOW_CTRL_TMOS * params->period_ns;
+	max_pending_tmo = ODPH_MAX(timer_capa->periodic.min_pending_tmo, 1U);
+	params->pool_param.periodic.max_pending_tmo = max_pending_tmo;
+
+	timer_pool = odp_timer_pool_create("periodic_timer", &params->pool_param);
+	CU_ASSERT_FATAL(timer_pool != ODP_TIMER_POOL_INVALID);
+
+	CU_ASSERT_FATAL(odp_timer_pool_start_multi(&timer_pool, 1) == 1);
+
+	odp_queue_param_init(&queue_param);
+	if (queue_type == ODP_QUEUE_TYPE_SCHED) {
+		queue_param.type       = ODP_QUEUE_TYPE_SCHED;
+		queue_param.sched.sync = ODP_SCHED_SYNC_ATOMIC;
+	}
+
+	queue = odp_queue_create("timeout_queue", &queue_param);
+	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
+
+	params->tmr_param.queue = queue;
+	timer = odp_timer_periodic_alloc(timer_pool, &params->tmr_param);
+	CU_ASSERT_FATAL(timer != ODP_TIMER_INVALID);
+
+	memset(&start_param, 0, sizeof(odp_timer_periodic_start_t));
+
+	ret = odp_timer_periodic_start(timer, &start_param);
+	if (ret == ODP_TIMER_TOO_NEAR)
+		ODPH_ERR("First tick too near\n");
+	else if (ret == ODP_TIMER_TOO_FAR)
+		ODPH_ERR("First tick too far\n");
+	else if (ret == ODP_TIMER_BUSY)
+		ODPH_ERR("Resources busy\n");
+	else if (ret == ODP_TIMER_FAIL)
+		ODPH_ERR("Periodic timer start failed\n");
+
+	CU_ASSERT_FATAL(ret == ODP_TIMER_SUCCESS);
+
+	t1 = odp_time_local();
+
+	while (1) {
+		if (queue_type == ODP_QUEUE_TYPE_SCHED)
+			ev = odp_schedule(NULL, ODP_SCHED_NO_WAIT);
+		else
+			ev = odp_queue_deq(queue);
+
+		if (ev == ODP_EVENT_INVALID) {
+			t2 = odp_time_local();
+			diff_ns = odp_time_diff_ns(t2, t1);
+			if (diff_ns >  duration_ns)
+				break;
+
+			continue;
+		}
+
+		CU_ASSERT(odp_event_type(ev) == ODP_EVENT_TIMEOUT);
+
+		if (odp_event_type(ev) != ODP_EVENT_TIMEOUT) {
+			odp_event_free(ev);
+			continue;
+		}
+
+		/* Collect timeouts without acknowledging them to trigger flow control */
+		tmo_tbl[num_tmo++] = ev;
+		if (num_tmo >= MAX_FLOW_CTRL_TMOS)
+			break;
+	}
+
+	/* Assume at least some timeouts are missing */
+	CU_ASSERT(num_tmo < MAX_FLOW_CTRL_TMOS);
+
+	printf("\n    Received %" PRIu32 " timeouts (max_pending_tmo %" PRIu32 ")\n",
+	       num_tmo, max_pending_tmo);
+
+	/* Perform delayed acks */
+	for (uint32_t i = 0; i < num_tmo; i++)
+		CU_ASSERT(odp_timer_periodic_ack(timer, tmo_tbl[i]) == 0);
+
+	ret = odp_timer_periodic_cancel(timer);
+	CU_ASSERT_FATAL(ret == 0);
+
+	t1 = odp_time_local();
+	while (1) {
+		if (queue_type == ODP_QUEUE_TYPE_SCHED)
+			ev = odp_schedule(NULL, ODP_SCHED_NO_WAIT);
+		else
+			ev = odp_queue_deq(queue);
+
+		if (ev == ODP_EVENT_INVALID) {
+			t2 = odp_time_local();
+			diff_ns = odp_time_diff_ns(t2, t1);
+			if (diff_ns > duration_ns)
+				break;
+
+			if (done)
+				break;
+
+			continue;
+		}
+
+		CU_ASSERT(odp_event_type(ev) == ODP_EVENT_TIMEOUT);
+
+		if (odp_event_type(ev) != ODP_EVENT_TIMEOUT) {
+			odp_event_free(ev);
+			continue;
+		}
+
+		ret = odp_timer_periodic_ack(timer, ev);
+		CU_ASSERT(ret == 0 || ret == 1);
+
+		if (ret == 1) {
+			done = true;
+			break;
+		}
+	}
+
+	CU_ASSERT(done);
+	CU_ASSERT(odp_timer_free(timer) == 0);
+	odp_timer_pool_destroy(timer_pool);
+	CU_ASSERT(odp_queue_destroy(queue) == 0);
+}
+
+static void timer_test_periodic_base_mul_sched_flow_control(void)
+{
+	periodic_params_t params;
+
+	if (!fill_periodic_base_mul_params(&params))
+		return;
+
+	timer_test_periodic_flow_control(&params, ODP_QUEUE_TYPE_SCHED);
+}
+
+static void timer_test_periodic_base_mul_plain_flow_control(void)
+{
+	periodic_params_t params;
+
+	if (!fill_periodic_base_mul_params(&params))
+		return;
+
+	timer_test_periodic_flow_control(&params, ODP_QUEUE_TYPE_PLAIN);
+}
+
+static void timer_test_periodic_freq_sched_flow_control(void)
+{
+	periodic_params_t params;
+
+	if (!fill_periodic_freq_params(&params))
+		return;
+
+	timer_test_periodic_flow_control(&params, ODP_QUEUE_TYPE_SCHED);
+}
+
+static void timer_test_periodic_freq_plain_flow_control(void)
+{
+	periodic_params_t params;
+
+	if (!fill_periodic_freq_params(&params))
+		return;
+
+	timer_test_periodic_flow_control(&params, ODP_QUEUE_TYPE_PLAIN);
+}
+
 static void timer_test_periodic_pool_create_max(void)
 {
 	odp_timer_capability_t timer_capa;
@@ -3905,6 +4145,7 @@ static void timer_test_periodic_pool_create_max(void)
 	timer_param.clk_src = clk_src;
 	timer_param.periodic.base_mul.base_freq_hz = periodic_capa.base_mul.base_freq_hz;
 	timer_param.periodic.base_mul.max_multiplier = periodic_capa.base_mul.max_multiplier;
+	timer_param.periodic.max_pending_tmo = timer_capa.periodic.max_pending_tmo;
 
 	for (uint32_t i = 0; i < num; i++) {
 		tp[i] = odp_timer_pool_create("test_max_periodic", &timer_param);
@@ -3913,6 +4154,11 @@ static void timer_test_periodic_pool_create_max(void)
 			ODPH_ERR("Timer pool create failed: %u / %u\n", i, num);
 
 		CU_ASSERT_FATAL(tp[i] != ODP_TIMER_POOL_INVALID);
+
+		if (timer_param.periodic.max_pending_tmo == timer_capa.periodic.min_pending_tmo)
+			timer_param.periodic.max_pending_tmo = timer_capa.periodic.max_pending_tmo;
+		else
+			timer_param.periodic.max_pending_tmo--;
 	}
 
 	CU_ASSERT(odp_timer_pool_start_multi(tp, num) == (int)num);
@@ -3981,6 +4227,7 @@ static void timer_test_periodic_alloc_max(void)
 	timer_param.clk_src = clk_src;
 	timer_param.periodic.base_mul.base_freq_hz = periodic_capa.base_mul.base_freq_hz;
 	timer_param.periodic.base_mul.max_multiplier = periodic_capa.base_mul.max_multiplier;
+	timer_param.periodic.max_pending_tmo = timer_capa.periodic.min_pending_tmo;
 	pool = odp_timer_pool_create("test_max_periodic", &timer_param);
 
 	CU_ASSERT_FATAL(pool != ODP_TIMER_POOL_INVALID);
@@ -4132,6 +4379,10 @@ odp_testinfo_t timer_suite[] = {
 				  check_periodic_base_mul_plain_support),
 	ODP_TEST_INFO_CONDITIONAL(timer_test_periodic_base_mul_reuse,
 				  check_periodic_base_mul_sched_support),
+	ODP_TEST_INFO_CONDITIONAL(timer_test_periodic_base_mul_sched_flow_control,
+				  check_periodic_base_mul_sched_flow_control_support),
+	ODP_TEST_INFO_CONDITIONAL(timer_test_periodic_base_mul_plain_flow_control,
+				  check_periodic_base_mul_plain_flow_control_support),
 	ODP_TEST_INFO_CONDITIONAL(timer_test_periodic_pool_create_max,
 				  check_periodic_base_mul_support),
 	ODP_TEST_INFO_CONDITIONAL(timer_test_periodic_alloc_max,
@@ -4150,6 +4401,10 @@ odp_testinfo_t timer_suite[] = {
 				  check_periodic_freq_plain_support),
 	ODP_TEST_INFO_CONDITIONAL(timer_test_periodic_freq_reuse,
 				  check_periodic_freq_sched_support),
+	ODP_TEST_INFO_CONDITIONAL(timer_test_periodic_freq_sched_flow_control,
+				  check_periodic_freq_sched_flow_control_support),
+	ODP_TEST_INFO_CONDITIONAL(timer_test_periodic_freq_plain_flow_control,
+				  check_periodic_freq_plain_flow_control_support),
 	ODP_TEST_INFO_NULL,
 };
 
