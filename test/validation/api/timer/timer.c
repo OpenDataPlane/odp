@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2015-2018 Linaro Limited
- * Copyright (c) 2019-2025 Nokia
+ * Copyright (c) 2019-2026 Nokia
  */
 
 /* For rand_r and nanosleep */
@@ -405,6 +405,7 @@ static void test_param_init(uint8_t fill)
 	CU_ASSERT(tp_param.periodic.base_freq_hz.integer == 0);
 	CU_ASSERT(tp_param.periodic.base_freq_hz.numer == 0);
 	CU_ASSERT(tp_param.periodic.base_freq_hz.denom == 0);
+	CU_ASSERT(tp_param.periodic.max_pending_tmo == 0);
 }
 
 static void timer_test_param_init(void)
@@ -2947,6 +2948,7 @@ static void timer_test_periodic_capa(void)
 	CU_ASSERT_FATAL(odp_timer_capability(clk_src, &timer_capa) == 0);
 	CU_ASSERT(timer_capa.periodic.max_pools);
 	CU_ASSERT(timer_capa.periodic.max_timers);
+	CU_ASSERT(timer_capa.periodic.min_pending_tmo <= timer_capa.periodic.max_pending_tmo);
 
 	min_fract = timer_capa.periodic.min_base_freq_hz;
 	max_fract = timer_capa.periodic.max_base_freq_hz;
@@ -3164,6 +3166,8 @@ static void timer_test_periodic(odp_queue_type_t queue_type, int use_first, int 
 	timer_param.clk_src    = clk_src;
 	timer_param.periodic.base_freq_hz = base_freq;
 	timer_param.periodic.max_multiplier = multiplier;
+	timer_param.periodic.max_pending_tmo = timer_capa.periodic.max_pending_tmo ?
+						timer_capa.periodic.max_pending_tmo : UINT32_MAX;
 	timer_param.priority = max_prio ? timer_capa.periodic.max_priority : 0;
 
 	ODPH_DBG("\n");
@@ -3174,6 +3178,7 @@ static void timer_test_periodic(odp_queue_type_t queue_type, int use_first, int 
 		 timer_param.periodic.base_freq_hz.numer,
 		 timer_param.periodic.base_freq_hz.denom, freq);
 	ODPH_DBG("  Max multiplier:    %" PRIu64 "\n", timer_param.periodic.max_multiplier);
+	ODPH_DBG("  Max pending tmo:   %" PRIu32 "\n", timer_param.periodic.max_pending_tmo);
 	ODPH_DBG("  Priority:          %" PRIu16 "\n", timer_param.priority);
 	ODPH_DBG("Capabilities:\n");
 	ODPH_DBG("  Max multiplier:    %" PRIu64 " (with %f hz)\n",
@@ -3181,6 +3186,8 @@ static void timer_test_periodic(odp_queue_type_t queue_type, int use_first, int 
 	ODPH_DBG("  Max resolution:    %" PRIu64 " ns (with %f hz)\n", periodic_capa.res_ns, freq);
 	ODPH_DBG("  Min base freq:     %f hz\n", min_freq);
 	ODPH_DBG("  Max base freq:     %f hz\n", max_freq);
+	ODPH_DBG("  Min pending tmo:   %" PRIu32 "\n", timer_capa.periodic.min_pending_tmo);
+	ODPH_DBG("  Max pending tmo:   %" PRIu32 "\n", timer_capa.periodic.max_pending_tmo);
 	ODPH_DBG("  Max priority:      %" PRIu16 "\n", timer_capa.periodic.max_priority);
 
 	timer_pool = odp_timer_pool_create("periodic_timer", &timer_param);
@@ -3431,6 +3438,7 @@ static void timer_test_periodic_pool_create_max(void)
 	timer_param.clk_src = clk_src;
 	timer_param.periodic.base_freq_hz = periodic_capa.base_freq_hz;
 	timer_param.periodic.max_multiplier = periodic_capa.max_multiplier;
+	timer_param.periodic.max_pending_tmo = timer_capa.periodic.min_pending_tmo;
 
 	for (uint32_t i = 0; i < num; i++) {
 		tp[i] = odp_timer_pool_create("test_max_periodic", &timer_param);
@@ -3439,6 +3447,10 @@ static void timer_test_periodic_pool_create_max(void)
 			ODPH_ERR("Timer pool create failed: %u / %u\n", i, num);
 
 		CU_ASSERT_FATAL(tp[i] != ODP_TIMER_POOL_INVALID);
+
+		timer_param.periodic.max_pending_tmo++;
+		if (timer_param.periodic.max_pending_tmo > timer_capa.periodic.max_pending_tmo)
+			timer_param.periodic.max_pending_tmo = timer_capa.periodic.min_pending_tmo;
 	}
 
 	CU_ASSERT(odp_timer_pool_start_multi(tp, num) == (int)num);
@@ -3505,6 +3517,7 @@ static void timer_test_periodic_alloc_max(void)
 	timer_param.clk_src = clk_src;
 	timer_param.periodic.base_freq_hz = periodic_capa.base_freq_hz;
 	timer_param.periodic.max_multiplier = periodic_capa.max_multiplier;
+	timer_param.periodic.max_pending_tmo = timer_capa.periodic.min_pending_tmo;
 	pool = odp_timer_pool_create("test_max_periodic", &timer_param);
 
 	CU_ASSERT_FATAL(pool != ODP_TIMER_POOL_INVALID);
