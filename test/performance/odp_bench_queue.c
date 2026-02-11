@@ -638,6 +638,18 @@ static int schedule_multi_no_wait(void)
 	return 1;
 }
 
+static int schedule_multi_wait(void)
+{
+	odp_event_t *dst = gbl_args->data.evs;
+	const int num_burst = gbl_args->appl.burst_size;
+	int num_recv = 0;
+
+	for (uint32_t i = 0U; i < TEST_REPEAT_COUNT; i++)
+		num_recv += odp_schedule_multi_wait(NULL, &dst[num_recv], num_burst);
+
+	return 1;
+}
+
 static int schedule_multi_no_wait_tm(bench_tm_result_t *res, int repeat_count)
 {
 	bench_tm_stamp_t s1, s2;
@@ -649,6 +661,24 @@ static int schedule_multi_no_wait_tm(bench_tm_result_t *res, int repeat_count)
 	for (int i = 0; i < repeat_count; i++) {
 		bench_tm_now(res, &s1);
 		num_recv += odp_schedule_multi_no_wait(NULL, &dst[num_recv], num_burst);
+		bench_tm_now(res, &s2);
+		bench_tm_func_record(&s2, &s1, res, id1);
+	}
+
+	return 1;
+}
+
+static int schedule_multi_wait_tm(bench_tm_result_t *res, int repeat_count)
+{
+	bench_tm_stamp_t s1, s2;
+	odp_event_t *dst = gbl_args->data.evs;
+	const int num_burst = gbl_args->appl.burst_size;
+	int num_recv = 0;
+	const uint8_t id1 = bench_tm_func_register(res, "odp_schedule_multi_wait()");
+
+	for (int i = 0; i < repeat_count; i++) {
+		bench_tm_now(res, &s1);
+		num_recv += odp_schedule_multi_wait(NULL, &dst[num_recv], num_burst);
 		bench_tm_now(res, &s2);
 		bench_tm_func_record(&s2, &s1, res, id1);
 	}
@@ -704,6 +734,8 @@ bench_info_t test_suite[] = {
 	BENCH_INFO_2("schedule_full", schedule, fill_scheduled_queues, term_scheduled_dst_events),
 	BENCH_INFO_2("schedule_multi_no_wait_full", schedule_multi_no_wait, fill_scheduled_queues,
 		     term_scheduled_dst_events),
+	BENCH_INFO_2("schedule_multi_wait_full", schedule_multi_wait, fill_scheduled_queues,
+		     term_scheduled_dst_events),
 	BENCH_INFO_2("schedule_multi_full", schedule_multi, fill_scheduled_queues,
 		     term_scheduled_dst_events),
 };
@@ -729,6 +761,8 @@ bench_tm_info_t test_suite_tm[] = {
 	BENCH_INFO_TM_2("schedule_full_tm", schedule_tm, fill_scheduled_queues,
 			term_scheduled_dst_events),
 	BENCH_INFO_TM_2("schedule_multi_no_wait_full_tm", schedule_multi_no_wait_tm,
+			fill_scheduled_queues, term_scheduled_dst_events),
+	BENCH_INFO_TM_2("schedule_multi_wait_full_tm", schedule_multi_wait_tm,
 			fill_scheduled_queues, term_scheduled_dst_events),
 	BENCH_INFO_TM_2("schedule_multi_full_tm", schedule_multi_tm, fill_scheduled_queues,
 			term_scheduled_dst_events),
