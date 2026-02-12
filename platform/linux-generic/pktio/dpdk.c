@@ -107,7 +107,7 @@ ODP_STATIC_ASSERT(DPDK_MIN_RX_BURST <= UINT8_MAX, "DPDK_MIN_RX_BURST too large")
 typedef struct {
 	int num_rx_desc_default;
 	int num_tx_desc_default;
-	int min_rx_burst;
+	uint8_t min_rx_burst;
 	uint8_t multicast_en;
 	uint8_t rx_drop_en;
 	uint8_t set_flow_hash;
@@ -254,10 +254,11 @@ static int init_options(pktio_entry_t *pktio_entry,
 	if (!lookup_opt("min_rx_burst", dev_info->driver_name, &val))
 		return -1;
 
-	if (val < 0) {
-		_ODP_ERR("min_rx_burst value %d must be non-negative\n", val);
+	if (val < 0 || val > UINT8_MAX) {
+		_ODP_ERR("Invalid min_rx_burst value %d (0-%d valid)\n", val, UINT8_MAX);
 		return -1;
 	}
+	opt->min_rx_burst = (uint8_t)val;
 
 	_ODP_DBG("DPDK interface (%s): %" PRIu16 "\n", dev_info->driver_name,
 		 pkt_priv(pktio_entry)->port_id);
