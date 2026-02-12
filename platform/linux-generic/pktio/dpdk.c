@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2016-2018 Linaro Limited
- * Copyright (c) 2019-2025 Nokia
+ * Copyright (c) 2019-2026 Nokia
  */
 
 #include <odp/autoheader_internal.h>
@@ -243,11 +243,11 @@ static int init_options(pktio_entry_t *pktio_entry,
 		return -1;
 	opt->rx_drop_en = !!val;
 
-	if (!lookup_opt("set_flow_hash", NULL, &val))
+	if (!lookup_opt("set_flow_hash", dev_info->driver_name, &val))
 		return -1;
 	opt->set_flow_hash = !!val;
 
-	if (!lookup_opt("multicast_en", NULL, &val))
+	if (!lookup_opt("multicast_en", dev_info->driver_name, &val))
 		return -1;
 	opt->multicast_en = !!val;
 
@@ -262,11 +262,12 @@ static int init_options(pktio_entry_t *pktio_entry,
 
 	_ODP_DBG("DPDK interface (%s): %" PRIu16 "\n", dev_info->driver_name,
 		 pkt_priv(pktio_entry)->port_id);
-	_ODP_DBG("  multicast_en: %d\n", opt->multicast_en);
-	_ODP_DBG("  num_rx_desc: %d\n", opt->num_rx_desc_default);
-	_ODP_DBG("  num_tx_desc: %d\n", opt->num_tx_desc_default);
-	_ODP_DBG("  rx_drop_en: %d\n", opt->rx_drop_en);
-	_ODP_DBG("  min_rx_burst: %d\n", opt->min_rx_burst);
+	_ODP_DBG("  num_rx_desc:   %d\n", opt->num_rx_desc_default);
+	_ODP_DBG("  num_tx_desc:   %d\n", opt->num_tx_desc_default);
+	_ODP_DBG("  rx_drop_en:    %d\n", opt->rx_drop_en);
+	_ODP_DBG("  set_flow_hash: %d\n", opt->set_flow_hash);
+	_ODP_DBG("  multicast_en:  %d\n", opt->multicast_en);
+	_ODP_DBG("  min_rx_burst:  %d\n", opt->min_rx_burst);
 
 	return 0;
 }
