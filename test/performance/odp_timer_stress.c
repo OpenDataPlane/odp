@@ -633,10 +633,18 @@ static inline void start_single_shot(odp_timer_pool_t tmr_pool, odp_timer_t tmr,
 
 		--retry;
 
-		if (retry > 0U && ret == ODP_TIMER_TOO_NEAR) {
-			++mul;
-			++stats->num_retry;
-			continue;
+		if (retry > 0U) {
+			if (ret == ODP_TIMER_BUSY) {
+				/* Resources busy, don't increment multiplier, just retry. */
+				++stats->num_retry;
+				continue;
+			}
+
+			if (ret == ODP_TIMER_TOO_NEAR) {
+				++mul;
+				++stats->num_retry;
+				continue;
+			}
 		}
 
 		/* Arming the timer apparently not possible, abort. */
@@ -716,17 +724,31 @@ static int process_single_shot(void *args)
 }
 
 static void start_periodic(odp_timer_pool_t tmr_pool, odp_timer_t tmr, odp_event_t tmo,
-			   uint64_t mul)
+			   uint64_t mul, stats_t *stats)
 {
 	const odp_timer_periodic_start_t start = { .first_tick = 0U, .freq_multiplier = mul,
 						   .tmo_ev = tmo };
-	const int ret = odp_timer_periodic_start(tmr, &start);
+	uint32_t retry = MAX_RETRY;
+	int ret;
 
-	if (ret != ODP_TIMER_SUCCESS)
-		/* Even with implementation-set first tick, arming not possible, abort. */
+	while (retry) {
+		ret = odp_timer_periodic_start(tmr, &start);
+
+		if (ret == ODP_TIMER_SUCCESS)
+			break;
+
+		--retry;
+
+		if (retry > 0U && ret == ODP_TIMER_BUSY) {
+			++stats->num_retry;
+			continue;
+		}
+
+		/* Arming the timer apparently not possible, abort. */
 		ODPH_ABORT("Error starting timer, aborting (tmr: %" PRIx64 ", tmr pool: "
 			   "%" PRIx64 ")\n", odp_timer_to_u64(tmr),
 			   odp_timer_pool_to_u64(tmr_pool));
+	}
 }
 
 static void boot_periodic(worker_config_t *worker, odp_timer_pool_t tmr_pool, odp_pool_t tmo_pool,
@@ -736,7 +758,8 @@ static void boot_periodic(worker_config_t *worker, odp_timer_pool_t tmr_pool, od
 
 	for (uint32_t i = 0U; i < worker->num_boot_tmr; ++i) {
 		time = get_time_handles(tmr_pool, tmo_pool, worker->scd.q);
-		start_periodic(tmr_pool, time.tmr, odp_timeout_to_event(time.tmo), mul);
+		start_periodic(tmr_pool, time.tmr, odp_timeout_to_event(time.tmo), mul,
+			       &worker->stats);
 	}
 }
 
@@ -1012,18 +1035,17 @@ static void print_stats(const prog_config_t *config)
 		tot_rate += rate;
 
 		printf("  worker %u:\n"
-		       "    %s%" PRIu64 "\n", i,
+		       "    %s%" PRIu64 "\n"
+		       "    number of retries:  %" PRIu64 "\n", i,
 		       opts->mode == SINGLE_SHOT || opts->mode == PERIODIC ?
 			"number of timeouts: " : "number of cancels:  ",
-		       stats->num_tmo);
+		       stats->num_tmo, stats->num_retry);
 
 		if (opts->mode == SINGLE_SHOT || opts->mode == CANCEL) {
 			if (opts->mode == CANCEL)
 				printf("    number of misses:   %" PRIu64 "\n", stats->num_miss);
 
-			printf("    number of retries:  %" PRIu64 "\n"
-			       "    max start mul:      %" PRIu64 "\n", stats->num_retry,
-			       stats->max_mul);
+			printf("    max start mul:      %" PRIu64 "\n", stats->max_mul);
 		}
 
 		printf("    runtime:            %" PRIu64 " ns\n"
