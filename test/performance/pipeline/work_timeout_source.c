@@ -62,8 +62,11 @@ static int work_timeout_source(uintptr_t data, odp_event_t ev[] ODP_UNUSED, int 
 	} else if (ret == ODP_TIMER_TOO_FAR) {
 		odp_timeout_free(tmo);
 		++stats->data2;
-	} else {
+	} else if (ret == ODP_TIMER_BUSY) {
+		odp_timeout_free(tmo);
 		++stats->data3;
+	} else {
+		++stats->data4;
 	}
 
 	return 0;
@@ -114,8 +117,9 @@ static void work_timeout_source_print(const char *queue, const work_stats_t *sta
 	       "  work:           %s\n"
 	       "  timer too near: %" PRIu64 "\n"
 	       "  timer too far:  %" PRIu64 "\n"
+	       "  timer busy:     %" PRIu64 "\n"
 	       "  timer arms:     %" PRIu64 "\n", queue, WORK_TIMEOUT_SOURCE, stats->data1,
-	       stats->data2, stats->data3);
+	       stats->data2, stats->data3, stats->data4);
 }
 
 static void work_timeout_source_destroy(uintptr_t data)
