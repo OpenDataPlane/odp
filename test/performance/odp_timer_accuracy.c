@@ -103,7 +103,7 @@ typedef struct ODP_ALIGNED_CACHE {
 	uint64_t num_exact;
 	uint64_t num_after;
 
-	uint64_t num_too_near;
+	uint64_t num_retry;
 
 } test_stat_t;
 
@@ -973,7 +973,7 @@ static int print_stat(test_global_t *test_global)
 		stat->num_before += s[i].num_before;
 		stat->num_exact += s[i].num_exact;
 		stat->num_after += s[i].num_after;
-		stat->num_too_near += s[i].num_too_near;
+		stat->num_retry += s[i].num_retry;
 
 		if (s[i].nsec_before_min < stat->nsec_before_min) {
 			stat->nsec_before_min = s[i].nsec_before_min;
@@ -1033,7 +1033,7 @@ static int print_stat(test_global_t *test_global)
 	printf("  num exact:  %12" PRIu64 "  /  %.2f%%\n",
 	       stat->num_exact, 100.0 * stat->num_exact / tot_timers);
 	printf("  num retry:  %12" PRIu64 "  /  %.2f%%\n",
-	       stat->num_too_near, 100.0 * stat->num_too_near / tot_timers);
+	       stat->num_retry, 100.0 * stat->num_retry / tot_timers);
 	printf("  error after (nsec):\n");
 	print_nsec_error("min", stat->nsec_after_min, res_ns, nsec_after_min_tid,
 			 stat->nsec_after_min_idx);
@@ -1100,7 +1100,7 @@ static int print_stat(test_global_t *test_global)
 				      "%f,%" PRIu64 ",%f,%" PRIu64 ",%f,%" PRIu64 ",%f,%" PRIu64 ","
 				      "%f,%" PRIu64 ",%f,%" PRId64 ",%f\n",
 				      stat->num_after, stat->num_before,
-				      stat->num_exact, stat->num_too_near,
+				      stat->num_exact, stat->num_retry,
 				      stat->nsec_after_min, (double)stat->nsec_after_min / res_ns,
 				      stat->nsec_after_max, (double)stat->nsec_after_max / res_ns,
 				      ave_after, (double)ave_after / res_ns,
@@ -1470,9 +1470,9 @@ static int run_test(void *arg)
 				start_param.tick = tick;
 
 				ret = odp_timer_start(tim, &start_param);
-				if (ret == ODP_TIMER_TOO_NEAR) {
+				if (ret == ODP_TIMER_TOO_NEAR || ret == ODP_TIMER_BUSY) {
 					if (events >= test_global->opt.warmup_timers)
-						stat->num_too_near++;
+						stat->num_retry++;
 				} else {
 					break;
 				}
