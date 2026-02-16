@@ -1,0 +1,5 @@
+<map id="odp_pktio_info_t" name="odp_pktio_info_t">
+<area shape="rect" id="node1" title="Packet IO information." alt="" coords="83,95,214,121"/>
+<area shape="rect" id="node2" href="$struct__odp__abi__pool__t.html" title=" " alt="" coords="5,5,132,32"/>
+<area shape="rect" id="node3" href="$structodp__pktio__param__t.html" title="Packet IO parameters." alt="" coords="157,5,303,32"/>
+</map>

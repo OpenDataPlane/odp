@@ -1,0 +1,49 @@
+<map id="proto_stats_types.h" name="proto_stats_types.h">
+<area shape="rect" id="node1" title="ODP proto stats types." alt="" coords="1462,5,1613,32"/>
+<area shape="rect" id="node2" href="$api_2proto__stats__types_8h.html" title="ODP proto stats types." alt="" coords="1462,80,1613,107"/>
+<area shape="rect" id="node3" href="$api_2spec_2packet_8h.html" title="ODP packet descriptor." alt="" coords="1265,752,1343,779"/>
+<area shape="rect" id="node6" href="$api_2spec_2packet__types_8h.html" title="ODP packet types." alt="" coords="952,155,1072,181"/>
+<area shape="rect" id="node46" href="$api_2spec_2proto__stats_8h.html" title="ODP Proto Stats." alt="" coords="1575,155,1681,181"/>
+<area shape="rect" id="node4" href="$api_2packet_8h.html" title="ODP packet descriptor." alt="" coords="1265,976,1343,1003"/>
+<area shape="rect" id="node5" href="$odp__api_8h.html" title="The OpenDataPlane API." alt="" coords="873,1200,959,1227"/>
+<area shape="rect" id="node7" href="$api_2packet__types_8h.html" title="ODP packet." alt="" coords="517,229,637,256"/>
+<area shape="rect" id="node8" href="$api_2spec_2comp_8h.html" title="ODP Compression." alt="" coords="1429,304,1499,331"/>
+<area shape="rect" id="node10" href="$api_2spec_2crypto_8h.html" title="ODP crypto." alt="" coords="5,901,80,928"/>
+<area shape="rect" id="node12" href="$api_2spec_2crypto__types_8h.html" title="ODP crypto types." alt="" coords="185,603,303,629"/>
+<area shape="rect" id="node14" href="$api_2spec_2ipsec_8h.html" title="ODP IPsec API." alt="" coords="225,1051,293,1077"/>
+<area shape="rect" id="node18" href="$api_2spec_2dma__types_8h.html" title="ODP DMA." alt="" coords="717,304,824,331"/>
+<area shape="rect" id="node28" href="$api_2spec_2packet__io_8h.html" title="ODP Packet IO." alt="" coords="499,901,595,928"/>
+<area shape="rect" id="node30" href="$api_2spec_2event_8h.html" title="ODP event." alt="" coords="542,603,613,629"/>
+<area shape="rect" id="node36" href="$api_2spec_2packet__io__types_8h.html" title="ODP Packet IO types." alt="" coords="379,603,517,629"/>
+<area shape="rect" id="node44" href="$api_2spec_2packet__flags_8h.html" title="ODP packet flags." alt="" coords="1289,304,1404,331"/>
+<area shape="rect" id="node9" href="$api_2comp_8h.html" title="ODP crypto." alt="" coords="1429,528,1499,555"/>
+<area shape="rect" id="node11" href="$api_2crypto_8h.html" title="ODP crypto." alt="" coords="72,1051,147,1077"/>
+<area shape="rect" id="node13" href="$api_2crypto__types_8h.html" title="ODP crypto." alt="" coords="149,827,267,853"/>
+<area shape="rect" id="node16" href="$api_2spec_2ipsec__types_8h.html" title="ODP IPsec API type definitions." alt="" coords="250,901,361,928"/>
+<area shape="rect" id="node15" href="$api_2ipsec_8h.html" title="ODP IPSEC API &#45; platform specific header." alt="" coords="273,1125,341,1152"/>
+<area shape="rect" id="node17" href="$api_2ipsec__types_8h.html" title="ODP IPsec." alt="" coords="250,976,361,1003"/>
+<area shape="rect" id="node19" href="$api_2dma__types_8h.html" title="ODP DMA." alt="" coords="808,379,915,405"/>
+<area shape="rect" id="node20" href="$api_2spec_2dma_8h.html" title="ODP DMA." alt="" coords="1233,603,1295,629"/>
+<area shape="rect" id="node22" href="$api_2spec_2pool__types_8h.html" title="Type definitions for pools." alt="" coords="809,453,914,480"/>
+<area shape="rect" id="node21" href="$api_2dma_8h.html" title="ODP DMA." alt="" coords="1165,1125,1227,1152"/>
+<area shape="rect" id="node23" href="$api_2pool__types_8h.html" title="ODP pool." alt="" coords="763,528,869,555"/>
+<area shape="rect" id="node24" href="$api_2spec_2buffer_8h.html" title="ODP buffer." alt="" coords="781,603,851,629"/>
+<area shape="rect" id="node26" href="$api_2spec_2classification_8h.html" title="ODP classification descriptor." alt="" coords="581,752,699,779"/>
+<area shape="rect" id="node32" href="$api_2spec_2event__vector_8h.html" title="ODP event vector." alt="" coords="875,603,994,629"/>
+<area shape="rect" id="node34" href="$spec_2ml_8h.html" title="ODP Machine Learning (ML) offload." alt="" coords="1019,603,1069,629"/>
+<area shape="rect" id="node40" href="$api_2spec_2pool_8h.html" title="ODP pool." alt="" coords="1094,603,1157,629"/>
+<area shape="rect" id="node42" href="$api_2spec_2timer_8h.html" title="ODP timer service." alt="" coords="689,603,757,629"/>
+<area shape="rect" id="node25" href="$api_2buffer_8h.html" title="ODP buffer descriptor." alt="" coords="831,1051,902,1077"/>
+<area shape="rect" id="node27" href="$api_2classification_8h.html" title="ODP classification descriptor." alt="" coords="581,827,699,853"/>
+<area shape="rect" id="node29" href="$api_2packet__io_8h.html" title="ODP Packet IO." alt="" coords="507,976,603,1003"/>
+<area shape="rect" id="node31" href="$api_2event_8h.html" title="ODP event." alt="" coords="685,1125,755,1152"/>
+<area shape="rect" id="node33" href="$api_2event__vector_8h.html" title="ODP event vector." alt="" coords="882,752,1001,779"/>
+<area shape="rect" id="node35" href="$ml_8h.html" title="ODP Machine Learning (ML) offload." alt="" coords="1011,901,1061,928"/>
+<area shape="rect" id="node37" href="$api_2packet__io__types_8h.html" title="ODP Packet IO." alt="" coords="400,677,539,704"/>
+<area shape="rect" id="node38" href="$api_2spec_2traffic__mngr_8h.html" title=" " alt="" coords="393,752,505,779"/>
+<area shape="rect" id="node39" href="$api_2traffic__mngr_8h.html" title="ODP Traffic manager." alt="" coords="343,827,455,853"/>
+<area shape="rect" id="node41" href="$api_2pool_8h.html" title="ODP pool." alt="" coords="1089,677,1151,704"/>
+<area shape="rect" id="node43" href="$api_2timer_8h.html" title="ODP timer service." alt="" coords="713,677,781,704"/>
+<area shape="rect" id="node45" href="$api_2packet__flags_8h.html" title="ODP packet flags." alt="" coords="1316,1051,1431,1077"/>
+<area shape="rect" id="node47" href="$api_2proto__stats_8h.html" title="ODP proto stats." alt="" coords="1575,453,1681,480"/>
+</map>

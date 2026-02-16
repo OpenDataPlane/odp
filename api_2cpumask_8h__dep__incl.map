@@ -1,0 +1,15 @@
+<map id="cpumask.h" name="cpumask.h">
+<area shape="rect" id="node1" title="ODP CPU masks and enumeration." alt="" coords="659,5,752,32"/>
+<area shape="rect" id="node2" href="$api_2abi-default_2thrmask_8h.html" title="ODP thread masks." alt="" coords="341,80,429,107"/>
+<area shape="rect" id="node9" href="$api_2spec_2init_8h.html" title=" " alt="" coords="678,80,733,107"/>
+<area shape="rect" id="node13" href="$odp__api_8h.html" title="The OpenDataPlane API." alt="" coords="677,379,763,405"/>
+<area shape="rect" id="node3" href="$arch_2arm32-linux_2odp_2api_2abi_2thrmask_8h_source.html" title=" " alt="" coords="5,155,93,181"/>
+<area shape="rect" id="node4" href="$arch_2arm64-linux_2odp_2api_2abi_2thrmask_8h_source.html" title=" " alt="" coords="117,155,205,181"/>
+<area shape="rect" id="node5" href="$arch_2default-linux_2odp_2api_2abi_2thrmask_8h_source.html" title=" " alt="" coords="229,155,317,181"/>
+<area shape="rect" id="node6" href="$arch_2power64-linux_2odp_2api_2abi_2thrmask_8h_source.html" title=" " alt="" coords="341,155,429,181"/>
+<area shape="rect" id="node7" href="$arch_2x86__32-linux_2odp_2api_2abi_2thrmask_8h_source.html" title=" " alt="" coords="453,155,541,181"/>
+<area shape="rect" id="node8" href="$arch_2x86__64-linux_2odp_2api_2abi_2thrmask_8h_source.html" title=" " alt="" coords="565,155,653,181"/>
+<area shape="rect" id="node10" href="$api_2init_8h.html" title="ODP initialization." alt="" coords="678,155,733,181"/>
+<area shape="rect" id="node11" href="$api_2spec_2shared__memory_8h.html" title="ODP shared memory." alt="" coords="544,229,683,256"/>
+<area shape="rect" id="node12" href="$api_2shared__memory_8h.html" title="ODP shared memory." alt="" coords="544,304,683,331"/>
+</map>

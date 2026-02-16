@@ -1,0 +1,13 @@
+<map id="deprecated.h" name="deprecated.h">
+<area shape="rect" id="node1" title="Control deprecated API definitions." alt="" coords="111,5,217,32"/>
+<area shape="rect" id="node2" href="$spec_2crypto__types_8h.html" title="ODP crypto types." alt="" coords="105,80,223,107"/>
+<area shape="rect" id="node3" href="$crypto__types_8h.html" title="ODP crypto." alt="" coords="105,155,223,181"/>
+<area shape="rect" id="node4" href="$spec_2crypto_8h.html" title="ODP crypto." alt="" coords="5,229,80,256"/>
+<area shape="rect" id="node6" href="$spec_2ipsec_8h.html" title="ODP IPsec API." alt="" coords="83,379,151,405"/>
+<area shape="rect" id="node8" href="$spec_2ipsec__types_8h.html" title="ODP IPsec API type definitions." alt="" coords="155,229,266,256"/>
+<area shape="rect" id="node11" href="$crypto__inlines_8h_source.html" title=" " alt="" coords="291,229,416,256"/>
+<area shape="rect" id="node5" href="$crypto_8h.html" title="ODP crypto." alt="" coords="5,304,80,331"/>
+<area shape="rect" id="node7" href="$ipsec_8h.html" title="ODP IPSEC API &#45; platform specific header." alt="" coords="83,453,151,480"/>
+<area shape="rect" id="node9" href="$ipsec__types_8h.html" title="ODP IPsec." alt="" coords="155,304,266,331"/>
+<area shape="rect" id="node10" href="$ipsec__inlines_8h_source.html" title=" " alt="" coords="175,379,294,405"/>
+</map>

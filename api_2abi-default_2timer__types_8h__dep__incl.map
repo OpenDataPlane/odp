@@ -1,0 +1,9 @@
+<map id="timer_types.h" name="timer_types.h">
+<area shape="rect" id="node1" title="ODP timer service." alt="" coords="345,5,457,32"/>
+<area shape="rect" id="node2" href="$arch_2arm32-linux_2odp_2api_2abi_2timer__types_8h_source.html" title=" " alt="" coords="5,80,117,107"/>
+<area shape="rect" id="node3" href="$arch_2arm64-linux_2odp_2api_2abi_2timer__types_8h_source.html" title=" " alt="" coords="141,80,253,107"/>
+<area shape="rect" id="node4" href="$arch_2default-linux_2odp_2api_2abi_2timer__types_8h_source.html" title=" " alt="" coords="277,80,389,107"/>
+<area shape="rect" id="node5" href="$arch_2power64-linux_2odp_2api_2abi_2timer__types_8h_source.html" title=" " alt="" coords="413,80,525,107"/>
+<area shape="rect" id="node6" href="$arch_2x86__32-linux_2odp_2api_2abi_2timer__types_8h_source.html" title=" " alt="" coords="549,80,661,107"/>
+<area shape="rect" id="node7" href="$arch_2x86__64-linux_2odp_2api_2abi_2timer__types_8h_source.html" title=" " alt="" coords="685,80,797,107"/>
+</map>

@@ -1,0 +1,12 @@
+<map id="ml_quantize.h" name="ml_quantize.h">
+<area shape="rect" id="node1" title="ODP Machine Learning (ML) quantization functions." alt="" coords="205,5,319,32"/>
+<area shape="rect" id="node2" href="$visibility__begin_8h_source.html" title=" " alt="" coords="5,379,167,405"/>
+<area shape="rect" id="node3" href="$api_2std__types_8h.html" title="Standard C language types and definitions for ODP." alt="" coords="187,80,337,107"/>
+<area shape="rect" id="node10" href="$visibility__end_8h_source.html" title=" " alt="" coords="406,379,555,405"/>
+<area shape="rect" id="node4" title=" " alt="" coords="74,155,247,181"/>
+<area shape="rect" id="node5" href="$api_2spec_2std__types_8h.html" title="Common types and definitions for ODP API files." alt="" coords="272,155,455,181"/>
+<area shape="rect" id="node6" title=" " alt="" coords="211,229,281,256"/>
+<area shape="rect" id="node7" href="$api_2align_8h.html" title="ODP alignments." alt="" coords="305,229,424,256"/>
+<area shape="rect" id="node8" title=" " alt="" coords="124,304,267,331"/>
+<area shape="rect" id="node9" href="$api_2spec_2align_8h.html" title="ODP alignments." alt="" coords="291,304,443,331"/>
+</map>

@@ -1,0 +1,9 @@
+<map id="rwlock.h" name="rwlock.h">
+<area shape="rect" id="node1" title="ODP rwlock." alt="" coords="259,5,336,32"/>
+<area shape="rect" id="node2" href="$arch_2arm32-linux_2odp_2api_2abi_2rwlock_8h_source.html" title=" " alt="" coords="5,80,83,107"/>
+<area shape="rect" id="node3" href="$arch_2arm64-linux_2odp_2api_2abi_2rwlock_8h_source.html" title=" " alt="" coords="107,80,184,107"/>
+<area shape="rect" id="node4" href="$arch_2default-linux_2odp_2api_2abi_2rwlock_8h_source.html" title=" " alt="" coords="208,80,285,107"/>
+<area shape="rect" id="node5" href="$arch_2power64-linux_2odp_2api_2abi_2rwlock_8h_source.html" title=" " alt="" coords="309,80,387,107"/>
+<area shape="rect" id="node6" href="$arch_2x86__32-linux_2odp_2api_2abi_2rwlock_8h_source.html" title=" " alt="" coords="411,80,488,107"/>
+<area shape="rect" id="node7" href="$arch_2x86__64-linux_2odp_2api_2abi_2rwlock_8h_source.html" title=" " alt="" coords="512,80,589,107"/>
+</map>

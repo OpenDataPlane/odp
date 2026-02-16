@@ -1,0 +1,5 @@
+<map id="odp_timer_capability_t" name="odp_timer_capability_t">
+<area shape="rect" id="node1" title="Timer capability." alt="" coords="77,109,247,136"/>
+<area shape="rect" id="node2" href="$structodp__fract__u64__t.html" title="Unsigned 64 bit fractional number." alt="" coords="5,5,132,32"/>
+<area shape="rect" id="node3" href="$structodp__timer__res__capability__t.html" title="Timer resolution capability." alt="" coords="156,5,355,32"/>
+</map>

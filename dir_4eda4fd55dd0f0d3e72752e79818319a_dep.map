@@ -1,0 +1,17 @@
+<map id="arch" name="arch">
+<area shape="rect" id="node1" href="dir_be9f6d876b8eda462084eff1b3ea4553.html" title="api" alt="" coords="387,159,459,207"/>
+<area shape="rect" id="node3" href="dir_052e7602a29a4e1039e7de666bce86ca.html" title="arm32&#45;linux" alt="" coords="693,63,795,111"/>
+<area shape="rect" id="edge6-headlabel" href="dir_000006_000002.html" title="21" alt="" coords="469,174,487,189"/>
+<area shape="rect" id="node4" href="dir_70eaa2f41713610ea0cf8498c63ac358.html" title="arm64&#45;linux" alt="" coords="568,63,669,111"/>
+<area shape="rect" id="edge2-headlabel" href="dir_000010_000002.html" title="21" alt="" coords="471,159,488,173"/>
+<area shape="rect" id="node5" href="dir_48117faa50f292645806ea8fb70008d8.html" title="default&#45;linux" alt="" coords="438,63,543,111"/>
+<area shape="rect" id="edge4-headlabel" href="dir_000014_000002.html" title="21" alt="" coords="448,142,465,156"/>
+<area shape="rect" id="node6" href="dir_03c05aea247c636c5180e1c14df87c04.html" title="power64&#45;linux" alt="" coords="299,63,413,111"/>
+<area shape="rect" id="edge5-headlabel" href="dir_000018_000002.html" title="21" alt="" coords="394,132,411,146"/>
+<area shape="rect" id="node7" href="dir_8bf6b7e80d8919b75edbcc15956e61d9.html" title="x86_32&#45;linux" alt="" coords="168,63,275,111"/>
+<area shape="rect" id="edge1-headlabel" href="dir_000022_000002.html" title="21" alt="" coords="365,144,382,158"/>
+<area shape="rect" id="node8" href="dir_e8c392aee706068680f6562db90ecbae.html" title="x86_64&#45;linux" alt="" coords="37,63,144,111"/>
+<area shape="rect" id="edge3-headlabel" href="dir_000026_000002.html" title="21" alt="" coords="361,158,379,172"/>
+<area shape="rect" id="clust2" href="dir_4eda4fd55dd0f0d3e72752e79818319a.html" alt="" coords="27,52,901,121"/>
+<area shape="rect" id="clust1" href="dir_a97ec78d987d17ef5986981beb9a2005.html" title="odp" alt="" coords="16,16,912,217"/>
+</map>

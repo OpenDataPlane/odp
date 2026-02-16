@@ -1,0 +1,8 @@
+<map id="odp_cls_capability_t" name="odp_cls_capability_t">
+<area shape="rect" id="node1" title="Classification capabilities This capability structure defines system level classification capability." alt="" coords="361,107,516,133"/>
+<area shape="rect" id="node2" href="$unionodp__threshold__types__t.html" title="Supported threshold types." alt="" coords="17,5,187,32"/>
+<area shape="rect" id="node3" href="$structodp__cls__aggr__capability__t.html" title="Event aggregator related capabilities." alt="" coords="7,56,197,83"/>
+<area shape="rect" id="node4" href="$structodp__cls__stats__capability__t.html" title="Classifier statistics capabilities." alt="" coords="5,107,199,133"/>
+<area shape="rect" id="node5" href="$unionodp__pktin__hash__proto__t.html" title="Packet input hash protocols." alt="" coords="13,157,191,184"/>
+<area shape="rect" id="node6" href="$unionodp__cls__pmr__terms__t.html" title="Supported PMR term values." alt="" coords="21,208,183,235"/>
+</map>

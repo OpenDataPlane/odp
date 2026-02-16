@@ -1,0 +1,4 @@
+<map id="odp_dma_capability_t" name="odp_dma_capability_t">
+<area shape="rect" id="node1" title="DMA capabilities." alt="" coords="23,95,188,121"/>
+<area shape="rect" id="node2" href="$structodp__dma__pool__capability__t.html" title="DMA completion event pool capabilities." alt="" coords="5,5,205,32"/>
+</map>

@@ -1,0 +1,5 @@
+<map id="odp_schedule_group_info_t" name="odp_schedule_group_info_t">
+<area shape="rect" id="node1" title="Schedule group information." alt="" coords="5,184,160,225"/>
+<area shape="rect" id="node2" href="$structodp__thrmask__s.html" title=" " alt="" coords="22,95,143,121"/>
+<area shape="rect" id="node3" href="$structodp__cpumask__s.html" title=" " alt="" coords="19,5,146,32"/>
+</map>

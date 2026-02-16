@@ -1,0 +1,9 @@
+<map id="odp_ipsec_capability_t" name="odp_ipsec_capability_t">
+<area shape="rect" id="node1" title="IPSEC capability." alt="" coords="352,132,523,159"/>
+<area shape="rect" id="node2" href="$unionodp__proto__chksums__t.html" title="Flags to control packet data checksum checking." alt="" coords="32,5,196,32"/>
+<area shape="rect" id="node3" href="$unionodp__crypto__cipher__algos__t.html" title="Cipher algorithms in a bit field structure." alt="" coords="17,56,211,83"/>
+<area shape="rect" id="node4" href="$unionodp__crypto__auth__algos__t.html" title="Authentication algorithms in a bit field structure." alt="" coords="22,107,206,133"/>
+<area shape="rect" id="node5" href="$structodp__pktin__vector__capability__t.html" title="Packet input vector capabilities." alt="" coords="5,157,223,184"/>
+<area shape="rect" id="node6" href="$structodp__reass__capability__t.html" title="Reassembly capabilities." alt="" coords="29,208,199,235"/>
+<area shape="rect" id="node7" href="$structodp__ipsec__test__capability__t.html" title="IPSEC TEST capability." alt="" coords="13,259,215,285"/>
+</map>

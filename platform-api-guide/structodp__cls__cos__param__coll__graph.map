@@ -1,0 +1,14 @@
+<map id="odp_cls_cos_param" name="odp_cls_cos_param">
+<area shape="rect" id="node1" title="Class of service parameters Used to communicate class of service creation options." alt="" coords="976,185,1125,212"/>
+<area shape="rect" id="node2" href="$structodp__red__param__t.html" title="Random Early Detection (RED) Random Early Detection is enabled to initiate a drop probability for the..." alt="" coords="659,7,793,33"/>
+<area shape="rect" id="node3" href="$structodp__threshold__t.html" title="ODP Threshold." alt="" coords="242,32,369,59"/>
+<area shape="rect" id="node12" href="$structodp__bp__param__t.html" title="Back pressure (BP)" alt="" coords="661,57,791,84"/>
+<area shape="rect" id="node4" href="$structodp__queue__param__t.html" title="ODP Queue parameters." alt="" coords="649,159,803,185"/>
+<area shape="rect" id="node5" href="$structodp__event__aggr__config__t.html" title="Event vector configuration." alt="" coords="213,159,397,185"/>
+<area shape="rect" id="node6" href="$struct__odp__abi__pool__t.html" title=" " alt="" coords="5,159,132,185"/>
+<area shape="rect" id="node11" href="$structodp__pktin__vector__config__t.html" title="Packet input vector configuration." alt="" coords="421,257,613,284"/>
+<area shape="rect" id="node7" href="$structodp__schedule__param__t.html" title="Scheduler parameters." alt="" coords="219,209,391,236"/>
+<area shape="rect" id="node8" href="$struct__odp__abi__queue__t.html" title=" " alt="" coords="657,272,795,299"/>
+<area shape="rect" id="node9" href="$unionodp__pktin__hash__proto__t.html" title="Packet input hash protocols." alt="" coords="637,323,815,349"/>
+<area shape="rect" id="node10" href="$structodp__aggr__enq__profile__t.html" title="Event aggregator enqueuing profile." alt="" coords="639,373,813,400"/>
+</map>

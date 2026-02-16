@@ -1,0 +1,5 @@
+<map id="odp_ipsec_out_opt_t" name="odp_ipsec_out_opt_t">
+<area shape="rect" id="node1" title="IPSEC outbound operation options." alt="" coords="122,95,277,121"/>
+<area shape="rect" id="node2" href="$structodp__ipsec__ipv4__param__t.html" title="IPv4 header parameters." alt="" coords="5,5,188,32"/>
+<area shape="rect" id="node3" href="$structodp__ipsec__ipv6__param__t.html" title="IPv6 header parameters." alt="" coords="212,5,395,32"/>
+</map>
