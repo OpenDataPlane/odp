@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2013-2018 Linaro Limited
- * Copyright (c) 2019-2025 Nokia
+ * Copyright (c) 2019-2026 Nokia
  */
 
 /**
@@ -503,9 +503,38 @@ typedef struct odp_timer_periodic_start_t {
 	/** Timeout event
 	 *
 	 *  This event is enqueued to the destination queue when the timer expires. The event type
-	 *  must be ODP_EVENT_TIMEOUT.
+	 *  must be ODP_EVENT_TIMEOUT. Event ownership is transferred to the successfully started
+	 *  timer until the timer is cancelled, all of its events acknowledged and cancellation
+	 *  finalized.
+	 *
+	 *  Only certain functions are permitted to be called for the event until cancellation
+	 *  finalization, specifically:
+	 *  - odp_event_type*() functions
+	 *  - odp_timer_periodic_ack()
+	 *  - odp_timeout_from_event*() functions
+	 *  - odp_timeout_to_event()
+	 *  - odp_timeout_timer()
+	 *  - odp_timeout_tick()
+	 *  - odp_timeout_user_ptr()
+	 *  - odp_timeout_user_area()
+	 *  - odp_timeout_print()
+	 *  - odp_timeout_to_u64()
 	 */
 	odp_event_t tmo_ev;
+
+	/** Cancellation event
+	 *
+	 *  When periodic timer is cancelled, remaining 'tmo_ev' event(s) will be delivered to the
+	 *  configured destination queue, followed by 'cancel_ev'. 'cancel_ev' is the last event to
+	 *  be enqueued for the cancelled timer (see odp_timer_periodic_ack()). The event type
+	 *  must be ODP_EVENT_TIMEOUT and different object than 'tmo_ev'. Event ownership is
+	 *  transferred to the successfully started timer until the timer is cancelled, all of its
+	 *  events acknowledged and cancellation finalized.
+	 *
+	 *  Only certain functions are permitted to be called for the event until cancellation
+	 *  finalization, see 'tmo_ev' for the list of allowed functions.
+	 */
+	odp_event_t cancel_ev;
 
 } odp_timer_periodic_start_t;
 
