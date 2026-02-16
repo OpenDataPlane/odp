@@ -1768,6 +1768,8 @@ static void timer_test_event_type(odp_queue_type_t queue_type,
 				ODPH_DBG("Timer set failed. Too near %i.\n", i);
 			else if (ret == ODP_TIMER_TOO_FAR)
 				ODPH_DBG("Timer set failed. Too far %i.\n", i);
+			else if (ret == ODP_TIMER_BUSY)
+				ODPH_DBG("Timer set failed. Busy %i.\n", i);
 			else if (ret == ODP_TIMER_FAIL)
 				ODPH_DBG("Timer set failed %i\n", i);
 
@@ -1980,6 +1982,8 @@ static void timer_test_queue_type(odp_queue_type_t queue_type, int priv, int exp
 			ODPH_DBG("Timer set failed. Too near %" PRIu64 ".\n", tick);
 		else if (ret == ODP_TIMER_TOO_FAR)
 			ODPH_DBG("Timer set failed. Too far %" PRIu64 ".\n", tick);
+		else if (ret == ODP_TIMER_BUSY)
+			ODPH_DBG("Timer set failed. Busy %" PRIu64 ".\n", tick);
 		else if (ret == ODP_TIMER_FAIL)
 			ODPH_DBG("Timer set failed %" PRIu64 "\n", tick);
 
@@ -2310,6 +2314,8 @@ static void timer_test_tmo_limit(odp_queue_type_t queue_type,
 			ODPH_DBG("Timer set failed. Too near %i.\n", i);
 		else if (ret == ODP_TIMER_TOO_FAR)
 			ODPH_DBG("Timer set failed. Too late %i.\n", i);
+		else if (ret == ODP_TIMER_BUSY)
+			ODPH_DBG("Timer set failed. Busy %i.\n", i);
 		else if (ret == ODP_TIMER_FAIL)
 			ODPH_DBG("Timer set failed %i\n", i);
 
@@ -2585,8 +2591,8 @@ static int worker_entrypoint(void *arg ODP_UNUSED)
 		tt[i].ev = ODP_EVENT_INVALID;
 
 		rc = odp_timer_start(tt[i].tim, &start_param);
-		if (rc == ODP_TIMER_TOO_NEAR) {
-			ODPH_ERR("Missed tick, setting timer\n");
+		if (rc == ODP_TIMER_TOO_NEAR || rc == ODP_TIMER_BUSY) {
+			ODPH_ERR("Missed tick or resources busy, setting timer: %d\n", rc);
 		} else if (rc != ODP_TIMER_SUCCESS) {
 			ODPH_ERR("Failed to set timer: %d\n", rc);
 			CU_FAIL("Failed to set timer");
@@ -2668,6 +2674,8 @@ static int worker_entrypoint(void *arg ODP_UNUSED)
 				CU_FAIL("Failed to set timer: TOO NEAR");
 			} else if (rc == ODP_TIMER_TOO_FAR) {
 				CU_FAIL("Failed to set timer: TOO FAR");
+			} else if (rc == ODP_TIMER_BUSY) {
+				CU_FAIL("Failed to set timer: BUSY");
 			} else if (rc == ODP_TIMER_FAIL) {
 				/* Set/reset failed, timer already expired */
 				ntoolate++;
@@ -3250,6 +3258,8 @@ static void timer_test_periodic(odp_queue_type_t queue_type, int use_first, int 
 			ODPH_ERR("First tick too near\n");
 		else if (ret == ODP_TIMER_TOO_FAR)
 			ODPH_ERR("First tick too far\n");
+		else if (ret == ODP_TIMER_BUSY)
+			ODPH_ERR("Resources busy\n");
 		else if (ret == ODP_TIMER_FAIL)
 			ODPH_ERR("Periodic timer start failed\n");
 

@@ -538,12 +538,20 @@ typedef enum {
 	ODP_TIMER_TOO_FAR = -2,
 
 	/**
+	 * Timer operation failed, resources temporarily busy
+	 *
+	 * The operation failed because the underlying timer resources are temporarily busy. Timer
+	 * start and restart may return this value.
+	 */
+	ODP_TIMER_BUSY = -3,
+
+	/**
 	 * Timer operation failed
 	 *
 	 * The operation failed due to some other reason than timing of the request. Timer start,
 	 * restart and cancel operations may return this value.
 	 */
-	ODP_TIMER_FAIL = -3
+	ODP_TIMER_FAIL = -4
 
 } odp_timer_retval_t;
 
