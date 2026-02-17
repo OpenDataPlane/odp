@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # Test AH and ESP input
 #  - 2 loop interfaces

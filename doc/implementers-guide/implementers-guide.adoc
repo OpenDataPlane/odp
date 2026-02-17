@@ -387,7 +387,7 @@ Here follows a dummy example of what wrapper-script could be:
 
 [source,bash]
 ----
-#!/bin/bash
+#!/usr/bin/env bash
 
 # The parameter, $1, is the name of the test executable to run
 echo "WRAPPER!!!"

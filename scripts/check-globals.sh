@@ -1,4 +1,4 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
 #
 # Check that global symbols in a static library conform to a given regex.
 # Only static library is checked, since libtool -export-symbols-regex
@@ -11,6 +11,7 @@
 # lib_LTLIBRARIES       Library .la file.
 # CHECK_GLOBALS_REGEX   Global symbols matching this regex are accepted.
 #
+set -o errexit
 
 tmpfile=$(mktemp)
 

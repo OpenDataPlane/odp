@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -e
 
 export TARGET_ARCH=aarch64-linux-gnu
