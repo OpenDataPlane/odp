@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2016-2018 Linaro Limited
- * Copyright (c) 2021-2022 Nokia
+ * Copyright (c) 2021-2025 Nokia
  */
 
 /**
@@ -433,6 +433,10 @@ int odp_ipsec_out_enq(const odp_packet_t pkt[], int num,
  * otherwise identical to odp_ipsec_out_enq(), but outputs all successfully
  * transformed packets to the specified output interface (or tm_queue), instead of
  * generating events for those.
+ *
+ * Packets that reference or are referenced by other packets may be sent
+ * using this function only if the pktout to be used has the relevant
+ * capability. See odp_pktio_capability_t::packet_ref. XXX dontfree
  *
  * Inline operation parameters are defined per packet. The array of parameters
  * must have 'num' elements and is pointed to by 'inline_param'.
