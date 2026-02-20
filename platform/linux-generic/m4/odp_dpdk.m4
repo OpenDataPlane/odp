@@ -5,7 +5,7 @@
 ##########################################################################
 # Enable DPDK support
 ##########################################################################
-pktio_dpdk_min_version=22.11.0
+pktio_dpdk_min_version=23.11.0
 pktio_dpdk_support=no
 
 AC_ARG_ENABLE([dpdk],
@@ -46,6 +46,9 @@ if test x$pktio_dpdk_support = xyes
 then
     ODP_DPDK([$pktio_dpdk_min_version], [$dpdk_shared], [],
 	     [AC_MSG_FAILURE([can't find DPDK])])
+
+    # Enable experimental DPDK APIs
+    DPDK_CFLAGS="${DPDK_CFLAGS} -DALLOW_EXPERIMENTAL_API"
 
     ODP_CHECK_CFLAG([-Wno-error=cast-align])
     AC_DEFINE([_ODP_PKTIO_DPDK], [1],
