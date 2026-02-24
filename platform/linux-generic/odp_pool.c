@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2013-2018 Linaro Limited
- * Copyright (c) 2019-2025 Nokia
+ * Copyright (c) 2019-2026 Nokia
  */
 
 #include <odp/api/align.h>
@@ -127,6 +127,15 @@ static inline void cache_push(pool_cache_t *cache, _odp_event_hdr_t *event_hdr[]
 		cache->event_hdr[cache_num + i] = event_hdr[i];
 
 	odp_atomic_store_u32(&cache->cache_num, cache_num + num);
+}
+
+static inline void cache_push_single(pool_cache_t *cache, _odp_event_hdr_t *event_hdr)
+{
+	const uint32_t cache_num = odp_atomic_load_u32(&cache->cache_num);
+
+	cache->event_hdr[cache_num] = event_hdr;
+
+	odp_atomic_store_u32(&cache->cache_num, cache_num + 1);
 }
 
 static void cache_flush(pool_cache_t *cache, pool_t *pool)
@@ -1437,6 +1446,45 @@ static inline void event_free_to_pool(pool_t *pool,
 	}
 
 	cache_push(cache, event_hdr, num);
+	if (CONFIG_POOL_STATISTICS && pool->params.stats.bit.cache_free_ops)
+		odp_atomic_inc_u64(&pool->stats.cache_free_ops);
+}
+
+void _odp_event_free(odp_event_t event)
+{
+	_odp_event_hdr_t *event_hdr = _odp_event_hdr(event);
+	pool_t *pool = _odp_pool_entry(event_hdr->pool);
+	pool_cache_t *cache = local.cache[pool->pool_idx];
+	const uint32_t cache_size = pool->cache_size;
+	uint32_t cache_num;
+
+	if (odp_unlikely(cache_size == 0)) {
+		ring_mpmc_rst_ptr_t *ring = &pool->ring->hdr;
+		uint32_t mask = pool->ring_mask;
+
+		ring_mpmc_rst_ptr_enq(ring, mask, (void *)event_hdr);
+
+		if (CONFIG_POOL_STATISTICS && pool->params.stats.bit.free_ops)
+			odp_atomic_inc_u64(&pool->stats.free_ops);
+		return;
+	}
+
+	cache_num = odp_atomic_load_u32(&cache->cache_num);
+
+	if (odp_unlikely(cache_size == cache_num)) {
+		const uint32_t burst = pool->burst_size;
+		_odp_event_hdr_t *ev_hdr[burst];
+		ring_mpmc_rst_ptr_t *ring = &pool->ring->hdr;
+		uint32_t mask = pool->ring_mask;
+
+		cache_pop(cache, ev_hdr, burst);
+
+		ring_mpmc_rst_ptr_enq_multi(ring, mask, (void **)ev_hdr, burst);
+		if (CONFIG_POOL_STATISTICS && pool->params.stats.bit.free_ops)
+			odp_atomic_inc_u64(&pool->stats.free_ops);
+	}
+
+	cache_push_single(cache, event_hdr);
 	if (CONFIG_POOL_STATISTICS && pool->params.stats.bit.cache_free_ops)
 		odp_atomic_inc_u64(&pool->stats.cache_free_ops);
 }
