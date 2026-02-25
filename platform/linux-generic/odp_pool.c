@@ -117,6 +117,21 @@ static inline uint32_t cache_pop(pool_cache_t *cache,
 	return num_ch;
 }
 
+static inline _odp_event_hdr_t *cache_pop_single(pool_cache_t *cache)
+{
+	const uint32_t cache_num = odp_atomic_load_u32(&cache->cache_num);
+	_odp_event_hdr_t *event_hdr;
+
+	if (odp_unlikely(cache_num == 0))
+		return NULL;
+
+	event_hdr = cache->event_hdr[cache_num - 1];
+
+	odp_atomic_store_u32(&cache->cache_num, cache_num - 1);
+
+	return event_hdr;
+}
+
 static inline void cache_push(pool_cache_t *cache, _odp_event_hdr_t *event_hdr[],
 			      uint32_t num)
 {
@@ -1334,6 +1349,50 @@ int odp_pool_info(odp_pool_t pool_hdl, odp_pool_info_t *info)
 	info->max_data_addr = (uintptr_t)pool->max_addr;
 
 	return 0;
+}
+
+odp_event_t _odp_event_alloc(pool_t *pool)
+{
+	pool_cache_t *cache = local.cache[pool->pool_idx];
+	_odp_event_hdr_t *hdr;
+
+	/* First pull packets from local cache */
+	hdr = cache_pop_single(cache);
+
+	if (CONFIG_POOL_STATISTICS && pool->params.stats.bit.cache_alloc_ops && hdr)
+		odp_atomic_inc_u64(&pool->stats.cache_alloc_ops);
+
+	if (odp_likely(hdr))
+		return _odp_event_from_hdr(hdr);
+
+	/* If needed, get more from the global pool */
+	uint32_t burst = pool->burst_size;
+	uint32_t mask = pool->ring_mask;
+	_odp_event_hdr_t *hdr_tmp[burst];
+	ring_mpmc_rst_ptr_t *ring = &pool->ring->hdr;
+
+	burst = ring_mpmc_rst_ptr_deq_multi(ring, mask, (void **)hdr_tmp, burst);
+
+	if (CONFIG_POOL_STATISTICS) {
+		if (pool->params.stats.bit.alloc_ops)
+			odp_atomic_inc_u64(&pool->stats.alloc_ops);
+		if (odp_unlikely(pool->params.stats.bit.alloc_fails && burst == 0))
+			odp_atomic_inc_u64(&pool->stats.alloc_fails);
+	}
+
+	if (odp_unlikely(burst == 0))
+		return ODP_EVENT_INVALID;
+
+	hdr = hdr_tmp[0];
+	burst--;
+
+	odp_prefetch(hdr);
+
+	/* Cache possible extra buffers. Cache is currently empty. */
+	if (burst)
+		cache_push(cache, &hdr_tmp[1], burst);
+
+	return _odp_event_from_hdr(hdr);
 }
 
 int _odp_event_alloc_multi(pool_t *pool, _odp_event_hdr_t *event_hdr[], int max_num)
