@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2015-2018 Linaro Limited
- * Copyright (c) 2019-2025 Nokia
+ * Copyright (c) 2019-2026 Nokia
  */
 
 /* For rand_r and nanosleep */
@@ -34,6 +34,7 @@
 #define USER_PTR ((void *)0xdead)
 #define TICK_INVALID (~(uint64_t)0)
 #define YEAR_IN_NS             (365 * 24 * ODP_TIME_HOUR_IN_NS)
+#define UAREA_DATA 0xaa
 
 /* Test case options */
 #define PRIV        1
@@ -63,6 +64,9 @@ struct test_timer {
 typedef struct {
 	/* Periodic timer support */
 	int periodic_support;
+
+	/* Timeout pool user area support */
+	uint32_t tmo_uarea_support;
 
 	/* Default resolution / timeout parameters */
 	struct {
@@ -102,6 +106,12 @@ typedef struct {
 	global_shared_mem_t global_mem;
 
 } test_global_t;
+
+typedef struct {
+	uint32_t num_init;
+	uint32_t max_num;
+
+} uarea_data_t;
 
 static global_shared_mem_t *global_mem;
 static test_global_t *test_global;
@@ -411,6 +421,27 @@ static void timer_test_param_init(void)
 {
 	test_param_init(0);
 	test_param_init(0xff);
+}
+
+static void timer_test_periodic_alloc_init(void)
+{
+	odp_timer_periodic_param_t param;
+
+	memset(&param, 0, sizeof(param));
+	odp_timer_periodic_param_init(&param);
+
+	CU_ASSERT(param.user_ptr == NULL);
+	CU_ASSERT(param.freq_multiplier == 1);
+	CU_ASSERT(param.uarea_init.init_fn == NULL);
+	CU_ASSERT(param.uarea_init.args == NULL);
+
+	memset(&param, 0xff, sizeof(param));
+	odp_timer_periodic_param_init(&param);
+
+	CU_ASSERT(param.user_ptr == NULL);
+	CU_ASSERT(param.freq_multiplier == 1);
+	CU_ASSERT(param.uarea_init.init_fn == NULL);
+	CU_ASSERT(param.uarea_init.args == NULL);
 }
 
 static void timer_test_timeout_pool_alloc(void)
@@ -1083,6 +1114,7 @@ static void timer_single_shot(odp_queue_type_t queue_type, odp_timer_tick_type_t
 	tmo = odp_timeout_alloc(pool);
 	ev  = odp_timeout_to_event(tmo);
 	CU_ASSERT_FATAL(ev != ODP_EVENT_INVALID);
+	CU_ASSERT(odp_timeout_is_periodic(tmo) == 0);
 
 	nsec = tmo_ns;
 	if (restart)
@@ -1138,6 +1170,7 @@ static void timer_single_shot(odp_queue_type_t queue_type, odp_timer_tick_type_t
 			tmo = odp_timeout_from_event(ev);
 			CU_ASSERT(odp_timeout_user_ptr(tmo) == USER_PTR);
 			CU_ASSERT(odp_timeout_timer(tmo) == timer);
+			CU_ASSERT(odp_timeout_is_periodic(tmo) == 0);
 
 			if (!cancel) {
 				if (tick_type == ODP_TIMER_TICK_ABS) {
@@ -3072,19 +3105,36 @@ static void timer_test_periodic_capa(void)
 	}
 }
 
+static void init_uarea(void *uarea, uint32_t size, void *args, uint32_t index, uint32_t max_num)
+{
+	uarea_data_t *data = args;
+
+	if (data->num_init == 0) {
+		data->max_num = max_num;
+		CU_ASSERT(max_num > 0);
+	} else {
+		CU_ASSERT(data->max_num == max_num);
+	}
+
+	CU_ASSERT(data->num_init == index);
+	data->num_init++;
+	memset(uarea, UAREA_DATA, size);
+
+	ODPH_DBG("Timeout init called, ptr: %p, size: %u, args: %p, index: %u, max_num: %u\n",
+		 uarea, size, args, index, max_num);
+}
+
 static void timer_test_periodic(odp_queue_type_t queue_type, int use_first, int rounds,
-				int reuse_event, odp_bool_t max_prio)
+				odp_bool_t max_prio)
 {
 	odp_timer_capability_t timer_capa;
 	odp_timer_periodic_capability_t periodic_capa;
-	odp_pool_t pool;
-	odp_pool_param_t pool_param;
 	odp_queue_param_t queue_param;
 	odp_timer_pool_param_t timer_param;
 	odp_timer_pool_t timer_pool;
+	odp_timer_periodic_param_t tmr_param;
 	odp_timer_periodic_start_t start_param;
 	odp_queue_t queue;
-	odp_timeout_t tmo;
 	odp_event_t ev = ODP_EVENT_INVALID;
 	odp_timer_t timer;
 	odp_time_t t1, t2;
@@ -3095,10 +3145,13 @@ static void timer_test_periodic(odp_queue_type_t queue_type, int use_first, int 
 	int num_tmo;
 	int done;
 	const int num = 200;
+	uarea_data_t data;
+	uint8_t *uarea;
 	/* Test frequency: 1x 1000 Hz, or 1x min/max_base_freq */
 	const uint64_t multiplier = 1;
 	odp_fract_u64_t base_freq = {1000, 0, 0};
 	odp_timer_clk_src_t clk_src = test_global->clk_src;
+	const uint32_t tmo_uarea_support = test_global->global_mem.tmo_uarea_support;
 
 	CU_ASSERT_FATAL(odp_timer_capability(clk_src, &timer_capa) == 0);
 
@@ -3164,6 +3217,7 @@ static void timer_test_periodic(odp_queue_type_t queue_type, int use_first, int 
 	timer_param.clk_src    = clk_src;
 	timer_param.periodic.base_freq_hz = base_freq;
 	timer_param.periodic.max_multiplier = multiplier;
+	timer_param.periodic.uarea_size = tmo_uarea_support > 0 ? 1 : 0;
 	timer_param.priority = max_prio ? timer_capa.periodic.max_priority : 0;
 
 	ODPH_DBG("\n");
@@ -3174,6 +3228,7 @@ static void timer_test_periodic(odp_queue_type_t queue_type, int use_first, int 
 		 timer_param.periodic.base_freq_hz.numer,
 		 timer_param.periodic.base_freq_hz.denom, freq);
 	ODPH_DBG("  Max multiplier:    %" PRIu64 "\n", timer_param.periodic.max_multiplier);
+	ODPH_DBG("  User area:         %" PRIu32 "\n", timer_param.periodic.uarea_size);
 	ODPH_DBG("  Priority:          %" PRIu16 "\n", timer_param.priority);
 	ODPH_DBG("Capabilities:\n");
 	ODPH_DBG("  Max multiplier:    %" PRIu64 " (with %f hz)\n",
@@ -3181,19 +3236,13 @@ static void timer_test_periodic(odp_queue_type_t queue_type, int use_first, int 
 	ODPH_DBG("  Max resolution:    %" PRIu64 " ns (with %f hz)\n", periodic_capa.res_ns, freq);
 	ODPH_DBG("  Min base freq:     %f hz\n", min_freq);
 	ODPH_DBG("  Max base freq:     %f hz\n", max_freq);
+	ODPH_DBG("  Max user area:     %" PRIu32 "\n", tmo_uarea_support);
 	ODPH_DBG("  Max priority:      %" PRIu16 "\n", timer_capa.periodic.max_priority);
 
 	timer_pool = odp_timer_pool_create("periodic_timer", &timer_param);
 	CU_ASSERT_FATAL(timer_pool != ODP_TIMER_POOL_INVALID);
 
 	CU_ASSERT_FATAL(odp_timer_pool_start_multi(&timer_pool, 1) == 1);
-
-	odp_pool_param_init(&pool_param);
-	pool_param.type    = ODP_POOL_TIMEOUT;
-	pool_param.tmo.num = 1;
-
-	pool = odp_pool_create("timeout_pool", &pool_param);
-	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
 
 	odp_queue_param_init(&queue_param);
 	if (queue_type == ODP_QUEUE_TYPE_SCHED) {
@@ -3204,11 +3253,23 @@ static void timer_test_periodic(odp_queue_type_t queue_type, int use_first, int 
 	queue = odp_queue_create("timeout_queue", &queue_param);
 	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
 
-	timer = odp_timer_alloc(timer_pool, queue, user_ctx);
+	odp_timer_periodic_param_init(&tmr_param);
+	memset(&data, 0, sizeof(data));
+	tmr_param.queue = queue;
+	tmr_param.user_ptr = user_ctx;
+	tmr_param.freq_multiplier = multiplier;
+	tmr_param.uarea_init.init_fn = init_uarea;
+	tmr_param.uarea_init.args = &data;
+	timer = odp_timer_periodic_alloc(timer_pool, &tmr_param);
 	CU_ASSERT_FATAL(timer != ODP_TIMER_INVALID);
 
 	/* Pool should have only one timer */
-	CU_ASSERT_FATAL(odp_timer_alloc(timer_pool, queue, user_ctx) == ODP_TIMER_INVALID);
+	CU_ASSERT_FATAL(odp_timer_periodic_alloc(timer_pool, &tmr_param) == ODP_TIMER_INVALID);
+
+	if (tmo_uarea_support > 0) {
+		CU_ASSERT(data.num_init > 0);
+		CU_ASSERT(data.num_init == data.max_num);
+	}
 
 	memset(&start_param, 0, sizeof(odp_timer_periodic_start_t));
 	offset_ns = period_ns / 2;
@@ -3221,26 +3282,16 @@ static void timer_test_periodic(odp_queue_type_t queue_type, int use_first, int 
 	for (int round = 0; round < rounds; round++) {
 		num_tmo = 0;
 		done = 0;
-
-		if (!reuse_event || round == 0) {
-			tmo = odp_timeout_alloc(pool);
-			ev  = odp_timeout_to_event(tmo);
-		}
-
-		CU_ASSERT_FATAL(ev != ODP_EVENT_INVALID);
 		cur_tick = odp_timer_current_tick(timer_pool);
 		tick = cur_tick + odp_timer_ns_to_tick(timer_pool, offset_ns);
 
 		if (use_first)
 			start_param.first_tick = tick;
 
-		start_param.freq_multiplier = multiplier;
-		start_param.tmo_ev = ev;
-
 		ODPH_DBG("Periodic timer start:\n");
 		ODPH_DBG("  Current tick:    %" PRIu64 "\n", cur_tick);
 		ODPH_DBG("  First tick:      %" PRIu64 "\n", start_param.first_tick);
-		ODPH_DBG("  Multiplier:      %" PRIu64 "\n", start_param.freq_multiplier);
+		ODPH_DBG("  Multiplier:      %" PRIu64 "\n", multiplier);
 		ODPH_DBG("  Period:          %" PRIu64 " nsec\n", period_ns);
 		ODPH_DBG("Expected duration: %" PRIu64 " nsec\n", duration_ns);
 
@@ -3282,6 +3333,15 @@ static void timer_test_periodic(odp_queue_type_t queue_type, int use_first, int 
 			if (odp_event_type(ev) != ODP_EVENT_TIMEOUT) {
 				odp_event_free(ev);
 				continue;
+			} else {
+				CU_ASSERT(odp_timeout_is_periodic(odp_timeout_from_event(ev))
+					  != 0);
+
+				if (tmo_uarea_support > 0) {
+					uarea = odp_timeout_user_area(odp_timeout_from_event(ev));
+					CU_ASSERT_FATAL(uarea != NULL);
+					CU_ASSERT(*uarea == UAREA_DATA);
+				}
 			}
 
 			CU_ASSERT(odp_timer_periodic_ack(timer, ev) == 0);
@@ -3293,7 +3353,7 @@ static void timer_test_periodic(odp_queue_type_t queue_type, int use_first, int 
 		/* Allow +-30% error on test duration */
 		CU_ASSERT((diff_ns > 0.7 * duration_ns) && (diff_ns < 1.3 * duration_ns));
 
-		/* Stop periodic timer */
+		/* Cancel periodic timer */
 		ret = odp_timer_periodic_cancel(timer);
 		CU_ASSERT_FATAL(ret == 0);
 
@@ -3323,63 +3383,62 @@ static void timer_test_periodic(odp_queue_type_t queue_type, int use_first, int 
 			if (odp_event_type(ev) != ODP_EVENT_TIMEOUT) {
 				odp_event_free(ev);
 				continue;
+			} else {
+				CU_ASSERT(odp_timeout_is_periodic(odp_timeout_from_event(ev))
+					  != 0);
+
+				if (tmo_uarea_support > 0) {
+					uarea = odp_timeout_user_area(odp_timeout_from_event(ev));
+					CU_ASSERT_FATAL(uarea != NULL);
+					CU_ASSERT(*uarea == UAREA_DATA);
+				}
 			}
 
 			ret = odp_timer_periodic_ack(timer, ev);
-			CU_ASSERT(ret == 1 || ret == 2);
+			CU_ASSERT(ret == 0 || ret == 1);
 
-			if (ret == 2) {
+			if (ret == 1)
 				done = 1;
-				if (reuse_event && round < rounds - 1)
-					break;
-				odp_event_free(ev);
-			}
 		}
 
-		/* Check that ack() returned 2 on the last event */
+		/* Check that ack() returned 1 on the last event */
 		CU_ASSERT(done);
-		CU_ASSERT(ret == 2);
+		CU_ASSERT(ret == 1);
 	}
 
 	CU_ASSERT(odp_timer_free(timer) == 0);
 	odp_timer_pool_destroy(timer_pool);
 	CU_ASSERT(odp_queue_destroy(queue) == 0);
-	CU_ASSERT(odp_pool_destroy(pool) == 0);
 }
 
 static void timer_test_periodic_sched(void)
 {
-	timer_test_periodic(ODP_QUEUE_TYPE_SCHED, 0, 1, 0, 0);
+	timer_test_periodic(ODP_QUEUE_TYPE_SCHED, 0, 1, 0);
 }
 
 static void timer_test_periodic_sched_max_prio(void)
 {
-	timer_test_periodic(ODP_QUEUE_TYPE_SCHED, 0, 1, 0, 1);
+	timer_test_periodic(ODP_QUEUE_TYPE_SCHED, 0, 1, 1);
 }
 
 static void timer_test_periodic_plain(void)
 {
-	timer_test_periodic(ODP_QUEUE_TYPE_PLAIN, 0, 1, 0, 0);
+	timer_test_periodic(ODP_QUEUE_TYPE_PLAIN, 0, 1, 0);
 }
 
 static void timer_test_periodic_sched_first(void)
 {
-	timer_test_periodic(ODP_QUEUE_TYPE_SCHED, FIRST_TICK, 1, 0, 0);
+	timer_test_periodic(ODP_QUEUE_TYPE_SCHED, FIRST_TICK, 1, 0);
 }
 
 static void timer_test_periodic_plain_first(void)
 {
-	timer_test_periodic(ODP_QUEUE_TYPE_PLAIN, FIRST_TICK, 1, 0, 0);
+	timer_test_periodic(ODP_QUEUE_TYPE_PLAIN, FIRST_TICK, 1, 0);
 }
 
 static void timer_test_periodic_reuse(void)
 {
-	timer_test_periodic(ODP_QUEUE_TYPE_SCHED, 0, 2, 0, 0);
-}
-
-static void timer_test_periodic_event_reuse(void)
-{
-	timer_test_periodic(ODP_QUEUE_TYPE_SCHED, 0, 2, 1, 0);
+	timer_test_periodic(ODP_QUEUE_TYPE_SCHED, 0, 2, 0);
 }
 
 static void timer_test_periodic_pool_create_max(void)
@@ -3457,6 +3516,7 @@ static void timer_test_periodic_alloc_max(void)
 	odp_timer_pool_param_t timer_param;
 	odp_timer_pool_t pool;
 	odp_timer_t *timer;
+	odp_timer_periodic_param_t tmr_param;
 	odp_queue_param_t queue_param;
 	odp_queue_t queue;
 	double min_freq, max_freq;
@@ -3519,8 +3579,13 @@ static void timer_test_periodic_alloc_max(void)
 
 	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
 
+	odp_timer_periodic_param_init(&tmr_param);
+	tmr_param.queue = queue;
+	tmr_param.user_ptr = USER_PTR;
+	tmr_param.freq_multiplier = periodic_capa.max_multiplier;
+
 	for (uint32_t i = 0; i < num; i++) {
-		timer[i] = odp_timer_alloc(pool, queue, USER_PTR);
+		timer[i] = odp_timer_periodic_alloc(pool, &tmr_param);
 
 		if (timer[i] == ODP_TIMER_INVALID)
 			ODPH_ERR("Timer alloc failed: %u / %u\n", i, num);
@@ -3539,6 +3604,7 @@ static void timer_test_periodic_alloc_max(void)
 
 odp_testinfo_t timer_general_suite[] = {
 	ODP_TEST_INFO(timer_test_param_init),
+	ODP_TEST_INFO(timer_test_periodic_alloc_init),
 	ODP_TEST_INFO(timer_test_timeout_pool_alloc),
 	ODP_TEST_INFO(timer_test_timeout_pool_alloc_multi),
 	ODP_TEST_INFO(timer_test_timeout_from_event),
@@ -3649,8 +3715,6 @@ odp_testinfo_t timer_suite[] = {
 				  check_periodic_plain_support),
 	ODP_TEST_INFO_CONDITIONAL(timer_test_periodic_reuse,
 				  check_periodic_sched_support),
-	ODP_TEST_INFO_CONDITIONAL(timer_test_periodic_event_reuse,
-				  check_periodic_sched_support),
 	ODP_TEST_INFO_CONDITIONAL(timer_test_periodic_pool_create_max,
 				  check_periodic_support),
 	ODP_TEST_INFO_CONDITIONAL(timer_test_periodic_alloc_max,
@@ -3666,6 +3730,7 @@ odp_suiteinfo_t timer_suites[] = {
 int main(int argc, char *argv[])
 {
 	int ret = 0;
+	odp_pool_capability_t pool_capa;
 
 	/* parse common options: */
 	if (odp_cunit_parse_options(&argc, argv))
@@ -3682,6 +3747,11 @@ int main(int argc, char *argv[])
 
 	if (odp_cunit_run())
 		goto fail;
+
+	if (odp_pool_capability(&pool_capa) < 0)
+		goto fail;
+
+	test_global->global_mem.tmo_uarea_support = pool_capa.tmo.max_uarea_size;
 
 	for (int i = ODP_CLOCK_SRC_0; i < ODP_CLOCK_NUM_SRC; i++) {
 		odp_timer_capability_t capa;
