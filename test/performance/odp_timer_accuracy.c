@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2018 Linaro Limited
- * Copyright (c) 2019-2025 Nokia
+ * Copyright (c) 2019-2026 Nokia
  */
 
 /**
@@ -583,9 +583,10 @@ static int create_timers(test_global_t *test_global)
 	odp_timer_pool_param_t timer_param;
 	odp_timer_capability_t timer_capa;
 	odp_timer_t timer;
-	odp_queue_t *queue;
+	odp_queue_t *queue, q;
 	odp_schedule_group_t *group;
 	odp_queue_param_t queue_param;
+	odp_timer_periodic_param_t tmr_param;
 	uint64_t offset_ns;
 	uint32_t max_timers;
 	odp_event_t event;
@@ -756,10 +757,30 @@ static int create_timers(test_global_t *test_global)
 
 	test_global->timer_pool = timer_pool;
 
+	if (mode == MODE_PERIODIC) {
+		odp_timer_periodic_param_init(&tmr_param);
+		tmr_param.freq_multiplier = test_global->opt.multiplier;
+	}
+
 	for (i = 0; i < alloc_timers; i++) {
+		q = queue[i % test_global->opt.num_queue];
 		timer_ctx_t *ctx = &test_global->timer_ctx[i];
 
-		timer = odp_timer_alloc(timer_pool, queue[i % test_global->opt.num_queue], ctx);
+		if (mode == MODE_PERIODIC) {
+			tmr_param.queue = q;
+			tmr_param.user_ptr = ctx;
+			timer = odp_timer_periodic_alloc(timer_pool, &tmr_param);
+		} else {
+			timeout = odp_timeout_alloc(pool);
+
+			if (timeout == ODP_TIMEOUT_INVALID) {
+				ODPH_ERR("Timeout alloc failed\n");
+				return -1;
+			}
+
+			ctx->event = odp_timeout_to_event(timeout);
+			timer = odp_timer_alloc(timer_pool, q, ctx);
+		}
 
 		if (timer == ODP_TIMER_INVALID) {
 			ODPH_ERR("Timer alloc failed.\n");
@@ -767,15 +788,6 @@ static int create_timers(test_global_t *test_global)
 		}
 
 		ctx->timer = timer;
-
-		timeout = odp_timeout_alloc(pool);
-		if (timeout == ODP_TIMEOUT_INVALID) {
-			ODPH_ERR("Timeout alloc failed\n");
-			return -1;
-		}
-
-		ctx->event = odp_timeout_to_event(timeout);
-
 		odp_ticketlock_init(&ctx->lock);
 	}
 
@@ -849,12 +861,10 @@ static int start_timers(test_global_t *test_global)
 				ctx->first_period = start_tick +
 					odp_timer_ns_to_tick(timer_pool,
 							     test_global->period_dbl + 0.5);
-				periodic_start.freq_multiplier = test_global->opt.multiplier;
 				periodic_start.first_tick = 0;
 				if (nsec)
 					periodic_start.first_tick =
 						start_tick + odp_timer_ns_to_tick(timer_pool, nsec);
-				periodic_start.tmo_ev = ctx->event;
 				retval = odp_timer_periodic_start(ctx->timer, &periodic_start);
 			} else if (mode == MODE_CONCURRENCY) {
 				ctx->nsec = start_ns + test_global->opt.period_ns;
@@ -1488,13 +1498,10 @@ static int run_test(void *arg)
 			int ret = odp_timer_periodic_ack(ctx->timer, ev);
 
 			if (ret < 0)
-				ODPH_ERR("Failed to ack a periodic timer.\n");
+				ODPH_ABORT("Failed to ack a periodic timer.\n");
 
-			if (ret == 2)
+			if (ret == 1)
 				odp_atomic_inc_u64(&test_global->last_events);
-
-			if (ret == 2 || ret < 0)
-				odp_event_free(ev);
 		} else if (mode == MODE_CONCURRENCY && events < tot_timers - 1) {
 			process_event_concurrency(events, test_global, ctx, time_ns, ev);
 		} else {
