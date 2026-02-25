@@ -189,17 +189,8 @@ static inline _odp_event_hdr_t *event_hdr_from_index(pool_t *pool,
 	return event_hdr;
 }
 
+odp_event_t _odp_event_alloc(pool_t *pool);
 int _odp_event_alloc_multi(pool_t *pool, _odp_event_hdr_t *event_hdr[], int num);
-
-static inline odp_event_t _odp_event_alloc(pool_t *pool)
-{
-	odp_event_t event;
-
-	if (odp_likely(_odp_event_alloc_multi(pool, (_odp_event_hdr_t **)&event, 1) == 1))
-		return event;
-
-	return ODP_EVENT_INVALID;
-}
 
 void _odp_event_free(odp_event_t event);
 void _odp_event_free_multi(_odp_event_hdr_t *event_hdr[], int num_free);
