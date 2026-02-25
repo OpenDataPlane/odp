@@ -1587,9 +1587,7 @@ void _odp_event_free_sp(_odp_event_hdr_t *event_hdr[], int num)
 
 odp_buffer_t odp_buffer_alloc(odp_pool_t pool_hdl)
 {
-	odp_buffer_t buf;
 	pool_t *pool;
-	int ret;
 
 	_ODP_ASSERT(ODP_POOL_INVALID != pool_hdl);
 
@@ -1598,12 +1596,10 @@ odp_buffer_t odp_buffer_alloc(odp_pool_t pool_hdl)
 	/* Buffer pools are also used by other pool implementations so check both types */
 	_ODP_ASSERT(pool->type == ODP_POOL_BUFFER && pool->type_2 == ODP_POOL_BUFFER);
 
-	ret  = _odp_event_alloc_multi(pool, (_odp_event_hdr_t **)&buf, 1);
+	/* Check that ODP_BUFFER_INVALID and ODP_EVENT_INVALID match for the cast */
+	_ODP_ASSERT((uintptr_t)ODP_BUFFER_INVALID == (uintptr_t)ODP_EVENT_INVALID);
 
-	if (odp_likely(ret == 1))
-		return buf;
-
-	return ODP_BUFFER_INVALID;
+	return (odp_buffer_t)_odp_event_alloc(pool);
 }
 
 int odp_buffer_alloc_multi(odp_pool_t pool_hdl, odp_buffer_t buf[], int num)
