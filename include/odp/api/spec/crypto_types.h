@@ -172,6 +172,14 @@ typedef enum {
 	 */
 	ODP_CIPHER_ALG_ZUC_EEA3,
 
+	/** NEA6 confidentiality algorithm
+	 *
+	 *  256-NEA6 algorithm.
+	 *
+	 *  Key length is 256 bits. IV size is 16 bytes.
+	 */
+	ODP_CIPHER_ALG_ZUC_NEA6,
+
 	/** SNOW-V stream cipher */
 	ODP_CIPHER_ALG_SNOW_V,
 
@@ -387,6 +395,14 @@ typedef enum {
 	 */
 	ODP_AUTH_ALG_ZUC_EIA3,
 
+	/** NIA6 integrity algorithm
+	 *
+	 *  256-NIA6 algorithm.
+	 *
+	 *  Key length is 256 bits. IV size is 16 bytes.
+	 */
+	ODP_AUTH_ALG_ZUC_NIA6,
+
 	/** SNOW-V-GCM AEAD algorithm
 	 *
 	 *  SNOW-V-GCM provides both authentication and encryption. This auth
@@ -536,6 +552,9 @@ typedef union odp_crypto_cipher_algos_t {
 		/** ODP_CIPHER_ALG_ZUC_EEA3 */
 		uint32_t zuc_eea3    : 1;
 
+		/** ODP_CIPHER_ALG_ZUC_NEA6 */
+		uint32_t zuc_nea6    : 1;
+
 		/** ODP_CIPHER_ALG_SNOW_V */
 		uint32_t snow_v      : 1;
 
@@ -637,6 +656,9 @@ typedef union odp_crypto_auth_algos_t {
 
 		/** ODP_AUTH_ALG_ZUC_EIA3 */
 		uint32_t zuc_eia3    : 1;
+
+		/** ODP_AUTH_ALG_ZUC_NIA6 */
+		uint32_t zuc_nia6    : 1;
 
 		/** ODP_AUTH_ALG_SNOW_V_GCM */
 		uint32_t snow_v_gcm : 1;
