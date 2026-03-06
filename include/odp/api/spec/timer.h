@@ -66,28 +66,33 @@ int odp_timer_res_capability(odp_timer_clk_src_t clk_src,
 /**
  * Periodic timer capability
  *
- * Checks periodic timer capability to support the requested base frequency and other parameters.
- * Application sets 'capa' with the requested timer pool base frequency, the maximum
- * frequency multiplier and the minimum timeout resolution. If there is no requirement for timeout
- * resolution, it is set to zero.
+ * Checks periodic timer capability to support the requested parameters. Application sets 'capa'
+ * with the requested values: For ODP_TIMER_TYPE_PERIODIC_BASE_MUL timers, timer pool base
+ * frequency and the maximum frequency multiplier. For ODP_TIMER_TYPE_PERIODIC_FREQ timers, a
+ * pointer to an array of constraining periodic timer frequencies and the number of items in the
+ * array. The minimum timeout resolution can additionally be set for both. If there is no
+ * requirement for timeout resolution, it is set to zero. Type is chosen with
+ * odp_timer_periodic_capability_t::type.
  *
  * When the call returns success, 'capa' fields are overwritten in following ways. On return value
- * of 1, timer supports the requested base frequency exactly, and meets or exceeds other requested
- * values. The base frequency value is not modified, but other 'capa' fields are updated with
- * resulting maximum capabilities.
+ * of 1, timer supports the requested frequencies exactly
+ * (odp_timer_periodic_capability_t::base_mul::base_freq_hz or each frequency in
+ * odp_timer_periodic_capability_t::freq::freq_hz array), and meets or exceeds other values.
+ * Frequency values are not modified, but other 'capa' fields are updated with resulting maximum
+ * capabilities.
  *
- * When the call returns 0, the requested base frequency is not supported exactly, but timer
+ * When the call returns 0, the requested frequencies are not supported exactly, but timer
  * capabilities meet or exceed all other requested values. In this case, the call overwrites
- * 'base_freq_hz' with the closest supported frequency and updates other 'capa' fields accordingly.
+ * frequencies with the closest supported value and updates other 'capa' fields accordingly.
  *
  * Failure is returned when the requirements are not supported or the call fails otherwise.
  *
  * @param         clk_src    Clock source for timer pool
  * @param[in,out] capa       Pointer to periodic timer capability for input/output.
  *
- * @retval 1   Success. Capability matches base frequency, and meets or exceeds other requested
+ * @retval 1   Success. Capability matches all frequencies, and meets or exceeds other requested
  *             values.
- * @retval 0   Success. Capability does not match base frequency exactly, but meets or exceeds
+ * @retval 0   Success. Capability does not match all frequencies exactly, but meets or exceeds
  *             other requested values.
  * @retval <0  Failure
  */
@@ -117,16 +122,14 @@ void odp_timer_pool_param_init(odp_timer_pool_param_t *param);
  * destroyed. The returned pool handle cannot be used with any other APIs, except
  * odp_timer_pool_to_u64(), before the pool is successfully started.
  *
- * Periodic timer expiration frequency is a multiple of the timer pool base frequency
- * (odp_timer_pool_param_t::periodic::base_freq_hz). Depending on implementation, the base
- * frequency may need to be selected carefully with respect to the timer pool source clock
- * frequency. Use odp_timer_periodic_capability() to check which base frequencies and multipliers
- * are supported. Additionally with periodic timers, an ODP_EVENT_TIMEOUT pool is created as part
- * of timer pool creation from which events for periodic timeouts are allocated from. The
- * to-be-created timeout pool may decrease the number of event pools that can be subsequently
- * created by application. Application can configure user area size for the event pool with
- * odp_timer_pool_param_t::periodic::uarea_size and later initialize user areas of timeout events
- * associated with a specific timer during timer allocation with
+ * With periodic timers, timer frequencies may need to be selected carefully with respect to the
+ * timer pool source clock frequency. Use odp_timer_periodic_capability() to check which
+ * timer frequencies are supported. Additionally with periodic timers, an ODP_EVENT_TIMEOUT pool is
+ * created as part of timer pool creation from which events for periodic timeouts are allocated
+ * from. The to-be-created timeout pool may decrease the number of event pools that can be
+ * subsequently created by application. Application can configure user area size for the event pool
+ * with odp_timer_pool_param_t::periodic::uarea_size and later initialize user areas of timeout
+ * events associated with a specific timer during timer allocation with
  * odp_timer_periodic_param_t::uarea_init::init_fn.
  *
  * The call returns failure when requested parameter values are not supported.
@@ -355,9 +358,9 @@ void odp_timer_periodic_param_init(odp_timer_periodic_param_t *param);
  * Allocate a periodic timer
  *
  * Allocates a periodic timer from the timer pool according to the parameters. The pool must have
- * been created with ODP_TIMER_TYPE_PERIODIC type. The allocated timer is started with
- * odp_timer_periodic_start() call. A timer may be reused multiple times before freeing it back
- * into the timer pool.
+ * been created with a periodic timer type (#ODP_TIMER_TYPE_PERIODIC_BASE_MUL or
+ * #ODP_TIMER_TYPE_PERIODIC_FREQ). The allocated timer is started with odp_timer_periodic_start()
+ * call. A timer may be reused multiple times before freeing it back into the timer pool.
  *
  * @param timer_pool Timer pool
  * @param params     Timer parameters
@@ -484,7 +487,7 @@ int odp_timer_periodic_cancel(odp_timer_t timer);
 int odp_timer_cancel(odp_timer_t timer, odp_event_t *tmo_ev);
 
 /**
- * Get timeout handle from a ODP_EVENT_TIMEOUT type event
+ * Get timeout handle from an ODP_EVENT_TIMEOUT type event
  *
  * @param ev An event of type ODP_EVENT_TIMEOUT
  *

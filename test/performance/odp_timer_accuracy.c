@@ -521,8 +521,9 @@ static int periodic_params(test_global_t *test_global, odp_timer_pool_param_t *t
 	min_freq = odp_fract_u64_to_dbl(&timer_capa->periodic.min_base_freq_hz);
 	max_freq = odp_fract_u64_to_dbl(&timer_capa->periodic.max_base_freq_hz);
 
-	capa.base_freq_hz = freq;
-	capa.max_multiplier = max_multiplier;
+	capa.type = ODP_TIMER_TYPE_PERIODIC_BASE_MUL;
+	capa.base_mul.base_freq_hz = freq;
+	capa.base_mul.max_multiplier = max_multiplier;
 	capa.res_ns = res_ns;
 
 	ret = odp_timer_periodic_capability(test_global->opt.clk_src, &capa);
@@ -537,9 +538,9 @@ static int periodic_params(test_global_t *test_global, odp_timer_pool_param_t *t
 
 	if (ret == 0) {
 		printf("Requested base frequency is not met. Using %.2f Hz instead of %.2f Hz.\n",
-		       odp_fract_u64_to_dbl(&capa.base_freq_hz), opt_freq);
+		       odp_fract_u64_to_dbl(&capa.base_mul.base_freq_hz), opt_freq);
 
-		freq = capa.base_freq_hz;
+		freq = capa.base_mul.base_freq_hz;
 	}
 
 	if (res_ns == 0)
@@ -550,9 +551,9 @@ static int periodic_params(test_global_t *test_global, odp_timer_pool_param_t *t
 	test_global->period_dbl = ODP_TIME_SEC_IN_NS / (multiplier * freq_dbl);
 
 	/* Min/max tmo are ignored, leave those to default values */
-	timer_param->timer_type = ODP_TIMER_TYPE_PERIODIC;
-	timer_param->periodic.base_freq_hz = freq;
-	timer_param->periodic.max_multiplier = max_multiplier;
+	timer_param->timer_type = ODP_TIMER_TYPE_PERIODIC_BASE_MUL;
+	timer_param->periodic.base_mul.base_freq_hz = freq;
+	timer_param->periodic.base_mul.max_multiplier = max_multiplier;
 
 	if (res_hz)
 		timer_param->res_hz = res_hz;
@@ -675,8 +676,9 @@ static int create_timers(test_global_t *test_global)
 	max_timers = timer_capa.max_timers;
 
 	if (mode == MODE_PERIODIC) {
-		if (timer_capa.periodic.max_pools < 1) {
-			ODPH_ERR("Periodic timers not supported.\n");
+		if (timer_capa.periodic.support.base_mul == 0) {
+			ODPH_ERR("Periodic timers not supported "
+				 "(ODP_TIMER_TYPE_PERIODIC_BASE_MUL).\n");
 			return -1;
 		}
 		max_timers = timer_capa.periodic.max_timers;
@@ -759,7 +761,7 @@ static int create_timers(test_global_t *test_global)
 
 	if (mode == MODE_PERIODIC) {
 		odp_timer_periodic_param_init(&tmr_param);
-		tmr_param.freq_multiplier = test_global->opt.multiplier;
+		tmr_param.base_mul.multiplier = test_global->opt.multiplier;
 	}
 
 	for (i = 0; i < alloc_timers; i++) {

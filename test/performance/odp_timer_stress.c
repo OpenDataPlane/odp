@@ -324,8 +324,9 @@ static parse_result_t check_options(prog_config_t *config)
 			}
 		}
 	} else {
-		if (tmr_capa.periodic.max_pools == 0U) {
-			ODPH_ERR("Periodic timers not supported\n");
+		if (tmr_capa.periodic.support.base_mul == 0U) {
+			ODPH_ERR("Periodic timers not supported "
+				 "(ODP_TIMER_TYPE_PERIODIC_BASE_MUL)\n");
 			return PRS_NOK;
 		}
 
@@ -347,8 +348,9 @@ static parse_result_t check_options(prog_config_t *config)
 			return PRS_NOK;
 		}
 
-		config->per_capa.base_freq_hz = hz;
-		config->per_capa.max_multiplier = MULTIPLIER;
+		config->per_capa.type = ODP_TIMER_TYPE_PERIODIC_BASE_MUL;
+		config->per_capa.base_mul.base_freq_hz = hz;
+		config->per_capa.base_mul.max_multiplier = MULTIPLIER;
 		config->per_capa.res_ns = opts->res_ns;
 
 		if (odp_timer_periodic_capability(opts->clk_src, &config->per_capa) < 0) {
@@ -356,8 +358,8 @@ static parse_result_t check_options(prog_config_t *config)
 			return PRS_NOK;
 		}
 
-		if (config->per_capa.max_multiplier > MULTIPLIER)
-			config->per_capa.max_multiplier = MULTIPLIER;
+		if (config->per_capa.base_mul.max_multiplier > MULTIPLIER)
+			config->per_capa.base_mul.max_multiplier = MULTIPLIER;
 	}
 
 	if (odp_pool_capability(&pool_capa) < 0) {
@@ -516,9 +518,10 @@ static odp_bool_t setup_config(prog_config_t *config)
 		tmr_param.min_tmo = config->res_capa.min_tmo;
 		tmr_param.max_tmo = config->res_capa.max_tmo;
 	} else {
-		tmr_param.timer_type = ODP_TIMER_TYPE_PERIODIC;
-		tmr_param.periodic.base_freq_hz = config->per_capa.base_freq_hz;
-		tmr_param.periodic.max_multiplier = config->per_capa.max_multiplier;
+		tmr_param.timer_type = ODP_TIMER_TYPE_PERIODIC_BASE_MUL;
+		tmr_param.periodic.base_mul.base_freq_hz = config->per_capa.base_mul.base_freq_hz;
+		tmr_param.periodic.base_mul.max_multiplier =
+			config->per_capa.base_mul.max_multiplier;
 	}
 
 	config->tmr_pool = create_timer_pool(&tmr_param);
@@ -716,7 +719,7 @@ static void get_periodic_time_handles(odp_timer_pool_t tmr_pool, odp_queue_t q, 
 	odp_timer_periodic_param_init(&param);
 	param.queue = q;
 	param.user_ptr = time;
-	param.freq_multiplier = mul;
+	param.base_mul.multiplier = mul;
 	time->tmr = odp_timer_periodic_alloc(tmr_pool, &param);
 
 	if (time->tmr == ODP_TIMER_INVALID)
@@ -789,7 +792,7 @@ static int process_periodic(void *args)
 				   "\n", odp_schedule_group_to_u64(worker->scd.grp));
 	}
 
-	boot_periodic(worker, config->tmr_pool, config->per_capa.max_multiplier);
+	boot_periodic(worker, config->tmr_pool, config->per_capa.base_mul.max_multiplier);
 	odp_barrier_wait(&config->init_barrier);
 	tm = odp_time_local_strict();
 
@@ -813,8 +816,8 @@ static int process_periodic(void *args)
 
 	while (true) {
 		ev = odp_schedule(NULL, odp_schedule_wait_time(res_ns *
-							       config->per_capa.max_multiplier *
-							       WAIT_MULTIPLIER));
+							config->per_capa.base_mul.max_multiplier *
+							WAIT_MULTIPLIER));
 
 		if (ev == ODP_EVENT_INVALID)
 			break;
