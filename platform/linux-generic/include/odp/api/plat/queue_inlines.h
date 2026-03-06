@@ -32,6 +32,7 @@ extern const _odp_queue_api_fn_t *_odp_queue_api;
 	#define odp_aggr_enq_param_init __odp_aggr_enq_param_init
 	#define odp_queue_deq       __odp_queue_deq
 	#define odp_queue_deq_multi __odp_queue_deq_multi
+	#define odp_queue_len __odp_queue_len
 #else
 	#define _ODP_INLINE
 #endif
@@ -88,6 +89,11 @@ _ODP_INLINE int odp_queue_deq_multi(odp_queue_t queue,
 				    odp_event_t events[], int num)
 {
 	return _odp_queue_api->queue_deq_multi(queue, events, num);
+}
+
+_ODP_INLINE uint32_t odp_queue_len(odp_queue_t queue)
+{
+	return _odp_queue_api->queue_len(queue);
 }
 
 /** @endcond */

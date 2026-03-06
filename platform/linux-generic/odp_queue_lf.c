@@ -253,6 +253,13 @@ static int queue_lf_deq_multi(odp_queue_t handle, _odp_event_hdr_t **event_hdr,
 	return 1;
 }
 
+static uint32_t queue_lf_length(odp_queue_t handle)
+{
+	queue_entry_t *queue = qentry_from_handle(handle);
+
+	return _odp_queue_lf_length(queue->queue_lf);
+}
+
 uint32_t _odp_queue_lf_init_global(uint32_t *queue_lf_size,
 				   queue_lf_func_t *lf_func)
 {
@@ -284,6 +291,7 @@ uint32_t _odp_queue_lf_init_global(uint32_t *queue_lf_size,
 	lf_func->enq_multi = queue_lf_enq_multi;
 	lf_func->deq       = queue_lf_deq;
 	lf_func->deq_multi = queue_lf_deq_multi;
+	lf_func->len       = queue_lf_length;
 
 	*queue_lf_size = RING_LF_SIZE;
 

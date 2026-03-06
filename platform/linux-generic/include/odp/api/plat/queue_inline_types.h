@@ -49,6 +49,7 @@ typedef struct {
 	odp_event_t (*queue_deq)(odp_queue_t queue);
 	int (*queue_deq_multi)(odp_queue_t queue, odp_event_t events[],
 			       int num);
+	uint32_t (*queue_len)(odp_queue_t queue);
 	odp_queue_type_t (*queue_type)(odp_queue_t queue);
 	odp_schedule_sync_t (*queue_sched_type)(odp_queue_t queue);
 	odp_schedule_prio_t (*queue_sched_prio)(odp_queue_t queue);

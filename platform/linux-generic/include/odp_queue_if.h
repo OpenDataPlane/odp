@@ -17,6 +17,8 @@ extern "C" {
 #include <odp_event_internal.h>
 #include <odp_forward_typedefs_internal.h>
 
+#include <stdint.h>
+
 #define QUEUE_MULTI_MAX CONFIG_BURST_SIZE
 
 typedef int (*queue_init_global_fn_t)(void);
@@ -40,6 +42,7 @@ typedef void (*queue_set_enq_deq_fn_t)(odp_queue_t queue,
 				       queue_enq_multi_fn_t enq_multi,
 				       queue_deq_fn_t deq,
 				       queue_deq_multi_fn_t deq_multi);
+typedef uint32_t (*queue_len_fn_t)(odp_queue_t queue);
 typedef void (*queue_timer_add_fn_t)(odp_queue_t queue);
 typedef void (*queue_timer_rem_fn_t)(odp_queue_t queue);
 

@@ -17,6 +17,7 @@ typedef struct {
 	queue_enq_multi_fn_t enq_multi;
 	queue_deq_fn_t deq;
 	queue_deq_multi_fn_t deq_multi;
+	queue_len_fn_t len;
 
 } queue_lf_func_t;
 

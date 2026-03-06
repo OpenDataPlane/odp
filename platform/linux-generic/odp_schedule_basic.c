@@ -2502,6 +2502,7 @@ static int schedule_capability(odp_schedule_capability_t *capa)
 	capa->aggr.min_size = 2;
 	capa->aggr.max_tmo_ns = 0;
 	capa->aggr.min_tmo_ns = 0;
+	capa->aggr.stats.bit.len = 1;
 
 	return 0;
 }
