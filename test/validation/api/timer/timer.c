@@ -62,8 +62,11 @@ struct test_timer {
 };
 
 typedef struct {
-	/* Periodic timer support */
-	int periodic_support;
+	/* Periodic timer ODP_TIMER_TYPE_PERIODIC_BASE_MUL support */
+	int periodic_base_mul_support;
+
+	/* Periodic timer ODP_TIMER_TYPE_PERIODIC_FREQ support */
+	int periodic_freq_support;
 
 	/* Timeout pool user area support */
 	uint32_t tmo_uarea_support;
@@ -112,6 +115,14 @@ typedef struct {
 	uint32_t max_num;
 
 } uarea_data_t;
+
+typedef struct {
+	odp_timer_pool_param_t pool_param;
+	odp_timer_periodic_param_t tmr_param;
+	odp_fract_u64_t freq_hz;
+	uint64_t period_ns;
+
+} periodic_params_t;
 
 static global_shared_mem_t *global_mem;
 static test_global_t *test_global;
@@ -195,7 +206,8 @@ static int timer_global_init(odp_instance_t *instance)
 		return -1;
 	}
 
-	global_mem->periodic_support = capa.periodic.max_pools > 0;
+	global_mem->periodic_base_mul_support = capa.periodic.support.base_mul;
+	global_mem->periodic_freq_support = capa.periodic.support.freq;
 
 	/* By default 2 msec resolution */
 	res_ns = 2 * ODP_TIME_MSEC_IN_NS;
@@ -261,25 +273,49 @@ check_plain_queue_support(void)
 	return ODP_TEST_INACTIVE;
 }
 
-static int check_periodic_support(void)
+static int check_periodic_base_mul_support(void)
 {
-	if (global_mem->periodic_support)
+	if (global_mem->periodic_base_mul_support)
 		return ODP_TEST_ACTIVE;
 
 	return ODP_TEST_INACTIVE;
 }
 
-static int check_periodic_sched_support(void)
+static int check_periodic_base_mul_sched_support(void)
 {
-	if (global_mem->periodic_support && global_mem->param.queue_type_sched)
+	if (global_mem->periodic_base_mul_support && global_mem->param.queue_type_sched)
 		return ODP_TEST_ACTIVE;
 
 	return ODP_TEST_INACTIVE;
 }
 
-static int check_periodic_plain_support(void)
+static int check_periodic_base_mul_plain_support(void)
 {
-	if (global_mem->periodic_support && global_mem->param.queue_type_plain)
+	if (global_mem->periodic_base_mul_support && global_mem->param.queue_type_plain)
+		return ODP_TEST_ACTIVE;
+
+	return ODP_TEST_INACTIVE;
+}
+
+static int check_periodic_freq_support(void)
+{
+	if (global_mem->periodic_freq_support)
+		return ODP_TEST_ACTIVE;
+
+	return ODP_TEST_INACTIVE;
+}
+
+static int check_periodic_freq_sched_support(void)
+{
+	if (global_mem->periodic_freq_support && global_mem->param.queue_type_sched)
+		return ODP_TEST_ACTIVE;
+
+	return ODP_TEST_INACTIVE;
+}
+
+static int check_periodic_freq_plain_support(void)
+{
+	if (global_mem->periodic_freq_support && global_mem->param.queue_type_plain)
 		return ODP_TEST_ACTIVE;
 
 	return ODP_TEST_INACTIVE;
@@ -412,18 +448,18 @@ static void test_param_init(uint8_t fill)
 	CU_ASSERT(tp_param.clk_src == ODP_CLOCK_DEFAULT);
 	CU_ASSERT(tp_param.exp_mode == ODP_TIMER_EXP_AFTER);
 	CU_ASSERT(tp_param.timer_type == ODP_TIMER_TYPE_SINGLE);
-	CU_ASSERT(tp_param.periodic.base_freq_hz.integer == 0);
-	CU_ASSERT(tp_param.periodic.base_freq_hz.numer == 0);
-	CU_ASSERT(tp_param.periodic.base_freq_hz.denom == 0);
+	CU_ASSERT(tp_param.periodic.base_mul.base_freq_hz.integer == 0);
+	CU_ASSERT(tp_param.periodic.base_mul.base_freq_hz.numer == 0);
+	CU_ASSERT(tp_param.periodic.base_mul.base_freq_hz.denom == 0);
 }
 
-static void timer_test_param_init(void)
+static void timer_test_pool_param_init(void)
 {
 	test_param_init(0);
 	test_param_init(0xff);
 }
 
-static void timer_test_periodic_alloc_init(void)
+static void timer_test_periodic_param_init(void)
 {
 	odp_timer_periodic_param_t param;
 
@@ -431,17 +467,23 @@ static void timer_test_periodic_alloc_init(void)
 	odp_timer_periodic_param_init(&param);
 
 	CU_ASSERT(param.user_ptr == NULL);
-	CU_ASSERT(param.freq_multiplier == 1);
+	CU_ASSERT(param.base_mul.multiplier == 1);
 	CU_ASSERT(param.uarea_init.init_fn == NULL);
 	CU_ASSERT(param.uarea_init.args == NULL);
+	CU_ASSERT(param.freq.freq_hz.integer == 0);
+	CU_ASSERT(param.freq.freq_hz.numer == 0);
+	CU_ASSERT(param.freq.freq_hz.denom == 0);
 
 	memset(&param, 0xff, sizeof(param));
 	odp_timer_periodic_param_init(&param);
 
 	CU_ASSERT(param.user_ptr == NULL);
-	CU_ASSERT(param.freq_multiplier == 1);
+	CU_ASSERT(param.base_mul.multiplier == 1);
 	CU_ASSERT(param.uarea_init.init_fn == NULL);
 	CU_ASSERT(param.uarea_init.args == NULL);
+	CU_ASSERT(param.freq.freq_hz.integer == 0);
+	CU_ASSERT(param.freq.freq_hz.numer == 0);
+	CU_ASSERT(param.freq.freq_hz.denom == 0);
 }
 
 static void timer_test_timeout_pool_alloc(void)
@@ -639,18 +681,14 @@ static void timer_test_timeout_pool_free(void)
 static void timer_test_timeout_user_area(void)
 {
 	odp_pool_t pool;
-	odp_pool_capability_t pool_capa;
 	odp_pool_param_t param;
-	uint32_t i, max_size;
+	uint32_t i, max_size = test_global->global_mem.tmo_uarea_support;
 	void *addr;
 	void *prev = NULL;
 	const uint32_t num = 10;
 	uint32_t num_alloc = 0;
 	uint32_t size = 1024;
 	odp_timeout_t tmo[num];
-
-	CU_ASSERT_FATAL(!odp_pool_capability(&pool_capa));
-	max_size = pool_capa.tmo.max_uarea_size;
 
 	if (max_size == 0) {
 		ODPH_DBG("Timeout user area not supported\n");
@@ -2973,24 +3011,9 @@ static void timer_test_sched_all(void)
 	timer_test_all(ODP_QUEUE_TYPE_SCHED);
 }
 
-static void timer_test_periodic_capa(void)
+static void check_freq_values(odp_fract_u64_t min_fract, odp_fract_u64_t max_fract)
 {
-	odp_timer_capability_t timer_capa;
-	odp_timer_periodic_capability_t capa;
-	odp_fract_u64_t min_fract, max_fract, base_freq;
-	uint64_t freq_range, freq_step, first_hz, res_ns, max_multiplier;
-	double freq, min_freq, max_freq;
-	int ret;
-	uint32_t i, j;
-	uint32_t num = 100;
-	odp_timer_clk_src_t clk_src = test_global->clk_src;
-
-	CU_ASSERT_FATAL(odp_timer_capability(clk_src, &timer_capa) == 0);
-	CU_ASSERT(timer_capa.periodic.max_pools);
-	CU_ASSERT(timer_capa.periodic.max_timers);
-
-	min_fract = timer_capa.periodic.min_base_freq_hz;
-	max_fract = timer_capa.periodic.max_base_freq_hz;
+	double min_freq, max_freq;
 
 	CU_ASSERT_FATAL(min_fract.integer || min_fract.numer);
 	CU_ASSERT_FATAL(max_fract.integer || max_fract.numer);
@@ -3007,32 +3030,78 @@ static void timer_test_periodic_capa(void)
 
 	min_freq = odp_fract_u64_to_dbl(&min_fract);
 	max_freq = odp_fract_u64_to_dbl(&max_fract);
-	CU_ASSERT(min_freq <= max_freq);
 
+	CU_ASSERT(min_freq <= max_freq);
+}
+
+static void timer_test_periodic_common_capa(void)
+{
+	odp_timer_clk_src_t clk_src = test_global->clk_src;
+	odp_timer_capability_t timer_capa;
+
+	CU_ASSERT_FATAL(odp_timer_capability(clk_src, &timer_capa) == 0);
+
+	if (timer_capa.periodic.support.base_mul == 0 &&
+	    timer_capa.periodic.support.freq == 0) {
+		printf("Periodic timer not supported\n");
+		return;
+	}
+
+	CU_ASSERT(timer_capa.periodic.max_pools);
+	CU_ASSERT(timer_capa.periodic.max_timers);
+
+	if (timer_capa.periodic.support.base_mul == 1)
+		check_freq_values(timer_capa.periodic.min_base_freq_hz,
+				  timer_capa.periodic.max_base_freq_hz);
+
+	if (timer_capa.periodic.support.freq == 1)
+		check_freq_values(timer_capa.periodic.min_freq_hz,
+				  timer_capa.periodic.max_freq_hz);
+}
+
+static void timer_test_periodic_capa_base_mul(void)
+{
+	odp_timer_capability_t timer_capa;
+	odp_timer_periodic_capability_t capa;
+	odp_fract_u64_t min_fract, max_fract, base_freq;
+	uint64_t freq_range, freq_step, first_hz, res_ns, max_multiplier;
+	double freq, min_freq, max_freq;
+	int ret;
+	uint32_t i, j;
+	uint32_t num = 100;
+	odp_timer_clk_src_t clk_src = test_global->clk_src;
+
+	CU_ASSERT_FATAL(odp_timer_capability(clk_src, &timer_capa) == 0);
+
+	min_fract = timer_capa.periodic.min_base_freq_hz;
+	max_fract = timer_capa.periodic.max_base_freq_hz;
+	min_freq = odp_fract_u64_to_dbl(&min_fract);
+	max_freq = odp_fract_u64_to_dbl(&max_fract);
 	memset(&capa, 0, sizeof(odp_timer_periodic_capability_t));
 
+	capa.type = ODP_TIMER_TYPE_PERIODIC_BASE_MUL;
 	/* Min freq, capa fills in resolution */
-	capa.base_freq_hz   = min_fract;
-	capa.max_multiplier = 1;
+	capa.base_mul.base_freq_hz   = min_fract;
+	capa.base_mul.max_multiplier = 1;
 	capa.res_ns         = 0;
 
 	CU_ASSERT(odp_timer_periodic_capability(clk_src, &capa) == 1);
-	CU_ASSERT(capa.base_freq_hz.integer == min_fract.integer);
-	CU_ASSERT(capa.base_freq_hz.numer   == min_fract.numer);
-	CU_ASSERT(capa.base_freq_hz.denom   == min_fract.denom);
-	CU_ASSERT(capa.max_multiplier >= 1);
+	CU_ASSERT(capa.base_mul.base_freq_hz.integer == min_fract.integer);
+	CU_ASSERT(capa.base_mul.base_freq_hz.numer   == min_fract.numer);
+	CU_ASSERT(capa.base_mul.base_freq_hz.denom   == min_fract.denom);
+	CU_ASSERT(capa.base_mul.max_multiplier >= 1);
 	CU_ASSERT(capa.res_ns > 0);
 
 	/* Max freq, capa fills in resolution */
-	capa.base_freq_hz   = max_fract;
-	capa.max_multiplier = 1;
+	capa.base_mul.base_freq_hz   = max_fract;
+	capa.base_mul.max_multiplier = 1;
 	capa.res_ns         = 0;
 
 	CU_ASSERT(odp_timer_periodic_capability(clk_src, &capa) == 1);
-	CU_ASSERT(capa.base_freq_hz.integer == max_fract.integer);
-	CU_ASSERT(capa.base_freq_hz.numer   == max_fract.numer);
-	CU_ASSERT(capa.base_freq_hz.denom   == max_fract.denom);
-	CU_ASSERT(capa.max_multiplier >= 1);
+	CU_ASSERT(capa.base_mul.base_freq_hz.integer == max_fract.integer);
+	CU_ASSERT(capa.base_mul.base_freq_hz.numer   == max_fract.numer);
+	CU_ASSERT(capa.base_mul.base_freq_hz.denom   == max_fract.denom);
+	CU_ASSERT(capa.base_mul.max_multiplier >= 1);
 	CU_ASSERT(capa.res_ns > 0);
 
 	freq_range = max_fract.integer - min_fract.integer;
@@ -3061,7 +3130,7 @@ static void timer_test_periodic_capa(void)
 			base_freq = max_fract;
 
 		for (j = 0; j < 4; j++) {
-			capa.base_freq_hz = base_freq;
+			capa.base_mul.base_freq_hz = base_freq;
 
 			max_multiplier = 1;
 			res_ns = 0;
@@ -3072,7 +3141,7 @@ static void timer_test_periodic_capa(void)
 			if (j & 0x2)
 				res_ns = 1 + (ODP_TIME_SEC_IN_NS / (10 * base_freq.integer));
 
-			capa.max_multiplier = max_multiplier;
+			capa.base_mul.max_multiplier = max_multiplier;
 			capa.res_ns = res_ns;
 
 			ODPH_DBG("freq %" PRIu64 ",  multip %" PRIu64 ", res %" PRIu64 ",\n",
@@ -3081,26 +3150,28 @@ static void timer_test_periodic_capa(void)
 			ret = odp_timer_periodic_capability(clk_src, &capa);
 
 			if (ret == 1) {
-				CU_ASSERT(capa.base_freq_hz.integer == base_freq.integer);
-				CU_ASSERT(capa.base_freq_hz.numer   == base_freq.numer);
-				CU_ASSERT(capa.base_freq_hz.denom   == base_freq.denom);
+				CU_ASSERT(capa.base_mul.base_freq_hz.integer == base_freq.integer);
+				CU_ASSERT(capa.base_mul.base_freq_hz.numer   == base_freq.numer);
+				CU_ASSERT(capa.base_mul.base_freq_hz.denom   == base_freq.denom);
 			} else if (ret == 0) {
-				CU_ASSERT(capa.base_freq_hz.integer != base_freq.integer ||
-					  capa.base_freq_hz.numer   != base_freq.numer ||
-					  capa.base_freq_hz.denom   != base_freq.denom);
+				CU_ASSERT(capa.base_mul.base_freq_hz.integer != base_freq.integer ||
+					  capa.base_mul.base_freq_hz.numer   != base_freq.numer ||
+					  capa.base_mul.base_freq_hz.denom   != base_freq.denom);
 
-				if (capa.base_freq_hz.numer) {
-					CU_ASSERT_FATAL(capa.base_freq_hz.denom);
-					CU_ASSERT_FATAL(capa.base_freq_hz.numer <
-							capa.base_freq_hz.denom);
+				if (capa.base_mul.base_freq_hz.numer) {
+					CU_ASSERT_FATAL(capa.base_mul.base_freq_hz.denom);
+					CU_ASSERT_FATAL(capa.base_mul.base_freq_hz.numer <
+							capa.base_mul.base_freq_hz.denom);
 				}
 
-				CU_ASSERT(odp_fract_u64_to_dbl(&capa.base_freq_hz) >= min_freq);
-				CU_ASSERT(odp_fract_u64_to_dbl(&capa.base_freq_hz) <= max_freq);
+				CU_ASSERT(odp_fract_u64_to_dbl(&capa.base_mul.base_freq_hz) >=
+					  min_freq);
+				CU_ASSERT(odp_fract_u64_to_dbl(&capa.base_mul.base_freq_hz) <=
+					  max_freq);
 			}
 
 			if (ret >= 0) {
-				CU_ASSERT(capa.max_multiplier >= max_multiplier);
+				CU_ASSERT(capa.base_mul.max_multiplier >= max_multiplier);
 
 				if (res_ns) {
 					/* Same or better resolution */
@@ -3111,6 +3182,341 @@ static void timer_test_periodic_capa(void)
 			}
 		}
 	}
+}
+
+static void timer_test_periodic_capa_freq(void)
+{
+	odp_timer_capability_t timer_capa;
+	odp_timer_periodic_capability_t capa;
+	odp_fract_u64_t min_fract, max_fract,
+	/* Use some sane array size for constraining frequencies, one array for base values,
+	 * one for comparison */
+	freqs[4], freqs_cmp[4];
+	uint64_t freq_range, freq_step, res_ns;
+	double min_freq, max_freq;
+	int ret;
+	uint32_t num = 100;
+	odp_timer_clk_src_t clk_src = test_global->clk_src;
+	odp_bool_t is_mod;
+
+	CU_ASSERT_FATAL(odp_timer_capability(clk_src, &timer_capa) == 0);
+
+	min_fract = timer_capa.periodic.min_freq_hz;
+	max_fract = timer_capa.periodic.max_freq_hz;
+	min_freq = odp_fract_u64_to_dbl(&min_fract);
+	max_freq = odp_fract_u64_to_dbl(&max_fract);
+	memset(&capa, 0, sizeof(odp_timer_periodic_capability_t));
+
+	capa.type = ODP_TIMER_TYPE_PERIODIC_FREQ;
+	/* Min freq, capa fills in resolution */
+	freqs[0] = min_fract;
+	capa.freq.freq_hz = freqs;
+	capa.freq.num = 1;
+	capa.res_ns = 0;
+
+	CU_ASSERT(odp_timer_periodic_capability(clk_src, &capa) == 1);
+	CU_ASSERT(capa.freq.freq_hz[0].integer == min_fract.integer);
+	CU_ASSERT(capa.freq.freq_hz[0].numer == min_fract.numer);
+	CU_ASSERT(capa.freq.freq_hz[0].denom == min_fract.denom);
+	CU_ASSERT(capa.res_ns > 0);
+
+	/* Max freq, capa fills in resolution */
+	freqs[0] = max_fract;
+	capa.res_ns = 0;
+
+	CU_ASSERT(odp_timer_periodic_capability(clk_src, &capa) == 1);
+	CU_ASSERT(capa.freq.freq_hz[0].integer == max_fract.integer);
+	CU_ASSERT(capa.freq.freq_hz[0].numer == max_fract.numer);
+	CU_ASSERT(capa.freq.freq_hz[0].denom == max_fract.denom);
+	CU_ASSERT(capa.res_ns > 0);
+
+	/* Entire supported range */
+	freqs[0] = min_fract;
+	freqs[1] = max_fract;
+	capa.freq.num = 2;
+	capa.res_ns = 0;
+
+	CU_ASSERT(odp_timer_periodic_capability(clk_src, &capa) == 1);
+	CU_ASSERT(capa.freq.freq_hz[0].integer == min_fract.integer);
+	CU_ASSERT(capa.freq.freq_hz[0].numer == min_fract.numer);
+	CU_ASSERT(capa.freq.freq_hz[0].denom == min_fract.denom);
+	CU_ASSERT(capa.freq.freq_hz[1].integer == max_fract.integer);
+	CU_ASSERT(capa.freq.freq_hz[1].numer == max_fract.numer);
+	CU_ASSERT(capa.freq.freq_hz[1].denom == max_fract.denom);
+	CU_ASSERT(capa.res_ns > 0);
+
+	freq_range = max_fract.integer - min_fract.integer;
+
+	if (freq_range < 10 * num)
+		num = freq_range / 10;
+
+	/* Too short frequency range */
+	if (num == 0)
+		return;
+
+	freq_step = freq_range / num;
+	memset(freqs, 0, sizeof(freqs));
+	capa.freq.freq_hz = freqs_cmp;
+	capa.freq.num = ODPH_ARRAY_SIZE(freqs);
+
+	for (uint32_t i = 0; i < num; i++) {
+		freqs[0].integer = min_fract.integer + i * freq_step;
+		freqs[3].integer = freqs[0].integer + freq_step;
+
+		if (odp_fract_u64_to_dbl(&freqs[3]) > max_freq)
+			break;
+
+		freqs[1].integer = freqs[0].integer + ((freqs[3].integer - freqs[0].integer) / 4);
+		freqs[2].integer = freqs[0].integer +
+				   ODPH_DIV_ROUNDUP(((freqs[3].integer - freqs[0].integer)), 3);
+		res_ns = 0;
+		is_mod = false;
+
+		if (i & 0x2)
+			res_ns = 1 + (ODP_TIME_SEC_IN_NS / (10 * freqs[0].integer));
+
+		for (uint32_t j = 0; j < capa.freq.num; j++)
+			ODPH_DBG("freqs[%u] %" PRIu64 "\n", j, freqs[j].integer);
+
+		ODPH_DBG("res %" PRIu64 "\n", res_ns);
+		memcpy(capa.freq.freq_hz, freqs, sizeof(freqs));
+		capa.res_ns = res_ns;
+		ret = odp_timer_periodic_capability(clk_src, &capa);
+
+		CU_ASSERT(capa.freq.num == ODPH_ARRAY_SIZE(freqs));
+
+		if (ret == 1) {
+			for (uint32_t j = 0; j < capa.freq.num; j++) {
+				CU_ASSERT(capa.freq.freq_hz[j].integer == freqs[j].integer);
+				CU_ASSERT(capa.freq.freq_hz[j].numer == freqs[j].numer);
+				CU_ASSERT(capa.freq.freq_hz[j].denom == freqs[j].denom);
+			}
+		} else if (ret == 0) {
+			for (uint32_t j = 0; j < capa.freq.num; j++) {
+				if (capa.freq.freq_hz[j].integer != freqs[j].integer ||
+				    capa.freq.freq_hz[j].numer != freqs[j].numer ||
+				    capa.freq.freq_hz[j].denom != freqs[j].denom) {
+					is_mod = true;
+
+					if (capa.freq.freq_hz[j].numer > 0) {
+						CU_ASSERT_FATAL(capa.freq.freq_hz[j].denom > 0);
+						CU_ASSERT_FATAL(capa.freq.freq_hz[j].numer <
+								capa.freq.freq_hz[j].denom);
+					}
+				}
+			}
+
+			CU_ASSERT(is_mod);
+			CU_ASSERT(odp_fract_u64_to_dbl(&capa.freq.freq_hz[0]) >= min_freq);
+			CU_ASSERT(odp_fract_u64_to_dbl(&capa.freq.freq_hz[capa.freq.num - 1])
+				  <= max_freq);
+		}
+
+		if (ret >= 0) {
+			if (res_ns) {
+				/* Same or better resolution */
+				CU_ASSERT(capa.res_ns <= res_ns);
+			} else {
+				CU_ASSERT(capa.res_ns > 0);
+			}
+		}
+	}
+}
+
+static odp_bool_t fill_periodic_base_mul_params(periodic_params_t *params)
+{
+	odp_timer_clk_src_t clk_src = test_global->clk_src;
+	odp_timer_capability_t timer_capa;
+	double freq, freq_out, min_freq, max_freq;
+	/* Test frequency: 1x 1000 Hz, or 1x min/max_base_freq */
+	const uint64_t multiplier = 1;
+	odp_fract_u64_t base_freq = { 1000, 0, 0 };
+	odp_timer_periodic_capability_t periodic_capa;
+	int ret;
+
+	CU_ASSERT_FATAL(odp_timer_capability(clk_src, &timer_capa) == 0);
+	CU_ASSERT_FATAL(timer_capa.periodic.max_pools);
+	CU_ASSERT_FATAL(timer_capa.periodic.max_timers);
+	CU_ASSERT_FATAL(timer_capa.periodic.min_base_freq_hz.integer ||
+			timer_capa.periodic.min_base_freq_hz.numer);
+	CU_ASSERT_FATAL(timer_capa.periodic.max_base_freq_hz.integer ||
+			timer_capa.periodic.max_base_freq_hz.numer);
+
+	min_freq = odp_fract_u64_to_dbl(&timer_capa.periodic.min_base_freq_hz);
+	max_freq = odp_fract_u64_to_dbl(&timer_capa.periodic.max_base_freq_hz);
+
+	CU_ASSERT(min_freq <= max_freq);
+
+	if (odp_fract_u64_to_dbl(&base_freq) < min_freq)
+		base_freq = timer_capa.periodic.min_base_freq_hz;
+	else if (odp_fract_u64_to_dbl(&base_freq) > max_freq)
+		base_freq = timer_capa.periodic.max_base_freq_hz;
+
+	freq = odp_fract_u64_to_dbl(&base_freq);
+	/* No resolution requirement */
+	memset(&periodic_capa, 0, sizeof(odp_timer_periodic_capability_t));
+	periodic_capa.type = ODP_TIMER_TYPE_PERIODIC_BASE_MUL;
+	periodic_capa.base_mul.base_freq_hz = base_freq;
+	periodic_capa.base_mul.max_multiplier = multiplier;
+	ret = odp_timer_periodic_capability(clk_src, &periodic_capa);
+
+	CU_ASSERT(ret == 0 || ret == 1);
+
+	if (ret < 0) {
+		ODPH_ERR("Periodic timer 'base_mul' type does not support tested frequency\n");
+		return false;
+	}
+
+	freq_out = odp_fract_u64_to_dbl(&periodic_capa.base_mul.base_freq_hz);
+
+	if (ret == 0) {
+		/* Allow 10% difference in outputted base frequency */
+		CU_ASSERT((freq_out > (0.9 * freq)) && (freq_out < (1.1 * freq)));
+
+		if (periodic_capa.base_mul.base_freq_hz.numer) {
+			CU_ASSERT_FATAL(periodic_capa.base_mul.base_freq_hz.numer <
+					periodic_capa.base_mul.base_freq_hz.denom);
+		}
+	} else {
+		CU_ASSERT(base_freq.integer == periodic_capa.base_mul.base_freq_hz.integer);
+		CU_ASSERT(base_freq.numer == periodic_capa.base_mul.base_freq_hz.numer);
+		CU_ASSERT(base_freq.denom == periodic_capa.base_mul.base_freq_hz.denom);
+	}
+
+	CU_ASSERT(periodic_capa.res_ns > 0);
+	CU_ASSERT(periodic_capa.base_mul.max_multiplier >= multiplier);
+
+	base_freq = periodic_capa.base_mul.base_freq_hz;
+	freq = odp_fract_u64_to_dbl(&base_freq);
+	params->period_ns = ODP_TIME_SEC_IN_NS / (freq * multiplier);
+
+	odp_timer_pool_param_init(&params->pool_param);
+	params->pool_param.timer_type = ODP_TIMER_TYPE_PERIODIC_BASE_MUL;
+	params->pool_param.res_ns = 2 * periodic_capa.res_ns;
+	params->pool_param.num_timers = 1;
+	params->pool_param.clk_src = clk_src;
+	params->pool_param.periodic.base_mul.base_freq_hz = base_freq;
+	params->pool_param.periodic.base_mul.max_multiplier = multiplier;
+	params->pool_param.periodic.uarea_size =
+					test_global->global_mem.tmo_uarea_support > 0 ? 1 : 0;
+	params->pool_param.priority = timer_capa.periodic.max_priority;
+	odp_timer_periodic_param_init(&params->tmr_param);
+	params->tmr_param.base_mul.multiplier = multiplier;
+
+	ODPH_DBG("\n");
+	ODPH_DBG("Periodic timer 'base_mul' pool create params:\n");
+	ODPH_DBG("  Resolution ns:     %" PRIu64 "\n", params->pool_param.res_ns);
+	ODPH_DBG("  Base freq hz:      %" PRIu64 " + %" PRIu64 "/%" PRIu64 " (%f)\n",
+		 params->pool_param.periodic.base_mul.base_freq_hz.integer,
+		 params->pool_param.periodic.base_mul.base_freq_hz.numer,
+		 params->pool_param.periodic.base_mul.base_freq_hz.denom, freq);
+	ODPH_DBG("  Max multiplier:    %" PRIu64 "\n",
+		 params->pool_param.periodic.base_mul.max_multiplier);
+	ODPH_DBG("  User area size:    %" PRIu32 "\n", params->pool_param.periodic.uarea_size);
+	ODPH_DBG("Capabilities:\n");
+	ODPH_DBG("  Max multiplier:    %" PRIu64 " (with %f hz)\n",
+		 periodic_capa.base_mul.max_multiplier, freq);
+	ODPH_DBG("  Max resolution:    %" PRIu64 " ns (with %f hz)\n", periodic_capa.res_ns, freq);
+	ODPH_DBG("  Min base freq:     %f hz\n", min_freq);
+	ODPH_DBG("  Max base freq:     %f hz\n", max_freq);
+	ODPH_DBG("  Max priority:      %" PRIu16 "\n", timer_capa.periodic.max_priority);
+
+	return true;
+}
+
+static odp_bool_t fill_periodic_freq_params(periodic_params_t *params)
+{
+	odp_timer_clk_src_t clk_src = test_global->clk_src;
+	odp_timer_capability_t timer_capa;
+	double freq, freq_out, min_freq, max_freq;
+	/* Test frequency: 1x 1000 Hz, or 1x min/max_base_freq */
+	odp_fract_u64_t freq_hz = { 1000, 0, 0 }, freq_out_hz;
+	odp_timer_periodic_capability_t periodic_capa;
+	int ret;
+
+	CU_ASSERT_FATAL(odp_timer_capability(clk_src, &timer_capa) == 0);
+	CU_ASSERT_FATAL(timer_capa.periodic.max_pools);
+	CU_ASSERT_FATAL(timer_capa.periodic.max_timers);
+	CU_ASSERT_FATAL(timer_capa.periodic.min_freq_hz.integer ||
+			timer_capa.periodic.min_freq_hz.numer);
+	CU_ASSERT_FATAL(timer_capa.periodic.max_freq_hz.integer ||
+			timer_capa.periodic.max_freq_hz.numer);
+
+	min_freq = odp_fract_u64_to_dbl(&timer_capa.periodic.min_freq_hz);
+	max_freq = odp_fract_u64_to_dbl(&timer_capa.periodic.max_freq_hz);
+
+	CU_ASSERT(min_freq <= max_freq);
+
+	if (odp_fract_u64_to_dbl(&freq_hz) < min_freq)
+		freq_hz = timer_capa.periodic.min_freq_hz;
+	else if (odp_fract_u64_to_dbl(&freq_hz) > max_freq)
+		freq_hz = timer_capa.periodic.max_freq_hz;
+
+	freq = odp_fract_u64_to_dbl(&freq_hz);
+	/* No resolution requirement */
+	memset(&periodic_capa, 0, sizeof(odp_timer_periodic_capability_t));
+	freq_out_hz = freq_hz;
+	periodic_capa.type = ODP_TIMER_TYPE_PERIODIC_FREQ;
+	periodic_capa.freq.freq_hz = &freq_out_hz;
+	periodic_capa.freq.num = 1;
+	ret = odp_timer_periodic_capability(clk_src, &periodic_capa);
+
+	CU_ASSERT(ret == 0 || ret == 1);
+
+	if (ret < 0) {
+		ODPH_ERR("Periodic timer 'freq' type does not support tested frequency\n");
+		return false;
+	}
+
+	freq_out = odp_fract_u64_to_dbl(&freq_out_hz);
+
+	if (ret == 0) {
+		/* Allow 10% difference in outputted base frequency */
+		CU_ASSERT((freq_out > (0.9 * freq)) && (freq_out < (1.1 * freq)));
+
+		if (freq_out_hz.numer) {
+			CU_ASSERT_FATAL(freq_out_hz.numer < freq_out_hz.denom);
+		}
+	} else {
+		CU_ASSERT(freq_hz.integer == freq_out_hz.integer);
+		CU_ASSERT(freq_hz.numer == freq_out_hz.numer);
+		CU_ASSERT(freq_hz.denom == freq_out_hz.denom);
+	}
+
+	CU_ASSERT(periodic_capa.freq.num == 1);
+	CU_ASSERT(periodic_capa.res_ns > 0);
+
+	freq_hz = freq_out_hz;
+	freq = odp_fract_u64_to_dbl(&freq_hz);
+	params->period_ns = ODP_TIME_SEC_IN_NS / freq;
+
+	odp_timer_pool_param_init(&params->pool_param);
+	params->pool_param.timer_type = ODP_TIMER_TYPE_PERIODIC_FREQ;
+	params->pool_param.res_ns = 2 * periodic_capa.res_ns;
+	params->pool_param.num_timers = 1;
+	params->pool_param.clk_src = clk_src;
+	params->freq_hz = freq_hz;
+	params->pool_param.periodic.freq.freq_hz = &params->freq_hz;
+	params->pool_param.periodic.freq.num = 1;
+	params->pool_param.periodic.uarea_size =
+					test_global->global_mem.tmo_uarea_support > 0 ? 1 : 0;
+	params->pool_param.priority = timer_capa.periodic.max_priority;
+	odp_timer_periodic_param_init(&params->tmr_param);
+	params->tmr_param.freq.freq_hz = params->freq_hz;
+
+	ODPH_DBG("\n");
+	ODPH_DBG("Periodic timer 'freq' pool create params:\n");
+	ODPH_DBG("  Resolution ns:     %" PRIu64 "\n", params->pool_param.res_ns);
+	ODPH_DBG("  Freq hz:           %" PRIu64 " + %" PRIu64 "/%" PRIu64 " (%f)\n",
+		 params->freq_hz.integer, params->freq_hz.numer, params->freq_hz.denom, freq);
+	ODPH_DBG("  User area size:    %" PRIu32 "\n", params->pool_param.periodic.uarea_size);
+	ODPH_DBG("Capabilities:\n");
+	ODPH_DBG("  Max resolution:    %" PRIu64 " ns (with %f hz)\n", periodic_capa.res_ns, freq);
+	ODPH_DBG("  Min freq:          %f hz\n", min_freq);
+	ODPH_DBG("  Max freq:          %f hz\n", max_freq);
+	ODPH_DBG("  Max priority:      %" PRIu16 "\n", timer_capa.periodic.max_priority);
+
+	return true;
 }
 
 static void init_uarea(void *uarea, uint32_t size, void *args, uint32_t index, uint32_t max_num)
@@ -3132,147 +3538,57 @@ static void init_uarea(void *uarea, uint32_t size, void *args, uint32_t index, u
 		 uarea, size, args, index, max_num);
 }
 
-static void timer_test_periodic(odp_queue_type_t queue_type, int use_first, int rounds,
-				odp_bool_t max_prio)
+static void timer_test_periodic(periodic_params_t *params, odp_queue_type_t queue_type,
+				int use_first, int rounds, odp_bool_t max_prio)
 {
-	odp_timer_capability_t timer_capa;
-	odp_timer_periodic_capability_t periodic_capa;
 	odp_queue_param_t queue_param;
-	odp_timer_pool_param_t timer_param;
 	odp_timer_pool_t timer_pool;
-	odp_timer_periodic_param_t tmr_param;
 	odp_timer_periodic_start_t start_param;
 	odp_queue_t queue;
 	odp_event_t ev = ODP_EVENT_INVALID;
 	odp_timer_t timer;
 	odp_time_t t1, t2;
-	uint64_t tick, cur_tick, period_ns, duration_ns, diff_ns, offset_ns;
-	double freq, freq_out, min_freq, max_freq;
+	uint64_t tick, cur_tick, duration_ns, diff_ns, offset_ns;
 	int ret;
 	const char *user_ctx = "User context";
+	uarea_data_t data;
+	uint8_t *uarea;
 	int num_tmo;
 	int done;
 	const int num = 200;
-	uarea_data_t data;
-	uint8_t *uarea;
-	/* Test frequency: 1x 1000 Hz, or 1x min/max_base_freq */
-	const uint64_t multiplier = 1;
-	odp_fract_u64_t base_freq = {1000, 0, 0};
-	odp_timer_clk_src_t clk_src = test_global->clk_src;
 	const uint32_t tmo_uarea_support = test_global->global_mem.tmo_uarea_support;
 
-	CU_ASSERT_FATAL(odp_timer_capability(clk_src, &timer_capa) == 0);
+	duration_ns = num * params->period_ns;
 
-	CU_ASSERT_FATAL(timer_capa.periodic.max_pools);
-	CU_ASSERT_FATAL(timer_capa.periodic.max_timers);
-	CU_ASSERT_FATAL(timer_capa.periodic.min_base_freq_hz.integer ||
-			timer_capa.periodic.min_base_freq_hz.numer);
-	CU_ASSERT_FATAL(timer_capa.periodic.max_base_freq_hz.integer ||
-			timer_capa.periodic.max_base_freq_hz.numer);
+	if (!max_prio)
+		params->pool_param.priority = 0;
 
-	min_freq = odp_fract_u64_to_dbl(&timer_capa.periodic.min_base_freq_hz);
-	max_freq = odp_fract_u64_to_dbl(&timer_capa.periodic.max_base_freq_hz);
-	CU_ASSERT(min_freq <= max_freq);
-
-	if (odp_fract_u64_to_dbl(&base_freq) < min_freq)
-		base_freq = timer_capa.periodic.min_base_freq_hz;
-	else if (odp_fract_u64_to_dbl(&base_freq) > max_freq)
-		base_freq = timer_capa.periodic.max_base_freq_hz;
-
-	freq = odp_fract_u64_to_dbl(&base_freq);
-
-	/* No resolution requirement */
-	memset(&periodic_capa, 0, sizeof(odp_timer_periodic_capability_t));
-	periodic_capa.base_freq_hz   = base_freq;
-	periodic_capa.max_multiplier = multiplier;
-
-	ret = odp_timer_periodic_capability(clk_src, &periodic_capa);
-	CU_ASSERT(ret == 0 || ret == 1);
-
-	if (ret < 0) {
-		ODPH_ERR("Periodic timer does not support tested frequency\n");
-		return;
-	}
-
-	freq_out = odp_fract_u64_to_dbl(&periodic_capa.base_freq_hz);
-
-	if (ret == 0) {
-		/* Allow 10% difference in outputted base frequency */
-		CU_ASSERT((freq_out > (0.9 * freq)) && (freq_out < (1.1 * freq)));
-
-		if (periodic_capa.base_freq_hz.numer) {
-			CU_ASSERT_FATAL(periodic_capa.base_freq_hz.numer <
-					periodic_capa.base_freq_hz.denom);
-		}
-	} else {
-		CU_ASSERT(base_freq.integer == periodic_capa.base_freq_hz.integer);
-		CU_ASSERT(base_freq.numer   == periodic_capa.base_freq_hz.numer);
-		CU_ASSERT(base_freq.denom   == periodic_capa.base_freq_hz.denom);
-	}
-
-	CU_ASSERT(periodic_capa.res_ns > 0);
-	CU_ASSERT(periodic_capa.max_multiplier >= multiplier);
-
-	base_freq = periodic_capa.base_freq_hz;
-	freq = odp_fract_u64_to_dbl(&base_freq);
-	period_ns = ODP_TIME_SEC_IN_NS / (freq * multiplier);
-	duration_ns = num * period_ns;
-
-	odp_timer_pool_param_init(&timer_param);
-	timer_param.timer_type = ODP_TIMER_TYPE_PERIODIC;
-	timer_param.res_ns     = 2 * periodic_capa.res_ns;
-	timer_param.num_timers = 1;
-	timer_param.clk_src    = clk_src;
-	timer_param.periodic.base_freq_hz = base_freq;
-	timer_param.periodic.max_multiplier = multiplier;
-	timer_param.periodic.uarea_size = tmo_uarea_support > 0 ? 1 : 0;
-	timer_param.priority = max_prio ? timer_capa.periodic.max_priority : 0;
-
-	ODPH_DBG("\n");
-	ODPH_DBG("Periodic timer pool create params:\n");
-	ODPH_DBG("  Resolution ns:     %" PRIu64 "\n", timer_param.res_ns);
-	ODPH_DBG("  Base freq hz:      %" PRIu64 " + %" PRIu64 "/%" PRIu64 " (%f)\n",
-		 timer_param.periodic.base_freq_hz.integer,
-		 timer_param.periodic.base_freq_hz.numer,
-		 timer_param.periodic.base_freq_hz.denom, freq);
-	ODPH_DBG("  Max multiplier:    %" PRIu64 "\n", timer_param.periodic.max_multiplier);
-	ODPH_DBG("  User area:         %" PRIu32 "\n", timer_param.periodic.uarea_size);
-	ODPH_DBG("  Priority:          %" PRIu16 "\n", timer_param.priority);
-	ODPH_DBG("Capabilities:\n");
-	ODPH_DBG("  Max multiplier:    %" PRIu64 " (with %f hz)\n",
-		 periodic_capa.max_multiplier, freq);
-	ODPH_DBG("  Max resolution:    %" PRIu64 " ns (with %f hz)\n", periodic_capa.res_ns, freq);
-	ODPH_DBG("  Min base freq:     %f hz\n", min_freq);
-	ODPH_DBG("  Max base freq:     %f hz\n", max_freq);
-	ODPH_DBG("  Max user area:     %" PRIu32 "\n", tmo_uarea_support);
-	ODPH_DBG("  Max priority:      %" PRIu16 "\n", timer_capa.periodic.max_priority);
-
-	timer_pool = odp_timer_pool_create("periodic_timer", &timer_param);
+	timer_pool = odp_timer_pool_create("periodic_timer", &params->pool_param);
 	CU_ASSERT_FATAL(timer_pool != ODP_TIMER_POOL_INVALID);
-
 	CU_ASSERT_FATAL(odp_timer_pool_start_multi(&timer_pool, 1) == 1);
 
 	odp_queue_param_init(&queue_param);
+
 	if (queue_type == ODP_QUEUE_TYPE_SCHED) {
-		queue_param.type       = ODP_QUEUE_TYPE_SCHED;
+		queue_param.type = ODP_QUEUE_TYPE_SCHED;
 		queue_param.sched.sync = ODP_SCHED_SYNC_ATOMIC;
 	}
 
 	queue = odp_queue_create("timeout_queue", &queue_param);
+
 	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
 
-	odp_timer_periodic_param_init(&tmr_param);
-	memset(&data, 0, sizeof(data));
-	tmr_param.queue = queue;
-	tmr_param.user_ptr = user_ctx;
-	tmr_param.freq_multiplier = multiplier;
-	tmr_param.uarea_init.init_fn = init_uarea;
-	tmr_param.uarea_init.args = &data;
-	timer = odp_timer_periodic_alloc(timer_pool, &tmr_param);
+	params->tmr_param.queue = queue;
+	params->tmr_param.user_ptr = user_ctx;
+	params->tmr_param.uarea_init.init_fn = init_uarea;
+	params->tmr_param.uarea_init.args = &data;
+	timer = odp_timer_periodic_alloc(timer_pool, &params->tmr_param);
+
 	CU_ASSERT_FATAL(timer != ODP_TIMER_INVALID);
 
 	/* Pool should have only one timer */
-	CU_ASSERT_FATAL(odp_timer_periodic_alloc(timer_pool, &tmr_param) == ODP_TIMER_INVALID);
+	CU_ASSERT_FATAL(odp_timer_periodic_alloc(timer_pool, &params->tmr_param) ==
+						 ODP_TIMER_INVALID);
 
 	if (tmo_uarea_support > 0) {
 		CU_ASSERT(data.num_init > 0);
@@ -3280,11 +3596,11 @@ static void timer_test_periodic(odp_queue_type_t queue_type, int use_first, int 
 	}
 
 	memset(&start_param, 0, sizeof(odp_timer_periodic_start_t));
-	offset_ns = period_ns / 2;
+	offset_ns = params->period_ns / 2;
 
 	if (use_first) {
 		/* First tick moves timer to start before the first period */
-		duration_ns -= (period_ns - offset_ns);
+		duration_ns -= (params->period_ns - offset_ns);
 	}
 
 	for (int round = 0; round < rounds; round++) {
@@ -3299,8 +3615,6 @@ static void timer_test_periodic(odp_queue_type_t queue_type, int use_first, int 
 		ODPH_DBG("Periodic timer start:\n");
 		ODPH_DBG("  Current tick:    %" PRIu64 "\n", cur_tick);
 		ODPH_DBG("  First tick:      %" PRIu64 "\n", start_param.first_tick);
-		ODPH_DBG("  Multiplier:      %" PRIu64 "\n", multiplier);
-		ODPH_DBG("  Period:          %" PRIu64 " nsec\n", period_ns);
 		ODPH_DBG("Expected duration: %" PRIu64 " nsec\n", duration_ns);
 
 		ret = odp_timer_periodic_start(timer, &start_param);
@@ -3421,34 +3735,124 @@ static void timer_test_periodic(odp_queue_type_t queue_type, int use_first, int 
 	CU_ASSERT(odp_queue_destroy(queue) == 0);
 }
 
-static void timer_test_periodic_sched(void)
+static void timer_test_periodic_base_mul_sched(void)
 {
-	timer_test_periodic(ODP_QUEUE_TYPE_SCHED, 0, 1, 0);
+	periodic_params_t params;
+
+	if (!fill_periodic_base_mul_params(&params))
+		return;
+
+	timer_test_periodic(&params, ODP_QUEUE_TYPE_SCHED, 0, 1, 0);
 }
 
-static void timer_test_periodic_sched_max_prio(void)
+static void timer_test_periodic_base_mul_sched_max_prio(void)
 {
-	timer_test_periodic(ODP_QUEUE_TYPE_SCHED, 0, 1, 1);
+	periodic_params_t params;
+
+	if (!fill_periodic_base_mul_params(&params))
+		return;
+
+	timer_test_periodic(&params, ODP_QUEUE_TYPE_SCHED, 0, 1, 1);
 }
 
-static void timer_test_periodic_plain(void)
+static void timer_test_periodic_base_mul_plain(void)
 {
-	timer_test_periodic(ODP_QUEUE_TYPE_PLAIN, 0, 1, 0);
+	periodic_params_t params;
+
+	if (!fill_periodic_base_mul_params(&params))
+		return;
+
+	timer_test_periodic(&params, ODP_QUEUE_TYPE_PLAIN, 0, 1, 0);
 }
 
-static void timer_test_periodic_sched_first(void)
+static void timer_test_periodic_base_mul_sched_first(void)
 {
-	timer_test_periodic(ODP_QUEUE_TYPE_SCHED, FIRST_TICK, 1, 0);
+	periodic_params_t params;
+
+	if (!fill_periodic_base_mul_params(&params))
+		return;
+
+	timer_test_periodic(&params, ODP_QUEUE_TYPE_SCHED, FIRST_TICK, 1, 0);
 }
 
-static void timer_test_periodic_plain_first(void)
+static void timer_test_periodic_base_mul_plain_first(void)
 {
-	timer_test_periodic(ODP_QUEUE_TYPE_PLAIN, FIRST_TICK, 1, 0);
+	periodic_params_t params;
+
+	if (!fill_periodic_base_mul_params(&params))
+		return;
+
+	timer_test_periodic(&params, ODP_QUEUE_TYPE_PLAIN, FIRST_TICK, 1, 0);
 }
 
-static void timer_test_periodic_reuse(void)
+static void timer_test_periodic_base_mul_reuse(void)
 {
-	timer_test_periodic(ODP_QUEUE_TYPE_SCHED, 0, 2, 0);
+	periodic_params_t params;
+
+	if (!fill_periodic_base_mul_params(&params))
+		return;
+
+	timer_test_periodic(&params, ODP_QUEUE_TYPE_SCHED, 0, 2, 0);
+}
+
+static void timer_test_periodic_freq_sched(void)
+{
+	periodic_params_t params;
+
+	if (!fill_periodic_freq_params(&params))
+		return;
+
+	timer_test_periodic(&params, ODP_QUEUE_TYPE_SCHED, 0, 1, 0);
+}
+
+static void timer_test_periodic_freq_sched_max_prio(void)
+{
+	periodic_params_t params;
+
+	if (!fill_periodic_freq_params(&params))
+		return;
+
+	timer_test_periodic(&params, ODP_QUEUE_TYPE_SCHED, 0, 1, 1);
+}
+
+static void timer_test_periodic_freq_plain(void)
+{
+	periodic_params_t params;
+
+	if (!fill_periodic_freq_params(&params))
+		return;
+
+	timer_test_periodic(&params, ODP_QUEUE_TYPE_PLAIN, 0, 1, 0);
+}
+
+static void timer_test_periodic_freq_sched_first(void)
+{
+	periodic_params_t params;
+
+	if (!fill_periodic_freq_params(&params))
+		return;
+
+	timer_test_periodic(&params, ODP_QUEUE_TYPE_SCHED, FIRST_TICK, 1, 0);
+}
+
+static void timer_test_periodic_freq_plain_first(void)
+{
+	periodic_params_t params;
+
+	if (!fill_periodic_freq_params(&params))
+		return;
+
+	timer_test_periodic(&params, ODP_QUEUE_TYPE_PLAIN, FIRST_TICK, 1, 0);
+}
+
+static void timer_test_periodic_freq_reuse(void)
+{
+	periodic_params_t params;
+
+	if (!fill_periodic_freq_params(&params))
+		return;
+
+	timer_test_periodic(&params, ODP_QUEUE_TYPE_SCHED, 0, 2, 0);
 }
 
 static void timer_test_periodic_pool_create_max(void)
@@ -3483,8 +3887,9 @@ static void timer_test_periodic_pool_create_max(void)
 		base_freq = timer_capa.periodic.max_base_freq_hz;
 
 	memset(&periodic_capa, 0, sizeof(odp_timer_periodic_capability_t));
-	periodic_capa.base_freq_hz = base_freq;
-	periodic_capa.max_multiplier = 1;
+	periodic_capa.type = ODP_TIMER_TYPE_PERIODIC_BASE_MUL;
+	periodic_capa.base_mul.base_freq_hz = base_freq;
+	periodic_capa.base_mul.max_multiplier = 1;
 
 	if (odp_timer_periodic_capability(clk_src, &periodic_capa) < 0) {
 		(void)odp_shm_free(shm_tp);
@@ -3492,14 +3897,14 @@ static void timer_test_periodic_pool_create_max(void)
 		return;
 	}
 
-	base_freq = periodic_capa.base_freq_hz;
+	base_freq = periodic_capa.base_mul.base_freq_hz;
 	odp_timer_pool_param_init(&timer_param);
-	timer_param.timer_type = ODP_TIMER_TYPE_PERIODIC;
+	timer_param.timer_type = ODP_TIMER_TYPE_PERIODIC_BASE_MUL;
 	timer_param.res_ns = 2 * periodic_capa.res_ns;
 	timer_param.num_timers = 1;
 	timer_param.clk_src = clk_src;
-	timer_param.periodic.base_freq_hz = periodic_capa.base_freq_hz;
-	timer_param.periodic.max_multiplier = periodic_capa.max_multiplier;
+	timer_param.periodic.base_mul.base_freq_hz = periodic_capa.base_mul.base_freq_hz;
+	timer_param.periodic.base_mul.max_multiplier = periodic_capa.base_mul.max_multiplier;
 
 	for (uint32_t i = 0; i < num; i++) {
 		tp[i] = odp_timer_pool_create("test_max_periodic", &timer_param);
@@ -3558,8 +3963,9 @@ static void timer_test_periodic_alloc_max(void)
 		base_freq = timer_capa.periodic.max_base_freq_hz;
 
 	memset(&periodic_capa, 0, sizeof(odp_timer_periodic_capability_t));
-	periodic_capa.base_freq_hz = base_freq;
-	periodic_capa.max_multiplier = 1;
+	periodic_capa.type = ODP_TIMER_TYPE_PERIODIC_BASE_MUL;
+	periodic_capa.base_mul.base_freq_hz = base_freq;
+	periodic_capa.base_mul.max_multiplier = 1;
 
 	if (odp_timer_periodic_capability(clk_src, &periodic_capa) < 0) {
 		(void)odp_shm_free(shm_tmr);
@@ -3567,14 +3973,14 @@ static void timer_test_periodic_alloc_max(void)
 		return;
 	}
 
-	base_freq = periodic_capa.base_freq_hz;
+	base_freq = periodic_capa.base_mul.base_freq_hz;
 	odp_timer_pool_param_init(&timer_param);
-	timer_param.timer_type = ODP_TIMER_TYPE_PERIODIC;
+	timer_param.timer_type = ODP_TIMER_TYPE_PERIODIC_BASE_MUL;
 	timer_param.res_ns = 2 * periodic_capa.res_ns;
 	timer_param.num_timers = num;
 	timer_param.clk_src = clk_src;
-	timer_param.periodic.base_freq_hz = periodic_capa.base_freq_hz;
-	timer_param.periodic.max_multiplier = periodic_capa.max_multiplier;
+	timer_param.periodic.base_mul.base_freq_hz = periodic_capa.base_mul.base_freq_hz;
+	timer_param.periodic.base_mul.max_multiplier = periodic_capa.base_mul.max_multiplier;
 	pool = odp_timer_pool_create("test_max_periodic", &timer_param);
 
 	CU_ASSERT_FATAL(pool != ODP_TIMER_POOL_INVALID);
@@ -3592,7 +3998,7 @@ static void timer_test_periodic_alloc_max(void)
 	odp_timer_periodic_param_init(&tmr_param);
 	tmr_param.queue = queue;
 	tmr_param.user_ptr = USER_PTR;
-	tmr_param.freq_multiplier = periodic_capa.max_multiplier;
+	tmr_param.base_mul.multiplier = periodic_capa.base_mul.max_multiplier;
 
 	for (uint32_t i = 0; i < num; i++) {
 		timer[i] = odp_timer_periodic_alloc(pool, &tmr_param);
@@ -3613,8 +4019,8 @@ static void timer_test_periodic_alloc_max(void)
 }
 
 odp_testinfo_t timer_general_suite[] = {
-	ODP_TEST_INFO(timer_test_param_init),
-	ODP_TEST_INFO(timer_test_periodic_alloc_init),
+	ODP_TEST_INFO(timer_test_pool_param_init),
+	ODP_TEST_INFO(timer_test_periodic_param_init),
 	ODP_TEST_INFO(timer_test_timeout_pool_alloc),
 	ODP_TEST_INFO(timer_test_timeout_pool_alloc_multi),
 	ODP_TEST_INFO(timer_test_timeout_from_event),
@@ -3711,24 +4117,39 @@ odp_testinfo_t timer_suite[] = {
 				  check_plain_queue_support),
 	ODP_TEST_INFO_CONDITIONAL(timer_test_sched_all,
 				  check_sched_queue_support),
-	ODP_TEST_INFO_CONDITIONAL(timer_test_periodic_capa,
-				  check_periodic_support),
-	ODP_TEST_INFO_CONDITIONAL(timer_test_periodic_sched,
-				  check_periodic_sched_support),
-	ODP_TEST_INFO_CONDITIONAL(timer_test_periodic_sched_max_prio,
-				  check_periodic_sched_support),
-	ODP_TEST_INFO_CONDITIONAL(timer_test_periodic_sched_first,
-				  check_periodic_sched_support),
-	ODP_TEST_INFO_CONDITIONAL(timer_test_periodic_plain,
-				  check_periodic_plain_support),
-	ODP_TEST_INFO_CONDITIONAL(timer_test_periodic_plain_first,
-				  check_periodic_plain_support),
-	ODP_TEST_INFO_CONDITIONAL(timer_test_periodic_reuse,
-				  check_periodic_sched_support),
+	ODP_TEST_INFO(timer_test_periodic_common_capa),
+	ODP_TEST_INFO_CONDITIONAL(timer_test_periodic_capa_base_mul,
+				  check_periodic_base_mul_support),
+	ODP_TEST_INFO_CONDITIONAL(timer_test_periodic_base_mul_sched,
+				  check_periodic_base_mul_sched_support),
+	ODP_TEST_INFO_CONDITIONAL(timer_test_periodic_base_mul_sched_max_prio,
+				  check_periodic_base_mul_sched_support),
+	ODP_TEST_INFO_CONDITIONAL(timer_test_periodic_base_mul_sched_first,
+				  check_periodic_base_mul_sched_support),
+	ODP_TEST_INFO_CONDITIONAL(timer_test_periodic_base_mul_plain,
+				  check_periodic_base_mul_plain_support),
+	ODP_TEST_INFO_CONDITIONAL(timer_test_periodic_base_mul_plain_first,
+				  check_periodic_base_mul_plain_support),
+	ODP_TEST_INFO_CONDITIONAL(timer_test_periodic_base_mul_reuse,
+				  check_periodic_base_mul_sched_support),
 	ODP_TEST_INFO_CONDITIONAL(timer_test_periodic_pool_create_max,
-				  check_periodic_support),
+				  check_periodic_base_mul_support),
 	ODP_TEST_INFO_CONDITIONAL(timer_test_periodic_alloc_max,
-				  check_periodic_support),
+				  check_periodic_base_mul_support),
+	ODP_TEST_INFO_CONDITIONAL(timer_test_periodic_capa_freq,
+				  check_periodic_freq_support),
+	ODP_TEST_INFO_CONDITIONAL(timer_test_periodic_freq_sched,
+				  check_periodic_freq_sched_support),
+	ODP_TEST_INFO_CONDITIONAL(timer_test_periodic_freq_sched_max_prio,
+				  check_periodic_freq_sched_support),
+	ODP_TEST_INFO_CONDITIONAL(timer_test_periodic_freq_sched_first,
+				  check_periodic_freq_sched_support),
+	ODP_TEST_INFO_CONDITIONAL(timer_test_periodic_freq_plain,
+				  check_periodic_freq_plain_support),
+	ODP_TEST_INFO_CONDITIONAL(timer_test_periodic_freq_plain_first,
+				  check_periodic_freq_plain_support),
+	ODP_TEST_INFO_CONDITIONAL(timer_test_periodic_freq_reuse,
+				  check_periodic_freq_sched_support),
 	ODP_TEST_INFO_NULL,
 };
 
