@@ -72,6 +72,7 @@ typedef struct ODP_ALIGNED_CACHE queue_entry_s {
 	event_aggr_t         aggr;       /* Aggregator queue specific fields */
 	queue_entry_t       *aggr_queue; /* Links base queue to aggregator queue */
 
+	queue_len_fn_t len;
 	queue_deq_multi_fn_t orig_dequeue_multi;
 	odp_queue_param_t param;
 	odp_pktin_queue_t pktin;

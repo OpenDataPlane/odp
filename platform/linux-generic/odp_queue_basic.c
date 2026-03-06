@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2013-2018 Linaro Limited
- * Copyright (c) 2021-2025 Nokia
+ * Copyright (c) 2021-2026 Nokia
  */
 
 #include <odp/api/align.h>
@@ -62,8 +62,10 @@ static int queue_capa(odp_queue_capability_t *capa, int sched ODP_UNUSED)
 	capa->max_queues        = CONFIG_MAX_QUEUES - CONFIG_INTERNAL_QUEUES;
 	capa->plain.max_num     = CONFIG_MAX_PLAIN_QUEUES;
 	capa->plain.max_size    = _odp_queue_glb->config.max_queue_size;
+	capa->plain.stats.bit.len = 1;
 	capa->plain.lockfree.max_num  = _odp_queue_glb->queue_lf_num;
 	capa->plain.lockfree.max_size = _odp_queue_glb->queue_lf_size;
+	capa->plain.lockfree.stats.bit.len = 1;
 
 	capa->plain.aggr.max_num = CONFIG_MAX_EVENT_AGGR;
 	capa->plain.aggr.max_num_per_queue = 1;
@@ -71,6 +73,7 @@ static int queue_capa(odp_queue_capability_t *capa, int sched ODP_UNUSED)
 	capa->plain.aggr.min_size = 2;
 	capa->plain.aggr.max_tmo_ns = 0;
 	capa->plain.aggr.min_tmo_ns = 0;
+	capa->plain.aggr.stats.bit.len = 1;
 
 	return 0;
 }
@@ -248,6 +251,17 @@ static int queue_term_global(void)
 static int queue_capability(odp_queue_capability_t *capa)
 {
 	return queue_capa(capa, 1);
+}
+
+static uint32_t queue_len(odp_queue_t handle)
+{
+	queue_entry_t *queue;
+
+	_ODP_ASSERT(handle != ODP_QUEUE_INVALID);
+
+	queue = qentry_from_handle(handle);
+
+	return queue->len(handle);
 }
 
 static odp_queue_type_t queue_type(odp_queue_t handle)
@@ -467,6 +481,7 @@ static odp_queue_t queue_create(const char *name,
 				queue->enqueue_multi = lf_fn->enq_multi;
 				queue->dequeue       = lf_fn->deq;
 				queue->dequeue_multi = lf_fn->deq_multi;
+				queue->len           = lf_fn->len;
 				queue->orig_dequeue_multi = lf_fn->deq_multi;
 			}
 
@@ -806,6 +821,19 @@ static int event_aggr_enq_multi(odp_queue_t aggr_handle, _odp_event_hdr_t *event
 	return _odp_event_aggr_enq(aggr_queue, event_hdr, num);
 }
 
+static uint32_t event_aggr_len(odp_queue_t aggr_handle)
+{
+	queue_entry_t *aggr_queue = qentry_from_handle(aggr_handle);
+	event_aggr_t *aggr = &aggr_queue->aggr;
+	int32_t len;
+
+	odp_ticketlock_lock(&aggr->lock);
+	len = aggr->num_events;
+	odp_ticketlock_unlock(&aggr->lock);
+
+	return len;
+}
+
 /* Called inside aggregator locks */
 static int event_aggr_enq_pending(event_aggr_t *aggr)
 {
@@ -950,6 +978,13 @@ static inline int plain_queue_deq_multi(odp_queue_t handle, _odp_event_hdr_t *ev
 	return num_deq;
 }
 
+static inline uint32_t plain_queue_len(odp_queue_t handle)
+{
+	queue_entry_t *queue = qentry_from_handle(handle);
+
+	return ring_mpmc_ptr_len(&queue->ring_mpmc);
+}
+
 static int error_enqueue(odp_queue_t handle, _odp_event_hdr_t *event_hdr)
 {
 	(void)event_hdr;
@@ -986,6 +1021,13 @@ static int error_dequeue_multi(odp_queue_t handle,
 	_ODP_ERR("Dequeue multi not supported (0x%" PRIx64 ")\n", odp_queue_to_u64(handle));
 
 	return -1;
+}
+
+static uint32_t unsupported_len(odp_queue_t handle)
+{
+	_ODP_DBG("Reading queue length not supported (0x%" PRIx64 ")\n", odp_queue_to_u64(handle));
+
+	return 0;
 }
 
 static void queue_param_init(odp_queue_param_t *params)
@@ -1084,11 +1126,7 @@ static void event_aggr_print(queue_entry_t *aggr_queue)
 	int max_len = 512;
 	int n = max_len - 1;
 	char str[max_len];
-	uint16_t num_events;
-
-	odp_ticketlock_lock(&aggr->lock);
-	num_events = aggr->num_events;
-	odp_ticketlock_unlock(&aggr->lock);
+	uint16_t num_events = event_aggr_len(aggr_queue->handle);
 
 	len += _odp_snprint(&str[len], n - len, "\nEvent aggregator info\n");
 	len += _odp_snprint(&str[len], n - len, "---------------------\n");
@@ -1471,6 +1509,8 @@ static void event_aggr_queue_init(queue_entry_t *aggr_queue, const queue_entry_t
 		aggr_queue->enqueue = event_aggr_enq;
 		aggr_queue->enqueue_multi = event_aggr_enq_multi;
 	}
+	aggr_queue->len = event_aggr_len;
+
 	aggr_queue->dequeue            = error_dequeue;
 	aggr_queue->dequeue_multi      = error_dequeue_multi;
 	aggr_queue->orig_dequeue_multi = error_dequeue_multi;
@@ -1541,6 +1581,7 @@ static int queue_init(queue_entry_t *queue, const char *name,
 	queue->enqueue_multi      = error_enqueue_multi;
 	queue->dequeue            = error_dequeue;
 	queue->dequeue_multi      = error_dequeue_multi;
+	queue->len                = unsupported_len;
 	queue->orig_dequeue_multi = error_dequeue_multi;
 
 	if (spsc) {
@@ -1551,6 +1592,7 @@ static int queue_init(queue_entry_t *queue, const char *name,
 			queue->enqueue_multi      = plain_queue_enq_multi;
 			queue->dequeue            = plain_queue_deq;
 			queue->dequeue_multi      = plain_queue_deq_multi;
+			queue->len                = plain_queue_len;
 			queue->orig_dequeue_multi = plain_queue_deq_multi;
 
 			queue->ring_data = &_odp_queue_glb->ring_data[offset];
@@ -1721,6 +1763,7 @@ _odp_queue_api_fn_t _odp_queue_basic_api = {
 	.queue_enq_aggr = queue_api_enq_aggr,
 	.queue_deq = queue_api_deq,
 	.queue_deq_multi = queue_api_deq_multi,
+	.queue_len = queue_len,
 	.queue_type = queue_type,
 	.queue_sched_type = queue_sched_type,
 	.queue_sched_prio = queue_sched_prio,

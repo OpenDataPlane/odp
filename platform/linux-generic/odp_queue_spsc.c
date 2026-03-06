@@ -113,6 +113,13 @@ static inline int queue_spsc_deq_multi(odp_queue_t handle, _odp_event_hdr_t *eve
 	return num_deq;
 }
 
+static inline uint32_t queue_spsc_len(odp_queue_t handle)
+{
+	queue_entry_t *queue = qentry_from_handle(handle);
+
+	return ring_spsc_ptr_len(&queue->ring_spsc);
+}
+
 void _odp_queue_spsc_init(queue_entry_t *queue, uint32_t queue_size)
 {
 	uint64_t offset;
@@ -121,6 +128,7 @@ void _odp_queue_spsc_init(queue_entry_t *queue, uint32_t queue_size)
 	queue->dequeue = queue_spsc_deq;
 	queue->enqueue_multi = queue_spsc_enq_multi;
 	queue->dequeue_multi = queue_spsc_deq_multi;
+	queue->len = queue_spsc_len;
 	queue->orig_dequeue_multi = queue_spsc_deq_multi;
 
 	offset = queue->index * (uint64_t)_odp_queue_glb->config.max_queue_size;
