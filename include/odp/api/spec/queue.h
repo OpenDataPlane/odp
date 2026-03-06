@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2013-2018 Linaro Limited
- * Copyright (c) 2023-2025 Nokia
+ * Copyright (c) 2023-2026 Nokia
  */
 
 /**
@@ -306,6 +306,24 @@ odp_event_t odp_queue_deq(odp_queue_t queue);
  * @retval <0 on failure
  */
 int odp_queue_deq_multi(odp_queue_t queue, odp_event_t events[], int num);
+
+/**
+ * Queue length
+ *
+ * Returns the number of events currently in the queue, or in case of an
+ * aggregator queue handle, the number of events currently waiting for vector
+ * generation.
+ *
+ * The returned value may differ from instantaneous true queue length due to
+ * implementation specific counter update latency or granularity. If reading
+ * queue length is not supported (see queue-type-specific capabilities), zero is
+ * always returned.
+ *
+ * @param queue   Queue handle
+ *
+ * @return Number of events in the queue
+ */
+uint32_t odp_queue_len(odp_queue_t queue);
 
 /**
  * Queue type

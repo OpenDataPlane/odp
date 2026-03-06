@@ -14,6 +14,7 @@
 #include <odp/visibility_begin.h>
 
 #include <odp/api/event_vector_types.h>
+#include <odp/api/queue_stats_types.h>
 #include <odp/api/schedule_types.h>
 
 #ifdef __cplusplus
@@ -198,6 +199,9 @@ typedef struct odp_queue_capability_t {
 		  * store all available events. */
 		uint32_t max_size;
 
+		/** Supported statistics counters */
+		odp_queue_stats_opt_t stats;
+
 		/** Lock-free (ODP_NONBLOCKING_LF) implementation capabilities.
 		  * The specification is the same as for the blocking
 		  * implementation. */
@@ -209,6 +213,9 @@ typedef struct odp_queue_capability_t {
 			/** Maximum queue size. The value of zero means that
 			 *  there is no size limit. */
 			uint32_t max_size;
+
+			/** Supported statistics counters */
+			odp_queue_stats_opt_t stats;
 
 		} lockfree;
 
@@ -223,6 +230,9 @@ typedef struct odp_queue_capability_t {
 			/** Maximum queue size. The value of zero means that
 			 *  there is no size limit. */
 			uint32_t max_size;
+
+			/** Supported statistics counters */
+			odp_queue_stats_opt_t stats;
 
 		} waitfree;
 

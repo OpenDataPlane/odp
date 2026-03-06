@@ -52,6 +52,7 @@ odpapiinclude_HEADERS = \
 	odp/api/proto_stats_types.h \
 	odp/api/queue.h \
 	odp/api/queue_types.h \
+	odp/api/queue_stats_types.h \
 	odp/api/random.h \
 	odp/api/random_types.h \
 	odp/api/reassembly.h \
@@ -124,6 +125,7 @@ odpapispecinclude_HEADERS = \
 		  odp/api/spec/proto_stats_types.h \
 		  odp/api/spec/queue.h \
 		  odp/api/spec/queue_types.h \
+		  odp/api/spec/queue_stats_types.h \
 		  odp/api/spec/random.h \
 		  odp/api/spec/random_types.h \
 		  odp/api/spec/reassembly.h \

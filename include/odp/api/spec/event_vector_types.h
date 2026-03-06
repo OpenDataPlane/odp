@@ -13,6 +13,7 @@
 #include <odp/visibility_begin.h>
 
 #include <odp/api/event_types.h>
+#include <odp/api/queue_stats_types.h>
 #include <odp/api/std_types.h>
 
 #ifdef __cplusplus
@@ -110,6 +111,9 @@ typedef struct odp_event_aggr_capability_t {
 	 *  value unless it is zero.
 	 */
 	uint64_t min_tmo_ns;
+
+	/** Supported aggregator statistics counters */
+	odp_queue_stats_opt_t stats;
 
 } odp_event_aggr_capability_t;
 

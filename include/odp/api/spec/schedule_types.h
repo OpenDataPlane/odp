@@ -14,6 +14,7 @@
 #include <odp/visibility_begin.h>
 
 #include <odp/api/event_vector_types.h>
+#include <odp/api/queue_stats_types.h>
 #include <odp/api/std_types.h>
 #include <odp/api/thrmask.h>
 
@@ -246,6 +247,9 @@ typedef struct odp_schedule_capability_t {
 	 * have a size limit, but a single queue can store all available
 	 * events. */
 	uint32_t max_queue_size;
+
+	/** Supported queue statistics counters */
+	odp_queue_stats_opt_t queue_stats;
 
 	/** Maximum flow ID per queue
 	 *
