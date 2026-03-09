@@ -358,19 +358,19 @@ static void test_burst(odp_nonblocking_t nonblocking,
 {
 	odp_queue_param_t param;
 	odp_queue_t queue;
-	odp_queue_capability_t capa;
+	odp_queue_capability_t *capa = &global_mem->capa;
 	uint32_t max_burst, burst, i, j;
 	odp_pool_t pool;
 	odp_buffer_t buf;
 	odp_event_t ev;
 	uint32_t *data;
 
-	CU_ASSERT_FATAL(odp_queue_capability(&capa) == 0);
-
-	max_burst = capa.plain.max_size;
-
 	if (nonblocking == ODP_NONBLOCKING_LF)
-		max_burst = capa.plain.lockfree.max_size;
+		max_burst = capa->plain.lockfree.max_size;
+	else if (nonblocking == ODP_NONBLOCKING_WF)
+		max_burst = capa->plain.waitfree.max_size;
+	else
+		max_burst = capa->plain.max_size;
 
 	if (max_burst == 0 || max_burst > MAX_NUM_EVENT)
 		max_burst = MAX_NUM_EVENT;
@@ -474,6 +474,31 @@ static void queue_test_burst_lf_spsc(void)
 {
 	test_burst(ODP_NONBLOCKING_LF, ODP_QUEUE_OP_MT_UNSAFE,
 		   ODP_QUEUE_OP_MT_UNSAFE);
+}
+
+static int check_nonblocking_wf(void)
+{
+	return global_mem->capa.plain.waitfree.max_num ? ODP_TEST_ACTIVE : ODP_TEST_INACTIVE;
+}
+
+static void queue_test_burst_wf(void)
+{
+	test_burst(ODP_NONBLOCKING_WF, ODP_QUEUE_OP_MT, ODP_QUEUE_OP_MT);
+}
+
+static void queue_test_burst_wf_spmc(void)
+{
+	test_burst(ODP_NONBLOCKING_WF, ODP_QUEUE_OP_MT_UNSAFE, ODP_QUEUE_OP_MT);
+}
+
+static void queue_test_burst_wf_mpsc(void)
+{
+	test_burst(ODP_NONBLOCKING_WF, ODP_QUEUE_OP_MT, ODP_QUEUE_OP_MT_UNSAFE);
+}
+
+static void queue_test_burst_wf_spsc(void)
+{
+	test_burst(ODP_NONBLOCKING_WF, ODP_QUEUE_OP_MT_UNSAFE, ODP_QUEUE_OP_MT_UNSAFE);
 }
 
 static int queue_pair_work_loop(void *arg)
@@ -1525,6 +1550,10 @@ odp_testinfo_t queue_suite[] = {
 	ODP_TEST_INFO_CONDITIONAL(queue_test_burst_lf_spmc, check_nonblocking_lf),
 	ODP_TEST_INFO_CONDITIONAL(queue_test_burst_lf_mpsc, check_nonblocking_lf),
 	ODP_TEST_INFO_CONDITIONAL(queue_test_burst_lf_spsc, check_nonblocking_lf),
+	ODP_TEST_INFO_CONDITIONAL(queue_test_burst_wf, check_nonblocking_wf),
+	ODP_TEST_INFO_CONDITIONAL(queue_test_burst_wf_spmc, check_nonblocking_wf),
+	ODP_TEST_INFO_CONDITIONAL(queue_test_burst_wf_mpsc, check_nonblocking_wf),
+	ODP_TEST_INFO_CONDITIONAL(queue_test_burst_wf_spsc, check_nonblocking_wf),
 	ODP_TEST_INFO(queue_test_pair),
 	ODP_TEST_INFO(queue_test_pair_spmc),
 	ODP_TEST_INFO(queue_test_pair_mpsc),
