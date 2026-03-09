@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2014-2018 Linaro Limited
- * Copyright (c) 2019-2025 Nokia
+ * Copyright (c) 2019-2026 Nokia
  */
 
 #include <odp_api.h>
@@ -111,6 +111,7 @@ typedef struct {
 
 	odp_schedule_group_t pgt_groups[MAX_WORKERS];
 	odp_queue_t pgt_queues[MAX_WORKERS];
+	odp_schedule_capability_t sched_capa;
 
 } test_globals_t;
 
@@ -3059,6 +3060,7 @@ static void scheduler_fifo_init(odp_schedule_sync_t sync, int multi, uint32_t nu
 
 	queue = odp_queue_create("sched_fifo", &queue_param);
 	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
+	CU_ASSERT(odp_queue_len(queue) == 0);
 
 	odp_pool_param_init(&pool_param);
 	pool_param.type      = ODP_POOL_BUFFER;
@@ -3106,8 +3108,9 @@ static int scheduler_fifo_test(void *arg)
 	int multi = globals->fifo.multi;
 	odp_queue_t queue = globals->fifo.queue;
 	odp_pool_t pool = globals->fifo.pool;
-	uint32_t num_events = globals->fifo.num_events;
+	uint32_t num_events = globals->fifo.num_events, len, prev_len = 0;
 	odp_event_t events[num_events];
+	odp_bool_t queue_len_supported = globals->sched_capa.queue_stats.bit.len;
 
 	/* Thread index as argument */
 	thr = (uintptr_t)arg;
@@ -3147,6 +3150,15 @@ static int scheduler_fifo_test(void *arg)
 		if (ret > 0)
 			globals->fifo.num_enq += ret;
 
+		len = odp_queue_len(queue);
+		if (queue_len_supported) {
+			CU_ASSERT(len <= globals->fifo.num_enq);
+			CU_ASSERT(len >= prev_len);
+			prev_len = len;
+		} else {
+			CU_ASSERT(len == 0);
+		}
+
 		odp_atomic_store_rel_u32(&globals->fifo.cur_thr, (cur_thr + 1) % num_thr);
 	}
 
@@ -3166,7 +3178,7 @@ static int scheduler_fifo_test(void *arg)
 		events[i] = ODP_EVENT_INVALID;
 
 	num = 0;
-
+	prev_len = num_events;
 	while (1) {
 		uint32_t num_recv;
 		int max_num = 3;
@@ -3186,6 +3198,15 @@ static int scheduler_fifo_test(void *arg)
 				break;
 
 			ret = 1;
+		}
+
+		len = odp_queue_len(queue);
+		if (queue_len_supported) {
+			CU_ASSERT(len <= num_events);
+			CU_ASSERT(len <= prev_len);
+			prev_len = len;
+		} else {
+			CU_ASSERT(len == 0);
 		}
 
 		num_recv = ret;
@@ -3783,7 +3804,6 @@ static int scheduler_test_global_init(void)
 	odp_pool_t pool;
 	odp_pool_param_t params;
 	uint64_t num_flows;
-	odp_schedule_capability_t sched_capa;
 	odp_schedule_config_t sched_config;
 
 	shm = odp_shm_reserve(GLOBALS_SHM_NAME,
@@ -3846,7 +3866,7 @@ static int scheduler_test_global_init(void)
 
 	globals->pool = pool;
 
-	if (odp_schedule_capability(&sched_capa)) {
+	if (odp_schedule_capability(&globals->sched_capa)) {
 		ODPH_ERR("odp_schedule_capability() failed\n");
 		return -1;
 	}
@@ -3855,10 +3875,10 @@ static int scheduler_test_global_init(void)
 	odp_schedule_config_init(&sched_config);
 
 	/* Enable flow aware scheduling */
-	if (sched_capa.max_flow_id > 0) {
+	if (globals->sched_capa.max_flow_id > 0) {
 		num_flows = MAX_FLOWS;
-		if ((MAX_FLOWS - 1) > sched_capa.max_flow_id)
-			num_flows = sched_capa.max_flow_id + 1;
+		if ((MAX_FLOWS - 1) > globals->sched_capa.max_flow_id)
+			num_flows = globals->sched_capa.max_flow_id + 1;
 
 		sched_config.max_flow_id = num_flows - 1;
 	}
