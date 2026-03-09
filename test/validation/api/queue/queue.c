@@ -27,6 +27,7 @@ typedef struct {
 	odp_pool_t       pool;
 	odp_queue_t      queue;
 	odp_atomic_u32_t num_event;
+	odp_queue_capability_t capa;
 
 	struct {
 		odp_queue_t queue_a;
@@ -86,6 +87,12 @@ static int queue_suite_init(void)
 
 	odp_barrier_init(&global_mem->barrier, num_workers);
 
+	if (odp_queue_capability(&global_mem->capa)) {
+		ODPH_ERR("Queue capability failed\n");
+		odp_shm_free(shm);
+		return -1;
+	}
+
 	odp_pool_param_init(&params);
 
 	params.buf.size  = 4;
@@ -98,6 +105,7 @@ static int queue_suite_init(void)
 
 	if (ODP_POOL_INVALID == global_mem->pool) {
 		ODPH_ERR("Pool create failed\n");
+		odp_shm_free(shm);
 		return -1;
 	}
 	return 0;
@@ -361,14 +369,8 @@ static void test_burst(odp_nonblocking_t nonblocking,
 
 	max_burst = capa.plain.max_size;
 
-	if (nonblocking == ODP_NONBLOCKING_LF) {
-		if (capa.plain.lockfree.max_num == 0) {
-			printf("  NO LOCKFREE QUEUES. Test skipped.\n");
-			return;
-		}
-
+	if (nonblocking == ODP_NONBLOCKING_LF)
 		max_burst = capa.plain.lockfree.max_size;
-	}
 
 	if (max_burst == 0 || max_burst > MAX_NUM_EVENT)
 		max_burst = MAX_NUM_EVENT;
@@ -446,6 +448,11 @@ static void queue_test_burst_spsc(void)
 {
 	test_burst(ODP_BLOCKING, ODP_QUEUE_OP_MT_UNSAFE,
 		   ODP_QUEUE_OP_MT_UNSAFE);
+}
+
+static int check_nonblocking_lf(void)
+{
+	return global_mem->capa.plain.lockfree.max_num ? ODP_TEST_ACTIVE : ODP_TEST_INACTIVE;
 }
 
 static void queue_test_burst_lf(void)
@@ -587,11 +594,6 @@ static void test_pair(odp_nonblocking_t nonblocking,
 	max_burst = 2 * BURST_SIZE;
 
 	if (nonblocking == ODP_NONBLOCKING_LF) {
-		if (capa.plain.lockfree.max_num == 0) {
-			printf("  NO LOCKFREE QUEUES. Test skipped.\n");
-			return;
-		}
-
 		if (capa.plain.lockfree.max_size &&
 		    capa.plain.lockfree.max_size < max_burst)
 			max_burst = capa.plain.lockfree.max_size;
@@ -1098,14 +1100,8 @@ static void multithread_test(odp_nonblocking_t nonblocking)
 
 	max_size = capa.plain.max_size;
 
-	if (nonblocking == ODP_NONBLOCKING_LF) {
-		if (capa.plain.lockfree.max_num == 0) {
-			printf("  NO LOCKFREE QUEUES. Test skipped.\n");
-			return;
-		}
-
+	if (nonblocking == ODP_NONBLOCKING_LF)
 		max_size = capa.plain.lockfree.max_size;
-	}
 
 	if (max_size && queue_size > max_size)
 		queue_size = max_size;
@@ -1525,18 +1521,18 @@ odp_testinfo_t queue_suite[] = {
 	ODP_TEST_INFO(queue_test_burst_spmc),
 	ODP_TEST_INFO(queue_test_burst_mpsc),
 	ODP_TEST_INFO(queue_test_burst_spsc),
-	ODP_TEST_INFO(queue_test_burst_lf),
-	ODP_TEST_INFO(queue_test_burst_lf_spmc),
-	ODP_TEST_INFO(queue_test_burst_lf_mpsc),
-	ODP_TEST_INFO(queue_test_burst_lf_spsc),
+	ODP_TEST_INFO_CONDITIONAL(queue_test_burst_lf, check_nonblocking_lf),
+	ODP_TEST_INFO_CONDITIONAL(queue_test_burst_lf_spmc, check_nonblocking_lf),
+	ODP_TEST_INFO_CONDITIONAL(queue_test_burst_lf_mpsc, check_nonblocking_lf),
+	ODP_TEST_INFO_CONDITIONAL(queue_test_burst_lf_spsc, check_nonblocking_lf),
 	ODP_TEST_INFO(queue_test_pair),
 	ODP_TEST_INFO(queue_test_pair_spmc),
 	ODP_TEST_INFO(queue_test_pair_mpsc),
 	ODP_TEST_INFO(queue_test_pair_spsc),
-	ODP_TEST_INFO(queue_test_pair_lf),
-	ODP_TEST_INFO(queue_test_pair_lf_spmc),
-	ODP_TEST_INFO(queue_test_pair_lf_mpsc),
-	ODP_TEST_INFO(queue_test_pair_lf_spsc),
+	ODP_TEST_INFO_CONDITIONAL(queue_test_pair_lf, check_nonblocking_lf),
+	ODP_TEST_INFO_CONDITIONAL(queue_test_pair_lf_spmc, check_nonblocking_lf),
+	ODP_TEST_INFO_CONDITIONAL(queue_test_pair_lf_mpsc, check_nonblocking_lf),
+	ODP_TEST_INFO_CONDITIONAL(queue_test_pair_lf_spsc, check_nonblocking_lf),
 	ODP_TEST_INFO(queue_test_param),
 	ODP_TEST_INFO(queue_test_same_name_plain),
 	ODP_TEST_INFO(queue_test_same_name_sched),
@@ -1544,7 +1540,7 @@ odp_testinfo_t queue_suite[] = {
 	ODP_TEST_INFO(queue_test_long_name_sched),
 	ODP_TEST_INFO(queue_test_info),
 	ODP_TEST_INFO(queue_test_mt_plain_block),
-	ODP_TEST_INFO(queue_test_mt_plain_nonblock_lf),
+	ODP_TEST_INFO_CONDITIONAL(queue_test_mt_plain_nonblock_lf, check_nonblocking_lf),
 	ODP_TEST_INFO(queue_test_aggr_capa_plain),
 	ODP_TEST_INFO(queue_test_aggr_capa_sched),
 	ODP_TEST_INFO(queue_test_aggr_cfg_none_plain),
