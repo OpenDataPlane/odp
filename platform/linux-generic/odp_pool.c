@@ -36,6 +36,8 @@
 #include <stdio.h>
 #include <stddef.h>
 #include <inttypes.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 #define LOCK(a)      odp_ticketlock_lock(a)
 #define UNLOCK(a)    odp_ticketlock_unlock(a)
@@ -553,6 +555,67 @@ static void init_event_hdr(pool_t *pool, _odp_event_hdr_t *event_hdr, uint32_t e
 	}
 }
 
+static uint64_t virt2phy(const void *virtaddr)
+{
+	int fd, retval;
+	unsigned long virt_pfn;
+	off_t offset;
+	uint64_t page, physaddr;
+	int page_size;
+
+	page_size = sysconf(_SC_PAGESIZE);
+	fd = open("/proc/self/pagemap", O_RDONLY);
+	if (fd < 0)
+		return 0;
+
+	virt_pfn = (unsigned long)virtaddr / page_size;
+	offset = sizeof(uint64_t) * virt_pfn;
+
+	if (lseek(fd, offset, SEEK_SET) == (off_t) -1) {
+		close(fd);
+		return 0;
+	}
+
+	retval = read(fd, &page, sizeof(page));
+	close(fd);
+
+	if (retval != sizeof(page))
+		return 0;
+
+	if ((page & 0x7fffffffffffffULL) == 0)
+		return 0;
+
+	physaddr = ((page & 0x7fffffffffffffULL) * page_size)
+		+ ((unsigned long)virtaddr % page_size);
+
+	return physaddr;
+}
+
+static int reserve_virt2phy(pool_t *pool, uint64_t page_size)
+{
+	odp_shm_t shm;
+	uint64_t page_count, phy_addrs_size;
+
+	pool->phy_shm = ODP_SHM_INVALID;
+	pool->phy_addrs = NULL;
+
+	if (virt2phy(pool->base_addr) == 0)
+		return -1;
+
+	page_count = pool->shm_size / page_size + 1;
+	phy_addrs_size = page_count * sizeof(uint64_t);
+
+	shm = odp_shm_reserve(NULL, phy_addrs_size, ODP_CACHE_LINE_SIZE, 0);
+
+	if (shm == ODP_SHM_INVALID)
+		return -1;
+
+	pool->phy_shm = shm;
+	pool->phy_addrs = (uint64_t *)odp_shm_addr(shm);
+	pool->phy_page_size = page_size;
+	return 0;
+}
+
 static void init_buffers(pool_t *pool)
 {
 	_odp_event_hdr_t *event_hdr;
@@ -569,6 +632,8 @@ static void init_buffers(pool_t *pool)
 	odp_pool_type_t type;
 	uint64_t page_size;
 	int skipped_blocks = 0;
+	int curr_page_done = 0;
+	uint64_t *phy_ptr = NULL;
 
 	if (odp_shm_info(pool->shm, &shm_info))
 		_ODP_ABORT("Shm info failed\n");
@@ -577,6 +642,11 @@ static void init_buffers(pool_t *pool)
 	ring = &pool->ring->hdr;
 	mask = pool->ring_mask;
 	type = pool->type;
+
+	if (type == ODP_POOL_PACKET && page_size >= FIRST_HP_SIZE &&
+		 reserve_virt2phy(pool, page_size) == 0) {
+		phy_ptr = pool->phy_addrs;
+	}
 
 	for (uint64_t i = 0; i < pool->num + skipped_blocks ; i++) {
 		addr = &pool->base_addr[i * pool->block_size];
@@ -592,8 +662,16 @@ static void init_buffers(pool_t *pool)
 			last_page = (((uint64_t)(uintptr_t)addr +
 					pool->block_size - 1) &
 					~(page_size - 1));
+
+			if (phy_ptr != NULL && curr_page_done == 0) {
+				*phy_ptr = virt2phy((void*)first_page);
+				curr_page_done = 1;
+			}
+
 			if (last_page != first_page) {
 				skipped_blocks++;
+				curr_page_done = 0;
+				phy_ptr++;
 				continue;
 			}
 		}
@@ -1008,6 +1086,9 @@ error:
 	if (pool->ring_shm != ODP_SHM_INVALID)
 		odp_shm_free(pool->ring_shm);
 
+	if (pool->phy_shm != ODP_SHM_INVALID)
+		odp_shm_free(pool->phy_shm);
+
 	pool->ring = NULL;
 
 	LOCK(&pool->lock);
@@ -1260,6 +1341,9 @@ int odp_pool_destroy(odp_pool_t pool_hdl)
 
 	if (pool->uarea_shm != ODP_SHM_INVALID)
 		odp_shm_free(pool->uarea_shm);
+
+	if (pool->phy_shm != ODP_SHM_INVALID)
+		odp_shm_free(pool->phy_shm);
 
 	pool->reserved = 0;
 	odp_shm_free(pool->ring_shm);

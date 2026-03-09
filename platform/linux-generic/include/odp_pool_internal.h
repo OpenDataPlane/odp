@@ -108,6 +108,9 @@ typedef struct pool_t {
 	uint64_t         shm_size;
 	odp_shm_t        ring_shm;
 	odp_shm_t        uarea_shm;
+	odp_shm_t        phy_shm;
+	uint64_t         phy_page_size;
+	uint64_t        *phy_addrs;
 	uint64_t         uarea_shm_size;
 	uint8_t         *uarea_base_addr;
 	uint32_t         align;

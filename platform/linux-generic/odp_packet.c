@@ -2460,3 +2460,31 @@ odp_proto_stats_t odp_packet_proto_stats(odp_packet_t pkt)
 
 	return ODP_PROTO_STATS_INVALID;
 }
+
+uint64_t odp_packet_data_phy_addr(odp_packet_t pkt)
+{
+	uint64_t page_index, page_offset, shm_offset, phy_addr;
+
+	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
+	pool_t *pool = _odp_pool_entry(pkt_hdr->event_hdr.pool);
+
+	if (pool->phy_addrs == NULL)
+		return 0;
+
+	shm_offset = (uint64_t)pool->block_size * pkt_hdr->event_hdr.index.event;
+	page_offset = shm_offset % pool->phy_page_size;
+	page_index = shm_offset / pool->phy_page_size;
+
+	phy_addr = pool->phy_addrs[page_index];
+	phy_addr += page_offset;
+	phy_addr += pool->block_offset;
+	phy_addr += sizeof(odp_packet_hdr_t);
+	phy_addr += pool->headroom;
+
+	return phy_addr;
+}
+
+uint64_t odp_packet_seg_data_phy_addr(odp_packet_t pkt ODP_UNUSED, odp_packet_seg_t seg)
+{
+	return odp_packet_data_phy_addr((odp_packet_t)seg);
+}

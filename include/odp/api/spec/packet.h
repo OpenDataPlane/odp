@@ -2561,6 +2561,46 @@ uint64_t odp_packet_seg_to_u64(odp_packet_seg_t seg);
 uint64_t odp_packet_tx_compl_to_u64(odp_packet_tx_compl_t tx_compl);
 
 /**
+ * Packet data physical address
+ *
+ * Returns physical address to the first byte of packet data. When packet is segmented,
+ * only a portion of packet data follows the physical address. When unsure, use e.g.
+ * odp_packet_seg_len() to check the data length following the physical address. Packet
+ * level offsets are calculated relative to this position.
+ *
+ * When a packet is received from packet input, this points to the first byte
+ * of the received packet. Pool configuration parameters may be used to ensure
+ * that the first packet segment contains all/most of the data relevant to the
+ * application.
+ *
+ * User can adjust the data physical address with e.g. push_head/pull_head (does not
+ * modify segmentation) and extend_head/trunc_head (may modify segmentation)
+ * calls.
+ *
+ * @param pkt  Packet handle
+ *
+ * @return  Physical address to the packet data
+ *
+ * @see odp_packet_seg_len(), odp_packet_push_head(), odp_packet_extend_head()
+ */
+uint64_t odp_packet_data_phy_addr(odp_packet_t pkt);
+
+/**
+ * Segment data physical address
+ *
+ * Returns physical address to the first byte of data in the segment.
+ *
+ * @param pkt  Packet handle
+ * @param seg  Segment handle
+ *
+ * @return  Physical address to the segment data
+ * @retval 0 on failure
+ *
+ * @see odp_packet_seg_data_len()
+ */
+uint64_t odp_packet_seg_data_phy_addr(odp_packet_t pkt, odp_packet_seg_t seg);
+
+/**
  * @}
  */
 
