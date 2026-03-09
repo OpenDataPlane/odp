@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2014-2018 Linaro Limited
- * Copyright (c) 2021-2025 Nokia
+ * Copyright (c) 2021-2026 Nokia
  */
 
 #include <odp_api.h>
@@ -20,8 +20,11 @@
 #define MAX_NUM_AGGR_PER_QUEUE 100 /* max number tested if more supported */
 
 typedef struct {
+	odp_shm_t        shm;
 	int              num_workers;
+	int              queue_context;
 	odp_barrier_t    barrier;
+	odp_pool_t       pool;
 	odp_queue_t      queue;
 	odp_atomic_u32_t num_event;
 
@@ -42,8 +45,7 @@ typedef struct {
 
 } test_globals_t;
 
-static int queue_context = 0xff;
-static odp_pool_t pool;
+static test_globals_t *global_mem;
 
 static void generate_name(char *name, uint32_t index)
 {
@@ -59,7 +61,6 @@ static void generate_name(char *name, uint32_t index)
 static int queue_suite_init(void)
 {
 	odp_shm_t shm;
-	test_globals_t *globals;
 	odp_pool_param_t params;
 	int num_workers;
 
@@ -71,16 +72,19 @@ static int queue_suite_init(void)
 		return -1;
 	}
 
-	globals = odp_shm_addr(shm);
-	memset(globals, 0, sizeof(test_globals_t));
+	global_mem = odp_shm_addr(shm);
+	memset(global_mem, 0, sizeof(test_globals_t));
+	global_mem->shm = shm;
 
 	num_workers = odp_cpumask_default_worker(NULL, 0);
 
 	if (num_workers > MAX_WORKERS)
 		num_workers = MAX_WORKERS;
 
-	globals->num_workers = num_workers;
-	odp_barrier_init(&globals->barrier, num_workers);
+	global_mem->num_workers = num_workers;
+	global_mem->queue_context = 0xff;
+
+	odp_barrier_init(&global_mem->barrier, num_workers);
 
 	odp_pool_param_init(&params);
 
@@ -90,9 +94,9 @@ static int queue_suite_init(void)
 	params.buf.num   = MAX_NUM_EVENT + params.buf.cache_size;
 	params.type      = ODP_POOL_BUFFER;
 
-	pool = odp_pool_create("msg_pool", &params);
+	global_mem->pool = odp_pool_create("msg_pool", &params);
 
-	if (ODP_POOL_INVALID == pool) {
+	if (ODP_POOL_INVALID == global_mem->pool) {
 		ODPH_ERR("Pool create failed\n");
 		return -1;
 	}
@@ -101,21 +105,13 @@ static int queue_suite_init(void)
 
 static int queue_suite_term(void)
 {
-	odp_shm_t shm;
-
-	shm = odp_shm_lookup(GLOBALS_NAME);
-	if (shm == ODP_SHM_INVALID) {
-		ODPH_ERR("SHM lookup failed\n");
-		return -1;
-	}
-
-	if (odp_shm_free(shm)) {
-		ODPH_ERR("SHM free failed\n");
-		return -1;
-	}
-
-	if (odp_pool_destroy(pool)) {
+	if (odp_pool_destroy(global_mem->pool)) {
 		ODPH_ERR("Pool destroy failed\n");
+		return -1;
+	}
+
+	if (odp_shm_free(global_mem->shm)) {
+		ODPH_ERR("SHM free failed\n");
 		return -1;
 	}
 
@@ -719,6 +715,7 @@ static void queue_test_param(void)
 	int max_iteration = MAX_ITERATION;
 	odp_queue_param_t qparams;
 	odp_buffer_t enbuf;
+	int *queue_context = &global_mem->queue_context;
 
 	odp_queue_param_init(&qparams);
 
@@ -739,10 +736,10 @@ static void queue_test_param(void)
 	CU_ASSERT(ODP_SCHED_GROUP_WORKER  == odp_queue_sched_group(queue));
 
 	CU_ASSERT(odp_queue_context(queue) == NULL);
-	CU_ASSERT(0 == odp_queue_context_set(queue, &queue_context,
-					     sizeof(queue_context)));
+	CU_ASSERT(0 == odp_queue_context_set(queue, queue_context,
+					     sizeof(*queue_context)));
 
-	CU_ASSERT(&queue_context == odp_queue_context(queue));
+	CU_ASSERT(queue_context == odp_queue_context(queue));
 	CU_ASSERT(odp_queue_destroy(queue) == 0);
 
 	/* Create queue with no name */
@@ -754,14 +751,14 @@ static void queue_test_param(void)
 	/* Plain type queue */
 	odp_queue_param_init(&qparams);
 	qparams.type        = ODP_QUEUE_TYPE_PLAIN;
-	qparams.context     = &queue_context;
-	qparams.context_len = sizeof(queue_context);
+	qparams.context     = queue_context;
+	qparams.context_len = sizeof(*queue_context);
 
 	queue = odp_queue_create("test_queue", &qparams);
 	CU_ASSERT_FATAL(ODP_QUEUE_INVALID != queue);
 	CU_ASSERT(queue == odp_queue_lookup("test_queue"));
 	CU_ASSERT(ODP_QUEUE_TYPE_PLAIN == odp_queue_type(queue));
-	CU_ASSERT(&queue_context == odp_queue_context(queue));
+	CU_ASSERT(queue_context == odp_queue_context(queue));
 
 	/* Destroy queue with no name */
 	CU_ASSERT(odp_queue_destroy(null_queue) == 0);
@@ -1135,7 +1132,7 @@ static void multithread_test(odp_nonblocking_t nonblocking)
 	globals->queue = queue;
 	reset_thread_stat(globals);
 
-	CU_ASSERT(alloc_and_enqueue(queue, pool, num) == num);
+	CU_ASSERT(alloc_and_enqueue(queue, global_mem->pool, num) == num);
 
 	arg = globals;
 	odp_cunit_thread_create(num_workers, queue_test_worker, &arg, 0, 0);
