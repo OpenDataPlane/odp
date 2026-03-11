@@ -291,6 +291,9 @@ static int event_types_suite_term(void)
 		ctx->type[i].pool = ODP_POOL_INVALID;
 	}
 
+	if (odp_cunit_print_inactive())
+		ret = -1;
+
 	return ret;
 }
 
