@@ -257,7 +257,7 @@ static int ml_suite_term(void)
 
 	free(global.model_param.model);
 
-	return 0;
+	return odp_cunit_print_inactive();
 }
 
 static int check_ml_support(void)

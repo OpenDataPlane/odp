@@ -115,7 +115,7 @@ static int queue_suite_term(void)
 		return -1;
 	}
 
-	return 0;
+	return odp_cunit_print_inactive();
 }
 
 static void queue_test_capa(void)
