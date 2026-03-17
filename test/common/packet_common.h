@@ -1,6 +1,9 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright (c) 2023 Nokia
+ * Copyright (c) 2023-2026 Nokia
  */
+
+#ifndef PACKET_COMMON_H_
+#define PACKET_COMMON_H_
 
 #include <odp_api.h>
 
@@ -32,7 +35,6 @@ typedef struct test_packet_md_t {
 	int has_icmp;
 	int has_flow_hash;
 	int has_ts;
-	uint32_t len;
 	odp_pool_t packet_pool;
 	odp_pktio_t packet_input;
 	void *user_ptr;
@@ -56,6 +58,7 @@ typedef struct test_packet_md_t {
 	uint32_t payload_offset;
 	uint64_t aging_tmo;
 	int has_tx_compl_request;
+	odp_packet_free_ctrl_t free_ctrl;
 	odp_proto_stats_t proto_stats;
 } test_packet_md_t;
 
@@ -63,3 +66,5 @@ void test_packet_set_md(odp_packet_t pkt);
 void test_packet_get_md(odp_packet_t pkt, test_packet_md_t *md);
 int test_packet_is_md_equal(const test_packet_md_t *md_1,
 			    const test_packet_md_t *md_2);
+
+#endif
