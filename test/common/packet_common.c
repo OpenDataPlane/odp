@@ -52,6 +52,7 @@ void test_packet_set_md(odp_packet_t pkt)
 	odp_packet_drop_eligible_set(pkt, binary_flag);
 	odp_packet_shaper_len_adjust_set(pkt, -42);
 	(void)odp_packet_payload_offset_set(pkt, offset);
+	odp_packet_free_ctrl_set(pkt, binary_flag);
 }
 
 void test_packet_get_md(odp_packet_t pkt, test_packet_md_t *md)
@@ -92,7 +93,6 @@ void test_packet_get_md(odp_packet_t pkt, test_packet_md_t *md)
 	md->has_flow_hash	= !!odp_packet_has_flow_hash(pkt);
 	md->has_ts		= !!odp_packet_has_ts(pkt);
 
-	md->len = odp_packet_len(pkt);
 	md->packet_pool = odp_packet_pool(pkt);
 	md->packet_input = odp_packet_input(pkt);
 	md->user_ptr = odp_packet_user_ptr(pkt);
@@ -115,6 +115,7 @@ void test_packet_get_md(odp_packet_t pkt, test_packet_md_t *md)
 	md->payload_offset = odp_packet_payload_offset(pkt);
 	md->aging_tmo = odp_packet_aging_tmo(pkt);
 	md->has_tx_compl_request = !!odp_packet_has_tx_compl_request(pkt);
+	md->free_ctrl = odp_packet_free_ctrl(pkt);
 	md->proto_stats = odp_packet_proto_stats(pkt);
 }
 
