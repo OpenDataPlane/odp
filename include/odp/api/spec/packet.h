@@ -1559,6 +1559,10 @@ void odp_packet_user_flag_set(odp_packet_t pkt, int val);
  * bytes in the segment following the pointer. The pointer value is generated
  * from the current layer 2 offset.
  *
+ * If the current offset is beyond the end of packet data, the returned values
+ * are undefined. The returned pointer can have any value, including NULL, and
+ * the value written to 'len' can be any value.
+ *
  * @param      pkt      Packet handle
  * @param[out] len      Number of data bytes remaining in the segment (output).
  *                      Ignored when NULL.
@@ -1592,8 +1596,11 @@ uint32_t odp_packet_l2_offset(odp_packet_t pkt);
  * Set layer 2 start offset
  *
  * Set offset to the start of layer 2. The offset is calculated from the current
- * odp_packet_data() position in bytes. Offset must not exceed packet data
- * length. Offset is not modified on an error.
+ * odp_packet_data() position in bytes. The offset must not exceed the current
+ * packet data length but later packet truncation or pulling operations do not
+ * modify the offset and may result in the offset exceeding packet data length.
+ *
+ * Offset is not modified on an error.
  *
  * @param pkt     Packet handle
  * @param offset  Layer 2 start offset (0 ... odp_packet_len()-1)
@@ -1609,6 +1616,10 @@ int odp_packet_l2_offset_set(odp_packet_t pkt, uint32_t offset);
  * Returns pointer to the start of layer 3. Optionally, outputs number of data
  * bytes in the segment following the pointer. The pointer value is generated
  * from the current layer 3 offset.
+ *
+ * If the current offset is beyond the end of packet data, the returned values
+ * are undefined. The returned pointer can have any value, including NULL, and
+ * the value written to 'len' can be any value.
  *
  * @param      pkt      Packet handle
  * @param[out] len      Number of data bytes remaining in the segment (output).
@@ -1643,8 +1654,11 @@ uint32_t odp_packet_l3_offset(odp_packet_t pkt);
  * Set layer 3 start offset
  *
  * Set offset to the start of layer 3. The offset is calculated from the current
- * odp_packet_data() position in bytes. Offset must not exceed packet data
- * length. Offset is not modified on an error.
+ * odp_packet_data() position in bytes. The offset must not exceed the current
+ * packet data length but later packet truncation or pulling operations do not
+ * modify the offset and may result in the offset exceeding packet data length.
+ *
+ * Offset is not modified on an error.
  *
  * @param pkt     Packet handle
  * @param offset  Layer 3 start offset (0 ... odp_packet_len()-1)
@@ -1660,6 +1674,10 @@ int odp_packet_l3_offset_set(odp_packet_t pkt, uint32_t offset);
  * Returns pointer to the start of layer 4. Optionally, outputs number of data
  * bytes in the segment following the pointer. The pointer value is generated
  * from the current layer 4 offset.
+ *
+ * If the current offset is beyond the end of packet data, the returned values
+ * are undefined. The returned pointer can have any value, including NULL, and
+ * the value written to 'len' can be any value.
  *
  * @param      pkt      Packet handle
  * @param[out] len      Number of data bytes remaining in the segment (output).
@@ -1694,8 +1712,11 @@ uint32_t odp_packet_l4_offset(odp_packet_t pkt);
  * Set layer 4 start offset
  *
  * Set offset to the start of layer 4. The offset is calculated from the current
- * odp_packet_data() position in bytes. Offset must not exceed packet data
- * length. Offset is not modified on an error.
+ * odp_packet_data() position in bytes. The offset must not exceed the current
+ * packet data length but later packet truncation or pulling operations do not
+ * modify the offset and may result in the offset exceeding packet data length.
+ *
+ * Offset is not modified on an error.
  *
  * @param pkt     Packet handle
  * @param offset  Layer 4 start offset (0 ... odp_packet_len()-1)
