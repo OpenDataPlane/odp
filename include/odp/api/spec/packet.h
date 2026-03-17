@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2013-2018 Linaro Limited
- * Copyright (c) 2021-2024 Nokia
+ * Copyright (c) 2021-2026 Nokia
  */
 
 /**
@@ -268,8 +268,7 @@ int odp_packet_reass_partial_state(odp_packet_t pkt, odp_packet_t frags[],
  * Packet head address
  *
  * Returns start address of the first segment. Packet level headroom starts
- * from here. Use odp_packet_data() or odp_packet_l2_ptr() to return the
- * packet data start address.
+ * from here. Use odp_packet_data() to return the packet data start address.
  *
  * @param pkt  Packet handle
  *
