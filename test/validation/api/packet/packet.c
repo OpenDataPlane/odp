@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2014-2018 Linaro Limited
- * Copyright (c) 2019-2025 Nokia
+ * Copyright (c) 2019-2026 Nokia
  * Copyright (c) 2020 Marvell
  */
 
@@ -395,12 +395,57 @@ static void packet_check_inflags_all(odp_packet_t pkt, int val)
 	CU_ASSERT(odp_packet_user_flag(pkt) == !!val);
 }
 
+/*
+ * Check that all metadata is in the default values as expected after
+ * allocation and metadata reset. Do not check metadata that does not
+ * have well-defined defaults or is related to packet data layout.
+ */
+static void packet_check_default_meta(odp_packet_t pkt)
+{
+	odp_event_t ev;
+	odp_event_subtype_t subtype = ODP_EVENT_NO_SUBTYPE;
+	odp_packet_data_range_t range;
+
+	packet_check_inflags_all(pkt, 0);
+
+	ev = odp_packet_to_event(pkt);
+	CU_ASSERT_FATAL(ev != ODP_EVENT_INVALID);
+	CU_ASSERT(odp_event_type(ev) == ODP_EVENT_PACKET);
+	CU_ASSERT(odp_event_subtype(ev) == ODP_EVENT_PACKET_BASIC);
+	CU_ASSERT(odp_event_types(ev, &subtype) == ODP_EVENT_PACKET);
+	CU_ASSERT(subtype == ODP_EVENT_PACKET_BASIC);
+	CU_ASSERT(odp_packet_subtype(pkt) == ODP_EVENT_PACKET_BASIC);
+
+	CU_ASSERT(odp_packet_input(pkt) == ODP_PKTIO_INVALID);
+	CU_ASSERT(odp_packet_input_index(pkt) < 0);
+	CU_ASSERT(odp_packet_user_ptr(pkt) == NULL);
+	CU_ASSERT(odp_packet_l2_offset(pkt) == ODP_PACKET_OFFSET_INVALID);
+	CU_ASSERT(odp_packet_l3_offset(pkt) == ODP_PACKET_OFFSET_INVALID);
+	CU_ASSERT(odp_packet_l4_offset(pkt) == ODP_PACKET_OFFSET_INVALID);
+	CU_ASSERT(odp_packet_l2_ptr(pkt, NULL) == NULL);
+	CU_ASSERT(odp_packet_l3_ptr(pkt, NULL) == NULL);
+	CU_ASSERT(odp_packet_l4_ptr(pkt, NULL) == NULL);
+	CU_ASSERT(odp_packet_l2_type(pkt) == ODP_PROTO_L2_TYPE_NONE);
+	CU_ASSERT(odp_packet_l3_type(pkt) == ODP_PROTO_L3_TYPE_NONE);
+	CU_ASSERT(odp_packet_l4_type(pkt) == ODP_PROTO_L4_TYPE_NONE);
+	CU_ASSERT(odp_packet_l3_chksum_status(pkt) == ODP_PACKET_CHKSUM_UNKNOWN);
+	CU_ASSERT(odp_packet_l4_chksum_status(pkt) == ODP_PACKET_CHKSUM_UNKNOWN);
+	CU_ASSERT(odp_packet_cls_mark(pkt) == 0);
+	CU_ASSERT(odp_packet_has_lso_request(pkt) == 0);
+	CU_ASSERT(odp_packet_aging_tmo(pkt) == 0);
+	CU_ASSERT(odp_packet_has_tx_compl_request(pkt) == 0);
+	CU_ASSERT(odp_packet_free_ctrl(pkt) == ODP_PACKET_FREE_CTRL_DISABLED);
+	CU_ASSERT(odp_packet_proto_stats(pkt) == ODP_PROTO_STATS_INVALID);
+
+	odp_packet_ones_comp(pkt, &range);
+	CU_ASSERT(range.length == 0);
+}
+
 static void packet_test_alloc_free(void)
 {
 	odp_pool_t pool;
 	odp_packet_t packet;
 	odp_pool_param_t params;
-	odp_event_subtype_t subtype = ODP_EVENT_NO_SUBTYPE;
 	odp_event_t ev;
 
 	odp_pool_param_init(&params);
@@ -421,21 +466,11 @@ static void packet_test_alloc_free(void)
 
 	ev = odp_packet_to_event(packet);
 	CU_ASSERT_FATAL(ev != ODP_EVENT_INVALID);
-	CU_ASSERT(odp_event_type(ev) == ODP_EVENT_PACKET);
-	CU_ASSERT(odp_event_subtype(ev) == ODP_EVENT_PACKET_BASIC);
-	CU_ASSERT(odp_event_types(ev, &subtype) == ODP_EVENT_PACKET);
-	CU_ASSERT(subtype == ODP_EVENT_PACKET_BASIC);
 	CU_ASSERT(odp_event_pool(ev) == pool);
-
-	CU_ASSERT(odp_packet_subtype(packet) == ODP_EVENT_PACKET_BASIC);
 	CU_ASSERT(odp_packet_to_u64(packet) !=
 		  odp_packet_to_u64(ODP_PACKET_INVALID));
 
-	/* User pointer should be NULL after alloc */
-	CU_ASSERT(odp_packet_user_ptr(packet) == NULL);
-
-	/* Packet flags should be zero */
-	packet_check_inflags_all(packet, 0);
+	packet_check_default_meta(packet);
 
 	/* Pool should have only one packet */
 	CU_ASSERT_FATAL(odp_packet_alloc(pool, packet_len)
@@ -990,7 +1025,7 @@ static void packet_test_reset(void)
 	ptr_len = (uintptr_t)odp_packet_data(pkt) -
 		  (uintptr_t)odp_packet_head(pkt);
 	CU_ASSERT(ptr_len == headroom);
-	CU_ASSERT(odp_packet_cls_mark(pkt) == 0);
+	packet_check_default_meta(pkt);
 
 	tail = odp_packet_tail(pkt);
 	new_tail = odp_packet_pull_tail(pkt, 1);
@@ -1002,7 +1037,7 @@ static void packet_test_reset(void)
 	packet_set_inflags_common(pkt, 1);
 	packet_check_inflags_common(pkt, 1);
 	CU_ASSERT(odp_packet_reset(pkt, len) == 0);
-	packet_check_inflags_all(pkt, 0);
+	packet_check_default_meta(pkt);
 
 	CU_ASSERT(odp_packet_reset(pkt, len - 1) == 0);
 	CU_ASSERT(odp_packet_len(pkt) == (len - 1));
@@ -1083,7 +1118,7 @@ static void packet_test_reset_meta(void)
 	packet_set_inflags_common(pkt, 1);
 	packet_check_inflags_common(pkt, 1);
 	odp_packet_reset_meta(pkt);
-	packet_check_inflags_all(pkt, 0);
+	packet_check_default_meta(pkt);
 
 	if (uarea_size) {
 		udat = odp_packet_user_area(pkt);
