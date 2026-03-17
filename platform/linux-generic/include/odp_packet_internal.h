@@ -225,7 +225,7 @@ static inline void _odp_packet_reset_md(odp_packet_hdr_t *pkt_hdr)
 	pkt_hdr->p.input_flags.all = 0;
 	pkt_hdr->p.flags.all_flags = 0;
 
-	pkt_hdr->p.l2_offset = 0;
+	pkt_hdr->p.l2_offset = ODP_PACKET_OFFSET_INVALID;
 	pkt_hdr->p.l3_offset = ODP_PACKET_OFFSET_INVALID;
 	pkt_hdr->p.l4_offset = ODP_PACKET_OFFSET_INVALID;
 
