@@ -668,6 +668,43 @@ static inline int packet_alloc(pool_t *pool, uint32_t len, int max_pkt,
 	return num;
 }
 
+static inline odp_packet_t packet_alloc_single(pool_t *pool, uint32_t len, int num_seg)
+{
+	odp_packet_hdr_t *hdr;
+
+	if (odp_likely(num_seg == 1)) {
+		odp_event_t event = _odp_event_alloc(pool);
+
+		if (odp_unlikely(event == ODP_EVENT_INVALID))
+			return ODP_PACKET_INVALID;
+
+		hdr = (odp_packet_hdr_t *)(uintptr_t)event;
+		odp_prefetch(hdr);
+		odp_prefetch((uint8_t *)hdr + ODP_CACHE_LINE_SIZE);
+
+		init_segments(&hdr, 1);
+		packet_init(hdr, len);
+		return packet_handle(hdr);
+	}
+	/* Multi-segment packet */
+	odp_packet_hdr_t *pkt_hdr[PKT_MAX_SEGS];
+	int num_buf = _odp_event_alloc_multi(pool, (_odp_event_hdr_t **)pkt_hdr, num_seg);
+
+	if (odp_unlikely(num_buf != num_seg)) {
+		if (num_buf)
+			_odp_event_free_sp((_odp_event_hdr_t **)pkt_hdr, num_buf);
+		return ODP_PACKET_INVALID;
+	}
+
+	hdr = pkt_hdr[0];
+	odp_prefetch(hdr);
+	odp_prefetch((uint8_t *)hdr + ODP_CACHE_LINE_SIZE);
+
+	init_segments(pkt_hdr, num_seg);
+	packet_init(hdr, len);
+	return packet_handle(hdr);
+}
+
 int _odp_packet_alloc_multi(odp_pool_t pool_hdl, uint32_t len,
 			    odp_packet_t pkt[], int max_num)
 {
@@ -683,21 +720,13 @@ int _odp_packet_alloc_multi(odp_pool_t pool_hdl, uint32_t len,
 odp_packet_t odp_packet_alloc(odp_pool_t pool_hdl, uint32_t len)
 {
 	pool_t *pool = _odp_pool_entry(pool_hdl);
-	odp_packet_t pkt;
-	int num, num_seg;
 
 	_ODP_ASSERT(pool->type == ODP_POOL_PACKET);
 
 	if (odp_unlikely(len > pool->max_len || len == 0))
 		return ODP_PACKET_INVALID;
 
-	num_seg = num_segments(len, pool->seg_len);
-	num     = packet_alloc(pool, len, 1, num_seg, &pkt);
-
-	if (odp_unlikely(num == 0))
-		return ODP_PACKET_INVALID;
-
-	return pkt;
+	return packet_alloc_single(pool, len, num_segments(len, pool->seg_len));
 }
 
 int odp_packet_alloc_multi(odp_pool_t pool_hdl, uint32_t len,
