@@ -511,6 +511,14 @@ static inline int skip_references(odp_packet_hdr_t *hdr[], int num)
 	return num_ref;
 }
 
+static inline void packet_free(odp_packet_hdr_t *hdr)
+{
+	if (odp_unlikely(skip_references(&hdr, 1)))
+		return;
+
+	_odp_event_free(_odp_event_from_hdr(&hdr->event_hdr));
+}
+
 static inline void packet_free_multi(odp_packet_hdr_t *hdr[], int num)
 {
 	num -= skip_references(hdr, num);
@@ -756,7 +764,7 @@ void odp_packet_free(odp_packet_t pkt)
 	_ODP_ASSERT(segment_ref(pkt_hdr) > 0);
 
 	if (odp_likely(num_seg == 1))
-		packet_free_sp(&pkt_hdr, 1);
+		packet_free(pkt_hdr);
 	else
 		free_all_segments(pkt_hdr, num_seg);
 }
