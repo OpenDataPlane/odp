@@ -546,7 +546,7 @@ static inline void free_all_segments(odp_packet_hdr_t *pkt_hdr, int num)
 		seg_hdr = seg_hdr->seg_next;
 	}
 
-	packet_free_multi(pkt_hdrs, num);
+	packet_free_sp(pkt_hdrs, num);
 }
 
 static inline odp_packet_hdr_t *free_segments(odp_packet_hdr_t *pkt_hdr,
@@ -589,7 +589,7 @@ static inline odp_packet_hdr_t *free_segments(odp_packet_hdr_t *pkt_hdr,
 
 		pkt_hdr = new_hdr;
 
-		packet_free_multi(pkt_hdrs, num);
+		packet_free_sp(pkt_hdrs, num);
 	} else {
 		/* Free last 'num' bufs.
 		 * First, find the last remaining header. */
@@ -603,7 +603,7 @@ static inline odp_packet_hdr_t *free_segments(odp_packet_hdr_t *pkt_hdr,
 			pkt_hdrs[i] = seg_hdr;
 		}
 
-		packet_free_multi(pkt_hdrs, num);
+		packet_free_sp(pkt_hdrs, num);
 
 		/* Head segment remains, no need to copy or update majority
 		 * of the metadata. */
