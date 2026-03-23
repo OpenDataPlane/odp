@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright (c) 2020-2025 Nokia
+ * Copyright (c) 2020-2026 Nokia
  */
 
 /**
@@ -1245,19 +1245,74 @@ static int check_lso_capa(char *name, odp_pktio_capability_t *pktio_capa,
 	return 0;
 }
 
+static int create_packet_pool(test_global_t *global)
+{
+	test_options_t *test_options = &global->test_options;
+	uint32_t num_pkt = test_options->num_pkt;
+	uint32_t pkt_len = test_options->use_rand_pkt_len ? test_options->rand_pkt_len_max :
+							    test_options->pkt_len;
+	uint32_t seg_len;
+	odp_pool_capability_t pool_capa;
+	odp_pool_param_t  pool_param;
+
+	global->pool = ODP_POOL_INVALID;
+
+	if (odp_pool_capability(&pool_capa)) {
+		ODPH_ERR("Error: Pool capability failed.\n");
+		return -1;
+	}
+
+	if (pool_capa.pkt.max_num && num_pkt > pool_capa.pkt.max_num) {
+		ODPH_ERR("Error: Too many packets. Max %u supported.\n", pool_capa.pkt.max_num);
+		return -1;
+	}
+
+	if (pool_capa.pkt.max_len && pkt_len > pool_capa.pkt.max_len) {
+		ODPH_ERR("Error: Too large packets. Max %u supported length.\n",
+			 pool_capa.pkt.max_len);
+		return -1;
+	}
+
+	seg_len = test_options->hdr_len;
+	if (pool_capa.pkt.max_seg_len && seg_len > pool_capa.pkt.max_seg_len) {
+		ODPH_ERR("Error: Max segment length is too small %u\n", pool_capa.pkt.max_seg_len);
+		return -1;
+	}
+
+	odp_pool_param_init(&pool_param);
+	pool_param.type        = ODP_POOL_PACKET;
+	pool_param.pkt.num     = num_pkt;
+	pool_param.pkt.len     = pkt_len;
+	pool_param.pkt.seg_len = seg_len;
+
+	global->pool = odp_pool_create("packet gen pool", &pool_param);
+
+	if (global->pool == ODP_POOL_INVALID) {
+		ODPH_ERR("Error: Pool create failed.\n");
+		return -1;
+	}
+	return 0;
+}
+
+static int destroy_packet_pool(test_global_t *global)
+{
+	if (global->pool != ODP_POOL_INVALID && odp_pool_destroy(global->pool)) {
+		ODPH_ERR("Error: Pool destroy failed.\n");
+		return -1;
+	}
+	return 0;
+}
+
 static int open_pktios(test_global_t *global)
 {
-	odp_pool_capability_t pool_capa;
 	odp_pktio_capability_t pktio_capa;
-	odp_pool_param_t  pool_param;
-	odp_pool_t pool;
 	odp_pktio_param_t pktio_param;
 	odp_pktio_t pktio;
 	odp_pktio_config_t pktio_config;
 	odp_pktin_queue_param_t pktin_param;
 	odp_pktout_queue_param_t pktout_param;
 	char *name;
-	uint32_t i, seg_len;
+	uint32_t i;
 	int j, pktio_idx;
 	test_options_t *test_options = &global->test_options;
 	int num_rx = test_options->num_rx;
@@ -1382,48 +1437,6 @@ static int open_pktios(test_global_t *global)
 	}
 	printf("\n");
 
-	global->pool = ODP_POOL_INVALID;
-
-	if (odp_pool_capability(&pool_capa)) {
-		ODPH_ERR("Error: Pool capability failed.\n");
-		return -1;
-	}
-
-	if (pool_capa.pkt.max_num &&
-	    num_pkt > pool_capa.pkt.max_num) {
-		ODPH_ERR("Error: Too many packets. Max %u supported.\n", pool_capa.pkt.max_num);
-		return -1;
-	}
-
-	if (pool_capa.pkt.max_len && pkt_len > pool_capa.pkt.max_len) {
-		ODPH_ERR("Error: Too large packets. Max %u supported length.\n",
-			 pool_capa.pkt.max_len);
-		return -1;
-	}
-
-	seg_len = test_options->hdr_len;
-	if (pool_capa.pkt.max_seg_len &&
-	    seg_len > pool_capa.pkt.max_seg_len) {
-		ODPH_ERR("Error: Max segment length is too small %u\n", pool_capa.pkt.max_seg_len);
-		return -1;
-	}
-
-	/* Create pool */
-	odp_pool_param_init(&pool_param);
-	pool_param.type        = ODP_POOL_PACKET;
-	pool_param.pkt.num     = num_pkt;
-	pool_param.pkt.len     = pkt_len;
-	pool_param.pkt.seg_len = seg_len;
-
-	pool = odp_pool_create("packet gen pool", &pool_param);
-
-	if (pool == ODP_POOL_INVALID) {
-		ODPH_ERR("Error: Pool create failed.\n");
-		return -1;
-	}
-
-	global->pool = pool;
-
 	odp_pktio_param_init(&pktio_param);
 
 	pktio_param.in_mode = num_rx ? (test_options->direct_rx ?
@@ -1440,7 +1453,7 @@ static int open_pktios(test_global_t *global)
 	/* Open and configure interfaces */
 	for (i = 0; i < num_pktio; i++) {
 		name  = test_options->pktio_name[i];
-		pktio = odp_pktio_open(name, pool, &pktio_param);
+		pktio = odp_pktio_open(name, global->pool, &pktio_param);
 
 		if (pktio == ODP_PKTIO_INVALID) {
 			ODPH_ERR("Error (%s): Pktio open failed.\n", name);
@@ -1571,7 +1584,7 @@ static int open_pktios(test_global_t *global)
 		pktio_config.parser.layer = ODP_PROTO_LAYER_ALL;
 
 		if (test_options->lso.enabled) {
-			if (check_lso_capa(name, &pktio_capa, test_options, pool))
+			if (check_lso_capa(name, &pktio_capa, test_options, global->pool))
 				return -1;
 
 			pktio_config.enable_lso = true;
@@ -1745,12 +1758,6 @@ static int close_pktios(test_global_t *global)
 			ODPH_ERR("Error (%s): Pktio close failed.\n", test_options->pktio_name[i]);
 			ret = -1;
 		}
-	}
-
-	if (global->pool != ODP_POOL_INVALID &&
-	    odp_pool_destroy(global->pool)) {
-		ODPH_ERR("Error: Pool destroy failed.\n");
-		ret = -1;
 	}
 
 	return ret;
@@ -2889,6 +2896,11 @@ int main(int argc, char **argv)
 		goto term;
 	}
 
+	if (create_packet_pool(global)) {
+		ret = 1;
+		goto term;
+	}
+
 	if (open_pktios(global)) {
 		ret = 1;
 		goto term;
@@ -2928,6 +2940,11 @@ int main(int argc, char **argv)
 		ret = 2;
 
 term:
+	if (destroy_packet_pool(global)) {
+		ODPH_ERR("Error: destroy_packet_pool() failed.\n");
+		return 1;
+	}
+
 	if (odp_shm_free(shm)) {
 		ODPH_ERR("Error: SHM free failed.\n");
 		return 1;
