@@ -4190,7 +4190,8 @@ static int pktio_check_pktout_dont_free(void)
 static void test_chksum(void (*config_fn)(odp_pktio_t, odp_pktio_t),
 			void (*prep_fn)(odp_packet_t pkt),
 			void (*test_fn)(odp_packet_t pkt),
-			uint32_t test_flags)
+			uint32_t test_flags,
+			int is_sctp)
 {
 	odp_pktio_t pktio_tx, pktio_rx;
 	odp_pktio_t pktio[MAX_NUM_IFACES] = {ODP_PKTIO_INVALID};
@@ -4201,6 +4202,7 @@ static void test_chksum(void (*config_fn)(odp_pktio_t, odp_pktio_t),
 	uint32_t pkt_seq[TX_BATCH_LEN];
 	int ret;
 	int i, num_rx;
+	size_t hdr_len = is_sctp ? ODPH_SCTPHDR_LEN : ODPH_UDPHDR_LEN;
 
 	CU_ASSERT_FATAL(global.num_ifaces >= 1);
 
@@ -4225,8 +4227,12 @@ static void test_chksum(void (*config_fn)(odp_pktio_t, odp_pktio_t),
 		_pktio_wait_linkup(pktio[i]);
 	}
 
-	ret = create_packets_udp(pkt_tbl, pkt_seq, TX_BATCH_LEN, pktio_tx,
-				 pktio_rx, false, ETH_UNICAST);
+	if (is_sctp)
+		ret = create_packets_sctp(pkt_tbl, pkt_seq, TX_BATCH_LEN, pktio_tx,
+					  pktio_rx);
+	else
+		ret = create_packets_udp(pkt_tbl, pkt_seq, TX_BATCH_LEN, pktio_tx,
+					 pktio_rx, false, ETH_UNICAST);
 	CU_ASSERT(ret == TX_BATCH_LEN);
 	if (ret != TX_BATCH_LEN) {
 		for (i = 0; i < global.num_ifaces; i++) {
@@ -4239,7 +4245,10 @@ static void test_chksum(void (*config_fn)(odp_pktio_t, odp_pktio_t),
 	/* Provide L3 and L4 proto for pktout HW checksum generation */
 	for (i = 0; i < TX_BATCH_LEN; i++) {
 		odp_packet_has_ipv4_set(pkt_tbl[i], true);
-		odp_packet_has_udp_set(pkt_tbl[i], true);
+		if (is_sctp)
+			odp_packet_has_sctp_set(pkt_tbl[i], true);
+		else
+			odp_packet_has_udp_set(pkt_tbl[i], true);
 	}
 
 	ret = odp_pktout_queue(pktio_tx, &pktout_queue, 1);
@@ -4252,9 +4261,11 @@ static void test_chksum(void (*config_fn)(odp_pktio_t, odp_pktio_t),
 	if (test_flags & TEST_WITH_REFS)
 		make_refs(ref_tbl, pkt_tbl, TX_BATCH_LEN);
 	send_packets(pktout_queue, pkt_tbl, TX_BATCH_LEN);
-	num_rx = wait_for_packets(&pktio_rx_info, pkt_tbl, pkt_seq,
-				  TX_BATCH_LEN, TXRX_MODE_MULTI,
-				  ODP_TIME_SEC_IN_NS, VECTOR_MODE_DISABLED);
+
+	num_rx = wait_for_packets_hdr(&pktio_rx_info, pkt_tbl, pkt_seq,
+				      TX_BATCH_LEN, TXRX_MODE_MULTI,
+				      ODP_TIME_SEC_IN_NS, hdr_len,
+				      VECTOR_MODE_DISABLED);
 	CU_ASSERT(num_rx == TX_BATCH_LEN);
 	if (test_flags & TEST_WITH_REFS)
 		free_refs(ref_tbl, TX_BATCH_LEN);
@@ -4276,91 +4287,7 @@ static void pktio_test_chksum(void (*config_fn)(odp_pktio_t, odp_pktio_t),
 			      void (*test_fn)(odp_packet_t pkt))
 {
 	for (uint32_t flags = 0; flags < NUM_TEST_FLAG_COMBOS; flags++)
-		test_chksum(config_fn, prep_fn, test_fn, flags);
-}
-
-static void test_chksum_sctp(void (*config_fn)(odp_pktio_t, odp_pktio_t),
-			     void (*prep_fn)(odp_packet_t pkt),
-			     void (*test_fn)(odp_packet_t pkt),
-			     uint32_t test_flags)
-{
-	odp_pktio_t pktio_tx, pktio_rx;
-	odp_pktio_t pktio[MAX_NUM_IFACES] = {ODP_PKTIO_INVALID};
-	pktio_info_t pktio_rx_info;
-	odp_pktout_queue_t pktout_queue;
-	odp_packet_t pkt_tbl[TX_BATCH_LEN];
-	odp_packet_t ref_tbl[TX_BATCH_LEN];
-	uint32_t pkt_seq[TX_BATCH_LEN];
-	int ret;
-	int i, num_rx;
-
-	CU_ASSERT_FATAL(global.num_ifaces >= 1);
-
-	/* Open and configure interfaces */
-	for (i = 0; i < global.num_ifaces; ++i) {
-		pktio[i] = create_pktio_with_flags(i, ODP_PKTIN_MODE_DIRECT,
-						   ODP_PKTOUT_MODE_DIRECT,
-						   test_flags);
-		CU_ASSERT_FATAL(pktio[i] != ODP_PKTIO_INVALID);
-	}
-
-	pktio_tx = pktio[0];
-	pktio_rx = (global.num_ifaces > 1) ? pktio[1] : pktio_tx;
-	pktio_rx_info.id   = pktio_rx;
-	pktio_rx_info.inq  = ODP_QUEUE_INVALID;
-	pktio_rx_info.in_mode = ODP_PKTIN_MODE_DIRECT;
-
-	config_fn(pktio_tx, pktio_rx);
-
-	for (i = 0; i < global.num_ifaces; ++i) {
-		CU_ASSERT_FATAL(odp_pktio_start(pktio[i]) == 0);
-		_pktio_wait_linkup(pktio[i]);
-	}
-
-	ret = create_packets_sctp(pkt_tbl, pkt_seq, TX_BATCH_LEN, pktio_tx,
-				  pktio_rx);
-	CU_ASSERT(ret == TX_BATCH_LEN);
-	if (ret != TX_BATCH_LEN) {
-		for (i = 0; i < global.num_ifaces; i++) {
-			CU_ASSERT_FATAL(odp_pktio_stop(pktio[i]) == 0);
-			CU_ASSERT_FATAL(odp_pktio_close(pktio[i]) == 0);
-		}
-		return;
-	}
-
-	/* Provide L3 and L4 proto for pktout HW checksum generation */
-	for (i = 0; i < TX_BATCH_LEN; i++) {
-		odp_packet_has_ipv4_set(pkt_tbl[i], true);
-		odp_packet_has_sctp_set(pkt_tbl[i], true);
-	}
-
-	ret = odp_pktout_queue(pktio_tx, &pktout_queue, 1);
-	CU_ASSERT_FATAL(ret > 0);
-
-	for (i = 0; i < TX_BATCH_LEN; i++)
-		if (prep_fn)
-			prep_fn(pkt_tbl[i]);
-
-	if (test_flags & TEST_WITH_REFS)
-		make_refs(ref_tbl, pkt_tbl, TX_BATCH_LEN);
-	send_packets(pktout_queue, pkt_tbl, TX_BATCH_LEN);
-	num_rx = wait_for_packets_hdr(&pktio_rx_info, pkt_tbl, pkt_seq,
-				      TX_BATCH_LEN, TXRX_MODE_MULTI,
-				      ODP_TIME_SEC_IN_NS, ODPH_SCTPHDR_LEN, VECTOR_MODE_DISABLED);
-	CU_ASSERT(num_rx == TX_BATCH_LEN);
-	if (test_flags & TEST_WITH_REFS)
-		free_refs(ref_tbl, TX_BATCH_LEN);
-	for (i = 0; i < num_rx; i++) {
-		CU_ASSERT(odp_packet_pool(pkt_tbl[i]) == expected_rx_pool(test_flags));
-		CU_ASSERT(odp_packet_has_ref(pkt_tbl[i]) == 0);
-		test_fn(pkt_tbl[i]);
-		odp_packet_free(pkt_tbl[i]);
-	}
-
-	for (i = 0; i < global.num_ifaces; i++) {
-		CU_ASSERT_FATAL(odp_pktio_stop(pktio[i]) == 0);
-		CU_ASSERT_FATAL(odp_pktio_close(pktio[i]) == 0);
-	}
+		test_chksum(config_fn, prep_fn, test_fn, flags, 0);
 }
 
 static void pktio_test_chksum_sctp(void (*config_fn)(odp_pktio_t, odp_pktio_t),
@@ -4368,7 +4295,7 @@ static void pktio_test_chksum_sctp(void (*config_fn)(odp_pktio_t, odp_pktio_t),
 				   void (*test_fn)(odp_packet_t pkt))
 {
 	for (uint32_t flags = 0; flags < NUM_TEST_FLAG_COMBOS; flags++)
-		test_chksum_sctp(config_fn, prep_fn, test_fn, flags);
+		test_chksum(config_fn, prep_fn, test_fn, flags, 1);
 }
 
 static int pktio_check_chksum_in_ipv4(void)
