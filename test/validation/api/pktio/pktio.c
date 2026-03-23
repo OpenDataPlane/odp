@@ -4242,21 +4242,14 @@ static void test_chksum(void (*config_fn)(odp_pktio_t, odp_pktio_t),
 		return;
 	}
 
-	/* Provide L3 and L4 proto for pktout HW checksum generation */
-	for (i = 0; i < TX_BATCH_LEN; i++) {
-		odp_packet_has_ipv4_set(pkt_tbl[i], true);
-		if (is_sctp)
-			odp_packet_has_sctp_set(pkt_tbl[i], true);
-		else
-			odp_packet_has_udp_set(pkt_tbl[i], true);
-	}
-
 	ret = odp_pktout_queue(pktio_tx, &pktout_queue, 1);
 	CU_ASSERT_FATAL(ret > 0);
 
-	for (i = 0; i < TX_BATCH_LEN; i++)
+	for (i = 0; i < TX_BATCH_LEN; i++) {
+		odp_packet_has_ipv4_set(pkt_tbl[i], 1);
 		if (prep_fn)
 			prep_fn(pkt_tbl[i]);
+	}
 
 	if (test_flags & TEST_WITH_REFS)
 		make_refs(ref_tbl, pkt_tbl, TX_BATCH_LEN);
@@ -4562,6 +4555,7 @@ static void pktio_test_chksum_out_udp_test(odp_packet_t pkt)
 static void pktio_test_chksum_out_udp_no_ovr_prep(odp_packet_t pkt)
 {
 	odph_ipv4_csum_update(pkt);
+	odp_packet_has_udp_set(pkt, 1);
 	odp_packet_l4_chksum_insert(pkt, false);
 }
 
@@ -4583,6 +4577,7 @@ static void pktio_test_chksum_out_udp_no_ovr(void)
 
 static void pktio_test_chksum_out_udp_ovr_prep(odp_packet_t pkt)
 {
+	odp_packet_has_udp_set(pkt, 1);
 	odp_packet_l4_chksum_insert(pkt, true);
 }
 
@@ -4621,10 +4616,15 @@ static void pktio_test_chksum_out_udp_pktio_config(odp_pktio_t pktio_tx,
 	CU_ASSERT_FATAL(odp_pktio_config(pktio_tx, &config) == 0);
 }
 
+static void pktio_test_chksum_out_udp_pktio_prep(odp_packet_t pkt)
+{
+	odp_packet_has_udp_set(pkt, 1);
+}
+
 static void pktio_test_chksum_out_udp_pktio(void)
 {
 	pktio_test_chksum(pktio_test_chksum_out_udp_pktio_config,
-			  NULL,
+			  pktio_test_chksum_out_udp_pktio_prep,
 			  pktio_test_chksum_out_udp_test);
 }
 
@@ -4668,6 +4668,7 @@ static void pktio_test_chksum_out_sctp_test(odp_packet_t pkt)
 static void pktio_test_chksum_out_sctp_no_ovr_prep(odp_packet_t pkt)
 {
 	odph_ipv4_csum_update(pkt);
+	odp_packet_has_sctp_set(pkt, 1);
 	odp_packet_l4_chksum_insert(pkt, false);
 }
 
@@ -4689,6 +4690,7 @@ static void pktio_test_chksum_out_sctp_no_ovr(void)
 
 static void pktio_test_chksum_out_sctp_ovr_prep(odp_packet_t pkt)
 {
+	odp_packet_has_sctp_set(pkt, 1);
 	odp_packet_l4_chksum_insert(pkt, true);
 }
 
@@ -4727,10 +4729,15 @@ static void pktio_test_chksum_out_sctp_pktio_config(odp_pktio_t pktio_tx,
 	CU_ASSERT_FATAL(odp_pktio_config(pktio_tx, &config) == 0);
 }
 
+static void pktio_test_chksum_out_sctp_pktio_prep(odp_packet_t pkt)
+{
+	odp_packet_has_sctp_set(pkt, 1);
+}
+
 static void pktio_test_chksum_out_sctp_pktio(void)
 {
 	pktio_test_chksum_sctp(pktio_test_chksum_out_sctp_pktio_config,
-			       NULL,
+			       pktio_test_chksum_out_sctp_pktio_prep,
 			       pktio_test_chksum_out_sctp_test);
 }
 
