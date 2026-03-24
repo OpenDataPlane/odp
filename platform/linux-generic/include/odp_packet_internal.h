@@ -487,6 +487,8 @@ int _odp_packet_sctp_chksum_insert(odp_packet_t pkt);
 int _odp_packet_l4_chksum(odp_packet_hdr_t *pkt_hdr,
 			  odp_pktin_config_opt_t opt, uint64_t l4_part_sum);
 
+int _odp_packet_unshare(odp_packet_t *pkt);
+
 #ifdef __cplusplus
 }
 #endif

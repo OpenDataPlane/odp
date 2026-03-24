@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2014-2018 Linaro Limited
- * Copyright (c) 2021-2025 Nokia
+ * Copyright (c) 2021-2026 Nokia
  */
 
 #include <odp_posix_extensions.h>
@@ -2550,8 +2550,13 @@ int crypto_int(odp_packet_t pkt_in,
 	odp_crypto_alg_err_t rc_cipher = ODP_CRYPTO_ALG_ERR_NONE;
 	odp_crypto_alg_err_t rc_auth = ODP_CRYPTO_ALG_ERR_NONE;
 	odp_crypto_generic_session_t *session;
-	odp_packet_t out_pkt = pkt_in;
+	odp_packet_t out_pkt;
 	odp_crypto_packet_result_t *op_result;
+
+	if (odp_unlikely(odp_packet_has_ref(pkt_in)))
+		if (odp_unlikely(_odp_packet_unshare(&pkt_in)))
+			return -1;
+	out_pkt = pkt_in;
 
 	session = (odp_crypto_generic_session_t *)(intptr_t)param->session;
 
