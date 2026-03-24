@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2014-2018 Linaro Limited
- * Copyright (c) 2021-2024 Nokia
+ * Copyright (c) 2021-2026 Nokia
  */
 
 #include <string.h>
@@ -39,6 +39,13 @@ typedef struct expected_t {
 	uint32_t len;
 	ignore_t ignore;
 } expected_t;
+
+typedef struct pkt_ref_state_t {
+	packet_type_t input_packet_type;
+	odp_packet_t pkt_ref;     /* packet sharing data with input packet */
+	odp_packet_t pkt_copy;    /* copy of pkt_ref for packet data checking */
+	test_packet_md_t md_copy; /* copy of pkt_ref metadata for checking */
+} pkt_ref_state_t;
 
 int crypto_op(odp_packet_t pkt_in,
 	      odp_packet_t *pkt_out,
@@ -468,6 +475,40 @@ static void check_output_packet_data(odp_packet_t pkt, expected_t *ex)
 	}
 }
 
+static void create_packet_ref(const crypto_op_test_param_t *param,
+			      odp_packet_t *pkt,
+			      pkt_ref_state_t *state)
+{
+	state->input_packet_type = param->input_packet_type;
+
+	if (param->input_packet_type == PKT_TYPE_STATIC_REF) {
+		state->pkt_ref = *pkt;
+		*pkt = odp_packet_ref_static(*pkt);
+	} else {
+		return;
+	}
+
+	CU_ASSERT_FATAL(*pkt != ODP_PACKET_INVALID);
+
+	test_packet_get_md(state->pkt_ref, &state->md_copy);
+	state->pkt_copy = odp_packet_copy(state->pkt_ref, suite_context.pool);
+	CU_ASSERT_FATAL(state->pkt_copy != ODP_PACKET_INVALID);
+}
+
+static void destroy_packet_ref(pkt_ref_state_t *state)
+{
+	test_packet_md_t md;
+
+	if (state->input_packet_type == PKT_TYPE_PACKET)
+		return;
+
+	test_packet_get_md(state->pkt_ref, &md);
+	CU_ASSERT(test_packet_is_md_equal(&state->md_copy, &md));
+	CU_ASSERT(is_packet_data_equal(state->pkt_ref, state->pkt_copy));
+	odp_packet_free(state->pkt_ref);
+	odp_packet_free(state->pkt_copy);
+}
+
 static int is_digest_in_cipher_range(const crypto_op_test_param_t *param,
 				     const odp_crypto_packet_op_param_t *op_params)
 {
@@ -503,6 +544,7 @@ static void do_test_crypto_op(const crypto_op_test_param_t *param)
 		.null_crypto = param->null_crypto,
 	};
 	odp_bool_t failure_allowed = false;
+	pkt_ref_state_t pkt_ref_state;
 
 	/*
 	 * Test detection of wrong digest value in input packet
@@ -546,11 +588,16 @@ static void do_test_crypto_op(const crypto_op_test_param_t *param)
 	}
 
 	test_packet_set_md(pkt);
+
+	create_packet_ref(param, &pkt, &pkt_ref_state);
+
 	test_packet_get_md(pkt, &md_in);
 
 	if (crypto_op(pkt, &pkt_out, &ok, &op_params,
 		      param->session.op_type, param->op_type))
 		return;
+
+	destroy_packet_ref(&pkt_ref_state);
 
 	test_packet_get_md(pkt_out, &md_out);
 
