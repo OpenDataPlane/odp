@@ -100,6 +100,7 @@ static void print_alg_test_param(const crypto_op_test_param_t *p)
 		printf("null crypto enabled in session\n");
 	if (p->null_crypto)
 		printf("null crypto requested\n");
+	printf("input packet type: %d\n", p->input_packet_type);
 }
 
 static void alg_test_execute_and_print(crypto_op_test_param_t *param)
@@ -153,15 +154,50 @@ static void alg_test_op2(crypto_op_test_param_t *param)
 	}
 }
 
+/*
+ * We test packet references only with a few algorithms to speed up testing
+ * unless doing a full test.
+ */
+static int skip_pkt_ref_tests(crypto_op_test_param_t *param)
+{
+	if (full_test)
+		return 0;
+
+	if (param->op_type == ODP_CRYPTO_OP_TYPE_BASIC_AND_OOP)
+		return 1;
+
+	if (param->ref->cipher != ODP_CIPHER_ALG_NULL &&
+	    param->ref->cipher != ODP_CIPHER_ALG_3DES_CBC &&
+	    param->ref->cipher != ODP_CIPHER_ALG_AES_CBC &&
+	    param->ref->cipher != ODP_CIPHER_ALG_AES_GCM)
+		return 1;
+
+	if (param->ref->auth != ODP_AUTH_ALG_NULL &&
+	    param->ref->auth != ODP_AUTH_ALG_MD5 &&
+	    param->ref->auth != ODP_AUTH_ALG_SHA1 &&
+	    param->ref->auth != ODP_AUTH_ALG_SHA256)
+		return 1;
+
+	return 0;
+}
+
 static void alg_test_op(crypto_op_test_param_t *param)
 {
-	param->op_type = param->session.op_type;
-	if (param->op_type == ODP_CRYPTO_OP_TYPE_BASIC_AND_OOP) {
-		param->op_type = ODP_CRYPTO_OP_TYPE_BASIC;
+	int num_types = NUM_PKT_TYPES;
+
+	if (skip_pkt_ref_tests(param))
+		num_types = 1;
+
+	for (int n = 0; n < num_types; n++) {
+		param->input_packet_type = n;
+		param->op_type = param->session.op_type;
+		if (param->op_type == ODP_CRYPTO_OP_TYPE_BASIC_AND_OOP) {
+			param->op_type = ODP_CRYPTO_OP_TYPE_BASIC;
+			alg_test_op2(param);
+			param->op_type = ODP_CRYPTO_OP_TYPE_OOP;
+		}
 		alg_test_op2(param);
-		param->op_type = ODP_CRYPTO_OP_TYPE_OOP;
 	}
-	alg_test_op2(param);
 }
 
 static int combo_warning_shown;

@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright (c) 2021-2023 Nokia
+ * Copyright (c) 2021-2026 Nokia
  */
 
 #ifndef CRYPTO_OP_TEST_H
@@ -18,6 +18,12 @@ typedef struct crypto_session_t {
 	odp_bool_t null_crypto_enable;
 } crypto_session_t;
 
+typedef enum packet_type_t {
+	PKT_TYPE_PACKET = 0,
+	PKT_TYPE_STATIC_REF = 1,
+} packet_type_t;
+#define NUM_PKT_TYPES 2
+
 typedef struct crypto_op_test_param_t {
 	crypto_session_t session;
 	odp_crypto_op_type_t op_type;
@@ -29,6 +35,7 @@ typedef struct crypto_op_test_param_t {
 	odp_bool_t null_crypto;
 	odp_bool_t adjust_segmentation;
 	odp_bool_t wrong_digest;
+	packet_type_t input_packet_type;
 	uint32_t first_seg_len;
 	uint32_t header_len;
 	uint32_t trailer_len;
