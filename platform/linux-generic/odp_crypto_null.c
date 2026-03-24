@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2014-2018 Linaro Limited
- * Copyright (c) 2021-2025 Nokia
+ * Copyright (c) 2021-2026 Nokia
  */
 
 #include <odp_posix_extensions.h>
@@ -394,8 +394,13 @@ int crypto_int(odp_packet_t pkt_in,
 	       odp_packet_t *pkt_out,
 	       const odp_crypto_packet_op_param_t *param ODP_UNUSED)
 {
-	odp_packet_t out_pkt = pkt_in;
+	odp_packet_t out_pkt;
 	odp_crypto_packet_result_t *op_result;
+
+	if (odp_unlikely(odp_packet_has_ref(pkt_in)))
+		if (odp_unlikely(_odp_packet_unshare(&pkt_in)))
+			return -1;
+	out_pkt = pkt_in;
 
 	/* Fill in result */
 	packet_subtype_set(out_pkt, ODP_EVENT_PACKET_CRYPTO);

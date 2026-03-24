@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2013-2018 Linaro Limited
- * Copyright (c) 2019-2025 Nokia
+ * Copyright (c) 2019-2026 Nokia
  */
 
 #include <odp/autoheader_external.h>
@@ -2202,6 +2202,18 @@ int odp_packet_has_ref(odp_packet_t pkt)
 		pkt_hdr = pkt_hdr->seg_next;
 	}
 
+	return 0;
+}
+
+int _odp_packet_unshare(odp_packet_t *pkt)
+{
+	odp_packet_t unshared;
+
+	unshared = odp_packet_copy(*pkt, odp_packet_pool(*pkt));
+	if (odp_unlikely(unshared == ODP_PACKET_INVALID))
+		return -1;
+	odp_packet_free(*pkt);
+	*pkt = unshared;
 	return 0;
 }
 

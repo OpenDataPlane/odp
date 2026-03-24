@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2017-2018 Linaro Limited
- * Copyright (c) 2018-2025 Nokia
+ * Copyright (c) 2018-2026 Nokia
  */
 
 #include <odp/api/byteorder.h>
@@ -2243,21 +2243,28 @@ static int ipsec_out_finalize_packet(odp_packet_t *pkt, ipsec_state_t *state, ip
 	return 0;
 }
 
-static void ipsec_in_prepare(const odp_packet_t pkt_in[], odp_packet_t pkt_out[], int num_in,
+static void ipsec_in_prepare(const odp_packet_t pkt_in[], odp_packet_t pkt_out[], int *num_in,
 			     const odp_ipsec_in_param_t *param, ipsec_op_t ops[],
 			     odp_packet_t crypto_pkts[],
 			     odp_crypto_packet_op_param_t crypto_param[], ipsec_op_t *crypto_ops[],
 			     int *num_crypto)
 {
 	unsigned int sa_idx = 0, sa_inc = (param->num_sa > 1) ? 1 : 0;
+	int num = *num_in;
 
 	*num_crypto = 0;
 
-	for (int i = 0; i < num_in; i++) {
+	for (int i = 0; i < num; i++) {
 		pkt_out[i] = pkt_in[i];
 		ipsec_op_t *op = &ops[i];
 		odp_packet_t *pkt = &pkt_out[i];
 		odp_crypto_packet_op_param_t c_p;
+
+		if (odp_unlikely(odp_packet_has_ref(*pkt)))
+			if (odp_unlikely(_odp_packet_unshare(pkt))) {
+				*num_in = i;
+				return;
+			}
 
 		memset(op, 0, sizeof(*op));
 
@@ -2401,7 +2408,7 @@ int odp_ipsec_in(const odp_packet_t pkt_in[], int num_in, odp_packet_t pkt_out[]
 	odp_crypto_packet_op_param_t crypto_param[MAX_BURST];
 	ipsec_op_t ops[MAX_BURST], *crypto_ops[MAX_BURST];
 
-	ipsec_in_prepare(pkt_in, pkt_out, max_out, param, ops, crypto_pkts, crypto_param,
+	ipsec_in_prepare(pkt_in, pkt_out, &max_out, param, ops, crypto_pkts, crypto_param,
 			 crypto_ops, &num_crypto);
 	ipsec_do_crypto_burst(crypto_pkts, crypto_param, crypto_ops, num_crypto);
 	ipsec_in_finalize(pkt_out, ops, max_out, false);
@@ -2412,7 +2419,7 @@ int odp_ipsec_in(const odp_packet_t pkt_in[], int num_in, odp_packet_t pkt_out[]
 
 static odp_ipsec_out_opt_t default_out_opt;
 
-static void ipsec_out_prepare(const odp_packet_t pkt_in[], odp_packet_t pkt_out[], int num_in,
+static void ipsec_out_prepare(const odp_packet_t pkt_in[], odp_packet_t pkt_out[], int *num_in,
 			      const odp_ipsec_out_param_t *param, ipsec_op_t ops[],
 			      odp_packet_t crypto_pkts[],
 			      odp_crypto_packet_op_param_t crypto_param[],
@@ -2420,18 +2427,25 @@ static void ipsec_out_prepare(const odp_packet_t pkt_in[], odp_packet_t pkt_out[
 {
 	unsigned int sa_idx = 0, opt_idx = 0, sa_inc = (param->num_sa > 1) ? 1 : 0,
 	opt_inc = (param->num_opt > 1) ? 1 : 0;
+	int num = *num_in;
 	/* No need to do _odp_ipsec_sa_use() here since an ODP application is not allowed to do
 	 * call IPsec output before SA creation has completed nor call odp_ipsec_sa_disable()
 	 * before IPsec output has completed. IOW, the needed synchronization between threads is
 	 * done by the application. */
 	*num_crypto = 0;
 
-	for (int i = 0; i < num_in; i++) {
+	for (int i = 0; i < num; i++) {
 		pkt_out[i] = pkt_in[i];
 		ipsec_op_t *op = &ops[i];
 		const odp_ipsec_out_opt_t *opt;
 		odp_packet_t *pkt = &pkt_out[i];
 		odp_crypto_packet_op_param_t c_p;
+
+		if (odp_unlikely(odp_packet_has_ref(*pkt)))
+			if (odp_unlikely(_odp_packet_unshare(pkt))) {
+				*num_in = i;
+				return;
+			}
 
 		memset(op, 0, sizeof(*op));
 		op->sa_hdl = param->sa[sa_idx];
@@ -2509,7 +2523,7 @@ int odp_ipsec_out(const odp_packet_t pkt_in[], int num_in, odp_packet_t pkt_out[
 	odp_crypto_packet_op_param_t crypto_param[MAX_BURST];
 	ipsec_op_t ops[MAX_BURST], *crypto_ops[MAX_BURST];
 
-	ipsec_out_prepare(pkt_in, pkt_out, max_out, param, ops, crypto_pkts, crypto_param,
+	ipsec_out_prepare(pkt_in, pkt_out, &max_out, param, ops, crypto_pkts, crypto_param,
 			  crypto_ops, &num_crypto, false);
 	ipsec_do_crypto_burst(crypto_pkts, crypto_param, crypto_ops, num_crypto);
 	ipsec_out_finalize(pkt_out, ops, max_out, false);
@@ -2532,7 +2546,7 @@ int odp_ipsec_in_enq(const odp_packet_t pkt_in[], int num_in, const odp_ipsec_in
 	odp_crypto_packet_op_param_t crypto_param[MAX_BURST];
 	ipsec_op_t ops[MAX_BURST], *crypto_ops[MAX_BURST];
 
-	ipsec_in_prepare(pkt_in, pkt_out, max_out, param, ops, crypto_pkts, crypto_param,
+	ipsec_in_prepare(pkt_in, pkt_out, &max_out, param, ops, crypto_pkts, crypto_param,
 			 crypto_ops, &num_crypto);
 	ipsec_do_crypto_burst(crypto_pkts, crypto_param, crypto_ops, num_crypto);
 	ipsec_in_finalize(pkt_out, ops, max_out, true);
@@ -2547,7 +2561,7 @@ int odp_ipsec_out_enq(const odp_packet_t pkt_in[], int num_in, const odp_ipsec_o
 	odp_crypto_packet_op_param_t crypto_param[MAX_BURST];
 	ipsec_op_t ops[MAX_BURST], *crypto_ops[MAX_BURST];
 
-	ipsec_out_prepare(pkt_in, pkt_out, max_out, param, ops, crypto_pkts, crypto_param,
+	ipsec_out_prepare(pkt_in, pkt_out, &max_out, param, ops, crypto_pkts, crypto_param,
 			  crypto_ops, &num_crypto, true);
 	ipsec_do_crypto_burst(crypto_pkts, crypto_param, crypto_ops, num_crypto);
 	ipsec_out_finalize(pkt_out, ops, max_out, true);
