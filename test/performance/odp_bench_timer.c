@@ -465,6 +465,36 @@ static int timeout_user_area_tm(bench_tm_result_t *res, int repeat_count)
 	return i;
 }
 
+static int timeout_is_periodic(void)
+{
+	int i;
+	odp_timeout_t timeout = gbl_args->timeout;
+	uint64_t *a1 = gbl_args->a1;
+
+	for (i = 0; i < REPEAT_COUNT; i++)
+		a1[i] = odp_timeout_is_periodic(timeout);
+
+	return i;
+}
+
+static int timeout_is_periodic_tm(bench_tm_result_t *res, int repeat_count)
+{
+	int i;
+	odp_timeout_t timeout = gbl_args->timeout;
+	uint64_t *a1 = gbl_args->a1;
+	const uint8_t id1 = bench_tm_func_register(res, "odp_timeout_is_periodic()");
+	bench_tm_stamp_t s1, s2;
+
+	for (i = 0; i < repeat_count; i++) {
+		bench_tm_now(res, &s1);
+		a1[i] = odp_timeout_is_periodic(timeout);
+		bench_tm_now(res, &s2);
+		bench_tm_func_record(&s2, &s1, res, id1);
+	}
+
+	return i;
+}
+
 static int timeout_to_u64(void)
 {
 	int i;
@@ -747,6 +777,7 @@ bench_info_t test_suite[] = {
 	BENCH_INFO(timeout_tick, NULL, NULL),
 	BENCH_INFO(timeout_user_ptr, NULL, NULL),
 	BENCH_INFO(timeout_user_area, NULL, NULL),
+	BENCH_INFO(timeout_is_periodic, NULL, NULL),
 	BENCH_INFO(timeout_to_u64, NULL, NULL),
 	BENCH_INFO(timer_to_u64, NULL, NULL),
 	BENCH_INFO(timer_pool_to_u64, NULL, NULL),
@@ -768,6 +799,7 @@ bench_tm_info_t test_suite_tm[] = {
 	BENCH_INFO_TM(timeout_tick_tm, NULL, NULL),
 	BENCH_INFO_TM(timeout_user_ptr_tm, NULL, NULL),
 	BENCH_INFO_TM(timeout_user_area_tm, NULL, NULL),
+	BENCH_INFO_TM(timeout_is_periodic_tm, NULL, NULL),
 	BENCH_INFO_TM(timeout_to_u64_tm, NULL, NULL),
 	BENCH_INFO_TM(timer_to_u64_tm, NULL, NULL),
 	BENCH_INFO_TM(timer_pool_to_u64_tm, NULL, NULL),
