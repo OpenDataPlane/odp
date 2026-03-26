@@ -1139,7 +1139,9 @@ int odp_packet_rem_data(odp_packet_t *pkt_ptr, uint32_t offset, uint32_t len)
 	odp_pool_t pool = pkt_hdr->event_hdr.pool;
 	odp_packet_t newpkt;
 
-	if (offset + len >= pktlen)
+	if (offset + len == pktlen)
+		return odp_packet_trunc_tail(pkt_ptr, len, NULL, NULL);
+	if (offset + len > pktlen)
 		return -1;
 
 	newpkt = odp_packet_alloc(pool, pktlen - len);
