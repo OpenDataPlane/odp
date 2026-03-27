@@ -2039,7 +2039,8 @@ static int tm_enqueue(tm_system_t *tm_system,
 			return -2;
 	}
 
-	if (odp_unlikely(odp_packet_has_ref(pkt)))
+	if (odp_unlikely(odp_packet_is_referencing(pkt) ||
+			 odp_packet_has_ref(pkt)))
 		if (odp_unlikely(_odp_packet_unshare(&pkt)))
 			return -1;
 
@@ -2653,6 +2654,10 @@ static int tm_capabilities(odp_tm_capabilities_t capabilities[],
 	cap_ptr->queue_stats.counter.discards = 1;
 	cap_ptr->queue_stats.counter.errors = 1;
 	cap_ptr->queue_stats.counter.packets = 1;
+
+	cap_ptr->packet_ref.static_ref = 1;
+	cap_ptr->packet_ref.referencing_pkt = 1;
+	cap_ptr->packet_ref.referenced_pkt = 1;
 
 	return 1;
 }
