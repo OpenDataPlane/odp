@@ -105,8 +105,10 @@ typedef struct ODP_ALIGNED_CACHE odp_packet_hdr_t {
 
 	uint16_t tailroom;
 
+	uint8_t unused_padding;
+
 	/* Classifier handle index */
-	uint16_t cos;
+	uint8_t cos;
 
 	/* Used as classifier destination queue, in IPsec inline input processing and as Tx
 	 * completion event queue. */
