@@ -20,9 +20,11 @@ typedef struct crypto_session_t {
 
 typedef enum packet_type_t {
 	PKT_TYPE_PACKET = 0,
-	PKT_TYPE_STATIC_REF = 1,
+	PKT_TYPE_STATIC_REF,
+	PKT_TYPE_REFERENCING_PKT,
+	PKT_TYPE_REFERENCED_PKT,
 } packet_type_t;
-#define NUM_PKT_TYPES 2
+#define NUM_PKT_TYPES 4
 
 typedef struct crypto_op_test_param_t {
 	crypto_session_t session;

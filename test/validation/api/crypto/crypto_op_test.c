@@ -484,6 +484,11 @@ static void create_packet_ref(const crypto_op_test_param_t *param,
 	if (param->input_packet_type == PKT_TYPE_STATIC_REF) {
 		state->pkt_ref = *pkt;
 		*pkt = odp_packet_ref_static(*pkt);
+	} else if (param->input_packet_type == PKT_TYPE_REFERENCING_PKT) {
+		state->pkt_ref = *pkt;
+		*pkt = odp_packet_ref(*pkt, 0);
+	} else if (param->input_packet_type == PKT_TYPE_REFERENCED_PKT) {
+		state->pkt_ref = odp_packet_ref(*pkt, 0);
 	} else {
 		return;
 	}
