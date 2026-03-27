@@ -1534,6 +1534,10 @@ static int open_pktios(test_global_t *global)
 			ODPH_ERR("Error (%s): Don't free mode not supported\n", name);
 			return -1;
 		}
+		if (test_options->tx_mode == TX_MODE_REF && !pktio_capa.packet_ref.static_ref) {
+			ODPH_ERR("Error (%s): Static-reference TX mode not supported\n", name);
+			return -1;
+		}
 
 		odp_pktio_config_init(&pktio_config);
 
