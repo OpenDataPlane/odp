@@ -2260,7 +2260,8 @@ static void ipsec_in_prepare(const odp_packet_t pkt_in[], odp_packet_t pkt_out[]
 		odp_packet_t *pkt = &pkt_out[i];
 		odp_crypto_packet_op_param_t c_p;
 
-		if (odp_unlikely(odp_packet_has_ref(*pkt)))
+		if (odp_unlikely(odp_packet_is_referencing(*pkt) ||
+				 odp_packet_has_ref(*pkt)))
 			if (odp_unlikely(_odp_packet_unshare(pkt))) {
 				*num_in = i;
 				return;
@@ -2441,7 +2442,8 @@ static void ipsec_out_prepare(const odp_packet_t pkt_in[], odp_packet_t pkt_out[
 		odp_packet_t *pkt = &pkt_out[i];
 		odp_crypto_packet_op_param_t c_p;
 
-		if (odp_unlikely(odp_packet_has_ref(*pkt)))
+		if (odp_unlikely(odp_packet_is_referencing(*pkt) ||
+				 odp_packet_has_ref(*pkt)))
 			if (odp_unlikely(_odp_packet_unshare(pkt))) {
 				*num_in = i;
 				return;
