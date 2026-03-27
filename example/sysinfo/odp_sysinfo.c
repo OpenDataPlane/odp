@@ -641,6 +641,9 @@ static void print_pktio_capa(appl_args_t *appl_args)
 		printf("    lso.proto.tcp_ipv6:            %u\n", capa->lso.proto.tcp_ipv6);
 		printf("    lso.proto.sctp_ipv4:           %u\n", capa->lso.proto.sctp_ipv4);
 		printf("    lso.proto.sctp_ipv6:           %u\n", capa->lso.proto.sctp_ipv6);
+		printf("    packet_ref.static_ref          %u\n", capa->packet_ref.static_ref);
+		printf("    packet_ref.referenced_pkt      %u\n", capa->packet_ref.referenced_pkt);
+		printf("    packet_ref.referencing_pkt     %u\n", capa->packet_ref.referencing_pkt);
 		printf("    maxlen.equal:                  %i\n", capa->maxlen.equal);
 		printf("    maxlen.min_input:              %u B\n", capa->maxlen.min_input);
 		printf("    maxlen.max_input:              %u B\n", capa->maxlen.max_input);
