@@ -1,5 +1,128 @@
 # Changelog
 
+## OpenDataPlane (1.50.0.0)
+
+### Backward incompatible API changes
+
+#### IPsec
+* Change `odp_ipsec_out_inline()` function specification to state that packets
+that share data with other packets may not be sent using this function unless
+the pktout to be used has the relevant capability.
+
+#### Packet
+* Redefine the semantics of `odp_packet_ref()` in a way that makes it simpler to
+support packet data sharing. Also, specify better rules for packet data layout
+manipulation operations, allowing private packet data also in the tail of
+packets that reference other packets.
+* Change `odp_packet_ref_pkt()` function specification to match updated
+`odp_packet_ref()` specification.
+* Change `odp_packet_has_ref()` to indicate whether a packet is referenced by
+another packet, not whether the packet shares data with another packet. In
+particular, `odp_packet_ref()` returns a packet that shares data with the given
+packet but is not itself referenced by other packets.
+
+#### Packet IO
+* Add `odp_pktio_capability_t.packet_ref` capability to indicate whether a pktio
+supports sending packets with shared data without using the `dont_free` flag.
+
+#### Timer
+* Change periodic timer expiration event configuration. Instead of configuring a
+single event to be sent for periodic timer expirations, application now
+configures a timeout pool to be created as part of timer pool creation
+(`odp_timer_pool_param_t.periodic`).
+* Add `odp_timer_periodic_param_init()` function for initializing periodic timer
+parameters (`odp_timer_periodic_param_t`).
+* Add `odp_timer_periodic_alloc()` function for allocating periodic timers. Old
+`odp_timer_alloc()` function is used only for single shot timers.
+* Change `odp_timer_periodic_start_t` to only include first expiration tick. The
+remaining previous parameters have been moved to `odp_timer_periodic_param_t`.
+* Change `odp_timer_periodic_ack()` return values to not have a specific value
+for events from a cancelled timer (not last).
+* Add `ODP_TIMER_BUSY` return value to `odp_timer_start()`,
+`odp_timer_restart()`, and `odp_timer_periodic_start()` functions.
+* Add alternative method for configuring periodic timer frequency for timer
+pools and timers. The new method introduces a new periodic timer type
+`ODP_TIMER_TYPE_PERIODIC_FREQ` to be used with periodic timer capability checks
+and timer pool creation. Old periodic timer type `ODP_TIMER_TYPE_PERIODIC` is
+renamed to `ODP_TIMER_TYPE_PERIODIC_BASE_MUL` to better reflect the differences
+between these two types.
+
+#### Traffic Manager
+* Add `odp_tm_capabilities_t.packet_ref` capability to indicate whether packets
+that reference other packets or are referenced by other packets can be enqueued
+to TM.
+
+### Backward compatible API changes
+
+#### Event Vector
+* Add `odp_event_aggr_capability_t.stats` capability for supported statistics
+counters.
+
+#### Packet
+* Add `odp_packet_is_referencing()` function for testing whether a packet
+references another packet but is not a static reference.
+* Clarify how `odp_packet_free()` function operates with packets that
+participate in packet data sharing.
+* Clarify how `odp_packet_concat()` function operates with packets that
+participate in packet data sharing.
+* Clarify that `odp_packet_copy()` function returns always a normal packet, even
+if the source packet is a referencing packet.
+* Change `odp_packet_free_ctrl_set()` function specification to allow usage with
+packets that participate in packet data sharing.
+* Clarify that even though `odp_packet_l2/l3/l4_offset_set()` functions require
+the offset not exceed packet data length, later packet truncation and pulling
+may result in the offset exceeding packet data length.
+* Clarify that `odp_packet_l2/l3/l4_ptr()` pointer value is undefined when
+l2/l3/l4 offset metadata of a packet is larger than the length of the packet
+e.g. after truncating the packet.
+* Fix `odp_packet_head()` specification to not refer to `odp_packet_l2_ptr()`
+as data start.
+
+#### Queue
+* Add `odp_queue_len()` function for reading the number of events currently in
+the queue, or in case of an aggregator queue handle, the number of events
+currently waiting for vector generation.
+* Add supported statistics counters (`odp_queue_stats_opt_t`) for each plain
+queue type into `odp_queue_capability_t`.
+
+#### Scheduler
+* Add `odp_schedule_capability_t.queue_stats` capability for supported
+statistics counters.
+
+#### Timer
+* Add `odp_timeout_is_periodic()` function for checking if a timeout is from a
+periodic timer.
+* Add new `odp_timer_pool_param_t.periodic.max_pending_tmo` parameter and
+matching capabilities `odp_timer_capability_t.periodic.min/max_pending_tmo`
+for configuring flow control for periodic timer pools.
+
+### Implementation
+* Optimize implementations for single event alloc functions (other event types
+than packet).
+* Optimize implementations for single event free functions (other event types
+than packet).
+
+### Performance Tests
+
+#### bench_queue
+* Match test results output to API function names also in throughput mode.
+* Add missing test for `odp_schedule_multi_wait()` function.
+
+#### bench_packet
+* Add test for `odp_packet_is_referencing()` function.
+
+#### bench_timer
+* Add tests for `odp_timeout_is_periodic()` function.
+
+#### pool_perf
+* Add support for testing single event `odp_buffer_alloc/free()` and
+`odp_packet_alloc/free()` functions by setting burst size to zero
+(`--burst 0`).
+* Change default burst size to 32.
+
+#### sched_pktio
+* Decrease packet pool size to 16k to reduce memory usage.
+
 ## OpenDataPlane (1.49.0.0)
 
 ### Backward compatible API changes
