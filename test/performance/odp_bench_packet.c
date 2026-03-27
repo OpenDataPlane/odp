@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2017-2018 Linaro Limited
- * Copyright (c) 2022-2025 Nokia
+ * Copyright (c) 2022-2026 Nokia
  */
 
 /**
@@ -1640,6 +1640,18 @@ static int packet_has_ref(void)
 	return i + ret;
 }
 
+static int packet_is_referencing(void)
+{
+	int i;
+	uint32_t ret = 0;
+	odp_packet_t *pkt_tbl = gbl_args->pkt_tbl;
+
+	for (i = 0; i < TEST_REPEAT_COUNT; i++)
+		ret += odp_packet_is_referencing(pkt_tbl[i]);
+
+	return i + ret;
+}
+
 static int packet_subtype(void)
 {
 	int i;
@@ -1954,6 +1966,7 @@ bench_info_t test_suite[] = {
 	BENCH_INFO(packet_ref, create_packets, free_packets_twice, NULL),
 	BENCH_INFO(packet_ref_pkt, alloc_packets_twice, free_packets_twice, NULL),
 	BENCH_INFO(packet_has_ref, alloc_ref_packets, free_packets_twice, NULL),
+	BENCH_INFO(packet_is_referencing, alloc_ref_packets, free_packets_twice, NULL),
 	BENCH_INFO(packet_subtype, create_packets, free_packets, NULL),
 	BENCH_INFO(event_subtype, create_events, free_packets, NULL),
 	BENCH_INFO(packet_parse, alloc_parse_packets_ipv4_tcp, free_packets,
