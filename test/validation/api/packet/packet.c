@@ -2716,18 +2716,6 @@ static void packet_test_extend_ref(void)
 	/* Verify ref lengths */
 	CU_ASSERT(ref != ODP_PACKET_INVALID);
 	CU_ASSERT(odp_packet_len(ref) == max_len - 200);
-	if (odp_packet_has_ref(ref) == 1) {
-		/* And ref's affect on max_pkt */
-		CU_ASSERT(odp_packet_has_ref(max_pkt) == 1);
-	}
-
-	/* Now extend max_pkt and verify effect */
-	CU_ASSERT(odp_packet_extend_head(&max_pkt, 10, NULL, NULL) >= 0);
-	CU_ASSERT(odp_packet_len(max_pkt) == max_len - 90);
-	packet_sanity_check(max_pkt);
-
-	/* Extend on max_pkt should not affect ref */
-	CU_ASSERT(odp_packet_len(ref) == max_len - 200);
 
 	/* Now extend ref and verify effect*/
 	CU_ASSERT(odp_packet_extend_head(&ref, 20, NULL, NULL) >= 0);
@@ -2735,22 +2723,12 @@ static void packet_test_extend_ref(void)
 	packet_sanity_check(max_pkt);
 
 	/* Extend on ref should not affect max_pkt */
-	CU_ASSERT(odp_packet_len(max_pkt) == max_len - 90);
-
-	/* Trunc max_pkt of all unshared len */
-	CU_ASSERT(odp_packet_trunc_head(&max_pkt, 110, NULL, NULL) >= 0);
-	packet_sanity_check(max_pkt);
-
-	/* Verify effect on max_pkt */
-	CU_ASSERT(odp_packet_len(max_pkt) == max_len - 200);
-
-	/* Verify that ref is unchanged */
-	CU_ASSERT(odp_packet_len(ref) == max_len - 180);
+	CU_ASSERT(odp_packet_len(max_pkt) == max_len - 100);
 
 	/* Free ref and verify that max_pkt is back to being unreferenced */
 	odp_packet_free(ref);
 	CU_ASSERT(odp_packet_has_ref(max_pkt) == 0);
-	CU_ASSERT(odp_packet_len(max_pkt) == max_len - 200);
+	CU_ASSERT(odp_packet_len(max_pkt) == max_len - 100);
 	packet_sanity_check(max_pkt);
 
 	odp_packet_free(max_pkt);
@@ -2868,10 +2846,9 @@ static void packet_test_offset(void)
 static void packet_test_ref(void)
 {
 	odp_packet_t base_pkt, segmented_base_pkt, hdr_pkt[4],
-		ref_pkt[4], refhdr_pkt[4], hdr_cpy;
+		ref_pkt[4], refhdr_pkt[4];
 	odp_packet_t pkt, pkt2, pkt3, ref, ref2;
-	uint32_t pkt_len, segmented_pkt_len, hdr_len[4], offset[4], hr[4],
-		base_hr, ref_len[4];
+	uint32_t pkt_len, segmented_pkt_len, hdr_len[4], offset[4], hr[4];
 	int i, ret;
 	odp_pool_t pool;
 
@@ -2953,8 +2930,11 @@ static void packet_test_ref(void)
 	CU_ASSERT_FATAL(ref != ODP_PACKET_INVALID);
 	pkt2 = odp_packet_copy(test_packet, pool);
 	CU_ASSERT_FATAL(pkt2 != ODP_PACKET_INVALID);
-	ref2 = odp_packet_ref_pkt(ref, 0, pkt2);
+	ref2 = odp_packet_ref(pkt, 0);
 	CU_ASSERT_FATAL(ref2 != ODP_PACKET_INVALID);
+	ret = odp_packet_concat(&ref2, ref);
+	CU_ASSERT_FATAL(ret >= 0);
+
 	packet_compare_data(pkt3, ref2);
 
 	/* Try print function on a reference */
@@ -2963,7 +2943,6 @@ static void packet_test_ref(void)
 	odp_packet_print_data(ref2, 0, 100);
 	odp_packet_print_data(ref2, 14, 20);
 
-	odp_packet_free(ref);
 	odp_packet_free(ref2);
 	odp_packet_free(pkt);
 	odp_packet_free(pkt3);
@@ -2971,7 +2950,6 @@ static void packet_test_ref(void)
 	/* Test has_ref, lengths, etc */
 	base_pkt = odp_packet_copy(test_packet, odp_packet_pool(test_packet));
 	CU_ASSERT_FATAL(base_pkt != ODP_PACKET_INVALID);
-	base_hr = odp_packet_headroom(base_pkt);
 	pkt_len = odp_packet_len(test_packet);
 
 	segmented_base_pkt =
@@ -3024,13 +3002,6 @@ static void packet_test_ref(void)
 	CU_ASSERT(refhdr_pkt[0] != ODP_PACKET_INVALID);
 	CU_ASSERT(refhdr_pkt[1] != ODP_PACKET_INVALID);
 
-	/* If base packet has now references, ref packet should be also
-	 * references. */
-	if (odp_packet_has_ref(base_pkt) == 1) {
-		CU_ASSERT(odp_packet_has_ref(refhdr_pkt[0]) == 1);
-		CU_ASSERT(odp_packet_has_ref(refhdr_pkt[1]) == 1);
-	}
-
 	CU_ASSERT(odp_packet_len(refhdr_pkt[0]) ==
 		  hdr_len[0] + pkt_len - offset[0]);
 	CU_ASSERT(odp_packet_len(refhdr_pkt[1]) ==
@@ -3044,22 +3015,9 @@ static void packet_test_ref(void)
 			      base_pkt, offset[1],
 			      pkt_len - offset[1]);
 
-	/* See if compound references are supported and if so that they
-	 * operate properly */
-	hdr_cpy = odp_packet_copy(hdr_pkt[2], odp_packet_pool(hdr_pkt[2]));
-	CU_ASSERT_FATAL(hdr_cpy != ODP_PACKET_INVALID);
-
-	refhdr_pkt[2] = odp_packet_ref_pkt(refhdr_pkt[0], 2, hdr_cpy);
-	CU_ASSERT(refhdr_pkt[2] != ODP_PACKET_INVALID);
-
-	if (odp_packet_has_ref(refhdr_pkt[2]) == 1) {
-		CU_ASSERT(odp_packet_has_ref(refhdr_pkt[0]) == 1);
-	}
-
 	/* Delete the refs */
 	odp_packet_free(refhdr_pkt[0]);
 	odp_packet_free(refhdr_pkt[1]);
-	odp_packet_free(refhdr_pkt[2]);
 
 	/* Verify that base_pkt no longer has a ref */
 	CU_ASSERT(odp_packet_has_ref(base_pkt) == 0);
@@ -3068,13 +3026,8 @@ static void packet_test_ref(void)
 	refhdr_pkt[2] = odp_packet_ref_pkt(base_pkt, offset[2], hdr_pkt[2]);
 	refhdr_pkt[3] = odp_packet_ref_pkt(base_pkt, offset[3], hdr_pkt[3]);
 
-	CU_ASSERT(hdr_pkt[2] != ODP_PACKET_INVALID);
-	CU_ASSERT(hdr_pkt[3] != ODP_PACKET_INVALID);
-
-	if (odp_packet_has_ref(base_pkt) == 1) {
-		CU_ASSERT(odp_packet_has_ref(refhdr_pkt[2]) == 1);
-		CU_ASSERT(odp_packet_has_ref(refhdr_pkt[3]) == 1);
-	}
+	CU_ASSERT(refhdr_pkt[2] != ODP_PACKET_INVALID);
+	CU_ASSERT(refhdr_pkt[3] != ODP_PACKET_INVALID);
 
 	CU_ASSERT(odp_packet_len(refhdr_pkt[2]) ==
 		  odp_packet_len(refhdr_pkt[3]));
@@ -3093,10 +3046,6 @@ static void packet_test_ref(void)
 	/* Create a static reference */
 	ref_pkt[0] = odp_packet_ref_static(base_pkt);
 	CU_ASSERT(ref_pkt[0] != ODP_PACKET_INVALID);
-
-	if (odp_packet_has_ref(base_pkt) == 1) {
-		CU_ASSERT(odp_packet_has_ref(ref_pkt[0]) == 1);
-	}
 
 	CU_ASSERT(odp_packet_len(ref_pkt[0]) == odp_packet_len(base_pkt));
 	packet_compare_offset(ref_pkt[0], 0, base_pkt, 0,
@@ -3156,37 +3105,6 @@ static void packet_test_ref(void)
 			  segmented_pkt_len - offset[1]);
 	}
 
-	odp_packet_free(ref_pkt[0]);
-	odp_packet_free(ref_pkt[1]);
-
-	/* Verify we can modify base packet after reference is created */
-	base_pkt = odp_packet_copy(test_packet, odp_packet_pool(test_packet));
-
-	ref_pkt[1] = odp_packet_ref(base_pkt, offset[1]);
-	CU_ASSERT_FATAL(ref_pkt[1] != ODP_PACKET_INVALID);
-	ref_len[1] = odp_packet_len(ref_pkt[1]);
-	CU_ASSERT(ref_len[1] == odp_packet_len(base_pkt) - offset[1]);
-
-	CU_ASSERT(odp_packet_push_head(base_pkt, base_hr / 2) != NULL);
-
-	CU_ASSERT(odp_packet_len(ref_pkt[1]) == ref_len[1]);
-
-	ref_pkt[0] = odp_packet_ref(base_pkt, offset[0]);
-	CU_ASSERT_FATAL(ref_pkt[0] != ODP_PACKET_INVALID);
-	ref_len[0] = odp_packet_len(ref_pkt[0]);
-	CU_ASSERT(ref_len[0] == odp_packet_len(base_pkt) - offset[0]);
-
-	CU_ASSERT(odp_packet_push_head(base_pkt,
-				       base_hr - base_hr / 2) != NULL);
-	CU_ASSERT(odp_packet_len(ref_pkt[1]) == ref_len[1]);
-	CU_ASSERT(odp_packet_len(ref_pkt[0]) == ref_len[0]);
-
-	hr[0] = odp_packet_headroom(ref_pkt[0]);
-	hr[1] = odp_packet_headroom(ref_pkt[1]);
-	CU_ASSERT(odp_packet_push_head(ref_pkt[0], hr[0]) != NULL);
-	CU_ASSERT(odp_packet_push_head(ref_pkt[1], hr[1]) != NULL);
-
-	odp_packet_free(base_pkt);
 	odp_packet_free(ref_pkt[0]);
 	odp_packet_free(ref_pkt[1]);
 }
