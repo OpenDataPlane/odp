@@ -779,7 +779,8 @@ int crypto_int(odp_packet_t pkt_in,
 	odp_crypto_generic_session_t *session;
 	odp_packet_t out_pkt;
 
-	if (odp_unlikely(odp_packet_has_ref(pkt_in)))
+	if (odp_unlikely(odp_packet_is_referencing(pkt_in) ||
+			 odp_packet_has_ref(pkt_in)))
 		if (odp_unlikely(_odp_packet_unshare(&pkt_in)))
 			return -1;
 	out_pkt = pkt_in;
