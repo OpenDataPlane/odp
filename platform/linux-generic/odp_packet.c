@@ -73,6 +73,8 @@ const _odp_packet_inline_offset_t _odp_packet_inline ODP_ALIGNED_CACHE = {
 
 #include <odp/visibility_end.h>
 
+static inline void free_referenced_seg(odp_packet_hdr_t *hdr);
+
 static inline odp_packet_hdr_t *packet_seg_to_hdr(odp_packet_seg_t seg)
 {
 	return (odp_packet_hdr_t *)(uintptr_t)seg;
@@ -131,6 +133,9 @@ static inline uint32_t seg_headroom(odp_packet_hdr_t *pkt_seg)
 	uint8_t *base = hdr->base_data;
 	uint8_t *head = pkt_seg->seg_data;
 
+	if (odp_unlikely(pkt_seg->seg_indirect))
+		return 0;
+
 	return pool->headroom + (head - base);
 }
 
@@ -138,6 +143,9 @@ static inline uint32_t seg_tailroom(odp_packet_hdr_t *pkt_seg)
 {
 	_odp_event_hdr_t *hdr = &pkt_seg->event_hdr;
 	uint8_t *tail         = pkt_seg->seg_data + pkt_seg->seg_len;
+
+	if (odp_unlikely(pkt_seg->seg_indirect))
+		return 0;
 
 	return hdr->buf_end - tail;
 }
@@ -268,6 +276,7 @@ static inline void link_segments(odp_packet_hdr_t *pkt_hdr[], int num)
 		hdr = pkt_hdr[cur];
 		hdr->seg_data = event_hdr->base_data;
 		hdr->seg_len  = seg_len;
+		hdr->seg_indirect = 0;
 
 		/* init_segments() handles first seg ref_cnt init */
 		if (ODP_DEBUG == 1 && cur > 0) {
@@ -305,6 +314,7 @@ static inline void init_segments(odp_packet_hdr_t *pkt_hdr[], int num)
 	hdr->seg_data = hdr->event_hdr.base_data;
 	hdr->seg_len  = seg_len;
 	hdr->seg_next = NULL;
+	hdr->seg_indirect = 0;
 
 	hdr->seg_count = num;
 
@@ -326,6 +336,10 @@ static inline void reset_segments(odp_packet_hdr_t *pkt_hdr)
 	uint32_t seg_len = _odp_pool_entry(pkt_hdr->event_hdr.pool)->seg_len;
 
 	while (pkt_hdr != NULL) {
+		if (pkt_hdr->seg_indirect) {
+			free_referenced_seg(pkt_hdr);
+			pkt_hdr->seg_indirect = 0;
+		}
 		base = pkt_hdr->event_hdr.base_data;
 
 		pkt_hdr->seg_len  = seg_len;
@@ -458,12 +472,25 @@ static inline int is_multi_ref(uint32_t ref_cnt)
 	return (ref_cnt > 1);
 }
 
+static inline void free_referenced_seg(odp_packet_hdr_t *hdr)
+{
+	odp_packet_hdr_t *referenced = hdr->seg_referenced;
+	uint32_t ref_cnt;
+
+	ref_cnt = segment_ref_dec(referenced);
+	if (!is_multi_ref(ref_cnt))
+		_odp_event_free(_odp_event_from_hdr(&referenced->event_hdr));
+}
+
 static inline int skip_references(odp_packet_hdr_t *hdr[], int num)
 {
 	uint32_t ref_cnt;
 	int num_ref = 0;
 
 	for (int i = 0; i < num; i++) {
+		if (hdr[i]->seg_indirect)
+			free_referenced_seg(hdr[i]);
+
 		/* Zero when reference API has not been used */
 		ref_cnt = segment_ref(hdr[i]);
 
@@ -793,9 +820,14 @@ int odp_packet_reset(odp_packet_t pkt, uint32_t len)
 
 void odp_packet_reset_meta(odp_packet_t pkt)
 {
+	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
+	uint8_t is_ref;
+
 	_ODP_ASSERT(pkt != ODP_PACKET_INVALID);
 
-	_odp_packet_reset_md(packet_hdr(pkt));
+	is_ref = pkt_hdr->p.flags.is_ref;
+	_odp_packet_reset_md(pkt_hdr);
+	 pkt_hdr->p.flags.is_ref = is_ref;
 }
 
 int odp_event_filter_packet(const odp_event_t event[],
@@ -845,6 +877,8 @@ void *odp_packet_push_head(odp_packet_t pkt, uint32_t len)
 {
 	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
 
+	_ODP_ASSERT(odp_packet_has_ref(pkt) == 0);
+
 	if (odp_unlikely(len > pkt_hdr->headroom))
 		return NULL;
 
@@ -857,6 +891,8 @@ int odp_packet_extend_head(odp_packet_t *pkt, uint32_t len,
 {
 	odp_packet_hdr_t *pkt_hdr = packet_hdr(*pkt);
 	const uint32_t headroom  = pkt_hdr->headroom;
+
+	_ODP_ASSERT(odp_packet_has_ref(*pkt) == 0);
 
 	if (len > headroom) {
 		pool_t *pool = _odp_pool_entry(pkt_hdr->event_hdr.pool);
@@ -898,6 +934,8 @@ void *odp_packet_pull_head(odp_packet_t pkt, uint32_t len)
 {
 	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
 
+	_ODP_ASSERT(odp_packet_has_ref(pkt) == 0);
+
 	if (odp_unlikely(len >= pkt_hdr->seg_len))
 		return NULL;
 
@@ -910,6 +948,8 @@ int odp_packet_trunc_head(odp_packet_t *pkt, uint32_t len,
 {
 	odp_packet_hdr_t *pkt_hdr = packet_hdr(*pkt);
 	uint32_t seg_len = packet_first_seg_len(pkt_hdr);
+
+	_ODP_ASSERT(odp_packet_has_ref(*pkt) == 0);
 
 	if (odp_unlikely(len >= pkt_hdr->frame_len))
 		return -1;
@@ -1169,6 +1209,55 @@ int odp_packet_rem_data(odp_packet_t *pkt_ptr, uint32_t offset, uint32_t len)
 	return 1;
 }
 
+/*
+ * Align a referencing packet by simply copying it. This assumes that the
+ * aligned range fits in the first segment of the newly allocated packet.
+ */
+static int packet_align_dyn_ref(odp_packet_t *pkt, uint32_t offset,
+				uint32_t len, uint32_t align)
+{
+	odp_packet_hdr_t *pkt_hdr = packet_hdr(*pkt);
+	odp_pool_t pool = pkt_hdr->event_hdr.pool;
+	uint32_t pkt_len = pkt_hdr->frame_len;
+	odp_packet_t new_pkt;
+	odp_packet_hdr_t *new_pkt_hdr;
+	uintptr_t new_addr, misalign;
+	uint32_t shift = 0;
+	int rc;
+
+	new_pkt = odp_packet_alloc(pool, pkt_len + align);
+	if (new_pkt == ODP_PACKET_INVALID)
+		return -1;
+
+	new_pkt_hdr = packet_hdr(new_pkt);
+	new_addr = (uintptr_t)new_pkt_hdr->seg_data + offset;
+	misalign = align == 0 ? 0 : new_addr & (align - 1);
+	if (misalign)
+		shift = align - misalign;
+	if (shift + offset + len > new_pkt_hdr->seg_len) {
+		odp_packet_free(new_pkt);
+		return -1;
+	}
+
+	if (odp_packet_pull_head(new_pkt, shift) == NULL ||
+	    odp_packet_trunc_tail(&new_pkt, align - shift, NULL, NULL) != 0) {
+		odp_packet_free(new_pkt);
+		return -1;
+	}
+
+	rc = odp_packet_copy_from_pkt(new_pkt, 0, *pkt, 0, pkt_len);
+	if (rc < 0) {
+		odp_packet_free(new_pkt);
+		return -1;
+	}
+
+	_odp_packet_copy_md(packet_hdr(new_pkt), pkt_hdr, 0);
+	packet_hdr(new_pkt)->p.flags.is_ref = 0;
+	odp_packet_free(*pkt);
+	*pkt = new_pkt;
+	return 1;
+}
+
 int odp_packet_align(odp_packet_t *pkt, uint32_t offset, uint32_t len,
 		     uint32_t align)
 {
@@ -1203,6 +1292,15 @@ int odp_packet_align(odp_packet_t *pkt, uint32_t offset, uint32_t len,
 			shift += align - misalign;
 	}
 
+	if (odp_packet_is_referencing(*pkt)) {
+		/*
+		 * We cannot move the whole packet data as the packet most
+		 * likely has indirect segments and the data of such segments
+		 * is read-only. So we will do something different.
+		 */
+		return packet_align_dyn_ref(pkt, offset, len, align);
+	}
+
 	rc = odp_packet_extend_head(pkt, shift, NULL, NULL);
 	if (rc < 0)
 		return rc;
@@ -1213,6 +1311,8 @@ int odp_packet_align(odp_packet_t *pkt, uint32_t offset, uint32_t len,
 	(void)odp_packet_trunc_tail(pkt, shift, NULL, NULL);
 	return 1;
 }
+
+static odp_packet_t packet_ref(odp_packet_t pkt);
 
 int odp_packet_concat(odp_packet_t *dst, odp_packet_t src)
 {
@@ -1248,10 +1348,21 @@ int odp_packet_concat(odp_packet_t *dst, odp_packet_t src)
 			 PKT_MAX_SEGS))
 		return -1;
 
+	if (odp_packet_has_ref(src)) {
+		odp_packet_t ref;
+
+		ref = packet_ref(src);
+		if (odp_unlikely(ref == ODP_PACKET_INVALID))
+			return -1;
+		src_hdr = packet_hdr(ref);
+		odp_packet_free(src);
+	}
+
 	add_all_segs(dst_hdr, src_hdr);
 
 	dst_hdr->frame_len = dst_len + src_len;
 	dst_hdr->tailroom  = src_hdr->tailroom;
+	dst_hdr->p.flags.is_ref |= src_hdr->p.flags.is_ref;
 
 	/* Data was not moved in memory */
 	return 0;
@@ -1305,6 +1416,7 @@ odp_packet_t odp_packet_copy(odp_packet_t pkt, odp_pool_t pool)
 	}
 
 	_odp_packet_copy_md(packet_hdr(newpkt), srchdr, 1);
+	packet_hdr(newpkt)->p.flags.is_ref = 0;
 
 	return newpkt;
 }
@@ -1528,6 +1640,10 @@ void odp_packet_print(odp_packet_t pkt)
 	len += _odp_snprint(&str[len], n - len,
 			    "  tailroom       %" PRIu32 "\n", odp_packet_tailroom(pkt));
 	len += _odp_snprint(&str[len], n - len,
+			    "  referencing    %" PRIu32 "\n", odp_packet_is_referencing(pkt));
+	len += _odp_snprint(&str[len], n - len,
+			    "  referenced     %" PRIu32 "\n", odp_packet_has_ref(pkt));
+	len += _odp_snprint(&str[len], n - len,
 			    "  num_segs       %i\n", odp_packet_num_segs(pkt));
 
 	seg = odp_packet_first_seg(pkt);
@@ -1538,9 +1654,20 @@ void odp_packet_print(odp_packet_t pkt)
 		int str_len;
 
 		str_len = _odp_snprint(&seg_str[0], max_len,
-				       "    [%d] seg_len %-4" PRIu32 "  seg_data %p  ref_cnt %u\n",
+				       "    [%d] seg_len %-6" PRIu32 "  seg_data %p  ref_cnt %u\n",
 				       seg_idx, odp_packet_seg_data_len(pkt, seg),
 				       odp_packet_seg_data(pkt, seg), segment_ref(seg_hdr));
+
+		if (seg_hdr->seg_indirect) {
+			odp_packet_hdr_t *ref_seg = seg_hdr->seg_referenced;
+
+			str_len += _odp_snprint(&seg_str[str_len], max_len - str_len,
+						"        referenced seg: seg_data %p "
+						" ref_cnt %-2u seg_len %" PRIu32 "\n",
+						ref_seg->seg_data,
+						segment_ref(ref_seg),
+						ref_seg->seg_len);
+		}
 
 		/* Prevent print buffer overflow */
 		if (n - len - str_len < 10) {
@@ -2149,27 +2276,73 @@ odp_packet_t odp_packet_ref_static(odp_packet_t pkt)
 	return pkt;
 }
 
+/*
+ * Make each segment in the 'ref' chain of segments reference the
+ * packet data of the corresponding segment in the 'base' chain
+ * of segments. The chains must be of equal length.
+ */
+static void ref_segments(odp_packet_hdr_t *ref, odp_packet_hdr_t *base)
+{
+	while (ref) {
+		_ODP_ASSERT(base != NULL);
+		_ODP_ASSERT(!base->seg_indirect);
+		ref->seg_indirect = 1;
+		ref->seg_referenced = base;
+		ref->seg_data = base->seg_data;
+		ref->seg_len = base->seg_len;
+		ref = ref->seg_next;
+		segment_ref_inc(base);
+		base = base->seg_next;
+	}
+	_ODP_ASSERT(base == NULL);
+}
+
+static odp_packet_t packet_ref(odp_packet_t pkt)
+{
+	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
+	odp_packet_hdr_t *ref;
+	odp_pool_t pool;
+
+	pool = odp_packet_pool(pkt);
+	_ODP_ASSERT(pool != ODP_POOL_INVALID);
+
+	ref = alloc_segments(_odp_pool_entry(pool), pkt_hdr->seg_count);
+	if (odp_unlikely(ref == NULL))
+		return ODP_PACKET_INVALID;
+
+	_odp_packet_reset_md(ref);
+
+	ref_segments(ref, pkt_hdr);
+	ref->p.flags.is_ref = 1;
+
+	ref->frame_len = pkt_hdr->frame_len;
+	ref->seg_count = pkt_hdr->seg_count;
+
+	/* cannot use headroom/tailroom of the referenced packet */
+	ref->headroom  = 0;
+	ref->tailroom  = 0;
+
+	return packet_handle(ref);
+}
+
 odp_packet_t odp_packet_ref(odp_packet_t pkt, uint32_t offset)
 {
-	odp_packet_t new;
-	int ret;
+	odp_packet_t ref;
 
-	new = odp_packet_copy(pkt, odp_packet_pool(pkt));
+	if (odp_unlikely(odp_packet_is_referencing(pkt)))
+		return ODP_PACKET_INVALID;
 
-	if (new == ODP_PACKET_INVALID) {
-		_ODP_ERR("copy failed\n");
+	if (odp_likely(offset == 0))
+		return packet_ref(pkt);
+
+	ref = packet_ref(pkt);
+	if (odp_unlikely(ref == ODP_PACKET_INVALID))
+		return ODP_PACKET_INVALID;
+	if (odp_packet_trunc_head(&ref, offset, NULL, NULL) < 0) {
+		odp_packet_free(ref);
 		return ODP_PACKET_INVALID;
 	}
-
-	ret = odp_packet_trunc_head(&new, offset, NULL, NULL);
-
-	if (ret < 0) {
-		_ODP_ERR("trunk_head failed\n");
-		odp_packet_free(new);
-		return ODP_PACKET_INVALID;
-	}
-
-	return new;
+	return ref;
 }
 
 odp_packet_t odp_packet_ref_pkt(odp_packet_t pkt, uint32_t offset,
@@ -2211,6 +2384,11 @@ int odp_packet_has_ref(odp_packet_t pkt)
 	}
 
 	return 0;
+}
+
+int odp_packet_is_referencing(odp_packet_t pkt)
+{
+	return packet_hdr(pkt)->p.flags.is_ref;
 }
 
 int _odp_packet_unshare(odp_packet_t *pkt)
@@ -2403,10 +2581,20 @@ uint32_t odp_packet_disassemble(odp_packet_t pkt, odp_packet_buf_t pkt_buf[], ui
 		return 0;
 	}
 
+	if (odp_unlikely(odp_packet_is_referencing(pkt))) {
+		_ODP_ERR("Packet references another packet.\n");
+		return 0;
+	}
+
 	seg = odp_packet_first_seg(pkt);
 
 	for (i = 0; i < num_segs; i++) {
-		pkt_buf[i] = (odp_packet_buf_t)(uintptr_t)packet_seg_to_hdr(seg);
+		pkt_hdr = packet_seg_to_hdr(seg);
+		if (odp_unlikely(segment_ref(pkt_hdr) > 1)) {
+			_ODP_ERR("Packet is referenced by another packet.\n");
+			return 0;
+		}
+		pkt_buf[i] = (odp_packet_buf_t)(uintptr_t)pkt_hdr;
 		seg = odp_packet_next_seg(pkt, seg);
 	}
 

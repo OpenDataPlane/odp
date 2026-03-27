@@ -117,9 +117,14 @@ typedef union {
 	uint32_t all_flags;
 
 	struct {
-		uint32_t reserved1:      4;
+		uint32_t reserved1:      3;
 
 	/*
+	 * Sharing flags
+	 */
+		uint32_t is_ref:         1; /* packet references other packets */
+
+		/*
 	 * Init flags
 	 */
 		uint32_t user_ptr_set:   1; /* User has set a non-NULL value */
@@ -155,8 +160,8 @@ typedef union {
 
 	/* Flag groups */
 	struct {
-		uint32_t reserved2:      4;
-		uint32_t other:         21; /* All other flags */
+		uint32_t reserved2:      3;
+		uint32_t other:         22; /* All other flags */
 		uint32_t error:          7; /* All error flags */
 	} all;
 
