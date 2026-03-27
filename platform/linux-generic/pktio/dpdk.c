@@ -1106,6 +1106,7 @@ static inline int pkt_to_mbuf_zero(pktio_entry_t *pktio_entry,
 			goto fail;
 
 		if (odp_likely(pkt_hdr->seg_count == 1 &&
+			       !pkt_hdr->seg_indirect &&
 			       odp_atomic_load_u32(&pkt_hdr->ref_cnt) <= 1)) {
 			mbuf_update(mbuf, pkt_hdr, pkt_len);
 
