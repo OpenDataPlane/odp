@@ -4,6 +4,8 @@
  * Copyright (c) 2020 Marvell
  */
 
+#include "packet_ref.h"
+
 #include <odp_api.h>
 #include <odp_cunit_common.h>
 #include <test_packet_ipv4.h>
@@ -400,7 +402,7 @@ static void packet_check_inflags_all(odp_packet_t pkt, int val)
  * allocation and metadata reset. Do not check metadata that does not
  * have well-defined defaults or is related to packet data layout.
  */
-static void packet_check_default_meta(odp_packet_t pkt)
+void packet_check_default_meta(odp_packet_t pkt)
 {
 	odp_event_t ev;
 	odp_event_subtype_t subtype = ODP_EVENT_NO_SUBTYPE;
@@ -4689,6 +4691,10 @@ odp_testinfo_t packet_parse_suite[] = {
 	ODP_TEST_INFO_NULL,
 };
 
+extern odp_testinfo_t packet_ref_suite[];
+int packet_ref_suite_init(void);
+int packet_ref_suite_term(void);
+
 odp_suiteinfo_t packet_suites[] = {
 	{ .name         = "packet tests",
 	  .testinfo_tbl = packet_suite,
@@ -4704,6 +4710,11 @@ odp_suiteinfo_t packet_suites[] = {
 	  .testinfo_tbl = packet_vector_parse_suite,
 	  .init_func    = packet_vector_suite_init,
 	  .term_func    = packet_vector_suite_term,
+	},
+	{ .name         = "packet ref tests",
+	  .testinfo_tbl = packet_ref_suite,
+	  .init_func    = packet_ref_suite_init,
+	  .term_func    = packet_ref_suite_term,
 	},
 	ODP_SUITE_INFO_NULL,
 };
