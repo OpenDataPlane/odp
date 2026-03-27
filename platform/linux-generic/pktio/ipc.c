@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2015-2018 Linaro Limited
- * Copyright (c) 2019-2022 Nokia
+ * Copyright (c) 2019-2026 Nokia
  */
 
 #include <odp/api/hints.h>
@@ -778,6 +778,7 @@ static int ipc_pktio_send_lockless(pktio_entry_t *pktio_entry,
 		pool = _odp_pool_entry(pkt_hdr->event_hdr.pool);
 
 		if (pool->pool_idx != ipc_pool->pool_idx ||
+		    odp_packet_is_referencing(pkt) ||
 		    odp_packet_has_ref(pkt)) {
 			odp_packet_t newpkt;
 

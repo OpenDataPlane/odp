@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright (c) 2022-2023 Nokia
+ * Copyright (c) 2022-2026 Nokia
  */
 
 #include <odp/autoheader_internal.h>
@@ -976,7 +976,9 @@ static int sock_xdp_send(pktio_entry_t *pktio_entry, int index, const odp_packet
 		pkt_hdr = packet_hdr(packets[i]);
 		seg_cnt = pkt_hdr->seg_count;
 
-		if (_odp_pool_entry(pkt_hdr->event_hdr.pool) != pool) {
+		if (_odp_pool_entry(pkt_hdr->event_hdr.pool) != pool ||
+		    odp_packet_is_referencing(packets[i]) ||
+		    odp_packet_has_ref(packets[i])) {
 			pkt = odp_packet_copy(packets[i], pool_hdl);
 
 			if (odp_unlikely(pkt == ODP_PACKET_INVALID)) {

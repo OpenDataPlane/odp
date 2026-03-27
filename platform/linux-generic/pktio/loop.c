@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2013-2018 Linaro Limited
- * Copyright (c) 2013-2025 Nokia Solutions and Networks
+ * Copyright (c) 2013-2026 Nokia Solutions and Networks
  */
 
 #include <odp/api/debug.h>
@@ -562,6 +562,7 @@ static int loopback_send(pktio_entry_t *pktio_entry, int index, const odp_packet
 			break;
 		}
 		if (odp_unlikely(odp_packet_pool(pkt) != pkt_loop->pool ||
+				 odp_packet_is_referencing(pkt) ||
 				 odp_packet_has_ref(pkt))) {
 			pkt = odp_packet_copy(pkt, pkt_loop->pool);
 			if (odp_unlikely(pkt == ODP_PACKET_INVALID)) {

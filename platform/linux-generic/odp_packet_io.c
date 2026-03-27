@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2013-2018 Linaro Limited
- * Copyright (c) 2019-2025 Nokia
+ * Copyright (c) 2019-2026 Nokia
  */
 
 #include <odp_posix_extensions.h>
@@ -1578,6 +1578,11 @@ int odp_pktio_capability(odp_pktio_t pktio, odp_pktio_capability_t *capa)
 	capa->lso.proto.custom           = 1;
 	capa->lso.mod_op.add_segment_num = 1;
 	capa->lso.mod_op.write_bits      = 1;
+
+	/* all pktios support packet references (by copying if necessary) */
+	capa->packet_ref.static_ref = 1;
+	capa->packet_ref.referencing_pkt = 1;
+	capa->packet_ref.referenced_pkt = 1;
 
 	capa->tx_compl.queue_type_sched = 1;
 	capa->tx_compl.queue_type_plain = 1;
