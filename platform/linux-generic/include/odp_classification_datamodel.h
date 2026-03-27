@@ -46,7 +46,9 @@ extern "C" {
 #define CLS_QUEUE_GROUP_MAX		(CLS_COS_MAX_ENTRY * CLS_COS_QUEUE_MAX)
 
 /* CoS index is stored in odp_packet_hdr_t */
-ODP_STATIC_ASSERT(CLS_COS_MAX_ENTRY <= UINT16_MAX, "CoS_does_not_fit_16_bits");
+ODP_STATIC_ASSERT(CLS_COS_MAX_ENTRY <= UINT8_MAX, "cos field in packet header is too small");
+ODP_STATIC_ASSERT(sizeof(((odp_packet_hdr_t *)0)->cos) == sizeof(uint8_t),
+		  "Unexpected cos field size in packet header");
 
 typedef union {
 	/* All proto fields */
