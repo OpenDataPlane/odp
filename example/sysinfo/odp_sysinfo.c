@@ -766,6 +766,8 @@ static void print_timer_capa(appl_args_t *appl_args)
 		printf("      min_tmo:            %" PRIu64 " nsec\n", capa->max_tmo.min_tmo);
 		printf("      max_tmo:            %" PRIu64 " nsec\n", capa->max_tmo.max_tmo);
 		printf("    periodic\n");
+		printf("      support.base_mul:   %u\n", capa->periodic.support.base_mul);
+		printf("      support.freq:       %u\n", capa->periodic.support.freq);
 		printf("      max_pools:          %u\n", capa->periodic.max_pools);
 		printf("      max_priority:       %u\n", capa->periodic.max_priority);
 		printf("      max_timers:         %u\n", capa->periodic.max_timers);
@@ -777,6 +779,14 @@ static void print_timer_capa(appl_args_t *appl_args)
 		       capa->periodic.max_base_freq_hz.integer,
 		       capa->periodic.max_base_freq_hz.numer,
 		       capa->periodic.max_base_freq_hz.denom);
+		printf("      min_freq_hz:        %" PRIu64 " %" PRIu64 "/%" PRIu64 " Hz\n",
+		       capa->periodic.min_freq_hz.integer,
+		       capa->periodic.min_freq_hz.numer,
+		       capa->periodic.min_freq_hz.denom);
+		printf("      max_freq_hz:        %" PRIu64 " %" PRIu64 "/%" PRIu64 " Hz\n",
+		       capa->periodic.max_freq_hz.integer,
+		       capa->periodic.max_freq_hz.numer,
+		       capa->periodic.max_freq_hz.denom);
 		printf("    timer pool tick info (max_res)\n");
 		printf("      freq:               %" PRIu64 " %" PRIu64 "/%" PRIu64 " Hz\n",
 		       info->tick_info.freq.integer,
