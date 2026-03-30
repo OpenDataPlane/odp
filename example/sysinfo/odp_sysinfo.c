@@ -787,6 +787,8 @@ static void print_timer_capa(appl_args_t *appl_args)
 		       capa->periodic.max_freq_hz.integer,
 		       capa->periodic.max_freq_hz.numer,
 		       capa->periodic.max_freq_hz.denom);
+		printf("      min_pending_tmo:    %" PRIu32 "\n", capa->periodic.min_pending_tmo);
+		printf("      max_pending_tmo:    %" PRIu32 "\n", capa->periodic.max_pending_tmo);
 		printf("    timer pool tick info (max_res)\n");
 		printf("      freq:               %" PRIu64 " %" PRIu64 "/%" PRIu64 " Hz\n",
 		       info->tick_info.freq.integer,
