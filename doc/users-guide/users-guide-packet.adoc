@@ -322,6 +322,7 @@ function like:
 int xmit_pkt(odp_pktout_queue_t queue, odp_packet_t pkt)
 {
 	odp_packet_t ref = odp_packet_ref_static(pkt);
+	/* send through a pktio that supports static packet references */
 	return ref == ODP_PACKET_INVALID ? -1 : odp_pktout_send(queue, ref, 1);
 }
 -----
@@ -330,7 +331,8 @@ This transmits a reference to `pkt` so that `pkt` is retained by the caller,
 which means that the caller is free to retransmit it if needed at a later
 time. When a higher level protocol (_e.g.,_ receipt of a TCP ACK packet)
 confirms that the transmission was successful, `pkt` can then be discarded via
-an `odp_packet_free()` call.
+an `odp_packet_free()` call. The pktio through which the reference is
+sent must support sending static packet references.
 
 The key characteristic of a static reference is that because there are
 multiple independent handles that refer to the same packet, the caller should
@@ -349,8 +351,9 @@ int odp_packet_has_ref(odp_packet_t pkt);
 -----
 
 that indicates whether other packets exist that share bytes with this
-packet. If this routine returns 0 then the caller can be assured that it is
-safe to modify it as this handle is the only reference to the packet.
+packet. If this routine returns 0 and the packet is not a dynamic reference,
+then the caller can be assured that it is safe to modify the packet as this
+handle is the only reference to the packet.
 
 ==== Dynamic References
 While static references are convenient and efficient, they are limited by the
@@ -380,12 +383,19 @@ image::ref.svg[align="center"]
 Following a successful reference creation, the bytes of `pkt` beginning at
 offset `offset` are shared with the created reference. These bytes should be
 treated as read only since multiple references point to them. Each reference,
-however still retains its own individual headroom and metadata that is not
-shared with any other reference. This allows unique headers to be created by
-calling `odp_packet_push_head()` or `odp_packet_extend_head()` on either
-handle. This allows multiple references to the same packet to prefix unique
-headers onto common shared data it so that they can be properly multicast
-using code such as:
+however, has its own metadata that is not shared with any other packet.
+
+Packet data and layout of the referenced packet `pkt` must not be
+modified as long as references to the packet exist. Packet layout of the
+referencing packet, `ref_pkt`, may be modified. The push and extend
+variants of packet manipulation functions always add non-shared data
+to a dynamic reference and pull and trunc functions remove any kind
+(shared or non-shared) data from the reference. Non-shared packet data
+of the referencing packet may be modified.
+
+Prefixing dynamic references with non-shared packet data makes it possible to
+have multiple packets that prefix the same packet data with unique headers,
+which enables multicast without packet data copying using code such as:
 
 [source,c]
 -----
@@ -400,6 +410,10 @@ int pkt_fanout(odp_packet_t payload, odp_queue_t fanout_queue[], int num_queues)
 
 Receiver worker threads can then operate on each reference to the packet in
 parallel to prefix a unique transmit header onto it and send it out.
+
+Dynamic references and referencing packets can be sent to a pktio only
+if the pktio advertises the capability to send such packets or if the
+packets are sent with the `ODP_PACKET_FREE_CTRL_DONT_FREE` option.
 
 ==== Dynamic References with Headers
 The dynamic references discussed so far have one drawback in that the headers
@@ -457,7 +471,7 @@ Here two separate header packets are prefixed onto the same shared packet, each
 at their own specified offset, which may or may not be the same. The result is
 three packets visible to the application:
 
-* The original `pkt`, which can still be accessed and manipulated directly.
+* The original `pkt`, which can still be accessed as read only.
 * The first reference, which consists of `hdr_pkt1` followed by bytes
 contained in `pkt` starting at `offset1`.
 * The second reference, which consists of `hdr_pkt2` followed by bytes
@@ -468,10 +482,9 @@ references exist.
 
 ===== Data Sharing with References
 Because a `pkt` is a shared object when referenced, applications must observe
-certain disciplines when working with them. For best portability and
-reliability, the shared data contained in any packet referred to by references
-should be treated as read only once it has been successfully referenced until
-it is known that all references to it have been freed.
+certain disciplines when working with them. Shared data contained in any
+packet should be treated as read only and all packet data of packets referenced
+by other packets should be treaded as read only.
 
 To assist applications in working with references, ODP provides the additional
 API:
@@ -481,24 +494,23 @@ API:
 int odp_packet_has_ref(odp_packet_t pkt);
 -----
 The `odp_packet_has_ref()` API says whether any other packets
-exist that share any bytes with this packet.
+exist that reference packet data of this packet.
 
-===== Compound References
-Note that architecturally ODP does not limit referencing and so it is possible
-that a reference may be used as a basis for creating another reference. The
-result is a _compound reference_ that should still behave as any other
+[source,c]
+-----
+int odp_packet_is_referencing(odp_packet_t pkt);
+-----
+The `odp_packet_is_referencing()` API says whether this packet is a dynamic
 reference.
 
-As noted earlier, the intent behind references is that they are lightweight
-objects that can be implemented without requiring data copies. The existence
-of compound references may complicate this goal for some implementations. As a
-result, implementations are always free to perform partial or full copies of
-packets as part of any reference creation call.
+===== Compound References
 
-Note also that a packet may not reference itself, nor may circular reference
-relationships be formed, _e.g.,_ packet A is used as a header for a reference
-to packet B and B is used as a header for a reference to packet A.  Results
-are undefined if such circular references are attempted.
+Static packet reference may be created to a packet it is already a static
+packet reference. Static packet reference may not be created to a packet
+that is a dynamic reference or a packet that is referenced by a dynamic
+reference. Dynamic references may not be created to packets that are
+static or dynamic references, but may be created to packets that are
+already referenced by another dynamic reference.
 
 === Packet Parsing, Checksum Processing, and Overrides
 Packet parsing is normally triggered automatically as part of packet RX
