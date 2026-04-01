@@ -419,11 +419,11 @@ static void set_random_md(odp_packet_t pkt)
 	uintptr_t addr = random_u32();
 
 	odp_packet_user_ptr_set(pkt, (const void *)addr);
-	odp_packet_l2_offset_set(pkt, random_u8() % len);
-	odp_packet_l3_offset_set(pkt, random_u8() % len);
-	odp_packet_l4_offset_set(pkt, random_u8() % len);
 	odp_packet_flow_hash_set(pkt, random_u32());
-	odp_packet_payload_offset_set(pkt, random_u8() % len);
+	CU_ASSERT(odp_packet_l2_offset_set(pkt, random_u8() % len) == 0);
+	CU_ASSERT(odp_packet_l3_offset_set(pkt, random_u8() % len) == 0);
+	CU_ASSERT(odp_packet_l4_offset_set(pkt, random_u8() % len) == 0);
+	CU_ASSERT(odp_packet_payload_offset_set(pkt, random_u8() % len) == 0);
 }
 
 static odp_packet_t make_packet(uint32_t len, uint32_t num_segs)
@@ -583,7 +583,7 @@ static void pkt_extend_head(odp_packet_t *pkt, uint32_t push_len)
 	check_pkt_data(&before, 0, &after, push_len, before.len);
 	CU_ASSERT(data_ptr == after.seg_info.segs[0].data);
 	CU_ASSERT(seg_len  == after.seg_info.segs[0].len);
-	CU_ASSERT(after.len = before.len + push_len);
+	CU_ASSERT(after.len == before.len + push_len);
 
 	if (before.headroom >= push_len) {
 		CU_ASSERT(rc == 0);
@@ -620,7 +620,7 @@ static void pkt_push_head(odp_packet_t *pkt, uint32_t push_len)
 	check_metadata_equal(&before.metadata, &after.metadata);
 	check_pkt_data(&before, 0, &after, push_len, before.len);
 	CU_ASSERT(data_ptr == after.seg_info.segs[0].data);
-	CU_ASSERT(after.len = before.len + push_len);
+	CU_ASSERT(after.len == before.len + push_len);
 	CU_ASSERT(after.head == before.head);
 	CU_ASSERT(after.data == before.data - push_len);
 	CU_ASSERT(after.tail  == before.tail);
@@ -652,7 +652,7 @@ static void pkt_trunc_head(odp_packet_t *pkt, uint32_t pull_len)
 	check_pkt_data(&before, pull_len, &after, 0, after.len);
 	CU_ASSERT(data_ptr == after.seg_info.segs[0].data);
 	CU_ASSERT(seg_len  == after.seg_info.segs[0].len);
-	CU_ASSERT(after.len = before.len - pull_len);
+	CU_ASSERT(after.len == before.len - pull_len);
 
 	if (before.seg_info.segs[0].len > pull_len) {
 		bool head_data_maybe_shared = (odp_packet_is_referencing(*pkt) &&
@@ -691,7 +691,7 @@ static void pkt_pull_head(odp_packet_t *pkt, uint32_t pull_len)
 	check_metadata_equal(&before.metadata, &after.metadata);
 	check_pkt_data(&before, pull_len, &after, 0, after.len);
 	CU_ASSERT(data_ptr == after.seg_info.segs[0].data);
-	CU_ASSERT(after.len = before.len - pull_len);
+	CU_ASSERT(after.len == before.len - pull_len);
 	CU_ASSERT(after.data == before.data + pull_len);
 	CU_ASSERT(after.tail  == before.tail);
 	CU_ASSERT(after.uarea == before.uarea);
@@ -720,7 +720,7 @@ static void pkt_extend_tail(odp_packet_t *pkt, uint32_t push_len)
 	check_metadata_equal(&before.metadata, &after.metadata);
 	check_pkt_data(&before, 0, &after, 0, before.len);
 
-	CU_ASSERT(after.len = before.len + push_len);
+	CU_ASSERT(after.len == before.len + push_len);
 
 	if (before.tailroom >= push_len) {
 		CU_ASSERT(rc == 0);
@@ -759,7 +759,7 @@ static void pkt_push_tail(odp_packet_t *pkt, uint32_t push_len)
 	check_metadata_equal(&before.metadata, &after.metadata);
 	check_pkt_data(&before, 0, &after, 0, before.len);
 
-	CU_ASSERT(after.len = before.len + push_len);
+	CU_ASSERT(after.len == before.len + push_len);
 	CU_ASSERT(after.head == before.head);
 	CU_ASSERT(after.data == before.data);
 	CU_ASSERT(after.tail  == before.tail + push_len);
@@ -792,7 +792,7 @@ static void pkt_trunc_tail(odp_packet_t *pkt, uint32_t pull_len)
 
 	CU_ASSERT(tail == after.tail);
 	CU_ASSERT(tailroom  == after.tailroom);
-	CU_ASSERT(after.len = before.len - pull_len);
+	CU_ASSERT(after.len == before.len - pull_len);
 
 	if (last_seg(&before.seg_info)->len > pull_len) {
 		bool tail_data_maybe_shared = (odp_packet_is_referencing(*pkt) &&
@@ -832,7 +832,7 @@ static void pkt_pull_tail(odp_packet_t *pkt, uint32_t pull_len)
 	check_metadata_equal(&before.metadata, &after.metadata);
 	check_pkt_data(&before, 0, &after, 0, after.len);
 
-	CU_ASSERT(after.len = before.len - pull_len);
+	CU_ASSERT(after.len == before.len - pull_len);
 	CU_ASSERT(after.head == before.head);
 	CU_ASSERT(after.data == before.data);
 	CU_ASSERT(after.tail  == before.tail - pull_len);
