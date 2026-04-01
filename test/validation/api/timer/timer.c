@@ -3931,7 +3931,6 @@ static void timer_test_periodic_flow_control(periodic_params_t *params, odp_queu
 	uint64_t duration_ns, diff_ns;
 	int ret;
 	uint32_t num_tmo = 0, max_pending_tmo;
-	odp_bool_t done = false;
 	odp_event_t tmo_tbl[MAX_FLOW_CTRL_TMOS];
 
 	/* Use minimum supported value for pending timeouts */
@@ -4024,12 +4023,10 @@ static void timer_test_periodic_flow_control(periodic_params_t *params, odp_queu
 		if (ev == ODP_EVENT_INVALID) {
 			t2 = odp_time_local();
 			diff_ns = odp_time_diff_ns(t2, t1);
-			if (diff_ns > duration_ns)
+			if (diff_ns > duration_ns) {
+				CU_FAIL("Last timeout not received");
 				break;
-
-			if (done)
-				break;
-
+			}
 			continue;
 		}
 
@@ -4043,13 +4040,10 @@ static void timer_test_periodic_flow_control(periodic_params_t *params, odp_queu
 		ret = odp_timer_periodic_ack(timer, ev);
 		CU_ASSERT(ret == 0 || ret == 1);
 
-		if (ret == 1) {
-			done = true;
+		if (ret == 1)
 			break;
-		}
 	}
 
-	CU_ASSERT(done);
 	CU_ASSERT(odp_timer_free(timer) == 0);
 	odp_timer_pool_destroy(timer_pool);
 	CU_ASSERT(odp_queue_destroy(queue) == 0);
