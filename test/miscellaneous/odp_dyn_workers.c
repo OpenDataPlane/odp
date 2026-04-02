@@ -1227,26 +1227,29 @@ static odp_bool_t run_global(global_config_t *config)
 			dump_result(prog->socket, prog->pid);
 	}
 
-	for (uint32_t i = 0U; i < config->num_progs; ++i) {
+	/* Tear down in reverse order so secondaries call odp_term_local
+	 * before the primary's odp_term_global frees shared resources. */
+	for (uint32_t i = config->num_progs; i-- > 0;) {
 		prog = &config->progs[i];
 
-		if (prog->state == UP) {
-			for (uint32_t j = 0U; j < MAX_WORKERS; ++j) {
-				ret = send_command(prog->socket, encode_cmd(REM_WORKER, j));
+		if (prog->state != UP)
+			continue;
 
-				if (ret == CONN_ERR || ret == PEER_ERR)
-					break;
+		for (uint32_t j = 0U; j < MAX_WORKERS; ++j) {
+			ret = send_command(prog->socket, encode_cmd(REM_WORKER, j));
 
-				if (ret != CMD_SUMMARY)
-					continue;
+			if (ret == CONN_ERR || ret == PEER_ERR)
+				break;
 
-				if (recv_summary(prog->socket, &prog->summary))
-					dump_summary(prog->pid, &prog->summary);
-			}
+			if (ret != CMD_SUMMARY)
+				continue;
 
-			(void)send_command(prog->socket, encode_cmd(EXIT_PROG, 0));
-			(void)TEMP_FAILURE_RETRY(waitpid(prog->pid, NULL, 0));
+			if (recv_summary(prog->socket, &prog->summary))
+				dump_summary(prog->pid, &prog->summary);
 		}
+
+		(void)send_command(prog->socket, encode_cmd(EXIT_PROG, 0));
+		(void)TEMP_FAILURE_RETRY(waitpid(prog->pid, NULL, 0));
 	}
 
 	return func_ret;
