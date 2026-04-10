@@ -1437,15 +1437,27 @@ static int dpdk_pktio_term(void)
 }
 
 static void prepare_rss_conf(pktio_entry_t *pktio_entry,
-			     const odp_pktin_queue_param_t *p, uint64_t rss_hf_capa)
+			     const odp_pktin_queue_param_t *p)
 {
+	struct rte_eth_dev_info dev_info;
+	uint64_t rss_hf_capa;
 	pkt_dpdk_t *pkt_dpdk = pkt_priv(pktio_entry);
+	uint16_t port_id = pkt_dpdk->port_id;
+	int ret;
 
 	memset(&pkt_dpdk->rss_conf, 0, sizeof(struct rte_eth_rss_conf));
 
 	/* Flow hashing not enabled */
 	if (!p->hash_enable)
 		return;
+
+	ret = rte_eth_dev_info_get(port_id, &dev_info);
+	if (ret) {
+		_ODP_ERR("Failed to read device info: %d\n", ret);
+		return;
+	}
+
+	rss_hf_capa = dev_info.flow_type_rss_offloads;
 
 	/* Flow hashing is enabled but device does not support RSS */
 	if (rss_hf_capa == 0) {
@@ -1493,21 +1505,11 @@ static void prepare_rss_conf(pktio_entry_t *pktio_entry,
 static int dpdk_input_queues_config(pktio_entry_t *pktio_entry,
 				    const odp_pktin_queue_param_t *p)
 {
-	struct rte_eth_dev_info dev_info;
 	pkt_dpdk_t *pkt_dpdk = pkt_priv(pktio_entry);
 	odp_pktin_mode_t mode = pktio_entry->param.in_mode;
 	uint8_t lockless;
-	uint16_t port_id = pkt_dpdk->port_id;
-	int ret;
 
-	ret  = rte_eth_dev_info_get(port_id, &dev_info);
-	if (ret) {
-		_ODP_ERR("DPDK: rte_eth_dev_info_get() failed with return value: %d, port: %u\n",
-			 ret, port_id);
-		return -1;
-	}
-
-	prepare_rss_conf(pktio_entry, p, dev_info.flow_type_rss_offloads);
+	prepare_rss_conf(pktio_entry, p);
 
 	/**
 	 * Scheduler synchronizes input queue polls. Only single thread
@@ -1522,23 +1524,25 @@ static int dpdk_input_queues_config(pktio_entry_t *pktio_entry,
 	/* Configure RX descriptors */
 	for (uint32_t i = 0; i  < p->num_queues; i++) {
 		uint16_t num_rx_desc = pkt_dpdk->opt.num_rx_desc_default;
+		int ret;
 
-		if (mode == ODP_PKTIN_MODE_DIRECT && p->queue_size[i] != 0) {
+		if (mode == ODP_PKTIN_MODE_DIRECT && p->queue_size[i] != 0)
 			num_rx_desc = p->queue_size[i];
-			/* Make sure correct alignment is used */
-			if (dev_info.rx_desc_lim.nb_align)
-				num_rx_desc = RTE_ALIGN_MUL_CEIL(num_rx_desc,
-								 dev_info.rx_desc_lim.nb_align);
-		}
 
-		if (num_rx_desc < dev_info.rx_desc_lim.nb_min ||
-		    num_rx_desc > dev_info.rx_desc_lim.nb_max ||
-		    num_rx_desc % dev_info.rx_desc_lim.nb_align) {
-			_ODP_ERR("DPDK: invalid number of RX descriptors (%" PRIu16 ") for queue "
-				 "%" PRIu32 "\n", num_rx_desc, i);
-			return -1;
+		/* Adjust descriptor count */
+		ret = rte_eth_dev_adjust_nb_rx_tx_desc(pkt_dpdk->port_id, &num_rx_desc, NULL);
+		if (ret) {
+			if (ret == -ENOTSUP) {
+				_ODP_DBG("rte_eth_dev_adjust_nb_rx_tx_desc() not supported\n");
+			} else {
+				_ODP_ERR("rte_eth_dev_adjust_nb_rx_tx_desc() failed: %d\n", ret);
+				return -1;
+			}
 		}
 		pkt_dpdk->num_rx_desc[i] = num_rx_desc;
+
+		_ODP_DBG("Port %" PRIu16 " RX queue %" PRIu32 " using %" PRIu16 " descriptors\n",
+			 pkt_dpdk->port_id, i, num_rx_desc);
 	}
 
 	return 0;
@@ -1547,11 +1551,8 @@ static int dpdk_input_queues_config(pktio_entry_t *pktio_entry,
 static int dpdk_output_queues_config(pktio_entry_t *pktio_entry,
 				     const odp_pktout_queue_param_t *p)
 {
-	struct rte_eth_dev_info dev_info;
 	pkt_dpdk_t *pkt_dpdk = pkt_priv(pktio_entry);
 	uint8_t lockless;
-	uint16_t port_id = pkt_dpdk->port_id;
-	int ret;
 
 	if (p->op_mode == ODP_PKTIO_OP_MT_UNSAFE)
 		lockless = 1;
@@ -1560,34 +1561,30 @@ static int dpdk_output_queues_config(pktio_entry_t *pktio_entry,
 
 	pkt_dpdk->flags.lockless_tx = lockless;
 
-	ret  = rte_eth_dev_info_get(port_id, &dev_info);
-	if (ret) {
-		_ODP_ERR("DPDK: rte_eth_dev_info_get() failed with return value: %d, port: %u\n",
-			 ret, port_id);
-		return -1;
-	}
-
 	/* Configure TX descriptors */
 	for (uint32_t i = 0; i  < p->num_queues; i++) {
 		uint16_t num_tx_desc = pkt_dpdk->opt.num_tx_desc_default;
+		int ret;
 
-		if (p->queue_size[i] != 0) {
+		if (p->queue_size[i] != 0)
 			num_tx_desc = p->queue_size[i];
-			/* Make sure correct alignment is used */
-			if (dev_info.tx_desc_lim.nb_align)
-				num_tx_desc = RTE_ALIGN_MUL_CEIL(num_tx_desc,
-								 dev_info.tx_desc_lim.nb_align);
-		}
 
-		if (num_tx_desc < dev_info.tx_desc_lim.nb_min ||
-		    num_tx_desc > dev_info.tx_desc_lim.nb_max ||
-		    num_tx_desc % dev_info.tx_desc_lim.nb_align) {
-			_ODP_ERR("DPDK: invalid number of TX descriptors (%" PRIu16 ") for queue "
-				 "%" PRIu32 "\n", num_tx_desc, i);
-			return -1;
+		/* Adjust descriptor count */
+		ret = rte_eth_dev_adjust_nb_rx_tx_desc(pkt_dpdk->port_id, NULL, &num_tx_desc);
+		if (ret) {
+			if (ret == -ENOTSUP) {
+				_ODP_DBG("rte_eth_dev_adjust_nb_rx_tx_desc() not supported\n");
+			} else {
+				_ODP_ERR("rte_eth_dev_adjust_nb_rx_tx_desc() failed: %d\n", ret);
+				return -1;
+			}
 		}
 		pkt_dpdk->num_tx_desc[i] = num_tx_desc;
+
+		_ODP_DBG("Port %" PRIu16 " TX queue %" PRIu32 " using %" PRIu16 " descriptors\n",
+			 pkt_dpdk->port_id, i, num_tx_desc);
 	}
+
 	return 0;
 }
 
