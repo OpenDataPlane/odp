@@ -1291,72 +1291,6 @@ static int dpdk_pktio_term(void)
 	return 0;
 }
 
-static void prepare_rss_conf(pktio_entry_t *pktio_entry,
-			     const odp_pktin_queue_param_t *p)
-{
-	struct rte_eth_dev_info dev_info;
-	uint64_t rss_hf_capa;
-	pkt_dpdk_t *pkt_dpdk = pkt_priv(pktio_entry);
-	uint16_t port_id = pkt_dpdk->port_id;
-	int ret;
-
-	memset(&pkt_dpdk->rss_conf, 0, sizeof(struct rte_eth_rss_conf));
-
-	/* Flow hashing not enabled */
-	if (!p->hash_enable)
-		return;
-
-	ret = rte_eth_dev_info_get(port_id, &dev_info);
-	if (ret) {
-		_ODP_ERR("Failed to read device info: %d\n", ret);
-		return;
-	}
-
-	rss_hf_capa = dev_info.flow_type_rss_offloads;
-
-	/* Flow hashing is enabled but device does not support RSS */
-	if (rss_hf_capa == 0) {
-		_ODP_WARN("DPDK: flow hashing is enabled but not supported by the device\n");
-		return;
-	}
-
-	/* Print debug info about unsupported hash protocols */
-	if (p->hash_proto.proto.ipv4 &&
-	    ((rss_hf_capa & RTE_ETH_RSS_IPV4) == 0))
-		_ODP_WARN("DPDK: hash_proto.ipv4 not supported (rss_hf_capa 0x%" PRIx64 ")\n",
-			  rss_hf_capa);
-
-	if (p->hash_proto.proto.ipv4_udp &&
-	    ((rss_hf_capa & RTE_ETH_RSS_NONFRAG_IPV4_UDP) == 0))
-		_ODP_WARN("DPDK: hash_proto.ipv4_udp not supported (rss_hf_capa 0x%" PRIx64 ")\n",
-			  rss_hf_capa);
-
-	if (p->hash_proto.proto.ipv4_tcp &&
-	    ((rss_hf_capa & RTE_ETH_RSS_NONFRAG_IPV4_TCP) == 0))
-		_ODP_WARN("DPDK: hash_proto.ipv4_tcp not supported (rss_hf_capa 0x%" PRIx64 ")\n",
-			  rss_hf_capa);
-
-	if (p->hash_proto.proto.ipv6 &&
-	    ((rss_hf_capa & RTE_ETH_RSS_IPV6) == 0))
-		_ODP_WARN("DPDK: hash_proto.ipv6 not supported (rss_hf_capa 0x%" PRIx64 ")\n",
-			  rss_hf_capa);
-
-	if (p->hash_proto.proto.ipv6_udp &&
-	    ((rss_hf_capa & RTE_ETH_RSS_NONFRAG_IPV6_UDP) == 0))
-		_ODP_WARN("DPDK: hash_proto.ipv6_udp not supported (rss_hf_capa 0x%" PRIx64 ")\n",
-			  rss_hf_capa);
-
-	if (p->hash_proto.proto.ipv6_tcp &&
-	    ((rss_hf_capa & RTE_ETH_RSS_NONFRAG_IPV6_TCP) == 0))
-		_ODP_WARN("DPDK: hash_proto.ipv6_tcp not supported (rss_hf_capa 0x%" PRIx64 ")\n",
-			  rss_hf_capa);
-
-	_odp_dpdk_hash_proto_to_rss_conf(&pkt_dpdk->rss_conf, &p->hash_proto);
-
-	/* Filter out unsupported hash functions */
-	pkt_dpdk->rss_conf.rss_hf &= rss_hf_capa;
-}
-
 static int dpdk_input_queues_config(pktio_entry_t *pktio_entry,
 				    const odp_pktin_queue_param_t *p)
 {
@@ -1364,7 +1298,8 @@ static int dpdk_input_queues_config(pktio_entry_t *pktio_entry,
 	odp_pktin_mode_t mode = pktio_entry->param.in_mode;
 	uint8_t lockless;
 
-	prepare_rss_conf(pktio_entry, p);
+	if (_odp_dpdk_prepare_rss_conf(pkt_dpdk->port_id, &pkt_dpdk->rss_conf, p))
+		return -1;
 
 	/**
 	 * Scheduler synchronizes input queue polls. Only single thread

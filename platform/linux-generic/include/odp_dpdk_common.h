@@ -182,8 +182,8 @@ static inline void _odp_dpdk_pkt_set_ol_tx(odp_pktout_config_opt_t *pktout_cfg,
 
 int _odp_dpdk_netdev_is_valid(const char *s);
 
-void _odp_dpdk_hash_proto_to_rss_conf(struct rte_eth_rss_conf *rss_conf,
-				      const odp_pktin_hash_proto_t *hash_proto);
+int _odp_dpdk_prepare_rss_conf(uint16_t port_id, struct rte_eth_rss_conf *rss_conf,
+			       const odp_pktin_queue_param_t *p);
 
 int _odp_dpdk_stats_common(uint16_t port_id, odp_pktio_stats_t *stats);
 int _odp_dpdk_stats_reset_common(uint16_t port_id);
