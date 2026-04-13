@@ -22,10 +22,10 @@
 
 #include <odp_classification_internal.h>
 #include <odp_debug_internal.h>
+#include <odp_dpdk_common.h>
 #include <odp_global_data.h>
 #include <odp_libconfig_internal.h>
 #include <odp_macros_internal.h>
-#include <odp_packet_dpdk.h>
 #include <odp_packet_internal.h>
 #include <odp_packet_io_internal.h>
 #include <protocols/eth.h>
@@ -754,117 +754,6 @@ fail:
 	return (i > 0 ? i : -1);
 }
 
-static inline int check_proto(void *l3_hdr, odp_bool_t *l3_proto_v4,
-			      uint8_t *l4_proto)
-{
-	uint8_t l3_proto_ver = _ODP_IPV4HDR_VER(*(uint8_t *)l3_hdr);
-
-	if (l3_proto_ver == _ODP_IPV4) {
-		struct rte_ipv4_hdr *ip = (struct rte_ipv4_hdr *)l3_hdr;
-
-		*l3_proto_v4 = 1;
-		if (!rte_ipv4_frag_pkt_is_fragmented(ip))
-			*l4_proto = ip->next_proto_id;
-		else
-			*l4_proto = 0;
-
-		return 0;
-	} else if (l3_proto_ver == _ODP_IPV6) {
-		struct rte_ipv6_hdr *ipv6 = (struct rte_ipv6_hdr *)l3_hdr;
-
-		*l3_proto_v4 = 0;
-		*l4_proto = ipv6->proto;
-		return 0;
-	}
-
-	return -1;
-}
-
-static inline uint16_t phdr_csum(odp_bool_t ipv4, void *l3_hdr,
-				 uint64_t ol_flags)
-{
-	if (ipv4)
-		return rte_ipv4_phdr_cksum(l3_hdr, ol_flags);
-	else /*ipv6*/
-		return rte_ipv6_phdr_cksum(l3_hdr, ol_flags);
-}
-
-#define OL_TX_CHKSUM_PKT(_cfg, _capa, _proto, _ovr_set, _ovr) \
-	(_capa && _proto && (_ovr_set ? _ovr : _cfg))
-
-static inline void pkt_set_ol_tx(odp_pktout_config_opt_t *pktout_cfg,
-				 odp_pktout_config_opt_t *pktout_capa,
-				 odp_packet_hdr_t *pkt_hdr,
-				 struct rte_mbuf *mbuf,
-				 char *mbuf_data)
-{
-	void *l3_hdr, *l4_hdr;
-	uint8_t l4_proto;
-	odp_bool_t l3_proto_v4;
-	odp_bool_t ipv4_chksum_pkt, udp_chksum_pkt, tcp_chksum_pkt;
-	packet_parser_t *pkt_p = &pkt_hdr->p;
-
-	if (pkt_p->l3_offset == ODP_PACKET_OFFSET_INVALID)
-		return;
-
-	l3_hdr = (void *)(mbuf_data + pkt_p->l3_offset);
-
-	if (check_proto(l3_hdr, &l3_proto_v4, &l4_proto))
-		return;
-
-	ipv4_chksum_pkt = OL_TX_CHKSUM_PKT(pktout_cfg->bit.ipv4_chksum,
-					   pktout_capa->bit.ipv4_chksum,
-					   l3_proto_v4,
-					   pkt_p->flags.l3_chksum_set,
-					   pkt_p->flags.l3_chksum);
-	udp_chksum_pkt =  OL_TX_CHKSUM_PKT(pktout_cfg->bit.udp_chksum,
-					   pktout_capa->bit.udp_chksum,
-					   (l4_proto == _ODP_IPPROTO_UDP),
-					   pkt_p->flags.l4_chksum_set,
-					   pkt_p->flags.l4_chksum);
-	tcp_chksum_pkt =  OL_TX_CHKSUM_PKT(pktout_cfg->bit.tcp_chksum,
-					   pktout_capa->bit.tcp_chksum,
-					   (l4_proto == _ODP_IPPROTO_TCP),
-					   pkt_p->flags.l4_chksum_set,
-					   pkt_p->flags.l4_chksum);
-
-	if (!ipv4_chksum_pkt && !udp_chksum_pkt && !tcp_chksum_pkt)
-		return;
-
-	mbuf->l2_len = pkt_p->l3_offset - pkt_p->l2_offset;
-
-	if (l3_proto_v4)
-		mbuf->ol_flags = RTE_MBUF_F_TX_IPV4;
-	else
-		mbuf->ol_flags = RTE_MBUF_F_TX_IPV6;
-
-	if (ipv4_chksum_pkt) {
-		mbuf->ol_flags |=  RTE_MBUF_F_TX_IP_CKSUM;
-
-		((struct rte_ipv4_hdr *)l3_hdr)->hdr_checksum = 0;
-		mbuf->l3_len = _ODP_IPV4HDR_IHL(*(uint8_t *)l3_hdr) * 4;
-	}
-
-	if (pkt_p->l4_offset == ODP_PACKET_OFFSET_INVALID)
-		return;
-
-	mbuf->l3_len = pkt_p->l4_offset - pkt_p->l3_offset;
-
-	l4_hdr = (void *)(mbuf_data + pkt_p->l4_offset);
-
-	if (udp_chksum_pkt) {
-		mbuf->ol_flags |= RTE_MBUF_F_TX_UDP_CKSUM;
-
-		((struct rte_udp_hdr *)l4_hdr)->dgram_cksum =
-			phdr_csum(l3_proto_v4, l3_hdr, mbuf->ol_flags);
-	} else if (tcp_chksum_pkt) {
-		mbuf->ol_flags |= RTE_MBUF_F_TX_TCP_CKSUM;
-
-		((struct rte_tcp_hdr *)l4_hdr)->cksum =
-			phdr_csum(l3_proto_v4, l3_hdr, mbuf->ol_flags);
-	}
-}
-
 static inline int pkt_to_mbuf(pktio_entry_t *pktio_entry,
 			      struct rte_mbuf *mbuf_table[],
 			      const odp_packet_t pkt_table[], uint16_t num,
@@ -896,8 +785,8 @@ static inline int pkt_to_mbuf(pktio_entry_t *pktio_entry,
 		odp_packet_copy_to_mem(pkt_table[i], 0, pkt_len, data);
 
 		if (odp_unlikely(chksum_enabled))
-			pkt_set_ol_tx(pktout_cfg, &pkt_dpdk->pktout_capa, pkt_hdr,
-				      mbuf_table[i], data);
+			_odp_dpdk_pkt_set_ol_tx(pktout_cfg, &pkt_dpdk->pktout_capa, pkt_hdr,
+						mbuf_table[i], data);
 
 		if (odp_unlikely(tx_ts_enabled)) {
 			if (odp_unlikely(*tx_ts_idx == 0 && pkt_hdr->p.flags.ts_set))
@@ -1109,8 +998,8 @@ static inline int pkt_to_mbuf_zero(pktio_entry_t *pktio_entry,
 			mbuf_update(mbuf, pkt_hdr, pkt_len);
 
 			if (odp_unlikely(chksum_enabled))
-				pkt_set_ol_tx(pktout_cfg, pktout_capa, pkt_hdr,
-					      mbuf, odp_packet_data(pkt));
+				_odp_dpdk_pkt_set_ol_tx(pktout_cfg, pktout_capa, pkt_hdr,
+							mbuf, odp_packet_data(pkt));
 		} else {
 			uint16_t dummy_idx = 0;
 
