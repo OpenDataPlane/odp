@@ -2112,88 +2112,12 @@ static int dpdk_capability(pktio_entry_t *pktio_entry,
 
 static int dpdk_link_status(pktio_entry_t *pktio_entry)
 {
-	struct rte_eth_link link;
-	uint16_t port_id = pkt_priv(pktio_entry)->port_id;
-	int ret;
-
-	memset(&link, 0, sizeof(struct rte_eth_link));
-
-	ret = rte_eth_link_get_nowait(port_id, &link);
-	if (ret != 0) {
-		_ODP_ERR("DPDK: rte_eth_link_get_nowait() failed with return value: %d, port: %u\n",
-			 ret, port_id);
-		return ODP_PKTIO_LINK_STATUS_UNKNOWN;
-	}
-	if (link.link_status)
-		return ODP_PKTIO_LINK_STATUS_UP;
-	return ODP_PKTIO_LINK_STATUS_DOWN;
+	return _odp_dpdk_link_status_common(pkt_priv(pktio_entry)->port_id);
 }
 
 static int dpdk_link_info(pktio_entry_t *pktio_entry, odp_pktio_link_info_t *info)
 {
-	struct rte_eth_link link;
-	struct rte_eth_fc_conf fc_conf;
-	uint16_t port_id = pkt_priv(pktio_entry)->port_id;
-	int ret;
-
-	memset(&fc_conf, 0, sizeof(struct rte_eth_fc_conf));
-	memset(&link, 0, sizeof(struct rte_eth_link));
-
-	ret = rte_eth_dev_flow_ctrl_get(port_id, &fc_conf);
-	if (ret && ret != -ENOTSUP) {
-		_ODP_ERR("rte_eth_dev_flow_ctrl_get() failed\n");
-		return -1;
-	}
-
-	ret = rte_eth_link_get_nowait(port_id, &link);
-	if (ret != 0) {
-		_ODP_ERR("DPDK: rte_eth_link_get_nowait() failed with return value: %d, port: %u\n",
-			 ret, port_id);
-		return -1;
-	}
-
-	memset(info, 0, sizeof(odp_pktio_link_info_t));
-	info->pause_rx = ODP_PKTIO_LINK_PAUSE_OFF;
-	info->pause_tx = ODP_PKTIO_LINK_PAUSE_OFF;
-	if (fc_conf.mode == RTE_ETH_FC_RX_PAUSE) {
-		info->pause_rx = ODP_PKTIO_LINK_PAUSE_ON;
-	} else if (fc_conf.mode == RTE_ETH_FC_TX_PAUSE) {
-		info->pause_tx = ODP_PKTIO_LINK_PAUSE_ON;
-	} else if (fc_conf.mode == RTE_ETH_FC_FULL) {
-		info->pause_rx = ODP_PKTIO_LINK_PAUSE_ON;
-		info->pause_tx = ODP_PKTIO_LINK_PAUSE_ON;
-	}
-
-	if (link.link_autoneg == RTE_ETH_LINK_AUTONEG)
-		info->autoneg = ODP_PKTIO_LINK_AUTONEG_ON;
-	else
-		info->autoneg = ODP_PKTIO_LINK_AUTONEG_OFF;
-
-	if (link.link_duplex == RTE_ETH_LINK_FULL_DUPLEX)
-		info->duplex = ODP_PKTIO_LINK_DUPLEX_FULL;
-	else
-		info->duplex = ODP_PKTIO_LINK_DUPLEX_HALF;
-
-	if (link.link_speed == RTE_ETH_SPEED_NUM_NONE)
-		info->speed = ODP_PKTIO_LINK_SPEED_UNKNOWN;
-	else
-		info->speed = link.link_speed;
-
-	if (link.link_status == RTE_ETH_LINK_UP)
-		info->status = ODP_PKTIO_LINK_STATUS_UP;
-	else
-		info->status = ODP_PKTIO_LINK_STATUS_DOWN;
-
-#if RTE_VERSION >= RTE_VERSION_NUM(25, 11, 0, 0)
-	if (link.link_connector == RTE_ETH_LINK_CONNECTOR_NONE)
-		info->media = "unknown";
-	else
-		info->media = rte_eth_link_connector_to_str(link.link_connector);
-#else
-	info->media = "unknown";
-#endif
-
-	return 0;
+	return _odp_dpdk_link_info_common(pkt_priv(pktio_entry)->port_id, info);
 }
 
 static int dpdk_stats(pktio_entry_t *pktio_entry, odp_pktio_stats_t *stats)
