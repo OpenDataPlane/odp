@@ -13,6 +13,7 @@
 
 #include <protocols/ip.h>
 
+#include <rte_ethdev.h>
 #include <rte_mbuf.h>
 #include <rte_ip.h>
 #include <rte_ip_frag.h>
@@ -178,5 +179,10 @@ static inline void _odp_dpdk_pkt_set_ol_tx(odp_pktout_config_opt_t *pktout_cfg,
 			_odp_dpdk_phdr_csum(l3_proto_v4, l3_hdr, mbuf->ol_flags);
 	}
 }
+
+int _odp_dpdk_netdev_is_valid(const char *s);
+
+void _odp_dpdk_hash_proto_to_rss_conf(struct rte_eth_rss_conf *rss_conf,
+				      const odp_pktin_hash_proto_t *hash_proto);
 
 #endif
