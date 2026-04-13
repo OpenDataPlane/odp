@@ -197,4 +197,7 @@ int _odp_dpdk_pktin_stats_common(uint16_t port_id, uint32_t index,
 int _odp_dpdk_pktout_stats_common(uint16_t port_id, uint32_t index,
 				  odp_pktout_queue_stats_t *pktout_stats);
 
+int _odp_dpdk_link_status_common(uint16_t port_id);
+int _odp_dpdk_link_info_common(uint16_t port_id, odp_pktio_link_info_t *info);
+
 #endif

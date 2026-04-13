@@ -247,6 +247,101 @@ int _odp_dpdk_pktout_stats_common(uint16_t port_id ODP_UNUSED, uint32_t index OD
 }
 #endif
 
+int _odp_dpdk_link_status_common(uint16_t port_id)
+{
+	struct rte_eth_link link;
+	int ret;
+
+	ret = rte_eth_link_get_nowait(port_id, &link);
+	if (odp_unlikely(ret)) {
+		if (ret == -ENOTSUP)
+			_ODP_DBG("rte_eth_link_get_nowait() not supported\n");
+		else
+			_ODP_ERR("rte_eth_link_get_nowait() failed: %d\n", ret);
+		return ODP_PKTIO_LINK_STATUS_UNKNOWN;
+	}
+
+	return link.link_status ? ODP_PKTIO_LINK_STATUS_UP : ODP_PKTIO_LINK_STATUS_DOWN;
+}
+
+int _odp_dpdk_link_info_common(uint16_t port_id, odp_pktio_link_info_t *info)
+{
+	struct rte_eth_link link;
+	struct rte_eth_fc_conf fc_conf;
+	odp_pktio_link_info_t link_info;
+	int ret;
+
+	memset(&link_info, 0, sizeof(odp_pktio_link_info_t));
+
+	ret = rte_eth_dev_flow_ctrl_get(port_id, &fc_conf);
+	if (ret) {
+		if (ret != -ENOTSUP) {
+			_ODP_ERR("rte_eth_dev_flow_ctrl_get() failed: %d\n", ret);
+			return -1;
+		}
+		_ODP_DBG("rte_eth_dev_flow_ctrl_get() not supported\n");
+		link_info.pause_rx = ODP_PKTIO_LINK_PAUSE_UNKNOWN;
+		link_info.pause_tx = ODP_PKTIO_LINK_PAUSE_UNKNOWN;
+	} else {
+		link_info.pause_rx = ODP_PKTIO_LINK_PAUSE_OFF;
+		link_info.pause_tx = ODP_PKTIO_LINK_PAUSE_OFF;
+		if (fc_conf.mode == RTE_ETH_FC_RX_PAUSE) {
+			link_info.pause_rx = ODP_PKTIO_LINK_PAUSE_ON;
+		} else if (fc_conf.mode == RTE_ETH_FC_TX_PAUSE) {
+			link_info.pause_tx = ODP_PKTIO_LINK_PAUSE_ON;
+		} else if (fc_conf.mode == RTE_ETH_FC_FULL) {
+			link_info.pause_rx = ODP_PKTIO_LINK_PAUSE_ON;
+			link_info.pause_tx = ODP_PKTIO_LINK_PAUSE_ON;
+		}
+	}
+
+	ret = rte_eth_link_get_nowait(port_id, &link);
+	if (ret) {
+		if (ret != -ENOTSUP) {
+			_ODP_ERR("rte_eth_link_get_nowait() failed: %d\n", ret);
+			return -1;
+		}
+		_ODP_DBG("rte_eth_link_get_nowait() not supported\n");
+		link_info.autoneg = ODP_PKTIO_LINK_AUTONEG_UNKNOWN;
+		link_info.duplex = ODP_PKTIO_LINK_DUPLEX_UNKNOWN;
+		link_info.speed = ODP_PKTIO_LINK_SPEED_UNKNOWN;
+		link_info.status = ODP_PKTIO_LINK_STATUS_UNKNOWN;
+		link_info.media = "unknown";
+	} else {
+		if (link.link_autoneg == RTE_ETH_LINK_AUTONEG)
+			link_info.autoneg = ODP_PKTIO_LINK_AUTONEG_ON;
+		else
+			link_info.autoneg = ODP_PKTIO_LINK_AUTONEG_OFF;
+
+		if (link.link_duplex == RTE_ETH_LINK_FULL_DUPLEX)
+			link_info.duplex = ODP_PKTIO_LINK_DUPLEX_FULL;
+		else
+			link_info.duplex = ODP_PKTIO_LINK_DUPLEX_HALF;
+
+		if (link.link_speed == RTE_ETH_SPEED_NUM_NONE)
+			link_info.speed = ODP_PKTIO_LINK_SPEED_UNKNOWN;
+		else
+			link_info.speed = link.link_speed;
+
+		if (link.link_status == RTE_ETH_LINK_UP)
+			link_info.status = ODP_PKTIO_LINK_STATUS_UP;
+		else
+			link_info.status = ODP_PKTIO_LINK_STATUS_DOWN;
+
+#if RTE_VERSION >= RTE_VERSION_NUM(25, 11, 0, 0)
+		if (link.link_connector == RTE_ETH_LINK_CONNECTOR_NONE)
+			link_info.media = "unknown";
+		else
+			link_info.media = rte_eth_link_connector_to_str(link.link_connector);
+#else
+		link_info.media = "unknown";
+#endif
+	}
+
+	*info = link_info;
+	return 0;
+}
+
 #else
 /* Avoid warning about empty translation unit */
 typedef int _odp_dummy;
