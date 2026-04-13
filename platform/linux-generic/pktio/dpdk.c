@@ -1022,17 +1022,6 @@ fail:
 	return  i > 0 ? i : -1;
 }
 
-/* Test if s has only digits or not. Dpdk pktio uses only digits.*/
-static int dpdk_netdev_is_valid(const char *s)
-{
-	while (*s) {
-		if (!isdigit(*s))
-			return 0;
-		s++;
-	}
-	return 1;
-}
-
 static uint32_t dpdk_maxlen(pktio_entry_t *pktio_entry)
 {
 	pkt_dpdk_t *pkt_dpdk = pkt_priv(pktio_entry);
@@ -1057,29 +1046,6 @@ static int dpdk_maxlen_set(pktio_entry_t *pktio_entry, uint32_t maxlen_input,
 		pkt_dpdk->mtu = maxlen_input;
 
 	return ret;
-}
-
-static void hash_proto_to_rss_conf(struct rte_eth_rss_conf *rss_conf,
-				   const odp_pktin_hash_proto_t *hash_proto)
-{
-	if (hash_proto->proto.ipv4_udp)
-		rss_conf->rss_hf |= RTE_ETH_RSS_NONFRAG_IPV4_UDP;
-	if (hash_proto->proto.ipv4_tcp)
-		rss_conf->rss_hf |= RTE_ETH_RSS_NONFRAG_IPV4_TCP;
-	if (hash_proto->proto.ipv4)
-		rss_conf->rss_hf |= RTE_ETH_RSS_IPV4 | RTE_ETH_RSS_FRAG_IPV4 |
-				    RTE_ETH_RSS_NONFRAG_IPV4_OTHER;
-	if (hash_proto->proto.ipv6_udp)
-		rss_conf->rss_hf |= RTE_ETH_RSS_NONFRAG_IPV6_UDP |
-				    RTE_ETH_RSS_IPV6_UDP_EX;
-	if (hash_proto->proto.ipv6_tcp)
-		rss_conf->rss_hf |= RTE_ETH_RSS_NONFRAG_IPV6_TCP |
-				    RTE_ETH_RSS_IPV6_TCP_EX;
-	if (hash_proto->proto.ipv6)
-		rss_conf->rss_hf |= RTE_ETH_RSS_IPV6 | RTE_ETH_RSS_FRAG_IPV6 |
-				    RTE_ETH_RSS_NONFRAG_IPV6_OTHER |
-				    RTE_ETH_RSS_IPV6_EX;
-	rss_conf->rss_key = NULL;
 }
 
 static int dpdk_setup_eth_dev(pktio_entry_t *pktio_entry)
@@ -1385,7 +1351,7 @@ static void prepare_rss_conf(pktio_entry_t *pktio_entry,
 		_ODP_WARN("DPDK: hash_proto.ipv6_tcp not supported (rss_hf_capa 0x%" PRIx64 ")\n",
 			  rss_hf_capa);
 
-	hash_proto_to_rss_conf(&pkt_dpdk->rss_conf, &p->hash_proto);
+	_odp_dpdk_hash_proto_to_rss_conf(&pkt_dpdk->rss_conf, &p->hash_proto);
 
 	/* Filter out unsupported hash functions */
 	pkt_dpdk->rss_conf.rss_hf &= rss_hf_capa;
@@ -1677,7 +1643,7 @@ static int dpdk_open(odp_pktio_t id ODP_UNUSED,
 
 	if (!rte_eth_dev_get_port_by_name(netdev, &port_id))
 		pkt_dpdk->port_id = port_id;
-	else if (dpdk_netdev_is_valid(netdev))
+	else if (_odp_dpdk_netdev_is_valid(netdev))
 		pkt_dpdk->port_id = atoi(netdev);
 	else {
 		_ODP_ERR("Invalid DPDK interface name: %s\n", netdev);
