@@ -2196,186 +2196,43 @@ static int dpdk_link_info(pktio_entry_t *pktio_entry, odp_pktio_link_info_t *inf
 	return 0;
 }
 
-static void stats_convert(const struct rte_eth_stats *rte_stats,
-			  odp_pktio_stats_t *stats)
-{
-	memset(stats, 0, sizeof(odp_pktio_stats_t));
-
-	stats->in_octets = rte_stats->ibytes;
-	stats->in_packets = rte_stats->ipackets;
-	stats->in_discards = rte_stats->imissed;
-	stats->in_errors = rte_stats->ierrors;
-	stats->out_octets = rte_stats->obytes;
-	stats->out_packets = rte_stats->opackets;
-	stats->out_errors = rte_stats->oerrors;
-}
-
 static int dpdk_stats(pktio_entry_t *pktio_entry, odp_pktio_stats_t *stats)
 {
-	int ret;
-	struct rte_eth_stats rte_stats;
-
-	ret = rte_eth_stats_get(pkt_priv(pktio_entry)->port_id, &rte_stats);
-
-	if (ret == 0) {
-		stats_convert(&rte_stats, stats);
-		return 0;
-	}
-	return -1;
+	return _odp_dpdk_stats_common(pkt_priv(pktio_entry)->port_id, stats);
 }
 
 static int dpdk_stats_reset(pktio_entry_t *pktio_entry)
 {
-	uint16_t port_id = pkt_priv(pktio_entry)->port_id;
-
-	(void)rte_eth_stats_reset(port_id);
-	(void)rte_eth_xstats_reset(port_id);
-	return 0;
+	return _odp_dpdk_stats_reset_common(pkt_priv(pktio_entry)->port_id);
 }
 
 static int dpdk_extra_stat_info(pktio_entry_t *pktio_entry,
 				odp_pktio_extra_stat_info_t info[], int num)
 {
-	uint16_t port_id = pkt_priv(pktio_entry)->port_id;
-	int num_stats, ret, i;
-
-	num_stats = rte_eth_xstats_get_names(port_id, NULL, 0);
-	if (num_stats < 0) {
-		_ODP_ERR("rte_eth_xstats_get_names() failed: %d\n", num_stats);
-		return num_stats;
-	} else if (info == NULL || num == 0 || num_stats == 0) {
-		return num_stats;
-	}
-
-	struct rte_eth_xstat_name xstats_names[num_stats];
-
-	ret = rte_eth_xstats_get_names(port_id, xstats_names, num_stats);
-	if (ret < 0 || ret > num_stats) {
-		_ODP_ERR("rte_eth_xstats_get_names() failed: %d\n", ret);
-		return -1;
-	}
-	num_stats = ret;
-
-	for (i = 0; i < num && i < num_stats; i++)
-		_odp_strcpy(info[i].name, xstats_names[i].name,
-			    ODP_PKTIO_STATS_EXTRA_NAME_LEN);
-
-	return num_stats;
+	return _odp_dpdk_extra_stat_info_common(pkt_priv(pktio_entry)->port_id, info, num);
 }
 
-static int dpdk_extra_stats(pktio_entry_t *pktio_entry,
-			    uint64_t stats[], int num)
+static int dpdk_extra_stats(pktio_entry_t *pktio_entry, uint64_t stats[], int num)
 {
-	uint16_t port_id = pkt_priv(pktio_entry)->port_id;
-	int num_stats, ret, i;
-
-	num_stats = rte_eth_xstats_get(port_id, NULL, 0);
-	if (num_stats < 0) {
-		_ODP_ERR("rte_eth_xstats_get() failed: %d\n", num_stats);
-		return num_stats;
-	} else if (stats == NULL || num == 0 || num_stats == 0) {
-		return num_stats;
-	}
-
-	struct rte_eth_xstat xstats[num_stats];
-
-	ret = rte_eth_xstats_get(port_id, xstats, num_stats);
-	if (ret < 0 || ret > num_stats) {
-		_ODP_ERR("rte_eth_xstats_get() failed: %d\n", ret);
-		return -1;
-	}
-	num_stats = ret;
-
-	for (i = 0; i < num && i < num_stats; i++)
-		stats[i] = xstats[i].value;
-
-	return num_stats;
+	return _odp_dpdk_extra_stats_common(pkt_priv(pktio_entry)->port_id, stats, num);
 }
 
-static int dpdk_extra_stat_counter(pktio_entry_t *pktio_entry, uint32_t id,
-				   uint64_t *stat)
+static int dpdk_extra_stat_counter(pktio_entry_t *pktio_entry, uint32_t id, uint64_t *stat)
 {
-	uint16_t port_id = pkt_priv(pktio_entry)->port_id;
-	uint64_t xstat_id = id;
-	int ret;
-
-	ret = rte_eth_xstats_get_by_id(port_id, &xstat_id, stat, 1);
-	if (ret != 1) {
-		_ODP_ERR("rte_eth_xstats_get_by_id() failed: %d\n", ret);
-		return -1;
-	}
-
-	return 0;
+	return _odp_dpdk_extra_stat_counter_common(pkt_priv(pktio_entry)->port_id, id, stat);
 }
 
-#if RTE_VERSION < RTE_VERSION_NUM(25, 11, 0, 0)
 static int dpdk_pktin_stats(pktio_entry_t *pktio_entry, uint32_t index,
 			    odp_pktin_queue_stats_t *pktin_stats)
 {
-	struct rte_eth_stats rte_stats;
-	int ret;
-
-	if (odp_unlikely(index > RTE_ETHDEV_QUEUE_STAT_CNTRS - 1)) {
-		_ODP_ERR("DPDK supports max %d per queue counters\n", RTE_ETHDEV_QUEUE_STAT_CNTRS);
-		return -1;
-	}
-
-	ret = rte_eth_stats_get(pkt_priv(pktio_entry)->port_id, &rte_stats);
-	if (odp_unlikely(ret)) {
-		_ODP_ERR("Failed to read DPDK pktio stats: %d\n", ret);
-		return -1;
-	}
-
-	memset(pktin_stats, 0, sizeof(odp_pktin_queue_stats_t));
-
-	pktin_stats->packets = rte_stats.q_ipackets[index];
-	pktin_stats->octets = rte_stats.q_ibytes[index];
-	pktin_stats->errors = rte_stats.q_errors[index];
-
-	return 0;
+	return _odp_dpdk_pktin_stats_common(pkt_priv(pktio_entry)->port_id, index, pktin_stats);
 }
-#else
-static int dpdk_pktin_stats(pktio_entry_t *pktio_entry ODP_UNUSED, uint32_t index ODP_UNUSED,
-			    odp_pktin_queue_stats_t *pktin_stats)
-{
-	memset(pktin_stats, 0, sizeof(*pktin_stats));
-	return 0;
-}
-#endif
 
-#if RTE_VERSION < RTE_VERSION_NUM(25, 11, 0, 0)
 static int dpdk_pktout_stats(pktio_entry_t *pktio_entry, uint32_t index,
 			     odp_pktout_queue_stats_t *pktout_stats)
 {
-	struct rte_eth_stats rte_stats;
-	int ret;
-
-	if (odp_unlikely(index > RTE_ETHDEV_QUEUE_STAT_CNTRS - 1)) {
-		_ODP_ERR("DPDK supports max %d per queue counters\n", RTE_ETHDEV_QUEUE_STAT_CNTRS);
-		return -1;
-	}
-
-	ret = rte_eth_stats_get(pkt_priv(pktio_entry)->port_id, &rte_stats);
-	if (odp_unlikely(ret)) {
-		_ODP_ERR("Failed to read DPDK pktio stats: %d\n", ret);
-		return -1;
-	}
-
-	memset(pktout_stats, 0, sizeof(odp_pktout_queue_stats_t));
-
-	pktout_stats->packets = rte_stats.q_opackets[index];
-	pktout_stats->octets = rte_stats.q_obytes[index];
-
-	return 0;
+	return _odp_dpdk_pktout_stats_common(pkt_priv(pktio_entry)->port_id, index, pktout_stats);
 }
-#else
-static int dpdk_pktout_stats(pktio_entry_t *pktio_entry ODP_UNUSED, uint32_t index ODP_UNUSED,
-			     odp_pktout_queue_stats_t *pktout_stats)
-{
-	memset(pktout_stats, 0, sizeof(*pktout_stats));
-	return 0;
-}
-#endif
 
 const pktio_if_ops_t _odp_dpdk_pktio_ops = {
 	.name = "dpdk",

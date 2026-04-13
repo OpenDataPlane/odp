@@ -185,4 +185,16 @@ int _odp_dpdk_netdev_is_valid(const char *s);
 void _odp_dpdk_hash_proto_to_rss_conf(struct rte_eth_rss_conf *rss_conf,
 				      const odp_pktin_hash_proto_t *hash_proto);
 
+int _odp_dpdk_stats_common(uint16_t port_id, odp_pktio_stats_t *stats);
+int _odp_dpdk_stats_reset_common(uint16_t port_id);
+
+int _odp_dpdk_extra_stat_info_common(uint16_t port_id, odp_pktio_extra_stat_info_t info[], int num);
+int _odp_dpdk_extra_stats_common(uint16_t port_id, uint64_t stats[], int num);
+int _odp_dpdk_extra_stat_counter_common(uint16_t port_id, uint32_t id, uint64_t *stat);
+
+int _odp_dpdk_pktin_stats_common(uint16_t port_id, uint32_t index,
+				 odp_pktin_queue_stats_t *pktin_stats);
+int _odp_dpdk_pktout_stats_common(uint16_t port_id, uint32_t index,
+				  odp_pktout_queue_stats_t *pktout_stats);
+
 #endif
