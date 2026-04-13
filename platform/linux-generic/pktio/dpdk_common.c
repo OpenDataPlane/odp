@@ -32,8 +32,8 @@ int _odp_dpdk_netdev_is_valid(const char *s)
 	return 1;
 }
 
-void _odp_dpdk_hash_proto_to_rss_conf(struct rte_eth_rss_conf *rss_conf,
-				      const odp_pktin_hash_proto_t *hash_proto)
+static void hash_proto_to_rss_conf(struct rte_eth_rss_conf *rss_conf,
+				   const odp_pktin_hash_proto_t *hash_proto)
 {
 	if (hash_proto->proto.ipv4_udp)
 		rss_conf->rss_hf |= RTE_ETH_RSS_NONFRAG_IPV4_UDP;
@@ -53,6 +53,72 @@ void _odp_dpdk_hash_proto_to_rss_conf(struct rte_eth_rss_conf *rss_conf,
 				    RTE_ETH_RSS_NONFRAG_IPV6_OTHER |
 				    RTE_ETH_RSS_IPV6_EX;
 	rss_conf->rss_key = NULL;
+}
+
+int _odp_dpdk_prepare_rss_conf(uint16_t port_id, struct rte_eth_rss_conf *rss_conf,
+			       const odp_pktin_queue_param_t *p)
+{
+	struct rte_eth_dev_info dev_info;
+	uint64_t rss_hf_capa;
+	int ret;
+
+	memset(rss_conf, 0, sizeof(struct rte_eth_rss_conf));
+
+	/* Flow hashing not enabled */
+	if (!p->hash_enable)
+		return 0;
+
+	ret = rte_eth_dev_info_get(port_id, &dev_info);
+	if (ret) {
+		_ODP_ERR("rte_eth_dev_info_get() failed: %d\n", ret);
+		return -1;
+	}
+
+	rss_hf_capa = dev_info.flow_type_rss_offloads;
+
+	/* Flow hashing is enabled but device does not support RSS */
+	if (rss_hf_capa == 0) {
+		_ODP_WARN("DPDK: flow hashing is enabled but not supported by the device\n");
+		return 0;
+	}
+
+	/* Print debug info about unsupported hash protocols */
+	if (p->hash_proto.proto.ipv4 &&
+	    ((rss_hf_capa & RTE_ETH_RSS_IPV4) == 0))
+		_ODP_WARN("DPDK: hash_proto.ipv4 not supported (rss_hf_capa 0x%" PRIx64 ")\n",
+			  rss_hf_capa);
+
+	if (p->hash_proto.proto.ipv4_udp &&
+	    ((rss_hf_capa & RTE_ETH_RSS_NONFRAG_IPV4_UDP) == 0))
+		_ODP_WARN("DPDK: hash_proto.ipv4_udp not supported (rss_hf_capa 0x%" PRIx64 ")\n",
+			  rss_hf_capa);
+
+	if (p->hash_proto.proto.ipv4_tcp &&
+	    ((rss_hf_capa & RTE_ETH_RSS_NONFRAG_IPV4_TCP) == 0))
+		_ODP_WARN("DPDK: hash_proto.ipv4_tcp not supported (rss_hf_capa 0x%" PRIx64 ")\n",
+			  rss_hf_capa);
+
+	if (p->hash_proto.proto.ipv6 &&
+	    ((rss_hf_capa & RTE_ETH_RSS_IPV6) == 0))
+		_ODP_WARN("DPDK: hash_proto.ipv6 not supported (rss_hf_capa 0x%" PRIx64 ")\n",
+			  rss_hf_capa);
+
+	if (p->hash_proto.proto.ipv6_udp &&
+	    ((rss_hf_capa & RTE_ETH_RSS_NONFRAG_IPV6_UDP) == 0))
+		_ODP_WARN("DPDK: hash_proto.ipv6_udp not supported (rss_hf_capa 0x%" PRIx64 ")\n",
+			  rss_hf_capa);
+
+	if (p->hash_proto.proto.ipv6_tcp &&
+	    ((rss_hf_capa & RTE_ETH_RSS_NONFRAG_IPV6_TCP) == 0))
+		_ODP_WARN("DPDK: hash_proto.ipv6_tcp not supported (rss_hf_capa 0x%" PRIx64 ")\n",
+			  rss_hf_capa);
+
+	hash_proto_to_rss_conf(rss_conf, &p->hash_proto);
+
+	/* Filter out unsupported hash functions */
+	rss_conf->rss_hf &= rss_hf_capa;
+
+	return 0;
 }
 
 int _odp_dpdk_stats_common(uint16_t port_id, odp_pktio_stats_t *stats)
