@@ -1,4 +1,6 @@
-#!/bin/bash -x
+#!/usr/bin/env bash
+
+set -o xtrace
 
 PATCHES=$1
 echo "Run checkpatch for ${PATCHES}"
