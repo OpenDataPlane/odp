@@ -75,7 +75,7 @@ typedef struct odp_event_aggr_config_t {
 	 * Event type of event aggregator. If 'event_type' is ODP_EVENT_ANY,
 	 * application is allowed to enqueue any event types, except event
 	 * vectors, to the event aggregator. Otherwise, only events of type
-	 * 'event_type' are allowed. The default value is ODP_EVENT_ANY.
+	 * 'event_type' are allowed.
 	 *
 	 * Regardless of 'event_type', an application is never allowed to
 	 * enqueue event vector or packet vector events (ODP_EVENT_VECTOR or
