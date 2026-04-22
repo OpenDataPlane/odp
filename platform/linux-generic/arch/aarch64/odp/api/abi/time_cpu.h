@@ -15,7 +15,7 @@ static inline uint64_t _odp_time_cpu_global(void)
 {
 	uint64_t cntvct;
 
-	__asm__ volatile("mrs %0, cntvct_el0" : "=r"(cntvct) : : "memory");
+	__asm__ volatile("mrs %0, cntvct_el0" : "=r"(cntvct));
 
 	return cntvct;
 }
