@@ -100,10 +100,10 @@ _ODP_INLINE uint64_t odp_time_to_ns(odp_time_t time)
 
 _ODP_INLINE int odp_time_cmp(odp_time_t t2, odp_time_t t1)
 {
-	if (odp_likely(t2.u64 > t1.u64))
+	if (odp_likely(t2 > t1))
 		return 1;
 
-	if (t2.u64 < t1.u64)
+	if (t2 < t1)
 		return -1;
 
 	return 0;
@@ -111,38 +111,22 @@ _ODP_INLINE int odp_time_cmp(odp_time_t t2, odp_time_t t1)
 
 _ODP_INLINE odp_time_t odp_time_diff(odp_time_t t2, odp_time_t t1)
 {
-	odp_time_t time;
-
-	time.u64 = t2.u64 - t1.u64;
-
-	return time;
+	return t2 - t1;
 }
 
 _ODP_INLINE uint64_t odp_time_diff_ns(odp_time_t t2, odp_time_t t1)
 {
-	odp_time_t time;
-
-	time.u64 = t2.u64 - t1.u64;
-
-	return odp_time_to_ns(time);
+	return odp_time_to_ns(t2 - t1);
 }
 
 _ODP_INLINE odp_time_t odp_time_add_ns(odp_time_t time, uint64_t ns)
 {
-	odp_time_t t = _odp_time_from_ns(ns);
-
-	t.u64 += time.u64;
-
-	return t;
+	return time + _odp_time_from_ns(ns);
 }
 
 _ODP_INLINE odp_time_t odp_time_sum(odp_time_t t1, odp_time_t t2)
 {
-	odp_time_t time;
-
-	time.u64 = t1.u64 + t2.u64;
-
-	return time;
+	return t1 + t2;
 }
 
 _ODP_INLINE odp_time_t odp_time_local_from_ns(uint64_t ns)
