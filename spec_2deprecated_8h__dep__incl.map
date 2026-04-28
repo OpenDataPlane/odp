@@ -1,0 +1,13 @@
+<map id="deprecated.h" name="deprecated.h">
+<area shape="rect" id="node1" title="Macro for deprecated API definitions." alt="" coords="201,5,308,32"/>
+<area shape="rect" id="node2" href="$deprecated_8h.html" title="Control deprecated API definitions." alt="" coords="201,80,308,107"/>
+<area shape="rect" id="node3" href="$api_2spec_2crypto__types_8h.html" title="ODP crypto types." alt="" coords="147,155,266,181"/>
+<area shape="rect" id="node7" href="$odp__api_8h.html" title="The OpenDataPlane API." alt="" coords="144,603,229,629"/>
+<area shape="rect" id="node4" href="$api_2crypto__types_8h.html" title="ODP crypto." alt="" coords="103,229,222,256"/>
+<area shape="rect" id="node5" href="$api_2spec_2crypto_8h.html" title="ODP crypto." alt="" coords="5,304,80,331"/>
+<area shape="rect" id="node8" href="$api_2spec_2ipsec_8h.html" title="ODP IPsec API." alt="" coords="153,453,221,480"/>
+<area shape="rect" id="node10" href="$api_2spec_2ipsec__types_8h.html" title="ODP IPsec API type definitions." alt="" coords="155,304,266,331"/>
+<area shape="rect" id="node6" href="$api_2crypto_8h.html" title="ODP crypto." alt="" coords="36,453,111,480"/>
+<area shape="rect" id="node9" href="$api_2ipsec_8h.html" title="ODP IPSEC API &#45; platform specific header." alt="" coords="153,528,221,555"/>
+<area shape="rect" id="node11" href="$api_2ipsec__types_8h.html" title="ODP IPsec." alt="" coords="155,379,266,405"/>
+</map>
