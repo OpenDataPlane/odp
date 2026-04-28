@@ -282,6 +282,11 @@ static int parse_args(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
+	if (glb->opt.warmup < 0) {
+		ODPH_ERR("Invalid number of warmup rounds: %d\n", glb->opt.warmup);
+		exit(EXIT_FAILURE);
+	}
+
 	printf("Options:\n");
 	printf("--------\n");
 	printf("model_name: %s\n", glb->opt.model_name);
@@ -456,7 +461,7 @@ static void dequantize_output(uint8_t *out_d_addr, uint8_t *out_q_addr)
 
 static int test_ml(void *ptr)
 {
-	odp_time_t time;
+	odp_time_t time = ODP_TIME_NULL;
 	odp_ml_data_seg_t inp_seg[MAX_IO];
 	uint8_t *inp_addr;
 	odp_ml_data_seg_t out_seg[MAX_IO];
@@ -588,7 +593,7 @@ error:
 
 static int test_ml_create(void *ptr)
 {
-	odp_time_t time;
+	odp_time_t time = ODP_TIME_NULL;
 	int thread_idx = (int)(uintptr_t)ptr;
 	odp_ml_model_t mdl;
 	odp_ml_model_param_t model_param;
@@ -630,7 +635,7 @@ error:
 
 static int test_ml_load(void *ptr)
 {
-	odp_time_t time;
+	odp_time_t time = ODP_TIME_NULL;
 	int thread_idx = (int)(uintptr_t)ptr;
 	odp_ml_model_t mdl;
 	odp_ml_model_param_t model_param;

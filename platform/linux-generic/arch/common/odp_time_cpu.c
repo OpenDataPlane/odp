@@ -40,6 +40,25 @@ int _odp_time_init_global(void)
 
 	_ODP_PRINT("HW time counter freq: %" PRIu64 " hz\n\n", global->freq_hz);
 
+#ifdef __SIZEOF_INT128__
+	/* Find the maximum shift for which the multiplier fits into 64 bits */
+	for (global->shift_to_ns = 63; global->shift_to_ns > 0; global->shift_to_ns--) {
+		if ((((__uint128_t)_ODP_TIME_GIGA_HZ << global->shift_to_ns) /
+		     global->freq_hz) <= UINT64_MAX)
+			break;
+	}
+	global->mult_to_ns = (uint64_t)(((__uint128_t)_ODP_TIME_GIGA_HZ << global->shift_to_ns) /
+					global->freq_hz);
+
+	for (global->shift_from_ns = 63; global->shift_from_ns > 0; global->shift_from_ns--) {
+		if ((((__uint128_t)global->freq_hz << global->shift_from_ns) /
+		     ODP_TIME_SEC_IN_NS) <= UINT64_MAX)
+			break;
+	}
+	global->mult_from_ns = (uint64_t)(((__uint128_t)global->freq_hz << global->shift_from_ns) /
+					  ODP_TIME_SEC_IN_NS);
+#endif
+
 	count = _odp_time_cpu_global();
 	time.count = count;
 	global->start_time = count;
