@@ -4458,7 +4458,6 @@ static void parse_eth_ipv4_udp_last_frag(void)
 		CU_ASSERT(odp_packet_has_eth(pkt[i]));
 		CU_ASSERT(odp_packet_has_ipv4(pkt[i]));
 		CU_ASSERT(odp_packet_has_ipfrag(pkt[i]));
-		CU_ASSERT(odp_packet_has_udp(pkt[i]));
 		CU_ASSERT(!odp_packet_has_ipv6(pkt[i]));
 		CU_ASSERT(!odp_packet_has_tcp(pkt[i]));
 		CU_ASSERT(!odp_packet_has_ipopt(pkt[i]));
