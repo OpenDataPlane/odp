@@ -112,7 +112,8 @@ error:
 static inline uint8_t parse_ipv4(packet_parser_t *prs, const uint8_t **parseptr,
 				 uint32_t *offset, uint32_t frame_len,
 				 odp_pktin_config_opt_t opt,
-				 uint64_t *l4_part_sum)
+				 uint64_t *l4_part_sum,
+				 odp_bool_t *non_first_frag)
 {
 	const _odp_ipv4hdr_t *ipv4 = (const _odp_ipv4hdr_t *)*parseptr;
 	uint32_t dstaddr = odp_be_to_cpu_32(ipv4->dst_addr);
@@ -154,8 +155,12 @@ static inline uint8_t parse_ipv4(packet_parser_t *prs, const uint8_t **parseptr,
 	*     OR
 	*  "fragment offset" field is nonzero (all fragments except the first)
 	*/
-	if (odp_unlikely(_ODP_IPV4HDR_IS_FRAGMENT(frag_offset)))
+	if (odp_unlikely(_ODP_IPV4HDR_IS_FRAGMENT(frag_offset))) {
 		prs->input_flags.ipfrag = 1;
+
+		if (_ODP_IPV4HDR_FRAG_OFFSET(frag_offset) != 0)
+			*non_first_frag = true;
+	}
 
 	/* Handle IPv4 broadcast / multicast */
 	if (odp_unlikely(dstaddr == 0xffffffff))
@@ -362,6 +367,7 @@ int _odp_packet_parse_common_l3_l4(packet_parser_t *prs,
 				   odp_pktin_config_opt_t opt)
 {
 	uint8_t  ip_proto;
+	odp_bool_t non_first_frag = false;
 
 	prs->l3_offset = offset;
 
@@ -376,7 +382,7 @@ int _odp_packet_parse_common_l3_l4(packet_parser_t *prs,
 	case _ODP_ETHTYPE_IPV4:
 		prs->input_flags.ipv4 = 1;
 		ip_proto = parse_ipv4(prs, &parseptr, &offset, frame_len,
-				      opt, l4_part_sum);
+				      opt, l4_part_sum, &non_first_frag);
 		if (odp_likely(!prs->flags.ip_err))
 			prs->l4_offset = offset;
 		else if (opt.bit.drop_ipv4_err)
@@ -406,7 +412,6 @@ int _odp_packet_parse_common_l3_l4(packet_parser_t *prs,
 	if (layer == ODP_PROTO_LAYER_L3)
 		return prs->flags.all.error != 0;
 
-	/* Set l4 flag only for known ip_proto */
 	prs->input_flags.l4 = 1;
 
 	/* Parse Layer 4 headers */
@@ -423,9 +428,12 @@ int _odp_packet_parse_common_l3_l4(packet_parser_t *prs,
 		break;
 
 	case _ODP_IPPROTO_TCP:
+		prs->input_flags.tcp = 1;
+		/* Non-first IP fragments do not contain an L4 header */
+		if (odp_unlikely(non_first_frag))
+			return prs->flags.all.error != 0;
 		if (odp_unlikely(offset + _ODP_TCPHDR_LEN > seg_end))
 			return -1;
-		prs->input_flags.tcp = 1;
 		parse_tcp(prs, &parseptr, frame_len - prs->l4_offset, opt,
 			  l4_part_sum);
 		if (prs->flags.tcp_err && opt.bit.drop_tcp_err)
@@ -433,9 +441,12 @@ int _odp_packet_parse_common_l3_l4(packet_parser_t *prs,
 		break;
 
 	case _ODP_IPPROTO_UDP:
+		prs->input_flags.udp = 1;
+		/* Non-first IP fragments do not contain an L4 header */
+		if (odp_unlikely(non_first_frag))
+			return prs->flags.all.error != 0;
 		if (odp_unlikely(offset + _ODP_UDPHDR_LEN > seg_end))
 			return -1;
-		prs->input_flags.udp = 1;
 		parse_udp(prs, &parseptr, opt, l4_part_sum);
 		if (prs->flags.udp_err && opt.bit.drop_udp_err)
 			return -1; /* drop */
@@ -453,6 +464,11 @@ int _odp_packet_parse_common_l3_l4(packet_parser_t *prs,
 
 	case _ODP_IPPROTO_SCTP:
 		prs->input_flags.sctp = 1;
+		/* Non-first IP fragments do not contain an L4 header */
+		if (odp_unlikely(non_first_frag))
+			return prs->flags.all.error != 0;
+		if (odp_unlikely(offset + _ODP_SCTPHDR_LEN > seg_end))
+			return -1;
 		parse_sctp(prs, &parseptr, frame_len - prs->l4_offset, opt,
 			   l4_part_sum);
 		if (prs->flags.sctp_err && opt.bit.drop_sctp_err)
