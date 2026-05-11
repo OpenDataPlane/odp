@@ -283,9 +283,17 @@ static void print_usage(void)
 	       "                            format: protocol,payload_offset(B),max_payload_len(B). E.g.:\n"
 	       "                              0,34,1500\n"
 	       "                            In case of ODP_LSO_PROTO_CUSTOM the list is extended by\n"
-	       "                            up to %d custom modification options in format:\n"
-	       "                            mod_op:offset(B):size(B) separated by commas. E.g.:\n"
+	       "                            up to %d custom modification options. For ODP_LSO_ADD_*\n"
+	       "                            operations the format is:\n"
+	       "                              mod_op:offset(B):size(B)\n"
+	       "                            For ODP_LSO_WRITE_BITS the format is:\n"
+	       "                              mod_op:offset(B):size(B):fm:fv:mm:mv:lm:lv\n"
+	       "                            where size must be 1 and fm/fv, mm/mv, lm/lv are the\n"
+	       "                            mask/value byte pairs (in hex) to write to the first,\n"
+	       "                            middle and last segments respectively. Custom modification\n"
+	       "                            options are separated by commas. E.g.:\n"
 	       "                              2,22,1500,0:19:1\n"
+	       "                              2,22,1500,3:19:1:0xff:0x80:0xff:0x00:0xff:0x40\n"
 	       "                            Supported protocols:\n"
 	       "                              0: ODP_LSO_PROTO_IPV4\n"
 	       "                              1: ODP_LSO_PROTO_TCP_IPV4\n"
@@ -294,6 +302,7 @@ static void print_usage(void)
 	       "                              0: ODP_LSO_ADD_SEGMENT_NUM\n"
 	       "                              1: ODP_LSO_ADD_PAYLOAD_LEN\n"
 	       "                              2: ODP_LSO_ADD_PAYLOAD_OFFSET\n"
+	       "                              3: ODP_LSO_WRITE_BITS\n"
 	       "                            Depending on the implementation, all listed LSO options\n"
 	       "                            may not be always supported.\n"
 	       "  -n, --num_pkt             Number of packets in the pool. Default: 1000\n"
@@ -587,6 +596,9 @@ static odp_bool_t parse_lso_fields(const char *optarg, test_options_t *opts)
 			opts->lso.param.custom.field[num_custom].mod_op =
 				ODP_LSO_ADD_PAYLOAD_OFFSET;
 			break;
+		case 3:
+			opts->lso.param.custom.field[num_custom].mod_op = ODP_LSO_WRITE_BITS;
+			break;
 		default:
 			ODPH_ERR("Error: Invalid custom LSO operation: %" PRIu32 "\n", mod_op);
 			ret_val = false;
@@ -595,12 +607,55 @@ static odp_bool_t parse_lso_fields(const char *optarg, test_options_t *opts)
 
 		opts->lso.param.custom.field[num_custom].offset = offset;
 
-		if (size != 1 && size != 2 && size != 4 && size != 8) {
+		if (mod_op == 3 && size != 1) {
+			ODPH_ERR("Error: ODP_LSO_WRITE_BITS requires size of 1 byte"
+				 " (got %" PRIu32 ")\n", size);
+			ret_val = false;
+			goto exit;
+		} else if (mod_op != 3 && size != 1 && size != 2 && size != 4 && size != 8) {
 			ODPH_ERR("Error: Invalid custom field size: %" PRIu32 "\n", size);
 			ret_val = false;
 			goto exit;
 		}
+
 		opts->lso.param.custom.field[num_custom].size = size;
+
+		if (mod_op == 3) {
+			/* Parse first/middle/last mask and value byte pairs */
+			uint32_t f_mask, f_val, m_mask, m_val, l_mask, l_val;
+
+			ret = sscanf(tmp, "%*u" FIELD_DELIMITER "%*u" FIELD_DELIMITER "%*u"
+				     FIELD_DELIMITER "%" SCNu32 FIELD_DELIMITER "%" SCNu32
+				     FIELD_DELIMITER "%" SCNu32 FIELD_DELIMITER "%" SCNu32
+				     FIELD_DELIMITER "%" SCNu32 FIELD_DELIMITER "%" SCNu32,
+				     &f_mask, &f_val, &m_mask, &m_val, &l_mask, &l_val);
+
+			if (ret != 6) {
+				ODPH_ERR("Error: ODP_LSO_WRITE_BITS requires 6 mask/value bytes\n");
+				ret_val = false;
+				goto exit;
+			}
+
+			if (f_mask > UINT8_MAX || f_val > UINT8_MAX || m_mask > UINT8_MAX ||
+			    m_val > UINT8_MAX || l_mask > UINT8_MAX || l_val > UINT8_MAX) {
+				ODPH_ERR("Error: ODP_LSO_WRITE_BITS mask/value byte out of range\n");
+				ret_val = false;
+				goto exit;
+			}
+
+			opts->lso.param.custom.field[num_custom].write_bits.first_seg.mask[0] =
+				f_mask;
+			opts->lso.param.custom.field[num_custom].write_bits.first_seg.value[0] =
+				f_val;
+			opts->lso.param.custom.field[num_custom].write_bits.middle_seg.mask[0] =
+				m_mask;
+			opts->lso.param.custom.field[num_custom].write_bits.middle_seg.value[0] =
+				m_val;
+			opts->lso.param.custom.field[num_custom].write_bits.last_seg.mask[0] =
+				l_mask;
+			opts->lso.param.custom.field[num_custom].write_bits.last_seg.value[0] =
+				l_val;
+		}
 
 		num_custom++;
 		tmp = strtok(NULL, TOKEN_DELIMITER);
@@ -1239,6 +1294,12 @@ static int check_lso_capa(char *name, odp_pktio_capability_t *pktio_capa,
 					 name);
 				return -1;
 			}
+			if (opt->lso.param.custom.field[i].mod_op == ODP_LSO_WRITE_BITS &&
+			    !pktio_capa->lso.mod_op.write_bits) {
+				ODPH_ERR("Error (%s): ODP_LSO_WRITE_BITS not supported\n",
+					 name);
+				return -1;
+			}
 		}
 	}
 
@@ -1364,17 +1425,49 @@ static int open_pktios(test_global_t *global)
 		       test_options->lso.max_payload_len);
 
 		for (i = 0; i < test_options->lso.param.custom.num_custom; i++) {
-			printf("    Custom operation %" PRIu32 ":   %s\n", i + 1,
-			       test_options->lso.param.custom.field[i].mod_op ==
-					ODP_LSO_ADD_SEGMENT_NUM ?
-			       "ODP_LSO_ADD_SEGMENT_NUM" :
-			       test_options->lso.param.custom.field[i].mod_op ==
-					ODP_LSO_ADD_PAYLOAD_LEN ?
-			       "ODP_LSO_ADD_PAYLOAD_LEN" : "ODP_LSO_ADD_PAYLOAD_OFFSET");
-			printf("      offset:             %" PRIu32 " bytes\n",
+			const odp_lso_modify_t mod_op =
+				test_options->lso.param.custom.field[i].mod_op;
+			const char *mod_op_str;
+
+			switch (mod_op) {
+			case ODP_LSO_ADD_SEGMENT_NUM:
+				mod_op_str = "ODP_LSO_ADD_SEGMENT_NUM";
+				break;
+			case ODP_LSO_ADD_PAYLOAD_LEN:
+				mod_op_str = "ODP_LSO_ADD_PAYLOAD_LEN";
+				break;
+			case ODP_LSO_ADD_PAYLOAD_OFFSET:
+				mod_op_str = "ODP_LSO_ADD_PAYLOAD_OFFSET";
+				break;
+			case ODP_LSO_WRITE_BITS:
+				mod_op_str = "ODP_LSO_WRITE_BITS";
+				break;
+			default:
+				mod_op_str = "UNKNOWN";
+				break;
+			}
+
+			printf("    Custom operation %" PRIu32 ": %s\n", i + 1, mod_op_str);
+			printf("      offset:           %" PRIu32 " bytes\n",
 			       test_options->lso.param.custom.field[i].offset);
-			printf("      size:               %" PRIu32 " bytes\n",
+			printf("      size:             %" PRIu32 " bytes\n",
 			       test_options->lso.param.custom.field[i].size);
+
+			if (mod_op == ODP_LSO_WRITE_BITS) {
+				const odp_lso_write_bits_t *fs =
+				     &test_options->lso.param.custom.field[i].write_bits.first_seg;
+				const odp_lso_write_bits_t *ms =
+				    &test_options->lso.param.custom.field[i].write_bits.middle_seg;
+				const odp_lso_write_bits_t *ls =
+				      &test_options->lso.param.custom.field[i].write_bits.last_seg;
+
+				printf("      first seg:        0x%02x/0x%02x\n",
+				       fs->value[0], fs->mask[0]);
+				printf("      middle seg:       0x%02x/0x%02x\n",
+				       ms->value[0], ms->mask[0]);
+				printf("      last seg:         0x%02x/0x%02x\n",
+				       ls->value[0], ls->mask[0]);
+			}
 		}
 	}
 
