@@ -1229,10 +1229,12 @@ odp_packet_t odp_packet_ref_static(odp_packet_t pkt);
  * - odp_packet_{pull,trunc}_{head,tail}() functions can be used normally.
  *   Pulling and truncation can include shared packet data, in which case
  *   the shared packet data area shrinks. It is possible to pull or truncate
- *   the packet so much that it no longer shares any packet data, but that
- *   does not stop the referencing relationship between the packets and
- *   the restrictions that apply to the referencing and referenced packet
- *   still hold.
+ *   the packet so much that it no longer shares any packet data. In this case
+ *   it is implementation specific to what extent the referencing relationship
+ *   between the packets still holds. An application may use
+ *   odp_packet_is_referencing() on the referencing packet and
+ *   odp_packet_has_ref() on the referenced packet to determine, individually
+ *   for each packet, whether the referencing restrictions still apply.
  *
  * - odp_packet_{push,extend}_{head,tail}() functions can be used normally.
  *   The new packet data created by the functions is always private, even if
