@@ -403,7 +403,7 @@ static int data_type_supported(odp_ml_data_type_t data_type)
 	}
 }
 
-static void quantize_input(uint8_t *inp_q_addr, uint8_t *inp_d_addr)
+static void quantize_input(uint8_t *inp_q_addr, float *inp_d_addr)
 {
 	for (int i = 0; i < glb->num_inp; i++) {
 		float scale_q = glb->opt.scale_q;
@@ -412,26 +412,26 @@ static void quantize_input(uint8_t *inp_q_addr, uint8_t *inp_d_addr)
 
 		switch (data_type) {
 		case ODP_ML_DATA_TYPE_INT8:
-			odp_ml_fp32_to_int8((int8_t *)inp_q_addr, (float *)inp_d_addr, elems,
+			odp_ml_fp32_to_int8((int8_t *)inp_q_addr, inp_d_addr, elems,
 					    scale_q, 0);
 			break;
 		case ODP_ML_DATA_TYPE_UINT8:
-			odp_ml_fp32_to_uint8((uint8_t *)inp_q_addr, (float *)inp_d_addr, elems,
+			odp_ml_fp32_to_uint8((uint8_t *)inp_q_addr, inp_d_addr, elems,
 					     scale_q, 0);
 			break;
 		case ODP_ML_DATA_TYPE_FP16:
-			odp_ml_fp32_to_fp16((uint16_t *)inp_q_addr, (float *)inp_d_addr, elems);
+			odp_ml_fp32_to_fp16((uint16_t *)(void *)inp_q_addr, inp_d_addr, elems);
 			break;
 		default:
 			ODPH_ERR("Unsupported type %d for input %d\n", data_type, i);
 		}
 
 		inp_q_addr += glb->inp[i].size;
-		inp_d_addr += elems * sizeof(float);
+		inp_d_addr += elems;
 	}
 }
 
-static void dequantize_output(uint8_t *out_d_addr, uint8_t *out_q_addr)
+static void dequantize_output(float *out_d_addr, uint8_t *out_q_addr)
 {
 	for (int i = 0; i < glb->num_out; i++) {
 		float scale_d = glb->opt.scale_d;
@@ -440,22 +440,22 @@ static void dequantize_output(uint8_t *out_d_addr, uint8_t *out_q_addr)
 
 		switch (data_type) {
 		case ODP_ML_DATA_TYPE_INT8:
-			odp_ml_fp32_from_int8((float *)out_d_addr, (int8_t *)out_q_addr, elems,
+			odp_ml_fp32_from_int8(out_d_addr, (int8_t *)out_q_addr, elems,
 					      scale_d, 0);
 			break;
 		case ODP_ML_DATA_TYPE_UINT8:
-			odp_ml_fp32_from_uint8((float *)out_d_addr, (uint8_t *)out_q_addr, elems,
+			odp_ml_fp32_from_uint8(out_d_addr, (uint8_t *)out_q_addr, elems,
 					       scale_d, 0);
 			break;
 		case ODP_ML_DATA_TYPE_FP16:
-			odp_ml_fp32_from_fp16((float *)out_d_addr, (uint16_t *)out_q_addr, elems);
+			odp_ml_fp32_from_fp16(out_d_addr, (uint16_t *)(void *)out_q_addr, elems);
 			break;
 		default:
 			ODPH_ERR("Unsupported type %d for output %d\n", data_type, i);
 		}
 
 		out_q_addr += glb->out[i].size;
-		out_d_addr += elems * sizeof(float);
+		out_d_addr += elems;
 	}
 }
 

@@ -279,7 +279,7 @@ static void calc_io_size(void)
 	printf("Output size_q: %" PRIu64 ", size_d: %" PRIu64 "\n", glb.out_size_q, glb.out_size_d);
 }
 
-static int quantize_input(uint8_t *inp_q_addr, uint8_t *inp_d_addr)
+static int quantize_input(uint8_t *inp_q_addr, float *inp_d_addr)
 {
 	for (int i = 0; i < glb.num_inp; i++) {
 		float scale_q = glb.opt.scale_q;
@@ -288,15 +288,15 @@ static int quantize_input(uint8_t *inp_q_addr, uint8_t *inp_d_addr)
 
 		switch (info->data_type) {
 		case ODP_ML_DATA_TYPE_INT8:
-			odp_ml_fp32_to_int8((int8_t *)inp_q_addr, (float *)inp_d_addr, elems,
+			odp_ml_fp32_to_int8((int8_t *)inp_q_addr, inp_d_addr, elems,
 					    scale_q, 0);
 			break;
 		case ODP_ML_DATA_TYPE_UINT8:
-			odp_ml_fp32_to_uint8((uint8_t *)inp_q_addr, (float *)inp_d_addr, elems,
+			odp_ml_fp32_to_uint8((uint8_t *)inp_q_addr, inp_d_addr, elems,
 					     scale_q, 0);
 			break;
 		case ODP_ML_DATA_TYPE_FP16:
-			odp_ml_fp32_to_fp16((uint16_t *)inp_q_addr, (float *)inp_d_addr, elems);
+			odp_ml_fp32_to_fp16((uint16_t *)(void *)inp_q_addr, inp_d_addr, elems);
 			break;
 		default:
 			ODPH_ERR("Unsupported type %d for input %d\n", info->data_type, i);
@@ -304,13 +304,13 @@ static int quantize_input(uint8_t *inp_q_addr, uint8_t *inp_d_addr)
 		}
 
 		inp_q_addr += glb.inp[i].size;
-		inp_d_addr += elems * sizeof(float);
+		inp_d_addr += elems;
 	}
 
 	return 0;
 }
 
-static int dequantize_output(uint8_t *out_d_addr, uint8_t *out_q_addr)
+static int dequantize_output(float *out_d_addr, uint8_t *out_q_addr)
 {
 	for (int i = 0; i < glb.num_out; i++) {
 		float scale_d = glb.opt.scale_d;
@@ -319,15 +319,15 @@ static int dequantize_output(uint8_t *out_d_addr, uint8_t *out_q_addr)
 
 		switch (info->data_type) {
 		case ODP_ML_DATA_TYPE_INT8:
-			odp_ml_fp32_from_int8((float *)out_d_addr, (int8_t *)out_q_addr, elems,
+			odp_ml_fp32_from_int8(out_d_addr, (int8_t *)out_q_addr, elems,
 					      scale_d, 0);
 			break;
 		case ODP_ML_DATA_TYPE_UINT8:
-			odp_ml_fp32_from_uint8((float *)out_d_addr, (uint8_t *)out_q_addr, elems,
+			odp_ml_fp32_from_uint8(out_d_addr, (uint8_t *)out_q_addr, elems,
 					       scale_d, 0);
 			break;
 		case ODP_ML_DATA_TYPE_FP16:
-			odp_ml_fp32_from_fp16((float *)out_d_addr, (uint16_t *)out_q_addr, elems);
+			odp_ml_fp32_from_fp16(out_d_addr, (uint16_t *)(void *)out_q_addr, elems);
 			break;
 		default:
 			ODPH_ERR("Unsupported type %d for output %d\n", info->data_type, i);
@@ -335,7 +335,7 @@ static int dequantize_output(uint8_t *out_d_addr, uint8_t *out_q_addr)
 		}
 
 		out_q_addr += glb.out[i].size;
-		out_d_addr += elems * sizeof(float);
+		out_d_addr += elems;
 	}
 
 	return 0;
