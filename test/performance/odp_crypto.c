@@ -837,8 +837,7 @@ run_measure_one(crypto_args_t *cargs,
 			}
 
 			if (cargs->schedule || cargs->poll) {
-				rc = odp_crypto_op_enq(&pkt, &out_pkt,
-						       &params, 1);
+				rc = odp_crypto_op_enq(&pkt, NULL, &params, 1);
 				if (rc <= 0) {
 					ODPH_ERR("failed odp_crypto_packet_op_enq: rc = %d\n", rc);
 					if (!cargs->reuse_packet)
