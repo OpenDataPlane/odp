@@ -113,7 +113,7 @@ jobs:
     if: ${{ github.repository == 'OpenDataPlane/odp' }}
     runs-on: ah-ubuntu_22_04-c7g_2x-50
     env:
-      OS: ubuntu_25.10
+      OS: ubuntu_26.04
     strategy:
       fail-fast: false
       matrix:
