@@ -127,7 +127,7 @@ static void custom_barrier_wait(custom_barrier_t *custom_barrier)
 	wait_cnt = 1;
 	while (wait_cnt != 0) {
 		for (delay_cnt = 1; delay_cnt <= BARRIER_DELAY; delay_cnt++)
-			counter++;
+			counter = counter + 1;
 
 		wait_cnt = odp_atomic_load_u32(&custom_barrier->wait_cnt);
 	}
