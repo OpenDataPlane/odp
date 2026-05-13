@@ -231,7 +231,7 @@ jobs:
   Build_gcc_15:
     runs-on: ubuntu-22.04
     env:
-      OS: ubuntu_25.10
+      OS: ubuntu_26.04
     strategy:
       fail-fast: false
       matrix:
