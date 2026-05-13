@@ -1719,7 +1719,7 @@ static tm_node_desc_t *find_node_desc(uint8_t     tm_system_idx,
 {
 	tm_node_desc_t *node_desc;
 	uint32_t        child_num;
-	char           *name_ptr;
+	const char     *name_ptr;
 
 	/* Assume node_name is "node_" followed by a sequence of integers
 	 * separated by underscores, where each integer is the child number to

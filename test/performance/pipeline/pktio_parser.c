@@ -422,7 +422,7 @@ static void pktio_parser_undeploy(void)
 static uintptr_t pktio_parser_get_resource(const char *resource)
 {
 	pktio_parse_t *parse;
-	char *tmp1, *tmp2;
+	const char *tmp1, *tmp2;
 	uint32_t idx;
 
 	for (uint32_t i = 0U; i < pktios.num; ++i) {
