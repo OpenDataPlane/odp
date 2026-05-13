@@ -278,7 +278,7 @@ static int sock_xdp_open(odp_pktio_t pktio, pktio_entry_t *pktio_entry, const ch
 	priv = pkt_priv(pktio_entry);
 	memset(priv, 0, sizeof(xdp_sock_info_t));
 	pool = _odp_pool_entry(pool_hdl);
-	priv->umem_info = (xdp_umem_info_t *)pool->mem_src_data;
+	priv->umem_info = (xdp_umem_info_t *)(void *)pool->mem_src_data;
 	priv->umem_info->pool = pool;
 	/* Mark transitory kernel-owned packets with the pktio index, so that they can be freed on
 	 * close. */
