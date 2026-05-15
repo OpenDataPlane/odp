@@ -144,10 +144,9 @@ static inline void cache_push(pool_cache_t *cache, _odp_event_hdr_t *event_hdr[]
 	odp_atomic_store_u32(&cache->cache_num, cache_num + num);
 }
 
-static inline void cache_push_single(pool_cache_t *cache, _odp_event_hdr_t *event_hdr)
+static inline void cache_push_single(pool_cache_t *cache, _odp_event_hdr_t *event_hdr,
+				     uint32_t cache_num)
 {
-	const uint32_t cache_num = odp_atomic_load_u32(&cache->cache_num);
-
 	cache->event_hdr[cache_num] = event_hdr;
 
 	odp_atomic_store_u32(&cache->cache_num, cache_num + 1);
@@ -1541,9 +1540,12 @@ void _odp_event_free(odp_event_t event)
 		ring_mpmc_rst_ptr_enq_multi(ring, mask, (void **)ev_hdr, burst);
 		if (CONFIG_POOL_STATISTICS && pool->params.stats.bit.free_ops)
 			odp_atomic_inc_u64(&pool->stats.free_ops);
+
+		cache_num = odp_atomic_load_u32(&cache->cache_num);
 	}
 
-	cache_push_single(cache, event_hdr);
+	cache_push_single(cache, event_hdr, cache_num);
+
 	if (CONFIG_POOL_STATISTICS && pool->params.stats.bit.cache_free_ops)
 		odp_atomic_inc_u64(&pool->stats.cache_free_ops);
 }
