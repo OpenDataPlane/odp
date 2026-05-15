@@ -1358,11 +1358,11 @@ odp_event_t _odp_event_alloc(pool_t *pool)
 	/* First pull packets from local cache */
 	hdr = cache_pop_single(cache);
 
-	if (CONFIG_POOL_STATISTICS && pool->params.stats.bit.cache_alloc_ops && hdr)
-		odp_atomic_inc_u64(&pool->stats.cache_alloc_ops);
-
-	if (odp_likely(hdr))
+	if (odp_likely(hdr)) {
+		if (CONFIG_POOL_STATISTICS && pool->params.stats.bit.cache_alloc_ops)
+			odp_atomic_inc_u64(&pool->stats.cache_alloc_ops);
 		return _odp_event_from_hdr(hdr);
+	}
 
 	/* If needed, get more from the global pool */
 	uint32_t burst = pool->burst_size;
