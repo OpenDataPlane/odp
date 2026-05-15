@@ -1558,18 +1558,14 @@ void _odp_event_free_multi(_odp_event_hdr_t *event_hdr[], int num_total)
 	int first = 0;
 
 	while (1) {
-		num  = 1;
-		i    = 1;
 		pool = _odp_pool_entry(event_hdr[first]->pool);
 
 		/* 'num' buffers are from the same pool */
-		if (num_total > 1) {
-			for (i = first; i < num_total; i++)
-				if (pool != _odp_pool_entry(event_hdr[i]->pool))
-					break;
+		for (i = first + 1; i < num_total; i++)
+			if (pool != _odp_pool_entry(event_hdr[i]->pool))
+				break;
 
-			num = i - first;
-		}
+		num = i - first;
 
 		event_free_to_pool(pool, &event_hdr[first], num);
 
