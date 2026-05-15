@@ -243,6 +243,21 @@ jobs:
       - if: ${{ failure() }}
         uses: ./.github/actions/build-failure-log
 
+  Build_clang_21:
+    runs-on: ubuntu-22.04
+    env:
+      OS: ubuntu_26.04
+    strategy:
+      fail-fast: false
+      matrix:
+        conf: ['', '--enable-abi-compat']
+    steps:
+      - uses: actions/checkout@v6
+      - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="clang-21" -e CXX="clang++-21"
+               -e CONF="${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/build_${ARCH}.sh
+      - if: ${{ failure() }}
+        uses: ./.github/actions/build-failure-log
+
   Build_out-of-tree:
     runs-on: ubuntu-22.04
     steps:
