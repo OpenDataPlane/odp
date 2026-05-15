@@ -126,6 +126,23 @@ jobs:
       - if: ${{ failure() }}
         uses: ./.github/actions/build-failure-log
 
+  Build_clang_21:
+    if: ${{ github.repository == 'OpenDataPlane/odp' }}
+    runs-on: ah-ubuntu_22_04-c7g_2x-50
+    env:
+      OS: ubuntu_26.04
+    strategy:
+      fail-fast: false
+      matrix:
+        conf: ['', '--enable-abi-compat']
+    steps:
+      - uses: OpenDataPlane/action-clean-up@main
+      - uses: actions/checkout@v6
+      - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="clang-21" -e CXX="clang++-21"
+               -e CONF="${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-graviton3 /odp/scripts/ci/build_${ARCH}.sh
+      - if: ${{ failure() }}
+        uses: ./.github/actions/build-failure-log
+
   Build_out-of-tree:
     if: ${{ github.repository == 'OpenDataPlane/odp' }}
     runs-on: ah-ubuntu_22_04-c7g_2x-50
