@@ -855,8 +855,8 @@ odp_queue_t odp_cls_hash_result(odp_cos_t cos, odp_packet_t packet);
  *
  * Before destroying a CoS, all the PMRs referring to the CoS (as a source or
  * destination CoS) must be destroyed first. Also, the CoS must not be in use
- * as the default CoS in any pktio (see odp_pktio_default_cos_set()) or as the
- * destination CoS of any IPsec SA.
+ * as the default or error CoS in any pktio (see odp_pktio_default_cos_set() and
+ * odp_pktio_error_cos_set()), or as the destination CoS of any IPsec SA.
  *
  * @param cos          CoS handle
  *
