@@ -678,17 +678,19 @@ int odp_pktio_mac_addr_set(odp_pktio_t pktio, const void *mac_addr,
 			   int size);
 
 /**
- * Setup per-port default class-of-service.
+ * Set interface default class-of-service
  *
- * @param pktio        Ingress port pktio handle.
- * @param default_cos  Class-of-service set to all packets arriving at this
- *                     ingress port. Use ODP_COS_INVALID to remove the default
- *                     CoS.
+ * Set default CoS for packets received on this packet IO interface, or remove
+ * the current default CoS by passing ODP_COS_INVALID as 'default_cos'. The
+ * 'default_cos' must be unique per odp_pktio_t instance. This function may be
+ * called multiple times on the same interface, and each successful call
+ * replaces the previous default CoS binding.
+ *
+ * @param pktio        Packet IO handle
+ * @param default_cos  CoS handle or ODP_COS_INVALID
  *
  * @retval  0 on success
  * @retval <0 on failure
- *
- * @note The default_cos has to be unique per odp_pktio_t instance.
  */
 int odp_pktio_default_cos_set(odp_pktio_t pktio, odp_cos_t default_cos);
 
