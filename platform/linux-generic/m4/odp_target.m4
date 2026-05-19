@@ -51,6 +51,7 @@ AC_ARG_WITH([target],
 	     with_target=default])
 
 # Set safe default values for all feature flags
+feat_ecv=no
 time_freq_1ghz=no
 
 AS_CASE([$ODP_TARGET],
@@ -58,6 +59,10 @@ AS_CASE([$ODP_TARGET],
 	[AC_MSG_ERROR([unsupported --with-target value '$ODP_TARGET'. Supported values: ]m4_defn([_ODP_TARGET_NAMES]))]
 )
 
+if test "x$feat_ecv" = "xyes"; then
+	AC_DEFINE([_ODP_FEAT_ECV], [1],
+		  [Define to 1 when FEAT_ECV is available])
+fi
 if test "x$time_freq_1ghz" = "xyes"; then
 	AC_DEFINE([_ODP_TIME_FREQ_1GHZ], [1],
 		  [Define to 1 when target has 1 GHz time counter frequency])
