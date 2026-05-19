@@ -1,9 +1,11 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright (c) 2021 Nokia
+ * Copyright (c) 2021-2026 Nokia
  */
 
 #ifndef ODP_API_ABI_TIME_CPU_H_
 #define ODP_API_ABI_TIME_CPU_H_
+
+#include <odp/autoheader_external.h>
 
 #include <stdint.h>
 
@@ -24,8 +26,12 @@ static inline uint64_t _odp_time_cpu_global_strict(void)
 {
 	uint64_t cntvct;
 
+#ifdef _ODP_FEAT_ECV
+	__asm__ volatile("mrs %0, cntvctss_el0" : "=r"(cntvct) : : "memory");
+#else
 	__asm__ volatile("isb" ::: "memory");
 	__asm__ volatile("mrs %0, cntvct_el0" : "=r"(cntvct) : : "memory");
+#endif
 
 	return cntvct;
 }
