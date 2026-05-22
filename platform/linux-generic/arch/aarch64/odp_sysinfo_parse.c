@@ -168,6 +168,14 @@ static void aarch64_part_info(char *str, int maxlen, odp_cpu_arch_arm_t *cpu_isa
 			snprintf(str, maxlen, "Cortex-A715");
 			*cpu_isa = ODP_CPU_ARCH_ARMV9_0;
 			return;
+		case 0xd4e:
+			snprintf(str, maxlen, "Cortex-X3");
+			*cpu_isa = ODP_CPU_ARCH_ARMV9_0;
+			return;
+		case 0xd4f:
+			snprintf(str, maxlen, "Neoverse V2");
+			*cpu_isa = ODP_CPU_ARCH_ARMV9_0;
+			return;
 		case 0xd80:
 			snprintf(str, maxlen, "Cortex-A520");
 			*cpu_isa = ODP_CPU_ARCH_ARMV9_2;
@@ -175,6 +183,42 @@ static void aarch64_part_info(char *str, int maxlen, odp_cpu_arch_arm_t *cpu_isa
 		case 0xd81:
 			snprintf(str, maxlen, "Cortex-A720");
 			*cpu_isa = ODP_CPU_ARCH_ARMV9_2;
+			return;
+		case 0xd82:
+			snprintf(str, maxlen, "Cortex-X4");
+			*cpu_isa = ODP_CPU_ARCH_ARMV9_2;
+			return;
+		case 0xd84:
+			snprintf(str, maxlen, "Neoverse V3");
+			*cpu_isa = ODP_CPU_ARCH_ARMV9_2;
+			return;
+		case 0xd85:
+			snprintf(str, maxlen, "Cortex-X925");
+			*cpu_isa = ODP_CPU_ARCH_ARMV9_2;
+			return;
+		case 0xd87:
+			snprintf(str, maxlen, "Cortex-A725");
+			*cpu_isa = ODP_CPU_ARCH_ARMV9_2;
+			return;
+		case 0xd8a:
+			snprintf(str, maxlen, "C1-Nano");
+			*cpu_isa = ODP_CPU_ARCH_ARMV9_3;
+			return;
+		case 0xd8b:
+			snprintf(str, maxlen, "C1-Pro");
+			*cpu_isa = ODP_CPU_ARCH_ARMV9_3;
+			return;
+		case 0xd8c:
+			snprintf(str, maxlen, "C1-Ultra");
+			*cpu_isa = ODP_CPU_ARCH_ARMV9_3;
+			return;
+		case 0xd8e:
+			snprintf(str, maxlen, "Neoverse N3");
+			*cpu_isa = ODP_CPU_ARCH_ARMV9_2;
+			return;
+		case 0xd90:
+			snprintf(str, maxlen, "C1-Premium");
+			*cpu_isa = ODP_CPU_ARCH_ARMV9_3;
 			return;
 		default:
 			break;
