@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2013-2018 Linaro Limited
- * Copyright (c) 2023 Nokia
+ * Copyright (c) 2023-2026 Nokia
  */
 
 #ifndef ODP_GLOBAL_DATA_H_
@@ -52,8 +52,6 @@ typedef struct odp_global_data_ro_t {
 	odp_init_t init_param;
 	/* directory for odp mapped files */
 	char *shm_dir;
-	/* overload default with env */
-	int   shm_dir_from_env;
 	uint64_t shm_max_memory;
 	uint64_t shm_max_size;
 	int shm_single_va;
@@ -66,7 +64,10 @@ typedef struct odp_global_data_ro_t {
 	odp_cpumask_t control_cpus;
 	odp_cpumask_t worker_cpus;
 	int num_cpus_installed;
-	uint8_t has_config_rt;
+	struct {
+		uint8_t shm_dir_from_env : 1; /* Overload default with env */
+		uint8_t has_config_rt : 1;
+	} flags;
 	config_t libconfig_default;
 	config_t libconfig_runtime;
 
