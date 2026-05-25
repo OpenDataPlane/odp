@@ -626,6 +626,29 @@ static int schedule_tm(bench_tm_result_t *res, int repeat_count)
 	return 1;
 }
 
+static int schedule_prefetch_single(void)
+{
+	for (uint32_t i = 0U; i < TEST_REPEAT_COUNT; i++)
+		odp_schedule_prefetch(1);
+
+	return 1;
+}
+
+static int schedule_prefetch_single_tm(bench_tm_result_t *res, int repeat_count)
+{
+	bench_tm_stamp_t s1, s2;
+	const uint8_t id1 = bench_tm_func_register(res, "odp_schedule_prefetch(1)");
+
+	for (int i = 0; i < repeat_count; i++) {
+		bench_tm_now(res, &s1);
+		odp_schedule_prefetch(1);
+		bench_tm_now(res, &s2);
+		bench_tm_func_record(&s2, &s1, res, id1);
+	}
+
+	return 1;
+}
+
 static int schedule_multi_no_wait(void)
 {
 	odp_event_t *dst = gbl_args->data.evs;
@@ -716,6 +739,32 @@ static int schedule_multi_tm(bench_tm_result_t *res, int repeat_count)
 	return 1;
 }
 
+static int schedule_prefetch_burst(void)
+{
+	const int num_burst = gbl_args->appl.burst_size;
+
+	for (uint32_t i = 0U; i < TEST_REPEAT_COUNT; i++)
+		odp_schedule_prefetch(num_burst);
+
+	return 1;
+}
+
+static int schedule_prefetch_burst_tm(bench_tm_result_t *res, int repeat_count)
+{
+	bench_tm_stamp_t s1, s2;
+	const int num_burst = gbl_args->appl.burst_size;
+	const uint8_t id1 = bench_tm_func_register(res, "odp_schedule_prefetch(burst)");
+
+	for (int i = 0; i < repeat_count; i++) {
+		bench_tm_now(res, &s1);
+		odp_schedule_prefetch(num_burst);
+		bench_tm_now(res, &s2);
+		bench_tm_func_record(&s2, &s1, res, id1);
+	}
+
+	return 1;
+}
+
 bench_info_t test_suite[] = {
 	BENCH_INFO_1(queue_context_set_plain, NULL, NULL),
 	BENCH_INFO_1(queue_context_plain, NULL, NULL),
@@ -737,6 +786,10 @@ bench_info_t test_suite[] = {
 	BENCH_INFO_2("schedule_multi_wait_full", schedule_multi_wait, fill_scheduled_queues,
 		     term_scheduled_dst_events),
 	BENCH_INFO_2("schedule_multi_full", schedule_multi, fill_scheduled_queues,
+		     term_scheduled_dst_events),
+	BENCH_INFO_2("schedule_prefetch_single", schedule_prefetch_single, fill_scheduled_queues,
+		     term_scheduled_dst_events),
+	BENCH_INFO_2("schedule_prefetch_burst", schedule_prefetch_burst, fill_scheduled_queues,
 		     term_scheduled_dst_events),
 };
 
@@ -766,6 +819,10 @@ bench_tm_info_t test_suite_tm[] = {
 			fill_scheduled_queues, term_scheduled_dst_events),
 	BENCH_INFO_TM_2("schedule_multi_full_tm", schedule_multi_tm, fill_scheduled_queues,
 			term_scheduled_dst_events),
+	BENCH_INFO_TM_2("schedule_prefetch_single_tm", schedule_prefetch_single_tm,
+			fill_scheduled_queues, term_scheduled_dst_events),
+	BENCH_INFO_TM_2("schedule_prefetch_burst_tm", schedule_prefetch_burst_tm,
+			fill_scheduled_queues, term_scheduled_dst_events),
 };
 
 ODP_STATIC_ASSERT(ODPH_ARRAY_SIZE(test_suite_tm) < TEST_MAX_BENCH,
