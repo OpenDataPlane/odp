@@ -29,7 +29,7 @@ int _odp_libconfig_init_global(void)
 
 	config_init(config);
 	config_init(config_rt);
-	odp_global_ro.has_config_rt = 0;
+	odp_global_ro.flags.has_config_rt = 0;
 
 	if (!config_read_string(config, config_builtin)) {
 		_ODP_ERR("Failed to read default config: %s(%d): %s\n",
@@ -76,7 +76,7 @@ int _odp_libconfig_init_global(void)
 		goto fail;
 	}
 
-	odp_global_ro.has_config_rt = 1;
+	odp_global_ro.flags.has_config_rt = 1;
 	return 0;
 fail:
 	_ODP_ERR("Config file failure\n");
@@ -319,7 +319,7 @@ int _odp_libconfig_print(void)
 
 	config_write(&odp_global_ro.libconfig_default, file);
 
-	if (odp_global_ro.has_config_rt) {
+	if (odp_global_ro.flags.has_config_rt) {
 		if (fprintf(file,
 			    "\nODP_CONFIG_FILE override values:\n"
 			    "--------------------------------\n\n") < 0)

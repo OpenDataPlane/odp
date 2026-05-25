@@ -1710,13 +1710,13 @@ int _odp_ishm_init_global(const odp_init_t *init)
 	odp_global_ro.main_pid = getpid();
 	odp_global_ro.shm_dir = getenv("ODP_SHM_DIR");
 	if (odp_global_ro.shm_dir) {
-		odp_global_ro.shm_dir_from_env = 1;
+		odp_global_ro.flags.shm_dir_from_env = 1;
 	} else {
 		odp_global_ro.shm_dir =
 			calloc(1, sizeof(ISHM_FILENAME_NORMAL_PAGE_DIR));
 		sprintf(odp_global_ro.shm_dir, "%s",
 			ISHM_FILENAME_NORMAL_PAGE_DIR);
-		odp_global_ro.shm_dir_from_env = 0;
+		odp_global_ro.flags.shm_dir_from_env = 0;
 	}
 
 	_ODP_DBG("ishm: using dir %s\n", odp_global_ro.shm_dir);
@@ -1953,7 +1953,7 @@ int _odp_ishm_term_global(void)
 		_ODP_ERR("unable to close single VA\n.");
 	}
 
-	if (!odp_global_ro.shm_dir_from_env)
+	if (!odp_global_ro.flags.shm_dir_from_env)
 		free(odp_global_ro.shm_dir);
 
 	hp_term();
