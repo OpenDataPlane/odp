@@ -20,13 +20,17 @@ int32_t _odp_random_crypto_data_generic(uint8_t *buf, uint32_t len);
 
 #ifdef __ARM_FEATURE_RNG
 
+#include <odp_global_data.h>
+
 #if __ARM_FEATURE_UNALIGNED != 1
 #error This implementation requires unaligned access
 #endif
 
 static inline int _odp_random_max_kind(void)
 {
-	return ODP_RANDOM_TRUE;
+	if (odp_global_ro.flags.has_arm_rng)
+		return ODP_RANDOM_TRUE;
+	return _odp_random_max_kind_generic();
 }
 
 static inline int _odp_rndr(uint64_t *v)
@@ -72,6 +76,9 @@ static inline int32_t _odp_random_crypto_data(uint8_t *buf, uint32_t len)
 {
 	uint64_t temp;
 
+	if (!odp_global_ro.flags.has_arm_rng)
+		return _odp_random_crypto_data_generic(buf, len);
+
 	for (uint32_t i = 0; i < len / 8; i++) {
 		while (!_odp_rndr(&temp))
 			;
@@ -106,6 +113,9 @@ static inline int32_t _odp_random_crypto_data(uint8_t *buf, uint32_t len)
 static inline int32_t _odp_random_true_data(uint8_t *buf, uint32_t len)
 {
 	uint64_t temp;
+
+	if (!odp_global_ro.flags.has_arm_rng)
+		return _odp_random_true_data_generic(buf, len);
 
 	for (uint32_t i = 0; i < len / 8; i++) {
 		while (!_odp_rndrrs(&temp))

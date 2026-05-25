@@ -50,6 +50,8 @@ int _odp_classification_term_global(void);
 int _odp_queue_init_global(void);
 int _odp_queue_term_global(void);
 
+int _odp_random_init_global(void);
+int _odp_random_term_global(void);
 int _odp_random_init_local(void);
 int _odp_random_term_local(void);
 

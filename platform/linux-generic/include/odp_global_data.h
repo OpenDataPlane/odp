@@ -67,6 +67,7 @@ typedef struct odp_global_data_ro_t {
 	struct {
 		uint8_t shm_dir_from_env : 1; /* Overload default with env */
 		uint8_t has_config_rt : 1;
+		uint8_t has_arm_rng : 1;
 	} flags;
 	config_t libconfig_default;
 	config_t libconfig_runtime;
