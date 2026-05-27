@@ -1538,13 +1538,11 @@ void _odp_event_free(odp_event_t event)
 
 	if (odp_unlikely(cache_size == cache_num)) {
 		const uint32_t burst = pool->burst_size;
-		_odp_event_hdr_t *ev_hdr[burst];
 		ring_mpmc_rst_ptr_t *ring = &pool->ring->hdr;
 		uint32_t mask = pool->ring_mask;
 
-		cache_pop(cache, ev_hdr, burst);
+		cache_pop_to_ring(cache, ring, mask, cache_num, burst);
 
-		ring_mpmc_rst_ptr_enq_multi(ring, mask, (void **)ev_hdr, burst);
 		if (CONFIG_POOL_STATISTICS && pool->params.stats.bit.free_ops)
 			odp_atomic_inc_u64(&pool->stats.free_ops);
 
