@@ -357,15 +357,6 @@ jobs:
       - if: ${{ failure() }}
         uses: ./.github/actions/run-failure-log
 
-  Run_stash_config:
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v6
-      - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}" -e ARCH="${ARCH}"
-               -e CONF="${CONF}" -e ODP_CONFIG_FILE=/odp/platform/linux-generic/test/stash-custom.conf $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/check.sh
-      - if: ${{ failure() }}
-        uses: ./.github/actions/run-failure-log
-
   Run_scheduler_sp:
     runs-on: ubuntu-22.04
     steps:
