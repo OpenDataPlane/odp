@@ -233,15 +233,16 @@ int _odp_thread_init_local(_odp_internal_thread_type_t type)
 
 	odp_spinlock_lock(&thread_globals->lock);
 	id = alloc_id(type);
+	if (id >= 0) {
+		thread_globals->thr[id].thr  = id;
+		thread_globals->thr[id].type = type;
+	}
 	odp_spinlock_unlock(&thread_globals->lock);
 
 	if (id < 0) {
 		_ODP_ERR("Too many threads\n");
 		return -1;
 	}
-
-	thread_globals->thr[id].thr  = id;
-	thread_globals->thr[id].type = type;
 
 	_odp_this_thread = &thread_globals->thr[id];
 
@@ -313,6 +314,21 @@ int odp_thread_count(void)
 	uint32_t num_internal = odp_atomic_load_u32(&thread_globals->num_internal);
 
 	return (int)(num - num_internal);
+}
+
+int _odp_thread_is_internal(int thr_id)
+{
+	int is_internal;
+
+	if (thr_id < 0 || thr_id >= (int)thread_globals->num_max)
+		return 0;
+
+	odp_spinlock_lock(&thread_globals->lock);
+	is_internal = odp_thrmask_isset(&thread_globals->all, thr_id) &&
+		      thread_globals->thr[thr_id].type == _ODP_THR_INTERNAL;
+	odp_spinlock_unlock(&thread_globals->lock);
+
+	return is_internal;
 }
 
 int _odp_thread_count_max(void)
