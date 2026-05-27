@@ -32,6 +32,14 @@ extern "C" {
  * Returns 0 on success, -1 on error. */
 int _odp_service_cpus_reserve(const odp_cpumask_t *cpus);
 
+/* Returns 1 if the slot 'thr_id' is currently allocated to an ODP-internal
+ * thread, 0 otherwise (including unallocated and out-of-range slots).
+ *
+ * Intended for use by subsystems (e.g. pool) that need to specialize
+ * per-thread state by internal vs. application thread type when iterating
+ * all thread id slots. */
+int _odp_thread_is_internal(int thr_id);
+
 /* Returns the number of thread id slots, including those of ODP-internal
  * threads. Unlike odp_thread_count_max(), this covers every value that
  * odp_thread_id() may return, so implementation-internal per-thread state
