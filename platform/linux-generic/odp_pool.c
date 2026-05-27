@@ -101,7 +101,6 @@ static inline uint32_t cache_pop(pool_cache_t *cache,
 	uint32_t cache_num = odp_atomic_load_u32(&cache->cache_num);
 	uint32_t num_ch = max_num;
 	uint32_t cache_begin;
-	uint32_t i;
 
 	/* Cache does not have enough buffers */
 	if (odp_unlikely(cache_num < (uint32_t)max_num))
@@ -109,10 +108,10 @@ static inline uint32_t cache_pop(pool_cache_t *cache,
 
 	/* Get buffers from the cache */
 	cache_begin = cache_num - num_ch;
-	for (i = 0; i < num_ch; i++)
-		event_hdr[i] = cache->event_hdr[cache_begin + i];
+	memcpy(event_hdr, &cache->event_hdr[cache_begin],
+	       num_ch * sizeof(_odp_event_hdr_t *));
 
-	odp_atomic_store_u32(&cache->cache_num, cache_num - num_ch);
+	odp_atomic_store_u32(&cache->cache_num, cache_begin);
 
 	return num_ch;
 }
@@ -136,10 +135,9 @@ static inline void cache_push(pool_cache_t *cache, _odp_event_hdr_t *event_hdr[]
 			      uint32_t num)
 {
 	uint32_t cache_num = odp_atomic_load_u32(&cache->cache_num);
-	uint32_t i;
 
-	for (i = 0; i < num; i++)
-		cache->event_hdr[cache_num + i] = event_hdr[i];
+	memcpy(&cache->event_hdr[cache_num], event_hdr,
+	       num * sizeof(_odp_event_hdr_t *));
 
 	odp_atomic_store_u32(&cache->cache_num, cache_num + num);
 }
