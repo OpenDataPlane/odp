@@ -67,7 +67,6 @@ jobs:
                'CFLAGS=-O0 --enable-debug=full',
                'CFLAGS=-Os',
                'CFLAGS=-pedantic',
-               '--enable-lto',
                '--enable-lto --enable-abi-compat',
                '--enable-pcapng-support --enable-icache-perf-test']
     steps:
@@ -305,6 +304,7 @@ jobs:
                '--enable-dpdk-zero-copy --disable-static-applications',
                '--disable-host-optimization --enable-event-validation=warn',
                '--disable-host-optimization --enable-abi-compat',
+               '--enable-lto',
                '--without-openssl --without-pcap']
     steps:
       - uses: actions/checkout@v6
