@@ -22,6 +22,7 @@
 #include <odp_init_internal.h>
 #include <odp_libconfig_internal.h>
 #include <odp_schedule_if.h>
+#include <odp_service_thread_internal.h>
 
 #include <errno.h>
 #include <sched.h>
@@ -41,6 +42,7 @@ typedef struct {
 	odp_atomic_u32_t num;
 	odp_atomic_u32_t num_worker;
 	odp_atomic_u32_t num_control;
+	odp_atomic_u32_t num_internal;
 	uint32_t       num_max;
 	odp_spinlock_t lock;
 } thread_globals_t;
@@ -85,6 +87,7 @@ int _odp_thread_init_global(void)
 	odp_atomic_init_u32(&thread_globals->num, 0);
 	odp_atomic_init_u32(&thread_globals->num_worker, 0);
 	odp_atomic_init_u32(&thread_globals->num_control, 0);
+	odp_atomic_init_u32(&thread_globals->num_internal, 0);
 	odp_spinlock_init(&thread_globals->lock);
 	thread_globals->num_max = num_max;
 	_ODP_PRINT("System config:\n");
@@ -108,24 +111,61 @@ int _odp_thread_term_global(void)
 	return ret;
 }
 
+static int thread_count_max_visible(void)
+{
+	int num_max = (int)thread_globals->num_max;
+	int num_svc = odp_global_ro.num_service_cpus;
+
+	if (num_svc >= num_max)
+		return 0;
+
+	return num_max - num_svc;
+}
+
 static int alloc_id(_odp_thread_type_t type)
 {
 	int thr;
+	int begin, end, step;
 	odp_thrmask_t *all = &thread_globals->all;
+	uint32_t num = odp_atomic_load_u32(&thread_globals->num);
+	uint32_t num_internal = odp_atomic_load_u32(&thread_globals->num_internal);
+	const int visible = thread_count_max_visible();
 
-	if (odp_atomic_load_u32(&thread_globals->num) >= thread_globals->num_max)
+	if (num >= thread_globals->num_max)
 		return -1;
 
-	for (thr = 0; thr < (int)thread_globals->num_max; thr++) {
+	/* Each reserved service CPU runs at most one internal thread. Allocate
+	 * _ODP_THR_INTERNAL ids from the top of the range, [odp_thread_count_max(),
+	 * _odp_thread_count_max()), so that application threads keep the id space
+	 * [0, odp_thread_count_max()). */
+	if (type == _ODP_THR_INTERNAL) {
+		if (num_internal >= (uint32_t)odp_global_ro.num_service_cpus)
+			return -1;
+
+		begin = (int)thread_globals->num_max - 1;
+		end = visible - 1;
+		step = -1;
+	} else {
+		if (num - num_internal >= (uint32_t)visible)
+			return -1;
+
+		begin = 0;
+		end = visible;
+		step = 1;
+	}
+
+	for (thr = begin; thr != end; thr += step) {
 		if (odp_thrmask_isset(all, thr) == 0) {
 			odp_thrmask_set(all, thr);
 
 			if (type == _ODP_THR_WORKER) {
 				odp_thrmask_set(&thread_globals->worker, thr);
 				odp_atomic_inc_u32(&thread_globals->num_worker);
-			} else {
+			} else if (type == _ODP_THR_CONTROL) {
 				odp_thrmask_set(&thread_globals->control, thr);
 				odp_atomic_inc_u32(&thread_globals->num_control);
+			} else {
+				odp_atomic_inc_u32(&thread_globals->num_internal);
 			}
 
 			odp_atomic_inc_u32(&thread_globals->num);
@@ -139,6 +179,7 @@ static int alloc_id(_odp_thread_type_t type)
 static int free_id(int thr)
 {
 	odp_thrmask_t *all = &thread_globals->all;
+	uint32_t num_internal;
 
 	if (thr < 0 || thr >= (int)thread_globals->num_max)
 		return -1;
@@ -151,12 +192,19 @@ static int free_id(int thr)
 	if (thread_globals->thr[thr].type == _ODP_THR_WORKER) {
 		odp_thrmask_clr(&thread_globals->worker, thr);
 		odp_atomic_dec_u32(&thread_globals->num_worker);
-	} else {
+	} else if (thread_globals->thr[thr].type == _ODP_THR_CONTROL) {
 		odp_thrmask_clr(&thread_globals->control, thr);
 		odp_atomic_dec_u32(&thread_globals->num_control);
+	} else {
+		odp_atomic_dec_u32(&thread_globals->num_internal);
 	}
 
-	return odp_atomic_fetch_dec_u32(&thread_globals->num) - 1;
+	num_internal = odp_atomic_load_u32(&thread_globals->num_internal);
+
+	/* Return remaining application thread count (excluding internal
+	 * threads) so the last application thread sees zero even if internal
+	 * threads are still running. */
+	return odp_atomic_fetch_dec_u32(&thread_globals->num) - 1 - num_internal;
 }
 
 int odp_cpu_id(void)
@@ -202,6 +250,10 @@ int _odp_thread_init_local(_odp_thread_type_t type)
 
 	_odp_this_thread = &thread_globals->thr[id];
 
+	/* Internal threads are not part of any application scheduler group. */
+	if (type == _ODP_THR_INTERNAL)
+		return 0;
+
 	if (group_all)
 		_odp_sched_fn->thr_add(ODP_SCHED_GROUP_ALL, id);
 
@@ -228,7 +280,7 @@ int _odp_thread_term_local(void)
 	group_worker = 1;
 	group_control = 1;
 
-	if (_odp_sched_fn->get_config) {
+	if (type != _ODP_THR_INTERNAL && _odp_sched_fn->get_config) {
 		schedule_config_t schedule_config;
 
 		_odp_sched_fn->get_config(&schedule_config);
@@ -237,7 +289,7 @@ int _odp_thread_term_local(void)
 		group_control = schedule_config.group_enable.control;
 	}
 
-	if (group_all)
+	if (type != _ODP_THR_INTERNAL && group_all)
 		_odp_sched_fn->thr_rem(ODP_SCHED_GROUP_ALL, id);
 
 	if (type == _ODP_THR_WORKER && group_worker)
@@ -262,7 +314,15 @@ int _odp_thread_term_local(void)
 
 int odp_thread_count(void)
 {
-	return odp_atomic_load_u32(&thread_globals->num);
+	uint32_t num = odp_atomic_load_u32(&thread_globals->num);
+	uint32_t num_internal = odp_atomic_load_u32(&thread_globals->num_internal);
+
+	return (int)(num - num_internal);
+}
+
+int _odp_thread_count_max(void)
+{
+	return (int)thread_globals->num_max;
 }
 
 int odp_thread_control_count(void)
@@ -277,17 +337,17 @@ int odp_thread_worker_count(void)
 
 int odp_thread_count_max(void)
 {
-	return thread_globals->num_max;
+	return thread_count_max_visible();
 }
 
 int odp_thread_control_count_max(void)
 {
-	return thread_globals->num_max;
+	return thread_count_max_visible();
 }
 
 int odp_thread_worker_count_max(void)
 {
-	return thread_globals->num_max;
+	return thread_count_max_visible();
 }
 
 int odp_thrmask_worker(odp_thrmask_t *mask)

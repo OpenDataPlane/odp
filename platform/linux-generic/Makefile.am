@@ -204,6 +204,7 @@ noinst_HEADERS = \
 		  include/ring/odp_ring_st_u32_internal.h \
 		  include/ring/odp_ring_st_u64_internal.h \
 		  include/odp_schedule_if.h \
+		  include/odp_service_thread_internal.h \
 		  include/odp_shm_internal.h \
 		  include/odp_sorted_list_internal.h \
 		  include/odp_sysinfo_internal.h \
@@ -273,6 +274,7 @@ __LIB__libodp_linux_la_SOURCES = \
 			   odp_schedule_basic.c \
 			   odp_schedule_if.c \
 			   odp_schedule_sp.c \
+			   odp_service_thread.c \
 			   odp_shared_memory.c \
 			   odp_sorted_list.c \
 			   odp_stash.c \

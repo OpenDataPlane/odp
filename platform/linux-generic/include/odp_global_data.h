@@ -60,15 +60,22 @@ typedef struct odp_global_data_ro_t {
 	char uid[UID_MAXLEN];
 	system_info_t system_info;
 	hugepage_info_t hugepage_info;
+	/* Application-visible CPU set. Equal to the kernel-given process
+	 * affinity minus 'service_cpus'. */
 	odp_cpumask_t all_cpus;
 	odp_cpumask_t control_cpus;
 	odp_cpumask_t worker_cpus;
+	/* Implementation-reserved CPU set. */
+	odp_cpumask_t service_cpus;
+	/* Application-visible CPU count. */
 	int num_cpus_installed;
 	struct {
 		uint8_t shm_dir_from_env : 1; /* Overload default with env */
 		uint8_t has_config_rt : 1;
 		uint8_t has_arm_rng : 1;
 	} flags;
+	/* Implementation-reserved CPU count. */
+	int num_service_cpus;
 	config_t libconfig_default;
 	config_t libconfig_runtime;
 
