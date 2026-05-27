@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2013-2018 Linaro Limited
- * Copyright (c) 2020-2025 Nokia
+ * Copyright (c) 2020-2026 Nokia
  *
  * Copyright(c) 2010-2014 Intel Corporation
  *   - lib/eal/common/eal_common_string_fns.c
@@ -70,13 +70,16 @@ static int read_cache_line_size(void)
 
 static uint64_t default_huge_page_size(void)
 {
+	const char *proc_meminfo = "/proc/meminfo";
 	char str[1024];
 	unsigned long sz;
 	FILE *file;
 
-	file = fopen("/proc/meminfo", "rt");
-	if (!file)
+	file = fopen(proc_meminfo, "rt");
+	if (!file) {
+		_ODP_WARN("Unable to open %s\n", proc_meminfo);
 		return 0;
+	}
 
 	while (fgets(str, sizeof(str), file) != NULL) {
 		if (sscanf(str, "Hugepagesize:   %8lu kB", &sz) == 1) {
