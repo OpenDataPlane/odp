@@ -86,7 +86,7 @@ static uint64_t default_huge_page_size(void)
 		}
 	}
 
-	_ODP_ERR("unable to get default hp size\n");
+	_ODP_WARN("Unable to read default huge page size\n");
 	fclose(file);
 	return 0;
 }
