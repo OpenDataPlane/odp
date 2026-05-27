@@ -108,7 +108,7 @@ int _odp_thread_term_global(void)
 	return ret;
 }
 
-static int alloc_id(odp_thread_type_t type)
+static int alloc_id(_odp_internal_thread_type_t type)
 {
 	int thr;
 	odp_thrmask_t *all = &thread_globals->all;
@@ -120,7 +120,7 @@ static int alloc_id(odp_thread_type_t type)
 		if (odp_thrmask_isset(all, thr) == 0) {
 			odp_thrmask_set(all, thr);
 
-			if (type == ODP_THREAD_WORKER) {
+			if (type == _ODP_THR_WORKER) {
 				odp_thrmask_set(&thread_globals->worker, thr);
 				odp_atomic_inc_u32(&thread_globals->num_worker);
 			} else {
@@ -148,7 +148,7 @@ static int free_id(int thr)
 
 	odp_thrmask_clr(all, thr);
 
-	if (thread_globals->thr[thr].type == ODP_THREAD_WORKER) {
+	if (thread_globals->thr[thr].type == _ODP_THR_WORKER) {
 		odp_thrmask_clr(&thread_globals->worker, thr);
 		odp_atomic_dec_u32(&thread_globals->num_worker);
 	} else {
@@ -170,7 +170,7 @@ int odp_cpu_id(void)
 	return cpu;
 }
 
-int _odp_thread_init_local(odp_thread_type_t type)
+int _odp_thread_init_local(_odp_internal_thread_type_t type)
 {
 	int id;
 	int group_all, group_worker, group_control;
@@ -205,10 +205,10 @@ int _odp_thread_init_local(odp_thread_type_t type)
 	if (group_all)
 		_odp_sched_fn->thr_add(ODP_SCHED_GROUP_ALL, id);
 
-	if (type == ODP_THREAD_WORKER && group_worker)
+	if (type == _ODP_THR_WORKER && group_worker)
 		_odp_sched_fn->thr_add(ODP_SCHED_GROUP_WORKER, id);
 
-	if (type == ODP_THREAD_CONTROL && group_control)
+	if (type == _ODP_THR_CONTROL && group_control)
 		_odp_sched_fn->thr_add(ODP_SCHED_GROUP_CONTROL, id);
 
 	return 0;
@@ -219,7 +219,7 @@ int _odp_thread_term_local(void)
 	int num;
 	int group_all, group_worker, group_control;
 	int id = _odp_this_thread->thr;
-	odp_thread_type_t type = _odp_this_thread->type;
+	_odp_internal_thread_type_t type = _odp_this_thread->type;
 
 	/* Flush pending prints */
 	_odp_print_term_local();
@@ -240,10 +240,10 @@ int _odp_thread_term_local(void)
 	if (group_all)
 		_odp_sched_fn->thr_rem(ODP_SCHED_GROUP_ALL, id);
 
-	if (type == ODP_THREAD_WORKER && group_worker)
+	if (type == _ODP_THR_WORKER && group_worker)
 		_odp_sched_fn->thr_rem(ODP_SCHED_GROUP_WORKER, id);
 
-	if (type == ODP_THREAD_CONTROL && group_control)
+	if (type == _ODP_THR_CONTROL && group_control)
 		_odp_sched_fn->thr_rem(ODP_SCHED_GROUP_CONTROL, id);
 
 	_odp_this_thread = NULL;

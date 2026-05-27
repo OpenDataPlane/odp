@@ -32,7 +32,7 @@ _ODP_INLINE int odp_thread_id(void)
 
 _ODP_INLINE odp_thread_type_t odp_thread_type(void)
 {
-	return _odp_this_thread->type;
+	return (odp_thread_type_t)_odp_this_thread->type;
 }
 
 /** @endcond */
