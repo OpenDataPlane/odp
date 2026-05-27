@@ -131,6 +131,18 @@ static inline _odp_event_hdr_t *cache_pop_single(pool_cache_t *cache)
 	return event_hdr;
 }
 
+static inline void cache_pop_to_ring(pool_cache_t *cache,
+				     ring_mpmc_rst_ptr_t *ring, uint32_t mask,
+				     uint32_t cache_num, uint32_t num)
+{
+	const uint32_t cache_begin = cache_num - num;
+
+	_ODP_ASSERT(num <= cache_num);
+
+	ring_mpmc_rst_ptr_enq_multi(ring, mask, (void **)&cache->event_hdr[cache_begin], num);
+	odp_atomic_store_u32(&cache->cache_num, cache_begin);
+}
+
 static inline void cache_push(pool_cache_t *cache, _odp_event_hdr_t *event_hdr[],
 			      uint32_t num)
 {
@@ -1492,11 +1504,8 @@ static inline void event_free_to_pool(pool_t *pool,
 		if (odp_unlikely((uint32_t)num > cache_num))
 			burst = cache_num;
 
-		_odp_event_hdr_t *ev_hdr[burst];
+		cache_pop_to_ring(cache, ring, mask, cache_num, burst);
 
-		cache_pop(cache, ev_hdr, burst);
-
-		ring_mpmc_rst_ptr_enq_multi(ring, mask, (void **)ev_hdr, burst);
 		if (CONFIG_POOL_STATISTICS && pool->params.stats.bit.free_ops)
 			odp_atomic_inc_u64(&pool->stats.free_ops);
 	}
