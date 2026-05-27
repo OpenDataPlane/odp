@@ -207,7 +207,7 @@ static inline int cache_available(pool_t *pool, odp_pool_stats_t *stats)
 	const uint16_t last = stats->thread.last;
 	const odp_bool_t cache_available = pool->params.stats.bit.cache_available;
 	const odp_bool_t per_thread = pool->params.stats.bit.thread_cache_available;
-	const int max_threads = odp_thread_count_max();
+	const int max_threads = _odp_thread_count_max();
 	uint16_t out_idx = 0;
 	int i, idx_limit;
 
@@ -250,7 +250,7 @@ static inline int cache_available(pool_t *pool, odp_pool_stats_t *stats)
 static inline uint64_t cache_total_available(pool_t *pool)
 {
 	uint64_t cached = 0;
-	const int max_threads = odp_thread_count_max();
+	const int max_threads = _odp_thread_count_max();
 
 	for (int i = 0; i < max_threads; i++)
 		cached += odp_atomic_load_u32(&pool->local_cache[i].cache_num);
@@ -1294,7 +1294,7 @@ odp_pool_t odp_pool_create(const char *name, const odp_pool_param_t *params)
 int odp_pool_destroy(odp_pool_t pool_hdl)
 {
 	pool_t *pool = _odp_pool_entry(pool_hdl);
-	const int max_threads = odp_thread_count_max();
+	const int max_threads = _odp_thread_count_max();
 	int i;
 
 	if (pool == NULL)

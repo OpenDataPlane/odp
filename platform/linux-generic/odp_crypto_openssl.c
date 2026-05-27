@@ -288,7 +288,7 @@ odp_crypto_generic_session_t *alloc_session(void)
 
 	session->idx = session - global->sessions;
 
-	for (int i = 0; i < odp_thread_count_max(); i++)
+	for (int i = 0; i < _odp_thread_count_max(); i++)
 		global->ctx_valid[i][session->idx] = 0;
 
 	return session;
@@ -2394,7 +2394,7 @@ int _odp_crypto_init_global(void)
 	 * events fit in the queue as long as no thread tries to defer events
 	 * after it has seen that the queue is not empty.
 	 */
-	const uint32_t max_pending = odp_thread_count_max() * MAX_BURST;
+	const uint32_t max_pending = _odp_thread_count_max() * MAX_BURST;
 
 	/* Calculate the memory size we need */
 	mem_size  = sizeof(odp_crypto_global_t);
