@@ -62,8 +62,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        conf: ['',
-               'CFLAGS=-O3',
+        conf: ['CFLAGS=-O3',
                'CFLAGS=-O1',
                'CFLAGS=-O0 --enable-debug=full',
                'CFLAGS=-Os',
@@ -83,8 +82,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        conf: ['',
-               'CFLAGS=-O3',
+        conf: ['CFLAGS=-O3',
                'CFLAGS=-O1',
                'CFLAGS=-O0 --enable-debug=full',
                'CFLAGS=-Os',
@@ -219,7 +217,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        cc_ver: [10, 11, 12, 13, 14]
+        # Gcc-13 is the default in Ubuntu 24.04 and gets used in Run_gcc
+        cc_ver: [10, 11, 12, 14]
         conf: ['', '--enable-abi-compat']
     steps:
       - uses: actions/checkout@v6
