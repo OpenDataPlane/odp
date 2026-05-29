@@ -794,8 +794,24 @@ typedef struct odp_timer_tick_info_t {
  * ODP timer pool information and configuration
  */
 typedef struct {
-	/** Parameters specified at creation */
+	/** Timer pool parameters
+	 *
+	 *  Parameters specified at creation with the exception of
+	 *  odp_timer_pool_param_t::periodic::freq::freq_hz and
+	 *  odp_timer_pool_param_t::periodic::freq::num which are set to NULL and 0 respectively.
+	 *  The creation-time values for these are provided via 'freq_hz' and 'num_freq_hz' fields
+	 *  in case of ODP_TIMER_TYPE_PERIODIC_FREQ pools.
+	 */
 	odp_timer_pool_param_t param;
+
+	/** Array of constraining periodic timer frequencies for timer pool specified at
+	 *  creation. Must not be modified after population by odp_timer_pool_info(). Accessible
+	 *  until the timer pool is destroyed.
+	 */
+	const odp_fract_u64_t *freq_hz;
+
+	/** Number of items in 'freq_hz' array */
+	uint32_t num_freq_hz;
 
 	/** Number of currently allocated timers */
 	uint32_t cur_timers;
