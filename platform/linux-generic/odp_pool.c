@@ -162,6 +162,22 @@ static inline void cache_push_single(pool_cache_t *cache, _odp_event_hdr_t *even
 	odp_atomic_store_u32(&cache->cache_num, cache_num + 1);
 }
 
+static inline uint32_t cache_push_from_ring(pool_cache_t *cache,
+					    ring_mpmc_rst_ptr_t *ring, uint32_t mask,
+					    uint32_t cache_num, uint32_t num)
+{
+	uint32_t cached;
+
+	_ODP_ASSERT(cache_num + num <= CONFIG_POOL_CACHE_MAX_SIZE);
+
+	cached = ring_mpmc_rst_ptr_deq_multi(ring, mask,
+					     (void **)&cache->event_hdr[cache_num], num);
+
+	odp_atomic_store_u32(&cache->cache_num, cache_num + cached);
+
+	return cached;
+}
+
 static void cache_flush(pool_cache_t *cache, pool_t *pool)
 {
 	_odp_event_hdr_t *event_hdr;
@@ -1364,6 +1380,7 @@ odp_event_t _odp_event_alloc(pool_t *pool)
 {
 	pool_cache_t *cache = local.cache[pool->pool_idx];
 	_odp_event_hdr_t *hdr;
+	uint32_t cached;
 
 	/* First pull packets from local cache */
 	hdr = cache_pop_single(cache);
@@ -1374,32 +1391,22 @@ odp_event_t _odp_event_alloc(pool_t *pool)
 		return _odp_event_from_hdr(hdr);
 	}
 
-	/* If needed, get more from the global pool */
-	uint32_t burst = pool->burst_size;
-	uint32_t mask = pool->ring_mask;
-	_odp_event_hdr_t *hdr_tmp[burst];
-	ring_mpmc_rst_ptr_t *ring = &pool->ring->hdr;
-
-	burst = ring_mpmc_rst_ptr_deq_multi(ring, mask, (void **)hdr_tmp, burst);
+	/* Cache is empty. Refill from the global pool directly into the local cache. */
+	cached = cache_push_from_ring(cache, &pool->ring->hdr, pool->ring_mask, 0,
+				      pool->burst_size);
 
 	if (CONFIG_POOL_STATISTICS) {
 		if (pool->params.stats.bit.alloc_ops)
 			odp_atomic_inc_u64(&pool->stats.alloc_ops);
-		if (odp_unlikely(pool->params.stats.bit.alloc_fails && burst == 0))
+		if (odp_unlikely(pool->params.stats.bit.alloc_fails && cached == 0))
 			odp_atomic_inc_u64(&pool->stats.alloc_fails);
 	}
 
-	if (odp_unlikely(burst == 0))
+	if (odp_unlikely(cached == 0))
 		return ODP_EVENT_INVALID;
 
-	hdr = hdr_tmp[0];
-	burst--;
-
+	hdr = cache_pop_single(cache);
 	odp_prefetch(hdr);
-
-	/* Cache possible extra buffers. Cache is currently empty. */
-	if (burst)
-		cache_push(cache, &hdr_tmp[1], burst);
 
 	return _odp_event_from_hdr(hdr);
 }
