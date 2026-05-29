@@ -271,6 +271,7 @@ __LIB__libodp_linux_la_SOURCES = \
 			   odp_random_std.c \
 			   odp_random_openssl.c \
 			   odp_schedule_basic.c \
+			   odp_schedule_centralized.c \
 			   odp_schedule_if.c \
 			   odp_schedule_sp.c \
 			   odp_shared_memory.c \
