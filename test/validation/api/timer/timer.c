@@ -3606,6 +3606,7 @@ static void timer_test_periodic(periodic_params_t *params, odp_queue_type_t queu
 {
 	odp_queue_param_t queue_param;
 	odp_timer_pool_t timer_pool;
+	odp_timer_pool_info_t info;
 	odp_timer_periodic_start_t start_param;
 	odp_queue_t queue;
 	odp_event_t ev = ODP_EVENT_INVALID;
@@ -3616,6 +3617,8 @@ static void timer_test_periodic(periodic_params_t *params, odp_queue_type_t queu
 	const char *user_ctx = "User context";
 	uarea_data_t data;
 	uint8_t *uarea;
+	uint32_t num_freq;
+	const odp_fract_u64_t *info_hz, *src_hz;
 	int num_tmo;
 	int done;
 	const int num = 200;
@@ -3627,9 +3630,26 @@ static void timer_test_periodic(periodic_params_t *params, odp_queue_type_t queu
 		params->pool_param.priority = 0;
 
 	timer_pool = odp_timer_pool_create("periodic_timer", &params->pool_param);
-	CU_ASSERT_FATAL(timer_pool != ODP_TIMER_POOL_INVALID);
-	CU_ASSERT_FATAL(odp_timer_pool_start_multi(&timer_pool, 1) == 1);
 
+	CU_ASSERT_FATAL(timer_pool != ODP_TIMER_POOL_INVALID);
+	CU_ASSERT_FATAL(odp_timer_pool_info(timer_pool, &info) == 0);
+
+	if (params->pool_param.timer_type == ODP_TIMER_TYPE_PERIODIC_FREQ) {
+		num_freq = params->pool_param.periodic.freq.num;
+		src_hz = params->pool_param.periodic.freq.freq_hz;
+		info_hz = info.param.periodic.freq.freq_hz;
+
+		CU_ASSERT(info.param.timer_type == ODP_TIMER_TYPE_PERIODIC_FREQ);
+		CU_ASSERT(info.param.periodic.freq.num == num_freq);
+
+		for (uint32_t i = 0; i < num_freq; i++) {
+			CU_ASSERT(info_hz[i].integer == src_hz[i].integer);
+			CU_ASSERT(info_hz[i].numer == src_hz[i].numer);
+			CU_ASSERT(info_hz[i].denom == src_hz[i].denom);
+		}
+	}
+
+	CU_ASSERT_FATAL(odp_timer_pool_start_multi(&timer_pool, 1) == 1);
 	odp_queue_param_init(&queue_param);
 
 	if (queue_type == ODP_QUEUE_TYPE_SCHED) {
