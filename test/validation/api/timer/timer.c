@@ -3555,7 +3555,6 @@ static odp_bool_t fill_periodic_freq_params(periodic_params_t *params)
 	params->pool_param.num_timers = 1;
 	params->pool_param.clk_src = clk_src;
 	params->freq_hz = freq_hz;
-	params->pool_param.periodic.freq.freq_hz = &params->freq_hz;
 	params->pool_param.periodic.freq.num = 1;
 	params->pool_param.periodic.uarea_size =
 					test_global->global_mem.tmo_uarea_support > 0 ? 1 : 0;
@@ -3601,6 +3600,53 @@ static void init_uarea(void *uarea, uint32_t size, void *args, uint32_t index, u
 		 uarea, size, args, index, max_num);
 }
 
+static odp_timer_pool_t create_periodic_timer_pool(periodic_params_t *params)
+{
+	odp_fract_u64_t freq_hz = params->freq_hz;
+	odp_timer_pool_t timer_pool;
+	odp_timer_pool_info_t info;
+	odp_fract_u64_t src_hz = { 0 }, info_hz = { 0 };
+
+	if (params->pool_param.timer_type == ODP_TIMER_TYPE_PERIODIC_FREQ) {
+		params->pool_param.periodic.freq.freq_hz = &freq_hz;
+		timer_pool = odp_timer_pool_create("periodic_timer", &params->pool_param);
+		freq_hz.integer = 0;
+		freq_hz.numer = 0;
+		freq_hz.denom = 0;
+	} else {
+		timer_pool = odp_timer_pool_create("periodic_timer", &params->pool_param);
+	}
+
+	CU_ASSERT_FATAL(timer_pool != ODP_TIMER_POOL_INVALID);
+	CU_ASSERT_FATAL(odp_timer_pool_info(timer_pool, &info) == 0);
+
+	if (params->pool_param.timer_type == ODP_TIMER_TYPE_PERIODIC_FREQ) {
+		CU_ASSERT(info.param.timer_type == ODP_TIMER_TYPE_PERIODIC_FREQ);
+		CU_ASSERT(info.param.periodic.freq.num == params->pool_param.periodic.freq.num);
+		CU_ASSERT_FATAL(info.param.periodic.freq.freq_hz != NULL);
+
+		/* We currently pass a single frequency, so we just check the first one */
+		src_hz = params->freq_hz;
+		info_hz = info.param.periodic.freq.freq_hz[0];
+	} else if (params->pool_param.timer_type == ODP_TIMER_TYPE_PERIODIC_BASE_MUL) {
+		CU_ASSERT(info.param.timer_type == ODP_TIMER_TYPE_PERIODIC_BASE_MUL);
+		CU_ASSERT(info.param.periodic.base_mul.max_multiplier ==
+			  params->pool_param.periodic.base_mul.max_multiplier);
+
+		src_hz = params->pool_param.periodic.base_mul.base_freq_hz;
+		info_hz = info.param.periodic.base_mul.base_freq_hz;
+	}
+
+	CU_ASSERT(info_hz.integer == src_hz.integer);
+	CU_ASSERT(info_hz.numer == src_hz.numer);
+	CU_ASSERT(info_hz.denom == src_hz.denom);
+	CU_ASSERT(info.param.periodic.uarea_size == params->pool_param.periodic.uarea_size);
+	CU_ASSERT(info.param.periodic.max_pending_tmo ==
+		  params->pool_param.periodic.max_pending_tmo);
+
+	return timer_pool;
+}
+
 static void timer_test_periodic(periodic_params_t *params, odp_queue_type_t queue_type,
 				int use_first, int rounds, odp_bool_t max_prio)
 {
@@ -3626,10 +3672,9 @@ static void timer_test_periodic(periodic_params_t *params, odp_queue_type_t queu
 	if (!max_prio)
 		params->pool_param.priority = 0;
 
-	timer_pool = odp_timer_pool_create("periodic_timer", &params->pool_param);
-	CU_ASSERT_FATAL(timer_pool != ODP_TIMER_POOL_INVALID);
-	CU_ASSERT_FATAL(odp_timer_pool_start_multi(&timer_pool, 1) == 1);
+	timer_pool = create_periodic_timer_pool(params);
 
+	CU_ASSERT_FATAL(odp_timer_pool_start_multi(&timer_pool, 1) == 1);
 	odp_queue_param_init(&queue_param);
 
 	if (queue_type == ODP_QUEUE_TYPE_SCHED) {
@@ -3938,8 +3983,7 @@ static void timer_test_periodic_flow_control(periodic_params_t *params, odp_queu
 	max_pending_tmo = ODPH_MAX(timer_capa->periodic.min_pending_tmo, 1U);
 	params->pool_param.periodic.max_pending_tmo = max_pending_tmo;
 
-	timer_pool = odp_timer_pool_create("periodic_timer", &params->pool_param);
-	CU_ASSERT_FATAL(timer_pool != ODP_TIMER_POOL_INVALID);
+	timer_pool = create_periodic_timer_pool(params);
 
 	CU_ASSERT_FATAL(odp_timer_pool_start_multi(&timer_pool, 1) == 1);
 
