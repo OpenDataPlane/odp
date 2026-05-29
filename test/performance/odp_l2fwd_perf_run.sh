@@ -15,6 +15,11 @@ PATH=$TEST_DIR:$PATH
 # exit codes expected by automake for skipped tests
 TEST_SKIPPED=77
 
+if [ "${ODP_SCHEDULER}" = "centralized" ]; then
+	echo "ODP_SCHEDULER=centralized is not supported. Skipping test."
+	exit $TEST_SKIPPED
+fi
+
 VALIDATION_TESTDIR=platform/$ODP_PLATFORM/test/validation
 PLATFORM_VALIDATION=${TEST_SRC_DIR}/../../$VALIDATION_TESTDIR
 

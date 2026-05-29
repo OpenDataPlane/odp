@@ -17,8 +17,9 @@ extern "C" {
 #include <odp_event_internal.h>
 #include <odp_queue_if.h>
 
-#define _ODP_SCHED_ID_BASIC    0
-#define _ODP_SCHED_ID_SP       1
+#define _ODP_SCHED_ID_BASIC       0
+#define _ODP_SCHED_ID_SP          1
+#define _ODP_SCHED_ID_CENTRALIZED 2
 
 /* Scheduler identifier */
 extern int _odp_sched_id;

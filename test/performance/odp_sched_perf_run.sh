@@ -53,6 +53,12 @@ run()
 }
 
 run 1
+
+if [ "${ODP_SCHEDULER}" = "centralized" ]; then
+	echo "Skipping multi-worker tests with ODP_SCHEDULER=centralized."
+	exit 0
+fi
+
 run 2
 run 6
 

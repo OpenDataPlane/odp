@@ -7,6 +7,11 @@
 # Exit code expected by automake for skipped tests
 TEST_SKIPPED=77
 
+if [ "${ODP_SCHEDULER}" = "centralized" ]; then
+  echo "ODP_SCHEDULER=centralized is not supported. Skipping test."
+  exit $TEST_SKIPPED
+fi
+
 if  [ -f ./pktio_env ]; then
   . ./pktio_env
 else
