@@ -1155,7 +1155,7 @@ static odp_timer_pool_t timer_pool_new(const char *name, const odp_timer_pool_pa
 {
 	uint32_t i;
 	int tp_idx;
-	size_t sz0, sz1, sz2;
+	size_t sz0, sz1, sz2, sz3;
 	uint64_t tp_size;
 	uint64_t res_ns, nsec_per_scan;
 	odp_shm_t shm;
@@ -1276,7 +1276,10 @@ static odp_timer_pool_t timer_pool_new(const char *name, const odp_timer_pool_pa
 	sz0 = _ODP_ROUNDUP_CACHE_LINE(sizeof(timer_pool_t));
 	sz1 = _ODP_ROUNDUP_CACHE_LINE(sizeof(tick_buf_t) * param->num_timers);
 	sz2 = _ODP_ROUNDUP_CACHE_LINE(sizeof(_odp_timer_t) * param->num_timers);
-	tp_size = sz0 + sz1 + sz2;
+	sz3 = 0;
+	if (param->timer_type == ODP_TIMER_TYPE_PERIODIC_FREQ)
+		sz3 = _ODP_ROUNDUP_CACHE_LINE(sizeof(odp_fract_u64_t) * param->periodic.freq.num);
+	tp_size = sz0 + sz1 + sz2 + sz3;
 
 	if (periodic) {
 		odp_pool_param_init(&tmo_pool_param);
@@ -1332,6 +1335,14 @@ static odp_timer_pool_t timer_pool_new(const char *name, const odp_timer_pool_pa
 			tp->p.base_freq = base_freq;
 			tp->p.max_multiplier = max_multiplier;
 		} else {
+			odp_fract_u64_t *freq_copy =
+				(void *)((char *)odp_shm_addr(shm) + sz0 + sz1 + sz2);
+			const uint32_t num = param->periodic.freq.num;
+
+			memcpy(freq_copy, param->periodic.freq.freq_hz,
+			       sizeof(odp_fract_u64_t) * num);
+			tp->param.periodic.freq.freq_hz = freq_copy;
+
 			tp->p.min_freq = min_freq;
 			tp->p.max_freq = max_freq;
 		}
@@ -1644,6 +1655,14 @@ int odp_timer_pool_info(odp_timer_pool_t tpid, odp_timer_pool_info_t *tp_info)
 
 	memset(tp_info, 0, sizeof(odp_timer_pool_info_t));
 	tp_info->param = tp->param;
+
+	if (tp->p.type == ODP_TIMER_TYPE_PERIODIC_FREQ) {
+		tp_info->freq_hz = tp->param.periodic.freq.freq_hz;
+		tp_info->num_freq_hz = tp->param.periodic.freq.num;
+	}
+
+	tp_info->param.periodic.freq.freq_hz = NULL;
+	tp_info->param.periodic.freq.num = 0;
 	tp_info->cur_timers = tp->num_alloc;
 	tp_info->hwm_timers = odp_atomic_load_u32(&tp->high_wm);
 	tp_info->name = tp->name;
