@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2018 Linaro Limited
- * Copyright (c) 2023-2025 Nokia
+ * Copyright (c) 2023-2026 Nokia
  */
 
 #ifndef ODP_RING_MPMC_INTERNAL_H_
@@ -65,7 +65,7 @@ extern "C" {
  *             r_tail                      w_tail
  */
 
-struct ring_mpmc_common {
+struct ring_xpxc_common {
 	_ODP_CACHE_PAD
 
 	/* Reader head and tail */
@@ -86,16 +86,40 @@ struct ring_mpmc_common {
 };
 
 typedef struct ODP_ALIGNED_CACHE {
-	struct ring_mpmc_common r;
+	struct ring_xpxc_common r;
 } ring_mpmc_u32_t;
 
 typedef struct ODP_ALIGNED_CACHE {
-	struct ring_mpmc_common r;
+	struct ring_xpxc_common r;
 } ring_mpmc_u64_t;
 
 typedef struct ODP_ALIGNED_CACHE {
-	struct ring_mpmc_common r;
+	struct ring_xpxc_common r;
 } ring_mpmc_ptr_t;
+
+typedef struct ODP_ALIGNED_CACHE {
+	struct ring_xpxc_common r;
+} ring_mpsc_u32_t;
+
+typedef struct ODP_ALIGNED_CACHE {
+	struct ring_xpxc_common r;
+} ring_mpsc_u64_t;
+
+typedef struct ODP_ALIGNED_CACHE {
+	struct ring_xpxc_common r;
+} ring_mpsc_ptr_t;
+
+typedef struct ODP_ALIGNED_CACHE {
+	struct ring_xpxc_common r;
+} ring_spmc_u32_t;
+
+typedef struct ODP_ALIGNED_CACHE {
+	struct ring_xpxc_common r;
+} ring_spmc_u64_t;
+
+typedef struct ODP_ALIGNED_CACHE {
+	struct ring_xpxc_common r;
+} ring_spmc_ptr_t;
 
 static inline int ring_mpmc_cas_u32(odp_atomic_u32_t *atom,
 				    uint32_t *old_val, uint32_t new_val)
@@ -108,67 +132,146 @@ static inline int ring_mpmc_cas_u32(odp_atomic_u32_t *atom,
 
 #endif /* End of include guards */
 
-#undef _ring_mpmc_gen_t
-#undef _ring_mpmc_data_t
-#undef _RING_MPMC_INIT
+#undef _ring_xpxc_gen_t
+#undef _ring_xpxc_data_t
+#undef _RING_XPXC_INIT
+#undef _RING_XPXC_IS_EMPTY
+#undef _RING_XPXC_LEN
+
 #undef _RING_MPMC_DEQ
 #undef _RING_MPMC_ENQ
 #undef _RING_MPMC_DEQ_MULTI
 #undef _RING_MPMC_ENQ_MULTI
 #undef _RING_MPMC_DEQ_BATCH
 #undef _RING_MPMC_ENQ_BATCH
-#undef _RING_MPMC_IS_EMPTY
-#undef _RING_MPMC_LEN
+
+#undef _RING_MPSC_DEQ_MULTI
+#undef _RING_MPSC_DEQ_BATCH
+
+#undef _RING_SPMC_ENQ_MULTI
+#undef _RING_SPMC_ENQ_BATCH
 
 /* This header should NOT be included directly. There are no include guards for
  * the following types and function definitions! */
-#ifndef _ODP_RING_TYPE
+#if !defined(_ODP_RING_TYPE) || !defined(_ODP_RING_SYNC)
 #error Include type specific ring header instead of this common file.
 #endif
 
 #if _ODP_RING_TYPE == _ODP_RING_TYPE_U32
-	#define _ring_mpmc_gen_t	ring_mpmc_u32_t
-	#define _ring_mpmc_data_t	uint32_t
+	#if _ODP_RING_SYNC == _ODP_RING_SYNC_MPSC
+		#define _ring_xpxc_gen_t	ring_mpsc_u32_t
+		#define _ring_xpxc_data_t	uint32_t
 
-	#define _RING_MPMC_INIT		ring_mpmc_u32_init
-	#define _RING_MPMC_DEQ		ring_mpmc_u32_deq
-	#define _RING_MPMC_ENQ		ring_mpmc_u32_enq
-	#define _RING_MPMC_DEQ_MULTI	ring_mpmc_u32_deq_multi
-	#define _RING_MPMC_ENQ_MULTI	ring_mpmc_u32_enq_multi
-	#define _RING_MPMC_DEQ_BATCH	ring_mpmc_u32_deq_batch
-	#define _RING_MPMC_ENQ_BATCH	ring_mpmc_u32_enq_batch
-	#define _RING_MPMC_IS_EMPTY	ring_mpmc_u32_is_empty
-	#define _RING_MPMC_LEN		ring_mpmc_u32_len
+		#define _RING_XPXC_INIT		ring_mpsc_u32_init
+		#define _RING_MPMC_ENQ_MULTI	ring_mpsc_u32_enq_multi
+		#define _RING_MPMC_ENQ_BATCH	ring_mpsc_u32_enq_batch
+		#define _RING_MPSC_DEQ_MULTI	ring_mpsc_u32_deq_multi
+		#define _RING_MPSC_DEQ_BATCH	ring_mpsc_u32_deq_batch
+		#define _RING_XPXC_IS_EMPTY	ring_mpsc_u32_is_empty
+		#define _RING_XPXC_LEN		ring_mpsc_u32_len
+	#elif _ODP_RING_SYNC == _ODP_RING_SYNC_SPMC
+		#define _ring_xpxc_gen_t	ring_spmc_u32_t
+		#define _ring_xpxc_data_t	uint32_t
+
+		#define _RING_XPXC_INIT		ring_spmc_u32_init
+		#define _RING_SPMC_ENQ_MULTI	ring_spmc_u32_enq_multi
+		#define _RING_SPMC_ENQ_BATCH	ring_spmc_u32_enq_batch
+		#define _RING_MPMC_DEQ_MULTI	ring_spmc_u32_deq_multi
+		#define _RING_MPMC_DEQ_BATCH	ring_spmc_u32_deq_batch
+		#define _RING_XPXC_IS_EMPTY	ring_spmc_u32_is_empty
+		#define _RING_XPXC_LEN		ring_spmc_u32_len
+	#else
+		#define _ring_xpxc_gen_t	ring_mpmc_u32_t
+		#define _ring_xpxc_data_t	uint32_t
+
+		#define _RING_XPXC_INIT		ring_mpmc_u32_init
+		#define _RING_MPMC_DEQ		ring_mpmc_u32_deq
+		#define _RING_MPMC_ENQ		ring_mpmc_u32_enq
+		#define _RING_MPMC_DEQ_MULTI	ring_mpmc_u32_deq_multi
+		#define _RING_MPMC_ENQ_MULTI	ring_mpmc_u32_enq_multi
+		#define _RING_MPMC_DEQ_BATCH	ring_mpmc_u32_deq_batch
+		#define _RING_MPMC_ENQ_BATCH	ring_mpmc_u32_enq_batch
+		#define _RING_XPXC_IS_EMPTY	ring_mpmc_u32_is_empty
+		#define _RING_XPXC_LEN		ring_mpmc_u32_len
+	#endif
 #elif _ODP_RING_TYPE == _ODP_RING_TYPE_U64
-	#define _ring_mpmc_gen_t	ring_mpmc_u64_t
-	#define _ring_mpmc_data_t	uint64_t
+	#if _ODP_RING_SYNC == _ODP_RING_SYNC_MPSC
+		#define _ring_xpxc_gen_t	ring_mpsc_u64_t
+		#define _ring_xpxc_data_t	uint64_t
 
-	#define _RING_MPMC_INIT		ring_mpmc_u64_init
-	#define _RING_MPMC_DEQ		ring_mpmc_u64_deq
-	#define _RING_MPMC_ENQ		ring_mpmc_u64_enq
-	#define _RING_MPMC_DEQ_MULTI	ring_mpmc_u64_deq_multi
-	#define _RING_MPMC_ENQ_MULTI	ring_mpmc_u64_enq_multi
-	#define _RING_MPMC_DEQ_BATCH	ring_mpmc_u64_deq_batch
-	#define _RING_MPMC_ENQ_BATCH	ring_mpmc_u64_enq_batch
-	#define _RING_MPMC_IS_EMPTY	ring_mpmc_u64_is_empty
-	#define _RING_MPMC_LEN		ring_mpmc_u64_len
+		#define _RING_XPXC_INIT		ring_mpsc_u64_init
+		#define _RING_MPMC_ENQ_MULTI	ring_mpsc_u64_enq_multi
+		#define _RING_MPMC_ENQ_BATCH	ring_mpsc_u64_enq_batch
+		#define _RING_MPSC_DEQ_MULTI	ring_mpsc_u64_deq_multi
+		#define _RING_MPSC_DEQ_BATCH	ring_mpsc_u64_deq_batch
+		#define _RING_XPXC_IS_EMPTY	ring_mpsc_u64_is_empty
+		#define _RING_XPXC_LEN		ring_mpsc_u64_len
+	#elif _ODP_RING_SYNC == _ODP_RING_SYNC_SPMC
+		#define _ring_xpxc_gen_t	ring_spmc_u64_t
+		#define _ring_xpxc_data_t	uint64_t
+
+		#define _RING_XPXC_INIT		ring_spmc_u64_init
+		#define _RING_SPMC_ENQ_MULTI	ring_spmc_u64_enq_multi
+		#define _RING_SPMC_ENQ_BATCH	ring_spmc_u64_enq_batch
+		#define _RING_MPMC_DEQ_MULTI	ring_spmc_u64_deq_multi
+		#define _RING_MPMC_DEQ_BATCH	ring_spmc_u64_deq_batch
+		#define _RING_XPXC_IS_EMPTY	ring_spmc_u64_is_empty
+		#define _RING_XPXC_LEN		ring_spmc_u64_len
+	#else
+		#define _ring_xpxc_gen_t	ring_mpmc_u64_t
+		#define _ring_xpxc_data_t	uint64_t
+
+		#define _RING_XPXC_INIT		ring_mpmc_u64_init
+		#define _RING_MPMC_DEQ		ring_mpmc_u64_deq
+		#define _RING_MPMC_ENQ		ring_mpmc_u64_enq
+		#define _RING_MPMC_DEQ_MULTI	ring_mpmc_u64_deq_multi
+		#define _RING_MPMC_ENQ_MULTI	ring_mpmc_u64_enq_multi
+		#define _RING_MPMC_DEQ_BATCH	ring_mpmc_u64_deq_batch
+		#define _RING_MPMC_ENQ_BATCH	ring_mpmc_u64_enq_batch
+		#define _RING_XPXC_IS_EMPTY	ring_mpmc_u64_is_empty
+		#define _RING_XPXC_LEN		ring_mpmc_u64_len
+	#endif
 #elif _ODP_RING_TYPE == _ODP_RING_TYPE_PTR
-	#define _ring_mpmc_gen_t	ring_mpmc_ptr_t
-	#define _ring_mpmc_data_t	uintptr_t
+	#if _ODP_RING_SYNC == _ODP_RING_SYNC_MPSC
+		#define _ring_xpxc_gen_t	ring_mpsc_ptr_t
+		#define _ring_xpxc_data_t	uintptr_t
 
-	#define _RING_MPMC_INIT		ring_mpmc_ptr_init
-	#define _RING_MPMC_DEQ		ring_mpmc_ptr_deq
-	#define _RING_MPMC_ENQ		ring_mpmc_ptr_enq
-	#define _RING_MPMC_DEQ_MULTI	ring_mpmc_ptr_deq_multi
-	#define _RING_MPMC_ENQ_MULTI	ring_mpmc_ptr_enq_multi
-	#define _RING_MPMC_DEQ_BATCH	ring_mpmc_ptr_deq_batch
-	#define _RING_MPMC_ENQ_BATCH	ring_mpmc_ptr_enq_batch
-	#define _RING_MPMC_IS_EMPTY	ring_mpmc_ptr_is_empty
-	#define _RING_MPMC_LEN		ring_mpmc_ptr_len
+		#define _RING_XPXC_INIT		ring_mpsc_ptr_init
+		#define _RING_MPMC_ENQ_MULTI	ring_mpsc_ptr_enq_multi
+		#define _RING_MPMC_ENQ_BATCH	ring_mpsc_ptr_enq_batch
+		#define _RING_MPSC_DEQ_MULTI	ring_mpsc_ptr_deq_multi
+		#define _RING_MPSC_DEQ_BATCH	ring_mpsc_ptr_deq_batch
+		#define _RING_XPXC_IS_EMPTY	ring_mpsc_ptr_is_empty
+		#define _RING_XPXC_LEN		ring_mpsc_ptr_len
+	#elif _ODP_RING_SYNC == _ODP_RING_SYNC_SPMC
+		#define _ring_xpxc_gen_t	ring_spmc_ptr_t
+		#define _ring_xpxc_data_t	uintptr_t
+
+		#define _RING_XPXC_INIT		ring_spmc_ptr_init
+		#define _RING_SPMC_ENQ_MULTI	ring_spmc_ptr_enq_multi
+		#define _RING_SPMC_ENQ_BATCH	ring_spmc_ptr_enq_batch
+		#define _RING_MPMC_DEQ_MULTI	ring_spmc_ptr_deq_multi
+		#define _RING_MPMC_DEQ_BATCH	ring_spmc_ptr_deq_batch
+		#define _RING_XPXC_IS_EMPTY	ring_spmc_ptr_is_empty
+		#define _RING_XPXC_LEN		ring_spmc_ptr_len
+	#else
+		#define _ring_xpxc_gen_t	ring_mpmc_ptr_t
+		#define _ring_xpxc_data_t	uintptr_t
+
+		#define _RING_XPXC_INIT		ring_mpmc_ptr_init
+		#define _RING_MPMC_DEQ		ring_mpmc_ptr_deq
+		#define _RING_MPMC_ENQ		ring_mpmc_ptr_enq
+		#define _RING_MPMC_DEQ_MULTI	ring_mpmc_ptr_deq_multi
+		#define _RING_MPMC_ENQ_MULTI	ring_mpmc_ptr_enq_multi
+		#define _RING_MPMC_DEQ_BATCH	ring_mpmc_ptr_deq_batch
+		#define _RING_MPMC_ENQ_BATCH	ring_mpmc_ptr_enq_batch
+		#define _RING_XPXC_IS_EMPTY	ring_mpmc_ptr_is_empty
+		#define _RING_XPXC_LEN		ring_mpmc_ptr_len
+	#endif
 #endif
 
 /* Initialize ring */
-static inline void _RING_MPMC_INIT(_ring_mpmc_gen_t *ring)
+static inline void _RING_XPXC_INIT(_ring_xpxc_gen_t *ring)
 {
 	odp_atomic_init_u32(&ring->r.w_head, 0);
 	odp_atomic_init_u32(&ring->r.w_tail, 0);
@@ -176,11 +279,12 @@ static inline void _RING_MPMC_INIT(_ring_mpmc_gen_t *ring)
 	odp_atomic_init_u32(&ring->r.r_tail, 0);
 }
 
+#ifdef _RING_MPMC_DEQ
 /* Dequeue data from the ring head */
-static inline uint32_t _RING_MPMC_DEQ(_ring_mpmc_gen_t *ring,
-				      _ring_mpmc_data_t *ring_data,
+static inline uint32_t _RING_MPMC_DEQ(_ring_xpxc_gen_t *ring,
+				      _ring_xpxc_data_t *ring_data,
 				      uint32_t ring_mask,
-				      _ring_mpmc_data_t *data)
+				      _ring_xpxc_data_t *data)
 {
 	uint32_t old_head, new_head, w_tail, num_data;
 
@@ -215,12 +319,14 @@ static inline uint32_t _RING_MPMC_DEQ(_ring_mpmc_gen_t *ring,
 
 	return 1;
 }
+#endif
 
+#ifdef _RING_MPMC_DEQ_MULTI
 /* Dequeue data from the ring head */
-static inline uint32_t _RING_MPMC_DEQ_MULTI(_ring_mpmc_gen_t *ring,
-					    _ring_mpmc_data_t *ring_data,
+static inline uint32_t _RING_MPMC_DEQ_MULTI(_ring_xpxc_gen_t *ring,
+					    _ring_xpxc_data_t *ring_data,
 					    uint32_t ring_mask,
-					    _ring_mpmc_data_t data[],
+					    _ring_xpxc_data_t data[],
 					    uint32_t num)
 {
 	uint32_t old_head, new_head, w_tail, num_data, i;
@@ -261,12 +367,55 @@ static inline uint32_t _RING_MPMC_DEQ_MULTI(_ring_mpmc_gen_t *ring,
 
 	return num;
 }
+#endif
 
-/* Dequeue num or 0 data from the ring head */
-static inline uint32_t _RING_MPMC_DEQ_BATCH(_ring_mpmc_gen_t *ring,
-					    _ring_mpmc_data_t *ring_data,
+#ifdef _RING_MPSC_DEQ_MULTI
+/* Single-consumer dequeue of multiple data items from the ring head */
+static inline uint32_t _RING_MPSC_DEQ_MULTI(_ring_xpxc_gen_t *ring,
+					    _ring_xpxc_data_t *ring_data,
 					    uint32_t ring_mask,
-					    _ring_mpmc_data_t data[],
+					    _ring_xpxc_data_t data[],
+					    uint32_t num)
+{
+	uint32_t old_head, new_head, w_tail, num_data, i;
+
+	/* r_head value is always behind or equal to w_tail value */
+	old_head = odp_atomic_load_u32(&ring->r.r_head);
+	odp_prefetch(&ring_data[(old_head + 1) & ring_mask]);
+	w_tail   = odp_atomic_load_acq_u32(&ring->r.w_tail);
+	num_data = w_tail - old_head;
+
+	/* Ring is empty */
+	if (num_data == 0)
+		return 0;
+
+	/* Try to take all available */
+	if (num > num_data)
+		num = num_data;
+
+	new_head = old_head + num;
+
+	/* Reserve the slots. Relaxed store is enough as there are no other
+	 * readers. */
+	odp_atomic_store_u32(&ring->r.r_head, new_head);
+
+	/* Read data. */
+	for (i = 0; i < num; i++)
+		data[i] = ring_data[(old_head + 1 + i) & ring_mask];
+
+	/* Release the new reader tail, writers acquire it. */
+	odp_atomic_store_rel_u32(&ring->r.r_tail, new_head);
+
+	return num;
+}
+#endif
+
+#ifdef _RING_MPMC_DEQ_BATCH
+/* Dequeue num or 0 data from the ring head */
+static inline uint32_t _RING_MPMC_DEQ_BATCH(_ring_xpxc_gen_t *ring,
+					    _ring_xpxc_data_t *ring_data,
+					    uint32_t ring_mask,
+					    _ring_xpxc_data_t data[],
 					    uint32_t num)
 {
 	uint32_t old_head, new_head, w_tail, num_data, i;
@@ -303,12 +452,50 @@ static inline uint32_t _RING_MPMC_DEQ_BATCH(_ring_mpmc_gen_t *ring,
 
 	return num;
 }
+#endif
 
+#ifdef _RING_MPSC_DEQ_BATCH
+/* Single-consumer dequeue of data from the ring head */
+static inline uint32_t _RING_MPSC_DEQ_BATCH(_ring_xpxc_gen_t *ring,
+					    _ring_xpxc_data_t *ring_data,
+					    uint32_t ring_mask,
+					    _ring_xpxc_data_t data[],
+					    uint32_t num)
+{
+	uint32_t old_head, new_head, w_tail, num_data, i;
+
+	/* r_head value is always behind or equal to w_tail value */
+	old_head = odp_atomic_load_u32(&ring->r.r_head);
+	odp_prefetch(&ring_data[(old_head + 1) & ring_mask]);
+	w_tail   = odp_atomic_load_acq_u32(&ring->r.w_tail);
+	num_data = w_tail - old_head;
+
+	/* Not enough data available */
+	if (num_data < num)
+		return 0;
+
+	new_head = old_head + num;
+
+	/* Reserve the slots. Relaxed store is enough as there are no other
+	 * readers. */
+	odp_atomic_store_u32(&ring->r.r_head, new_head);
+
+	for (i = 0; i < num; i++)
+		data[i] = ring_data[(old_head + 1 + i) & ring_mask];
+
+	/* Release the new reader tail, writers acquire it. */
+	odp_atomic_store_rel_u32(&ring->r.r_tail, new_head);
+
+	return num;
+}
+#endif
+
+#ifdef _RING_MPMC_ENQ
 /* Enqueue data into the ring tail */
-static inline uint32_t _RING_MPMC_ENQ(_ring_mpmc_gen_t *ring,
-				      _ring_mpmc_data_t *ring_data,
+static inline uint32_t _RING_MPMC_ENQ(_ring_xpxc_gen_t *ring,
+				      _ring_xpxc_data_t *ring_data,
 				      uint32_t ring_mask,
-				      const _ring_mpmc_data_t data)
+				      const _ring_xpxc_data_t data)
 {
 	uint32_t old_head, new_head, r_tail, num_free;
 	uint32_t size = ring_mask + 1;
@@ -348,12 +535,14 @@ static inline uint32_t _RING_MPMC_ENQ(_ring_mpmc_gen_t *ring,
 
 	return 1;
 }
+#endif
 
+#ifdef _RING_MPMC_ENQ_MULTI
 /* Enqueue multiple data into the ring tail */
-static inline uint32_t _RING_MPMC_ENQ_MULTI(_ring_mpmc_gen_t *ring,
-					    _ring_mpmc_data_t *ring_data,
+static inline uint32_t _RING_MPMC_ENQ_MULTI(_ring_xpxc_gen_t *ring,
+					    _ring_xpxc_data_t *ring_data,
 					    uint32_t ring_mask,
-					    const _ring_mpmc_data_t data[],
+					    const _ring_xpxc_data_t data[],
 					    uint32_t num)
 {
 	uint32_t old_head, new_head, r_tail, num_free, i;
@@ -399,12 +588,55 @@ static inline uint32_t _RING_MPMC_ENQ_MULTI(_ring_mpmc_gen_t *ring,
 
 	return num;
 }
+#endif
 
-/* Enqueue num or 0 data into the ring tail */
-static inline uint32_t _RING_MPMC_ENQ_BATCH(_ring_mpmc_gen_t *ring,
-					    _ring_mpmc_data_t *ring_data,
+#ifdef _RING_SPMC_ENQ_MULTI
+/* Single-producer enqueue of multiple data items into the ring tail */
+static inline uint32_t _RING_SPMC_ENQ_MULTI(_ring_xpxc_gen_t *ring,
+					    _ring_xpxc_data_t *ring_data,
 					    uint32_t ring_mask,
-					    const _ring_mpmc_data_t data[],
+					    const _ring_xpxc_data_t data[],
+					    uint32_t num)
+{
+	uint32_t old_head, new_head, r_tail, num_free, i;
+	uint32_t size = ring_mask + 1;
+
+	/* w_head - r_tail is always less or equal than size */
+	old_head = odp_atomic_load_u32(&ring->r.w_head);
+	r_tail   = odp_atomic_load_acq_u32(&ring->r.r_tail);
+	num_free = size - (old_head - r_tail);
+
+	/* Ring is full */
+	if (num_free == 0)
+		return 0;
+
+	/* Try to use all available */
+	if (num > num_free)
+		num = num_free;
+
+	new_head = old_head + num;
+
+	/* Reserve the slots. Relaxed store is enough as there are no other
+	 * writers. */
+	odp_atomic_store_u32(&ring->r.w_head, new_head);
+
+	/* Write data. */
+	for (i = 0; i < num; i++)
+		ring_data[(old_head + 1 + i) & ring_mask] = data[i];
+
+	/* Release the new writer tail, readers acquire it. */
+	odp_atomic_store_rel_u32(&ring->r.w_tail, new_head);
+
+	return num;
+}
+#endif
+
+#ifdef _RING_MPMC_ENQ_BATCH
+/* Enqueue num or 0 data into the ring tail */
+static inline uint32_t _RING_MPMC_ENQ_BATCH(_ring_xpxc_gen_t *ring,
+					    _ring_xpxc_data_t *ring_data,
+					    uint32_t ring_mask,
+					    const _ring_xpxc_data_t data[],
 					    uint32_t num)
 {
 	uint32_t old_head, new_head, r_tail, num_free, i;
@@ -446,9 +678,47 @@ static inline uint32_t _RING_MPMC_ENQ_BATCH(_ring_mpmc_gen_t *ring,
 
 	return num;
 }
+#endif
+
+#ifdef _RING_SPMC_ENQ_BATCH
+/* Single-producer enqueue of data into the ring tail */
+static inline uint32_t _RING_SPMC_ENQ_BATCH(_ring_xpxc_gen_t *ring,
+					    _ring_xpxc_data_t *ring_data,
+					    uint32_t ring_mask,
+					    const _ring_xpxc_data_t data[],
+					    uint32_t num)
+{
+	uint32_t old_head, new_head, r_tail, num_free, i;
+	uint32_t size = ring_mask + 1;
+
+	/* w_head - r_tail is always less or equal than size */
+	old_head = odp_atomic_load_u32(&ring->r.w_head);
+	r_tail   = odp_atomic_load_acq_u32(&ring->r.r_tail);
+	num_free = size - (old_head - r_tail);
+
+	/* Not enough free space available */
+	if (num_free < num)
+		return 0;
+
+	new_head = old_head + num;
+
+	/* Reserve the slots. Relaxed store is enough as there are no other
+	 * writers. */
+	odp_atomic_store_u32(&ring->r.w_head, new_head);
+
+	/* Write data. */
+	for (i = 0; i < num; i++)
+		ring_data[(old_head + 1 + i) & ring_mask] = data[i];
+
+	/* Release the new writer tail, readers acquire it. */
+	odp_atomic_store_rel_u32(&ring->r.w_tail, new_head);
+
+	return num;
+}
+#endif
 
 /* Check if ring is empty */
-static inline int _RING_MPMC_IS_EMPTY(_ring_mpmc_gen_t *ring)
+static inline int _RING_XPXC_IS_EMPTY(_ring_xpxc_gen_t *ring)
 {
 	uint32_t head = odp_atomic_load_u32(&ring->r.r_head);
 	uint32_t tail = odp_atomic_load_u32(&ring->r.w_tail);
@@ -457,7 +727,7 @@ static inline int _RING_MPMC_IS_EMPTY(_ring_mpmc_gen_t *ring)
 }
 
 /* Return current ring length */
-static inline uint32_t _RING_MPMC_LEN(_ring_mpmc_gen_t *ring)
+static inline uint32_t _RING_XPXC_LEN(_ring_xpxc_gen_t *ring)
 {
 	uint32_t head = odp_atomic_load_u32(&ring->r.r_head);
 	uint32_t tail = odp_atomic_load_u32(&ring->r.w_tail);
