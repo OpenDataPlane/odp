@@ -13,6 +13,10 @@ extern "C" {
 #define _ODP_RING_TYPE_U64 2
 #define _ODP_RING_TYPE_PTR 3
 
+#define _ODP_RING_SYNC_MPMC 1
+#define _ODP_RING_SYNC_SPMC 2
+#define _ODP_RING_SYNC_MPSC 3
+
 #ifdef __cplusplus
 }
 #endif
