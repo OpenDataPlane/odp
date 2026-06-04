@@ -1134,7 +1134,7 @@ static void posix_timer_start(timer_pool_t *tp)
 	}
 }
 
-static odp_bool_t check_freq_range(odp_fract_u64_t *freq_hz, uint32_t num, double min_freq,
+static odp_bool_t check_freq_range(const odp_fract_u64_t *freq_hz, uint32_t num, double min_freq,
 				   double max_freq)
 {
 	double prev = -1.0, freq;
