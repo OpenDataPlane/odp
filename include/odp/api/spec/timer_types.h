@@ -500,7 +500,7 @@ typedef struct {
 			 *  exactly compatible (see odp_timer_periodic_capability()) with the
 			 *  'freq_hz' frequencies.
 			 */
-			odp_fract_u64_t *freq_hz;
+			const odp_fract_u64_t *freq_hz;
 
 			/** Number of items in 'freq_hz' array */
 			uint32_t num;
@@ -794,7 +794,15 @@ typedef struct odp_timer_tick_info_t {
  * ODP timer pool information and configuration
  */
 typedef struct {
-	/** Parameters specified at creation */
+	/** Timer pool parameters
+	 *
+	 *  Parameters specified for the pool at creation. Parameter values unused by a particular
+	 *  timer pool type are undefined.
+	 *
+	 *  In case of ODP_TIMER_TYPE_PERIODIC_FREQ, odp_timer_pool_param_t::periodic::freq::freq_hz
+	 *  points to an implementation-specific array containing read-only values that were passed
+	 *  at creation time. The array is accessible until the timer pool is destroyed.
+	 */
 	odp_timer_pool_param_t param;
 
 	/** Number of currently allocated timers */
