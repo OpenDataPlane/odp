@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2014-2018 Linaro Limited
- * Copyright (c) 2022-2025 Nokia
+ * Copyright (c) 2022-2026 Nokia
  */
 
 /**
@@ -13,10 +13,12 @@
 #define ODP_MACROS_INTERNAL_H_
 
 #include <odp/api/align.h>
+#include <odp/api/debug.h>
 
 #include <odp_config_internal.h>
 
 #include <stdint.h>
+#include <stddef.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -108,6 +110,15 @@ __extension__ ({			\
 #else
 #define _ODP_CACHE_PAD
 #endif
+
+/*
+ * Check that the offset of 'field' in struct 'type' falls within the 'block':th
+ * 64 byte block of the struct. Only do the check in 64-bit compilations.
+ */
+#define _ODP_STATIC_ASSERT_64B_BLOCK(block, type, field)				\
+	ODP_STATIC_ASSERT((sizeof(void *) != 8) ||					\
+			  (offsetof(type, field) / 64 + 1 == (block)),	\
+			  #type "::" #field " not in 64B block " #block)
 
 #ifdef __cplusplus
 }
