@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2014-2018 Linaro Limited
- * Copyright (c) 2019-2024 Nokia
+ * Copyright (c) 2019-2026 Nokia
  * Copyright (c) 2021 Marvell
  */
 
@@ -52,7 +52,8 @@ static struct {
 static odp_suiteinfo_t *global_testsuites;
 
 #define MAX_STR_LEN 256
-#define MAX_FAILURES 10
+#define MAX_POSTPONED_FAILURES 10
+#define MAX_FAILURES_BEFORE_FATAL 100
 
 /* Recorded assertion failure for later CUnit call in the initial thread */
 typedef struct assertion_failure_t {
@@ -63,7 +64,7 @@ typedef struct assertion_failure_t {
 } assertion_failure_t;
 
 typedef struct thr_global_t {
-	assertion_failure_t failure[MAX_FAILURES];
+	assertion_failure_t failure[MAX_POSTPONED_FAILURES];
 	unsigned long num_failures;
 } thr_global_t;
 
@@ -78,6 +79,17 @@ void odp_cu_assert(CU_BOOL value, unsigned int line,
 	unsigned long idx;
 
 	if (initial_thread) {
+		static uint64_t num_failures;
+
+		/* CUnit does not scale well to a big number of failed assertions. */
+		if (!value && ++num_failures > MAX_FAILURES_BEFORE_FATAL) {
+			if (num_failures == MAX_FAILURES_BEFORE_FATAL + 1)
+				CU_assertImplementation(value, line,
+					"All subsequent assertions are treated as fatal.",
+					file, "", 0);
+			fatal = true;
+		}
+
 		CU_assertImplementation(value, line, condition, file, "", fatal);
 		return;
 	}
@@ -102,7 +114,7 @@ void odp_cu_assert(CU_BOOL value, unsigned int line,
 
 	idx = __atomic_fetch_add(&thr_global->num_failures, 1, __ATOMIC_RELAXED);
 
-	if (idx < MAX_FAILURES) {
+	if (idx < MAX_POSTPONED_FAILURES) {
 		assertion_failure_t *a = &thr_global->failure[idx];
 
 		odph_strcpy(a->cond, condition, sizeof(a->cond));
@@ -119,8 +131,8 @@ static void handle_postponed_asserts(void)
 {
 	unsigned long num = thr_global->num_failures;
 
-	if (num > MAX_FAILURES)
-		num = MAX_FAILURES;
+	if (num > MAX_POSTPONED_FAILURES)
+		num = MAX_POSTPONED_FAILURES;
 
 	for (unsigned long n = 0; n < num; n++) {
 		assertion_failure_t *a = &thr_global->failure[n];
