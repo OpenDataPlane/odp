@@ -328,32 +328,43 @@ static inline void _odp_packet_copy_md(odp_packet_hdr_t *dst_hdr,
 	 *   .seg_indirect
 	 *   .seg_referenced
 	 */
+
+	_ODP_STATIC_ASSERT_64B_BLOCK(2, odp_packet_hdr_t, input);
+	_ODP_STATIC_ASSERT_64B_BLOCK(1, odp_packet_hdr_t, event_hdr.subtype);
+	_ODP_STATIC_ASSERT_64B_BLOCK(2, odp_packet_hdr_t, dst_queue);
+	_ODP_STATIC_ASSERT_64B_BLOCK(2, odp_packet_hdr_t, cos);
+	_ODP_STATIC_ASSERT_64B_BLOCK(2, odp_packet_hdr_t, flow_hash);
+	_ODP_STATIC_ASSERT_64B_BLOCK(2, odp_packet_hdr_t, user_ptr);
+
 	dst_hdr->input = src_hdr->input;
 	dst_hdr->event_hdr.subtype = subtype;
 	dst_hdr->dst_queue = src_hdr->dst_queue;
 	dst_hdr->cos = src_hdr->cos;
-	dst_hdr->cls_mark = src_hdr->cls_mark;
+	dst_hdr->flow_hash = src_hdr->flow_hash;
 	dst_hdr->user_ptr = src_hdr->user_ptr;
 
-	if (src_hdr->p.input_flags.flow_hash)
-		dst_hdr->flow_hash = src_hdr->flow_hash;
+	/* Avoid accessing the third 64 B block of the headers if not necessary */
+	if (src_hdr->p.input_flags.timestamp ||
+	    src_hdr->p.input_flags.cls_mark ||
+	    src_hdr->p.flags.payload_off ||
+	    src_hdr->p.flags.lso ||
+	    src_hdr->p.flags.tx_aging ||
+	    src_hdr->p.flags.tx_compl_poll) {
+		_ODP_STATIC_ASSERT_64B_BLOCK(3, odp_packet_hdr_t, cls_mark);
+		_ODP_STATIC_ASSERT_64B_BLOCK(3, odp_packet_hdr_t, payload_offset);
+		_ODP_STATIC_ASSERT_64B_BLOCK(3, odp_packet_hdr_t, lso_max_payload);
+		_ODP_STATIC_ASSERT_64B_BLOCK(3, odp_packet_hdr_t, tx_aging_ns);
+		_ODP_STATIC_ASSERT_64B_BLOCK(3, odp_packet_hdr_t, tx_compl_id);
+		_ODP_STATIC_ASSERT_64B_BLOCK(3, odp_packet_hdr_t, lso_profile_idx);
 
-	if (src_hdr->p.input_flags.timestamp)
-		dst_hdr->timestamp = src_hdr->timestamp;
-
-	if (src_hdr->p.flags.lso) {
+		dst_hdr->timestamp       = src_hdr->timestamp;
+		dst_hdr->cls_mark        = src_hdr->cls_mark;
+		dst_hdr->payload_offset  = src_hdr->payload_offset;
 		dst_hdr->lso_max_payload = src_hdr->lso_max_payload;
+		dst_hdr->tx_aging_ns     = src_hdr->tx_aging_ns;
+		dst_hdr->tx_compl_id     = src_hdr->tx_compl_id;
 		dst_hdr->lso_profile_idx = src_hdr->lso_profile_idx;
 	}
-
-	if (src_hdr->p.flags.payload_off)
-		dst_hdr->payload_offset = src_hdr->payload_offset;
-
-	if (src_hdr->p.flags.tx_aging)
-		dst_hdr->tx_aging_ns = src_hdr->tx_aging_ns;
-
-	if (src_hdr->p.flags.tx_compl_poll)
-		dst_hdr->tx_compl_id = src_hdr->tx_compl_id;
 
 	dst_hdr->p = src_hdr->p;
 
