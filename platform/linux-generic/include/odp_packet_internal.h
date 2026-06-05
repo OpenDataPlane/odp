@@ -144,15 +144,18 @@ typedef struct ODP_ALIGNED_CACHE odp_packet_hdr_t {
 	/* Max payload size in a LSO segment */
 	uint16_t lso_max_payload;
 
+	/* LSO profile index */
+	uint8_t lso_profile_idx;
+
+	/* Unused field. Used only for optimizing metadata copying */
+	uint8_t unused;
+
 	/* Packet aging drop timeout before enqueue. Once enqueued holds the maximum age (time of
 	 * request + requested drop timeout). */
 	uint64_t tx_aging_ns;
 
 	/* Tx completion poll completion identifier */
 	uint32_t tx_compl_id;
-
-	/* LSO profile index */
-	uint8_t lso_profile_idx;
 
 	/* Pktio where packet is used as a memory source */
 	uint8_t ms_pktio_idx;
@@ -311,8 +314,8 @@ static inline int _odp_packet_copy_md_possible(odp_pool_t dst_pool,
  *                         are swapped between the packet headers (allowed
  *                         only when packets are from the same pool).
  */
-static inline void _odp_packet_copy_md(odp_packet_hdr_t *dst_hdr,
-				       odp_packet_hdr_t *src_hdr,
+static inline void _odp_packet_copy_md(odp_packet_hdr_t *restrict dst_hdr,
+				       odp_packet_hdr_t *restrict src_hdr,
 				       odp_bool_t uarea_copy)
 {
 	int8_t subtype = src_hdr->event_hdr.subtype;
@@ -328,6 +331,8 @@ static inline void _odp_packet_copy_md(odp_packet_hdr_t *dst_hdr,
 	 *   .seg_indirect
 	 *   .seg_referenced
 	 */
+
+	_ODP_ASSERT(dst_hdr != src_hdr);
 
 	_ODP_STATIC_ASSERT_64B_BLOCK(2, odp_packet_hdr_t, input);
 	_ODP_STATIC_ASSERT_64B_BLOCK(1, odp_packet_hdr_t, event_hdr.subtype);
@@ -364,6 +369,7 @@ static inline void _odp_packet_copy_md(odp_packet_hdr_t *dst_hdr,
 		dst_hdr->tx_aging_ns     = src_hdr->tx_aging_ns;
 		dst_hdr->tx_compl_id     = src_hdr->tx_compl_id;
 		dst_hdr->lso_profile_idx = src_hdr->lso_profile_idx;
+		dst_hdr->unused          = src_hdr->unused; /* not copying this is slower */
 	}
 
 	dst_hdr->p = src_hdr->p;
