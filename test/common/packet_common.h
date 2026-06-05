@@ -62,6 +62,7 @@ typedef struct test_packet_md_t {
 	odp_proto_stats_t proto_stats;
 } test_packet_md_t;
 
+int test_packet_write_data(odp_packet_t pkt, uint32_t offset, uint32_t len);
 void test_packet_set_md(odp_packet_t pkt);
 void test_packet_get_md(odp_packet_t pkt, test_packet_md_t *md);
 int test_packet_is_md_equal(const test_packet_md_t *md_1,

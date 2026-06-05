@@ -1,19 +1,63 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright (c) 2023 Nokia
+ * Copyright (c) 2023-2026 Nokia
  */
 
 #include <packet_common.h>
 #include <string.h>
 
+static uint32_t minstd_rand(void)
+{
+	static __thread uint64_t s = 1;
+	uint64_t prime = 0x7fffffff;
+
+	s = (48271 * s) % prime;
+	return s;
+}
+
+static uint32_t random_u32(void)
+{
+	return minstd_rand();
+}
+
+static uint8_t random_u8(void)
+{
+	return minstd_rand();
+}
+
+int test_packet_write_data(odp_packet_t pkt, uint32_t offset, uint32_t len)
+{
+	uint8_t w_data[len + 1]; /* +1 to avoid zero length array */
+	uint8_t r_data[len + 1];
+
+	if (len == 0)
+		return 0;
+	if (offset + len > odp_packet_len(pkt))
+		return 1;
+
+	for (uint32_t n = 0; n < len; n++)
+		w_data[n] = random_u8();
+	if (odp_packet_copy_from_mem(pkt, offset, len, w_data) != 0 ||
+	    odp_packet_copy_to_mem(pkt, offset, len, r_data) != 0 ||
+	    memcmp(w_data, r_data, len) != 0)
+		return 2;
+
+	return 0;
+}
+
 void test_packet_set_md(odp_packet_t pkt)
 {
 	const int binary_flag = 1;
-	const uint32_t offset = 1;
+	const int varying_flag = random_u8() % 2;
 	uint8_t *uarea = odp_packet_user_area(pkt);
-	uint32_t uarea_size = odp_packet_user_area_size(pkt);
+	const uint32_t uarea_size = odp_packet_user_area_size(pkt);
+	const uint32_t len = odp_packet_len(pkt);
+	const odp_packet_tx_compl_opt_t tx_compl_opt = {
+		.mode = ODP_PACKET_TX_COMPL_POLL,
+		.compl_id = random_u32(),
+	};
 
 	for (uint32_t n = 0; n < uarea_size; n++)
-		uarea[n] = n;
+		uarea[n] = random_u8();
 
 	/*
 	 * Some of these flags cannot be set simultaneously, but we do not
@@ -23,35 +67,37 @@ void test_packet_set_md(odp_packet_t pkt)
 	odp_packet_has_l3_set(pkt, binary_flag);
 	odp_packet_has_l4_set(pkt, binary_flag);
 	odp_packet_has_eth_set(pkt, binary_flag);
-	odp_packet_has_eth_bcast_set(pkt, binary_flag);
-	odp_packet_has_eth_mcast_set(pkt, !binary_flag);
+	odp_packet_has_eth_bcast_set(pkt, varying_flag);
+	odp_packet_has_eth_mcast_set(pkt, !varying_flag);
 	odp_packet_has_jumbo_set(pkt, binary_flag);
 	odp_packet_has_vlan_set(pkt, binary_flag);
 	odp_packet_has_vlan_qinq_set(pkt, binary_flag);
 	odp_packet_has_arp_set(pkt, binary_flag);
-	odp_packet_has_ipv4_set(pkt, binary_flag);
-	odp_packet_has_ipv6_set(pkt, !binary_flag);
+	odp_packet_has_ipv4_set(pkt, varying_flag);
+	odp_packet_has_ipv6_set(pkt, !varying_flag);
 	odp_packet_has_ip_bcast_set(pkt, binary_flag);
 	odp_packet_has_ip_mcast_set(pkt, binary_flag);
 	odp_packet_has_ipfrag_set(pkt, binary_flag);
 	odp_packet_has_ipopt_set(pkt, binary_flag);
 	odp_packet_has_ipsec_set(pkt, binary_flag);
-	odp_packet_has_udp_set(pkt, binary_flag);
-	odp_packet_has_tcp_set(pkt, !binary_flag);
+	odp_packet_has_udp_set(pkt, varying_flag);
+	odp_packet_has_tcp_set(pkt, !varying_flag);
 	odp_packet_has_sctp_set(pkt, binary_flag);
 	odp_packet_has_icmp_set(pkt, binary_flag);
 
-	odp_packet_user_ptr_set(pkt, &pkt);
+	odp_packet_user_ptr_set(pkt, (void *)(uintptr_t)random_u32());
 	odp_packet_user_flag_set(pkt, binary_flag);
-	(void)odp_packet_l2_offset_set(pkt, offset);
-	(void)odp_packet_l3_offset_set(pkt, offset);
-	(void)odp_packet_l4_offset_set(pkt, offset);
-	odp_packet_flow_hash_set(pkt, 0x12345678);
+	(void)odp_packet_l2_offset_set(pkt, random_u32() % len);
+	(void)odp_packet_l3_offset_set(pkt, random_u32() % len);
+	(void)odp_packet_l4_offset_set(pkt, random_u32() % len);
+	odp_packet_flow_hash_set(pkt, random_u32());
 	odp_packet_ts_set(pkt, odp_time_local_from_ns(ODP_TIME_SEC_IN_NS));
-	odp_packet_color_set(pkt, ODP_PACKET_YELLOW);
+	odp_packet_color_set(pkt, varying_flag ? ODP_PACKET_YELLOW : ODP_PACKET_RED);
 	odp_packet_drop_eligible_set(pkt, binary_flag);
-	odp_packet_shaper_len_adjust_set(pkt, -42);
-	(void)odp_packet_payload_offset_set(pkt, offset);
+	odp_packet_shaper_len_adjust_set(pkt, random_u8() - 128);
+	(void)odp_packet_payload_offset_set(pkt, random_u32() % len);
+	odp_packet_aging_tmo_set(pkt, random_u32());
+	(void)odp_packet_tx_compl_request(pkt, &tx_compl_opt);
 	odp_packet_free_ctrl_set(pkt, binary_flag);
 }
 
