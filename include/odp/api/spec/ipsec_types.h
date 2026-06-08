@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2016-2018 Linaro Limited
- * Copyright (c) 2022-2025 Nokia
+ * Copyright (c) 2022-2026 Nokia
  */
 
 /**
@@ -33,7 +33,7 @@ extern "C" {
  * IPSEC Security Association (SA)
  */
 
- /**
+/**
  * @def ODP_IPSEC_SA_INVALID
  * Invalid IPSEC SA
  */
@@ -255,6 +255,34 @@ typedef struct odp_ipsec_outbound_config_t {
 } odp_ipsec_outbound_config_t;
 
 /**
+ * Capabilities regarding IPsec outbound operation parameters
+ */
+typedef struct odp_ipsec_out_op_capability_t {
+	/** Supported outbound operation option flags.
+	 *
+	 *  If a flag is set, the corresponding option in odp_ipsec_out_opt_t
+	 *  is supported in outbound IPsec processing. If a flag is clear,
+	 *  the corresponding flag and parameter fields of odp_ipsec_out_opt_t
+	 *  are ignored by the IPsec outbound processing functions.
+	 */
+	struct {
+		/** fragmentation mode option supported */
+		uint8_t frag_mode :1;
+
+		/** TFC padding length option supported */
+		uint8_t tfc_pad   :1;
+
+		/** TFC dummy packet option supported */
+		uint8_t tfc_dummy :1;
+
+		/** IP parameters option supported */
+		uint8_t ip_param  :1;
+
+	} opt;
+
+} odp_ipsec_out_op_capability_t;
+
+/**
  * IPSEC TEST capability
  */
 typedef struct odp_ipsec_test_capability_t {
@@ -323,6 +351,9 @@ typedef struct odp_ipsec_capability_t {
 	 * processed packets
 	 */
 	odp_support_t retain_header;
+
+	/** Outbound operation specific capabilities */
+	odp_ipsec_out_op_capability_t out_op;
 
 	/**
 	 * Inner packet checksum check offload support in inbound direction.
@@ -1213,7 +1244,11 @@ typedef struct odp_ipsec_op_flag_t {
 /**
  * IPSEC outbound operation options
  *
- * These may be used to override some SA level options
+ * These may be used to override some SA level options. Supported options are
+ * listed in odp_ipsec_capability_t::out_op returned by odp_ipsec_capability().
+ * Options that are not supported are ignored.
+ *
+ * @see odp_ipsec_out_op_capability_t
  */
 typedef struct odp_ipsec_out_opt_t {
 	/** Union of all flag bits */
