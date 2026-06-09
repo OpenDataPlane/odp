@@ -29,7 +29,7 @@
 #include <odp_config_internal.h>
 #include <odp/api/sync.h>
 #include <odp/api/packet_io.h>
-#include <odp_ring_mpmc_rst_u32_internal.h>
+#include <ring/odp_ring_mpmc_rst_u32_internal.h>
 #include <odp_timer_internal.h>
 #include <odp_queue_basic_internal.h>
 #include <odp_libconfig_internal.h>

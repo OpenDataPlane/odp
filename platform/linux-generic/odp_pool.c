@@ -23,7 +23,7 @@
 #include <odp_event_internal.h>
 #include <odp_event_validation_internal.h>
 #include <odp_macros_internal.h>
-#include <odp_ring_mpmc_rst_ptr_internal.h>
+#include <ring/odp_ring_mpmc_rst_ptr_internal.h>
 #include <odp_global_data.h>
 #include <odp_libconfig_internal.h>
 #include <odp_shm_internal.h>

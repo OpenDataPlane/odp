@@ -173,21 +173,21 @@ noinst_HEADERS = \
 		  include/odp_queue_lf.h \
 		  include/odp_random_std_internal.h \
 		  include/odp_random_openssl_internal.h \
-		  include/odp_ring_common.h \
-		  include/odp_ring_mpmc_internal.h \
-		  include/odp_ring_mpmc_ptr_internal.h \
-		  include/odp_ring_mpmc_u32_internal.h \
-		  include/odp_ring_mpmc_u64_internal.h \
-		  include/odp_ring_mpmc_rst_internal.h \
-		  include/odp_ring_mpmc_rst_ptr_internal.h \
-		  include/odp_ring_mpmc_rst_u32_internal.h \
-		  include/odp_ring_mpmc_rst_u64_internal.h \
-		  include/odp_ring_spsc_internal.h \
-		  include/odp_ring_spsc_ptr_internal.h \
-		  include/odp_ring_spsc_u32_internal.h \
-		  include/odp_ring_st_internal.h \
-		  include/odp_ring_st_ptr_internal.h \
-		  include/odp_ring_st_u32_internal.h \
+		  include/ring/odp_ring_common.h \
+		  include/ring/odp_ring_mpmc_internal.h \
+		  include/ring/odp_ring_mpmc_ptr_internal.h \
+		  include/ring/odp_ring_mpmc_u32_internal.h \
+		  include/ring/odp_ring_mpmc_u64_internal.h \
+		  include/ring/odp_ring_mpmc_rst_internal.h \
+		  include/ring/odp_ring_mpmc_rst_ptr_internal.h \
+		  include/ring/odp_ring_mpmc_rst_u32_internal.h \
+		  include/ring/odp_ring_mpmc_rst_u64_internal.h \
+		  include/ring/odp_ring_spsc_internal.h \
+		  include/ring/odp_ring_spsc_ptr_internal.h \
+		  include/ring/odp_ring_spsc_u32_internal.h \
+		  include/ring/odp_ring_st_internal.h \
+		  include/ring/odp_ring_st_ptr_internal.h \
+		  include/ring/odp_ring_st_u32_internal.h \
 		  include/odp_schedule_if.h \
 		  include/odp_shm_internal.h \
 		  include/odp_sorted_list_internal.h \
