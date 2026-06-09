@@ -14,7 +14,7 @@
 #include <odp/api/plat/atomic_inlines.h>
 #include <odp/api/plat/cpu_inlines.h>
 
-#include <odp_ring_common.h>
+#include <ring/odp_ring_common.h>
 #include <odp_macros_internal.h>
 
 #ifdef __cplusplus

@@ -9,7 +9,7 @@
 #include <odp/api/align.h>
 #include <odp/api/hints.h>
 
-#include <odp_ring_common.h>
+#include <ring/odp_ring_common.h>
 
 #include <stdint.h>
 

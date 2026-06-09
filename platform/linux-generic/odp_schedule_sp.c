@@ -27,7 +27,7 @@
 #include <odp_config_internal.h>
 #include <odp_event_internal.h>
 #include <odp_macros_internal.h>
-#include <odp_ring_mpmc_rst_u32_internal.h>
+#include <ring/odp_ring_mpmc_rst_u32_internal.h>
 #include <odp_timer_internal.h>
 #include <odp_queue_basic_internal.h>
 #include <odp_string_internal.h>

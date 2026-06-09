@@ -16,10 +16,10 @@
 #include <odp_init_internal.h>
 #include <odp_libconfig_internal.h>
 #include <odp_macros_internal.h>
-#include <odp_ring_mpmc_u32_internal.h>
-#include <odp_ring_mpmc_u64_internal.h>
-#include <odp_ring_mpmc_rst_u32_internal.h>
-#include <odp_ring_mpmc_rst_u64_internal.h>
+#include <ring/odp_ring_mpmc_u32_internal.h>
+#include <ring/odp_ring_mpmc_u64_internal.h>
+#include <ring/odp_ring_mpmc_rst_u32_internal.h>
+#include <ring/odp_ring_mpmc_rst_u64_internal.h>
 
 #include <stdio.h>
 #include <stdint.h>

@@ -17,7 +17,7 @@
 #include <odp_debug_internal.h>
 #include <odp_ipsec_internal.h>
 #include <odp_macros_internal.h>
-#include <odp_ring_mpmc_u32_internal.h>
+#include <ring/odp_ring_mpmc_u32_internal.h>
 #include <odp_global_data.h>
 
 #include <string.h>

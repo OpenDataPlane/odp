@@ -15,7 +15,7 @@
 #include <odp/api/plat/cpu_inlines.h>
 
 #include <odp_macros_internal.h>
-#include <odp_ring_common.h>
+#include <ring/odp_ring_common.h>
 
 #ifdef __cplusplus
 extern "C" {

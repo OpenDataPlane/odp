@@ -23,7 +23,7 @@ extern "C" {
 
 #include <odp_event_internal.h>
 #include <odp_config_internal.h>
-#include <odp_ring_mpmc_rst_ptr_internal.h>
+#include <ring/odp_ring_mpmc_rst_ptr_internal.h>
 #include <odp/api/plat/strong_types.h>
 
 #define _ODP_POOL_MEM_SRC_DATA_SIZE 128
