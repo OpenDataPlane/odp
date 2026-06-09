@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2018 Linaro Limited
- * Copyright (c) 2025 Nokia
+ * Copyright (c) 2025-2026 Nokia
  */
 
 #ifndef ODP_RING_SPSC_INTERNAL_H_
@@ -40,6 +40,10 @@ typedef struct {
 
 typedef struct {
 	struct ring_spsc_common r;
+} ring_spsc_u64_t;
+
+typedef struct {
+	struct ring_spsc_common r;
 } ring_spsc_ptr_t;
 
 #endif /* End of include guards */
@@ -49,8 +53,10 @@ typedef struct {
 #undef _RING_SPSC_INIT
 #undef _RING_SPSC_DEQ
 #undef _RING_SPSC_DEQ_MULTI
+#undef _RING_SPSC_DEQ_BATCH
 #undef _RING_SPSC_ENQ
 #undef _RING_SPSC_ENQ_MULTI
+#undef _RING_SPSC_ENQ_BATCH
 #undef _RING_SPSC_IS_EMPTY
 #undef _RING_SPSC_LEN
 
@@ -67,10 +73,25 @@ typedef struct {
 	#define _RING_SPSC_INIT		ring_spsc_u32_init
 	#define _RING_SPSC_DEQ		ring_spsc_u32_deq
 	#define _RING_SPSC_DEQ_MULTI	ring_spsc_u32_deq_multi
+	#define _RING_SPSC_DEQ_BATCH	ring_spsc_u32_deq_batch
 	#define _RING_SPSC_ENQ		ring_spsc_u32_enq
 	#define _RING_SPSC_ENQ_MULTI	ring_spsc_u32_enq_multi
+	#define _RING_SPSC_ENQ_BATCH	ring_spsc_u32_enq_batch
 	#define _RING_SPSC_IS_EMPTY	ring_spsc_u32_is_empty
 	#define _RING_SPSC_LEN		ring_spsc_u32_len
+#elif _ODP_RING_TYPE == _ODP_RING_TYPE_U64
+	#define _ring_spsc_gen_t	ring_spsc_u64_t
+	#define _ring_spsc_data_t	uint64_t
+
+	#define _RING_SPSC_INIT		ring_spsc_u64_init
+	#define _RING_SPSC_DEQ		ring_spsc_u64_deq
+	#define _RING_SPSC_DEQ_MULTI	ring_spsc_u64_deq_multi
+	#define _RING_SPSC_DEQ_BATCH	ring_spsc_u64_deq_batch
+	#define _RING_SPSC_ENQ		ring_spsc_u64_enq
+	#define _RING_SPSC_ENQ_MULTI	ring_spsc_u64_enq_multi
+	#define _RING_SPSC_ENQ_BATCH	ring_spsc_u64_enq_batch
+	#define _RING_SPSC_IS_EMPTY	ring_spsc_u64_is_empty
+	#define _RING_SPSC_LEN		ring_spsc_u64_len
 #elif _ODP_RING_TYPE == _ODP_RING_TYPE_PTR
 	#define _ring_spsc_gen_t	ring_spsc_ptr_t
 	#define _ring_spsc_data_t	uintptr_t
@@ -78,8 +99,10 @@ typedef struct {
 	#define _RING_SPSC_INIT		ring_spsc_ptr_init
 	#define _RING_SPSC_DEQ		ring_spsc_ptr_deq
 	#define _RING_SPSC_DEQ_MULTI	ring_spsc_ptr_deq_multi
+	#define _RING_SPSC_DEQ_BATCH	ring_spsc_ptr_deq_batch
 	#define _RING_SPSC_ENQ		ring_spsc_ptr_enq
 	#define _RING_SPSC_ENQ_MULTI	ring_spsc_ptr_enq_multi
+	#define _RING_SPSC_ENQ_BATCH	ring_spsc_ptr_enq_batch
 	#define _RING_SPSC_IS_EMPTY	ring_spsc_ptr_is_empty
 	#define _RING_SPSC_LEN		ring_spsc_ptr_len
 #endif
@@ -114,7 +137,7 @@ static inline uint32_t _RING_SPSC_DEQ(_ring_spsc_gen_t *ring,
 	return 1;
 }
 
-/* Dequeue data from the ring head. Max_num is smaller than ring size.*/
+/* Dequeue data from the ring head */
 static inline uint32_t _RING_SPSC_DEQ_MULTI(_ring_spsc_gen_t *ring,
 					    _ring_spsc_data_t *ring_data,
 					    uint32_t ring_mask, _ring_spsc_data_t data[],
@@ -146,6 +169,35 @@ static inline uint32_t _RING_SPSC_DEQ_MULTI(_ring_spsc_gen_t *ring,
 	return num;
 }
 
+/* Dequeue a batch of data from the ring head. Returns a full batch or nothing. */
+static inline uint32_t _RING_SPSC_DEQ_BATCH(_ring_spsc_gen_t *ring,
+					    _ring_spsc_data_t *ring_data,
+					    uint32_t ring_mask, _ring_spsc_data_t data[],
+					    uint32_t max_num)
+{
+	uint32_t head, tail, idx;
+	uint32_t num, i;
+
+	tail = odp_atomic_load_acq_u32(&ring->r.tail);
+	head = odp_atomic_load_u32(&ring->r.head);
+	num  = tail - head;
+
+	/* Only return full batches */
+	if (num < max_num)
+		return 0;
+
+	idx = head & ring_mask;
+
+	for (i = 0; i < max_num; i++) {
+		data[i] = ring_data[idx];
+		idx = (idx + 1) & ring_mask;
+	}
+
+	odp_atomic_store_rel_u32(&ring->r.head, head + max_num);
+
+	return max_num;
+}
+
 /* Enqueue data into the ring tail */
 static inline uint32_t _RING_SPSC_ENQ(_ring_spsc_gen_t *ring,
 				      _ring_spsc_data_t *ring_data,
@@ -171,7 +223,7 @@ static inline uint32_t _RING_SPSC_ENQ(_ring_spsc_gen_t *ring,
 	return 1;
 }
 
-/* Enqueue data into the ring tail. Num_data is smaller than ring size. */
+/* Enqueue data into the ring tail */
 static inline uint32_t _RING_SPSC_ENQ_MULTI(_ring_spsc_gen_t *ring,
 					    _ring_spsc_data_t *ring_data,
 					    uint32_t ring_mask,
@@ -203,6 +255,37 @@ static inline uint32_t _RING_SPSC_ENQ_MULTI(_ring_spsc_gen_t *ring,
 	odp_atomic_store_rel_u32(&ring->r.tail, tail + num);
 
 	return num;
+}
+
+/* Enqueue a batch of data into the ring tail. Stores a full batch or nothing. */
+static inline uint32_t _RING_SPSC_ENQ_BATCH(_ring_spsc_gen_t *ring,
+					    _ring_spsc_data_t *ring_data,
+					    uint32_t ring_mask,
+					    const _ring_spsc_data_t data[],
+					    uint32_t num_data)
+{
+	uint32_t head, tail, size, idx;
+	uint32_t num, i;
+
+	head = odp_atomic_load_acq_u32(&ring->r.head);
+	tail = odp_atomic_load_u32(&ring->r.tail);
+	size = ring_mask + 1;
+	num  = size - (tail - head);
+
+	/* Only store full batches */
+	if (num_data > num)
+		return 0;
+
+	idx = tail & ring_mask;
+
+	for (i = 0; i < num_data; i++) {
+		ring_data[idx] = data[i];
+		idx = (idx + 1) & ring_mask;
+	}
+
+	odp_atomic_store_rel_u32(&ring->r.tail, tail + num_data);
+
+	return num_data;
 }
 
 /* Check if ring is empty */
