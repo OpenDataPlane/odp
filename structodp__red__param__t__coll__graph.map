@@ -1,0 +1,4 @@
+<map id="odp_red_param_t" name="odp_red_param_t">
+<area shape="rect" id="node1" title="Random Early Detection (RED) Random Early Detection is enabled to initiate a drop probability for the..." alt="" coords="5,95,140,121"/>
+<area shape="rect" id="node2" href="$structodp__threshold__t.html" title="ODP Threshold." alt="" coords="9,5,136,32"/>
+</map>

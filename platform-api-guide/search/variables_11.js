@@ -1,0 +1,25 @@
+var searchData=
+[
+  ['random_5fearly_5fdetection_5106',['random_early_detection',['../structodp__cls__capability__t.html#a924f095fc1a9bb5185d3fef32d83ab02',1,'odp_cls_capability_t']]],
+  ['range_5107',['range',['../structodp__pmr__param__t.html#a4a5121aab8cfa41c5463fde82909499a',1,'odp_pmr_param_t']]],
+  ['range_5fterm_5108',['range_term',['../structodp__pmr__param__t.html#a934ef24cabde157bf08e1fbabaf294ac',1,'odp_pmr_param_t']]],
+  ['rd_5fcnt_5109',['rd_cnt',['../structodp__rwlock__recursive__s.html#a8bba97a259a501540659fbad611a56a7',1,'odp_rwlock_recursive_s']]],
+  ['reass_5fasync_5110',['reass_async',['../structodp__ipsec__inbound__config__t.html#a4e8cc250b616a6482e30c844a8a5d9bc',1,'odp_ipsec_inbound_config_t::reass_async()'],['../structodp__ipsec__capability__t.html#af7aee6898406fcfec2fc56d27b5d3131',1,'odp_ipsec_capability_t::reass_async()']]],
+  ['reass_5finline_5111',['reass_inline',['../structodp__ipsec__inbound__config__t.html#a82104bbff001390132e05191ec7be73c',1,'odp_ipsec_inbound_config_t::reass_inline()'],['../structodp__ipsec__capability__t.html#a2381af43edccf3f87406fd68f4ab5b0d',1,'odp_ipsec_capability_t::reass_inline()']]],
+  ['reassembly_5112',['reassembly',['../structodp__ipsec__inbound__config__t.html#a372ca9ae952b00b435872fe3a2c45ccd',1,'odp_ipsec_inbound_config_t::reassembly()'],['../structodp__ipsec__capability__t.html#a0568bae10d5778f88bd6080bf7a7c517',1,'odp_ipsec_capability_t::reassembly()'],['../structodp__pktio__config__t.html#a34a55e98dcf0a7e341cf0a572fc30fe1',1,'odp_pktio_config_t::reassembly()'],['../structodp__pktio__capability__t.html#afd6b982854f943e8e5070c675ef8cf69',1,'odp_pktio_capability_t::reassembly()']]],
+  ['reassembly_5fen_5113',['reassembly_en',['../structodp__ipsec__sa__param__t.html#a63b7745987326730d4420ca58d9d75e3',1,'odp_ipsec_sa_param_t']]],
+  ['red_5114',['red',['../structodp__cls__cos__param.html#a9f9f3100e56f2d85ceca114908836269',1,'odp_cls_cos_param']]],
+  ['referenced_5fpkt_5115',['referenced_pkt',['../structodp__packet__ref__types__t.html#a351821af6adecbd1b9930bdc9ad9ff20',1,'odp_packet_ref_types_t']]],
+  ['referencing_5fpkt_5116',['referencing_pkt',['../structodp__packet__ref__types__t.html#aa92143ae4ac5a426ab2c703957b2cdcd',1,'odp_packet_ref_types_t']]],
+  ['reflect_5fin_5117',['reflect_in',['../structodp__hash__crc__param__t.html#ada5a7bec720f5a126c23303bb5c8935c',1,'odp_hash_crc_param_t']]],
+  ['reflect_5fout_5118',['reflect_out',['../structodp__hash__crc__param__t.html#a2f733597e6287b129ed5414e283bf376',1,'odp_hash_crc_param_t']]],
+  ['regions_5119',['regions',['../structodp__cache__stash__config__t.html#a72c77b95736d62eff1968c1f24f042dd',1,'odp_cache_stash_config_t']]],
+  ['res_5fhz_5120',['res_hz',['../structodp__timer__res__capability__t.html#a246a16330982521b9e942910577bf9e8',1,'odp_timer_res_capability_t::res_hz()'],['../structodp__timer__pool__param__t.html#a28ac8ecc44799f4510a8d182158ee0bc',1,'odp_timer_pool_param_t::res_hz()']]],
+  ['res_5fns_5121',['res_ns',['../structodp__timer__res__capability__t.html#af1eb01598a9d584c800a16d247cf93e4',1,'odp_timer_res_capability_t::res_ns()'],['../structodp__timer__periodic__capability__t.html#aa28b6af956546b02bdf03731d4e5586b',1,'odp_timer_periodic_capability_t::res_ns()'],['../structodp__timer__pool__param__t.html#a0c9d28e284d142c3fe6ee5f8cc66171e',1,'odp_timer_pool_param_t::res_ns()']]],
+  ['result_5122',['result',['../structodp__ipsec__status__t.html#a0c1bbbaad463b5b4079adb1e4e761689',1,'odp_ipsec_status_t::result()'],['../structodp__ml__run__param__t.html#a718e2113fe7fa0043ed0448f7e27df06',1,'odp_ml_run_param_t::result()']]],
+  ['retain_5fheader_5123',['retain_header',['../structodp__ipsec__capability__t.html#ae3cc3d84265df689b0e287bd7afe3893',1,'odp_ipsec_capability_t']]],
+  ['retain_5fouter_5124',['retain_outer',['../structodp__ipsec__inbound__config__t.html#a79c265a5914f8d93696f3387df7b823a',1,'odp_ipsec_inbound_config_t']]],
+  ['riscv_5125',['riscv',['../unionodp__cpu__arch__isa__t.html#aa6db2ef17ee29bba37cc62129953ceae',1,'odp_cpu_arch_isa_t']]],
+  ['run_5126',['run',['../structodp__ml__capability__t.html#a10b584a34011dbfdce6bcd084366bd2e',1,'odp_ml_capability_t']]],
+  ['run_5fmode_5fmask_5127',['run_mode_mask',['../structodp__ml__config__t.html#af0fbc53da06fc3a21f56b90abe902f43',1,'odp_ml_config_t']]]
+];

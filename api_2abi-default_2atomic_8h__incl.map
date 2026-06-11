@@ -1,0 +1,12 @@
+<map id="atomic.h" name="atomic.h">
+<area shape="rect" id="node1" title="ODP atomic operations." alt="" coords="373,5,452,32"/>
+<area shape="rect" id="node2" href="$api_2std__types_8h.html" title="Standard C language types and definitions for ODP." alt="" coords="277,80,426,107"/>
+<area shape="rect" id="node7" href="$api_2align_8h.html" title="ODP alignments." alt="" coords="328,229,447,256"/>
+<area shape="rect" id="node3" title=" " alt="" coords="265,155,438,181"/>
+<area shape="rect" id="node4" href="$api_2spec_2std__types_8h.html" title="Common types and definitions for ODP API files." alt="" coords="57,155,240,181"/>
+<area shape="rect" id="node5" href="$visibility__begin_8h_source.html" title=" " alt="" coords="5,379,167,405"/>
+<area shape="rect" id="node6" title=" " alt="" coords="187,229,257,256"/>
+<area shape="rect" id="node10" href="$visibility__end_8h_source.html" title=" " alt="" coords="191,379,341,405"/>
+<area shape="rect" id="node8" title=" " alt="" coords="364,304,507,331"/>
+<area shape="rect" id="node9" href="$api_2spec_2align_8h.html" title="ODP alignments." alt="" coords="187,304,339,331"/>
+</map>

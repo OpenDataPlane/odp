@@ -1,0 +1,6 @@
+<map id="odp_queue_param_t" name="odp_queue_param_t">
+<area shape="rect" id="node1" title="ODP Queue parameters." alt="" coords="121,184,276,211"/>
+<area shape="rect" id="node2" href="$structodp__event__aggr__config__t.html" title="Event vector configuration." alt="" coords="5,95,189,121"/>
+<area shape="rect" id="node3" href="$struct__odp__abi__pool__t.html" title=" " alt="" coords="34,5,161,32"/>
+<area shape="rect" id="node4" href="$structodp__schedule__param__t.html" title="Scheduler parameters." alt="" coords="214,95,386,121"/>
+</map>

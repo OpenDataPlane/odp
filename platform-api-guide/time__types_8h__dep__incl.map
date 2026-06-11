@@ -1,0 +1,13 @@
+<map id="time_types.h" name="time_types.h">
+<area shape="rect" id="node1" title="ODP time." alt="" coords="303,5,409,32"/>
+<area shape="rect" id="node2" href="$spec_2packet_8h.html" title="ODP packet descriptor." alt="" coords="103,80,180,107"/>
+<area shape="rect" id="node6" href="$spec_2packet__io_8h.html" title="ODP Packet IO." alt="" coords="204,80,300,107"/>
+<area shape="rect" id="node8" href="$spec_2time_8h.html" title="ODP time." alt="" coords="324,80,388,107"/>
+<area shape="rect" id="node10" href="$packet__inlines_8h.html" title="Packet inline functions." alt="" coords="413,80,539,107"/>
+<area shape="rect" id="node11" href="$time__inlines_8h_source.html" title=" " alt="" coords="564,80,679,107"/>
+<area shape="rect" id="node3" href="$packet_8h.html" title="ODP packet descriptor." alt="" coords="103,155,180,181"/>
+<area shape="rect" id="node4" href="$crypto__inlines_8h_source.html" title=" " alt="" coords="5,229,131,256"/>
+<area shape="rect" id="node5" href="$ipsec__inlines_8h_source.html" title=" " alt="" coords="155,229,274,256"/>
+<area shape="rect" id="node7" href="$packet__io_8h.html" title="ODP Packet IO." alt="" coords="204,155,300,181"/>
+<area shape="rect" id="node9" href="$time_8h.html" title="ODP time." alt="" coords="324,155,388,181"/>
+</map>

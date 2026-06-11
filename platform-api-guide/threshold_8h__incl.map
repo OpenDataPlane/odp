@@ -1,0 +1,13 @@
+<map id="threshold.h" name="threshold.h">
+<area shape="rect" id="node1" title="ODP threshold API &#45; platform specific header." alt="" coords="215,5,309,32"/>
+<area shape="rect" id="node2" href="$spec_2threshold_8h.html" title="ODP threshold descriptor." alt="" coords="171,80,353,107"/>
+<area shape="rect" id="node3" title=" " alt="" coords="5,453,167,480"/>
+<area shape="rect" id="node4" href="$std__types_8h.html" title="Standard C language types and definitions for ODP." alt="" coords="187,155,337,181"/>
+<area shape="rect" id="node11" title=" " alt="" coords="406,453,555,480"/>
+<area shape="rect" id="node5" title=" " alt="" coords="74,229,247,256"/>
+<area shape="rect" id="node6" href="$spec_2std__types_8h.html" title="Common types and definitions for ODP API files." alt="" coords="272,229,455,256"/>
+<area shape="rect" id="node7" title=" " alt="" coords="211,304,281,331"/>
+<area shape="rect" id="node8" href="$align_8h.html" title="ODP alignments." alt="" coords="305,304,424,331"/>
+<area shape="rect" id="node9" title=" " alt="" coords="124,379,267,405"/>
+<area shape="rect" id="node10" href="$spec_2align_8h.html" title="ODP alignments." alt="" coords="291,379,443,405"/>
+</map>

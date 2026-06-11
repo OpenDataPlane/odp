@@ -1,0 +1,10 @@
+<map id="odp_pktin_queue_param_t" name="odp_pktin_queue_param_t">
+<area shape="rect" id="node1" title="Packet input queue parameters." alt="" coords="989,141,1184,168"/>
+<area shape="rect" id="node2" href="$structodp__queue__param__t.html" title="ODP Queue parameters." alt="" coords="651,55,806,81"/>
+<area shape="rect" id="node3" href="$structodp__event__aggr__config__t.html" title="Event vector configuration." alt="" coords="213,56,397,83"/>
+<area shape="rect" id="node4" href="$struct__odp__abi__pool__t.html" title=" " alt="" coords="5,84,132,111"/>
+<area shape="rect" id="node8" href="$structodp__pktin__vector__config__t.html" title="Packet input vector configuration." alt="" coords="421,107,613,133"/>
+<area shape="rect" id="node5" href="$structodp__schedule__param__t.html" title="Scheduler parameters." alt="" coords="219,5,391,32"/>
+<area shape="rect" id="node6" href="$structodp__pktin__queue__param__ovr__t.html" title="Packet input queue parameters override." alt="" coords="637,169,820,210"/>
+<area shape="rect" id="node7" href="$unionodp__pktin__hash__proto__t.html" title="Packet input hash protocols." alt="" coords="640,235,817,261"/>
+</map>

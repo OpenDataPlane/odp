@@ -1,0 +1,15 @@
+<map id="time.h" name="time.h">
+<area shape="rect" id="node1" title="ODP time." alt="" coords="512,5,576,32"/>
+<area shape="rect" id="node2" title=" " alt="" coords="351,379,513,405"/>
+<area shape="rect" id="node3" href="$std__types_8h.html" title="Standard C language types and definitions for ODP." alt="" coords="548,80,697,107"/>
+<area shape="rect" id="node10" title=" " alt="" coords="571,379,720,405"/>
+<area shape="rect" id="node11" href="$time__types_8h.html" title="ODP time." alt="" coords="269,229,427,256"/>
+<area shape="rect" id="node4" title=" " alt="" coords="739,155,912,181"/>
+<area shape="rect" id="node5" href="$spec_2std__types_8h.html" title="Common types and definitions for ODP API files." alt="" coords="531,155,714,181"/>
+<area shape="rect" id="node6" title=" " alt="" coords="867,229,938,256"/>
+<area shape="rect" id="node7" href="$align_8h.html" title="ODP alignments." alt="" coords="563,229,682,256"/>
+<area shape="rect" id="node8" title=" " alt="" coords="697,304,839,331"/>
+<area shape="rect" id="node9" href="$spec_2align_8h.html" title="ODP alignments." alt="" coords="520,304,672,331"/>
+<area shape="rect" id="node12" title=" " alt="" coords="45,304,227,331"/>
+<area shape="rect" id="node13" href="$spec_2time__types_8h.html" title="ODP time." alt="" coords="251,304,445,331"/>
+</map>
