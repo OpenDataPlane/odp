@@ -198,7 +198,7 @@ jobs:
                '--disable-host-optimization --enable-abi-compat',
                '--enable-lto',
                '--without-openssl --without-pcap',
-               '--enable-wfe-locks']
+               '--with-target=neoverse-v1 --enable-wfe-locks']
     steps:
       - uses: OpenDataPlane/action-clean-up@main
       - uses: actions/checkout@v6
