@@ -1112,8 +1112,7 @@ static inline int32_t stash_put(odp_stash_t st, const void *obj, int32_t num, od
 	uint32_t obj_size;
 	int32_t i;
 
-	if (odp_unlikely(st == ODP_STASH_INVALID))
-		return -1;
+	_ODP_ASSERT(st != ODP_STASH_INVALID);
 
 	if (is_batch) {
 		ring_u32_enq = stash->ring_fn.u32.enq_batch;
@@ -1168,9 +1167,7 @@ int32_t odp_stash_put_u32(odp_stash_t st, const uint32_t val[], int32_t num)
 {
 	stash_t *stash = stash_entry(st);
 
-	if (odp_unlikely(st == ODP_STASH_INVALID))
-		return -1;
-
+	_ODP_ASSERT(st != ODP_STASH_INVALID);
 	_ODP_ASSERT(stash->obj_size == sizeof(uint32_t));
 
 	return stash->ring_fn.u32.enq_multi(stash, val, num);
@@ -1180,9 +1177,7 @@ int32_t odp_stash_put_u32_batch(odp_stash_t st, const uint32_t val[], int32_t nu
 {
 	stash_t *stash = stash_entry(st);
 
-	if (odp_unlikely(st == ODP_STASH_INVALID))
-		return -1;
-
+	_ODP_ASSERT(st != ODP_STASH_INVALID);
 	_ODP_ASSERT(stash->obj_size == sizeof(uint32_t));
 
 	return stash->ring_fn.u32.enq_batch(stash, val, num);
@@ -1192,9 +1187,7 @@ int32_t odp_stash_put_u64(odp_stash_t st, const uint64_t val[], int32_t num)
 {
 	stash_t *stash = stash_entry(st);
 
-	if (odp_unlikely(st == ODP_STASH_INVALID))
-		return -1;
-
+	_ODP_ASSERT(st != ODP_STASH_INVALID);
 	_ODP_ASSERT(stash->obj_size == sizeof(uint64_t));
 
 	return stash->ring_fn.u64.enq_multi(stash, (uint64_t *)(uintptr_t)val, num);
@@ -1205,9 +1198,7 @@ int32_t odp_stash_put_u64_batch(odp_stash_t st, const uint64_t val[],
 {
 	stash_t *stash = stash_entry(st);
 
-	if (odp_unlikely(st == ODP_STASH_INVALID))
-		return -1;
-
+	_ODP_ASSERT(st != ODP_STASH_INVALID);
 	_ODP_ASSERT(stash->obj_size == sizeof(uint64_t));
 
 	return stash->ring_fn.u64.enq_batch(stash, (uint64_t *)(uintptr_t)val, num);
@@ -1217,9 +1208,7 @@ int32_t odp_stash_put_ptr(odp_stash_t st, const uintptr_t ptr[], int32_t num)
 {
 	stash_t *stash = stash_entry(st);
 
-	if (odp_unlikely(st == ODP_STASH_INVALID))
-		return -1;
-
+	_ODP_ASSERT(st != ODP_STASH_INVALID);
 	_ODP_ASSERT(stash->obj_size == sizeof(uintptr_t));
 
 	if (sizeof(uintptr_t) == sizeof(uint32_t))
@@ -1236,9 +1225,7 @@ int32_t odp_stash_put_ptr_batch(odp_stash_t st,	const uintptr_t ptr[],
 {
 	stash_t *stash = stash_entry(st);
 
-	if (odp_unlikely(st == ODP_STASH_INVALID))
-		return -1;
-
+	_ODP_ASSERT(st != ODP_STASH_INVALID);
 	_ODP_ASSERT(stash->obj_size == sizeof(uintptr_t));
 
 	if (sizeof(uintptr_t) == sizeof(uint32_t))
@@ -1258,8 +1245,7 @@ static inline int32_t stash_get(odp_stash_t st, void *obj, int32_t num, odp_bool
 	uint32_t obj_size;
 	uint32_t i, num_deq;
 
-	if (odp_unlikely(st == ODP_STASH_INVALID))
-		return -1;
+	_ODP_ASSERT(st != ODP_STASH_INVALID);
 
 	if (is_batch) {
 		ring_u32_deq = stash->ring_fn.u32.deq_batch;
@@ -1318,9 +1304,7 @@ int32_t odp_stash_get_u32(odp_stash_t st, uint32_t val[], int32_t num)
 {
 	stash_t *stash = stash_entry(st);
 
-	if (odp_unlikely(st == ODP_STASH_INVALID))
-		return -1;
-
+	_ODP_ASSERT(st != ODP_STASH_INVALID);
 	_ODP_ASSERT(stash->obj_size == sizeof(uint32_t));
 
 	return stash->ring_fn.u32.deq_multi(stash, val, num);
@@ -1330,9 +1314,7 @@ int32_t odp_stash_get_u32_batch(odp_stash_t st, uint32_t val[], int32_t num)
 {
 	stash_t *stash = stash_entry(st);
 
-	if (odp_unlikely(st == ODP_STASH_INVALID))
-		return -1;
-
+	_ODP_ASSERT(st != ODP_STASH_INVALID);
 	_ODP_ASSERT(stash->obj_size == sizeof(uint32_t));
 
 	return stash->ring_fn.u32.deq_batch(stash, val, num);
@@ -1342,9 +1324,7 @@ int32_t odp_stash_get_u64(odp_stash_t st, uint64_t val[], int32_t num)
 {
 	stash_t *stash = stash_entry(st);
 
-	if (odp_unlikely(st == ODP_STASH_INVALID))
-		return -1;
-
+	_ODP_ASSERT(st != ODP_STASH_INVALID);
 	_ODP_ASSERT(stash->obj_size == sizeof(uint64_t));
 
 	return stash->ring_fn.u64.deq_multi(stash, val, num);
@@ -1354,9 +1334,7 @@ int32_t odp_stash_get_u64_batch(odp_stash_t st, uint64_t val[], int32_t num)
 {
 	stash_t *stash = stash_entry(st);
 
-	if (odp_unlikely(st == ODP_STASH_INVALID))
-		return -1;
-
+	_ODP_ASSERT(st != ODP_STASH_INVALID);
 	_ODP_ASSERT(stash->obj_size == sizeof(uint64_t));
 
 	return stash->ring_fn.u64.deq_batch(stash, val, num);
@@ -1366,9 +1344,7 @@ int32_t odp_stash_get_ptr(odp_stash_t st, uintptr_t ptr[], int32_t num)
 {
 	stash_t *stash = stash_entry(st);
 
-	if (odp_unlikely(st == ODP_STASH_INVALID))
-		return -1;
-
+	_ODP_ASSERT(st != ODP_STASH_INVALID);
 	_ODP_ASSERT(stash->obj_size == sizeof(uintptr_t));
 
 	if (sizeof(uintptr_t) == sizeof(uint32_t))
@@ -1384,9 +1360,7 @@ int32_t odp_stash_get_ptr_batch(odp_stash_t st, uintptr_t ptr[], int32_t num)
 {
 	stash_t *stash = stash_entry(st);
 
-	if (odp_unlikely(st == ODP_STASH_INVALID))
-		return -1;
-
+	_ODP_ASSERT(st != ODP_STASH_INVALID);
 	_ODP_ASSERT(stash->obj_size == sizeof(uintptr_t));
 
 	if (sizeof(uintptr_t) == sizeof(uint32_t))
@@ -1400,8 +1374,7 @@ int32_t odp_stash_get_ptr_batch(odp_stash_t st, uintptr_t ptr[], int32_t num)
 
 int odp_stash_flush_cache(odp_stash_t st)
 {
-	if (odp_unlikely(st == ODP_STASH_INVALID))
-		return -1;
+	_ODP_ASSERT(st != ODP_STASH_INVALID);
 
 	return 0;
 }
