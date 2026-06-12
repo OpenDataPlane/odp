@@ -1,7 +1,9 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2013-2018 Linaro Limited
- * Copyright (c) 2020-2023 Nokia
+ * Copyright (c) 2020-2026 Nokia
  */
+
+#include <odp/autoheader_external.h>
 
 #include <odp/api/time_types.h>
 
@@ -40,7 +42,13 @@ int _odp_time_init_global(void)
 
 	_ODP_PRINT("HW time counter freq: %" PRIu64 " hz\n\n", global->freq_hz);
 
-#ifdef __SIZEOF_INT128__
+#ifdef _ODP_TIME_FREQ_1GHZ
+	if (global->freq_hz != _ODP_TIME_GIGA_HZ) {
+		_ODP_ERR("_ODP_TIME_FREQ_1GHZ defined, but actual frequency is %" PRIu64 " Hz\n",
+			 global->freq_hz);
+		return -1;
+	}
+#elif defined(__SIZEOF_INT128__)
 	/* Find the maximum shift for which the multiplier fits into 64 bits */
 	for (global->shift_to_ns = 63; global->shift_to_ns > 0; global->shift_to_ns--) {
 		__uint128_t cur = ((__uint128_t)_ODP_TIME_GIGA_HZ << global->shift_to_ns) /

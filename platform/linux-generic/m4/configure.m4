@@ -14,6 +14,7 @@ m4_include([platform/linux-generic/m4/odp_cpu.m4])
 m4_include([platform/linux-generic/m4/odp_event_validation.m4])
 m4_include([platform/linux-generic/m4/odp_pcap.m4])
 m4_include([platform/linux-generic/m4/odp_scheduler.m4])
+m4_include([platform/linux-generic/m4/odp_target.m4])
 
 AC_ARG_WITH([pcap],
 	    [AS_HELP_STRING([--without-pcap],
@@ -36,6 +37,7 @@ m4_include([platform/linux-generic/m4/odp_dpdk.m4])
 m4_include([platform/linux-generic/m4/odp_wfe.m4])
 m4_include([platform/linux-generic/m4/odp_xdp.m4])
 m4_include([platform/linux-generic/m4/odp_ml.m4])
+ODP_TARGET_OPTIONS
 ODP_EVENT_VALIDATION
 ODP_SCHEDULER
 
@@ -44,6 +46,7 @@ AS_VAR_APPEND([PLAT_DEP_LIBS], ["${ATOMIC_LIBS} ${AARCH64CRYPTO_LIBS} ${LIBCONFI
 # Add text to the end of configure with platform specific settings.
 # Make sure it's aligned same as other lines in configure.ac.
 AS_VAR_APPEND([PLAT_CFG_TEXT], ["
+	with_target:            ${with_target}
 	event_validation:       ${enable_event_validation}
 	openssl:                ${with_openssl}
 	openssl_rand:           ${openssl_rand}
