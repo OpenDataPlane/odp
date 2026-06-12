@@ -3,14 +3,6 @@
  * Copyright (c) 2019-2025 Nokia
  */
 
-/*
- * Suppress bounds warnings about interior zero length arrays. Such an array
- * is used intentionally in prio_queue_t.
- */
-#if __GNUC__ >= 10
-#pragma GCC diagnostic ignored "-Wzero-length-bounds"
-#endif
-
 #include <odp/api/packet.h>
 #include <odp/api/ticketlock.h>
 #include <odp/api/thread.h>
@@ -77,17 +69,14 @@ typedef struct ODP_ALIGNED_CACHE {
 	odp_queue_t        queue[NUM_PKTIN];
 } sched_cmd_t;
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wpedantic"
 typedef struct ODP_ALIGNED_CACHE {
 	/* Ring header */
 	ring_mpmc_rst_u32_t ring;
 
 	/* Ring data: queue indexes */
-	uint32_t ring_idx[RING_SIZE]; /* overlaps with ring.data[] */
+	uint32_t ring_idx[RING_SIZE];
 
 } prio_queue_t;
-#pragma GCC diagnostic pop
 
 typedef struct thr_group_t {
 	/* A generation counter for fast comparison if groups have changed */
@@ -125,10 +114,7 @@ typedef struct {
 	sched_cmd_t   queue_cmd[NUM_QUEUE];
 	sched_cmd_t   pktio_cmd[NUM_PKTIO];
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wpedantic"
 	prio_queue_t  prio_queue[NUM_GROUP][NUM_PRIO];
-#pragma GCC diagnostic pop
 	sched_group_t sched_group;
 	odp_shm_t     shm;
 	/* Scheduler interface config options (not used in fast path) */
@@ -648,7 +634,7 @@ static inline void add_tail(sched_cmd_t *cmd)
 	uint32_t idx = cmd->ring_idx;
 
 	prio_queue = &sched_global->prio_queue[group][prio];
-	ring_mpmc_rst_u32_enq(&prio_queue->ring, RING_MASK, idx);
+	ring_mpmc_rst_u32_enq(&prio_queue->ring, prio_queue->ring_idx, RING_MASK, idx);
 }
 
 static inline sched_cmd_t *rem_head(int group, int prio)
@@ -659,7 +645,8 @@ static inline sched_cmd_t *rem_head(int group, int prio)
 
 	prio_queue = &sched_global->prio_queue[group][prio];
 
-	if (ring_mpmc_rst_u32_deq(&prio_queue->ring, RING_MASK, &ring_idx) == 0)
+	if (ring_mpmc_rst_u32_deq(&prio_queue->ring, prio_queue->ring_idx, RING_MASK,
+				  &ring_idx) == 0)
 		return NULL;
 
 	pktio = index_from_ring_idx(&index, ring_idx);
