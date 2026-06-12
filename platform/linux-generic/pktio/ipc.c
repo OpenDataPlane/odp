@@ -156,6 +156,11 @@ static int _ring_destroy(const char *name)
 	return 0;
 }
 
+static inline void **_ring_data(ring_mpmc_rst_ptr_t *r)
+{
+	return (void **)(r + 1);
+}
+
 /**
  * Return the number of entries in a ring.
  */
@@ -595,7 +600,7 @@ static void _ipc_free_ring_packets(pktio_entry_t *pktio_entry, ring_mpmc_rst_ptr
 	rbuf_p = (void *)&offsets;
 
 	while (1) {
-		ret = ring_mpmc_rst_ptr_deq_multi(r, r_mask, rbuf_p, IPC_BURST_SIZE);
+		ret = ring_mpmc_rst_ptr_deq_multi(r, _ring_data(r), r_mask, rbuf_p, IPC_BURST_SIZE);
 		if (ret <= 0)
 			break;
 		for (i = 0; i < ret; i++) {
@@ -633,7 +638,7 @@ static int ipc_pktio_recv_lockless(pktio_entry_t *pktio_entry,
 
 	/* rx from cache */
 	r = pktio_ipc->rx.cache;
-	pkts = ring_mpmc_rst_ptr_deq_multi(r, ring_mask, ipcbufs_p, len);
+	pkts = ring_mpmc_rst_ptr_deq_multi(r, _ring_data(r), ring_mask, ipcbufs_p, len);
 	if (odp_unlikely(pkts < 0))
 		_ODP_ABORT("internal error dequeue\n");
 
@@ -641,7 +646,7 @@ static int ipc_pktio_recv_lockless(pktio_entry_t *pktio_entry,
 	if (pkts == 0) {
 		ipcbufs_p = (void *)&offsets[0];
 		r = pktio_ipc->rx.recv;
-		pkts = ring_mpmc_rst_ptr_deq_multi(r, ring_mask, ipcbufs_p, len);
+		pkts = ring_mpmc_rst_ptr_deq_multi(r, _ring_data(r), ring_mask, ipcbufs_p, len);
 		if (odp_unlikely(pkts < 0))
 			_ODP_ABORT("internal error dequeue\n");
 	}
@@ -710,7 +715,7 @@ static int ipc_pktio_recv_lockless(pktio_entry_t *pktio_entry,
 	if (pkts != i) {
 		ipcbufs_p = (void *)&offsets[i];
 		r_p = pktio_ipc->rx.cache;
-		ring_mpmc_rst_ptr_enq_multi(r_p, ring_mask, ipcbufs_p, pkts - i);
+		ring_mpmc_rst_ptr_enq_multi(r_p, _ring_data(r_p), ring_mask, ipcbufs_p, pkts - i);
 
 		if (i == 0)
 			return 0;
@@ -723,7 +728,7 @@ static int ipc_pktio_recv_lockless(pktio_entry_t *pktio_entry,
 	r_p = pktio_ipc->rx.free;
 
 	ipcbufs_p = (void *)&offsets[0];
-	ring_mpmc_rst_ptr_enq_multi(r_p, ring_mask, ipcbufs_p, pkts);
+	ring_mpmc_rst_ptr_enq_multi(r_p, _ring_data(r_p), ring_mask, ipcbufs_p, pkts);
 
 	for (i = 0; i < pkts; i++) {
 		ODP_DBG_LVL(IPC_DBG, "%d/%d send to be free packet offset %" PRIuPTR "\n",
@@ -817,7 +822,7 @@ static int ipc_pktio_send_lockless(pktio_entry_t *pktio_entry,
 	/* Put packets to ring to be processed by other process. */
 	rbuf_p = (void *)&offsets[0];
 	r = pktio_ipc->tx.send;
-	ring_mpmc_rst_ptr_enq_multi(r, ring_mask, rbuf_p, num);
+	ring_mpmc_rst_ptr_enq_multi(r, _ring_data(r), ring_mask, rbuf_p, num);
 
 	return num;
 }

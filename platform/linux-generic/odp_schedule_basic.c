@@ -187,6 +187,7 @@ typedef struct ODP_ALIGNED_CACHE {
 		uint32_t    qi;
 		odp_queue_t queue;
 		ring_mpmc_rst_u32_t   *ring;
+		uint32_t    *ring_data;
 		odp_event_t ev[STASH_SIZE];
 	} stash;
 
@@ -210,18 +211,15 @@ typedef struct ODP_ALIGNED_CACHE {
 
 } sched_local_t;
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wpedantic"
 /* Priority queue */
 typedef struct ODP_ALIGNED_CACHE {
 	/* Ring header */
 	ring_mpmc_rst_u32_t ring;
 
 	/* Ring data: queue indexes */
-	uint32_t queue_index[MAX_RING_SIZE]; /* overlaps with ring.data[] */
+	uint32_t queue_index[MAX_RING_SIZE];
 
 } prio_queue_t;
-#pragma GCC diagnostic pop
 
 /* Order context of a queue */
 typedef struct ODP_ALIGNED_CACHE {
@@ -724,11 +722,13 @@ static int schedule_term_global(void)
 		for (i = 0; i < NUM_PRIO; i++) {
 			for (j = 0; j < MAX_SPREAD; j++) {
 				ring_mpmc_rst_u32_t *ring;
+				uint32_t *ring_data;
 				uint32_t qi;
 
 				ring = &sched->prio_q[grp][i][j].ring;
+				ring_data = sched->prio_q[grp][i][j].queue_index;
 
-				while (ring_mpmc_rst_u32_deq(ring, ring_mask, &qi)) {
+				while (ring_mpmc_rst_u32_deq(ring, ring_data, ring_mask, &qi)) {
 					odp_event_t events[1];
 					int num;
 
@@ -1001,8 +1001,9 @@ static int schedule_sched_queue(uint32_t queue_index)
 	int prio     = sched->queue[queue_index].prio;
 	int spread   = sched->queue[queue_index].spread;
 	ring_mpmc_rst_u32_t *ring = &sched->prio_q[grp][prio][spread].ring;
+	uint32_t *ring_data = sched->prio_q[grp][prio][spread].queue_index;
 
-	ring_mpmc_rst_u32_enq(ring, sched->ring_mask, queue_index);
+	ring_mpmc_rst_u32_enq(ring, ring_data, sched->ring_mask, queue_index);
 	return 0;
 }
 
@@ -1032,9 +1033,10 @@ static inline void release_atomic(void)
 {
 	uint32_t qi  = sched_local.stash.qi;
 	ring_mpmc_rst_u32_t *ring = sched_local.stash.ring;
+	uint32_t *ring_data = sched_local.stash.ring_data;
 
 	/* Release current atomic queue */
-	ring_mpmc_rst_u32_enq(ring, sched->ring_mask, qi);
+	ring_mpmc_rst_u32_enq(ring, ring_data, sched->ring_mask, qi);
 
 	/* We don't hold sync context anymore */
 	sched_local.sync_ctx = NO_SYNC_CONTEXT;
@@ -1582,6 +1584,7 @@ static inline int schedule_grp_prio(odp_queue_t *out_queue, odp_event_t out_ev[]
 		uint8_t sync_ctx, ordered;
 		odp_queue_t handle;
 		ring_mpmc_rst_u32_t *ring;
+		uint32_t *ring_data;
 		int pktin;
 		uint32_t max_deq;
 		int stashed = 1;
@@ -1598,9 +1601,10 @@ static inline int schedule_grp_prio(odp_queue_t *out_queue, odp_event_t out_ev[]
 		}
 
 		ring = &sched->prio_q[grp][prio][spr].ring;
+		ring_data = sched->prio_q[grp][prio][spr].queue_index;
 
 		/* Get queue index from the spread queue */
-		if (ring_mpmc_rst_u32_deq(ring, ring_mask, &qi) == 0) {
+		if (ring_mpmc_rst_u32_deq(ring, ring_data, ring_mask, &qi) == 0) {
 			/* Spread queue is empty */
 			i++;
 			spr++;
@@ -1637,6 +1641,7 @@ static inline int schedule_grp_prio(odp_queue_t *out_queue, odp_event_t out_ev[]
 			if (new_spr != spr) {
 				sched->queue[qi].spread = new_spr;
 				ring = &sched->prio_q[grp][prio][new_spr].ring;
+				ring_data = sched->prio_q[grp][prio][new_spr].queue_index;
 				update_queue_count(grp, prio, spr, new_spr);
 			}
 		}
@@ -1670,7 +1675,7 @@ static inline int schedule_grp_prio(odp_queue_t *out_queue, odp_event_t out_ev[]
 			if (num_pkt == 0 || !direct_recv) {
 				/* No packets to be returned. Continue scheduling
 				 * packet input queue even when it is empty. */
-				ring_mpmc_rst_u32_enq(ring, ring_mask, qi);
+				ring_mpmc_rst_u32_enq(ring, ring_data, ring_mask, qi);
 
 				/* Continue scheduling from the next spread */
 				i++;
@@ -1693,17 +1698,18 @@ static inline int schedule_grp_prio(odp_queue_t *out_queue, odp_event_t out_ev[]
 			sched_local.ordered.src_queue = qi;
 
 			/* Continue scheduling ordered queues */
-			ring_mpmc_rst_u32_enq(ring, ring_mask, qi);
+			ring_mpmc_rst_u32_enq(ring, ring_data, ring_mask, qi);
 			sched_local.sync_ctx = sync_ctx;
 
 		} else if (sync_ctx == ODP_SCHED_SYNC_ATOMIC) {
 			/* Hold queue during atomic access */
-			sched_local.stash.qi   = qi;
-			sched_local.stash.ring = ring;
-			sched_local.sync_ctx   = sync_ctx;
+			sched_local.stash.qi        = qi;
+			sched_local.stash.ring      = ring;
+			sched_local.stash.ring_data = ring_data;
+			sched_local.sync_ctx        = sync_ctx;
 		} else {
 			/* Continue scheduling parallel queues */
-			ring_mpmc_rst_u32_enq(ring, ring_mask, qi);
+			ring_mpmc_rst_u32_enq(ring, ring_data, ring_mask, qi);
 		}
 
 		handle = queue_from_index(qi);

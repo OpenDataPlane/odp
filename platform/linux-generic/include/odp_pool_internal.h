@@ -36,8 +36,6 @@ typedef struct ODP_ALIGNED_CACHE pool_cache_t {
 
 } pool_cache_t;
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wpedantic"
 /* Event header ring */
 typedef struct ODP_ALIGNED_CACHE {
 	/* Ring header */
@@ -50,7 +48,6 @@ typedef struct ODP_ALIGNED_CACHE {
 	_odp_event_hdr_t *event_hdr_by_index[];
 
 } pool_ring_t;
-#pragma GCC diagnostic pop
 
 struct _odp_pool_mem_src_ops_t;
 

@@ -53,47 +53,38 @@ struct ring_xpxc_rst_common {
 
 typedef struct ODP_ALIGNED_CACHE {
 	struct ring_xpxc_rst_common r;
-	uint32_t data[];
 } ring_mpmc_rst_u32_t;
 
 typedef struct ODP_ALIGNED_CACHE {
 	struct ring_xpxc_rst_common r;
-	uint64_t data[];
 } ring_mpmc_rst_u64_t;
 
 typedef struct ODP_ALIGNED_CACHE {
 	struct ring_xpxc_rst_common r;
-	void *data[];
 } ring_mpmc_rst_ptr_t;
 
 typedef struct ODP_ALIGNED_CACHE {
 	struct ring_xpxc_rst_common r;
-	uint32_t data[];
 } ring_mpsc_rst_u32_t;
 
 typedef struct ODP_ALIGNED_CACHE {
 	struct ring_xpxc_rst_common r;
-	uint64_t data[];
 } ring_mpsc_rst_u64_t;
 
 typedef struct ODP_ALIGNED_CACHE {
 	struct ring_xpxc_rst_common r;
-	void *data[];
 } ring_mpsc_rst_ptr_t;
 
 typedef struct ODP_ALIGNED_CACHE {
 	struct ring_xpxc_rst_common r;
-	uint32_t data[];
 } ring_spmc_rst_u32_t;
 
 typedef struct ODP_ALIGNED_CACHE {
 	struct ring_xpxc_rst_common r;
-	uint64_t data[];
 } ring_spmc_rst_u64_t;
 
 typedef struct ODP_ALIGNED_CACHE {
 	struct ring_xpxc_rst_common r;
-	void *data[];
 } ring_spmc_rst_ptr_t;
 
 /* 32-bit CAS with memory order selection */
@@ -240,7 +231,9 @@ static inline void _RING_XPXC_RST_INIT(_ring_xpxc_rst_gen_t *ring)
 
 #ifdef _RING_MPMC_RST_DEQ
 /* Dequeue data from the ring head */
-static inline uint32_t _RING_MPMC_RST_DEQ(_ring_xpxc_rst_gen_t *ring, uint32_t mask,
+static inline uint32_t _RING_MPMC_RST_DEQ(_ring_xpxc_rst_gen_t *ring,
+					  _ring_xpxc_rst_data_t *ring_data,
+					  uint32_t ring_mask,
 					  _ring_xpxc_rst_data_t *data)
 {
 	uint32_t head, tail, new_head;
@@ -264,7 +257,7 @@ static inline uint32_t _RING_MPMC_RST_DEQ(_ring_xpxc_rst_gen_t *ring, uint32_t m
 					 __ATOMIC_ACQUIRE) == 0));
 
 	/* Read data. */
-	*data = ring->data[new_head & mask];
+	*data = ring_data[new_head & ring_mask];
 
 	/* Wait until other readers have updated the tail */
 	while (odp_unlikely(odp_atomic_load_u32(&ring->r.r_tail) != head))
@@ -279,7 +272,9 @@ static inline uint32_t _RING_MPMC_RST_DEQ(_ring_xpxc_rst_gen_t *ring, uint32_t m
 
 #ifdef _RING_MPMC_RST_DEQ_MULTI
 /* Dequeue multiple data from the ring head. Num is smaller than ring size. */
-static inline uint32_t _RING_MPMC_RST_DEQ_MULTI(_ring_xpxc_rst_gen_t *ring, uint32_t mask,
+static inline uint32_t _RING_MPMC_RST_DEQ_MULTI(_ring_xpxc_rst_gen_t *ring,
+						_ring_xpxc_rst_data_t *ring_data,
+						uint32_t ring_mask,
 						_ring_xpxc_rst_data_t data[], uint32_t num)
 {
 	uint32_t head, tail, new_head, i;
@@ -309,7 +304,7 @@ static inline uint32_t _RING_MPMC_RST_DEQ_MULTI(_ring_xpxc_rst_gen_t *ring, uint
 
 	/* Read data. */
 	for (i = 0; i < num; i++)
-		data[i] = ring->data[(head + 1 + i) & mask];
+		data[i] = ring_data[(head + 1 + i) & ring_mask];
 
 	/* Wait until other readers have updated the tail */
 	while (odp_unlikely(odp_atomic_load_u32(&ring->r.r_tail) != head))
@@ -325,7 +320,9 @@ static inline uint32_t _RING_MPMC_RST_DEQ_MULTI(_ring_xpxc_rst_gen_t *ring, uint
 #ifdef _RING_MPSC_RST_DEQ_MULTI
 /* Single-consumer dequeue of multiple data items from the ring head. Num is
  * smaller than ring size. */
-static inline uint32_t _RING_MPSC_RST_DEQ_MULTI(_ring_xpxc_rst_gen_t *ring, uint32_t mask,
+static inline uint32_t _RING_MPSC_RST_DEQ_MULTI(_ring_xpxc_rst_gen_t *ring,
+						_ring_xpxc_rst_data_t *ring_data,
+						uint32_t ring_mask,
 						_ring_xpxc_rst_data_t data[], uint32_t num)
 {
 	uint32_t head, tail, new_head, i;
@@ -350,7 +347,7 @@ static inline uint32_t _RING_MPSC_RST_DEQ_MULTI(_ring_xpxc_rst_gen_t *ring, uint
 
 	/* Read data. */
 	for (i = 0; i < num; i++)
-		data[i] = ring->data[(head + 1 + i) & mask];
+		data[i] = ring_data[(head + 1 + i) & ring_mask];
 
 	/* Update the tail. Writers acquire it. */
 	odp_atomic_store_rel_u32(&ring->r.r_tail, new_head);
@@ -361,7 +358,9 @@ static inline uint32_t _RING_MPSC_RST_DEQ_MULTI(_ring_xpxc_rst_gen_t *ring, uint
 
 #ifdef _RING_MPMC_RST_DEQ_BATCH
 /* Dequeue batch of data (0 or num) from the ring head. Num is smaller than ring size. */
-static inline uint32_t _RING_MPMC_RST_DEQ_BATCH(_ring_xpxc_rst_gen_t *ring, uint32_t mask,
+static inline uint32_t _RING_MPMC_RST_DEQ_BATCH(_ring_xpxc_rst_gen_t *ring,
+						_ring_xpxc_rst_data_t *ring_data,
+						uint32_t ring_mask,
 						_ring_xpxc_rst_data_t data[], uint32_t num)
 {
 	uint32_t head, tail, new_head, i;
@@ -387,7 +386,7 @@ static inline uint32_t _RING_MPMC_RST_DEQ_BATCH(_ring_xpxc_rst_gen_t *ring, uint
 
 	/* Read data. */
 	for (i = 0; i < num; i++)
-		data[i] = ring->data[(head + 1 + i) & mask];
+		data[i] = ring_data[(head + 1 + i) & ring_mask];
 
 	/* Wait until other readers have updated the tail */
 	while (odp_unlikely(odp_atomic_load_u32(&ring->r.r_tail) != head))
@@ -403,7 +402,9 @@ static inline uint32_t _RING_MPMC_RST_DEQ_BATCH(_ring_xpxc_rst_gen_t *ring, uint
 #ifdef _RING_MPSC_RST_DEQ_BATCH
 /* Single-consumer batch dequeue of data items from the ring head. Num is
  * smaller than ring size. */
-static inline uint32_t _RING_MPSC_RST_DEQ_BATCH(_ring_xpxc_rst_gen_t *ring, uint32_t mask,
+static inline uint32_t _RING_MPSC_RST_DEQ_BATCH(_ring_xpxc_rst_gen_t *ring,
+						_ring_xpxc_rst_data_t *ring_data,
+						uint32_t ring_mask,
 						_ring_xpxc_rst_data_t data[], uint32_t num)
 {
 	uint32_t head, tail, new_head, i;
@@ -422,7 +423,7 @@ static inline uint32_t _RING_MPSC_RST_DEQ_BATCH(_ring_xpxc_rst_gen_t *ring, uint
 
 	/* Read data. */
 	for (i = 0; i < num; i++)
-		data[i] = ring->data[(head + 1 + i) & mask];
+		data[i] = ring_data[(head + 1 + i) & ring_mask];
 
 	/* Update the tail. Writers acquire it. */
 	odp_atomic_store_rel_u32(&ring->r.r_tail, new_head);
@@ -433,11 +434,13 @@ static inline uint32_t _RING_MPSC_RST_DEQ_BATCH(_ring_xpxc_rst_gen_t *ring, uint
 
 #ifdef _RING_MPMC_RST_ENQ
 /* Enqueue data into the ring tail */
-static inline void _RING_MPMC_RST_ENQ(_ring_xpxc_rst_gen_t *ring, uint32_t mask,
+static inline void _RING_MPMC_RST_ENQ(_ring_xpxc_rst_gen_t *ring,
+				      _ring_xpxc_rst_data_t *ring_data,
+				      uint32_t ring_mask,
 				      _ring_xpxc_rst_data_t data)
 {
 	uint32_t old_head, new_head;
-	uint32_t size = mask + 1;
+	uint32_t size = ring_mask + 1;
 
 	/* Reserve a slot in the ring for writing */
 	old_head = odp_atomic_fetch_inc_u32(&ring->r.w_head);
@@ -451,7 +454,7 @@ static inline void _RING_MPMC_RST_ENQ(_ring_xpxc_rst_gen_t *ring, uint32_t mask,
 		odp_cpu_pause();
 
 	/* Write data */
-	ring->data[new_head & mask] = data;
+	ring_data[new_head & ring_mask] = data;
 
 	/* Wait until other writers have updated the tail */
 	while (odp_unlikely(odp_atomic_load_u32(&ring->r.w_tail) != old_head))
@@ -464,11 +467,13 @@ static inline void _RING_MPMC_RST_ENQ(_ring_xpxc_rst_gen_t *ring, uint32_t mask,
 
 #ifdef _RING_MPMC_RST_ENQ_MULTI
 /* Enqueue multiple data into the ring tail. Num is smaller than ring size. */
-static inline void _RING_MPMC_RST_ENQ_MULTI(_ring_xpxc_rst_gen_t *ring, uint32_t mask,
+static inline void _RING_MPMC_RST_ENQ_MULTI(_ring_xpxc_rst_gen_t *ring,
+					    _ring_xpxc_rst_data_t *ring_data,
+					    uint32_t ring_mask,
 					    _ring_xpxc_rst_data_t data[], uint32_t num)
 {
 	uint32_t old_head, new_head, i;
-	uint32_t size = mask + 1;
+	uint32_t size = ring_mask + 1;
 
 	/* Reserve a slot in the ring for writing */
 	old_head = odp_atomic_fetch_add_u32(&ring->r.w_head, num);
@@ -483,7 +488,7 @@ static inline void _RING_MPMC_RST_ENQ_MULTI(_ring_xpxc_rst_gen_t *ring, uint32_t
 
 	/* Write data */
 	for (i = 0; i < num; i++)
-		ring->data[(new_head + i) & mask] = data[i];
+		ring_data[(new_head + i) & ring_mask] = data[i];
 
 	/* Wait until other writers have updated the tail */
 	while (odp_unlikely(odp_atomic_load_u32(&ring->r.w_tail) != old_head))
@@ -497,11 +502,13 @@ static inline void _RING_MPMC_RST_ENQ_MULTI(_ring_xpxc_rst_gen_t *ring, uint32_t
 #ifdef _RING_SPMC_RST_ENQ_MULTI
 /* Single-producer enqueue of multiple data items into the ring tail. Num is
  * smaller than ring size. */
-static inline void _RING_SPMC_RST_ENQ_MULTI(_ring_xpxc_rst_gen_t *ring, uint32_t mask,
+static inline void _RING_SPMC_RST_ENQ_MULTI(_ring_xpxc_rst_gen_t *ring,
+					    _ring_xpxc_rst_data_t *ring_data,
+					    uint32_t ring_mask,
 					    _ring_xpxc_rst_data_t data[], uint32_t num)
 {
 	uint32_t old_head, new_head, i;
-	uint32_t size = mask + 1;
+	uint32_t size = ring_mask + 1;
 
 	/* Reserve the slots for writing. Relaxed load and store are enough as
 	 * there are no other writers. */
@@ -518,7 +525,7 @@ static inline void _RING_SPMC_RST_ENQ_MULTI(_ring_xpxc_rst_gen_t *ring, uint32_t
 
 	/* Write data */
 	for (i = 0; i < num; i++)
-		ring->data[(new_head + i) & mask] = data[i];
+		ring_data[(new_head + i) & ring_mask] = data[i];
 
 	/* Release the new writer tail, readers acquire it. */
 	odp_atomic_store_rel_u32(&ring->r.w_tail, old_head + num);
