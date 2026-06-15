@@ -2477,6 +2477,57 @@ static void pktio_test_default_cos(void)
 	CU_ASSERT(odp_pktio_close(pktio) == 0);
 }
 
+static void pktio_test_error_cos(void)
+{
+	odp_pktio_t pktio;
+	odp_pktin_queue_param_t pktin_param;
+	odp_cls_cos_param_t cos_param;
+	odp_queue_param_t qparam;
+	odp_queue_t queue;
+	odp_cos_t cos1, cos2;
+
+	pktio = create_pktio(0, ODP_PKTIN_MODE_SCHED, ODP_PKTOUT_MODE_DIRECT);
+	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
+
+	odp_queue_param_init(&qparam);
+	qparam.type = ODP_QUEUE_TYPE_SCHED;
+
+	queue = odp_queue_create("error_cos_queue", &qparam);
+	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
+
+	odp_pktin_queue_param_init(&pktin_param);
+	pktin_param.classifier_enable = 1;
+	CU_ASSERT_FATAL(odp_pktin_queue_config(pktio, &pktin_param) == 0);
+
+	odp_cls_cos_param_init(&cos_param);
+
+	cos_param.action = ODP_COS_ACTION_DROP;
+	cos1 = odp_cls_cos_create("error_cos_1", &cos_param);
+	CU_ASSERT_FATAL(cos1 != ODP_COS_INVALID);
+
+	cos_param.action = ODP_COS_ACTION_ENQUEUE;
+	cos_param.queue = queue;
+	cos2 = odp_cls_cos_create("error_cos_2", &cos_param);
+	CU_ASSERT_FATAL(cos2 != ODP_COS_INVALID);
+
+	CU_ASSERT(odp_pktio_error_cos_set(pktio, cos1) == 0);
+
+	CU_ASSERT(odp_pktio_error_cos_set(pktio, cos2) == 0);
+
+	CU_ASSERT(odp_pktio_error_cos_set(pktio, ODP_COS_INVALID) == 0);
+
+	CU_ASSERT(odp_pktio_error_cos_set(pktio, ODP_COS_INVALID) == 0);
+
+	CU_ASSERT(odp_pktio_error_cos_set(pktio, cos2) == 0);
+
+	CU_ASSERT(odp_pktio_error_cos_set(pktio, ODP_COS_INVALID) == 0);
+
+	CU_ASSERT(odp_cos_destroy(cos1) == 0);
+	CU_ASSERT(odp_cos_destroy(cos2) == 0);
+	CU_ASSERT(odp_queue_destroy(queue) == 0);
+	CU_ASSERT(odp_pktio_close(pktio) == 0);
+}
+
 static void pktio_test_pktin_queue_config_direct(void)
 {
 	odp_pktio_t pktio;
@@ -5962,6 +6013,7 @@ odp_testinfo_t pktio_suite_unsegmented[] = {
 	ODP_TEST_INFO_CONDITIONAL(pktio_test_enable_pfc_tx, pktio_check_pfc_tx),
 	ODP_TEST_INFO_CONDITIONAL(pktio_test_enable_pfc_both, pktio_check_pfc_both),
 	ODP_TEST_INFO_CONDITIONAL(pktio_test_default_cos, pktio_check_cos_support),
+	ODP_TEST_INFO_CONDITIONAL(pktio_test_error_cos, pktio_check_cos_support),
 	ODP_TEST_INFO_NULL
 };
 
