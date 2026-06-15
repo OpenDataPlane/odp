@@ -470,10 +470,10 @@ void odp_packet_prefetch(odp_packet_t pkt, uint32_t offset, uint32_t len);
  * offsets when needed.
  *
  * @param pkt  Packet handle
- * @param len  Number of bytes to push the head (0 ... headroom)
+ * @param len  Number of bytes to push the head
  *
  * @return The new data pointer
- * @retval NULL  Requested offset exceeds available headroom
+ * @retval NULL  len exceeds headroom
  *
  * @see odp_packet_headroom(), odp_packet_pull_head()
  */
@@ -502,10 +502,10 @@ void *odp_packet_push_head(odp_packet_t pkt, uint32_t len);
  * offsets when needed.
  *
  * @param pkt  Packet handle
- * @param len  Number of bytes to pull the head (0 ... seg_len - 1)
+ * @param len  Number of bytes to pull the head
  *
  * @return The new data pointer
- * @retval NULL  Requested offset exceeds packet segment length
+ * @retval NULL  len equals or exceeds first segment length
  *
  * @see odp_packet_seg_len(), odp_packet_push_head()
  */
@@ -531,10 +531,10 @@ void *odp_packet_pull_head(odp_packet_t pkt, uint32_t len);
  * pointers and offsets remain valid.
  *
  * @param pkt  Packet handle
- * @param len  Number of bytes to push the tail (0 ... tailroom)
+ * @param len  Number of bytes to push the tail
  *
  * @return The old tail pointer
- * @retval NULL  Requested offset exceeds available tailroom
+ * @retval NULL  len exceeds tailroom
  *
  * @see odp_packet_tailroom(), odp_packet_pull_tail()
  */
@@ -565,10 +565,10 @@ void *odp_packet_push_tail(odp_packet_t pkt, uint32_t len);
  * offsets when needed.
  *
  * @param pkt  Packet handle
- * @param len  Number of bytes to pull the tail (0 ... last_seg:data_len - 1)
+ * @param len  Number of bytes to pull the tail
  *
  * @return The new tail pointer
- * @retval NULL  The specified offset exceeds allowable data length
+ * @retval NULL  len equals or exceeds last segment length
  */
 void *odp_packet_pull_tail(odp_packet_t pkt, uint32_t len);
 
