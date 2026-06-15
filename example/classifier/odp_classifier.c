@@ -131,6 +131,7 @@ typedef struct {
 	int pool_size;
 	int burst_size;
 	uint32_t vector_size;
+	odp_spinlock_t verbose_lock;	/**< Serializes verbose packet dumps */
 } appl_args_t;
 
 enum packet_mode {
@@ -377,24 +378,31 @@ static void process_packets(odp_packet_t pkts[], int num, odp_queue_t in_q,
 	int i, j, dropped, sent;
 	global_statistics *stats;
 	unsigned long err_cnt = 0;
+	/* Per-thread batch counter identifying packets processed by a thread in this processing
+	 * round */
+	static __thread uint64_t batch;
 
 	if (odp_unlikely(appl->verbose)) {
+		odp_queue_info_t info;
+		const char *qname = odp_queue_info(in_q, &info) == 0 ? info.name : "(unknown)";
 		const char *orig = was_vector ? "vector" : "packet";
 
+		odp_spinlock_lock(&appl->verbose_lock);
+
 		for (j = 0; j < num; j++) {
-			odp_queue_info_t info;
 			uint32_t len = odp_packet_len(pkts[j]);
 
-			printf("Origin: %s\n", orig);
-
-			if (odp_queue_info(in_q, &info) == 0)
-				printf("Queue: %s\n", info.name);
+			printf("Queue: %s, origin: %s, thread: %d, batch: %" PRIu64 "\n", qname,
+			       orig, thr, batch);
 
 			if (len > 96)
 				len = 96;
 
 			odp_packet_print_data(pkts[j], 0, len);
 		}
+
+		++batch;
+		odp_spinlock_unlock(&appl->verbose_lock);
 	}
 
 	/* Total packets received */
@@ -446,6 +454,7 @@ static int pktio_receive_thread(void *arg)
 	const int thr = odp_thread_id();
 	odp_packet_t single_pkts[MAX_PKT_BURST];
 	odp_event_t ev, evs[MAX_PKT_BURST], *ev_tbl;
+	odp_event_type_t type;
 	odp_event_vector_t evv;
 	int num_recv, num_pkts, vector_size;
 	odp_queue_t queue;
@@ -469,8 +478,9 @@ static int pktio_receive_thread(void *arg)
 
 		for (int i = 0; i < num_recv; i++) {
 			ev = evs[i];
+			type = odp_event_type(ev);
 
-			if (odp_event_type(ev) == ODP_EVENT_VECTOR) {
+			if (type == ODP_EVENT_VECTOR) {
 				evv = odp_event_vector_from_event(ev);
 				vector_size = odp_event_vector_tbl(evv, &ev_tbl);
 
@@ -481,9 +491,12 @@ static int pktio_receive_thread(void *arg)
 						true);
 				odp_event_vector_free(evv);
 				continue;
+			} else if (type == ODP_EVENT_PACKET) {
+				single_pkts[num_pkts++] = odp_packet_from_event(ev);
+			} else {
+				ODPH_ERR("Unexpected event received, type: %d, freeing\n", type);
+				odp_event_free(ev);
 			}
-
-			single_pkts[num_pkts++] = odp_packet_from_event(ev);
 		}
 
 		if (num_pkts > 0)
@@ -801,6 +814,7 @@ int main(int argc, char *argv[])
 
 	appl_args_gbl = args;
 	memset(args, 0, sizeof(*args));
+	odp_spinlock_init(&args->verbose_lock);
 	/* Parse and store the application arguments */
 	if (parse_args(argc, argv, args))
 		goto args_error;
