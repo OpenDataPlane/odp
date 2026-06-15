@@ -38,6 +38,7 @@ typedef union odp_cls_testcase {
 		uint32_t default_cos:1;
 		uint32_t drop_cos:1;
 		uint32_t error_cos:1;
+		uint32_t alt_cos:1;
 		uint32_t pmr_chain:1;
 		uint32_t pmr_chain_rev:1;
 		uint32_t pmr_cos:1;

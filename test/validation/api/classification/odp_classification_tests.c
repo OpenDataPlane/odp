@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2015-2018 Linaro Limited
- * Copyright (c) 2020-2025 Nokia
+ * Copyright (c) 2020-2026 Nokia
  */
 
 #include "odp_classification_testsuites.h"
@@ -23,6 +23,7 @@ static odp_cls_testcase_u tc;
 #define NUM_COS_DROP	1
 #define NUM_COS_ERROR	1
 #define NUM_COS_PMR	1
+#define NUM_COS_ALT	1
 #define NUM_COS_COMPOSITE	1
 #define PKTV_DEFAULT_SIZE	8
 #define EVV_DEFAULT_SIZE	8
@@ -507,25 +508,93 @@ void configure_pktio_default_cos(vector_mode_t vector_mode)
 	CU_ASSERT(retval == 0);
 }
 
-void test_pktio_default_cos(vector_mode_t vector_mode)
+static odp_cos_t create_alt_cos(const char *name, odp_pool_t pool, odp_queue_t *queue_out,
+				vector_mode_t vector_mode)
+{
+	odp_cos_t cos;
+	odp_queue_t queue;
+	odp_queue_param_t qparam;
+	odp_cls_cos_param_t cls_param;
+
+	odp_queue_param_init(&qparam);
+	qparam.type = ODP_QUEUE_TYPE_SCHED;
+
+	if (vector_mode == VECTOR_MODE_EVENT) {
+		qparam.aggr = &global.event_aggr.config;
+		qparam.num_aggr = 1;
+	}
+
+	queue = odp_queue_create(name, &qparam);
+	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
+
+	odp_cls_cos_param_init(&cls_param);
+	cls_param.pool = pool;
+	cls_param.queue = vector_mode == VECTOR_MODE_EVENT ?
+				odp_queue_aggr(queue, 0) : queue;
+	CU_ASSERT_FATAL(cls_param.queue != ODP_QUEUE_INVALID);
+
+	if (vector_mode == VECTOR_MODE_PACKET) {
+		cls_param.vector.enable = true;
+		cls_param.vector.pool = pktv_config.pool;
+		cls_param.vector.max_size = pktv_config.max_size;
+		cls_param.vector.max_tmo_ns = pktv_config.max_tmo_ns;
+	}
+
+	cos = odp_cls_cos_create(name, &cls_param);
+	CU_ASSERT_FATAL(cos != ODP_COS_INVALID);
+
+	*queue_out = queue;
+	return cos;
+}
+
+static odp_packet_t create_ipv4_udp_pkt(uint32_t *seqno_out)
 {
 	odp_packet_t pkt;
-	uint32_t seqno = 0;
-	cls_packet_info_t pkt_info;
+	uint32_t seqno;
+	cls_packet_info_t pkt_info = default_pkt_info;
 
-	/* create a default packet */
-	pkt_info = default_pkt_info;
 	pkt_info.l4_type = CLS_PKT_L4_UDP;
 	pkt = create_packet(pkt_info);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
-	seqno = cls_pkt_get_seq(pkt);
-	CU_ASSERT(seqno != TEST_SEQ_INVALID);
 
+	seqno = cls_pkt_get_seq(pkt);
+	CU_ASSERT_FATAL(seqno != TEST_SEQ_INVALID);
+
+	*seqno_out = seqno;
+	return pkt;
+}
+
+void test_pktio_default_cos(vector_mode_t vector_mode)
+{
+	odp_packet_t pkt;
+	odp_cos_t cos2;
+	odp_pool_t pool2;
+	odp_queue_t queue2;
+	uint32_t seqno;
+
+	pkt = create_ipv4_udp_pkt(&seqno);
 	enqueue_pktio_interface(pkt, pktio_loop);
 	/* Default packet should be received in default queue */
 	pkt = receive_and_check(seqno, queue_list[CLS_DEFAULT], pool_list[CLS_DEFAULT],
 				vector_mode);
 	odp_packet_free(pkt);
+
+	if (!tc.alt_cos)
+		return;
+
+	pool2 = pool_default;
+	cos2 = create_alt_cos("alt_cos", pool2, &queue2, vector_mode);
+	CU_ASSERT_FATAL(odp_pktio_default_cos_set(pktio_loop, cos2) == 0);
+
+	pkt = create_ipv4_udp_pkt(&seqno);
+	enqueue_pktio_interface(pkt, pktio_loop);
+	pkt = receive_and_check(seqno, queue2, pool2, vector_mode);
+	odp_packet_free(pkt);
+
+	/* Restore the original CoS for the remaining tests */
+	CU_ASSERT_FATAL(odp_pktio_default_cos_set(pktio_loop, cos_list[CLS_DEFAULT]) == 0);
+	CU_ASSERT(!odp_cos_destroy(cos2));
+	CU_ASSERT(!odp_queue_destroy(queue2));
 }
 
 void configure_pktio_drop_cos(vector_mode_t vector_mode, uint32_t max_cos_stats)
@@ -1007,6 +1076,11 @@ static void cls_pktio_configure_common(vector_mode_t vector_mode)
 		configure_pktio_pmr_composite(vector_mode);
 		tc.pmr_composite_cos = 1;
 		num_cos -= NUM_COS_COMPOSITE;
+	}
+	/* Reserve a spare CoS for default and error CoS swap tests */
+	if (num_cos >= NUM_COS_ALT) {
+		tc.alt_cos = 1;
+		num_cos -= NUM_COS_ALT;
 	}
 
 	odp_cls_print_all();
