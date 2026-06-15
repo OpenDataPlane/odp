@@ -791,32 +791,63 @@ void configure_pktio_error_cos(vector_mode_t vector_mode)
 	CU_ASSERT(retval == 0);
 }
 
-void test_pktio_error_cos(vector_mode_t vector_mode)
+static odp_packet_t create_error_ipv4_udp_pkt(void)
 {
-	odp_queue_t queue;
 	odp_packet_t pkt;
-	odp_pool_t pool;
 	cls_packet_info_t pkt_info;
+	odph_ipv4hdr_t *ip;
 
-	/*Create an error packet */
 	pkt_info = default_pkt_info;
 	pkt_info.l4_type = CLS_PKT_L4_UDP;
+
 	pkt = create_packet(pkt_info);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
-	odph_ipv4hdr_t *ip = (odph_ipv4hdr_t *)odp_packet_l3_ptr(pkt, NULL);
+	ip = (odph_ipv4hdr_t *)odp_packet_l3_ptr(pkt, NULL);
 
-	/* Incorrect IpV4 version */
+	/* Incorrect IPv4 version */
 	ip->ver_ihl = 8 << 4 | ODPH_IPV4HDR_IHL_MIN;
 	ip->chksum = 0;
+
+	return pkt;
+}
+
+void test_pktio_error_cos(vector_mode_t vector_mode)
+{
+	odp_cos_t cos2;
+	odp_packet_t pkt;
+	odp_pool_t pool2;
+	odp_queue_t queue, queue2;
+
+	pkt = create_error_ipv4_udp_pkt();
 	enqueue_pktio_interface(pkt, pktio_loop);
 
 	pkt = receive_packet(&queue, ODP_TIME_SEC_IN_NS, vector_mode);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	/* Error packet should be received in error queue */
 	CU_ASSERT(queue == queue_list[CLS_ERROR]);
-	pool = odp_packet_pool(pkt);
-	CU_ASSERT(pool == pool_list[CLS_ERROR]);
+	CU_ASSERT(odp_packet_pool(pkt) == pool_list[CLS_ERROR]);
 	odp_packet_free(pkt);
+
+	if (!tc.alt_cos)
+		return;
+
+	pool2 = pool_default;
+	cos2 = create_alt_cos("alt_cos", pool2, &queue2, vector_mode);
+	CU_ASSERT_FATAL(odp_pktio_error_cos_set(pktio_loop, cos2) == 0);
+
+	pkt = create_error_ipv4_udp_pkt();
+	enqueue_pktio_interface(pkt, pktio_loop);
+
+	pkt = receive_packet(&queue, ODP_TIME_SEC_IN_NS, vector_mode);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+	CU_ASSERT(queue == queue2);
+	CU_ASSERT(odp_packet_pool(pkt) == pool2);
+	odp_packet_free(pkt);
+
+	/* Restore the original error CoS for the remaining tests */
+	CU_ASSERT_FATAL(odp_pktio_error_cos_set(pktio_loop, cos_list[CLS_ERROR]) == 0);
+	CU_ASSERT(!odp_cos_destroy(cos2));
+	CU_ASSERT(!odp_queue_destroy(queue2));
 }
 
 static void cls_pktio_set_skip(void)
