@@ -622,23 +622,26 @@ static odp_bool_t parse_lso_fields(const char *optarg, test_options_t *opts)
 
 		if (mod_op == 3) {
 			/* Parse first/middle/last mask and value byte pairs */
-			uint32_t f_mask, f_val, m_mask, m_val, l_mask, l_val;
+			int32_t f_mask, f_val, m_mask, m_val, l_mask, l_val;
 
 			ret = sscanf(tmp, "%*u" FIELD_DELIMITER "%*u" FIELD_DELIMITER "%*u"
-				     FIELD_DELIMITER "%" SCNu32 FIELD_DELIMITER "%" SCNu32
-				     FIELD_DELIMITER "%" SCNu32 FIELD_DELIMITER "%" SCNu32
-				     FIELD_DELIMITER "%" SCNu32 FIELD_DELIMITER "%" SCNu32,
+				     FIELD_DELIMITER "%" SCNi32 FIELD_DELIMITER "%" SCNi32
+				     FIELD_DELIMITER "%" SCNi32 FIELD_DELIMITER "%" SCNi32
+				     FIELD_DELIMITER "%" SCNi32 FIELD_DELIMITER "%" SCNi32,
 				     &f_mask, &f_val, &m_mask, &m_val, &l_mask, &l_val);
 
 			if (ret != 6) {
-				ODPH_ERR("Error: ODP_LSO_WRITE_BITS requires 6 mask/value bytes\n");
+				ODPH_ERR("Error: ODP_LSO_WRITE_BITS requires 6 mask/value bytes, "
+					 "parsed: %d\n", ret);
 				ret_val = false;
 				goto exit;
 			}
 
-			if (f_mask > UINT8_MAX || f_val > UINT8_MAX || m_mask > UINT8_MAX ||
-			    m_val > UINT8_MAX || l_mask > UINT8_MAX || l_val > UINT8_MAX) {
-				ODPH_ERR("Error: ODP_LSO_WRITE_BITS mask/value byte out of range\n");
+			if (f_mask < 0 || f_mask > UINT8_MAX || f_val < 0 || f_val > UINT8_MAX ||
+			    m_mask < 0 || m_mask > UINT8_MAX || m_val < 0 || m_val > UINT8_MAX ||
+			    l_mask < 0 || l_mask > UINT8_MAX || l_val < 0 || l_val > UINT8_MAX) {
+				ODPH_ERR("Error: ODP_LSO_WRITE_BITS mask/value byte out of "
+					 "range\n");
 				ret_val = false;
 				goto exit;
 			}
