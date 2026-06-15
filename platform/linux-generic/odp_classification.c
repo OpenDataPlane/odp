@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2014-2018 Linaro Limited
- * Copyright (c) 2019-2025 Nokia
+ * Copyright (c) 2019-2026 Nokia
  */
 
 #include <odp/api/classification.h>
@@ -626,7 +626,7 @@ int odp_pktio_default_cos_set(odp_pktio_t pktio_in, odp_cos_t default_cos)
 int odp_pktio_error_cos_set(odp_pktio_t pktio_in, odp_cos_t error_cos)
 {
 	pktio_entry_t *entry;
-	cos_t *cos;
+	cos_t *cos = NULL;
 
 	entry = get_pktio_entry(pktio_in);
 	if (entry == NULL) {
@@ -634,10 +634,12 @@ int odp_pktio_error_cos_set(odp_pktio_t pktio_in, odp_cos_t error_cos)
 		return -1;
 	}
 
-	cos = get_cos_entry(error_cos);
-	if (cos == NULL) {
-		_ODP_ERR("Invalid odp_cos_t handle\n");
-		return -1;
+	if (error_cos != ODP_COS_INVALID) {
+		cos = get_cos_entry(error_cos);
+		if (cos == NULL) {
+			_ODP_ERR("Invalid odp_cos_t handle\n");
+			return -1;
+		}
 	}
 
 	entry->cls.error_cos = cos;
