@@ -25,6 +25,11 @@ type odp_packet_t, and packet-related APIs take arguments of this type. What an
 odp_packet_t actually is, is not part of the ODP API specification and
 applications cannot make assumptions about the underlying type.
 
+Most ODP handle types have a special 'invalid' value (e.g. ODP_PACKET_INVALID
+for packet handles) that is typically used for indicating failures of various
+API functions that return handles. Such an invalid handle must not be passed
+to any ODP API function unless explicitly allowed in the API text.
+
 Application gains ODP handle ownership when it receives it from an ODP API call.
 For example, application can receive an odp_event_t handle from `odp_schedule()`
 call. The ownership ends when the handle is passed back to ODP, for example with
