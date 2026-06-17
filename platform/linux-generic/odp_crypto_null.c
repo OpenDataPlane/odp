@@ -301,6 +301,8 @@ _odp_crypto_init_global(void)
 		return 0;
 	}
 
+	_ODP_WARN("Null crypto implementation provides NO encryption or authentication. NOT for production use.\n");
+
 	/* Calculate the memory size we need */
 	mem_size  = sizeof(odp_crypto_global_t);
 
