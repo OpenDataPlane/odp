@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2017-2018 Linaro Limited
  * Copyright (c) 2020 Marvell
- * Copyright (c) 2020 Nokia
+ * Copyright (c) 2020-2026 Nokia
  */
 
 #ifndef _ODP_TEST_IPSEC_H_
@@ -161,6 +161,9 @@ int ipsec_check_test_sa_update_seq_num(void);
 int ipsec_check_esp_aes_gcm_128_reass_ipv4(void);
 int ipsec_check_esp_aes_gcm_128_reass_ipv6(void);
 int ipsec_check_esp_null_aes_xcbc(void);
+int ipsec_check_out_ipv4_ah_sha256_frag_check(void);
+int ipsec_check_out_ipv4_esp_null_sha256_frag_check(void);
+int ipsec_check_out_dummy_esp_null_sha256(void);
 void ipsec_status_event_get(odp_ipsec_sa_t sa,
 			    enum ipsec_test_sa_expiry sa_expiry);
 

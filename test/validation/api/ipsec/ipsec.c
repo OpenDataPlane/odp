@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2017-2018 Linaro Limited
- * Copyright (c) 2018-2025 Nokia
+ * Copyright (c) 2018-2026 Nokia
  * Copyright (c) 2020-2021 Marvell
  */
 
@@ -376,6 +376,30 @@ int ipsec_check_esp_null_aes_xcbc(void)
 {
 	return  ipsec_check_esp(ODP_CIPHER_ALG_NULL, 0,
 				ODP_AUTH_ALG_AES_XCBC_MAC, 128);
+}
+
+int ipsec_check_out_ipv4_ah_sha256_frag_check(void)
+{
+	if (!capa.out_op.opt.frag_mode || ipsec_check_ah_sha256() == ODP_TEST_INACTIVE)
+		return ODP_TEST_INACTIVE;
+
+	return ODP_TEST_ACTIVE;
+}
+
+int ipsec_check_out_ipv4_esp_null_sha256_frag_check(void)
+{
+	if (!capa.out_op.opt.frag_mode || ipsec_check_esp_null_sha256() == ODP_TEST_INACTIVE)
+		return ODP_TEST_INACTIVE;
+
+	return ODP_TEST_ACTIVE;
+}
+
+int ipsec_check_out_dummy_esp_null_sha256(void)
+{
+	if (!capa.out_op.opt.tfc_dummy || ipsec_check_esp_null_sha256() == ODP_TEST_INACTIVE)
+		return ODP_TEST_INACTIVE;
+
+	return ODP_TEST_ACTIVE;
 }
 
 void ipsec_sa_param_fill(odp_ipsec_sa_param_t *param,
