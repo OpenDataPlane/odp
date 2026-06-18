@@ -459,11 +459,13 @@ void odp_packet_prefetch(odp_packet_t pkt, uint32_t offset, uint32_t len);
  * pushed out up to 'headroom' bytes. Packet is not modified if there's not
  * enough headroom space.
  *
- * odp_packet_xxx:
- * seg_len  += len
- * len      += len
- * headroom -= len
- * data     -= len
+ * @code{.unparsed}
+ *     odp_packet_xxx:
+ *         seg_len  += len
+ *         len      += len
+ *         headroom -= len
+ *         data     -= len
+ * @endcode
  *
  * Operation does not modify packet segmentation or move data. Handles and
  * pointers remain valid. User is responsible to update packet metadata
@@ -487,11 +489,13 @@ void *odp_packet_push_head(odp_packet_t pkt, uint32_t len);
  * pointer must stay in the first segment). Packet is not modified if there's
  * not enough data in the first segment.
  *
- * odp_packet_xxx:
- * seg_len  -= len
- * len      -= len
- * data     += len
- * headroom += len, if the packet is not a referencing packet
+ * @code{.unparsed}
+ *     odp_packet_xxx:
+ *         seg_len  -= len
+ *         len      -= len
+ *         data     += len
+ *         headroom += len, if the packet is not a referencing packet
+ * @endcode
  *
  * If the packet is a referencing packet and the first segment shares data
  * with another packet, headroom does not increase. Otherwise headroom
@@ -519,13 +523,15 @@ void *odp_packet_pull_head(odp_packet_t pkt, uint32_t len);
  * pushed out up to 'tailroom' bytes. Packet is not modified if there's not
  * enough tailroom.
  *
- * last_seg:
- * data_len += len
+ * @code{.unparsed}
+ *     last_seg:
+ *         data_len += len
  *
- * odp_packet_xxx:
- * len      += len
- * tail     += len
- * tailroom -= len
+ *     odp_packet_xxx:
+ *         len      += len
+ *         tail     += len
+ *         tailroom -= len
+ * @endcode
  *
  * Operation does not modify packet segmentation or move data. Handles,
  * pointers and offsets remain valid.
@@ -548,13 +554,15 @@ void *odp_packet_push_tail(odp_packet_t pkt, uint32_t len);
  * in up to last segment data_len - 1 bytes. (i.e. packet tail must stay in the
  * last segment). Packet is not modified if there's not enough data.
  *
- * last_seg:
- * data_len -= len
+ * @code{.unparsed}
+ *     last_seg:
+ *         data_len -= len
  *
- * odp_packet_xxx:
- * len      -= len
- * tail     -= len
- * tailroom += len, if the packet is not a referencing packet
+ *     odp_packet_xxx:
+ *         len      -= len
+ *         tail     -= len
+ *         tailroom += len, if the packet is not a referencing packet
+ * @endcode
  *
  * If the packet is a referencing packet and the last segment shares data
  * with another packet, tailroom does not increase. Otherwise tailroom
