@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2017-2018 Linaro Limited
  * Copyright (c) 2020 Marvell
- * Copyright (c) 2020-2025 Nokia
+ * Copyright (c) 2020-2026 Nokia
  */
 
 #include <stddef.h>
@@ -2152,11 +2152,11 @@ odp_testinfo_t ipsec_out_suite[] = {
 	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_esp_udp_null_sha256,
 				  ipsec_check_esp_null_sha256),
 	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_ah_sha256_frag_check,
-				  ipsec_check_ah_sha256),
+				  ipsec_check_out_ipv4_ah_sha256_frag_check),
 	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_ah_sha256_frag_check_2,
 				  ipsec_check_ah_sha256),
 	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_esp_null_sha256_frag_check,
-				  ipsec_check_esp_null_sha256),
+				  ipsec_check_out_ipv4_esp_null_sha256_frag_check),
 	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_esp_null_sha256_frag_check_2,
 				  ipsec_check_esp_null_sha256),
 	ODP_TEST_INFO_CONDITIONAL(test_out_ipv6_ah_sha256,
@@ -2174,9 +2174,9 @@ odp_testinfo_t ipsec_out_suite[] = {
 	ODP_TEST_INFO_CONDITIONAL(test_out_ipv6_esp_udp_null_sha256,
 				  ipsec_check_esp_null_sha256),
 	ODP_TEST_INFO_CONDITIONAL(test_out_dummy_esp_null_sha256_tun_ipv4,
-				  ipsec_check_esp_null_sha256),
+				  ipsec_check_out_dummy_esp_null_sha256),
 	ODP_TEST_INFO_CONDITIONAL(test_out_dummy_esp_null_sha256_tun_ipv6,
-				  ipsec_check_esp_null_sha256),
+				  ipsec_check_out_dummy_esp_null_sha256),
 	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_udp_esp_null_sha256,
 				  ipsec_check_esp_null_sha256),
 	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_null_aes_xcbc,
