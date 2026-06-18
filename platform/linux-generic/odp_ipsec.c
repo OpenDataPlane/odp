@@ -568,15 +568,25 @@ static int ipsec_parse_ipv6(ipsec_state_t *state, odp_packet_t pkt)
 	while (state->ip_next_hdr == _ODP_IPPROTO_HOPOPTS ||
 	       state->ip_next_hdr == _ODP_IPPROTO_DEST ||
 	       state->ip_next_hdr == _ODP_IPPROTO_ROUTE) {
-		odp_packet_copy_to_mem(pkt,
-				       state->ip_offset + state->ip_hdr_len,
-				       sizeof(ipv6hdrext),
-				       &ipv6hdrext);
+		int rc;
+		uint16_t ext_hdr_len;
+
+		rc = odp_packet_copy_to_mem(pkt,
+					    state->ip_offset + state->ip_hdr_len,
+					    sizeof(ipv6hdrext),
+					    &ipv6hdrext);
+		if (odp_unlikely(rc != 0))
+			return -1;
+
 		state->ip_next_hdr = ipv6hdrext.next_hdr;
 		state->ip_next_hdr_offset = state->ip_offset +
 			state->ip_hdr_len +
 			_ODP_IPV6HDREXT_NHDR_OFFSET;
-		state->ip_hdr_len += (ipv6hdrext.ext_len + 1) * 8;
+
+		ext_hdr_len = (ipv6hdrext.ext_len + 1) * 8;
+		if ((uint32_t)state->ip_hdr_len + ext_hdr_len > UINT16_MAX)
+			return -1;
+		state->ip_hdr_len += ext_hdr_len;
 	}
 
 	if (_ODP_IPPROTO_FRAG == state->ip_next_hdr)
