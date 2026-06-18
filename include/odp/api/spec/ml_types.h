@@ -484,19 +484,23 @@ typedef struct odp_ml_shape_info_t {
 	 *
 	 *  For example, a static (#ODP_ML_SHAPE_STATIC) NCHW tensor could be presented as:
 	 *
+	 *  @code{.c}
 	 *      num_dim = 4;
 	 *      dim[0]  = 1;    // no batching, N = 1
 	 *      dim[1]  = 3;    // 3 color channels
 	 *      dim[2]  = 720;  // height 720 pixels
 	 *      dim[3]  = 1280; // width 1280 pixels
+	 *  @endcode
 	 *
 	 *  ... and with dynamic batch size (#ODP_ML_SHAPE_BATCH):
 	 *
+	 *  @code{.c}
 	 *      num_dim = 4;
 	 *      dim[0]  = ODP_ML_DIM_DYNAMIC; // dynamic in range: dim_min[0] ... dim_max[0]
 	 *      dim[1]  = 3;
 	 *      dim[2]  = 720;
 	 *      dim[3]  = 1280;
+	 *  @endcode
 	 */
 	uint32_t dim[ODP_ML_MAX_DIMS];
 

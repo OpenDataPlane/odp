@@ -955,13 +955,13 @@ uint32_t odp_packet_seg_data_len(odp_packet_t pkt, odp_packet_seg_t seg);
  * Otherwise the result packet is either a normal or referencing packet
  * depending on the packets and the implementation.
  *
- *  dst         src             result
- *  -------------------------------------------------
- *  normal      normal          normal
- *  normal      referenced      normal or referencing
- *  normal      referencing     normal or referencing
- *  normal      static ref      normal or referencing
- *  referencing any             referencing
+ *  | dst         | src             | result                |
+ *  |:-----------:|:---------------:|:---------------------:|
+ *  | normal      | normal          | normal                |
+ *  | normal      | referenced      | normal or referencing |
+ *  | normal      | referencing     | normal or referencing |
+ *  | normal      | static ref      | normal or referencing |
+ *  | referencing | any             | referencing           |
  *
  * On failure, both handles remain valid and packets are not modified.
  *
@@ -2222,9 +2222,9 @@ int odp_packet_payload_offset_set(odp_packet_t pkt, uint32_t offset);
  * Enable or disable Tx packet drop based on packet age. When enabled, packet will be dropped
  * if it is in Tx pktout queue or traffic shapers/schedulers for longer than timeout set.
  *
- * When tmo_ns is
- * !0: Aging is enabled
- *  0: Aging is disabled
+ * When tmo_ns is:
+ * - !0: Aging is enabled
+ * -  0: Aging is disabled
  *
  * Aging is disabled by default. Maximum tmo value is defined by max_tx_aging_tmo_ns capa.
  *

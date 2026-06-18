@@ -592,20 +592,20 @@ typedef struct odp_ipsec_crypto_param_t {
 	 * Zero value indicates that the default ICV length shall be used.
 	 * The default length depends on the selected algorithm as follows:
 	 *
-	 * Algorithm                       Default length     Other lengths
-	 * ----------------------------------------------------------------
-	 * ODP_AUTH_ALG_NULL               0
-	 * ODP_AUTH_ALG_MD5_HMAC           12
-	 * ODP_AUTH_ALG_SHA1_HMAC          12
-	 * ODP_AUTH_ALG_SHA256_HMAC        16
-	 * ODP_AUTH_ALG_SHA384_HMAC        24
-	 * ODP_AUTH_ALG_SHA512_HMAC        32
-	 * ODP_AUTH_ALG_AES_GCM            16                 8, 12
-	 * ODP_AUTH_ALG_AES_GMAC           16
-	 * ODP_AUTH_ALG_AES_CCM            16                 8, 12
-	 * ODP_AUTH_ALG_AES_CMAC           12
-	 * ODP_AUTH_ALG_AES_XCBC_MAC       12
-	 * ODP_AUTH_ALG_CHACHA20_POLY1305  16
+	 * | Algorithm                      | Default length | Other lengths |
+	 * |--------------------------------|:--------------:|:-------------:|
+	 * | ODP_AUTH_ALG_NULL              |              0 |               |
+	 * | ODP_AUTH_ALG_MD5_HMAC          |             12 |               |
+	 * | ODP_AUTH_ALG_SHA1_HMAC         |             12 |               |
+	 * | ODP_AUTH_ALG_SHA256_HMAC       |             16 |               |
+	 * | ODP_AUTH_ALG_SHA384_HMAC       |             24 |               |
+	 * | ODP_AUTH_ALG_SHA512_HMAC       |             32 |               |
+	 * | ODP_AUTH_ALG_AES_GCM           |             16 |         8, 12 |
+	 * | ODP_AUTH_ALG_AES_GMAC          |             16 |               |
+	 * | ODP_AUTH_ALG_AES_CCM           |             16 |         8, 12 |
+	 * | ODP_AUTH_ALG_AES_CMAC          |             12 |               |
+	 * | ODP_AUTH_ALG_AES_XCBC_MAC      |             12 |               |
+	 * | ODP_AUTH_ALG_CHACHA20_POLY1305 |             16 |               |
 	 *
 	 * The requested ICV length must be supported for the selected
 	 * algorithm as indicated by odp_ipsec_auth_capability().
