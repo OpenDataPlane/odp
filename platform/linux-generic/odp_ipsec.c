@@ -236,6 +236,11 @@ int odp_ipsec_capability(odp_ipsec_capability_t *capa)
 
 	capa->max_num_sa = _odp_ipsec_max_num_sa();
 
+	capa->out_op.opt.frag_mode = 1;
+	capa->out_op.opt.tfc_pad = 1;
+	capa->out_op.opt.tfc_dummy = 1;
+	capa->out_op.opt.ip_param = 1;
+
 	capa->max_antireplay_ws = IPSEC_AR_WIN_SIZE_MAX;
 
 	rc = set_ipsec_crypto_capa(capa);
