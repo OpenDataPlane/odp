@@ -533,8 +533,9 @@ static int ipsec_parse_ipv4(ipsec_state_t *state, odp_packet_t pkt)
 {
 	_odp_ipv4hdr_t ipv4hdr;
 
-	odp_packet_copy_to_mem(pkt, state->ip_offset,
-			       _ODP_IPV4HDR_LEN, &ipv4hdr);
+	if (odp_unlikely(odp_packet_copy_to_mem(pkt, state->ip_offset,
+						_ODP_IPV4HDR_LEN, &ipv4hdr)))
+		return -1;
 
 	if (_ODP_IPV4HDR_IS_FRAGMENT(odp_be_to_cpu_16(ipv4hdr.frag_offset)))
 		return -1;
@@ -554,8 +555,9 @@ static int ipsec_parse_ipv6(ipsec_state_t *state, odp_packet_t pkt)
 	_odp_ipv6hdr_t ipv6hdr;
 	_odp_ipv6hdr_ext_t ipv6hdrext;
 
-	odp_packet_copy_to_mem(pkt, state->ip_offset,
-			       _ODP_IPV6HDR_LEN, &ipv6hdr);
+	if (odp_unlikely(odp_packet_copy_to_mem(pkt, state->ip_offset,
+						_ODP_IPV6HDR_LEN, &ipv6hdr)))
+		return -1;
 
 	state->ip_hdr_len = _ODP_IPV6HDR_LEN;
 	state->ip_next_hdr = ipv6hdr.next_hdr;
@@ -678,8 +680,11 @@ static int ipsec_in_esp(odp_packet_t *pkt,
 		uint16_t ip_data_len = state->ip_tot_len -
 				       state->ip_hdr_len;
 
-		odp_packet_copy_to_mem(*pkt, ipsec_offset,
-				       _ODP_UDPHDR_LEN, &udp);
+		if (odp_unlikely(odp_packet_copy_to_mem(*pkt, ipsec_offset,
+							_ODP_UDPHDR_LEN, &udp))) {
+			status->error.proto = 1;
+			return -1;
+		}
 
 		if (udp.dst_port != odp_cpu_to_be_16(_ODP_UDP_IPSEC_PORT) ||
 		    udp.length != odp_cpu_to_be_16(ip_data_len)) {
