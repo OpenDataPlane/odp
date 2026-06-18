@@ -1360,6 +1360,15 @@ int main(int argc, char **argv)
 		       support_level(ipsec_capa.pipeline_cls));
 		printf("    retaining outer headers:      %s\n",
 		       support_level(ipsec_capa.retain_header));
+		printf("    outbound operation options:\n");
+		printf("      frag_mode:                  %i\n",
+		       ipsec_capa.out_op.opt.frag_mode);
+		printf("      tfc_pad:                    %i\n",
+		       ipsec_capa.out_op.opt.tfc_pad);
+		printf("      tfc_dummy:                  %i\n",
+		       ipsec_capa.out_op.opt.tfc_dummy);
+		printf("      ip_param:                   %i\n",
+		       ipsec_capa.out_op.opt.ip_param);
 		printf("    inbound checksum offload support:\n");
 		printf("      IPv4 header checksum:       %s\n",
 		       support_level(ipsec_capa.chksums_in.chksum.ipv4));
