@@ -104,6 +104,7 @@ typedef struct timer_pool_t {
 
 typedef struct test_global_t {
 	test_options_t test_options;
+	odp_timer_pool_param_t timer_pool_param;
 	odp_atomic_u32_t exit_test;
 	odp_atomic_u32_t timers_started;
 	odp_barrier_t barrier;
@@ -265,18 +266,25 @@ static int set_num_cpu(test_global_t *global)
 	return 0;
 }
 
-static int create_timer_pools(test_global_t *global)
+static void init_global_handles(test_global_t *global)
+{
+	uint32_t i, j;
+
+	for (i = 0; i < MAX_TIMER_POOLS; i++) {
+		global->timer_pool[i].tp = ODP_TIMER_POOL_INVALID;
+		global->pool[i]  = ODP_POOL_INVALID;
+		global->queue[i] = ODP_QUEUE_INVALID;
+
+		for (j = 0; j < MAX_TIMERS; j++)
+			global->timer[i][j] = ODP_TIMER_INVALID;
+	}
+}
+
+static int prepare_timer_pool_param(test_global_t *global, odp_timer_pool_param_t *timer_pool_param)
 {
 	odp_timer_capability_t timer_capa;
 	odp_timer_res_capability_t timer_res_capa;
-	odp_timer_pool_param_t timer_pool_param;
-	odp_timer_pool_t tp;
-	odp_queue_param_t queue_param;
-	odp_queue_t queue;
-	odp_pool_param_t pool_param;
-	odp_pool_t pool;
 	uint64_t max_tmo_ns, min_tmo_ns;
-	uint32_t i, j;
 	uint32_t max_timers;
 	int priv;
 	test_options_t *test_options = &global->test_options;
@@ -286,12 +294,11 @@ static int create_timer_pools(test_global_t *global)
 	uint64_t res_ns    = test_options->res_ns;
 	uint64_t period_ns = test_options->period_ns;
 	int mode = test_options->mode;
-	char tp_name[] = "timer_pool_00";
 
 	max_tmo_ns = START_NS + (num_timer * period_ns);
 	min_tmo_ns = START_NS / 2;
 
-	if (test_options->mode == MODE_START_EXPIRE) {
+	if (mode == MODE_START_EXPIRE) {
 		/*
 		 * Timers are started 1-2 periods from current time. Add an
 		 * arbitrary margin of one period, resulting in maximum of
@@ -320,15 +327,6 @@ static int create_timer_pools(test_global_t *global)
 		printf("  test duration    %.2f sec\n", (double)max_tmo_ns / ODP_TIME_SEC_IN_NS);
 	else
 		printf("  test rounds      %" PRIu64 "\n", test_options->test_rounds);
-
-	for (i = 0; i < MAX_TIMER_POOLS; i++) {
-		global->timer_pool[i].tp = ODP_TIMER_POOL_INVALID;
-		global->pool[i]  = ODP_POOL_INVALID;
-		global->queue[i] = ODP_QUEUE_INVALID;
-
-		for (j = 0; j < MAX_TIMERS; j++)
-			global->timer[i][j] = ODP_TIMER_INVALID;
-	}
 
 	if (odp_timer_capability(ODP_CLOCK_DEFAULT, &timer_capa)) {
 		ODPH_ERR("Timer capability failed\n");
@@ -368,23 +366,24 @@ static int create_timer_pools(test_global_t *global)
 		return -1;
 	}
 
-	odp_timer_pool_param_init(&timer_pool_param);
-	timer_pool_param.res_ns     = res_ns;
-	timer_pool_param.min_tmo    = min_tmo_ns;
-	timer_pool_param.max_tmo    = max_tmo_ns;
-	timer_pool_param.num_timers = num_timer;
-	timer_pool_param.priv       = priv;
-	timer_pool_param.clk_src    = ODP_CLOCK_DEFAULT;
+	odp_timer_pool_param_init(timer_pool_param);
+	timer_pool_param->res_ns     = res_ns;
+	timer_pool_param->min_tmo    = min_tmo_ns;
+	timer_pool_param->max_tmo    = max_tmo_ns;
+	timer_pool_param->num_timers = num_timer;
+	timer_pool_param->priv       = priv;
+	timer_pool_param->clk_src    = ODP_CLOCK_DEFAULT;
 
-	odp_pool_param_init(&pool_param);
-	pool_param.type    = ODP_POOL_TIMEOUT;
-	pool_param.tmo.num = num_timer;
+	return 0;
+}
 
-	odp_queue_param_init(&queue_param);
-	queue_param.type        = ODP_QUEUE_TYPE_SCHED;
-	queue_param.sched.prio  = odp_schedule_default_prio();
-	queue_param.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
-	queue_param.sched.group = ODP_SCHED_GROUP_ALL;
+static int create_timer_pools(test_global_t *global, odp_timer_pool_param_t *timer_pool_param)
+{
+	odp_timer_pool_t tp;
+	uint32_t i;
+	test_options_t *test_options = &global->test_options;
+	uint32_t num_tp = test_options->num_tp;
+	char tp_name[] = "timer_pool_00";
 
 	for (i = 0; i < num_tp; i++) {
 		if (num_tp < 100) {
@@ -392,7 +391,7 @@ static int create_timer_pools(test_global_t *global)
 			tp_name[12] = '0' + i % 10;
 		}
 
-		tp = odp_timer_pool_create(tp_name, &timer_pool_param);
+		tp = odp_timer_pool_create(tp_name, timer_pool_param);
 		global->timer_pool[i].tp = tp;
 		if (tp == ODP_TIMER_POOL_INVALID) {
 			ODPH_ERR("Timer pool create failed (%u)\n", i);
@@ -404,20 +403,6 @@ static int create_timer_pools(test_global_t *global)
 			return -1;
 		}
 
-		pool = odp_pool_create(tp_name, &pool_param);
-		global->pool[i] = pool;
-		if (pool == ODP_POOL_INVALID) {
-			ODPH_ERR("Pool create failed (%u)\n", i);
-			return -1;
-		}
-
-		queue = odp_queue_create(tp_name, &queue_param);
-		global->queue[i] = queue;
-		if (queue == ODP_QUEUE_INVALID) {
-			ODPH_ERR("Queue create failed (%u)\n", i);
-			return -1;
-		}
-
 		global->timer_pool[i].period_tick = odp_timer_ns_to_tick(tp,
 									 test_options->period_ns);
 		global->timer_pool[i].start_tick = odp_timer_ns_to_tick(tp, START_NS);
@@ -426,6 +411,69 @@ static int create_timer_pools(test_global_t *global)
 	printf("  start            %" PRIu64 " tick\n",  global->timer_pool[0].start_tick);
 	printf("  period           %" PRIu64 " ticks\n", global->timer_pool[0].period_tick);
 	printf("\n");
+
+	return 0;
+}
+
+static int create_event_pools(test_global_t *global)
+{
+	odp_pool_param_t pool_param;
+	odp_pool_t pool;
+	uint32_t i;
+	test_options_t *test_options = &global->test_options;
+	uint32_t num_tp    = test_options->num_tp;
+	uint32_t num_timer = test_options->num_timer;
+	char name[] = "timer_pool_00";
+
+	odp_pool_param_init(&pool_param);
+	pool_param.type    = ODP_POOL_TIMEOUT;
+	pool_param.tmo.num = num_timer;
+
+	for (i = 0; i < num_tp; i++) {
+		if (num_tp < 100) {
+			name[11] = '0' + i / 10;
+			name[12] = '0' + i % 10;
+		}
+
+		pool = odp_pool_create(name, &pool_param);
+		global->pool[i] = pool;
+		if (pool == ODP_POOL_INVALID) {
+			ODPH_ERR("Pool create failed (%u)\n", i);
+			return -1;
+		}
+	}
+
+	return 0;
+}
+
+static int create_event_queues(test_global_t *global)
+{
+	odp_queue_param_t queue_param;
+	odp_queue_t queue;
+	uint32_t i;
+	test_options_t *test_options = &global->test_options;
+	uint32_t num_tp = test_options->num_tp;
+	char name[] = "timer_pool_00";
+
+	odp_queue_param_init(&queue_param);
+	queue_param.type        = ODP_QUEUE_TYPE_SCHED;
+	queue_param.sched.prio  = odp_schedule_default_prio();
+	queue_param.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
+	queue_param.sched.group = ODP_SCHED_GROUP_ALL;
+
+	for (i = 0; i < num_tp; i++) {
+		if (num_tp < 100) {
+			name[11] = '0' + i / 10;
+			name[12] = '0' + i % 10;
+		}
+
+		queue = odp_queue_create(name, &queue_param);
+		global->queue[i] = queue;
+		if (queue == ODP_QUEUE_INVALID) {
+			ODPH_ERR("Queue create failed (%u)\n", i);
+			return -1;
+		}
+	}
 
 	return 0;
 }
@@ -1324,7 +1372,18 @@ int main(int argc, char **argv)
 	if (set_num_cpu(global))
 		return -1;
 
-	if (create_timer_pools(global))
+	init_global_handles(global);
+
+	if (prepare_timer_pool_param(global, &global->timer_pool_param))
+		return -1;
+
+	if (create_timer_pools(global, &global->timer_pool_param))
+		return -1;
+
+	if (create_event_pools(global))
+		return -1;
+
+	if (create_event_queues(global))
 		return -1;
 
 	if (shared) {
