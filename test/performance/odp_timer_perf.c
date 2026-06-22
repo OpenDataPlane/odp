@@ -24,6 +24,7 @@
 #define MODE_SCHED_OVERH  0
 #define MODE_START_CANCEL 1
 #define MODE_START_EXPIRE 2
+#define MODE_TP_CTRL      3
 #define MAX_TIMER_POOLS   32
 #define MAX_TIMERS        10000
 #define START_NS          (100 * ODP_TIME_MSEC_IN_NS)
@@ -61,6 +62,27 @@ typedef struct test_stat_t {
 	time_stat_t after;
 
 } test_stat_t;
+
+typedef struct test_stat_tp_ctrl_t {
+	uint64_t rounds;
+	uint64_t nsec;
+
+	uint64_t num_tp_create;
+	uint64_t tp_create_cycles;
+
+	uint64_t num_tp_start;
+	uint64_t tp_start_cycles;
+
+	uint64_t num_timer_alloc;
+	uint64_t timer_alloc_cycles;
+
+	uint64_t num_timer_free;
+	uint64_t timer_free_cycles;
+
+	uint64_t num_tp_destroy;
+	uint64_t tp_destroy_cycles;
+
+} test_stat_tp_ctrl_t;
 
 typedef struct test_stat_sum_t {
 	uint64_t rounds;
@@ -118,6 +140,7 @@ typedef struct test_global_t {
 	test_stat_t stat[ODP_THREAD_COUNT_MAX];
 	thread_arg_t thread_arg[ODP_THREAD_COUNT_MAX];
 	test_stat_sum_t stat_sum;
+	test_stat_tp_ctrl_t stat_tp_ctrl[ODP_THREAD_COUNT_MAX];
 
 } test_global_t;
 
@@ -135,8 +158,8 @@ static void print_usage(void)
 	       "  -t, --num_timer        Number of timers per timer pool. Default: 10\n"
 	       "  -r, --res_ns           Resolution in nsec.     Default:  10000000\n"
 	       "  -p, --period_ns        Timeout period in nsec. Default: 100000000\n"
-	       "  -s, --shared           Shared vs private timer pool. Currently, private pools can be\n"
-	       "                         tested only with single CPU. Default: 1\n"
+	       "  -s, --shared           Shared vs private timer pool. Currently, modes 0-2 support private\n"
+	       "                         pools only with single CPU. Default: 1\n"
 	       "                           0: Private timer pools\n"
 	       "                           1: Shared timer pools\n"
 	       "  -m, --mode             Select test mode. Default: 0\n"
@@ -144,8 +167,10 @@ static void print_usage(void)
 	       "                           1: Measure timer start + cancel performance\n"
 	       "                           2: Measure schedule and timer start overhead while continuously\n"
 	       "                              restarting expiring timers\n"
-	       "  -R, --rounds           Number of test rounds in timer start + cancel test.\n"
-	       "                           Default: 100000\n"
+	       "                           3: Measure timer pool create/start/destroy and timer alloc/free\n"
+	       "                              performance. Does not measure actual timer usage (start/expire).\n"
+	       "                              Requires num timer pools (-n) >= num CPUs (-c).\n"
+	       "  -R, --rounds           Number of test rounds. Default value is 50 for mode 3, otherwise 100000.\n"
 	       "  -h, --help             This help\n"
 	       "\n");
 }
@@ -177,7 +202,7 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 	test_options->period_ns = 100 * ODP_TIME_MSEC_IN_NS;
 	test_options->shared    = 1;
 	test_options->mode      = 0;
-	test_options->test_rounds = 100000;
+	test_options->test_rounds = 0;
 
 	while (1) {
 		opt = getopt_long(argc, argv, shortopts, longopts, NULL);
@@ -224,15 +249,29 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 		ret = -1;
 	}
 
+	if (test_options->mode < 0 || test_options->mode > MODE_TP_CTRL) {
+		ODPH_ERR("Invalid mode %i\n", test_options->mode);
+		ret = -1;
+	}
+
+	if (test_options->test_rounds == 0) {
+		/* Set default rounds */
+		test_options->test_rounds = 100000;
+
+		if (test_options->mode == MODE_TP_CTRL)
+			test_options->test_rounds = 50;
+	}
+
 	return ret;
 }
 
-static int set_num_cpu(test_global_t *global)
+static int set_num_cpu(test_global_t *global, int use_workers)
 {
 	int ret;
 	test_options_t *test_options = &global->test_options;
-	int num_cpu = test_options->num_cpu;
+	uint32_t num_cpu = test_options->num_cpu;
 	int shared = test_options->shared;
+	int mode = test_options->mode;
 
 	/* One thread used for the main thread */
 	if (num_cpu > ODP_THREAD_COUNT_MAX - 1) {
@@ -242,12 +281,12 @@ static int set_num_cpu(test_global_t *global)
 
 	ret = odp_cpumask_default_worker(&global->cpumask, num_cpu);
 
-	if (num_cpu && ret != num_cpu) {
+	if (num_cpu && (uint32_t)ret != num_cpu) {
 		ODPH_ERR("Too many workers. Max supported %i\n.", ret);
 		return -1;
 	}
 
-	if (shared == 0 && num_cpu != 1) {
+	if (shared == 0 && num_cpu != 1 && mode != MODE_TP_CTRL) {
 		ODPH_ERR("Private pool test supports only single CPU\n.");
 		return -1;
 	}
@@ -258,7 +297,15 @@ static int set_num_cpu(test_global_t *global)
 		test_options->num_cpu = num_cpu;
 	}
 
-	if (shared) /* Main thread + all workers */
+	/* Timer pool control mode partitions the timer pools across workers,
+	 * so each worker needs at least one timer pool. */
+	if (mode == MODE_TP_CTRL && test_options->num_tp < num_cpu) {
+		ODPH_ERR("Mode %i requires num timer pools (%u) >= num workers (%u)\n",
+			 MODE_TP_CTRL, test_options->num_tp, num_cpu);
+		return -1;
+	}
+
+	if (use_workers) /* Main thread + all workers */
 		odp_barrier_init(&global->barrier, num_cpu + 1);
 	else /* Only the main thread */
 		odp_barrier_init(&global->barrier, 1);
@@ -1039,6 +1086,155 @@ static int start_expire_mode_worker(void *arg)
 	return ret;
 }
 
+static int timer_pool_ctrl_mode_worker(void *arg)
+{
+	odp_timer_pool_t tp[MAX_TIMER_POOLS];
+	odp_queue_t queue[MAX_TIMER_POOLS];
+	odp_timer_t timer;
+	odp_time_t t1, t2;
+	uint64_t c1, c2;
+	uint32_t i, j, idx;
+	uint64_t round;
+	int thr, rv;
+	int ret = 0;
+	thread_arg_t *thread_arg = arg;
+	test_global_t *global = thread_arg->global;
+	test_options_t *test_options = &global->test_options;
+	odp_timer_pool_param_t *timer_pool_param = &global->timer_pool_param;
+	uint32_t num_tp     = test_options->num_tp;
+	uint32_t num_timer  = test_options->num_timer;
+	uint32_t num_worker = test_options->num_cpu;
+	uint64_t rounds     = test_options->test_rounds;
+	uint32_t worker_idx = thread_arg->worker_idx;
+	test_stat_tp_ctrl_t *stat;
+	char tp_name[] = "timer_pool_00";
+	/* Partition timer pools evenly across workers. The first 'extra'
+	 * workers handle one additional timer pool when the division is not
+	 * even. As num_tp >= num_worker, every worker handles at least one
+	 * timer pool. */
+	uint32_t base  = num_tp / num_worker;
+	uint32_t extra = num_tp % num_worker;
+	uint32_t num_tp_worker = base + (worker_idx < extra ? 1 : 0);
+	uint32_t first_tp = (worker_idx * base) + (worker_idx < extra ? worker_idx : extra);
+
+	thr  = odp_thread_id();
+	stat = &global->stat_tp_ctrl[thr];
+	memset(stat, 0, sizeof(test_stat_tp_ctrl_t));
+
+	/* This worker's pre-created queues */
+	for (i = 0; i < num_tp_worker; i++)
+		queue[i] = global->queue[first_tp + i];
+
+	/* Start all workers at the same time */
+	odp_barrier_wait(&global->barrier);
+
+	t1 = odp_time_local();
+
+	for (round = 0; round < rounds; round++) {
+		/* Create timer pools */
+		for (i = 0; i < num_tp_worker; i++) {
+			idx = first_tp + i;
+
+			if (num_tp < 100) {
+				tp_name[11] = '0' + idx / 10;
+				tp_name[12] = '0' + idx % 10;
+			}
+
+			c1 = odp_cpu_cycles_strict();
+			tp[i] = odp_timer_pool_create(tp_name, timer_pool_param);
+			c2 = odp_cpu_cycles_strict();
+
+			if (tp[i] == ODP_TIMER_POOL_INVALID) {
+				ODPH_ERR("Timer pool create failed (%u)\n", idx);
+				ret = -1;
+				goto error;
+			}
+
+			stat->tp_create_cycles += odp_cpu_cycles_diff(c2, c1);
+			stat->num_tp_create++;
+		}
+
+		/* Start timer pools */
+		for (i = 0; i < num_tp_worker; i++) {
+			c1 = odp_cpu_cycles_strict();
+			rv = odp_timer_pool_start_multi(&tp[i], 1);
+			c2 = odp_cpu_cycles_strict();
+
+			if (rv != 1) {
+				ODPH_ERR("Timer pool start failed (%u)\n", first_tp + i);
+				ret = -1;
+				goto error;
+			}
+
+			stat->tp_start_cycles += odp_cpu_cycles_diff(c2, c1);
+			stat->num_tp_start++;
+		}
+
+		/* Allocate timers */
+		for (i = 0; i < num_tp_worker; i++) {
+			idx = first_tp + i;
+
+			for (j = 0; j < num_timer; j++) {
+				c1 = odp_cpu_cycles_strict();
+				timer = odp_timer_alloc(tp[i], queue[i], NULL);
+				c2 = odp_cpu_cycles_strict();
+
+				global->timer[idx][j] = timer;
+				if (timer == ODP_TIMER_INVALID) {
+					ODPH_ERR("Timer alloc failed (%u/%u)\n", idx, j);
+					ret = -1;
+					goto error;
+				}
+
+				stat->timer_alloc_cycles += odp_cpu_cycles_diff(c2, c1);
+				stat->num_timer_alloc++;
+			}
+		}
+
+		/* Free timers */
+		for (i = 0; i < num_tp_worker; i++) {
+			idx = first_tp + i;
+
+			for (j = 0; j < num_timer; j++) {
+				timer = global->timer[idx][j];
+
+				c1 = odp_cpu_cycles_strict();
+				rv = odp_timer_free(timer);
+				c2 = odp_cpu_cycles_strict();
+
+				global->timer[idx][j] = ODP_TIMER_INVALID;
+				if (rv) {
+					ODPH_ERR("Timer free failed (%u/%u)\n", idx, j);
+					ret = -1;
+					goto error;
+				}
+
+				stat->timer_free_cycles += odp_cpu_cycles_diff(c2, c1);
+				stat->num_timer_free++;
+			}
+		}
+
+		/* Destroy timer pools */
+		for (i = 0; i < num_tp_worker; i++) {
+			c1 = odp_cpu_cycles_strict();
+			odp_timer_pool_destroy(tp[i]);
+			c2 = odp_cpu_cycles_strict();
+
+			tp[i] = ODP_TIMER_POOL_INVALID;
+			stat->tp_destroy_cycles += odp_cpu_cycles_diff(c2, c1);
+			stat->num_tp_destroy++;
+		}
+
+		stat->rounds++;
+	}
+
+error:
+	t2 = odp_time_local();
+	stat->nsec = odp_time_diff_ns(t2, t1);
+
+	return ret;
+}
+
 static int start_workers(test_global_t *global, odp_instance_t instance)
 {
 	odph_thread_common_param_t thr_common;
@@ -1060,6 +1256,8 @@ static int start_workers(test_global_t *global, odp_instance_t instance)
 			thr_param[i].start = sched_mode_worker;
 		else if (test_options->mode == MODE_START_CANCEL)
 			thr_param[i].start = start_cancel_mode_worker;
+		else if (test_options->mode == MODE_TP_CTRL)
+			thr_param[i].start = timer_pool_ctrl_mode_worker;
 		else
 			thr_param[i].start = start_expire_mode_worker;
 
@@ -1287,6 +1485,82 @@ static void print_stat_expire_mode(test_global_t *global)
 	printf("\n");
 }
 
+static void print_stat_timer_pool_ctrl_mode(test_global_t *global)
+{
+	int i;
+	test_stat_tp_ctrl_t sum;
+	double create_ave = 0.0, start_ave = 0.0, alloc_ave = 0.0;
+	double free_ave = 0.0, destroy_ave = 0.0;
+	double time_ave = 0.0;
+	uint64_t nsec_sum = 0;
+	int num = 0;
+
+	memset(&sum, 0, sizeof(sum));
+
+	for (i = 0; i < ODP_THREAD_COUNT_MAX; i++) {
+		const test_stat_tp_ctrl_t *stat = &global->stat_tp_ctrl[i];
+
+		if (stat->rounds == 0)
+			continue;
+
+		num++;
+		sum.rounds              = stat->rounds;
+		sum.num_tp_create      += stat->num_tp_create;
+		sum.tp_create_cycles   += stat->tp_create_cycles;
+		sum.num_tp_start       += stat->num_tp_start;
+		sum.tp_start_cycles    += stat->tp_start_cycles;
+		sum.num_timer_alloc    += stat->num_timer_alloc;
+		sum.timer_alloc_cycles += stat->timer_alloc_cycles;
+		sum.num_timer_free     += stat->num_timer_free;
+		sum.timer_free_cycles  += stat->timer_free_cycles;
+		sum.num_tp_destroy     += stat->num_tp_destroy;
+		sum.tp_destroy_cycles  += stat->tp_destroy_cycles;
+		nsec_sum               += stat->nsec;
+	}
+
+	if (sum.num_tp_create)
+		create_ave = (double)sum.tp_create_cycles / sum.num_tp_create;
+
+	if (sum.num_tp_start)
+		start_ave = (double)sum.tp_start_cycles / sum.num_tp_start;
+
+	if (sum.num_timer_alloc)
+		alloc_ave = (double)sum.timer_alloc_cycles / sum.num_timer_alloc;
+
+	if (sum.num_timer_free)
+		free_ave = (double)sum.timer_free_cycles / sum.num_timer_free;
+
+	if (sum.num_tp_destroy)
+		destroy_ave = (double)sum.tp_destroy_cycles / sum.num_tp_destroy;
+
+	if (num)
+		time_ave = ((double)nsec_sum / num) / ODP_TIME_SEC_IN_NS;
+
+	printf("\n");
+	printf("RESULTS\n");
+	printf("-------------------------------------------------\n");
+	printf("TOTAL (%i workers)\n", num);
+	printf("  rounds per worker:               %" PRIu64 "\n", sum.rounds);
+	printf("  ave time:                        %.2f sec\n", time_ave);
+	printf("\n");
+	printf("  odp_timer_pool_create()\n");
+	printf("    calls:                         %" PRIu64 "\n", sum.num_tp_create);
+	printf("    ave cycles per call:           %.1f\n", create_ave);
+	printf("  odp_timer_pool_start_multi()\n");
+	printf("    calls:                         %" PRIu64 "\n", sum.num_tp_start);
+	printf("    ave cycles per call:           %.1f\n", start_ave);
+	printf("  odp_timer_alloc()\n");
+	printf("    calls:                         %" PRIu64 "\n", sum.num_timer_alloc);
+	printf("    ave cycles per call:           %.1f\n", alloc_ave);
+	printf("  odp_timer_free()\n");
+	printf("    calls:                         %" PRIu64 "\n", sum.num_timer_free);
+	printf("    ave cycles per call:           %.1f\n", free_ave);
+	printf("  odp_timer_pool_destroy()\n");
+	printf("    calls:                         %" PRIu64 "\n", sum.num_tp_destroy);
+	printf("    ave cycles per call:           %.1f\n", destroy_ave);
+	printf("\n");
+}
+
 static void sig_handler(int signo)
 {
 	(void)signo;
@@ -1304,7 +1578,7 @@ int main(int argc, char **argv)
 	odp_shm_t shm;
 	test_global_t *global;
 	test_options_t *test_options;
-	int i, shared, mode;
+	int i, use_workers, mode;
 
 	signal(SIGINT, sig_handler);
 
@@ -1363,14 +1637,17 @@ int main(int argc, char **argv)
 		return -1;
 
 	test_options = &global->test_options;
-	shared = test_options->shared;
-	mode   = test_options->mode;
+	mode = test_options->mode;
+
+	use_workers = 1;
+	if (!test_options->shared && mode != MODE_TP_CTRL)
+		use_workers = 0;
 
 	odp_sys_info_print();
 
 	odp_schedule_config(NULL);
 
-	if (set_num_cpu(global))
+	if (set_num_cpu(global, use_workers))
 		return -1;
 
 	init_global_handles(global);
@@ -1378,16 +1655,23 @@ int main(int argc, char **argv)
 	if (prepare_timer_pool_param(global, &global->timer_pool_param))
 		return -1;
 
-	if (create_timer_pools(global, &global->timer_pool_param))
-		return -1;
+	/*
+	 * Timer pool control mode creates and destroys the timer pools and
+	 * timers inside the worker loop. It does not use timeout event pools.
+	 * Other modes create those here up front.
+	 */
+	if (mode != MODE_TP_CTRL) {
+		if (create_timer_pools(global, &global->timer_pool_param))
+			return -1;
 
-	if (create_event_pools(global))
-		return -1;
+		if (create_event_pools(global))
+			return -1;
+	}
 
 	if (create_event_queues(global))
 		return -1;
 
-	if (shared) {
+	if (use_workers) {
 		/* Start worker threads */
 		start_workers(global, instance);
 
@@ -1399,14 +1683,19 @@ int main(int argc, char **argv)
 		odp_time_wait_ns(ODP_TIME_MSEC_IN_NS);
 	}
 
-	/* Start timers. Force workers to exit on failure. */
-	if (start_timers(global))
-		odp_atomic_add_u32(&global->exit_test, MAX_TIMER_POOLS);
-	else
-		odp_atomic_store_rel_u32(&global->timers_started, 1);
+	/* Start timers. Force workers to exit on failure. Timer pool control
+	 * mode does not start timers. */
+	if (mode != MODE_TP_CTRL) {
+		if (start_timers(global))
+			odp_atomic_add_u32(&global->exit_test, MAX_TIMER_POOLS);
+		else
+			odp_atomic_store_rel_u32(&global->timers_started, 1);
+	}
 
-	if (!shared) {
-		/* Test private pools on the master thread */
+	if (!use_workers) {
+		/* Test private pools on the master thread. Timer pool control
+		 * mode supports private and shared pools with workers, as it
+		 * does not share timer pools between threads. */
 		if (mode == MODE_SCHED_OVERH) {
 			if (sched_mode_worker(&global->thread_arg[0])) {
 				ODPH_ERR("Sched_mode_worker failed\n");
@@ -1429,14 +1718,18 @@ int main(int argc, char **argv)
 				 global->test_options.num_cpu);
 	}
 
-	sum_stat(global);
+	if (mode == MODE_TP_CTRL) {
+		print_stat_timer_pool_ctrl_mode(global);
+	} else {
+		sum_stat(global);
 
-	if (mode == MODE_SCHED_OVERH)
-		print_stat_sched_mode(global);
-	else if (mode == MODE_START_CANCEL)
-		print_stat_start_cancel_mode(global);
-	else
-		print_stat_expire_mode(global);
+		if (mode == MODE_SCHED_OVERH)
+			print_stat_sched_mode(global);
+		else if (mode == MODE_START_CANCEL)
+			print_stat_start_cancel_mode(global);
+		else
+			print_stat_expire_mode(global);
+	}
 
 	destroy_timer_pool(global);
 
