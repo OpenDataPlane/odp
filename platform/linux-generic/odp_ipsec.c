@@ -1460,10 +1460,8 @@ static int ipsec_out_tunnel_ipv4(odp_packet_t *pkt,
 	out_ip.ttl = ipv4_param->ttl;
 	/* Will be filled later by packet checksum update */
 	out_ip.chksum = 0;
-	memcpy(&out_ip.src_addr, ipv4_param->src_addr,
-	       _ODP_IPV4ADDR_LEN);
-	memcpy(&out_ip.dst_addr, ipv4_param->dst_addr,
-	       _ODP_IPV4ADDR_LEN);
+	out_ip.src_addr = ipsec_sa->out.tun_ipv4.src_ip;
+	out_ip.dst_addr = ipsec_sa->out.tun_ipv4.dst_ip;
 
 	if (odp_packet_extend_head(pkt, _ODP_IPV4HDR_LEN,
 				   NULL, NULL) < 0)
@@ -1519,10 +1517,8 @@ static int ipsec_out_tunnel_ipv6(odp_packet_t *pkt,
 	state->ip_tot_len += _ODP_IPV6HDR_LEN;
 
 	out_ip.hop_limit = ipv6_param->hlimit;
-	memcpy(&out_ip.src_addr, ipv6_param->src_addr,
-	       _ODP_IPV6ADDR_LEN);
-	memcpy(&out_ip.dst_addr, ipv6_param->dst_addr,
-	       _ODP_IPV6ADDR_LEN);
+	memcpy(&out_ip.src_addr, ipsec_sa->out.tun_ipv6.src_ip, _ODP_IPV6ADDR_LEN);
+	memcpy(&out_ip.dst_addr, ipsec_sa->out.tun_ipv6.dst_ip, _ODP_IPV6ADDR_LEN);
 
 	if (odp_packet_extend_head(pkt, _ODP_IPV6HDR_LEN,
 				   NULL, NULL) < 0)
