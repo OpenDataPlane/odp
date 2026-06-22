@@ -592,10 +592,8 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 			memcpy(&ipsec_sa->out.tun_ipv4.dst_ip,
 			       param->outbound.tunnel.ipv4.dst_addr,
 			       sizeof(ipsec_sa->out.tun_ipv4.dst_ip));
-			ipsec_sa->out.tun_ipv4.param.src_addr =
-				&ipsec_sa->out.tun_ipv4.src_ip;
-			ipsec_sa->out.tun_ipv4.param.dst_addr =
-				&ipsec_sa->out.tun_ipv4.dst_ip;
+			ipsec_sa->out.tun_ipv4.param.src_addr = NULL; /* unused */
+			ipsec_sa->out.tun_ipv4.param.dst_addr = NULL; /* unused */
 			ipsec_sa->out.tun_ipv4.param.ttl =
 				param->outbound.tunnel.ipv4.ttl;
 			ipsec_sa->out.tun_ipv4.param.dscp =
@@ -610,10 +608,8 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 			memcpy(&ipsec_sa->out.tun_ipv6.dst_ip,
 			       param->outbound.tunnel.ipv6.dst_addr,
 			       sizeof(ipsec_sa->out.tun_ipv6.dst_ip));
-			ipsec_sa->out.tun_ipv4.param.src_addr =
-				&ipsec_sa->out.tun_ipv6.src_ip;
-			ipsec_sa->out.tun_ipv4.param.dst_addr =
-				&ipsec_sa->out.tun_ipv6.dst_ip;
+			ipsec_sa->out.tun_ipv6.param.src_addr = NULL; /* unused */
+			ipsec_sa->out.tun_ipv6.param.dst_addr = NULL; /* unused */
 			ipsec_sa->out.tun_ipv6.param.hlimit =
 				param->outbound.tunnel.ipv6.hlimit;
 			ipsec_sa->out.tun_ipv6.param.dscp =
