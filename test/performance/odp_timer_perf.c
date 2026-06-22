@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright (c) 2019-2023 Nokia
+ * Copyright (c) 2019-2026 Nokia
  */
 
 /**
@@ -55,7 +55,7 @@ typedef struct test_stat_t {
 	uint64_t cycles_1;
 
 	uint64_t cancels;
-	uint64_t sets;
+	uint64_t starts;
 
 	time_stat_t before;
 	time_stat_t after;
@@ -70,7 +70,7 @@ typedef struct test_stat_sum_t {
 	uint64_t cycles_1;
 
 	uint64_t cancels;
-	uint64_t sets;
+	uint64_t starts;
 
 	time_stat_t before;
 	time_stat_t after;
@@ -140,10 +140,10 @@ static void print_usage(void)
 	       "                           1: Shared timer pools\n"
 	       "  -m, --mode             Select test mode. Default: 0\n"
 	       "                           0: Measure odp_schedule() overhead when using timers\n"
-	       "                           1: Measure timer set + cancel performance\n"
+	       "                           1: Measure timer start + cancel performance\n"
 	       "                           2: Measure schedule and timer start overhead while continuously\n"
 	       "                              restarting expiring timers\n"
-	       "  -R, --rounds           Number of test rounds in timer set + cancel test.\n"
+	       "  -R, --rounds           Number of test rounds in timer start + cancel test.\n"
 	       "                           Default: 100000\n"
 	       "  -h, --help             This help\n"
 	       "\n");
@@ -293,7 +293,7 @@ static int create_timer_pools(test_global_t *global)
 
 	if (test_options->mode == MODE_START_EXPIRE) {
 		/*
-		 * Timers are set to 1-2 periods from current time. Add an
+		 * Timers are started 1-2 periods from current time. Add an
 		 * arbitrary margin of one period, resulting in maximum of
 		 * three periods.
 		 */
@@ -430,7 +430,7 @@ static int create_timer_pools(test_global_t *global)
 	return 0;
 }
 
-static int set_timers(test_global_t *global)
+static int start_timers(test_global_t *global)
 {
 	odp_timer_pool_info_t timer_pool_info;
 	odp_timer_pool_t tp;
@@ -466,7 +466,7 @@ static int set_timers(test_global_t *global)
 			timer_ctx_t *ctx = &global->timer_ctx[i][j];
 			odp_timer_start_t start_param;
 
-			/* Set timers backwards, the last timer is set first */
+			/* Start timers backwards, the last timer is started first */
 			if (j == 0)
 				ctx->last = 1;
 
@@ -497,7 +497,7 @@ static int set_timers(test_global_t *global)
 
 			status = odp_timer_start(timer, &start_param);
 			if (status != ODP_TIMER_SUCCESS) {
-				ODPH_ERR("Timer set %i/%i (ret %i)\n", i, j, status);
+				ODPH_ERR("Timer start %i/%i (ret %i)\n", i, j, status);
 				return -1;
 			}
 		}
@@ -685,7 +685,7 @@ static int cancel_timers(test_global_t *global, uint32_t worker_idx)
 	return ret;
 }
 
-static int set_cancel_mode_worker(void *arg)
+static int start_cancel_mode_worker(void *arg)
 {
 	uint64_t tick, start_tick, period_tick, nsec;
 	uint64_t c1, c2;
@@ -708,7 +708,7 @@ static int set_cancel_mode_worker(void *arg)
 	uint64_t test_rounds = test_options->test_rounds;
 	uint64_t num_tmo = 0;
 	uint64_t num_cancel = 0;
-	uint64_t num_set = 0;
+	uint64_t num_start = 0;
 	uint64_t cancel_cycles = 0, start_cycles = 0;
 	odp_event_t ev_tbl[MAX_TIMERS];
 
@@ -723,7 +723,7 @@ static int set_cancel_mode_worker(void *arg)
 		ev = odp_schedule(NULL, ODP_SCHED_NO_WAIT);
 
 		if (odp_unlikely(ev != ODP_EVENT_INVALID)) {
-			/* Timeout, set timer again. When start_tick is large enough, this should
+			/* Timeout, start timer again. When start_tick is large enough, this should
 			 * not happen. */
 			timer_ctx_t *ctx;
 
@@ -742,10 +742,10 @@ static int set_cancel_mode_worker(void *arg)
 
 			status = odp_timer_start(timer, &start_param);
 			num_tmo++;
-			num_set++;
+			num_start++;
 
 			if (status != ODP_TIMER_SUCCESS) {
-				ODPH_ERR("Timer set (tmo) failed (ret %i)\n", status);
+				ODPH_ERR("Timer start (tmo) failed (ret %i)\n", status);
 				ret = -1;
 				break;
 			}
@@ -766,7 +766,7 @@ static int set_cancel_mode_worker(void *arg)
 			t1 = odp_time_local();
 		}
 
-		/* Cancel and set timers again */
+		/* Cancel and start timers again */
 		for (i = 0; i < num_tp; i++) {
 			tp = global->timer_pool[i].tp;
 			if (tp == ODP_TIMER_POOL_INVALID)
@@ -815,10 +815,10 @@ static int set_cancel_mode_worker(void *arg)
 				start_param.tmo_ev = ev_tbl[j];
 
 				status = odp_timer_start(timer, &start_param);
-				num_set++;
+				num_start++;
 
 				if (status != ODP_TIMER_SUCCESS) {
-					ODPH_ERR("Timer (%u/%u) set failed (ret %i)\n", i, j,
+					ODPH_ERR("Timer (%u/%u) start failed (ret %i)\n", i, j,
 						 status);
 					ret = -1;
 					break;
@@ -851,12 +851,12 @@ static int set_cancel_mode_worker(void *arg)
 	global->stat[thr].cycles_1 = start_cycles;
 
 	global->stat[thr].cancels = num_cancel;
-	global->stat[thr].sets    = num_set;
+	global->stat[thr].starts  = num_start;
 
 	return ret;
 }
 
-static int set_expire_mode_worker(void *arg)
+static int start_expire_mode_worker(void *arg)
 {
 	int status, thr;
 	uint32_t i, j, exit_test;
@@ -954,7 +954,7 @@ static int set_expire_mode_worker(void *arg)
 		start_cycles += diff;
 
 		if (status != ODP_TIMER_SUCCESS) {
-			ODPH_ERR("Timer set (tmo) failed (ret %i)\n", status);
+			ODPH_ERR("Timer start (tmo) failed (ret %i)\n", status);
 			ret = -1;
 			break;
 		}
@@ -1010,9 +1010,9 @@ static int start_workers(test_global_t *global, odp_instance_t instance)
 		if (test_options->mode == MODE_SCHED_OVERH)
 			thr_param[i].start = sched_mode_worker;
 		else if (test_options->mode == MODE_START_CANCEL)
-			thr_param[i].start = set_cancel_mode_worker;
+			thr_param[i].start = start_cancel_mode_worker;
 		else
-			thr_param[i].start = set_expire_mode_worker;
+			thr_param[i].start = start_expire_mode_worker;
 
 		thr_param[i].arg      = &global->thread_arg[i];
 		thr_param[i].thr_type = ODP_THREAD_WORKER;
@@ -1047,7 +1047,7 @@ static void sum_stat(test_global_t *global)
 		sum->cycles_1 += global->stat[i].cycles_1;
 		sum->nsec    += global->stat[i].nsec;
 		sum->cancels += global->stat[i].cancels;
-		sum->sets    += global->stat[i].sets;
+		sum->starts    += global->stat[i].starts;
 
 		sum->before.num    += global->stat[i].before.num;
 		sum->before.sum_ns += global->stat[i].before.sum_ns;
@@ -1113,11 +1113,11 @@ static void print_stat_sched_mode(test_global_t *global)
 	printf("\n");
 }
 
-static void print_stat_set_cancel_mode(test_global_t *global)
+static void print_stat_start_cancel_mode(test_global_t *global)
 {
 	int i;
 	test_stat_sum_t *sum = &global->stat_sum;
-	double set_ave = 0.0;
+	double start_ave = 0.0;
 	int num = 0;
 
 	printf("\n");
@@ -1148,27 +1148,27 @@ static void print_stat_set_cancel_mode(test_global_t *global)
 	for (i = 0; i < ODP_THREAD_COUNT_MAX; i++) {
 		const test_stat_t *si = &global->stat[i];
 
-		if (si->sets) {
+		if (si->starts) {
 			if ((num % 10) == 0)
 				printf("\n   ");
 
-			printf("%6.1f ", (double)si->cycles_1 / si->sets);
+			printf("%6.1f ", (double)si->cycles_1 / si->starts);
 			num++;
 		}
 	}
 
 	if (sum->num)
-		set_ave = (double)sum->sets / sum->num;
+		start_ave = (double)sum->starts / sum->num;
 
 	printf("\n\n");
 	printf("TOTAL (%i workers)\n", sum->num);
 	printf("  rounds:              %" PRIu64 "\n", sum->rounds);
 	printf("  timeouts:            %" PRIu64 "\n", sum->events);
 	printf("  timer cancels:       %" PRIu64 "\n", sum->cancels);
-	printf("  cancels failed:      %" PRIu64 "\n", sum->cancels - sum->sets);
-	printf("  timer sets:          %" PRIu64 "\n", sum->sets);
+	printf("  cancels failed:      %" PRIu64 "\n", sum->cancels - sum->starts);
+	printf("  timer starts:        %" PRIu64 "\n", sum->starts);
 	printf("  ave time:            %.2f sec\n", sum->time_ave);
-	printf("  cancel+set per cpu:  %.2fM per sec\n", (set_ave / sum->time_ave) / 1000000.0);
+	printf("  cancel+start per cpu: %.2fM per sec\n", (start_ave / sum->time_ave) / 1000000.0);
 	printf("\n");
 }
 
@@ -1334,13 +1334,13 @@ int main(int argc, char **argv)
 		/* Wait until workers have started.
 		 * Scheduler calls from workers may be needed to run timer
 		 * pools in a software implementation. Wait 1 msec to ensure
-		 * that timer pools are running before setting timers. */
+		 * that timer pools are running before starting timers. */
 		odp_barrier_wait(&global->barrier);
 		odp_time_wait_ns(ODP_TIME_MSEC_IN_NS);
 	}
 
-	/* Set timers. Force workers to exit on failure. */
-	if (set_timers(global))
+	/* Start timers. Force workers to exit on failure. */
+	if (start_timers(global))
 		odp_atomic_add_u32(&global->exit_test, MAX_TIMER_POOLS);
 	else
 		odp_atomic_store_rel_u32(&global->timers_started, 1);
@@ -1353,13 +1353,13 @@ int main(int argc, char **argv)
 				return -1;
 			}
 		} else if (mode == MODE_START_CANCEL) {
-			if (set_cancel_mode_worker(&global->thread_arg[0])) {
-				ODPH_ERR("Set_cancel_mode_worker failed\n");
+			if (start_cancel_mode_worker(&global->thread_arg[0])) {
+				ODPH_ERR("Start_cancel_mode_worker failed\n");
 				return -1;
 			}
 		} else {
-			if (set_expire_mode_worker(&global->thread_arg[0])) {
-				ODPH_ERR("Set_expire_mode_worker failed\n");
+			if (start_expire_mode_worker(&global->thread_arg[0])) {
+				ODPH_ERR("Start_expire_mode_worker failed\n");
 				return -1;
 			}
 		}
@@ -1374,7 +1374,7 @@ int main(int argc, char **argv)
 	if (mode == MODE_SCHED_OVERH)
 		print_stat_sched_mode(global);
 	else if (mode == MODE_START_CANCEL)
-		print_stat_set_cancel_mode(global);
+		print_stat_start_cancel_mode(global);
 	else
 		print_stat_expire_mode(global);
 
