@@ -937,7 +937,7 @@ static int pktin_deq_multi(odp_queue_t queue, _odp_event_hdr_t *event_hdr[],
 {
 	int nbr;
 	_odp_event_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
-	int pkts, i, j;
+	int pkts, i;
 	odp_pktin_queue_t pktin_queue = _odp_queue_fn->get_pktin(queue);
 	odp_pktio_t pktio = pktin_queue.pktio;
 	int pktin_index   = pktin_queue.index;
@@ -946,8 +946,7 @@ static int pktin_deq_multi(odp_queue_t queue, _odp_event_hdr_t *event_hdr[],
 	_ODP_ASSERT(entry != NULL);
 
 	nbr = _odp_queue_fn->orig_deq_multi(queue, event_hdr, num);
-	if (odp_unlikely(nbr > num))
-		_ODP_ABORT("queue_deq_multi req: %d, returned %d\n", num, nbr);
+	_ODP_ASSERT(nbr >= 0);
 
 	/** queue already has number of requested buffers,
 	 *  do not do receive in that case.
@@ -964,21 +963,19 @@ static int pktin_deq_multi(odp_queue_t queue, _odp_event_hdr_t *event_hdr[],
 		event_hdr[nbr] = hdr_tbl[i];
 
 	/* Queue the rest for later */
-	for (j = 0; i < pkts; i++, j++)
-		hdr_tbl[j] = hdr_tbl[i];
-
-	if (j) {
+	if (i < pkts) {
+		const int num_rem = pkts - i;
 		int num_enq;
 
-		num_enq = odp_queue_enq_multi(queue, (odp_event_t *)hdr_tbl, j);
+		num_enq = odp_queue_enq_multi(queue, (odp_event_t *)&hdr_tbl[i], num_rem);
 
-		if (odp_unlikely(num_enq < j)) {
+		if (odp_unlikely(num_enq < num_rem)) {
 			if (odp_unlikely(num_enq < 0))
 				num_enq = 0;
 
 			_ODP_DBG("Interface %s dropped %i packets\n",
-				 entry->name, j - num_enq);
-			_odp_event_free_multi(&hdr_tbl[num_enq], j - num_enq);
+				 entry->name, num_rem - num_enq);
+			_odp_event_free_multi(&hdr_tbl[i + num_enq], num_rem - num_enq);
 		}
 	}
 
