@@ -1,0 +1,41 @@
+name: PR Title Version
+
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize]
+
+permissions:
+  pull-requests: write
+
+concurrency:
+  group: pr-title-version-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  version-prefix:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Update PR title version prefix
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const title = pr.title;
+            const re = /^\[PATCH v(\d+)\]\s*/;
+            const m = title.match(re);
+            let newTitle;
+            if (context.payload.action === 'synchronize') {
+              newTitle = m
+                ? title.replace(re, `[PATCH v${parseInt(m[1], 10) + 1}] `)
+                : `[PATCH v1] ${title}`;
+            } else {
+              newTitle = m ? title : `[PATCH v1] ${title}`;
+            }
+            if (newTitle !== title) {
+              await github.rest.pulls.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: pr.number,
+                title: newTitle,
+              });
+            }
