@@ -1,5 +1,95 @@
 # Changelog
 
+## OpenDataPlane (1.51.0.0)
+
+### Backward incompatible API changes
+
+#### IPsec
+* Change per-packet outbound options (`odp_ipsec_out_opt_t`) to be optional by
+introducing capability bits (`odp_ipsec_capability_t.out_op`) for indicating
+which options are supported.
+
+### Backward compatible API changes
+
+#### General
+* Add a paragraph in the API principles section in the API README explaining
+that invalid handles must not be passed to any ODP API function unless
+explicitly allowed.
+
+#### Classifier
+* Clarify that the CoS being destroyed must not be used as pktio error CoS.
+
+#### Crypto
+* Add ZUC-256 based `ODP_CIPHER_ALG_ZUC_NEA6` cipher algorithm and
+`ODP_AUTH_ALG_ZUC_NIA6` authentication algorithm.
+
+#### Event Vector
+* Remove the default value from the `odp_event_aggr_config_t.event_type`
+specification, as there is no initialization function for
+`odp_event_aggr_config_t`.
+
+#### Packet
+* Remove the value range from the `len` parameter descriptions of
+`odp_packet_push_head()`, `odp_packet_pull_head()`, `odp_packet_push_tail()`,
+and `odp_packet_pull_tail()`. An application may pass any `len` value and too
+large values cause the functions to return failure.
+* Relax `odp_packet_ref()` specification by stating that when pull or truncation
+operations remove all shared packet data. It is implementation specific to what
+extent the referencing relationship between the packets still holds.
+
+#### Packet IO
+* Clarify that `odp_pktio_default_cos_set()` may be called multiple times for
+the same pktio and that each successful call replaces the previous default
+CoS binding.
+* Clarify that `odp_pktio_error_cos_set()` may be called multiple times for
+the same pktio and that each successful call replaces the previous error
+CoS binding.
+
+#### Timer
+* Change `odp_timer_pool_param_t.periodic.freq.freq_hz` to a pointer to const
+(`const odp_fract_u64_t *`).
+* Clarify that, for `ODP_TIMER_TYPE_PERIODIC_FREQ` timer pools,
+`odp_timer_pool_info()` returns the creation-time frequency values in an
+implementation-specific read-only array that remains accessible until the timer
+pool is destroyed.
+* Clarify that parameter values unused by the particular timer pool type are
+undefined when calling `odp_timer_pool_info()`.
+
+### Implementation
+* Optimize stash implementation by utilizing specialized ring variants for the
+different stash operation modes.
+* Optimize single and multi event alloc and free function implementations.
+* Optimize time conversion function `odp_time_to_ns()`,
+`odp_time_local_from_ns()`, and `odp_time_global_from_ns()` implementations for
+systems supporting 128-bit operations.
+* Add a new `--with-target` configure option for passing the ODP target system,
+enabling system specific optimizations. The initially supported systems are
+neoverse-n2, neoverse-n3, neoverse-v1, neoverse-v2, and neoverse-v3.
+* Add support for DPDK v25.11 pktio and remove support for EOL v22.11. The
+recommended (best testing coverage) version is now v24.11.
+
+### Example Applications
+
+#### classifier
+* Add `-q, --cos_queue_param` option for configuring the CoS/queue defined by
+the policy destination queue parameter (`-p <dst queue>`). For a queue,
+priority, synchronization and a single packet aggregator with timeout and vector
+size can be configured. For the related CoS, aggregator enqueue profile and
+optional parameter for the custom profile can be configured.
+
+### Performance Tests
+
+#### bench_queue
+* Add tests for the `odp_schedule_prefetch()` function.
+
+#### packet_gen
+* Add support for testing LSO custom modification option `ODP_LSO_WRITE_BITS`
+to `-T, --lso <options>`.
+
+#### timer_perf
+* Add new test mode (`-m 3`) which measures timer pool create, start and destroy
+together with timer alloc and free performance.
+
 ## OpenDataPlane (1.50.0.0)
 
 ### Backward incompatible API changes
