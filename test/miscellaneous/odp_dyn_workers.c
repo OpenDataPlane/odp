@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright (c) 2024 Nokia
+ * Copyright (c) 2024-2026 Nokia
  */
 
 #ifndef _GNU_SOURCE
@@ -88,6 +88,7 @@ ODP_STATIC_ASSERT(ODPH_ARRAY_SIZE(cmdstrs) < DELAY_PROG, "Too many commands");
 
 typedef struct {
 	uint64_t thread_id;
+	uint64_t cpu;
 	uint64_t num_handled;
 	uint64_t enq_errs;
 	uint64_t runtime;
@@ -648,6 +649,7 @@ static int run_worker(void *args)
 	const uint8_t idx = config->idx;
 
 	summary->thread_id = thread_id;
+	summary->cpu = odp_cpu_id();
 	tm = odp_time_local_strict();
 	odp_thrmask_zero(&tmask);
 	odp_thrmask_set(&tmask, thread_id);
@@ -1109,9 +1111,10 @@ static void dump_summary(pid_t pid, const summary_t *summary)
 	printf("\nremoved worker summary:\n"
 	       "    ODP process ID: %d\n"
 	       "    thread ID:      %" PRIu64 "\n"
+	       "    CPU:            %" PRIu64 "\n"
 	       "    events handled: %" PRIu64 "\n"
 	       "    enqueue errors: %" PRIu64 "\n"
-	       "    runtime:        %" PRIu64 " (ns)\n\n", pid, summary->thread_id,
+	       "    runtime:        %" PRIu64 " (ns)\n\n", pid, summary->thread_id, summary->cpu,
 	       summary->num_handled, summary->enq_errs, summary->runtime);
 }
 
