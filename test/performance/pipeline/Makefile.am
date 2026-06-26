@@ -5,6 +5,11 @@ AM_CFLAGS += \
 	$(LIBCONFIG_CFLAGS) \
 	-I$(top_srcdir)/test/performance/pipeline
 
+pkgconfigdir = $(libdir)/pkgconfig
+pkgconfig_DATA = libodp_pipeline.pc
+
+include_HEADERS = odp_pipeline_work.h
+
 bin_PROGRAMS = odp_pipeline
 
 odp_pipeline_SOURCES = \
@@ -29,6 +34,7 @@ odp_pipeline_SOURCES = \
 	sched_parser.c \
 	stash_parser.c \
 	timer_parser.c \
+	odp_pipeline_work.h \
 	work.h \
 	work.c \
 	work_forward.c \

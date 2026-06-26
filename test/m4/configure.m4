@@ -17,6 +17,7 @@ AC_CONFIG_FILES([test/common/Makefile
 		 test/miscellaneous/Makefile
 		 test/performance/Makefile
 		 test/performance/pipeline/Makefile
+		 test/performance/pipeline/libodp_pipeline.pc
 		 test/validation/Makefile
 		 test/validation/api/align/Makefile
 		 test/validation/api/atomic/Makefile
