@@ -1,0 +1,10 @@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
+
+Name: libodp_pipeline
+Description: ODP pipeline tester work registration interface
+Version: @PKGCONFIG_VERSION@
+Requires: lib@ODP_LIB_NAME@ libconfig
+Cflags: -I${includedir}
