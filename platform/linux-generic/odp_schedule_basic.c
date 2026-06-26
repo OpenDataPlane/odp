@@ -1,15 +1,7 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2013-2018 Linaro Limited
- * Copyright (c) 2019-2025 Nokia
+ * Copyright (c) 2019-2026 Nokia
  */
-
-/*
- * Suppress bounds warnings about interior zero length arrays. Such an array
- * is used intentionally in prio_queue_t.
- */
-#if __GNUC__ >= 10
-#pragma GCC diagnostic ignored "-Wzero-length-bounds"
-#endif
 
 #include <odp_posix_extensions.h>
 
@@ -266,10 +258,7 @@ typedef struct {
 	} queue[CONFIG_MAX_SCHED_QUEUES];
 
 	/* Scheduler priority queues */
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wpedantic"
 	prio_queue_t prio_q[NUM_SCHED_GRPS][NUM_PRIO][MAX_SPREAD];
-#pragma GCC diagnostic pop
 	uint32_t prio_q_count[NUM_SCHED_GRPS][NUM_PRIO][MAX_SPREAD];
 
 	/* Number of queues per group and priority  */
