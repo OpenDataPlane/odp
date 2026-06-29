@@ -17,7 +17,7 @@ if [ $RET_VAL -ne 0 ]; then
 	exit $RET_VAL
 fi
 
-echo odp_timer_perf: timer set + cancel mode
+echo odp_timer_perf: timer start and cancel mode
 echo ===============================================
 
 $TEST_DIR/odp_timer_perf${EXEEXT} -m 1 -c 1 -t 10 -R 50
@@ -25,6 +25,28 @@ $TEST_DIR/odp_timer_perf${EXEEXT} -m 1 -c 1 -t 10 -R 50
 RET_VAL=$?
 if [ $RET_VAL -ne 0 ]; then
 	echo odp_timer_perf -m 1: FAILED
+	exit $RET_VAL
+fi
+
+echo odp_timer_perf: timer start and expire mode
+echo ===============================================
+
+$TEST_DIR/odp_timer_perf${EXEEXT} -m 2 -c 1 -R 10
+
+RET_VAL=$?
+if [ $RET_VAL -ne 0 ]; then
+	echo odp_timer_perf -m 2: FAILED
+	exit $RET_VAL
+fi
+
+echo odp_timer_perf: timer pool control mode
+echo ===============================================
+
+$TEST_DIR/odp_timer_perf${EXEEXT} -m 3 -c 1 -R 10
+
+RET_VAL=$?
+if [ $RET_VAL -ne 0 ]; then
+	echo odp_timer_perf -m 3: FAILED
 	exit $RET_VAL
 fi
 
