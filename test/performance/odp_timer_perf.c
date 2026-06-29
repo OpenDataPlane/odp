@@ -361,8 +361,9 @@ static int prepare_timer_pool_param(test_global_t *global, odp_timer_pool_param_
 		return -1;
 	}
 
-	if (num_tp > timer_capa.max_pools) {
-		ODPH_ERR("Too many timer pools (max %u)\n", timer_capa.max_pools);
+	if (num_tp > MAX_TIMER_POOLS || num_tp > timer_capa.max_pools) {
+		ODPH_ERR("Too many timer pools (max supported %u, max capa %u)\n",
+			 MAX_TIMER_POOLS, timer_capa.max_pools);
 		return -1;
 	}
 
