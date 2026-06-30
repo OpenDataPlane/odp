@@ -49,7 +49,6 @@ typedef struct orchestrator_s {
 	odph_thread_t thrs[MAX_WORKERS];
 	orchestrator_worker_t worker[MAX_WORKERS];
 	odp_instance_t instance;
-	odp_shm_t shm;
 	odp_atomic_u32_t is_running;
 	odp_barrier_t init_barrier;
 	odp_barrier_t term_barrier;
@@ -58,7 +57,14 @@ typedef struct orchestrator_s {
 
 typedef int (*worker_fn_t)(void *);
 
-static orchestrator_t *config;
+typedef struct {
+	orchestrator_t *config;
+	odp_instance_t instance;
+	odp_shm_t shm;
+	odp_bool_t odp_ready;
+} orchestrator_global_t;
+
+static orchestrator_global_t orchestrator = { .shm = ODP_SHM_INVALID };
 
 static odp_instance_t init_odp(void)
 {
@@ -84,7 +90,7 @@ static void term_odp(odp_instance_t instance)
 
 static void terminate(int signal ODP_UNUSED)
 {
-	odp_atomic_store_u32(&config->is_running, 0U);
+	odp_atomic_store_u32(&orchestrator.config->is_running, 0U);
 }
 
 static void setup_signals(void)
@@ -100,36 +106,35 @@ static void setup_signals(void)
 
 odp_bool_t orchestrator_init(void)
 {
-	odp_instance_t instance = init_odp();
 	odp_shm_t shm;
+
+	orchestrator.instance = init_odp();
+	orchestrator.odp_ready = true;
 
 	shm = odp_shm_reserve("orchestrator", sizeof(orchestrator_t), ODP_CACHE_LINE_SIZE, 0U);
 
 	if (shm == ODP_SHM_INVALID) {
 		ODPH_ERR("Error reserving shared memory\n");
-		term_odp(instance);
 		return false;
 	}
 
-	config = odp_shm_addr(shm);
+	orchestrator.shm = shm;
+	orchestrator.config = odp_shm_addr(shm);
 
-	if (config == NULL) {
+	if (orchestrator.config == NULL) {
 		ODPH_ERR("Error resolving shared memory address\n");
-		odp_shm_free(shm);
-		term_odp(instance);
 		return false;
 	}
+
+	orchestrator.config->num_workers = 0U;
 
 	if (odp_schedule_config(NULL) < 0) {
 		ODPH_ERR("Error configuring scheduler\n");
-		odp_shm_free(shm);
-		term_odp(instance);
 		return false;
 	}
 
-	config->instance = instance;
-	config->shm = shm;
-	odp_atomic_init_u32(&config->is_running, 1U);
+	orchestrator.config->instance = orchestrator.instance;
+	odp_atomic_init_u32(&orchestrator.config->is_running, 1U);
 	setup_signals();
 
 	return true;
@@ -351,8 +356,8 @@ static void print_stats(void)
 
 	printf("\n*** pipeline finished ***\n");
 
-	for (uint32_t i = 0U; i < config->num_workers; ++i) {
-		worker = &config->worker[i];
+	for (uint32_t i = 0U; i < orchestrator.config->num_workers; ++i) {
+		worker = &orchestrator.config->worker[i];
 		printf("\n%s:\n"
 		       "  unhandled input events:  %" PRIu64 "\n"
 		       "  unhandled output events: %" PRIu64 "\n", worker->worker->name,
@@ -368,15 +373,15 @@ void orchestrator_deploy(void)
 	odph_thread_param_t params[num], *param;
 	orchestrator_worker_t *worker;
 
-	odp_barrier_init(&config->init_barrier, num + 1);
-	odp_barrier_init(&config->term_barrier, num + 1);
+	odp_barrier_init(&orchestrator.config->init_barrier, num + 1);
+	odp_barrier_init(&orchestrator.config->term_barrier, num + 1);
 	odph_thread_common_param_init(&common);
-	common.instance = config->instance;
+	common.instance = orchestrator.config->instance;
 	common.cpumask = &map->cpumask;
 
 	for (int i = 0; i < num; ++i) {
-		worker = &config->worker[i];
-		worker->prog_config = config;
+		worker = &orchestrator.config->worker[i];
+		worker->prog_config = orchestrator.config;
 		worker->worker = (worker_t *)config_parser_get(WORKER_DOMAIN, map->workers[i]);
 		param = &params[i];
 		odph_thread_param_init(param);
@@ -385,38 +390,42 @@ void orchestrator_deploy(void)
 		param->arg = worker;
 	}
 
-	if (odph_thread_create(config->thrs, &common, params, num) != num)
+	if (odph_thread_create(orchestrator.config->thrs, &common, params, num) != num)
 		ODPH_ABORT("Error launching worker threads, aborting\n");
 
-	config->num_workers = num;
-	odp_barrier_wait(&config->init_barrier);
+	orchestrator.config->num_workers = num;
+	odp_barrier_wait(&orchestrator.config->init_barrier);
 
-	while (odp_atomic_load_u32(&config->is_running))
+	while (odp_atomic_load_u32(&orchestrator.config->is_running))
 		sleep(1U);
 
 	config_parser_undeploy();
-	odp_barrier_wait(&config->term_barrier);
+	odp_barrier_wait(&orchestrator.config->term_barrier);
 	printf("\n*** flushing queues and freeing inflight events ***\n");
-	(void)odph_thread_join(config->thrs, config->num_workers);
+	(void)odph_thread_join(orchestrator.config->thrs, orchestrator.config->num_workers);
 	print_stats();
 }
 
 void orchestrator_destroy(void)
 {
-	odp_instance_t instance = config->instance;
 	orchestrator_worker_t *worker;
 
-	for (uint32_t i = 0U; i < config->num_workers; ++i) {
-		worker = &config->worker[i];
+	if (orchestrator.config != NULL) {
+		for (uint32_t i = 0U; i < orchestrator.config->num_workers; ++i) {
+			worker = &orchestrator.config->worker[i];
 
-		if (worker->worker->type == WT_SCHED)
-			free(worker->inputs.g);
-		else
-			free(worker->inputs.q);
+			if (worker->worker->type == WT_SCHED)
+				free(worker->inputs.g);
+			else
+				free(worker->inputs.q);
 
-		free(config->worker[i].outputs);
+			free(orchestrator.config->worker[i].outputs);
+		}
 	}
 
-	odp_shm_free(config->shm);
-	term_odp(instance);
+	if (orchestrator.shm != ODP_SHM_INVALID)
+		odp_shm_free(orchestrator.shm);
+
+	if (orchestrator.odp_ready)
+		term_odp(orchestrator.instance);
 }
