@@ -1,0 +1,13 @@
+<map id="rwlock.h" name="rwlock.h">
+<area shape="rect" id="Node000001" title="ODP rwlock." alt="" coords="136,5,213,31"/>
+<area shape="rect" id="Node000002" href="$atomic_8h.html" title="ODP atomic operations." alt="" coords="109,79,240,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="177,31,177,65,172,65,172,31"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="5,152,160,177"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="162,106,110,146,107,141,158,102"/>
+<area shape="rect" id="Node000004" href="$spec_2atomic_8h.html" title="ODP atomic operations." alt="" coords="184,152,349,177"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="191,102,243,141,239,146,188,106"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="95,225,257,251"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="254,179,203,219,200,214,250,175"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="281,225,431,251"/>
+<area shape="poly" id="edge5_Node000004_Node000006" title=" " alt="" coords="283,175,332,214,329,219,279,179"/>
+</map>

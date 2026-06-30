@@ -1,0 +1,21 @@
+<map id="spinlock.h" name="spinlock.h">
+<area shape="rect" id="Node000001" title="ODP spinlock." alt="" coords="413,5,501,31"/>
+<area shape="rect" id="Node000002" href="$api_2spinlock_8h.html" title="ODP spinlock." alt="" coords="413,79,501,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="460,44,460,79,455,79,455,44"/>
+<area shape="rect" id="Node000003" href="$odp__api_8h.html" title="The OpenDataPlane API." alt="" coords="343,152,428,177"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="437,116,399,154,395,150,434,112"/>
+<area shape="rect" id="Node000004" href="$api_2abi-default_2spinlock__recursive_8h.html" title="ODP recursive spinlock." alt="" coords="452,152,607,177"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="481,112,520,150,516,154,477,116"/>
+<area shape="rect" id="Node000005" href="$arch_2arm32-linux_2odp_2api_2abi_2spinlock__recursive_8h_source.html" title=" " alt="" coords="5,225,160,251"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="444,182,155,228,154,223,444,177"/>
+<area shape="rect" id="Node000006" href="$arch_2arm64-linux_2odp_2api_2abi_2spinlock__recursive_8h_source.html" title=" " alt="" coords="184,225,339,251"/>
+<area shape="poly" id="edge5_Node000004_Node000006" title=" " alt="" coords="473,183,305,228,304,223,472,178"/>
+<area shape="rect" id="Node000007" href="$arch_2default-linux_2odp_2api_2abi_2spinlock__recursive_8h_source.html" title=" " alt="" coords="363,225,517,251"/>
+<area shape="poly" id="edge6_Node000004_Node000007" title=" " alt="" coords="506,188,456,227,453,223,503,184"/>
+<area shape="rect" id="Node000008" href="$arch_2power64-linux_2odp_2api_2abi_2spinlock__recursive_8h_source.html" title=" " alt="" coords="541,225,696,251"/>
+<area shape="poly" id="edge7_Node000004_Node000008" title=" " alt="" coords="556,184,606,223,602,227,553,188"/>
+<area shape="rect" id="Node000009" href="$arch_2x86__32-linux_2odp_2api_2abi_2spinlock__recursive_8h_source.html" title=" " alt="" coords="720,225,875,251"/>
+<area shape="poly" id="edge8_Node000004_Node000009" title=" " alt="" coords="587,178,755,223,753,228,585,183"/>
+<area shape="rect" id="Node000010" href="$arch_2x86__64-linux_2odp_2api_2abi_2spinlock__recursive_8h_source.html" title=" " alt="" coords="899,225,1053,251"/>
+<area shape="poly" id="edge9_Node000004_Node000010" title=" " alt="" coords="615,177,904,223,904,228,614,182"/>
+</map>

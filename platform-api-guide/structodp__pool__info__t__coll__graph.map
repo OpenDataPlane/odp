@@ -1,0 +1,16 @@
+<map id="odp_pool_info_t" name="odp_pool_info_t">
+<area shape="rect" id="Node000001" title="Pool information struct Used to get information about a pool." alt="" coords="663,123,788,148"/>
+<area shape="rect" id="Node000002" href="$structodp__pool__param__t.html" title="Pool parameters." alt="" coords="319,47,462,72"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="476,66,556,79,639,98,698,120,696,125,638,103,555,84,475,71"/>
+<area shape="rect" id="Node000003" href="$structodp__pool__pkt__subparam__t.html" title="Packet pool subparameters." alt="" coords="5,5,199,31"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="205,30,319,47,319,52,204,35"/>
+<area shape="rect" id="Node000004" href="$unionodp__pool__stats__opt__t.html" title="Pool statistics counters options." alt="" coords="22,75,182,100"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="195,76,319,64,319,69,196,81"/>
+<area shape="rect" id="Node000005" href="$structodp__pool__ext__param__t.html" title="External memory pool parameters." alt="" coords="305,96,476,121"/>
+<area shape="poly" id="edge5_Node000005_Node000004" title=" " alt="" coords="181,100,223,105,305,108,305,113,222,110,181,105"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="490,114,663,128,662,133,490,119"/>
+<area shape="rect" id="Node000006" href="$structodp__dma__pool__param__t.html" title="DMA completion event pool parameters." alt="" coords="301,145,480,171"/>
+<area shape="poly" id="edge6_Node000001_Node000006" title=" " alt="" coords="494,159,565,158,638,153,677,145,678,151,639,158,565,164,494,165"/>
+<area shape="rect" id="Node000007" href="$structodp__ml__compl__pool__param__t.html" title="ML completion event pool parameters." alt="" coords="284,195,497,220"/>
+<area shape="poly" id="edge7_Node000001_Node000007" title=" " alt="" coords="511,201,575,193,638,178,673,163,704,146,706,151,676,168,639,183,576,198,512,206"/>
+</map>

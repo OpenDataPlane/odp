@@ -1,0 +1,7 @@
+<map id="odp_tm_egress_t" name="odp_tm_egress_t">
+<area shape="rect" id="Node000001" title="The odp_tm_egress_t type is used to describe that type of &quot;egress spigot&quot; associated with this TM sys..." alt="" coords="85,93,218,119"/>
+<area shape="rect" id="Node000002" href="$struct__odp__abi__pktio__t.html" title=" " alt="" coords="5,5,137,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="93,39,142,91,138,95,89,43"/>
+<area shape="rect" id="Node000003" href="$struct__odp__abi__packet__t.html" title=" " alt="" coords="161,5,304,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="214,43,165,95,161,91,210,39"/>
+</map>

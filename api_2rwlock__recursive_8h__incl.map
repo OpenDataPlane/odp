@@ -1,0 +1,11 @@
+<map id="rwlock_recursive.h" name="rwlock_recursive.h">
+<area shape="rect" id="Node000001" title="ODP recursive read/write lock." alt="" coords="89,5,233,31"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,79,147,119"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="151,33,108,71,105,67,147,29"/>
+<area shape="rect" id="Node000003" href="$api_2spec_2rwlock__recursive_8h.html" title="ODP recursive read/write lock." alt="" coords="171,79,322,119"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="176,29,218,67,214,71,172,33"/>
+<area shape="rect" id="Node000004" href="$visibility__begin_8h_source.html" title=" " alt="" coords="75,167,237,192"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="226,121,182,160,178,155,223,117"/>
+<area shape="rect" id="Node000005" href="$visibility__end_8h_source.html" title=" " alt="" coords="261,167,411,192"/>
+<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="270,117,314,155,311,159,267,121"/>
+</map>

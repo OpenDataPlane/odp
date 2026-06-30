@@ -1,0 +1,15 @@
+<map id="ticketlock.h" name="ticketlock.h">
+<area shape="rect" id="Node000001" title="ODP ticketlock." alt="" coords="308,5,405,31"/>
+<area shape="rect" id="Node000002" href="$arch_2arm32-linux_2odp_2api_2abi_2ticketlock_8h_source.html" title=" " alt="" coords="5,79,103,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="296,36,104,81,102,76,294,31"/>
+<area shape="rect" id="Node000003" href="$arch_2arm64-linux_2odp_2api_2abi_2ticketlock_8h_source.html" title=" " alt="" coords="127,79,224,104"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="316,38,206,81,204,76,314,33"/>
+<area shape="rect" id="Node000004" href="$arch_2default-linux_2odp_2api_2abi_2ticketlock_8h_source.html" title=" " alt="" coords="248,79,345,104"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="340,43,308,80,304,77,336,40"/>
+<area shape="rect" id="Node000005" href="$arch_2power64-linux_2odp_2api_2abi_2ticketlock_8h_source.html" title=" " alt="" coords="369,79,467,104"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="378,40,410,77,406,80,374,43"/>
+<area shape="rect" id="Node000006" href="$arch_2x86__32-linux_2odp_2api_2abi_2ticketlock_8h_source.html" title=" " alt="" coords="491,79,588,104"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="400,33,510,76,508,81,398,38"/>
+<area shape="rect" id="Node000007" href="$arch_2x86__64-linux_2odp_2api_2abi_2ticketlock_8h_source.html" title=" " alt="" coords="612,79,709,104"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="419,31,613,76,611,81,418,36"/>
+</map>
