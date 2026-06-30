@@ -99,11 +99,11 @@ int main(int argc, char **argv)
 	/* No support for process mode so no helper argument parsing */
 	parse_res = parse_options(argc, argv);
 
-	if (parse_res == PRS_NOK)
-		return EXIT_FAILURE;
+	if (parse_res != PRS_OK) {
+		free(opts.path);
 
-	if (parse_res == PRS_TERM)
-		return EXIT_SUCCESS;
+		return parse_res == PRS_NOK ? EXIT_FAILURE : EXIT_SUCCESS;
+	}
 
 	if (orchestrator_init() && config_parser_init(opts.path) && config_parser_deploy()) {
 		orchestrator_deploy();
@@ -114,6 +114,7 @@ int main(int argc, char **argv)
 
 	config_parser_destroy();
 	orchestrator_destroy();
+	free(opts.path);
 
 	return ret;
 }

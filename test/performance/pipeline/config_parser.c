@@ -25,9 +25,10 @@ typedef struct parser_s {
 typedef struct {
 	TAILQ_HEAD(, parser_s) p;
 
-	odp_bool_t init_done;
 	config_t config;
 	char *path;
+	odp_bool_t init_done;
+	odp_bool_t config_done;
 } parsers_t;
 
 static parsers_t parsers;
@@ -40,12 +41,12 @@ odp_bool_t config_parser_init(char *path)
 
 	parsers.path = path;
 	config_init(&parsers.config);
+	parsers.config_done = true;
 	ret = config_read_file(&parsers.config, parsers.path);
 
 	if (ret == CONFIG_FALSE) {
 		ODPH_ERR("Error opening configuration file, line %d: %s\n",
 			 config_error_line(&parsers.config), config_error_text(&parsers.config));
-		config_destroy(&parsers.config);
 		return false;
 	}
 
@@ -133,6 +134,6 @@ void config_parser_destroy(void)
 		free(drop);
 	}
 
-	config_destroy(&parsers.config);
-	free(parsers.path);
+	if (parsers.config_done)
+		config_destroy(&parsers.config);
 }
