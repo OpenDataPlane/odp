@@ -86,7 +86,9 @@ void work_register_work(const char *name, work_init_fn_t init_fn, work_print_fn_
 		entries.init_done = true;
 	}
 
-	TAILQ_INSERT_TAIL(&entries.w, entry, w);
+	/* Insert at head so later registrations, e.g. from runtime-loaded libraries, take
+	 * precedence over earlier baseline work of the same name. */
+	TAILQ_INSERT_HEAD(&entries.w, entry, w);
 }
 
 void work_print_work(work_t work, const char *queue)

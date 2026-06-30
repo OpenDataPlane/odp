@@ -12,6 +12,11 @@ include_HEADERS = odp_pipeline_work.h
 
 bin_PROGRAMS = odp_pipeline
 
+# Export the executable's dynamic symbols so runtime-loaded work libraries can resolve
+# work_register_work() and link libdl for dlopen().
+odp_pipeline_LDFLAGS = $(AM_LDFLAGS) -Wl,--export-dynamic
+odp_pipeline_LDADD = $(LDADD) -ldl
+
 odp_pipeline_SOURCES = \
 	cls_parser.c \
 	common.h \

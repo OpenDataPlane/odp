@@ -595,6 +595,11 @@ queue is marked as "output" flow, where again a set of events is passed to flow 
 instead of consuming the events, they are produced to the passed event set. Output flows are
 executed once per poll/scheduling round and after input flows have been handled.
 
+Work elements can assume that they are operating in a properly initialized ODP instance and must
+not initialize or create ODP instances themselves. Additionally, work elements must only use the
+explicitly configured ODP resources (configured via the configuration file) and must not create ODP
+resources themselves.
+
 ### Forward
 
 - name in configuration file: `work_forward`
@@ -660,3 +665,13 @@ executed once per poll/scheduling round and after input flows have been handled.
 - info: waits a given amount, no events consumed
 - parameter list:
   - index 0: time to wait in nanoseconds
+
+### External work libraries
+
+In addition to the baseline work compiled into the tester, work can be provided at runtime through
+shared libraries loaded with the `-l`, `--lib` command line option (the option may be repeated to
+load several libraries). Such a library is built against the installed, pkg-config discoverable
+`libodp_pipeline` package and registers its work with the `WORK_AUTOREGISTER()` macro from the
+public `odp_pipeline_work.h` header. Work registered from a loaded library overrides baseline work
+or work from a previously loaded library (order matters) of the same name, allowing work behavior
+to be replaced.

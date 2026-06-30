@@ -25,10 +25,6 @@ typedef enum {
 	PRS_TERM
 } parse_result_t;
 
-static struct {
-	char *path;
-} opts;
-
 static void print_usage(void)
 {
 	printf("\n"
@@ -44,23 +40,27 @@ static void print_usage(void)
 	       "\n"
 	       "Optional OPTIONS:\n"
 	       "\n"
+	       "  -l, --lib         Path to a shared library providing additional work. May be\n"
+	       "                    given multiple times. Work registered by a library overrides\n"
+	       "                    baseline work of the same name.\n"
 	       "  -h, --help        This help.\n"
 	       "\n");
 }
 
-static parse_result_t parse_options(int argc, char **argv)
+static parse_result_t parse_options(int argc, char **argv, opts_t *opts)
 {
 	int opt;
 
 	static const struct option longopts[] = {
 		{ "config_file", required_argument, NULL, 'f' },
+		{ "lib", required_argument, NULL, 'l' },
 		{ "help", no_argument, NULL, 'h' },
 		{ NULL, 0, NULL, 0 }
 	};
 
-	static const char *shortopts = "f:h";
+	static const char *shortopts = "f:l:h";
 
-	memset(&opts, 0, sizeof(opts));
+	memset(opts, 0, sizeof(*opts));
 
 	while (true) {
 		opt = getopt_long(argc, argv, shortopts, longopts, NULL);
@@ -70,15 +70,34 @@ static parse_result_t parse_options(int argc, char **argv)
 
 		switch (opt) {
 		case 'f':
-			free(opts.path);
-			opts.path = strdup(optarg);
+			free(opts->path);
+			opts->path = strdup(optarg);
 
-			if (opts.path == NULL) {
+			if (opts->path == NULL) {
 				ODPH_ERR("Error allocating memory\n");
 				return PRS_NOK;
 			}
 
 			break;
+		case 'l': {
+			char **libs = realloc(opts->libs, (opts->num_libs + 1U) * sizeof(*libs));
+
+			if (libs == NULL) {
+				ODPH_ERR("Error allocating memory\n");
+				return PRS_NOK;
+			}
+
+			opts->libs = libs;
+			opts->libs[opts->num_libs] = strdup(optarg);
+
+			if (opts->libs[opts->num_libs] == NULL) {
+				ODPH_ERR("Error allocating memory\n");
+				return PRS_NOK;
+			}
+
+			++opts->num_libs;
+			break;
+		}
 		case 'h':
 			print_usage();
 			return PRS_TERM;
@@ -92,20 +111,30 @@ static parse_result_t parse_options(int argc, char **argv)
 	return PRS_OK;
 }
 
+static void free_options(opts_t *opts)
+{
+	for (uint32_t i = 0U; i < opts->num_libs; ++i)
+		free(opts->libs[i]);
+
+	free(opts->libs);
+	free(opts->path);
+}
+
 int main(int argc, char **argv)
 {
+	opts_t opts;
 	parse_result_t parse_res;
 	int ret = EXIT_SUCCESS;
 	/* No support for process mode so no helper argument parsing */
-	parse_res = parse_options(argc, argv);
+	parse_res = parse_options(argc, argv, &opts);
 
 	if (parse_res != PRS_OK) {
-		free(opts.path);
+		free_options(&opts);
 
 		return parse_res == PRS_NOK ? EXIT_FAILURE : EXIT_SUCCESS;
 	}
 
-	if (orchestrator_init() && config_parser_init(opts.path) && config_parser_deploy()) {
+	if (orchestrator_init() && config_parser_init(&opts) && config_parser_deploy()) {
 		orchestrator_deploy();
 	} else {
 		ODPH_ERR("Error initializing pipeline\n");
@@ -114,7 +143,7 @@ int main(int argc, char **argv)
 
 	config_parser_destroy();
 	orchestrator_destroy();
-	free(opts.path);
+	free_options(&opts);
 
 	return ret;
 }

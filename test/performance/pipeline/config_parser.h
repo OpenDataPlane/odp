@@ -18,7 +18,13 @@ typedef void (*conf_undeploy_fn_t)(void);
 typedef void (*conf_destroy_fn_t)(void);
 typedef uintptr_t (*conf_resource_fn_t)(const char *resource);
 
-odp_bool_t config_parser_init(char *path);
+typedef struct {
+	char **libs;
+	char *path;
+	uint32_t num_libs;
+} opts_t;
+
+odp_bool_t config_parser_init(const opts_t *opts);
 
 odp_bool_t config_parser_deploy(void);
 
