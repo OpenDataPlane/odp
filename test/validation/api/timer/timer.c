@@ -3199,7 +3199,7 @@ static void timer_test_periodic_capa_base_mul(void)
 			capa.base_mul.max_multiplier = max_multiplier;
 			capa.res_ns = res_ns;
 
-			ODPH_DBG("freq %" PRIu64 ",  multip %" PRIu64 ", res %" PRIu64 ",\n",
+			ODPH_DBG("freq %" PRIu64 ", multip %" PRIu64 ", res %" PRIu64 " ns\n",
 				 base_freq.integer, max_multiplier, res_ns);
 
 			ret = odp_timer_periodic_capability(clk_src, &capa);
@@ -3223,6 +3223,11 @@ static void timer_test_periodic_capa_base_mul(void)
 					  min_freq);
 				CU_ASSERT(odp_fract_u64_to_dbl(&capa.base_mul.base_freq_hz) <=
 					  max_freq);
+			} else {
+				printf("Unable to accommodate freq %" PRIu64 " %" PRIu64 "/"
+				       "%" PRIu64 " Hz, multip %" PRIu64 ", res %" PRIu64 " ns\n",
+				       base_freq.integer, base_freq.numer, base_freq.denom,
+				       max_multiplier, res_ns);
 			}
 
 			if (ret >= 0) {
@@ -3326,6 +3331,11 @@ static void timer_test_periodic_capa_freq(void)
 		CU_ASSERT(odp_fract_u64_to_dbl(&capa.freq.freq_hz[0]) >= min_freq);
 		CU_ASSERT(odp_fract_u64_to_dbl(&capa.freq.freq_hz[1]) <= max_freq);
 		CU_ASSERT(capa.res_ns > 0);
+	} else {
+		printf("Unable to accommodate freq range %" PRIu64 " %" PRIu64 "/"
+		       "%" PRIu64 " Hz - %" PRIu64 " %" PRIu64 "/%" PRIu64 " Hz\n",
+		       min_fract.integer, min_fract.numer, min_fract.denom,
+		       max_fract.integer, max_fract.numer, max_fract.denom);
 	}
 
 	freq_range = max_fract.integer - min_fract.integer;
@@ -3361,7 +3371,7 @@ static void timer_test_periodic_capa_freq(void)
 		for (uint32_t j = 0; j < capa.freq.num; j++)
 			ODPH_DBG("freqs[%u] %" PRIu64 "\n", j, freqs[j].integer);
 
-		ODPH_DBG("res %" PRIu64 "\n", res_ns);
+		ODPH_DBG("res %" PRIu64 " ns\n", res_ns);
 		memcpy(capa.freq.freq_hz, freqs, sizeof(freqs));
 		capa.res_ns = res_ns;
 		ret = odp_timer_periodic_capability(clk_src, &capa);
@@ -3393,6 +3403,14 @@ static void timer_test_periodic_capa_freq(void)
 			CU_ASSERT(odp_fract_u64_to_dbl(&capa.freq.freq_hz[0]) >= min_freq);
 			CU_ASSERT(odp_fract_u64_to_dbl(&capa.freq.freq_hz[capa.freq.num - 1])
 				  <= max_freq);
+		} else {
+			printf("Unable to accommodate frequencies (res %" PRIu64 " ns):\n",
+			       res_ns);
+
+			for (uint32_t j = 0; j < capa.freq.num; j++) {
+				printf("  %" PRIu64 " %" PRIu64 "/%" PRIu64 " Hz\n",
+				       freqs[j].integer, freqs[j].numer, freqs[j].denom);
+			}
 		}
 
 		if (ret >= 0) {
