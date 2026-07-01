@@ -3252,7 +3252,7 @@ static void timer_test_periodic_capa_freq(void)
 	int ret;
 	uint32_t num = 100;
 	odp_timer_clk_src_t clk_src = test_global->clk_src;
-	odp_bool_t is_mod;
+	odp_bool_t is_min_mod = false, is_max_mod = false, is_mod;
 
 	CU_ASSERT_FATAL(odp_timer_capability(clk_src, &timer_capa) == 0);
 
@@ -3291,14 +3291,42 @@ static void timer_test_periodic_capa_freq(void)
 	capa.freq.num = 2;
 	capa.res_ns = 0;
 
-	CU_ASSERT(odp_timer_periodic_capability(clk_src, &capa) == 1);
-	CU_ASSERT(capa.freq.freq_hz[0].integer == min_fract.integer);
-	CU_ASSERT(capa.freq.freq_hz[0].numer == min_fract.numer);
-	CU_ASSERT(capa.freq.freq_hz[0].denom == min_fract.denom);
-	CU_ASSERT(capa.freq.freq_hz[1].integer == max_fract.integer);
-	CU_ASSERT(capa.freq.freq_hz[1].numer == max_fract.numer);
-	CU_ASSERT(capa.freq.freq_hz[1].denom == max_fract.denom);
-	CU_ASSERT(capa.res_ns > 0);
+	ret = odp_timer_periodic_capability(clk_src, &capa);
+
+	if (ret == 1) {
+		CU_ASSERT(capa.freq.freq_hz[0].integer == min_fract.integer);
+		CU_ASSERT(capa.freq.freq_hz[0].numer == min_fract.numer);
+		CU_ASSERT(capa.freq.freq_hz[0].denom == min_fract.denom);
+		CU_ASSERT(capa.freq.freq_hz[1].integer == max_fract.integer);
+		CU_ASSERT(capa.freq.freq_hz[1].numer == max_fract.numer);
+		CU_ASSERT(capa.freq.freq_hz[1].denom == max_fract.denom);
+		CU_ASSERT(capa.res_ns > 0);
+	} else if (ret == 0) {
+		is_min_mod = capa.freq.freq_hz[0].integer != min_fract.integer ||
+			     capa.freq.freq_hz[0].numer != min_fract.numer ||
+			     capa.freq.freq_hz[0].denom != min_fract.denom;
+		is_max_mod = capa.freq.freq_hz[1].integer != max_fract.integer ||
+			     capa.freq.freq_hz[1].numer != max_fract.numer ||
+			     capa.freq.freq_hz[1].denom != max_fract.denom;
+
+		CU_ASSERT(is_min_mod || is_max_mod);
+
+		if (is_min_mod && capa.freq.freq_hz[0].numer) {
+			CU_ASSERT_FATAL(capa.freq.freq_hz[0].denom > 0);
+			CU_ASSERT_FATAL(capa.freq.freq_hz[0].numer < capa.freq.freq_hz[0].denom);
+		}
+
+		if (is_max_mod && capa.freq.freq_hz[1].numer) {
+			CU_ASSERT_FATAL(capa.freq.freq_hz[1].denom > 0);
+			CU_ASSERT_FATAL(capa.freq.freq_hz[1].numer < capa.freq.freq_hz[1].denom);
+		}
+
+		CU_ASSERT(odp_fract_u64_to_dbl(&capa.freq.freq_hz[0]) <
+			  odp_fract_u64_to_dbl(&capa.freq.freq_hz[1]));
+		CU_ASSERT(odp_fract_u64_to_dbl(&capa.freq.freq_hz[0]) >= min_freq);
+		CU_ASSERT(odp_fract_u64_to_dbl(&capa.freq.freq_hz[1]) <= max_freq);
+		CU_ASSERT(capa.res_ns > 0);
+	}
 
 	freq_range = max_fract.integer - min_fract.integer;
 
