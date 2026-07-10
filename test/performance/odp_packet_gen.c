@@ -109,6 +109,7 @@ typedef struct test_options_t {
 	uint32_t num_pktio;
 	uint32_t num_pkt;
 	uint32_t pkt_len;
+	uint32_t pool_align;
 	uint8_t  use_rand_pkt_len;
 	uint8_t  direct_rx;
 	uint32_t rand_pkt_len_min;
@@ -141,6 +142,7 @@ typedef struct test_options_t {
 	odp_bool_t calc_cs;
 	odp_bool_t cs_offload;
 	odp_bool_t fill_pl;
+	odp_bool_t verbose;
 
 	struct vlan_hdr {
 		uint16_t tpid;
@@ -209,6 +211,7 @@ typedef struct test_global_t {
 	odp_barrier_t barrier;
 	odp_cpumask_t cpumask;
 	odp_pool_t pool;
+	odp_spinlock_t verbose_lock;
 	uint64_t drained;
 	odph_thread_t thread_tbl[MAX_THREADS];
 	thread_stat_t stat[MAX_THREADS];
@@ -307,6 +310,8 @@ static void print_usage(void)
 	       "                            may not be always supported.\n"
 	       "  -n, --num_pkt             Number of packets in the pool. Default: 1000\n"
 	       "  -l, --len                 Packet length. Default: 512\n"
+	       "  -I, --align <align>       Packet data alignment in bytes. Must be a power of\n"
+	       "                            two. Default: 0 (implementation default alignment)\n"
 	       "  -L, --len_range <min,max,bins>\n"
 	       "                            Random packet length. Specify the minimum and maximum\n"
 	       "                            packet lengths and the number of bins. To reduce pool size\n"
@@ -354,6 +359,8 @@ static void print_usage(void)
 	       "  -A, --no_payload_fill     Do not fill payload. By default, payload is filled\n"
 	       "                            with a pattern until the end of first packet\n"
 	       "                            segment.\n"
+	       "  -V, --verbose             Print received packets on the receive side. Affects only\n"
+	       "                            rx threads.\n"
 	       "  -q, --quit                Quit after this many transmit rounds.\n"
 	       "                            Default: 0 (don't quit)\n"
 	       "  -u, --update_stat <msec>  Update and print statistics every <msec> milliseconds.\n"
@@ -733,6 +740,7 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 		{"num_pkt",     required_argument, NULL, 'n'},
 		{"proto",       required_argument, NULL, 'N'},
 		{"len",         required_argument, NULL, 'l'},
+		{"align",       required_argument, NULL, 'I'},
 		{"len_range",   required_argument, NULL, 'L'},
 		{"direct_rx",   required_argument, NULL, 'D'},
 		{"tx_mode",     required_argument, NULL, 'm'},
@@ -750,6 +758,7 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 		{"no_udp_checksum", no_argument,   NULL, 'C'},
 		{"checksum_offload", no_argument,  NULL, 'X'},
 		{"no_payload_fill", no_argument,   NULL, 'A'},
+		{"verbose",     no_argument,       NULL, 'V'},
 		{"mtu",         required_argument, NULL, 'M'},
 		{"quit",        required_argument, NULL, 'q'},
 		{"wait",        required_argument, NULL, 'w'},
@@ -760,14 +769,15 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+i:e:r:t:T:n:N:l:L:D:m:M:b:x:g:v:s:d:o:"
-				       "p:c:CXAq:u:w:W:PaU:h";
+	static const char *shortopts = "+i:e:r:t:T:n:N:l:I:L:D:m:M:b:x:g:v:s:d:o:"
+				       "p:c:CXAVq:u:w:W:PaU:h";
 
 	test_options->num_pktio  = 0;
 	test_options->num_rx     = 1;
 	test_options->num_tx     = 1;
 	test_options->num_pkt    = 1000;
 	test_options->pkt_len    = 512;
+	test_options->pool_align = 0;
 	test_options->use_rand_pkt_len = 0;
 	test_options->direct_rx  = 0;
 	test_options->tx_mode    = TX_MODE_REF;
@@ -780,6 +790,7 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 	test_options->calc_cs    = 1;
 	test_options->cs_offload = 0;
 	test_options->fill_pl    = 1;
+	test_options->verbose    = 0;
 	odph_strcpy(test_options->ipv4_src_s, "192.168.0.1",
 		    sizeof(test_options->ipv4_src_s));
 	odph_strcpy(test_options->ipv4_dst_s, "192.168.0.2",
@@ -916,6 +927,9 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 		case 'l':
 			test_options->pkt_len = atoi(optarg);
 			break;
+		case 'I':
+			test_options->pool_align = atoi(optarg);
+			break;
 		case 'L':
 			pkt_len = strtoul(optarg, &end, 0);
 			test_options->rand_pkt_len_min = pkt_len;
@@ -986,6 +1000,9 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 			break;
 		case 'A':
 			test_options->fill_pl = 0;
+			break;
+		case 'V':
+			test_options->verbose = 1;
 			break;
 		case 'q':
 			test_options->quit = atoll(optarg);
@@ -1315,6 +1332,7 @@ static int create_packet_pool(test_global_t *global)
 	uint32_t num_pkt = test_options->num_pkt;
 	uint32_t pkt_len = test_options->use_rand_pkt_len ? test_options->rand_pkt_len_max :
 							    test_options->pkt_len;
+	uint32_t align = test_options->pool_align;
 	uint32_t seg_len;
 	odp_pool_capability_t pool_capa;
 	odp_pool_param_t  pool_param;
@@ -1343,10 +1361,22 @@ static int create_packet_pool(test_global_t *global)
 		return -1;
 	}
 
+	if (align & (align - 1)) {
+		ODPH_ERR("Error: Packet alignment must be a power of two: %u\n", align);
+		return -1;
+	}
+
+	if (align > pool_capa.pkt.max_align) {
+		ODPH_ERR("Error: Too large packet alignment. Max %u supported.\n",
+			 pool_capa.pkt.max_align);
+		return -1;
+	}
+
 	odp_pool_param_init(&pool_param);
 	pool_param.type        = ODP_POOL_PACKET;
 	pool_param.pkt.num     = num_pkt;
 	pool_param.pkt.len     = pkt_len;
+	pool_param.pkt.align   = align;
 	pool_param.pkt.seg_len = seg_len;
 
 	global->pool = odp_pool_create("packet gen pool", &pool_param);
@@ -1399,6 +1429,11 @@ static int open_pktios(test_global_t *global)
 		       test_options->rand_pkt_len_bins);
 	else
 		printf("  packet length:     %u bytes\n", pkt_len);
+	printf("  packet align:      ");
+	if (test_options->pool_align)
+		printf("%u bytes\n", test_options->pool_align);
+	else
+		printf("pool default\n");
 	printf("  MTU:               ");
 	if (test_options->mtu)
 		printf("%u bytes\n", test_options->mtu);
@@ -1411,6 +1446,7 @@ static int open_pktios(test_global_t *global)
 	printf("  UDP SW checksum:   %s\n", test_options->calc_cs ? "enabled" : "disabled");
 	printf("  Checksum offload:  %s\n", test_options->cs_offload ? "enabled" : "disabled");
 	printf("  payload filling:   %s\n", test_options->fill_pl ? "enabled" : "disabled");
+	printf("  verbose:           %s\n", test_options->verbose ? "enabled" : "disabled");
 	printf("  tx burst size:     %u\n", test_options->burst_size);
 	printf("  tx bursts:         %u\n", test_options->bursts);
 	printf("  tx burst gap:      %" PRIu64 " nsec\n",
@@ -1895,6 +1931,7 @@ static int rx_thread(void *arg)
 	test_global_t *global = thread_arg->global;
 	int direct_rx = global->test_options.direct_rx;
 	int periodic_stat = global->test_options.update_msec ? 1 : 0;
+	int verbose = global->test_options.verbose;
 	uint64_t rx_timeouts = 0;
 	uint64_t rx_packets = 0;
 	uint64_t rx_bytes = 0;
@@ -1985,6 +2022,15 @@ static int rx_thread(void *arg)
 		if (!clock_started) {
 			t1 = odp_time_local();
 			clock_started = 1;
+		}
+
+		if (odp_unlikely(verbose)) {
+			odp_spinlock_lock(&global->verbose_lock);
+
+			for (i = 0; i < num; i++)
+				odp_packet_print(pkt[i]);
+
+			odp_spinlock_unlock(&global->verbose_lock);
 		}
 
 		bytes = 0;
@@ -2282,6 +2328,7 @@ static int init_global_data(test_global_t *global)
 {
 	memset(global, 0, sizeof(test_global_t));
 	odp_atomic_init_u32(&global->exit_test, 0);
+	odp_spinlock_init(&global->verbose_lock);
 
 	for (int i = 0; i < MAX_THREADS; i++) {
 		uint8_t *rand_data = (uint8_t *)global->rand_data[i];
