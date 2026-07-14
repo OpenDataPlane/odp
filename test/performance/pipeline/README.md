@@ -675,3 +675,6 @@ load several libraries). Such a library is built against the installed, pkg-conf
 public `odp_pipeline_work.h` header. Work registered from a loaded library overrides baseline work
 or work from a previously loaded library (order matters) of the same name, allowing work behavior
 to be replaced.
+
+Libraries can query resources parsed from the configuration file, such as queues or pools, with the
+`config_parser_get()` function from the public `odp_pipeline_config.h` header.

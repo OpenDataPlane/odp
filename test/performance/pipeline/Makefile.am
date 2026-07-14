@@ -8,7 +8,10 @@ AM_CFLAGS += \
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = libodp_pipeline.pc
 
-include_HEADERS = odp_pipeline_work.h
+include_HEADERS = \
+	odp_pipeline_config.h \
+	odp_pipeline_domains.h \
+	odp_pipeline_work.h
 
 bin_PROGRAMS = odp_pipeline
 
@@ -20,6 +23,8 @@ odp_pipeline_LDADD = $(LDADD) -ldl
 odp_pipeline_SOURCES = \
 	cls_parser.c \
 	common.h \
+	odp_pipeline_config.h \
+	odp_pipeline_domains.h \
 	config_parser.h \
 	config_parser.c \
 	cpumap.h \
