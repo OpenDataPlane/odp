@@ -256,6 +256,15 @@ A few examples showcasing how one could configure the pipeline:
   - element: `name`
     - necessity: required
     - type: string, max `ODP_DMA_NAME_LEN`
+  - element: `compl_mode_mask`
+    - necessity: optional
+    - type: string, hexadecimal `odp_dma_compl_mode_t` mask
+    - default: `ODP_DMA_COMPL_EVENT`
+  - element: `order`
+    - necessity: optional
+    - type: string
+    - values: `"none"`, `"compl"`, `"all"`, mapping to `odp_dma_transfer_order_t`
+    - default: `odp_dma_param_init()`
 
 ### Flows
 
