@@ -138,17 +138,17 @@ static odp_bool_t pool_parser_init(config_t *config)
 	int num;
 	pool_parse_t *pool;
 
-	cs = config_lookup(config, POOL_DOMAIN);
+	cs = config_lookup(config, ODP_PL_POOL_DOMAIN);
 
 	if (cs == NULL)	{
-		printf("Nothing to parse for \"" POOL_DOMAIN "\" domain\n");
+		printf("Nothing to parse for \"" ODP_PL_POOL_DOMAIN "\" domain\n");
 		return true;
 	}
 
 	num = config_setting_length(cs);
 
 	if (num == 0) {
-		ODPH_ERR("No valid \"" POOL_DOMAIN "\" entries found\n");
+		ODPH_ERR("No valid \"" ODP_PL_POOL_DOMAIN "\" entries found\n");
 		return false;
 	}
 
@@ -161,14 +161,14 @@ static odp_bool_t pool_parser_init(config_t *config)
 		elem = config_setting_get_elem(cs, i);
 
 		if (elem == NULL) {
-			ODPH_ERR("Unparsable \"" POOL_DOMAIN "\" entry (%d)\n", i);
+			ODPH_ERR("Unparsable \"" ODP_PL_POOL_DOMAIN "\" entry (%d)\n", i);
 			return false;
 		}
 
 		pool = &pools.pools[pools.num];
 
 		if (!parse_pool_entry(elem, pool)) {
-			ODPH_ERR("Invalid \"" POOL_DOMAIN "\" entry (%d)\n", i);
+			ODPH_ERR("Invalid \"" ODP_PL_POOL_DOMAIN "\" entry (%d)\n", i);
 			free_pool_entry(pool);
 			return false;
 		}
@@ -183,7 +183,7 @@ static odp_bool_t pool_parser_deploy(void)
 {
 	pool_parse_t *pool;
 
-	printf("\n*** " POOL_DOMAIN " resources ***\n");
+	printf("\n*** " ODP_PL_POOL_DOMAIN " resources ***\n");
 
 	for (uint32_t i = 0U; i < pools.num; ++i) {
 		pool = &pools.pools[i];
@@ -235,5 +235,5 @@ static uintptr_t pool_parser_get_resource(const char *resource)
 	return (uintptr_t)pool;
 }
 
-CONFIG_PARSER_AUTOREGISTER(HIGH_PRIO, POOL_DOMAIN, pool_parser_init, pool_parser_deploy, NULL,
-			   pool_parser_destroy, pool_parser_get_resource)
+CONFIG_PARSER_AUTOREGISTER(HIGH_PRIO, ODP_PL_POOL_DOMAIN, pool_parser_init, pool_parser_deploy,
+			   NULL, pool_parser_destroy, pool_parser_get_resource)

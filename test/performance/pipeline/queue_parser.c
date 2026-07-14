@@ -298,17 +298,17 @@ static odp_bool_t queue_parser_init(config_t *config)
 	res_t res;
 	queue_parse_template_t templ;
 
-	cs = config_lookup(config, QUEUE_DOMAIN);
+	cs = config_lookup(config, ODP_PL_QUEUE_DOMAIN);
 
 	if (cs == NULL)	{
-		printf("Nothing to parse for \"" QUEUE_DOMAIN "\" domain\n");
+		printf("Nothing to parse for \"" ODP_PL_QUEUE_DOMAIN "\" domain\n");
 		return true;
 	}
 
 	num = config_setting_length(cs);
 
 	if (num == 0) {
-		ODPH_ERR("No valid \"" QUEUE_DOMAIN "\" entries found\n");
+		ODPH_ERR("No valid \"" ODP_PL_QUEUE_DOMAIN "\" entries found\n");
 		return false;
 	}
 
@@ -321,7 +321,7 @@ static odp_bool_t queue_parser_init(config_t *config)
 		elem = config_setting_get_elem(cs, i);
 
 		if (elem == NULL) {
-			ODPH_ERR("Unparsable \"" QUEUE_DOMAIN "\" entry (%d)\n", i);
+			ODPH_ERR("Unparsable \"" ODP_PL_QUEUE_DOMAIN "\" entry (%d)\n", i);
 			return false;
 		}
 
@@ -329,14 +329,14 @@ static odp_bool_t queue_parser_init(config_t *config)
 		res = parse_queue_entry(elem, queue);
 
 		if (res == PARSE_NOK) {
-			ODPH_ERR("Invalid \"" QUEUE_DOMAIN "\" entry (%d)\n", i);
+			ODPH_ERR("Invalid \"" ODP_PL_QUEUE_DOMAIN "\" entry (%d)\n", i);
 			free_queue_entry(queue);
 			return false;
 		} else if (res == PARSE_TEMPL) {
 			ret = parse_queue_entry_template(elem, &templ);
 
 			if (ret == -1) {
-				ODPH_ERR("Invalid \"" QUEUE_DOMAIN "\" entry (%d)\n", i);
+				ODPH_ERR("Invalid \"" ODP_PL_QUEUE_DOMAIN "\" entry (%d)\n", i);
 				free_queue_template(&templ);
 				return false;
 			}
@@ -351,7 +351,8 @@ static odp_bool_t queue_parser_init(config_t *config)
 				queue = &queues.queues[queues.num];
 
 				if (!parse_queue_entry_from_template(&templ, queue)) {
-					ODPH_ERR("Invalid \"" QUEUE_DOMAIN "\" entry (%d)\n", i);
+					ODPH_ERR("Invalid \"" ODP_PL_QUEUE_DOMAIN "\" entry "
+						 "(%d)\n", i);
 					free_queue_template(&templ);
 					free_queue_entry(queue);
 					return false;
@@ -373,7 +374,7 @@ static odp_bool_t queue_parser_deploy(void)
 {
 	queue_parse_t *queue;
 
-	printf("\n*** " QUEUE_DOMAIN " resources ***\n");
+	printf("\n*** " ODP_PL_QUEUE_DOMAIN " resources ***\n");
 
 	for (uint32_t i = 0U; i < queues.num; ++i) {
 		queue = &queues.queues[i];
@@ -382,8 +383,8 @@ static odp_bool_t queue_parser_deploy(void)
 			continue;
 
 		if (queue->group != NULL)
-			queue->param.sched.group =
-			       (odp_schedule_group_t)config_parser_get(SCHED_DOMAIN, queue->group);
+			queue->param.sched.group = (odp_schedule_group_t)
+				odp_pl_config_parser_get(ODP_PL_SCHED_DOMAIN, queue->group);
 
 		queue->queue = odp_queue_create(queue->name, &queue->param);
 
@@ -420,7 +421,7 @@ static uintptr_t queue_parser_get_resource(const char *resource)
 			continue;
 
 		if (parse->ext != NULL)
-			queue = (odp_queue_t)config_parser_get(parse->ext, resource);
+			queue = (odp_queue_t)odp_pl_config_parser_get(parse->ext, resource);
 		else
 			queue = parse->queue;
 
@@ -433,5 +434,5 @@ static uintptr_t queue_parser_get_resource(const char *resource)
 	return (uintptr_t)queue;
 }
 
-CONFIG_PARSER_AUTOREGISTER(HIGH_PRIO, QUEUE_DOMAIN, queue_parser_init, queue_parser_deploy, NULL,
-			   queue_parser_destroy, queue_parser_get_resource)
+CONFIG_PARSER_AUTOREGISTER(HIGH_PRIO, ODP_PL_QUEUE_DOMAIN, queue_parser_init, queue_parser_deploy,
+			   NULL, queue_parser_destroy, queue_parser_get_resource)

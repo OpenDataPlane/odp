@@ -31,10 +31,10 @@ static odp_bool_t cpumap_parser_init(config_t *config)
 	const char *val_str;
 	int num;
 
-	cs = config_lookup(config, CPUMAP_DOMAIN);
+	cs = config_lookup(config, ODP_PL_CPUMAP_DOMAIN);
 
 	if (cs == NULL)	{
-		printf("Nothing to parse for \"" CPUMAP_DOMAIN "\" domain\n");
+		printf("Nothing to parse for \"" ODP_PL_CPUMAP_DOMAIN "\" domain\n");
 		return true;
 	}
 
@@ -88,7 +88,7 @@ static odp_bool_t cpumap_parser_deploy(void)
 
 	(void)odp_cpumask_to_str(&cpumap.cpumask, str, ODP_CPUMASK_STR_SIZE);
 
-	printf("\n*** " CPUMAP_DOMAIN " resources ***\n\n"
+	printf("\n*** " ODP_PL_CPUMAP_DOMAIN " resources ***\n\n"
 	       "name: N/A\n"
 	       "info:\n"
 	       "  cpumask: %s\n"
@@ -113,5 +113,6 @@ static uintptr_t cpumap_parser_get_resource(const char *resource ODP_UNUSED)
 	return (uintptr_t)&cpumap;
 }
 
-CONFIG_PARSER_AUTOREGISTER(HIGH_PRIO, CPUMAP_DOMAIN, cpumap_parser_init, cpumap_parser_deploy,
-			   NULL, cpumap_parser_destroy, cpumap_parser_get_resource)
+CONFIG_PARSER_AUTOREGISTER(HIGH_PRIO, ODP_PL_CPUMAP_DOMAIN, cpumap_parser_init,
+			   cpumap_parser_deploy, NULL, cpumap_parser_destroy,
+			   cpumap_parser_get_resource)

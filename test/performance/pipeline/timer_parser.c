@@ -130,17 +130,17 @@ static odp_bool_t timer_parser_init(config_t *config)
 	int num;
 	timer_parse_t *timer;
 
-	cs = config_lookup(config, TIMER_DOMAIN);
+	cs = config_lookup(config, ODP_PL_TIMER_DOMAIN);
 
 	if (cs == NULL)	{
-		printf("Nothing to parse for \"" TIMER_DOMAIN "\" domain\n");
+		printf("Nothing to parse for \"" ODP_PL_TIMER_DOMAIN "\" domain\n");
 		return true;
 	}
 
 	num = config_setting_length(cs);
 
 	if (num == 0) {
-		ODPH_ERR("No valid \"" TIMER_DOMAIN "\" entries found\n");
+		ODPH_ERR("No valid \"" ODP_PL_TIMER_DOMAIN "\" entries found\n");
 		return false;
 	}
 
@@ -153,14 +153,14 @@ static odp_bool_t timer_parser_init(config_t *config)
 		elem = config_setting_get_elem(cs, i);
 
 		if (elem == NULL) {
-			ODPH_ERR("Unparsable \"" TIMER_DOMAIN "\" entry (%d)\n", i);
+			ODPH_ERR("Unparsable \"" ODP_PL_TIMER_DOMAIN "\" entry (%d)\n", i);
 			return false;
 		}
 
 		timer = &timers.timers[timers.num];
 
 		if (!parse_timer_entry(elem, timer)) {
-			ODPH_ERR("Invalid \"" TIMER_DOMAIN "\" entry (%d)\n", i);
+			ODPH_ERR("Invalid \"" ODP_PL_TIMER_DOMAIN "\" entry (%d)\n", i);
 			free_timer_entry(timer);
 			return false;
 		}
@@ -175,7 +175,7 @@ static odp_bool_t timer_parser_deploy(void)
 {
 	timer_parse_t *timer;
 
-	printf("\n*** " TIMER_DOMAIN " resources ***\n");
+	printf("\n*** " ODP_PL_TIMER_DOMAIN " resources ***\n");
 
 	for (uint32_t i = 0U; i < timers.num; ++i) {
 		timer = &timers.timers[i];
@@ -228,5 +228,5 @@ static uintptr_t timer_parser_get_resource(const char *resource)
 	return (uintptr_t)pool;
 }
 
-CONFIG_PARSER_AUTOREGISTER(MED_PRIO, TIMER_DOMAIN, timer_parser_init, timer_parser_deploy, NULL,
-			   timer_parser_destroy, timer_parser_get_resource)
+CONFIG_PARSER_AUTOREGISTER(MED_PRIO, ODP_PL_TIMER_DOMAIN, timer_parser_init, timer_parser_deploy,
+			   NULL, timer_parser_destroy, timer_parser_get_resource)

@@ -24,7 +24,7 @@ typedef struct {
 	uint32_t len;
 } work_packet_source_data_t;
 
-static int work_packet_source(uintptr_t data, odp_event_t ev[], int num, work_stats_t *stats)
+static int work_packet_source(uintptr_t data, odp_event_t ev[], int num, odp_pl_work_stats_t *stats)
 {
 	work_packet_source_data_t *priv = (work_packet_source_data_t *)data;
 	int num_allocd = odp_packet_alloc_multi(priv->pool, priv->len, (odp_packet_t *)ev, num);
@@ -35,7 +35,7 @@ static int work_packet_source(uintptr_t data, odp_event_t ev[], int num, work_st
 	return num_allocd;
 }
 
-static void work_packet_source_init(const work_param_t *param, work_init_t *init)
+static void work_packet_source_init(const odp_pl_work_param_t *param, odp_pl_work_init_t *init)
 {
 	work_packet_source_data_t *data = calloc(1U, sizeof(*data));
 	const char *val_str;
@@ -55,7 +55,7 @@ static void work_packet_source_init(const work_param_t *param, work_init_t *init
 	if (val_str == NULL)
 		ODPH_ABORT("No \"" CONF_STR_POOL "\" found\n");
 
-	data->pool = (odp_pool_t)config_parser_get(POOL_DOMAIN, val_str);
+	data->pool = (odp_pool_t)odp_pl_config_parser_get(ODP_PL_POOL_DOMAIN, val_str);
 	val_i = config_setting_get_int_elem(param->param, 1);
 
 	if (val_i == 0)
@@ -66,7 +66,7 @@ static void work_packet_source_init(const work_param_t *param, work_init_t *init
 	init->data = (uintptr_t)data;
 }
 
-static void work_packet_source_print(const char *queue, const work_stats_t *stats)
+static void work_packet_source_print(const char *queue, const odp_pl_work_stats_t *stats)
 {
 	printf("\n%s:\n"
 	       "  work:         %s\n"
@@ -78,5 +78,5 @@ static void work_packet_source_destroy(uintptr_t data)
 	free((void *)data);
 }
 
-WORK_AUTOREGISTER(WORK_PACKET_SOURCE, work_packet_source_init, work_packet_source_print,
-		  work_packet_source_destroy)
+ODP_PL_WORK_AUTOREGISTER(WORK_PACKET_SOURCE, work_packet_source_init, work_packet_source_print,
+			 work_packet_source_destroy)

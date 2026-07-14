@@ -67,10 +67,10 @@ static odp_bool_t sched_parser_init(config_t *config)
 	int num;
 	grp_parse_t *grp;
 
-	cs = config_lookup(config, SCHED_DOMAIN);
+	cs = config_lookup(config, ODP_PL_SCHED_DOMAIN);
 
 	if (cs == NULL)	{
-		printf("Nothing to parse for \"" SCHED_DOMAIN "\" domain\n");
+		printf("Nothing to parse for \"" ODP_PL_SCHED_DOMAIN "\" domain\n");
 		return true;
 	}
 
@@ -122,7 +122,7 @@ static odp_bool_t sched_parser_deploy(void)
 	grp_parse_t *grp;
 	odp_thrmask_t mask;
 
-	printf("\n*** " SCHED_DOMAIN " resources ***\n");
+	printf("\n*** " ODP_PL_SCHED_DOMAIN " resources ***\n");
 
 	for (uint32_t i = 0U; i < scd.num; ++i) {
 		grp = &scd.grps[i];
@@ -171,5 +171,5 @@ static uintptr_t sched_parser_get_resource(const char *resource)
 	return (uintptr_t)grp;
 }
 
-CONFIG_PARSER_AUTOREGISTER(CRIT_PRIO, SCHED_DOMAIN, sched_parser_init, sched_parser_deploy, NULL,
-			   sched_parser_destroy, sched_parser_get_resource)
+CONFIG_PARSER_AUTOREGISTER(CRIT_PRIO, ODP_PL_SCHED_DOMAIN, sched_parser_init, sched_parser_deploy,
+			   NULL, sched_parser_destroy, sched_parser_get_resource)

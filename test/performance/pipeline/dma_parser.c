@@ -69,17 +69,17 @@ static odp_bool_t dma_parser_init(config_t *config)
 	int num;
 	dma_parse_t *dma;
 
-	cs = config_lookup(config, DMA_DOMAIN);
+	cs = config_lookup(config, ODP_PL_DMA_DOMAIN);
 
 	if (cs == NULL)	{
-		printf("Nothing to parse for \"" DMA_DOMAIN "\" domain\n");
+		printf("Nothing to parse for \"" ODP_PL_DMA_DOMAIN "\" domain\n");
 		return true;
 	}
 
 	num = config_setting_length(cs);
 
 	if (num == 0) {
-		ODPH_ERR("No valid \"" DMA_DOMAIN "\" entries found\n");
+		ODPH_ERR("No valid \"" ODP_PL_DMA_DOMAIN "\" entries found\n");
 		return false;
 	}
 
@@ -92,14 +92,14 @@ static odp_bool_t dma_parser_init(config_t *config)
 		elem = config_setting_get_elem(cs, i);
 
 		if (elem == NULL) {
-			ODPH_ERR("Unparsable \"" DMA_DOMAIN "\" entry (%d)\n", i);
+			ODPH_ERR("Unparsable \"" ODP_PL_DMA_DOMAIN "\" entry (%d)\n", i);
 			return false;
 		}
 
 		dma = &dmas.dmas[dmas.num];
 
 		if (!parse_dma_entry(elem, dma)) {
-			ODPH_ERR("Invalid \"" DMA_DOMAIN "\" entry (%d)\n", i);
+			ODPH_ERR("Invalid \"" ODP_PL_DMA_DOMAIN "\" entry (%d)\n", i);
 			free_dma_entry(dma);
 			return false;
 		}
@@ -114,7 +114,7 @@ static odp_bool_t dma_parser_deploy(void)
 {
 	dma_parse_t *dma;
 
-	printf("\n*** " DMA_DOMAIN " resources ***\n");
+	printf("\n*** " ODP_PL_DMA_DOMAIN " resources ***\n");
 
 	for (uint32_t i = 0U; i < dmas.num; ++i) {
 		dma = &dmas.dmas[i];
@@ -162,5 +162,5 @@ static uintptr_t dma_parser_get_resource(const char *resource)
 	return (uintptr_t)dma;
 }
 
-CONFIG_PARSER_AUTOREGISTER(MED_PRIO, DMA_DOMAIN, dma_parser_init, dma_parser_deploy, NULL,
+CONFIG_PARSER_AUTOREGISTER(MED_PRIO, ODP_PL_DMA_DOMAIN, dma_parser_init, dma_parser_deploy, NULL,
 			   dma_parser_destroy, dma_parser_get_resource)

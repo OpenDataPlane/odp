@@ -11,7 +11,8 @@
 
 #define WORK_SINK "sink"
 
-static int work_sink(uintptr_t data ODP_UNUSED, odp_event_t ev[], int num, work_stats_t *stats)
+static int work_sink(uintptr_t data ODP_UNUSED, odp_event_t ev[], int num,
+		     odp_pl_work_stats_t *stats)
 {
 	odp_event_free_multi(ev, num);
 	stats->data1 += num;
@@ -19,12 +20,12 @@ static int work_sink(uintptr_t data ODP_UNUSED, odp_event_t ev[], int num, work_
 	return num;
 }
 
-static void work_sink_init(const work_param_t *param ODP_UNUSED, work_init_t *init)
+static void work_sink_init(const odp_pl_work_param_t *param ODP_UNUSED, odp_pl_work_init_t *init)
 {
 	init->fn = work_sink;
 }
 
-static void work_sink_print(const char *queue, const work_stats_t *stats)
+static void work_sink_print(const char *queue, const odp_pl_work_stats_t *stats)
 {
 	printf("\n%s:\n"
 	       "  work:         %s\n"
@@ -35,4 +36,4 @@ static void work_sink_destroy(uintptr_t data ODP_UNUSED)
 {
 }
 
-WORK_AUTOREGISTER(WORK_SINK, work_sink_init, work_sink_print, work_sink_destroy)
+ODP_PL_WORK_AUTOREGISTER(WORK_SINK, work_sink_init, work_sink_print, work_sink_destroy)

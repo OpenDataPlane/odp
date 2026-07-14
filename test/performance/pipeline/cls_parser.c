@@ -1015,10 +1015,10 @@ static odp_bool_t classifier_parser_init(config_t *config)
 	pmr_parse_t *pmr;
 	pmr_parse_template_t pmr_templ;
 
-	cs = config_lookup(config, CLASSIFICATION_DOMAIN);
+	cs = config_lookup(config, ODP_PL_CLASSIFICATION_DOMAIN);
 
 	if (cs == NULL)	{
-		printf("Nothing to parse for \"" CLASSIFICATION_DOMAIN "\" domain\n");
+		printf("Nothing to parse for \"" ODP_PL_CLASSIFICATION_DOMAIN "\" domain\n");
 		return true;
 	}
 
@@ -1168,18 +1168,18 @@ static odp_bool_t classifier_parser_deploy(void)
 	pmr_parse_t *pmr;
 	odp_cos_t src, dst;
 
-	printf("\n*** " CLASSIFICATION_DOMAIN " resources ***\n");
+	printf("\n*** " ODP_PL_CLASSIFICATION_DOMAIN " resources ***\n");
 
 	for (uint32_t i = 0U; i < cls.num_cos; ++i) {
 		cos = &cls.coss[i];
 
 		if (cos->queue != NULL)
-			cos->cos_param.queue = (odp_queue_t)config_parser_get(QUEUE_DOMAIN,
-									      cos->queue);
+			cos->cos_param.queue =
+			(odp_queue_t)odp_pl_config_parser_get(ODP_PL_QUEUE_DOMAIN, cos->queue);
 
 		if (cos->pool != NULL)
-			cos->cos_param.pool = (odp_pool_t)config_parser_get(POOL_DOMAIN,
-									    cos->pool);
+			cos->cos_param.pool =
+			(odp_pool_t)odp_pl_config_parser_get(ODP_PL_POOL_DOMAIN, cos->pool);
 
 		cos->cos = odp_cls_cos_create(cos->name, &cos->cos_param);
 
@@ -1189,7 +1189,8 @@ static odp_bool_t classifier_parser_deploy(void)
 		}
 
 		if (cos->def != NULL) {
-			pktio = (odp_pktio_t)config_parser_get(PKTIO_DOMAIN, cos->def);
+			pktio =
+			(odp_pktio_t)odp_pl_config_parser_get(ODP_PL_PKTIO_DOMAIN, cos->def);
 
 			if (odp_pktio_default_cos_set(pktio, cos->cos) < 0) {
 				ODPH_ERR("Error setting default CoS (%s)\n", cos->name);
@@ -1204,8 +1205,8 @@ static odp_bool_t classifier_parser_deploy(void)
 
 	for (uint32_t i = 0U; i < cls.num_pmr; ++i) {
 		pmr = &cls.pmrs[i];
-		src = (odp_cos_t)config_parser_get(CLASSIFICATION_DOMAIN, pmr->src);
-		dst = (odp_cos_t)config_parser_get(CLASSIFICATION_DOMAIN, pmr->dst);
+		src = (odp_cos_t)odp_pl_config_parser_get(ODP_PL_CLASSIFICATION_DOMAIN, pmr->src);
+		dst = (odp_cos_t)odp_pl_config_parser_get(ODP_PL_CLASSIFICATION_DOMAIN, pmr->dst);
 		pmr->pmr = odp_cls_pmr_create(&pmr->param, 1, src, dst);
 
 		if (pmr->pmr == ODP_PMR_INVALID) {
@@ -1254,6 +1255,6 @@ static uintptr_t classifier_parser_get_resource(const char *resource)
 	return (uintptr_t)cos;
 }
 
-CONFIG_PARSER_AUTOREGISTER(LOW_PRIO, CLASSIFICATION_DOMAIN, classifier_parser_init,
+CONFIG_PARSER_AUTOREGISTER(LOW_PRIO, ODP_PL_CLASSIFICATION_DOMAIN, classifier_parser_init,
 			   classifier_parser_deploy, NULL, classifier_parser_destroy,
 			   classifier_parser_get_resource)

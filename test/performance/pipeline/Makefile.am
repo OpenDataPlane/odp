@@ -16,7 +16,7 @@ include_HEADERS = \
 bin_PROGRAMS = odp_pipeline
 
 # Export the executable's dynamic symbols so runtime-loaded work libraries can resolve
-# work_register_work() and link libdl for dlopen().
+# odp_pl_work_register_work() and link libdl for dlopen().
 odp_pipeline_LDFLAGS = $(AM_LDFLAGS) -Wl,--export-dynamic
 odp_pipeline_LDADD = $(LDADD) -ldl
 

@@ -671,10 +671,10 @@ resources themselves.
 In addition to the baseline work compiled into the tester, work can be provided at runtime through
 shared libraries loaded with the `-l`, `--lib` command line option (the option may be repeated to
 load several libraries). Such a library is built against the installed, pkg-config discoverable
-`libodp_pipeline` package and registers its work with the `WORK_AUTOREGISTER()` macro from the
+`libodp_pipeline` package and registers its work with the `ODP_PL_WORK_AUTOREGISTER()` macro from the
 public `odp_pipeline_work.h` header. Work registered from a loaded library overrides baseline work
 or work from a previously loaded library (order matters) of the same name, allowing work behavior
 to be replaced.
 
 Libraries can query resources parsed from the configuration file, such as queues or pools, with the
-`config_parser_get()` function from the public `odp_pipeline_config.h` header.
+`odp_pl_config_parser_get()` function from the public `odp_pipeline_config.h` header.

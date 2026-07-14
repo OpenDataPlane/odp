@@ -39,7 +39,7 @@ typedef struct {
 	char *input;
 	char *output;
 	flow_t flow;
-	work_param_t *work;
+	odp_pl_work_param_t *work;
 	uint32_t num;
 } flow_parse_t;
 
@@ -52,7 +52,7 @@ typedef struct {
 	char *name_prefix;
 	char *input_prefix;
 	char *output_prefix;
-	work_param_t *work;
+	odp_pl_work_param_t *work;
 	uint32_t name_idx;
 	uint32_t name_inc;
 	uint32_t input_idx;
@@ -70,7 +70,7 @@ typedef enum {
 
 static flow_parses_t flows;
 
-static odp_bool_t parse_work_entry(config_setting_t *cs, work_param_t *work)
+static odp_bool_t parse_work_entry(config_setting_t *cs, odp_pl_work_param_t *work)
 {
 	const char *val_str;
 
@@ -89,7 +89,7 @@ static odp_bool_t parse_work_entry(config_setting_t *cs, work_param_t *work)
 	return true;
 }
 
-static void free_work_entry(work_param_t *work)
+static void free_work_entry(odp_pl_work_param_t *work)
 {
 	free(work->type);
 }
@@ -99,7 +99,7 @@ static res_t parse_flow_entry(config_setting_t *cs, flow_parse_t *flow)
 	const char *val_str;
 	int num;
 	config_setting_t *elem;
-	work_param_t *work;
+	odp_pl_work_param_t *work;
 
 	memset(flow, 0, sizeof(*flow));
 
@@ -179,7 +179,7 @@ static int parse_flow_entry_template(config_setting_t *cs, flow_parse_template_t
 	uint32_t num;
 	config_setting_t *elem;
 	const char *val_str;
-	work_param_t *work;
+	odp_pl_work_param_t *work;
 
 	memset(templ, 0, sizeof(*templ));
 
@@ -344,7 +344,7 @@ static odp_bool_t parse_flow_entry_from_template(flow_parse_template_t *templ, f
 {
 	char flow_name[FLOW_NAME_LEN];
 	char queue_name[ODP_QUEUE_NAME_LEN];
-	work_param_t *work_templ, *work;
+	odp_pl_work_param_t *work_templ, *work;
 
 	memset(flow, 0, sizeof(*flow));
 	memset(flow_name, 0, sizeof(flow_name));
@@ -427,17 +427,17 @@ static odp_bool_t flow_parser_init(config_t *config)
 	res_t res;
 	flow_parse_template_t templ;
 
-	cs = config_lookup(config, FLOW_DOMAIN);
+	cs = config_lookup(config, ODP_PL_FLOW_DOMAIN);
 
 	if (cs == NULL)	{
-		printf("Nothing to parse for \"" FLOW_DOMAIN "\" domain\n");
+		printf("Nothing to parse for \"" ODP_PL_FLOW_DOMAIN "\" domain\n");
 		return true;
 	}
 
 	num = config_setting_length(cs);
 
 	if (num == 0) {
-		ODPH_ERR("No valid \"" FLOW_DOMAIN "\" entries found\n");
+		ODPH_ERR("No valid \"" ODP_PL_FLOW_DOMAIN "\" entries found\n");
 		return false;
 	}
 
@@ -450,7 +450,7 @@ static odp_bool_t flow_parser_init(config_t *config)
 		elem = config_setting_get_elem(cs, i);
 
 		if (elem == NULL) {
-			ODPH_ERR("Unparsable \"" FLOW_DOMAIN "\" entry (%d)\n", i);
+			ODPH_ERR("Unparsable \"" ODP_PL_FLOW_DOMAIN "\" entry (%d)\n", i);
 			return false;
 		}
 
@@ -458,14 +458,14 @@ static odp_bool_t flow_parser_init(config_t *config)
 		res = parse_flow_entry(elem, flow);
 
 		if (res == PARSE_NOK) {
-			ODPH_ERR("Invalid \"" FLOW_DOMAIN "\" entry (%d)\n", i);
+			ODPH_ERR("Invalid \"" ODP_PL_FLOW_DOMAIN "\" entry (%d)\n", i);
 			free_flow_entry(flow);
 			return false;
 		} else if (res == PARSE_TEMPL) {
 			ret = parse_flow_entry_template(elem, &templ);
 
 			if (ret == -1) {
-				ODPH_ERR("Invalid \"" FLOW_DOMAIN "\" entry (%d)\n", i);
+				ODPH_ERR("Invalid \"" ODP_PL_FLOW_DOMAIN "\" entry (%d)\n", i);
 				free_flow_template(&templ);
 				return false;
 			}
@@ -480,7 +480,8 @@ static odp_bool_t flow_parser_init(config_t *config)
 				flow = &flows.flows[flows.num];
 
 				if (!parse_flow_entry_from_template(&templ, flow)) {
-					ODPH_ERR("Invalid \"" FLOW_DOMAIN "\" entry (%d)\n", i);
+					ODPH_ERR("Invalid \"" ODP_PL_FLOW_DOMAIN "\" entry (%d)\n",
+						 i);
 					free_flow_template(&templ);
 					free_flow_entry(flow);
 					return false;
@@ -506,7 +507,7 @@ static odp_bool_t flow_parser_deploy(void)
 	flow_t flow;
 	work_t *work;
 
-	printf("\n*** " FLOW_DOMAIN " resources ***\n");
+	printf("\n*** " ODP_PL_FLOW_DOMAIN " resources ***\n");
 
 	for (uint32_t i = 0U; i < flows.num; ++i) {
 		parse = &flows.flows[i];
@@ -519,7 +520,7 @@ static odp_bool_t flow_parser_deploy(void)
 			work[j] = work_create_work(&parse->work[j]);
 
 		name = parse->input != NULL ? parse->input : parse->output;
-		queue = (odp_queue_t)config_parser_get(QUEUE_DOMAIN, name);
+		queue = (odp_queue_t)odp_pl_config_parser_get(ODP_PL_QUEUE_DOMAIN, name);
 		flow = odp_queue_context(queue);
 
 		if (flow == NULL) {
@@ -610,5 +611,5 @@ static uintptr_t flow_parser_get_resource(const char *resource)
 	return (uintptr_t)flow;
 }
 
-CONFIG_PARSER_AUTOREGISTER(LOW_PRIO, FLOW_DOMAIN, flow_parser_init, flow_parser_deploy, NULL,
+CONFIG_PARSER_AUTOREGISTER(LOW_PRIO, ODP_PL_FLOW_DOMAIN, flow_parser_init, flow_parser_deploy, NULL,
 			   flow_parser_destroy, flow_parser_get_resource)
