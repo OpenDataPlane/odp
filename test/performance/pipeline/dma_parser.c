@@ -10,6 +10,7 @@
 
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include <libconfig.h>
@@ -20,6 +21,12 @@
 #include "config_parser.h"
 
 #define CONF_STR_NAME "name"
+#define CONF_STR_COMPL_MODE_MASK "compl_mode_mask"
+#define CONF_STR_ORDER "order"
+
+#define ORDER_NONE "none"
+#define ORDER_COMPL "compl"
+#define ORDER_ALL "all"
 
 typedef struct {
 	char *name;
@@ -51,6 +58,22 @@ static odp_bool_t parse_dma_entry(config_setting_t *cs, dma_parse_t *dma)
 
 	if (dma->name == NULL)
 		ODPH_ABORT("Error allocating memory, aborting\n");
+
+	if (config_setting_lookup_string(cs, CONF_STR_COMPL_MODE_MASK, &val_str) == CONFIG_TRUE)
+		dma->param.compl_mode_mask = (odp_dma_compl_mode_t)strtoul(val_str, NULL, 0);
+
+	if (config_setting_lookup_string(cs, CONF_STR_ORDER, &val_str) == CONFIG_TRUE) {
+		if (strcmp(val_str, ORDER_NONE) == 0) {
+			dma->param.order = ODP_DMA_ORDER_NONE;
+		} else if (strcmp(val_str, ORDER_COMPL) == 0) {
+			dma->param.order = ODP_DMA_ORDER_COMPL;
+		} else if (strcmp(val_str, ORDER_ALL) == 0) {
+			dma->param.order = ODP_DMA_ORDER_ALL;
+		} else {
+			ODPH_ERR("No valid \"" CONF_STR_ORDER "\" found\n");
+			return false;
+		}
+	}
 
 	return true;
 }
