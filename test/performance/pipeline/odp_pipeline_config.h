@@ -11,6 +11,6 @@
 
 #include "odp_pipeline_domains.h"
 
-uintptr_t config_parser_get(const char *domain, const char *resource);
+uintptr_t odp_pl_config_parser_get(const char *domain, const char *resource);
 
 #endif

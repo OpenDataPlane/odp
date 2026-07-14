@@ -15,7 +15,7 @@
 
 #define WORK_PACKET_COPY "packet_copy"
 
-static int work_packet_copy(uintptr_t data, odp_event_t ev[], int num, work_stats_t *stats)
+static int work_packet_copy(uintptr_t data, odp_event_t ev[], int num, odp_pl_work_stats_t *stats)
 {
 	odp_pool_t pool = (odp_pool_t)data;
 	odp_packet_t dst, src;
@@ -38,7 +38,7 @@ static int work_packet_copy(uintptr_t data, odp_event_t ev[], int num, work_stat
 	return 0;
 }
 
-static void work_packet_copy_init(const work_param_t *param, work_init_t *init)
+static void work_packet_copy_init(const odp_pl_work_param_t *param, odp_pl_work_init_t *init)
 {
 	const char *val_str;
 
@@ -54,10 +54,10 @@ static void work_packet_copy_init(const work_param_t *param, work_init_t *init)
 		ODPH_ABORT("No \"" CONF_STR_POOL "\" found\n");
 
 	init->fn = work_packet_copy;
-	init->data = config_parser_get(POOL_DOMAIN, val_str);
+	init->data = odp_pl_config_parser_get(ODP_PL_POOL_DOMAIN, val_str);
 }
 
-static void work_packet_copy_print(const char *queue, const work_stats_t *stats)
+static void work_packet_copy_print(const char *queue, const odp_pl_work_stats_t *stats)
 {
 	printf("\n%s:\n"
 	       "  work:   %s\n"
@@ -68,5 +68,5 @@ static void work_packet_copy_destroy(uintptr_t data ODP_UNUSED)
 {
 }
 
-WORK_AUTOREGISTER(WORK_PACKET_COPY, work_packet_copy_init, work_packet_copy_print,
-		  work_packet_copy_destroy)
+ODP_PL_WORK_AUTOREGISTER(WORK_PACKET_COPY, work_packet_copy_init, work_packet_copy_print,
+			 work_packet_copy_destroy)

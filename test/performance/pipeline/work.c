@@ -18,9 +18,9 @@ typedef struct work_entry_s {
 	TAILQ_ENTRY(work_entry_s) w;
 
 	const char *name;
-	work_init_fn_t init_fn;
-	work_print_fn_t print_fn;
-	work_destroy_fn_t destroy_fn;
+	odp_pl_work_init_fn_t init_fn;
+	odp_pl_work_print_fn_t print_fn;
+	odp_pl_work_destroy_fn_t destroy_fn;
 } work_entry_t;
 
 typedef struct {
@@ -30,19 +30,19 @@ typedef struct {
 } work_entries_t;
 
 typedef struct ODP_ALIGNED_CACHE {
-	work_fn_t fn;
+	odp_pl_work_fn_t fn;
 	uintptr_t data;
 	work_entry_t *entry;
-	work_stats_t stats;
+	odp_pl_work_stats_t stats;
 } work_priv_t;
 
 static work_entries_t entries;
 
-work_t work_create_work(const work_param_t *param)
+work_t work_create_work(const odp_pl_work_param_t *param)
 {
 	work_priv_t *work = calloc(1U, sizeof(*work));
 	work_entry_t *entry;
-	work_init_t init;
+	odp_pl_work_init_t init;
 
 	if (work == NULL)
 		ODPH_ABORT("Error allocating memory, aborting\n");
@@ -68,8 +68,9 @@ int work_issue(work_t work, odp_event_t ev[], int num)
 	return priv->fn(priv->data, ev, num, &priv->stats);
 }
 
-void work_register_work(const char *name, work_init_fn_t init_fn, work_print_fn_t print_fn,
-			work_destroy_fn_t destroy_fn)
+void odp_pl_work_register_work(const char *name, odp_pl_work_init_fn_t init_fn,
+			       odp_pl_work_print_fn_t print_fn,
+			       odp_pl_work_destroy_fn_t destroy_fn)
 {
 	work_entry_t *entry = calloc(1U, sizeof(*entry));
 

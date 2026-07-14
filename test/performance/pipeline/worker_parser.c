@@ -174,17 +174,17 @@ static odp_bool_t worker_parser_init(config_t *config)
 	int num;
 	worker_t *worker;
 
-	cs = config_lookup(config, WORKER_DOMAIN);
+	cs = config_lookup(config, ODP_PL_WORKER_DOMAIN);
 
 	if (cs == NULL)	{
-		printf("Nothing to parse for \"" WORKER_DOMAIN "\" domain\n");
+		printf("Nothing to parse for \"" ODP_PL_WORKER_DOMAIN "\" domain\n");
 		return true;
 	}
 
 	num = config_setting_length(cs);
 
 	if (num == 0) {
-		ODPH_ERR("No valid \"" WORKER_DOMAIN "\" entries found\n");
+		ODPH_ERR("No valid \"" ODP_PL_WORKER_DOMAIN "\" entries found\n");
 		return false;
 	}
 
@@ -197,14 +197,14 @@ static odp_bool_t worker_parser_init(config_t *config)
 		elem = config_setting_get_elem(cs, i);
 
 		if (elem == NULL) {
-			ODPH_ERR("Unparsable \"" WORKER_DOMAIN "\" entry (%d)\n", i);
+			ODPH_ERR("Unparsable \"" ODP_PL_WORKER_DOMAIN "\" entry (%d)\n", i);
 			return false;
 		}
 
 		worker = &workers.workers[workers.num];
 
 		if (!parse_worker_entry(elem, worker)) {
-			ODPH_ERR("Invalid \"" WORKER_DOMAIN "\" entry (%d)\n", i);
+			ODPH_ERR("Invalid \"" ODP_PL_WORKER_DOMAIN "\" entry (%d)\n", i);
 			free_worker_entry(worker);
 			return false;
 		}
@@ -219,7 +219,7 @@ static odp_bool_t worker_parser_deploy(void)
 {
 	worker_t *worker;
 
-	printf("\n*** " WORKER_DOMAIN " resources ***\n");
+	printf("\n*** " ODP_PL_WORKER_DOMAIN " resources ***\n");
 
 	for (uint32_t i = 0U; i < workers.num; ++i) {
 		worker = &workers.workers[i];
@@ -274,5 +274,6 @@ static uintptr_t worker_parser_get_resource(const char *resource)
 	return (uintptr_t)worker;
 }
 
-CONFIG_PARSER_AUTOREGISTER(LOW_PRIO, WORKER_DOMAIN, worker_parser_init, worker_parser_deploy, NULL,
-			   worker_parser_destroy, worker_parser_get_resource)
+CONFIG_PARSER_AUTOREGISTER(LOW_PRIO, ODP_PL_WORKER_DOMAIN, worker_parser_init,
+			   worker_parser_deploy, NULL, worker_parser_destroy,
+			   worker_parser_get_resource)

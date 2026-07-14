@@ -343,17 +343,17 @@ static odp_bool_t crypto_parser_init(config_t *config)
 	int num;
 	crypto_parse_t *crypto;
 
-	cs = config_lookup(config, CRYPTO_DOMAIN);
+	cs = config_lookup(config, ODP_PL_CRYPTO_DOMAIN);
 
 	if (cs == NULL)	{
-		printf("Nothing to parse for \"" CRYPTO_DOMAIN "\" domain\n");
+		printf("Nothing to parse for \"" ODP_PL_CRYPTO_DOMAIN "\" domain\n");
 		return true;
 	}
 
 	num = config_setting_length(cs);
 
 	if (num == 0) {
-		ODPH_ERR("No valid \"" CRYPTO_DOMAIN "\" entries found\n");
+		ODPH_ERR("No valid \"" ODP_PL_CRYPTO_DOMAIN "\" entries found\n");
 		return false;
 	}
 
@@ -366,14 +366,14 @@ static odp_bool_t crypto_parser_init(config_t *config)
 		elem = config_setting_get_elem(cs, i);
 
 		if (elem == NULL) {
-			ODPH_ERR("Unparsable \"" CRYPTO_DOMAIN "\" entry (%d)\n", i);
+			ODPH_ERR("Unparsable \"" ODP_PL_CRYPTO_DOMAIN "\" entry (%d)\n", i);
 			return false;
 		}
 
 		crypto = &cryptos.cryptos[cryptos.num];
 
 		if (!parse_crypto_entry(elem, crypto)) {
-			ODPH_ERR("Invalid \"" CRYPTO_DOMAIN "\" entry (%d)\n", i);
+			ODPH_ERR("Invalid \"" ODP_PL_CRYPTO_DOMAIN "\" entry (%d)\n", i);
 			free_crypto_entry(crypto);
 			return false;
 		}
@@ -390,11 +390,11 @@ static odp_bool_t crypto_parser_deploy(void)
 	odp_queue_t queue;
 	odp_crypto_ses_create_err_t status;
 
-	printf("\n*** " CRYPTO_DOMAIN " resources ***\n");
+	printf("\n*** " ODP_PL_CRYPTO_DOMAIN " resources ***\n");
 
 	for (uint32_t i = 0U; i < cryptos.num; ++i) {
 		crypto = &cryptos.cryptos[i];
-		queue = (odp_queue_t)config_parser_get(QUEUE_DOMAIN, crypto->queue);
+		queue = (odp_queue_t)odp_pl_config_parser_get(ODP_PL_QUEUE_DOMAIN, crypto->queue);
 		crypto->param.compl_queue = queue;
 		(void)odp_crypto_session_create(&crypto->param, &crypto->crypto, &status);
 
@@ -439,5 +439,6 @@ static uintptr_t crypto_parser_get_resource(const char *resource)
 	return (uintptr_t)crypto;
 }
 
-CONFIG_PARSER_AUTOREGISTER(LOW_PRIO, CRYPTO_DOMAIN, crypto_parser_init, crypto_parser_deploy, NULL,
-			   crypto_parser_destroy, crypto_parser_get_resource)
+CONFIG_PARSER_AUTOREGISTER(LOW_PRIO, ODP_PL_CRYPTO_DOMAIN, crypto_parser_init,
+			   crypto_parser_deploy, NULL, crypto_parser_destroy,
+			   crypto_parser_get_resource)

@@ -25,7 +25,8 @@ typedef struct {
 
 static work_global_forward_data_t common;
 
-static int work_global_forward(uintptr_t data, odp_event_t ev[], int num, work_stats_t *stats)
+static int work_global_forward(uintptr_t data, odp_event_t ev[], int num,
+			       odp_pl_work_stats_t *stats)
 {
 	work_global_forward_data_t *priv = (work_global_forward_data_t *)data;
 	int ret;
@@ -38,7 +39,7 @@ static int work_global_forward(uintptr_t data, odp_event_t ev[], int num, work_s
 	return ret;
 }
 
-static void work_global_forward_init(const work_param_t *param, work_init_t *init)
+static void work_global_forward_init(const odp_pl_work_param_t *param, odp_pl_work_init_t *init)
 {
 	const char *val_str;
 	config_setting_t *elem;
@@ -68,7 +69,8 @@ static void work_global_forward_init(const work_param_t *param, work_init_t *ini
 
 		for (int i = 0; i < num; ++i) {
 			val_str = config_setting_get_string_elem(elem, i);
-			common.out[i] = (odp_queue_t)config_parser_get(QUEUE_DOMAIN, val_str);
+			common.out[i] = (odp_queue_t)
+				odp_pl_config_parser_get(ODP_PL_QUEUE_DOMAIN, val_str);
 		}
 
 		common.num = num;
@@ -78,7 +80,7 @@ static void work_global_forward_init(const work_param_t *param, work_init_t *ini
 	init->data = (uintptr_t)&common;
 }
 
-static void work_global_forward_print(const char *queue, const work_stats_t *stats)
+static void work_global_forward_print(const char *queue, const odp_pl_work_stats_t *stats)
 {
 	printf("\n%s:\n"
 	       "  work:      %s\n"
@@ -94,5 +96,5 @@ static void work_global_forward_destroy(uintptr_t data ODP_UNUSED)
 	common.out = NULL;
 }
 
-WORK_AUTOREGISTER(WORK_GLOBAL_FORWARD, work_global_forward_init, work_global_forward_print,
-		  work_global_forward_destroy)
+ODP_PL_WORK_AUTOREGISTER(WORK_GLOBAL_FORWARD, work_global_forward_init, work_global_forward_print,
+			 work_global_forward_destroy)

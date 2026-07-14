@@ -13,7 +13,7 @@
 
 typedef void *work_t;
 
-work_t work_create_work(const work_param_t *param);
+work_t work_create_work(const odp_pl_work_param_t *param);
 
 int work_issue(work_t work, odp_event_t ev[], int num);
 

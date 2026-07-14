@@ -29,7 +29,7 @@ typedef struct {
 } work_timeout_source_data_t;
 
 static int work_timeout_source(uintptr_t data, odp_event_t ev[] ODP_UNUSED, int num ODP_UNUSED,
-			       work_stats_t *stats)
+			       odp_pl_work_stats_t *stats)
 {
 	work_timeout_source_data_t *priv = (work_timeout_source_data_t *)data;
 	odp_timeout_t tmo;
@@ -72,7 +72,7 @@ static int work_timeout_source(uintptr_t data, odp_event_t ev[] ODP_UNUSED, int 
 	return 0;
 }
 
-static void work_timeout_source_init(const work_param_t *param, work_init_t *init)
+static void work_timeout_source_init(const odp_pl_work_param_t *param, odp_pl_work_init_t *init)
 {
 	work_timeout_source_data_t *data = calloc(1U, sizeof(*data));
 	const char *val_str;
@@ -92,13 +92,13 @@ static void work_timeout_source_init(const work_param_t *param, work_init_t *ini
 	if (val_str == NULL)
 		ODPH_ABORT("No \"" CONF_STR_TIMER "\" found\n");
 
-	data->tmr_pool = (odp_timer_pool_t)config_parser_get(TIMER_DOMAIN, val_str);
+	data->tmr_pool = (odp_timer_pool_t)odp_pl_config_parser_get(ODP_PL_TIMER_DOMAIN, val_str);
 	val_str = config_setting_get_string_elem(param->param, 1);
 
 	if (val_str == NULL)
 		ODPH_ABORT("No \"" CONF_STR_POOL "\" found\n");
 
-	data->tmo_pool = (odp_pool_t)config_parser_get(POOL_DOMAIN, val_str);
+	data->tmo_pool = (odp_pool_t)odp_pl_config_parser_get(ODP_PL_POOL_DOMAIN, val_str);
 	val_ll = config_setting_get_int64_elem(param->param, 2);
 
 	if (val_ll == 0)
@@ -106,12 +106,12 @@ static void work_timeout_source_init(const work_param_t *param, work_init_t *ini
 
 	data->timeout_ns = val_ll;
 	init->fn = work_timeout_source;
-	data->queue = (odp_queue_t)config_parser_get(QUEUE_DOMAIN, param->queue);
+	data->queue = (odp_queue_t)odp_pl_config_parser_get(ODP_PL_QUEUE_DOMAIN, param->queue);
 	data->tmr = ODP_TIMER_INVALID;
 	init->data = (uintptr_t)data;
 }
 
-static void work_timeout_source_print(const char *queue, const work_stats_t *stats)
+static void work_timeout_source_print(const char *queue, const odp_pl_work_stats_t *stats)
 {
 	printf("\n%s:\n"
 	       "  work:           %s\n"
@@ -137,5 +137,5 @@ static void work_timeout_source_destroy(uintptr_t data)
 	free(priv);
 }
 
-WORK_AUTOREGISTER(WORK_TIMEOUT_SOURCE, work_timeout_source_init, work_timeout_source_print,
-		  work_timeout_source_destroy)
+ODP_PL_WORK_AUTOREGISTER(WORK_TIMEOUT_SOURCE, work_timeout_source_init, work_timeout_source_print,
+			 work_timeout_source_destroy)

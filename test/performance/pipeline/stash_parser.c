@@ -136,17 +136,17 @@ static odp_bool_t stash_parser_init(config_t *config)
 	int num;
 	stash_parse_t *stash;
 
-	cs = config_lookup(config, STASH_DOMAIN);
+	cs = config_lookup(config, ODP_PL_STASH_DOMAIN);
 
 	if (cs == NULL)	{
-		printf("Nothing to parse for \"" STASH_DOMAIN "\" domain\n");
+		printf("Nothing to parse for \"" ODP_PL_STASH_DOMAIN "\" domain\n");
 		return true;
 	}
 
 	num = config_setting_length(cs);
 
 	if (num == 0) {
-		ODPH_ERR("No valid \"" STASH_DOMAIN "\" entries found\n");
+		ODPH_ERR("No valid \"" ODP_PL_STASH_DOMAIN "\" entries found\n");
 		return false;
 	}
 
@@ -159,14 +159,14 @@ static odp_bool_t stash_parser_init(config_t *config)
 		elem = config_setting_get_elem(cs, i);
 
 		if (elem == NULL) {
-			ODPH_ERR("Unparsable \"" STASH_DOMAIN "\" entry (%d)\n", i);
+			ODPH_ERR("Unparsable \"" ODP_PL_STASH_DOMAIN "\" entry (%d)\n", i);
 			return false;
 		}
 
 		stash = &stashes.stashes[stashes.num];
 
 		if (!parse_stash_entry(elem, stash)) {
-			ODPH_ERR("Invalid \"" STASH_DOMAIN "\" entry (%d)\n", i);
+			ODPH_ERR("Invalid \"" ODP_PL_STASH_DOMAIN "\" entry (%d)\n", i);
 			free_stash_entry(stash);
 			return false;
 		}
@@ -181,7 +181,7 @@ static odp_bool_t stash_parser_deploy(void)
 {
 	stash_parse_t *stash;
 
-	printf("\n*** " STASH_DOMAIN " resources ***\n");
+	printf("\n*** " ODP_PL_STASH_DOMAIN " resources ***\n");
 
 	for (uint32_t i = 0U; i < stashes.num; ++i) {
 		stash = &stashes.stashes[i];
@@ -229,5 +229,5 @@ static uintptr_t stash_parser_get_resource(const char *resource)
 	return (uintptr_t)stash;
 }
 
-CONFIG_PARSER_AUTOREGISTER(MED_PRIO, STASH_DOMAIN, stash_parser_init, stash_parser_deploy, NULL,
-			   stash_parser_destroy, stash_parser_get_resource)
+CONFIG_PARSER_AUTOREGISTER(MED_PRIO, ODP_PL_STASH_DOMAIN, stash_parser_init, stash_parser_deploy,
+			   NULL, stash_parser_destroy, stash_parser_get_resource)

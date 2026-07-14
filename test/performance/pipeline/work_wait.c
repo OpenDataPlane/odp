@@ -16,7 +16,7 @@
 #define WORK_WAIT "wait"
 
 static int work_wait(uintptr_t data, odp_event_t ev[] ODP_UNUSED, int num ODP_UNUSED,
-		     work_stats_t *stats)
+		     odp_pl_work_stats_t *stats)
 {
 	odp_time_wait_ns((uint64_t)data);
 	stats->data1 = (uint64_t)data;
@@ -24,7 +24,7 @@ static int work_wait(uintptr_t data, odp_event_t ev[] ODP_UNUSED, int num ODP_UN
 	return 0;
 }
 
-static void work_wait_init(const work_param_t *param, work_init_t *init)
+static void work_wait_init(const odp_pl_work_param_t *param, odp_pl_work_init_t *init)
 {
 	long long val_ll;
 
@@ -43,7 +43,7 @@ static void work_wait_init(const work_param_t *param, work_init_t *init)
 	init->data = (uintptr_t)val_ll;
 }
 
-static void work_wait_print(const char *queue, const work_stats_t *stats)
+static void work_wait_print(const char *queue, const odp_pl_work_stats_t *stats)
 {
 	printf("\n%s:\n"
 	       "  work:        %s\n"
@@ -54,4 +54,4 @@ static void work_wait_destroy(uintptr_t data ODP_UNUSED)
 {
 }
 
-WORK_AUTOREGISTER(WORK_WAIT, work_wait_init, work_wait_print, work_wait_destroy)
+ODP_PL_WORK_AUTOREGISTER(WORK_WAIT, work_wait_init, work_wait_print, work_wait_destroy)

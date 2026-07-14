@@ -274,17 +274,17 @@ static odp_bool_t pktio_parser_init(config_t *config)
 	int num;
 	pktio_parse_t *pktio;
 
-	cs = config_lookup(config, PKTIO_DOMAIN);
+	cs = config_lookup(config, ODP_PL_PKTIO_DOMAIN);
 
 	if (cs == NULL)	{
-		printf("Nothing to parse for \"" PKTIO_DOMAIN "\" domain\n");
+		printf("Nothing to parse for \"" ODP_PL_PKTIO_DOMAIN "\" domain\n");
 		return true;
 	}
 
 	num = config_setting_length(cs);
 
 	if (num == 0) {
-		ODPH_ERR("No valid \"" PKTIO_DOMAIN "\" entries found\n");
+		ODPH_ERR("No valid \"" ODP_PL_PKTIO_DOMAIN "\" entries found\n");
 		return false;
 	}
 
@@ -297,14 +297,14 @@ static odp_bool_t pktio_parser_init(config_t *config)
 		elem = config_setting_get_elem(cs, i);
 
 		if (elem == NULL) {
-			ODPH_ERR("Unparsable \"" PKTIO_DOMAIN "\" entry (%d)\n", i);
+			ODPH_ERR("Unparsable \"" ODP_PL_PKTIO_DOMAIN "\" entry (%d)\n", i);
 			return false;
 		}
 
 		pktio = &pktios.pktios[pktios.num];
 
 		if (!parse_pktio_entry(elem, pktio)) {
-			ODPH_ERR("Invalid \"" PKTIO_DOMAIN "\" entry (%d)\n", i);
+			ODPH_ERR("Invalid \"" ODP_PL_PKTIO_DOMAIN "\" entry (%d)\n", i);
 			free_pktio_entry(pktio);
 			return false;
 		}
@@ -319,18 +319,19 @@ static odp_bool_t pktio_parser_deploy(void)
 {
 	pktio_parse_t *pktio;
 
-	printf("\n*** " PKTIO_DOMAIN " resources ***\n");
+	printf("\n*** " ODP_PL_PKTIO_DOMAIN " resources ***\n");
 
 	for (uint32_t i = 0U; i < pktios.num; ++i) {
 		pktio = &pktios.pktios[i];
 
 		if (pktio->group != NULL)
-			pktio->in_param.queue_param.sched.group =
-			       (odp_schedule_group_t)config_parser_get(SCHED_DOMAIN, pktio->group);
+			pktio->in_param.queue_param.sched.group = (odp_schedule_group_t)
+				odp_pl_config_parser_get(ODP_PL_SCHED_DOMAIN, pktio->group);
 
-		pktio->pktio = odp_pktio_open(pktio->iface,
-					      (odp_pool_t)config_parser_get(POOL_DOMAIN,
-									    pktio->pool),
+		pktio->pktio =
+		odp_pktio_open(pktio->iface,
+			       (odp_pool_t)odp_pl_config_parser_get(ODP_PL_POOL_DOMAIN,
+								    pktio->pool),
 					      &pktio->param);
 
 		if (pktio->pktio == ODP_PKTIO_INVALID) {
@@ -468,5 +469,5 @@ static uintptr_t pktio_parser_get_resource(const char *resource)
 	ODPH_ABORT("No resource found (%s), aborting\n", resource);
 }
 
-CONFIG_PARSER_AUTOREGISTER(MED_PRIO, PKTIO_DOMAIN, pktio_parser_init, pktio_parser_deploy,
+CONFIG_PARSER_AUTOREGISTER(MED_PRIO, ODP_PL_PKTIO_DOMAIN, pktio_parser_init, pktio_parser_deploy,
 			   pktio_parser_undeploy, pktio_parser_destroy, pktio_parser_get_resource)

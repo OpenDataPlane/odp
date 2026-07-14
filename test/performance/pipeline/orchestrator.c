@@ -304,8 +304,8 @@ static worker_fn_t get_worker(orchestrator_worker_t *orch)
 			ODPH_ABORT("Error allocating memory, aborting\n");
 
 		for (uint32_t i = 0U; i < worker->num_out; ++i)
-			outputs[i] = (odp_queue_t)config_parser_get(QUEUE_DOMAIN,
-								    worker->outputs[i]);
+			outputs[i] = (odp_queue_t)odp_pl_config_parser_get(ODP_PL_QUEUE_DOMAIN,
+									   worker->outputs[i]);
 
 		orch->outputs = outputs;
 	}
@@ -318,8 +318,9 @@ static worker_fn_t get_worker(orchestrator_worker_t *orch)
 				ODPH_ABORT("Error allocating memory, aborting\n");
 
 			for (uint32_t i = 0U; i < worker->num_in; ++i)
-				grps[i] = (odp_schedule_group_t)config_parser_get(SCHED_DOMAIN,
-										worker->inputs[i]);
+				grps[i] = (odp_schedule_group_t)
+					odp_pl_config_parser_get(ODP_PL_SCHED_DOMAIN,
+								 worker->inputs[i]);
 
 			orch->inputs.g = grps;
 		} else {
@@ -329,8 +330,8 @@ static worker_fn_t get_worker(orchestrator_worker_t *orch)
 				ODPH_ABORT("Error allocating memory, aborting\n");
 
 			for (uint32_t i = 0U; i < worker->num_in; ++i)
-				qs[i] = (odp_queue_t)config_parser_get(QUEUE_DOMAIN,
-								       worker->inputs[i]);
+				qs[i] = (odp_queue_t)odp_pl_config_parser_get(ODP_PL_QUEUE_DOMAIN,
+									      worker->inputs[i]);
 
 			orch->inputs.q = qs;
 		}
@@ -367,7 +368,7 @@ static void print_stats(void)
 
 void orchestrator_deploy(void)
 {
-	cpumap_t *map = (cpumap_t *)config_parser_get(CPUMAP_DOMAIN, NULL);
+	cpumap_t *map = (cpumap_t *)odp_pl_config_parser_get(ODP_PL_CPUMAP_DOMAIN, NULL);
 	odph_thread_common_param_t common;
 	const int num = map->num;
 	odph_thread_param_t params[num], *param;
@@ -382,7 +383,8 @@ void orchestrator_deploy(void)
 	for (int i = 0; i < num; ++i) {
 		worker = &orchestrator.config->worker[i];
 		worker->prog_config = orchestrator.config;
-		worker->worker = (worker_t *)config_parser_get(WORKER_DOMAIN, map->workers[i]);
+		worker->worker = (worker_t *)
+			odp_pl_config_parser_get(ODP_PL_WORKER_DOMAIN, map->workers[i]);
 		param = &params[i];
 		odph_thread_param_init(param);
 		param->start = get_worker(worker);

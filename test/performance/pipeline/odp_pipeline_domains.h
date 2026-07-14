@@ -7,17 +7,17 @@
 #ifndef ODP_PIPELINE_DOMAINS_H_
 #define ODP_PIPELINE_DOMAINS_H_
 
-#define CLASSIFICATION_DOMAIN "classification"
-#define CPUMAP_DOMAIN "cpumap"
-#define CRYPTO_DOMAIN "crypto"
-#define DMA_DOMAIN "dma"
-#define FLOW_DOMAIN "flows"
-#define PKTIO_DOMAIN "pktios"
-#define POOL_DOMAIN "pools"
-#define QUEUE_DOMAIN "queues"
-#define SCHED_DOMAIN "scheduler"
-#define STASH_DOMAIN "stash"
-#define TIMER_DOMAIN "timers"
-#define WORKER_DOMAIN "workers"
+#define ODP_PL_CLASSIFICATION_DOMAIN "classification"
+#define ODP_PL_CPUMAP_DOMAIN "cpumap"
+#define ODP_PL_CRYPTO_DOMAIN "crypto"
+#define ODP_PL_DMA_DOMAIN "dma"
+#define ODP_PL_FLOW_DOMAIN "flows"
+#define ODP_PL_PKTIO_DOMAIN "pktios"
+#define ODP_PL_POOL_DOMAIN "pools"
+#define ODP_PL_QUEUE_DOMAIN "queues"
+#define ODP_PL_SCHED_DOMAIN "scheduler"
+#define ODP_PL_STASH_DOMAIN "stash"
+#define ODP_PL_TIMER_DOMAIN "timers"
+#define ODP_PL_WORKER_DOMAIN "workers"
 
 #endif
