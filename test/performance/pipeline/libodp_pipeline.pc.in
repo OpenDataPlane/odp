@@ -4,7 +4,7 @@ libdir=@libdir@
 includedir=@includedir@
 
 Name: libodp_pipeline
-Description: ODP pipeline tester work registration and config parsing interface
+Description: ODP pipeline tester work registration, config parsing and orchestrator control interface
 Version: @PKGCONFIG_VERSION@
 Requires: lib@ODP_LIB_NAME@ libconfig
 Cflags: -I${includedir}

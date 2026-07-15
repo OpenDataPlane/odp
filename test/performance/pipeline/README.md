@@ -687,3 +687,7 @@ to be replaced.
 
 Libraries can query resources parsed from the configuration file, such as queues or pools, with the
 `odp_pl_config_parser_get()` function from the public `odp_pipeline_config.h` header.
+
+Work can request the tester to stop with the `odp_pl_request_termination()` function from the public
+`odp_pipeline_orchestrator.h` header. The passed source and cause strings are printed and the
+pipeline is then torn down as if a termination signal had been received.
