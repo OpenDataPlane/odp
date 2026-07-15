@@ -9,6 +9,8 @@
 
 #include <odp_api.h>
 
+#include "odp_pipeline_orchestrator.h"
+
 odp_bool_t orchestrator_init(void);
 
 void orchestrator_deploy(void);

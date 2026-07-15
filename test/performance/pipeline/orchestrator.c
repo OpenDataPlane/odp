@@ -93,6 +93,12 @@ static void terminate(int signal ODP_UNUSED)
 	odp_atomic_store_u32(&orchestrator.config->is_running, 0U);
 }
 
+void odp_pl_request_termination(const char *source, const char *cause)
+{
+	printf("\n*** termination requested by %s: %s ***\n", source, cause);
+	odp_atomic_store_u32(&orchestrator.config->is_running, 0U);
+}
+
 static void setup_signals(void)
 {
 	struct sigaction action = { .sa_handler = terminate };

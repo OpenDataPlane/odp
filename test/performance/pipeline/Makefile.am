@@ -11,12 +11,13 @@ pkgconfig_DATA = libodp_pipeline.pc
 include_HEADERS = \
 	odp_pipeline_config.h \
 	odp_pipeline_domains.h \
+	odp_pipeline_orchestrator.h \
 	odp_pipeline_work.h
 
 bin_PROGRAMS = odp_pipeline
 
 # Export the executable's dynamic symbols so runtime-loaded work libraries can resolve
-# odp_pl_work_register_work() and link libdl for dlopen().
+# the public odp_pl_*() functions and link libdl for dlopen().
 odp_pipeline_LDFLAGS = $(AM_LDFLAGS) -Wl,--export-dynamic
 odp_pipeline_LDADD = $(LDADD) -ldl
 
@@ -36,6 +37,7 @@ odp_pipeline_SOURCES = \
 	flow_parser.c \
 	helpers.h \
 	main.c \
+	odp_pipeline_orchestrator.h \
 	orchestrator.h \
 	orchestrator.c \
 	pktio_parser.c \
