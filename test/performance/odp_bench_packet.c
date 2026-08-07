@@ -1419,6 +1419,19 @@ DEF_FLAG_TEST_FUN(packet_has_icmp,      odp_packet_has_icmp)
 DEF_FLAG_TEST_FUN(packet_has_flow_hash, odp_packet_has_flow_hash)
 DEF_FLAG_TEST_FUN(packet_has_ts,        odp_packet_has_ts)
 
+static uint32_t get_test_pkt_offset(void)
+{
+	uint32_t len = gbl_args->pkt.len;
+
+	if (len <= 2)
+		return len / 2;
+	/*
+	 * Make the offset nonzero, not a compile time constant and
+	 * small enough to be accepted by typical ODP implementations.
+	 */
+	return ((len / 2) % 0x7f) + 1;
+}
+
 static int packet_l2_type(void)
 {
 	uint32_t ret = 0;
@@ -1454,7 +1467,7 @@ static int packet_l2_offset_set(void)
 {
 	int i;
 	uint32_t ret = 0;
-	uint32_t offset = gbl_args->pkt.len / 2;
+	uint32_t offset = get_test_pkt_offset();
 
 	for (i = 0; i < TEST_REPEAT_COUNT; i++)
 		ret += odp_packet_l2_offset_set(gbl_args->pkt_tbl[i], offset);
@@ -1497,7 +1510,7 @@ static int packet_l3_offset_set(void)
 {
 	int i;
 	uint32_t ret = 0;
-	uint32_t offset = gbl_args->pkt.len / 2;
+	uint32_t offset = get_test_pkt_offset();
 
 	for (i = 0; i < TEST_REPEAT_COUNT; i++)
 		ret += odp_packet_l3_offset_set(gbl_args->pkt_tbl[i], offset);
@@ -1540,7 +1553,7 @@ static int packet_l4_offset_set(void)
 {
 	int i;
 	uint32_t ret = 0;
-	uint32_t offset = gbl_args->pkt.len / 2;
+	uint32_t offset = get_test_pkt_offset();
 
 	for (i = 0; i < TEST_REPEAT_COUNT; i++)
 		ret += odp_packet_l4_offset_set(gbl_args->pkt_tbl[i], offset);
