@@ -34,7 +34,7 @@
 #include <openssl/evp.h>
 #include <openssl/opensslv.h>
 
-#if (OPENSSL_VERSION_NUMBER >= 0x10100000L) && !defined(OPENSSL_NO_POLY1305)
+#if !defined(OPENSSL_NO_POLY1305)
 #define _ODP_HAVE_CHACHA20_POLY1305 1
 #else
 #define _ODP_HAVE_CHACHA20_POLY1305 0
@@ -248,8 +248,6 @@ struct odp_crypto_global_s {
 
 	/* These flags are cleared at alloc_session() */
 	uint8_t ctx_valid[ODP_THREAD_COUNT_MAX][MAX_SESSIONS];
-
-	odp_ticketlock_t              openssl_lock[];
 };
 
 static odp_crypto_global_t *global;
@@ -323,37 +321,6 @@ null_crypto_init_routine(odp_crypto_generic_session_t *session)
 {
 	(void)session;
 }
-
-/* Mimic new OpenSSL 1.1.y API */
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
-static HMAC_CTX *HMAC_CTX_new(void)
-{
-	HMAC_CTX *ctx = malloc(sizeof(*ctx));
-
-	HMAC_CTX_init(ctx);
-	return ctx;
-}
-
-static void HMAC_CTX_free(HMAC_CTX *ctx)
-{
-	HMAC_CTX_cleanup(ctx);
-	free(ctx);
-}
-
-static EVP_MD_CTX *EVP_MD_CTX_new(void)
-{
-	EVP_MD_CTX *ctx = malloc(sizeof(*ctx));
-
-	EVP_MD_CTX_init(ctx);
-	return ctx;
-}
-
-static void EVP_MD_CTX_free(EVP_MD_CTX *ctx)
-{
-	EVP_MD_CTX_cleanup(ctx);
-	free(ctx);
-}
-#endif
 
 static void
 auth_hmac_init(odp_crypto_generic_session_t *session)
@@ -2362,29 +2329,11 @@ int odp_crypto_session_destroy(odp_crypto_session_t session)
 	return 0;
 }
 
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
-static void ODP_UNUSED openssl_thread_id(CRYPTO_THREADID ODP_UNUSED *id)
-{
-	CRYPTO_THREADID_set_numeric(id, odp_thread_id());
-}
-
-static void ODP_UNUSED openssl_lock(int mode, int n,
-				    const char *file ODP_UNUSED,
-				    int line ODP_UNUSED)
-{
-	if (mode & CRYPTO_LOCK)
-		odp_ticketlock_lock(&global->openssl_lock[n]);
-	else
-		odp_ticketlock_unlock(&global->openssl_lock[n]);
-}
-#endif
-
 int _odp_crypto_init_global(void)
 {
 	size_t mem_size;
 	odp_shm_t shm;
 	int idx;
-	int nlocks = CRYPTO_num_locks();
 
 	if (odp_global_ro.disable.crypto) {
 		_ODP_PRINT("\nODP crypto is DISABLED\n");
@@ -2393,7 +2342,6 @@ int _odp_crypto_init_global(void)
 
 	/* Calculate the memory size we need */
 	mem_size  = sizeof(odp_crypto_global_t);
-	mem_size += nlocks * sizeof(odp_ticketlock_t);
 
 	/* Allocate our globally shared memory */
 	shm = odp_shm_reserve("_odp_crypto_ssl_global", mem_size,
@@ -2416,16 +2364,6 @@ int _odp_crypto_init_global(void)
 	}
 	odp_spinlock_init(&global->lock);
 
-	if (nlocks > 0) {
-		for (idx = 0; idx < nlocks; idx++)
-			odp_ticketlock_init(&global->openssl_lock[idx]);
-
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
-		CRYPTO_THREADID_set_callback(openssl_thread_id);
-		CRYPTO_set_locking_callback(openssl_lock);
-#endif
-	}
-
 	return 0;
 }
 
@@ -2445,11 +2383,6 @@ int _odp_crypto_term_global(void)
 		_ODP_ERR("crypto sessions still active\n");
 		rc = -1;
 	}
-
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
-	CRYPTO_set_locking_callback(NULL);
-	CRYPTO_set_id_callback(NULL);
-#endif
 
 	ret = odp_shm_free(odp_shm_lookup("_odp_crypto_ssl_global"));
 	if (ret < 0) {
