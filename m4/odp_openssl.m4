@@ -42,14 +42,25 @@ LIBS="$OPENSSL_LIBS $LIBS"
 ##########################################################################
 odp_openssl_ok=yes
 odp_openssl_err="OpenSSL not found"
-AC_CHECK_HEADERS([openssl/des.h openssl/rand.h openssl/hmac.h openssl/evp.h], [],
-		 [odp_openssl_ok=no])
-AC_CACHE_CHECK([for EVP_EncryptInit in -lcrypto], [odp_cv_openssl_crypto],
-[AC_LINK_IFELSE([AC_LANG_CALL([], [EVP_EncryptInit])],
-	       [odp_cv_openssl_crypto=yes],
-	       [odp_cv_openssl_crypto=no])])
-if test "x$odp_cv_openssl_crypto" != "xyes" ; then
-	odp_openssl_ok=no
+AC_MSG_CHECKING([for OpenSSL headers])
+AC_PREPROC_IFELSE([AC_LANG_PROGRAM([[
+#include <openssl/des.h>
+#include <openssl/rand.h>
+#include <openssl/hmac.h>
+#include <openssl/evp.h>
+]])],
+	[AC_MSG_RESULT([yes])],
+	[AC_MSG_RESULT([no])
+	 odp_openssl_ok=no])
+
+if test "x$odp_openssl_ok" = "xyes" ; then
+	AC_CACHE_CHECK([for EVP_EncryptInit in -lcrypto], [odp_cv_openssl_crypto],
+	[AC_LINK_IFELSE([AC_LANG_CALL([], [EVP_EncryptInit])],
+		       [odp_cv_openssl_crypto=yes],
+		       [odp_cv_openssl_crypto=no])])
+	if test "x$odp_cv_openssl_crypto" != "xyes" ; then
+		odp_openssl_ok=no
+	fi
 fi
 
 ##########################################################################
