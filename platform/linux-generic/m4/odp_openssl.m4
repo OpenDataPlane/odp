@@ -12,7 +12,7 @@ AC_ARG_WITH([openssl],
 	    [],
 	    [with_openssl=yes])
 AS_IF([test "$with_openssl" != "no"],
-      [ODP_OPENSSL
+      [ODP_OPENSSL([], [], [0x10000000L], [1.0.0])
        have_openssl=1], [have_openssl=0])
 AM_CONDITIONAL([WITH_OPENSSL], [test x$with_openssl != xno])
 AC_DEFINE_UNQUOTED([_ODP_OPENSSL], [$have_openssl],
