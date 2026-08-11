@@ -161,6 +161,7 @@ int ipsec_check_test_sa_update_seq_num(void);
 int ipsec_check_esp_aes_gcm_128_reass_ipv4(void);
 int ipsec_check_esp_aes_gcm_128_reass_ipv6(void);
 int ipsec_check_esp_null_aes_xcbc(void);
+int ipsec_check_esp_sm4_cbc_sm3(void);
 int ipsec_check_out_ipv4_ah_sha256_frag_check(void);
 int ipsec_check_out_ipv4_esp_null_sha256_frag_check(void);
 int ipsec_check_out_dummy_esp_null_sha256(void);
