@@ -58,7 +58,8 @@ static struct cipher_param ciphers[] = {
 	ALG(ODP_CIPHER_ALG_AES_CBC, &key_a5_256, NULL),
 	ALG(ODP_CIPHER_ALG_AES_CTR, &key_a5_128, &key_mcgrew_gcm_salt_3),
 	ALG(ODP_CIPHER_ALG_AES_CTR, &key_a5_192, &key_mcgrew_gcm_salt_3),
-	ALG(ODP_CIPHER_ALG_AES_CTR, &key_a5_256, &key_mcgrew_gcm_salt_3)
+	ALG(ODP_CIPHER_ALG_AES_CTR, &key_a5_256, &key_mcgrew_gcm_salt_3),
+	ALG(ODP_CIPHER_ALG_SM4_CBC, &key_sm4, NULL),
 };
 
 /*
@@ -73,7 +74,8 @@ static struct auth_param auths[] = {
 	ALG(ODP_AUTH_ALG_SHA384_HMAC, &key_5a_384, NULL),
 	ALG(ODP_AUTH_ALG_SHA512_HMAC, &key_5a_512, NULL),
 	ALG(ODP_AUTH_ALG_AES_CMAC, &key_5a_128, NULL),
-	ALG(ODP_AUTH_ALG_AES_XCBC_MAC, &key_5a_128, NULL)
+	ALG(ODP_AUTH_ALG_AES_XCBC_MAC, &key_5a_128, NULL),
+	ALG(ODP_AUTH_ALG_SM3_HMAC, &key_sm3, NULL),
 };
 
 /*
