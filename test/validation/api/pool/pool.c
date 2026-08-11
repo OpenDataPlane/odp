@@ -2089,6 +2089,8 @@ static void test_packet_pool_ext_info(void)
 	CU_ASSERT_FATAL(odp_pool_info(pool, &info) == 0);
 
 	CU_ASSERT(info.pool_ext);
+	CU_ASSERT(info.type == ODP_POOL_PACKET);
+	CU_ASSERT(info.pool_ext_param.type == ODP_POOL_PACKET);
 	CU_ASSERT(strncmp(name, info.name, strlen(name)) == 0);
 
 	CU_ASSERT(odp_pool_destroy(pool) == 0);
