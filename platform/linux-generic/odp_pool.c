@@ -2223,6 +2223,7 @@ odp_pool_t odp_pool_ext_create(const char *name, const odp_pool_ext_param_t *par
 
 	pool->ring_mask      = ring_size - 1;
 	pool->type           = param->type;
+	pool->type_2         = param->type;
 	pool->num            = num_buf;
 	pool->headroom       = headroom;
 	pool->tailroom       = 0;
