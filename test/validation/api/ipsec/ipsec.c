@@ -384,6 +384,11 @@ int ipsec_check_esp_sm4_cbc_sm3(void)
 				ODP_AUTH_ALG_SM3_HMAC, 256);
 }
 
+int ipsec_check_ah_sm3(void)
+{
+	return ipsec_check_ah(ODP_AUTH_ALG_SM3_HMAC, 256);
+}
+
 int ipsec_check_out_ipv4_ah_sha256_frag_check(void)
 {
 	if (!capa.out_op.opt.frag_mode || ipsec_check_ah_sha256() == ODP_TEST_INACTIVE)
