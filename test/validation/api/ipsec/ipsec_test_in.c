@@ -79,6 +79,38 @@ static void test_in_ipv4_ah_sha256(void)
 	ipsec_sa_destroy(sa);
 }
 
+static void test_in_ipv4_ah_sm3(void)
+{
+	odp_ipsec_sa_param_t param;
+	odp_ipsec_sa_t sa;
+
+	ipsec_sa_param_fill(&param,
+			    ODP_IPSEC_DIR_INBOUND, ODP_IPSEC_AH, 123, NULL,
+			    ODP_CIPHER_ALG_NULL, NULL,
+			    ODP_AUTH_ALG_SM3_HMAC, &key_sm3,
+			    NULL, NULL);
+
+	sa = odp_ipsec_sa_create(&param);
+
+	CU_ASSERT_FATAL(ODP_IPSEC_SA_INVALID != sa);
+
+	ipsec_test_part test = {
+		.pkt_in = &pkt_ipv4_icmp_0_ah_sm3_1,
+		.num_pkt = 1,
+		.out = {
+			{ .status.warn.all = 0,
+			  .status.error.all = 0,
+			  .l3_type = ODP_PROTO_L3_TYPE_IPV4,
+			  .l4_type = ODP_PROTO_L4_TYPE_ICMPV4,
+			  .pkt_res = &pkt_ipv4_icmp_0 },
+		},
+	};
+
+	ipsec_check_in_one(&test, sa);
+
+	ipsec_sa_destroy(sa);
+}
+
 static void test_in_ipv4_ah_sha256_tun_ipv4(void)
 {
 	odp_ipsec_tunnel_param_t tunnel;
@@ -2398,6 +2430,8 @@ odp_testinfo_t ipsec_in_suite[] = {
 				  ipsec_check_esp_null_aes_xcbc),
 	ODP_TEST_INFO_CONDITIONAL(test_in_ipv4_esp_sm4_cbc_sm3,
 				  ipsec_check_esp_sm4_cbc_sm3),
+	ODP_TEST_INFO_CONDITIONAL(test_in_ipv4_ah_sm3,
+				  ipsec_check_ah_sm3),
 	ODP_TEST_INFO(test_ipsec_proto_err),
 	ODP_TEST_INFO(test_ipsec_auth_err),
 	ODP_TEST_INFO_NULL,
