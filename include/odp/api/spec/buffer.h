@@ -79,6 +79,23 @@ void odp_buffer_to_event_multi(const odp_buffer_t buf[], odp_event_t ev[], int n
 void *odp_buffer_addr(odp_buffer_t buf);
 
 /**
+ * Convert buffer start address to handle
+ *
+ * Converts a buffer start address (from a previous odp_buffer_addr() call) to a buffer handle.
+ * This allows an application to save memory as it can store only buffer addresses (instead of
+ * addresses and handles) and convert those to handles when needed.
+ *
+ * This call can be used only for buffers of an external memory pool (see odp_pool_ext_create()).
+ *
+ * @param      pool     Pool the buffer originates from
+ * @param      addr     Buffer start address
+ *
+ * @return Buffer handle on success
+ * @retval ODP_BUFFER_INVALID on failure
+ */
+odp_buffer_t odp_buffer_from_addr(odp_pool_t pool, void *addr);
+
+/**
  * Buffer maximum data size
  *
  * @param buf      Buffer handle
