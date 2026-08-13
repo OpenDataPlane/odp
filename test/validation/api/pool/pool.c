@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2014-2018 Linaro Limited
  * Copyright (c) 2020 Marvell
- * Copyright (c) 2020-2025 Nokia
+ * Copyright (c) 2020-2026 Nokia
  */
 
 #include <odp_api.h>
@@ -1978,7 +1978,7 @@ static void test_packet_pool_ext_capa(void)
 {
 	odp_pool_ext_capability_t capa;
 	odp_pool_type_t type;
-	const odp_pool_type_t unsupported_types[] = {ODP_POOL_BUFFER, ODP_POOL_TIMEOUT,
+	const odp_pool_type_t unsupported_types[] = {ODP_POOL_TIMEOUT,
 						     ODP_POOL_EVENT_VECTOR,
 						     ODP_POOL_VECTOR, ODP_POOL_DMA_COMPL,
 						     ODP_POOL_ML_COMPL};
