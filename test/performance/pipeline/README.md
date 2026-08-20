@@ -771,3 +771,25 @@ Libraries can query resources parsed from the configuration file, such as queues
 Work can request the tester to stop with the `odp_pl_request_termination()` function from the public
 `odp_pipeline_orchestrator.h` header. The passed source and cause strings are printed and the
 pipeline is then torn down as if a termination signal had been received.
+
+#### Example library
+
+[work_example.c](work_example.c) is a minimal work library which forwards the events it receives to
+the queue named in its first work parameter. It is not built as part of the tester, but compiled
+into a loadable library with:
+
+```bash
+gcc -shared -fPIC $(pkg-config --cflags libodp_pipeline) work_example.c -o work_example.so
+```
+
+The ODP libraries are not linked in, as the tester exports the symbols the library needs and
+resolves them when loading the library. If ODP is installed to a non-default prefix, point
+`pkg-config` to it with exporting `PKG_CONFIG_PATH=<odp-install-prefix>/lib/pkgconfig`.
+
+[pipeline.conf](pipeline.conf) references the work by the name it registered, `example`, and
+configures a single worker which polls `queue1` and passes the received events to the work, which
+forwards them to `queue2`. The library is loaded at startup with:
+
+```bash
+odp_pipeline -f pipeline.conf -l ./work_example.so
+```
