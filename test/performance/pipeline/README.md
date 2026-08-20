@@ -651,6 +651,44 @@ not initialize or create ODP instances themselves. Additionally, work elements m
 explicitly configured ODP resources (configured via the configuration file) and must not create ODP
 resources themselves.
 
+### Work API
+
+Work registers itself with the `ODP_PL_WORK_AUTOREGISTER()` macro from the public
+`odp_pipeline_work.h` header. The macro takes the name with which the work is referenced from the
+`type` element of a flow `work` entry and the `init`, `print` and `destroy` functions described
+below, the actual work function being set as part of the `init` context. A registration overrides
+an earlier registration of the same name.
+
+- `init` function
+  - type: `void (*)(const odp_pl_work_param_t *param, odp_pl_work_init_t *init)`
+  - info: run once for every flow `work` entry referencing the work, during flow deployment. Stores
+          the work function to `init->fn` and, optionally, a context value to `init->data`. As
+          there is no return value, configuration errors are reported by aborting with
+          `ODPH_ABORT()`
+  - `param` elements:
+    - `queue`: name of the queue the flow is attached to
+    - `type`: registered name of the work
+    - `param`: configured parameter list, `NULL` if none was given
+- work function
+  - type: `int (*)(uintptr_t data, odp_event_t ev[], int num, odp_pl_work_stats_t *stats)`
+  - info: run for every burst of events the flow handles, with `data` set to the context stored
+          during init. For input flows, the work consumes events from the beginning of `ev` and
+          returns the number of events consumed, the next work of the chain then receiving the
+          remaining events. For output flows, the work writes up to `num` events to `ev` and
+          returns the number of events produced. Statistics can be accumulated to the four
+          free-form counters of `stats`
+- `print` function
+  - type: `void (*)(const char *queue, const odp_pl_work_stats_t *stats)`
+  - info: run once per work instance during teardown for printing the accumulated `stats`. `queue`
+          is the name of the queue the flow is attached to
+- `destroy` function
+  - type: `void (*)(uintptr_t data)`
+  - info: run once per work instance after `print` for releasing the context
+
+The context is an arbitrary `uintptr_t` value, so work needing more than a single handle can
+allocate a context structure in the init function, pass its address as the context and release it
+in the destroy function.
+
 ### Forward
 
 - name in configuration file: `work_forward`
