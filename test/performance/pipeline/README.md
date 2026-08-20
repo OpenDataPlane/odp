@@ -49,8 +49,8 @@ existing yet but might in the future. More details in the next section.
 
 A few examples showcasing how one could configure the pipeline:
 
-[pipeline_example1](pipeline_example1)
-[pipeline_example2](pipeline_example2)
+[pipeline_example1.conf](pipeline_example1.conf)
+[pipeline_example2.conf](pipeline_example2.conf)
 
 ### Config parser API
 
