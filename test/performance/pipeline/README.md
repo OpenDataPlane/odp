@@ -52,6 +52,48 @@ A few examples showcasing how one could configure the pipeline:
 [pipeline_example1](pipeline_example1)
 [pipeline_example2](pipeline_example2)
 
+### Config parser API
+
+Every domain is handled by a parser of its own which registers itself with the
+`CONFIG_PARSER_AUTOREGISTER()` macro from `config_parser.h`. The macro takes a priority, the domain
+name as it appears in the configuration file and the five functions described below.
+
+The priority is a constructor priority, given as one of `CRIT_PRIO`, `HIGH_PRIO`, `MED_PRIO` or
+`LOW_PRIO` from `common.h`, and it sets the order in which the parsers are evaluated, `CRIT_PRIO`
+parsers running first and `LOW_PRIO` parsers last. A parser has to be registered with a priority
+which runs it after the parsers providing the resources it depends on, e.g. queues and pools are
+parsed with `HIGH_PRIO` while flows, which reference both, are parsed with `LOW_PRIO`.
+
+- `init` function
+  - type: `odp_bool_t (*)(config_t *config)`
+  - info: looks up the domain from the passed configuration and parses its entries into parser
+          internal state, without creating any ODP resources yet. Run in registration order. An
+          absent domain is not an error as all domains are optional, a malformed one is
+- `deploy` function
+  - type: `odp_bool_t (*)(void)`
+  - info: creates the ODP resources described by the parsed entries. Run in registration order after
+          every `init` function has succeeded, so resources of the earlier domains can be queried
+          with `odp_pl_config_parser_get()`
+- `undeploy` function
+  - type: `void (*)(void)`
+  - info: optional, may be `NULL`. Run in reverse registration order once termination has been
+          requested but workers are still running. Meant for stopping resources which generate
+          events, e.g. the packet I/O domain stops its packet I/Os here
+- `destroy` function
+  - type: `void (*)(void)`
+  - info: frees the parser internal state and destroys the created ODP resources. Run in reverse
+          registration order at exit, also when `init` or `deploy` of any domain failed, so it has
+          to tolerate partially initialized state
+- `resource` function
+  - type: `uintptr_t (*)(const char *resource)`
+  - info: maps a resource name of the domain to the created resource handle, cast to `uintptr_t`.
+          Called through `odp_pl_config_parser_get()`
+
+Configuration errors are reported by returning `false` from `init` or `deploy`, which tears down the
+already deployed domains and exits with an error. Errors which cannot be recovered from, such as
+memory allocation failures and name lookups which cannot be satisfied, abort immediately with
+`ODPH_ABORT()`.
+
 ## Domains
 
 ### Classification
