@@ -1134,9 +1134,10 @@ static void event_aggr_print(queue_entry_t *aggr_queue)
 			    (void *)aggr_queue->handle);
 	len += _odp_snprint(&str[len], n - len, "  index           %" PRIu32 "\n",
 			    aggr_queue->index);
-	len += _odp_snprint(&str[len], n - len, "  base queue      %p\n", base_queue->handle);
+	len += _odp_snprint(&str[len], n - len, "  base queue      %p\n",
+			    (void *)base_queue->handle);
 	len += _odp_snprint(&str[len], n - len, "  base queue name %s\n", base_queue->name);
-	len += _odp_snprint(&str[len], n - len, "  pool            %p\n", aggr->pool);
+	len += _odp_snprint(&str[len], n - len, "  pool            %p\n", (void *)aggr->pool);
 	len += _odp_snprint(&str[len], n - len, "  event type      %" PRIu32 "\n",
 			    aggr->event_type);
 	len += _odp_snprint(&str[len], n - len, "  num events      %" PRIu16 "\n", num_events);
