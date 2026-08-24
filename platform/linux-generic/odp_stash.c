@@ -1399,6 +1399,8 @@ void odp_stash_print(odp_stash_t st)
 		return;
 	}
 
+	_ODP_PRINT_BUFFERING_START();
+
 	_ODP_PRINT("\nStash info\n");
 	_ODP_PRINT("----------\n");
 	_ODP_PRINT("  handle          0x%" PRIx64 "\n", odp_stash_to_u64(st));
@@ -1409,6 +1411,8 @@ void odp_stash_print(odp_stash_t st)
 	_ODP_PRINT("  ring size       %u\n", stash->ring_size);
 	_ODP_PRINT("  strict size     %u\n", stash->strict_size);
 	_ODP_PRINT("\n");
+
+	_ODP_PRINT_BUFFERING_STOP();
 }
 
 int odp_stash_stats(odp_stash_t st, odp_stash_stats_t *stats)

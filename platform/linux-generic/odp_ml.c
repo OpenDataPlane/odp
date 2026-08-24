@@ -1251,6 +1251,8 @@ static inline void mode_print(odp_ml_compl_mode_t compl_mode_mask)
 
 void odp_ml_print(void)
 {
+	_ODP_PRINT_BUFFERING_START();
+
 	_ODP_PRINT("\nML info\n");
 	_ODP_PRINT("-----------\n");
 	_ODP_PRINT("  max_model_size: %u\n", ML_MAX_MODEL_SIZE);
@@ -1274,6 +1276,8 @@ void odp_ml_print(void)
 		   _odp_ml_glb->capa.run.compl_queue_plain ? 'Y' : 'N',
 		   _odp_ml_glb->capa.run.compl_queue_sched ? 'Y' : 'N');
 	_ODP_PRINT("\n");
+
+	_ODP_PRINT_BUFFERING_STOP();
 }
 
 int odp_ml_model_extra_stat_info(odp_ml_model_t model,
