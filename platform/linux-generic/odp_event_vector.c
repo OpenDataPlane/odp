@@ -101,7 +101,7 @@ void odp_event_vector_print(odp_event_vector_t evv)
 		int str_len;
 
 		str_len = _odp_snprint(seg_str, max_len, "    event     %p  type %d subtype %d\n",
-				       ev,
+				       (void *)ev,
 				       odp_event_type(ev),
 				       odp_event_subtype(ev));
 

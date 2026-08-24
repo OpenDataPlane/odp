@@ -1701,7 +1701,7 @@ void odp_packet_print(odp_packet_t pkt)
 			str_len += _odp_snprint(&seg_str[str_len], max_len - str_len,
 						"        referenced seg: seg_data %p "
 						" ref_cnt %-2u seg_len %" PRIu32 "\n",
-						ref_seg->seg_data,
+						(void *)ref_seg->seg_data,
 						segment_ref(ref_seg),
 						ref_seg->seg_len);
 		}

@@ -193,7 +193,7 @@ void _odp_crypto_session_print(const char *type, uint32_t index,
 	len += _odp_snprint(&str[len], n - len, "  cipher_alg                %s\n",
 			    cipher_alg_name(param->cipher_alg));
 	len += _odp_snprint(&str[len], n - len, "  cipher_key.data           %p\n",
-			    param->cipher_key.data);
+			    (void *)param->cipher_key.data);
 	len += _odp_snprint(&str[len], n - len, "  cipher_key.length         %" PRIu32 "\n",
 			    param->cipher_key.length);
 	len += _odp_snprint(&str[len], n - len, "  cipher_iv_len             %" PRIu32 "\n",
@@ -201,7 +201,7 @@ void _odp_crypto_session_print(const char *type, uint32_t index,
 	len += _odp_snprint(&str[len], n - len, "  auth_alg                  %s\n",
 			    auth_alg_name(param->auth_alg));
 	len += _odp_snprint(&str[len], n - len, "  auth_key.data             %p\n",
-			    param->auth_key.data);
+			    (void *)param->auth_key.data);
 	len += _odp_snprint(&str[len], n - len, "  auth_key.length           %" PRIu32 "\n",
 			    param->auth_key.length);
 	len += _odp_snprint(&str[len], n - len, "  auth_iv_len               %" PRIu32 "\n",

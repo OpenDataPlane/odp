@@ -95,7 +95,8 @@ static void print_event_data(odp_event_t event, odp_event_type_t type)
 
 	char str[max_len];
 
-	len += _odp_snprint(&str[len], n - len, "%s %p data %p:\n", type_str, event, data);
+	len += _odp_snprint(&str[len], n - len, "%s %p data %p:\n", type_str, (void *)event,
+			    (void *)data);
 	while (byte_len) {
 		uint32_t row_len = byte_len > bytes_per_row ? bytes_per_row : byte_len;
 

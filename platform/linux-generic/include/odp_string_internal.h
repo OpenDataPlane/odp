@@ -9,6 +9,8 @@
 extern "C" {
 #endif
 
+#include <odp/api/hints.h>
+
 #include <stddef.h>
 
 /* Helps with snprintf() return value checking
@@ -16,6 +18,7 @@ extern "C" {
  * Otherwise like snprintf(), but returns always the number of characters
  * printed (without the end mark) or zero on error. Terminates the string
  * always with the end mark. */
+ODP_PRINTF_FORMAT(3, 4)
 int _odp_snprint(char *str, size_t size, const char *format, ...);
 
 /*
