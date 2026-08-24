@@ -364,6 +364,8 @@ static int read_config_file(void)
 
 static void print_compiler_info(void)
 {
+	_ODP_PRINT_BUFFERING_START();
+
 	_ODP_PRINT("Compiler defines:\n");
 	_ODP_PRINT("  __GCC_ATOMIC_LLONG_LOCK_FREE:        %d\n", __GCC_ATOMIC_LLONG_LOCK_FREE);
 	_ODP_PRINT("  __GCC_ATOMIC_LONG_LOCK_FREE:         %d\n", __GCC_ATOMIC_LONG_LOCK_FREE);
@@ -375,6 +377,8 @@ static void print_compiler_info(void)
 	_ODP_PRINT("0\n");
 #endif
 	_ODP_PRINT("\n");
+
+	_ODP_PRINT_BUFFERING_STOP();
 }
 
 /*
@@ -574,45 +578,46 @@ int odp_system_info(odp_system_info_t *info)
 
 void odp_sys_info_print(void)
 {
-	int len, num_cpu;
-	int max_len = 512;
+	int num_cpu;
 	odp_cpumask_t cpumask;
 	char cpumask_str[ODP_CPUMASK_STR_SIZE];
-	char str[max_len];
 
 	memset(cpumask_str, 0, sizeof(cpumask_str));
 
 	num_cpu = odp_cpumask_all_available(&cpumask);
 	odp_cpumask_to_str(&cpumask, cpumask_str, ODP_CPUMASK_STR_SIZE);
 
-	len = snprintf(str, max_len, "\n"
-		       "ODP system info\n"
-		       "---------------\n"
-		       "ODP API version:  %s\n"
-		       "ODP impl name:    %s\n"
-		       "ODP impl details: %s\n"
-		       "CPU model:        %s\n"
-		       "CPU freq (hz):    %" PRIu64 "\n"
-		       "Cache line size:  %i\n"
-		       "CPU count:        %i\n"
-		       "CPU mask:         %s\n"
-		       "\n",
-		       odp_version_api_str(),
-		       odp_version_impl_name(),
-		       odp_version_impl_str(),
-		       odp_cpu_model_str(),
-		       odp_cpu_hz_max(),
-		       odp_sys_cache_line_size(),
-		       num_cpu, cpumask_str);
+	_ODP_PRINT_BUFFERING_START();
 
-	str[len] = '\0';
-	_ODP_PRINT("%s", str);
+	_ODP_PRINT("\n"
+		   "ODP system info\n"
+		   "---------------\n"
+		   "ODP API version:  %s\n"
+		   "ODP impl name:    %s\n"
+		   "ODP impl details: %s\n"
+		   "CPU model:        %s\n"
+		   "CPU freq (hz):    %" PRIu64 "\n"
+		   "Cache line size:  %i\n"
+		   "CPU count:        %i\n"
+		   "CPU mask:         %s\n"
+		   "\n",
+		   odp_version_api_str(),
+		   odp_version_impl_name(),
+		   odp_version_impl_str(),
+		   odp_cpu_model_str(),
+		   odp_cpu_hz_max(),
+		   odp_sys_cache_line_size(),
+		   num_cpu, cpumask_str);
 
 	_odp_sys_info_print_arch();
+
+	_ODP_PRINT_BUFFERING_STOP();
 }
 
 void odp_sys_config_print(void)
 {
+	_ODP_PRINT_BUFFERING_START();
+
 	/* Print ODP_CONFIG_FILE default and override values */
 	if (_odp_libconfig_print())
 		_ODP_ERR("Config file print failed\n");
@@ -654,4 +659,6 @@ void odp_sys_config_print(void)
 	_ODP_PRINT("CONFIG_ML_MAX_OUTPUTS:         %i\n", CONFIG_ML_MAX_OUTPUTS);
 	_ODP_PRINT("CONFIG_CACHE_PAD_LINES:        %i\n", CONFIG_CACHE_PAD_LINES);
 	_ODP_PRINT("\n");
+
+	_ODP_PRINT_BUFFERING_STOP();
 }

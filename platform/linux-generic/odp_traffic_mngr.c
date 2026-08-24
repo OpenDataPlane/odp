@@ -4973,6 +4973,8 @@ void odp_tm_stats_print(odp_tm_t odp_tm)
 	tm_system = GET_TM_SYSTEM(odp_tm);
 	input_work_queue = &tm_system->input_work_queue;
 
+	_ODP_PRINT_BUFFERING_START();
+
 	_ODP_PRINT("\nTM stats\n");
 	_ODP_PRINT("--------\n");
 	_ODP_PRINT("  tm_system=0x%" PRIX64 " tm_idx=%u\n", odp_tm, tm_system->tm_idx);
@@ -5004,6 +5006,8 @@ void odp_tm_stats_print(odp_tm_t odp_tm)
 				   tm_queue_obj->pkts_dequeued_cnt,
 				   tm_queue_obj->pkts_consumed_cnt);
 	}
+
+	_ODP_PRINT_BUFFERING_STOP();
 }
 
 int odp_tm_queue_stats(odp_tm_queue_t tm_queue, odp_tm_queue_stats_t *stats)

@@ -1797,6 +1797,8 @@ void odp_pool_print(odp_pool_t pool_hdl)
 
 	pool = _odp_pool_entry(pool_hdl);
 
+	_ODP_PRINT_BUFFERING_START();
+
 	_ODP_PRINT("\nPool info\n");
 	_ODP_PRINT("---------\n");
 	_ODP_PRINT("  pool            %" PRIu64 "\n",
@@ -1824,6 +1826,8 @@ void odp_pool_print(odp_pool_t pool_hdl)
 		   pool->mem_src_ops ? pool->mem_src_ops->name : "(none)");
 	_ODP_PRINT("  event valid.    %d\n", _ODP_EVENT_VALIDATION);
 	_ODP_PRINT("\n");
+
+	_ODP_PRINT_BUFFERING_STOP();
 }
 
 void odp_pool_print_all(void)

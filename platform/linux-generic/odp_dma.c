@@ -987,11 +987,15 @@ void odp_dma_print(odp_dma_t dma)
 		return;
 	}
 
+	_ODP_PRINT_BUFFERING_START();
+
 	_ODP_PRINT("\nDMA info\n");
 	_ODP_PRINT("--------\n");
 	_ODP_PRINT("  DMA handle      0x%" PRIx64 "\n", odp_dma_to_u64(dma));
 	_ODP_PRINT("  name            %s\n", session->name);
 	_ODP_PRINT("\n");
+
+	_ODP_PRINT_BUFFERING_STOP();
 }
 
 void odp_dma_compl_print(odp_dma_compl_t dma_compl)
@@ -1006,6 +1010,8 @@ void odp_dma_compl_print(odp_dma_compl_t dma_compl)
 
 	ret = odp_dma_compl_result(dma_compl, &result);
 
+	_ODP_PRINT_BUFFERING_START();
+
 	_ODP_PRINT("\nDMA completion\n");
 	_ODP_PRINT("--------------\n");
 	_ODP_PRINT("  Compl event handle: 0x%" PRIx64 "\n", _odp_pri(dma_compl));
@@ -1018,6 +1024,8 @@ void odp_dma_compl_print(odp_dma_compl_t dma_compl)
 	}
 
 	_ODP_PRINT("\n");
+
+	_ODP_PRINT_BUFFERING_STOP();
 }
 
 int _odp_dma_init_global(void)

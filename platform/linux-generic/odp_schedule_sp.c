@@ -1277,12 +1277,16 @@ static void schedule_print(void)
 
 	(void)schedule_capability(&capa);
 
+	_ODP_PRINT_BUFFERING_START();
+
 	_ODP_PRINT("\nScheduler debug info\n");
 	_ODP_PRINT("--------------------\n");
 	_ODP_PRINT("  scheduler:         sp\n");
 	_ODP_PRINT("  max groups:        %u\n", capa.max_groups);
 	_ODP_PRINT("  max priorities:    %u\n", capa.max_prios);
 	_ODP_PRINT("\n");
+
+	_ODP_PRINT_BUFFERING_STOP();
 }
 
 static void get_config(schedule_config_t *config)

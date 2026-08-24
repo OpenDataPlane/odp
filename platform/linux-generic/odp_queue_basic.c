@@ -1191,6 +1191,9 @@ static void queue_print(odp_queue_t handle)
 		_ODP_ERR("Invalid queue status:%d\n", status);
 		return;
 	}
+
+	_ODP_PRINT_BUFFERING_START();
+
 	_ODP_PRINT("\nQueue info\n");
 	_ODP_PRINT("----------\n");
 	_ODP_PRINT("  handle          %p\n", (void *)queue->handle);
@@ -1263,6 +1266,8 @@ static void queue_print(odp_queue_t handle)
 	_ODP_PRINT("\n");
 
 	UNLOCK(queue);
+
+	_ODP_PRINT_BUFFERING_STOP();
 }
 
 static void queue_print_all(void)

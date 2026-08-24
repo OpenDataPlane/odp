@@ -2002,6 +2002,8 @@ int _odp_ishm_status(const char *title)
 			max_name_len = str_len;
 	}
 
+	_ODP_PRINT_BUFFERING_START();
+
 	_ODP_PRINT("%s\n", title);
 	_ODP_PRINT("    %-*s flag %-29s %-8s   %-8s %-3s %-3s %-3s file\n",
 		   max_name_len, "name", "range", "user_len", "unused",
@@ -2132,6 +2134,9 @@ int _odp_ishm_status(const char *title)
 	_ODP_PRINT("\n");
 
 	odp_spinlock_unlock(&ishm_tbl->lock);
+
+	_ODP_PRINT_BUFFERING_STOP();
+
 	return nb_blocks;
 }
 
@@ -2151,6 +2156,8 @@ void _odp_ishm_print(int block_index)
 	}
 
 	block = &ishm_tbl->block[block_index];
+
+	_ODP_PRINT_BUFFERING_START();
 
 	_ODP_PRINT("\nSHM block info\n--------------\n");
 	_ODP_PRINT(" name:       %s\n",   block->param_name);
@@ -2186,6 +2193,8 @@ void _odp_ishm_print(int block_index)
 	_ODP_PRINT("\n");
 
 	odp_spinlock_unlock(&ishm_tbl->lock);
+
+	_ODP_PRINT_BUFFERING_STOP();
 }
 
 int32_t odp_system_meminfo(odp_system_meminfo_t *info, odp_system_memblock_t memblock[],
