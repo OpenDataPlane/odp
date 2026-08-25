@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2013-2018 Linaro Limited
- * Copyright (c) 2021-2024 Nokia
+ * Copyright (c) 2021-2026 Nokia
  */
 
 #include <odp_posix_extensions.h>
@@ -220,6 +220,9 @@ int _odp_thread_term_local(void)
 	int group_all, group_worker, group_control;
 	int id = _odp_this_thread->thr;
 	odp_thread_type_t type = _odp_this_thread->type;
+
+	/* Flush pending prints */
+	_odp_print_term_local();
 
 	group_all = 1;
 	group_worker = 1;

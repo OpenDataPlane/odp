@@ -23,6 +23,8 @@ int _odp_thread_init_local(odp_thread_type_t type);
 int _odp_thread_term_local(void);
 int _odp_thread_term_global(void);
 
+void _odp_print_term_local(void);
+
 int _odp_pcapng_init_global(void);
 int _odp_pcapng_term_global(void);
 
