@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2014-2018 Linaro Limited
- * Copyright (c) 2020-2023 Nokia
+ * Copyright (c) 2020-2026 Nokia
  */
 
 /**
@@ -36,6 +36,12 @@ extern "C" {
 
 extern odp_log_func_t _odp_log_fn;
 extern odp_abort_func_t _odp_abort_fn;
+
+int _odp_print_buffering(void);
+void _odp_print_buffering_start(void);
+void _odp_print_buffering_stop(void);
+ODP_PRINTF_FORMAT(1, 2)
+void _odp_print_buffered(const char *fmt, ...);
 
 static inline odp_log_func_t _odp_log_fn_get(void)
 {
@@ -114,7 +120,26 @@ static inline odp_log_func_t _odp_log_fn_get(void)
  * specifically for dumping internal data.
  */
 #define _ODP_PRINT(...) \
-	_ODP_LOG_FN(ODP_LOG_PRINT, ##__VA_ARGS__)
+	do { \
+		if (_odp_print_buffering()) \
+			_odp_print_buffered(__VA_ARGS__); \
+		else \
+			_ODP_LOG_FN(ODP_LOG_PRINT, ##__VA_ARGS__); \
+	} while (0)
+
+/**
+ * Start buffering _ODP_PRINT() output of the calling thread. The buffered
+ * output is printed with a single log function call when the matching
+ * _ODP_PRINT_BUFFERING_STOP() is called. Calls may be nested, only the outermost
+ * _ODP_PRINT_BUFFERING_STOP() prints.
+ */
+#define _ODP_PRINT_BUFFERING_START() _odp_print_buffering_start()
+
+/**
+ * Stop buffering _ODP_PRINT() output of the calling thread and print the
+ * buffered output. Must be paired with _ODP_PRINT_BUFFERING_START().
+ */
+#define _ODP_PRINT_BUFFERING_STOP() _odp_print_buffering_stop()
 
 #pragma GCC diagnostic pop
 
