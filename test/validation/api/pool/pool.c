@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2014-2018 Linaro Limited
  * Copyright (c) 2020 Marvell
- * Copyright (c) 2020-2025 Nokia
+ * Copyright (c) 2020-2026 Nokia
  */
 
 #include <odp_api.h>
@@ -18,6 +18,8 @@
 #define VEC_LEN  32
 #define PKT_LEN  400
 #define PKT_NUM  500
+#define ALIGN_NUM 32
+#define ALIGN_LEN 1223
 #define ELEM_NUM 10u
 #define ELEM_SIZE 128u
 #define CACHE_SIZE 32
@@ -642,6 +644,47 @@ static void pool_test_alloc_buffer_max_cache(void)
 	alloc_buffer(global_pool_capa.buf.max_cache_size);
 }
 
+static void buffer_align(uint32_t param_align, uint32_t expected_align)
+{
+	odp_pool_t pool;
+	odp_pool_param_t param;
+	odp_buffer_t buf[ALIGN_NUM];
+	uint32_t i, num = 0;
+
+	CU_ASSERT_FATAL(TEST_CHECK_POW2(expected_align));
+
+	odp_pool_param_init(&param);
+	param.type      = ODP_POOL_BUFFER;
+	param.buf.num   = ALIGN_NUM;
+	param.buf.size  = ALIGN_LEN;
+	param.buf.align = param_align;
+
+	pool = odp_pool_create(NULL, &param);
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+
+	for (i = 0; i < ALIGN_NUM; i++) {
+		buf[num] = odp_buffer_alloc(pool);
+		CU_ASSERT(buf[num] != ODP_BUFFER_INVALID);
+
+		if (buf[num] == ODP_BUFFER_INVALID)
+			break;
+
+		CU_ASSERT((uintptr_t)odp_buffer_addr(buf[num]) % expected_align == 0);
+		CU_ASSERT(odp_buffer_size(buf[num]) >= ALIGN_LEN);
+		num++;
+	}
+
+	odp_buffer_free_multi(buf, num);
+
+	CU_ASSERT(odp_pool_destroy(pool) == 0);
+}
+
+static void pool_test_alloc_buffer_align(void)
+{
+	buffer_align(0, 8);
+	buffer_align(global_pool_capa.buf.max_align, global_pool_capa.buf.max_align);
+}
+
 static void alloc_packet_vector(uint32_t cache_size)
 {
 	odp_pool_t pool;
@@ -811,6 +854,47 @@ static void pool_test_alloc_packet_min_cache(void)
 static void pool_test_alloc_packet_max_cache(void)
 {
 	alloc_packet(global_pool_capa.pkt.max_cache_size);
+}
+
+static void packet_align(uint32_t param_align, uint32_t expected_align)
+{
+	odp_pool_t pool;
+	odp_pool_param_t param;
+	odp_packet_t pkt[ALIGN_NUM];
+	uint32_t i, num = 0;
+
+	CU_ASSERT_FATAL(TEST_CHECK_POW2(expected_align));
+
+	odp_pool_param_init(&param);
+	param.type      = ODP_POOL_PACKET;
+	param.pkt.num   = ALIGN_NUM;
+	param.pkt.len   = ALIGN_LEN;
+	param.pkt.align = param_align;
+
+	pool = odp_pool_create(NULL, &param);
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+
+	for (i = 0; i < ALIGN_NUM; i++) {
+		pkt[num] = odp_packet_alloc(pool, ALIGN_LEN);
+		CU_ASSERT(pkt[num] != ODP_PACKET_INVALID);
+
+		if (pkt[num] == ODP_PACKET_INVALID)
+			break;
+
+		CU_ASSERT((uintptr_t)odp_packet_data(pkt[num]) % expected_align == 0);
+		CU_ASSERT(odp_packet_len(pkt[num]) == ALIGN_LEN);
+		num++;
+	}
+
+	odp_packet_free_multi(pkt, num);
+
+	CU_ASSERT(odp_pool_destroy(pool) == 0);
+}
+
+static void pool_test_alloc_packet_align(void)
+{
+	packet_align(0, 1);
+	packet_align(global_pool_capa.pkt.max_align, global_pool_capa.pkt.max_align);
 }
 
 static void pool_test_alloc_packet_subparam(void)
@@ -2619,6 +2703,7 @@ odp_testinfo_t pool_suite[] = {
 	ODP_TEST_INFO(pool_test_alloc_buffer),
 	ODP_TEST_INFO(pool_test_alloc_buffer_min_cache),
 	ODP_TEST_INFO(pool_test_alloc_buffer_max_cache),
+	ODP_TEST_INFO(pool_test_alloc_buffer_align),
 	ODP_TEST_INFO(pool_test_alloc_packet_vector),
 	ODP_TEST_INFO(pool_test_alloc_packet_vector_min_cache),
 	ODP_TEST_INFO(pool_test_alloc_packet_vector_max_cache),
@@ -2628,6 +2713,7 @@ odp_testinfo_t pool_suite[] = {
 	ODP_TEST_INFO(pool_test_alloc_packet),
 	ODP_TEST_INFO(pool_test_alloc_packet_min_cache),
 	ODP_TEST_INFO(pool_test_alloc_packet_max_cache),
+	ODP_TEST_INFO(pool_test_alloc_packet_align),
 	ODP_TEST_INFO(pool_test_alloc_packet_subparam),
 	ODP_TEST_INFO(pool_test_alloc_timeout),
 	ODP_TEST_INFO(pool_test_alloc_timeout_min_cache),
