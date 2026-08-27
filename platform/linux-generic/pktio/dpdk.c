@@ -81,6 +81,7 @@ ODP_STATIC_ASSERT(CONFIG_PACKET_HEADROOM == RTE_PKTMBUF_HEADROOM,
 #define PCAP_DRV_NAME "net_pcap"
 
 #define DPDK_MEMORY_MB 512
+#define DPDK_SOCKET_MEM_OPT "--socket-mem "
 #define DPDK_NB_MBUF 16384
 #define DPDK_MBUF_BUF_SIZE RTE_MBUF_DEFAULT_BUF_SIZE
 #define DPDK_MEMPOOL_CACHE_SIZE 64
@@ -1193,11 +1194,21 @@ static int dpdk_pktio_init(void)
 	if (numa_nodes <= 0)
 		numa_nodes = 1;
 
-	char mem_str[mem_str_len * numa_nodes + 1];
+	char mem_str[sizeof(DPDK_SOCKET_MEM_OPT) + mem_str_len * numa_nodes];
 
-	for (i = 0; i < numa_nodes; i++)
-		sprintf(&mem_str[i * mem_str_len], "%d,", DPDK_MEMORY_MB);
-	mem_str[mem_str_len * numa_nodes - 1] = '\0';
+	/* Preallocated memory is required only in process mode */
+	if (odp_global_ro.init_param.mem_model == ODP_MEM_MODEL_PROCESS) {
+		const int opt_len = sizeof(DPDK_SOCKET_MEM_OPT) - 1;
+
+		_odp_strcpy(mem_str, DPDK_SOCKET_MEM_OPT, sizeof(mem_str));
+
+		for (i = 0; i < numa_nodes; i++)
+			sprintf(&mem_str[opt_len + i * mem_str_len], "%d,", DPDK_MEMORY_MB);
+
+		mem_str[opt_len + mem_str_len * numa_nodes - 1] = ' ';
+	} else {
+		mem_str[0] = '\0';
+	}
 
 	cmdline = getenv("ODP_PKTIO_DPDK_PARAMS");
 	if (cmdline == NULL)
@@ -1205,7 +1216,7 @@ static int dpdk_pktio_init(void)
 
 	/* masklen includes the terminating null as well */
 	cmd_len = snprintf(NULL, 0, "odpdpdk --file-prefix %" PRIu32 "_ "
-			   "--proc-type auto -c %s --socket-mem %s %s ",
+			   "--proc-type auto -c %s %s%s ",
 			   odp_global_ro.main_pid, mask_str, mem_str, cmdline);
 
 	char full_cmd[cmd_len];
@@ -1213,7 +1224,7 @@ static int dpdk_pktio_init(void)
 	/* first argument is facility log, simply bind it to odpdpdk for now.*/
 	cmd_len = snprintf(full_cmd, cmd_len,
 			   "odpdpdk --file-prefix %" PRIu32 "_ "
-			   "--proc-type auto -c %s --socket-mem %s %s ",
+			   "--proc-type auto -c %s %s%s ",
 			   odp_global_ro.main_pid, mask_str, mem_str, cmdline);
 
 	for (i = 0, dpdk_argc = 1; i < cmd_len; ++i) {
