@@ -58,4 +58,10 @@ odp_pipeline_SOURCES = \
 	work_wait.c \
 	worker.h \
 	worker_parser.c
+
+EXTRA_DIST = \
+	pipeline.conf \
+	pipeline_example1.conf \
+	pipeline_example2.conf \
+	work_example.c
 endif
