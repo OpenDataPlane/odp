@@ -1,0 +1,5 @@
+<map id="odp_pool_capability_t" name="odp_pool_capability_t">
+<area shape="rect" id="Node000001" title="Pool capabilities." alt="" coords="5,93,169,119"/>
+<area shape="rect" id="Node000002" href="$unionodp__pool__stats__opt__t.html" title="Pool statistics counters options." alt="" coords="7,5,167,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="90,45,90,93,85,93,85,45"/>
+</map>

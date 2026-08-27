@@ -1,0 +1,19 @@
+<map id="rwlock.h" name="rwlock.h">
+<area shape="rect" id="Node000001" title="ODP RW Locks." alt="" coords="389,5,467,31"/>
+<area shape="rect" id="Node000002" href="$odp__api_8h.html" title="The OpenDataPlane API." alt="" coords="316,79,401,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="409,43,372,80,368,77,405,39"/>
+<area shape="rect" id="Node000003" href="$api_2abi-default_2rwlock__recursive_8h.html" title="ODP recursive read/write lock." alt="" coords="425,79,569,104"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="451,39,488,77,484,80,447,43"/>
+<area shape="rect" id="Node000004" href="$arch_2arm32-linux_2odp_2api_2abi_2rwlock__recursive_8h_source.html" title=" " alt="" coords="5,152,149,177"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="417,109,145,155,145,149,416,104"/>
+<area shape="rect" id="Node000005" href="$arch_2arm64-linux_2odp_2api_2abi_2rwlock__recursive_8h_source.html" title=" " alt="" coords="173,152,317,177"/>
+<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="444,110,287,154,285,149,443,105"/>
+<area shape="rect" id="Node000006" href="$arch_2default-linux_2odp_2api_2abi_2rwlock__recursive_8h_source.html" title=" " alt="" coords="341,152,485,177"/>
+<area shape="poly" id="edge5_Node000003_Node000006" title=" " alt="" coords="475,115,429,154,425,150,472,111"/>
+<area shape="rect" id="Node000007" href="$arch_2power64-linux_2odp_2api_2abi_2rwlock__recursive_8h_source.html" title=" " alt="" coords="509,152,653,177"/>
+<area shape="poly" id="edge6_Node000003_Node000007" title=" " alt="" coords="523,111,569,150,566,154,520,115"/>
+<area shape="rect" id="Node000008" href="$arch_2x86__32-linux_2odp_2api_2abi_2rwlock__recursive_8h_source.html" title=" " alt="" coords="677,152,821,177"/>
+<area shape="poly" id="edge7_Node000003_Node000008" title=" " alt="" coords="552,105,709,149,708,154,550,110"/>
+<area shape="rect" id="Node000009" href="$arch_2x86__64-linux_2odp_2api_2abi_2rwlock__recursive_8h_source.html" title=" " alt="" coords="845,152,989,177"/>
+<area shape="poly" id="edge8_Node000003_Node000009" title=" " alt="" coords="579,104,850,149,849,155,578,109"/>
+</map>

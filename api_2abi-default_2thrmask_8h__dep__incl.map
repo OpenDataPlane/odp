@@ -1,0 +1,15 @@
+<map id="thrmask.h" name="thrmask.h">
+<area shape="rect" id="Node000001" title="ODP thread masks." alt="" coords="285,5,373,31"/>
+<area shape="rect" id="Node000002" href="$arch_2arm32-linux_2odp_2api_2abi_2thrmask_8h_source.html" title=" " alt="" coords="5,79,93,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="272,36,94,81,93,76,271,31"/>
+<area shape="rect" id="Node000003" href="$arch_2arm64-linux_2odp_2api_2abi_2thrmask_8h_source.html" title=" " alt="" coords="117,79,205,104"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="291,38,190,81,188,76,289,34"/>
+<area shape="rect" id="Node000004" href="$arch_2default-linux_2odp_2api_2abi_2thrmask_8h_source.html" title=" " alt="" coords="229,79,317,104"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="314,43,284,80,280,77,309,40"/>
+<area shape="rect" id="Node000005" href="$arch_2power64-linux_2odp_2api_2abi_2thrmask_8h_source.html" title=" " alt="" coords="341,79,429,104"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="349,40,378,77,374,80,345,43"/>
+<area shape="rect" id="Node000006" href="$arch_2x86__32-linux_2odp_2api_2abi_2thrmask_8h_source.html" title=" " alt="" coords="453,79,541,104"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="370,34,471,76,469,81,368,38"/>
+<area shape="rect" id="Node000007" href="$arch_2x86__64-linux_2odp_2api_2abi_2thrmask_8h_source.html" title=" " alt="" coords="565,79,653,104"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="388,31,566,76,565,81,386,36"/>
+</map>

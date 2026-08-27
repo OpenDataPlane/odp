@@ -1,0 +1,9 @@
+<map id="odp_ml_model_param_t" name="odp_ml_model_param_t">
+<area shape="rect" id="Node000001" title="Machine learning model parameters." alt="" coords="130,211,309,236"/>
+<area shape="rect" id="Node000002" href="$structodp__ml__data__format__t.html" title="Model input / output data format." alt="" coords="5,101,175,126"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="105,137,122,161,144,185,164,198,186,208,183,213,161,203,140,189,118,165,100,140"/>
+<area shape="rect" id="Node000003" href="$structodp__ml__shape__info__t.html" title="Model input / output data shape information." alt="" coords="10,5,170,31"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="93,44,93,101,87,101,87,44"/>
+<area shape="rect" id="Node000004" href="$struct__odp__ml__model__extra__param__t.html" title=" " alt="" coords="199,93,365,133"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="266,147,229,211,224,209,262,144"/>
+</map>

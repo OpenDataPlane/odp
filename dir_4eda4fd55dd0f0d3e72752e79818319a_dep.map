@@ -1,0 +1,23 @@
+<map id="arch" name="arch">
+<area shape="rect" id="node1" href="dir_be9f6d876b8eda462084eff1b3ea4553.html" title="api" alt="" coords="401,136,444,161"/>
+<area shape="rect" id="node3" href="dir_052e7602a29a4e1039e7de666bce86ca.html" title="arm32&#45;linux" alt="" coords="693,63,795,88"/>
+<area shape="poly" id="edge1" href="dir_000016_000007.html" alt="" coords="715,91,682,101,559,128,458,145,457,140,558,123,681,96,714,86"/>
+<area shape="rect" id="edge1-headlabel" href="dir_000016_000007.html" title="21" alt="" coords="455,143,472,158"/>
+<area shape="rect" id="node4" href="dir_70eaa2f41713610ea0cf8498c63ac358.html" title="arm64&#45;linux" alt="" coords="568,63,669,88"/>
+<area shape="poly" id="edge2" href="dir_000017_000007.html" alt="" coords="588,91,458,137,456,132,586,86"/>
+<area shape="rect" id="edge2-headlabel" href="dir_000017_000007.html" title="21" alt="" coords="456,134,473,149"/>
+<area shape="rect" id="node5" href="dir_48117faa50f292645806ea8fb70008d8.html" title="default&#45;linux" alt="" coords="438,63,543,88"/>
+<area shape="poly" id="edge3" href="dir_000021_000007.html" alt="" coords="481,90,445,128,441,124,478,86"/>
+<area shape="rect" id="edge3-headlabel" href="dir_000021_000007.html" title="21" alt="" coords="444,121,461,136"/>
+<area shape="rect" id="node6" href="dir_03c05aea247c636c5180e1c14df87c04.html" title="power64&#45;linux" alt="" coords="299,63,413,88"/>
+<area shape="poly" id="edge4" href="dir_000042_000007.html" alt="" coords="369,87,404,124,401,128,365,90"/>
+<area shape="rect" id="edge4-headlabel" href="dir_000042_000007.html" title="21" alt="" coords="397,110,414,124"/>
+<area shape="rect" id="node7" href="dir_8bf6b7e80d8919b75edbcc15956e61d9.html" title="x86_32&#45;linux" alt="" coords="168,63,275,88"/>
+<area shape="poly" id="edge5" href="dir_000050_000007.html" alt="" coords="255,86,389,133,387,138,253,91"/>
+<area shape="rect" id="edge5-headlabel" href="dir_000050_000007.html" title="21" alt="" coords="378,118,395,133"/>
+<area shape="rect" id="node8" href="dir_e8c392aee706068680f6562db90ecbae.html" title="x86_64&#45;linux" alt="" coords="37,63,144,88"/>
+<area shape="poly" id="edge6" href="dir_000051_000007.html" alt="" coords="122,86,157,96,283,123,388,140,387,145,282,128,155,101,121,91"/>
+<area shape="rect" id="edge6-headlabel" href="dir_000051_000007.html" title="21" alt="" coords="376,126,393,141"/>
+<area shape="rect" id="clust2" href="dir_4eda4fd55dd0f0d3e72752e79818319a.html" alt="" coords="27,52,880,99"/>
+<area shape="rect" id="clust1" href="dir_a97ec78d987d17ef5986981beb9a2005.html" title="odp" alt="" coords="16,16,891,172"/>
+</map>

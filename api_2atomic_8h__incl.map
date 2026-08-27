@@ -1,0 +1,11 @@
+<map id="atomic.h" name="atomic.h">
+<area shape="rect" id="Node000001" title="ODP atomic operations." alt="" coords="135,5,214,31"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,79,160,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="162,33,110,72,107,68,158,29"/>
+<area shape="rect" id="Node000003" href="$api_2spec_2atomic_8h.html" title="ODP atomic operations." alt="" coords="184,79,349,104"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="191,29,243,68,239,72,188,33"/>
+<area shape="rect" id="Node000004" href="$visibility__begin_8h_source.html" title=" " alt="" coords="95,152,257,177"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="254,106,203,145,200,141,250,102"/>
+<area shape="rect" id="Node000005" href="$visibility__end_8h_source.html" title=" " alt="" coords="281,152,431,177"/>
+<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="283,102,332,141,329,145,279,106"/>
+</map>

@@ -1,0 +1,16 @@
+<map id="deprecated.h" name="deprecated.h">
+<area shape="rect" id="Node000001" title="Macro for deprecated API definitions." alt="" coords="43,5,150,31"/>
+<area shape="rect" id="Node000002" href="$process_8h.html" title="ODP Linux helper for processes." alt="" coords="5,225,89,251"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="94,45,53,226,47,224,88,44"/>
+<area shape="rect" id="Node000004" href="$pthread_8h.html" title="ODP Linux helper for pthreads." alt="" coords="103,79,187,104"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="114,41,139,77,135,80,110,44"/>
+<area shape="rect" id="Node000003" href="$linux_8h.html" title="All ODP Linux helpers." alt="" coords="113,299,179,324"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="76,256,131,296,128,301,72,261"/>
+<area shape="poly" id="edge4_Node000004_Node000003" title=" " alt="" coords="170,112,200,151,216,186,222,225,224,238,222,252,199,281,171,301,168,296,195,277,217,250,219,238,217,226,210,188,196,153,166,115"/>
+<area shape="rect" id="Node000005" href="$threads_8h.html" title="ODP Linux helper API." alt="" coords="103,152,186,177"/>
+<area shape="poly" id="edge5_Node000004_Node000005" title=" " alt="" coords="139,118,140,152,135,152,133,118"/>
+<area shape="poly" id="edge7_Node000005_Node000002" title=" " alt="" coords="119,188,65,227,62,223,116,183"/>
+<area shape="poly" id="edge8_Node000005_Node000004" title=" " alt="" coords="151,139,149,104,154,104,156,138"/>
+<area shape="rect" id="Node000006" href="$odph__api_8h.html" title="The OpenDataPlane helper API." alt="" coords="114,225,207,251"/>
+<area shape="poly" id="edge6_Node000005_Node000006" title=" " alt="" coords="153,190,161,225,155,226,148,191"/>
+</map>

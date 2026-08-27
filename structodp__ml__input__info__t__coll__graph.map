@@ -1,0 +1,9 @@
+<map id="odp_ml_input_info_t" name="odp_ml_input_info_t">
+<area shape="rect" id="Node000001" title="Model input information." alt="" coords="45,181,200,207"/>
+<area shape="rect" id="Node000002" href="$structodp__ml__shape__info__t.html" title="Model input / output data shape information." alt="" coords="5,93,165,119"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="98,130,120,180,115,182,93,132"/>
+<area shape="rect" id="Node000003" href="$structodp__ml__quant__info__t.html" title="Quantization information." alt="" coords="190,93,349,119"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="239,128,144,183,141,179,236,123"/>
+<area shape="rect" id="Node000004" href="$structodp__ml__quant__param__t.html" title="Quantization parameters." alt="" coords="182,5,357,31"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="272,45,272,93,267,93,267,45"/>
+</map>

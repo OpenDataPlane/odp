@@ -1,0 +1,19 @@
+<map id="buffer_types.h" name="buffer_types.h">
+<area shape="rect" id="Node000001" title="ODP buffer types." alt="" coords="199,5,314,31"/>
+<area shape="rect" id="Node000002" href="$buffer__types_8h.html" title="ODP buffer types." alt="" coords="199,79,314,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="259,44,259,79,254,79,254,44"/>
+<area shape="rect" id="Node000003" href="$spec_2buffer_8h.html" title="ODP buffer." alt="" coords="27,152,97,177"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="214,111,95,154,93,149,212,106"/>
+<area shape="rect" id="Node000006" href="$buffer__inlines_8h_source.html" title=" " alt="" coords="122,152,245,177"/>
+<area shape="poly" id="edge5_Node000002_Node000006" title=" " alt="" coords="237,116,197,154,193,150,233,112"/>
+<area shape="rect" id="Node000007" href="$event__inlines_8h_source.html" title=" " alt="" coords="269,152,391,177"/>
+<area shape="poly" id="edge6_Node000002_Node000007" title=" " alt="" coords="280,112,320,150,316,154,277,116"/>
+<area shape="rect" id="Node000008" href="$event__validation__external_8h.html" title="ODP event validation." alt="" coords="415,152,619,177"/>
+<area shape="poly" id="edge7_Node000002_Node000008" title=" " alt="" coords="312,105,475,149,474,154,311,110"/>
+<area shape="rect" id="Node000004" href="$buffer_8h.html" title="ODP buffer descriptor." alt="" coords="27,225,97,251"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="65,191,65,225,59,225,59,191"/>
+<area shape="rect" id="Node000005" href="$dma__inlines_8h_source.html" title=" " alt="" coords="5,299,119,324"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="65,264,65,299,59,299,59,264"/>
+<area shape="rect" id="Node000009" href="$queue__inlines_8h_source.html" title=" " alt="" coords="455,225,579,251"/>
+<area shape="poly" id="edge8_Node000008_Node000009" title=" " alt="" coords="519,191,519,225,514,225,514,191"/>
+</map>

@@ -1,0 +1,7 @@
+<map id="odp_schedule_group_info_t" name="odp_schedule_group_info_t">
+<area shape="rect" id="Node000001" title="Schedule group information." alt="" coords="5,181,160,221"/>
+<area shape="rect" id="Node000002" href="$structodp__thrmask__s.html" title=" " alt="" coords="22,93,143,119"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="85,132,85,181,80,181,80,132"/>
+<area shape="rect" id="Node000003" href="$structodp__cpumask__s.html" title=" " alt="" coords="19,5,146,31"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="85,45,85,93,80,93,80,45"/>
+</map>

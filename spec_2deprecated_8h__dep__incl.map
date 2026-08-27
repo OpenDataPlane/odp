@@ -1,0 +1,26 @@
+<map id="deprecated.h" name="deprecated.h">
+<area shape="rect" id="Node000001" title="Macro for deprecated API definitions." alt="" coords="201,5,308,31"/>
+<area shape="rect" id="Node000002" href="$deprecated_8h.html" title="Control deprecated API definitions." alt="" coords="201,79,308,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="257,44,257,79,252,79,252,44"/>
+<area shape="rect" id="Node000003" href="$api_2spec_2crypto__types_8h.html" title="ODP crypto types." alt="" coords="147,152,266,177"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="241,117,217,153,212,150,237,114"/>
+<area shape="rect" id="Node000007" href="$odp__api_8h.html" title="The OpenDataPlane API." alt="" coords="144,592,229,617"/>
+<area shape="poly" id="edge13_Node000002_Node000007" title=" " alt="" coords="270,115,294,169,303,202,307,237,307,460,304,482,296,504,270,542,237,573,208,594,204,590,234,569,265,539,291,502,299,481,301,459,301,237,298,203,289,171,266,117"/>
+<area shape="rect" id="Node000004" href="$api_2crypto__types_8h.html" title="ODP crypto." alt="" coords="103,225,222,251"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="194,191,172,227,168,224,190,188"/>
+<area shape="rect" id="Node000005" href="$api_2spec_2crypto_8h.html" title="ODP crypto." alt="" coords="5,299,80,324"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="133,260,64,301,61,296,130,255"/>
+<area shape="rect" id="Node000008" href="$api_2spec_2ipsec_8h.html" title="ODP IPsec API." alt="" coords="153,445,221,471"/>
+<area shape="poly" id="edge7_Node000004_Node000008" title=" " alt="" coords="155,264,145,299,138,349,139,370,145,396,159,423,177,444,173,447,155,426,140,398,133,371,132,348,140,298,150,263"/>
+<area shape="rect" id="Node000010" href="$api_2spec_2ipsec__types_8h.html" title="ODP IPsec API type definitions." alt="" coords="155,299,266,324"/>
+<area shape="poly" id="edge10_Node000004_Node000010" title=" " alt="" coords="180,261,205,297,201,300,176,264"/>
+<area shape="rect" id="Node000006" href="$api_2crypto_8h.html" title="ODP crypto." alt="" coords="36,445,111,471"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="51,337,73,445,68,446,45,338"/>
+<area shape="poly" id="edge6_Node000006_Node000007" title=" " alt="" coords="93,480,180,590,175,593,89,483"/>
+<area shape="rect" id="Node000009" href="$api_2ipsec_8h.html" title="ODP IPSEC API &#45; platform specific header." alt="" coords="153,519,221,544"/>
+<area shape="poly" id="edge8_Node000008_Node000009" title=" " alt="" coords="189,484,189,519,184,519,184,484"/>
+<area shape="poly" id="edge9_Node000009_Node000007" title=" " alt="" coords="189,558,189,592,184,592,184,558"/>
+<area shape="rect" id="Node000011" href="$api_2ipsec__types_8h.html" title="ODP IPsec." alt="" coords="155,372,266,397"/>
+<area shape="poly" id="edge11_Node000010_Node000011" title=" " alt="" coords="213,338,213,372,208,372,208,338"/>
+<area shape="poly" id="edge12_Node000011_Node000008" title=" " alt="" coords="205,411,193,446,188,444,200,409"/>
+</map>

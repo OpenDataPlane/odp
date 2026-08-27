@@ -1,0 +1,7 @@
+<map id="odp_crypto_capability_t" name="odp_crypto_capability_t">
+<area shape="rect" id="Node000001" title="Crypto capabilities." alt="" coords="121,108,298,133"/>
+<area shape="rect" id="Node000002" href="$unionodp__crypto__cipher__algos__t.html" title="Cipher algorithms in a bit field structure." alt="" coords="5,5,200,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="127,38,199,106,195,110,123,42"/>
+<area shape="rect" id="Node000003" href="$unionodp__crypto__auth__algos__t.html" title="Authentication algorithms in a bit field structure." alt="" coords="224,5,408,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="296,42,250,86,224,110,220,106,246,82,293,38"/>
+</map>
