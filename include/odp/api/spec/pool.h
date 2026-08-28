@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2015-2018 Linaro Limited
- * Copyright (c) 2020-2023 Nokia
+ * Copyright (c) 2020-2026 Nokia
  */
 
 /**
@@ -292,6 +292,33 @@ odp_pool_t odp_pool_ext_create(const char *name, const odp_pool_ext_param_t *par
  * odp_packet_head()--> |                               |                            |
  *                      | Packet data                   |                            |
  *                      |  (headroom, data, tailroom)   |                            |
+ *                      |                               |                            |
+ *                      |                               |                            |
+ *                      +-------------------------------+    --                      |
+ *                      |                               |     |                      |
+ *                      | ODP trailer (optional)        |      > odp_trailer_size    |
+ *                      |                               |     |                      |
+ *                      +-------------------------------+    --                     --
+ *
+ * @endcode
+ *
+ * For buffer pools, buffer layout is shown below. The buffer data (odp_buffer_addr())
+ * starts immediately after the application header. Buffer size includes all headers,
+ * data and trailer.
+ *
+ * @code{.unparsed}
+ *
+ *                      +-------------------------------+    --                     --
+ *          buf[N] ---> |                               |     |                      |
+ *                      | ODP header (optional)         |      > odp_header_size     |
+ *                      |                               |     |                      |
+ *                      +-------------------------------+    --                      |
+ *                      |                               |     |                      |
+ *                      | Application header (optional) |      > app_header_size     |
+ *                      |                               |     |                       > buf_size
+ *                      +-------------------------------+    --                      |
+ * odp_buffer_addr()--> |                               |                            |
+ *                      | Buffer data                   |                            |
  *                      |                               |                            |
  *                      |                               |                            |
  *                      +-------------------------------+    --                      |
