@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2017-2018 Linaro Limited
- * Copyright (c) 2018-2023 Nokia
+ * Copyright (c) 2018-2026 Nokia
  */
 
 #include <odp/api/atomic.h>
@@ -632,7 +632,6 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 
 	crypto_param.op_mode   = ODP_CRYPTO_SYNC;
 	crypto_param.compl_queue = ODP_QUEUE_INVALID;
-	crypto_param.output_pool = ODP_POOL_INVALID;
 
 	crypto_param.cipher_alg = param->crypto.cipher_alg;
 	crypto_param.cipher_key = param->crypto.cipher_key;

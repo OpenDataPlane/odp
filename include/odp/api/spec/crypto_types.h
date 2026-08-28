@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2014-2018 Linaro Limited
- * Copyright (c) 2021-2025 Nokia
+ * Copyright (c) 2021-2026 Nokia
  */
 
 /**
@@ -942,12 +942,13 @@ typedef struct odp_crypto_session_param_t {
 
 	/** Output pool
 	 *
-	 *  This field is unused and will be deprecated later.
 	 *  The value must be left to the default value.
 	 *
 	 *  Default value is ODP_POOL_INVALID.
+	 *
+	 *  @deprecated Unused by current operation types.
 	 */
-	odp_pool_t output_pool;
+	odp_pool_t ODP_DEPRECATE(output_pool);
 
 } odp_crypto_session_param_t;
 
