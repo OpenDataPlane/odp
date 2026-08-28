@@ -84,12 +84,6 @@ ODP_STATIC_ASSERT(CONFIG_PACKET_HEADROOM == RTE_PKTMBUF_HEADROOM,
 #define DPDK_SOCKET_MEM_OPT "--socket-mem "
 #define DPDK_NB_MBUF 16384
 #define DPDK_MBUF_BUF_SIZE RTE_MBUF_DEFAULT_BUF_SIZE
-#define DPDK_MEMPOOL_CACHE_SIZE 64
-
-ODP_STATIC_ASSERT((DPDK_NB_MBUF % DPDK_MEMPOOL_CACHE_SIZE == 0) &&
-		  (DPDK_MEMPOOL_CACHE_SIZE <= RTE_MEMPOOL_CACHE_MAX_SIZE) &&
-		  (DPDK_MEMPOOL_CACHE_SIZE <= DPDK_MBUF_BUF_SIZE * 10 / 15)
-		  , "DPDK mempool cache size failure");
 
 /* Minimum RX burst size
  * The same drivers might require different minimum burst sizes depending
@@ -109,6 +103,7 @@ ODP_STATIC_ASSERT(DPDK_MIN_RX_BURST <= UINT8_MAX, "DPDK_MIN_RX_BURST too large")
 typedef struct {
 	int num_rx_desc_default;
 	int num_tx_desc_default;
+	int32_t mempool_cache_size;
 	uint8_t min_rx_burst;
 	uint8_t multicast_en;
 	uint8_t rx_drop_en;
@@ -225,10 +220,29 @@ static int lookup_opt(const char *opt_name, const char *drv_name, int *val)
 	return ret;
 }
 
+/* Read DPDK mempool cache size option. Instead of driver specific values, this option supports ODP
+ * packet pool specific values. */
+static int lookup_mempool_cache_size(const char *pool_name, int32_t *opt_val)
+{
+	int val;
+
+	if (!lookup_opt("mempool_cache_size", pool_name, &val))
+		return -1;
+
+	if (val < -1) {
+		_ODP_ERR("Invalid mempool_cache_size value %d\n", val);
+		return -1;
+	}
+	*opt_val = val;
+
+	return 0;
+}
+
 static int init_options(pktio_entry_t *pktio_entry,
 			const struct rte_eth_dev_info *dev_info)
 {
 	dpdk_opt_t *opt = &pkt_priv(pktio_entry)->opt;
+	pool_t *pool_entry = _odp_pool_entry(pkt_priv(pktio_entry)->pool);
 	int val;
 
 	if (!lookup_opt("num_rx_desc", dev_info->driver_name,
@@ -260,43 +274,37 @@ static int init_options(pktio_entry_t *pktio_entry,
 	}
 	opt->min_rx_burst = (uint8_t)val;
 
+	if (lookup_mempool_cache_size(pool_entry->name, &opt->mempool_cache_size))
+		return -1;
+
 	_ODP_DBG("DPDK interface (%s): %" PRIu16 "\n", dev_info->driver_name,
 		 pkt_priv(pktio_entry)->port_id);
-	_ODP_DBG("  num_rx_desc:   %d\n", opt->num_rx_desc_default);
-	_ODP_DBG("  num_tx_desc:   %d\n", opt->num_tx_desc_default);
-	_ODP_DBG("  rx_drop_en:    %d\n", opt->rx_drop_en);
-	_ODP_DBG("  set_flow_hash: %d\n", opt->set_flow_hash);
-	_ODP_DBG("  multicast_en:  %d\n", opt->multicast_en);
-	_ODP_DBG("  min_rx_burst:  %d\n", opt->min_rx_burst);
+	_ODP_DBG("  num_rx_desc:        %d\n", opt->num_rx_desc_default);
+	_ODP_DBG("  num_tx_desc:        %d\n", opt->num_tx_desc_default);
+	_ODP_DBG("  rx_drop_en:         %d\n", opt->rx_drop_en);
+	_ODP_DBG("  set_flow_hash:      %d\n", opt->set_flow_hash);
+	_ODP_DBG("  multicast_en:       %d\n", opt->multicast_en);
+	_ODP_DBG("  min_rx_burst:       %d\n", opt->min_rx_burst);
+	_ODP_DBG("  mempool_cache_size: %" PRId32 "\n", opt->mempool_cache_size);
 
 	return 0;
 }
 
 /**
- * Calculate valid cache size for DPDK packet pool
+ * Calculate cache size for a DPDK packet pool
+ *
+ * 'opt_val' value -1 means that the ODP pool local cache size
+ * ('pool_cache_size') is used. The result is limited by the DPDK maximum cache
+ * size and by the DPDK requirement of the cache flush threshold (1.5 x cache
+ * size) not exceeding the number of mempool elements ('num').
  */
-static uint32_t cache_size(uint32_t num)
+static uint32_t mempool_cache_size(int32_t opt_val, uint32_t pool_cache_size, uint32_t num)
 {
-	uint32_t size = 0;
-	uint32_t i;
+	uint32_t size = opt_val < 0 ? pool_cache_size : (uint32_t)opt_val;
 
-	if (!RTE_MEMPOOL_CACHE_MAX_SIZE)
-		return 0;
+	size = RTE_MIN(size, (uint32_t)RTE_MEMPOOL_CACHE_MAX_SIZE);
 
-	i = (num + RTE_MEMPOOL_CACHE_MAX_SIZE - 1) / RTE_MEMPOOL_CACHE_MAX_SIZE;
-	i = RTE_MAX(i, 2UL);
-	for (; i <= (num / 2); ++i)
-		if ((num % i) == 0) {
-			size = num / i;
-			break;
-		}
-	if (odp_unlikely(size > RTE_MEMPOOL_CACHE_MAX_SIZE ||
-			 (uint32_t)size * 1.5 > num)) {
-		_ODP_ERR("Cache size calc failure: %d\n", size);
-		size = 0;
-	}
-
-	return size;
+	return RTE_MIN(size, (num / 3) * 2);
 }
 
 static inline uint16_t mbuf_data_off(struct rte_mbuf *mbuf,
@@ -374,9 +382,10 @@ static struct rte_mempool *mbuf_pool_create(const char *name,
 	struct rte_mempool_objsz sz;
 	unsigned int elt_size = dpdk_elt_size;
 	unsigned int num = pool_entry->num, populated = 0;
-	uint32_t total_size;
+	uint32_t total_size, cache_size;
 	uint64_t page_size, offset = 0, remainder = 0;
 	uint8_t *addr;
+	int32_t opt_val;
 	int ret;
 
 	if (!(pool_entry->mem_from_huge_pages)) {
@@ -405,7 +414,13 @@ static struct rte_mempool *mbuf_pool_create(const char *name,
 		goto fail;
 	}
 
-	mp = rte_mempool_create_empty(name, num, elt_size, cache_size(num),
+	if (lookup_mempool_cache_size(pool_entry->name, &opt_val))
+		goto fail;
+
+	cache_size = mempool_cache_size(opt_val, pool_entry->cache_size, num);
+	_ODP_DBG("DPDK mempool %s cache size: %" PRIu32 "\n", name, cache_size);
+
+	mp = rte_mempool_create_empty(name, num, elt_size, cache_size,
 				      sizeof(struct rte_pktmbuf_pool_private),
 				      rte_socket_id(), MEMPOOL_FLAGS);
 	if (mp == NULL) {
@@ -1733,8 +1748,12 @@ static int dpdk_open(odp_pktio_t id ODP_UNUSED,
 		/* Check if the pool exists already */
 		pkt_pool = rte_mempool_lookup(pool_name);
 		if (pkt_pool == NULL) {
-			unsigned cache_size = DPDK_MEMPOOL_CACHE_SIZE;
+			uint32_t cache_size = mempool_cache_size(pkt_dpdk->opt.mempool_cache_size,
+								 pool_entry->cache_size,
+								 DPDK_NB_MBUF);
 
+			_ODP_DBG("DPDK mempool %s cache size: %" PRIu32 "\n", pool_name,
+				 cache_size);
 			pkt_pool = rte_pktmbuf_pool_create(pool_name,
 							   DPDK_NB_MBUF,
 							   cache_size, 0,
