@@ -289,6 +289,17 @@ int ipsec_check_esp_aes_cbc_128_null(void)
 				ODP_AUTH_ALG_NULL, 0);
 }
 
+int ipsec_check_esp_sm4_cbc_sm3(void)
+{
+	return ipsec_check_esp(ODP_CIPHER_ALG_SM4_CBC, 128,
+				ODP_AUTH_ALG_SM3_HMAC, 256);
+}
+
+int ipsec_check_ah_sm3(void)
+{
+	return ipsec_check_ah(ODP_AUTH_ALG_SM3_HMAC, 160);
+}
+
 int ipsec_check_esp_aes_cbc_128_sha1(void)
 {
 	return  ipsec_check_esp(ODP_CIPHER_ALG_AES_CBC, 128,
