@@ -95,7 +95,7 @@ tap_setup()
 	done
 
 	for iface in $IF0 $IF1 $BR; do
-		ifconfig $iface -arp
+		ip link set dev $iface arp off
 		sysctl -w net.ipv6.conf.${iface}.disable_ipv6=1
 		ip link set dev $iface mtu 9216 up
 	done
