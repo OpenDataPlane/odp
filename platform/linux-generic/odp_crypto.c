@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright (c) 2025 Nokia
+ * Copyright (c) 2025-2026 Nokia
  */
 
 #include <odp/api/crypto.h>
@@ -212,7 +212,9 @@ void _odp_crypto_session_print(const char *type, uint32_t index,
 			    param->auth_aad_len);
 	len += _odp_snprint(&str[len], n - len, "  compl_queue               %" PRIu64 "\n",
 			    odp_queue_to_u64(param->compl_queue));
+#if ODP_DEPRECATED_API
 	len += _odp_snprint(&str[len], n - len, "  output_pool               %" PRIu64 "\n",
 			    odp_pool_to_u64(param->output_pool));
+#endif
 	_ODP_PRINT("%s\n", str);
 }
