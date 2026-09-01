@@ -18,15 +18,6 @@ AC_ARG_ENABLE([test-helper],
 AM_CONDITIONAL([test_helper], [test x$test_helper = xyes ])
 
 ##########################################################################
-# Enable/disable Linux helpers
-##########################################################################
-AC_ARG_ENABLE([helper-linux],
-    [AS_HELP_STRING([--disable-helper-linux],
-		   [disable Linux helpers [default=enabled]])],
-    [helper_linux=$enableval],
-    [helper_linux=yes])
-
-##########################################################################
 # Enable/disable ODPH_DEBUG
 ##########################################################################
 AC_ARG_ENABLE([helper-debug],
