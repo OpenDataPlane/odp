@@ -89,8 +89,9 @@ setup_pktio_env()
 	fi
 
 	for iface in $IF0 $IF1 $IF2 $IF3; do
-		ip link set $iface mtu 9216 up
 		ip link set dev $iface arp off
+		sysctl -w net.ipv6.conf.$iface.disable_ipv6=1
+		ip link set $iface mtu 9216 up
 	done
 
 	# check that the interface has come up before starting the test
