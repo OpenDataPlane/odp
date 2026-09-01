@@ -90,7 +90,7 @@ setup_pktio_env()
 
 	for iface in $IF0 $IF1 $IF2 $IF3; do
 		ip link set $iface mtu 9216 up
-		ifconfig $iface -arp
+		ip link set dev $iface arp off
 	done
 
 	# check that the interface has come up before starting the test
