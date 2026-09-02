@@ -414,6 +414,7 @@ static void print_pktio_capa(appl_args_t *appl_args)
 		printf("    config.pktout:                 0x%" PRIx64 "\n",
 		       capa->config.pktout.all_bits);
 		printf("    set_op:                        0x%" PRIx32 "\n", capa->set_op.all_bits);
+#if ODP_DEPRECATED_API
 		printf("    vector.supported:              %s\n",
 		       support_level(capa->vector.supported));
 		printf("    vector.max_size:               %u\n", capa->vector.max_size);
@@ -422,6 +423,7 @@ static void print_pktio_capa(appl_args_t *appl_args)
 		       capa->vector.max_tmo_ns);
 		printf("    vector.min_tmo_ns:             %" PRIu64 " ns\n",
 		       capa->vector.min_tmo_ns);
+#endif
 		printf("    lso.max_profiles:              %u\n", capa->lso.max_profiles);
 		printf("    lso.max_profiles_per_pktio:    %u\n", capa->lso.max_profiles_per_pktio);
 		printf("    lso.max_packet_segments:       %u\n", capa->lso.max_packet_segments);
@@ -934,6 +936,7 @@ int main(int argc, char **argv)
 	printf("    tmo.min_cache_size:       %u\n", pool_capa.tmo.min_cache_size);
 	printf("    tmo.max_cache_size:       %u\n", pool_capa.tmo.max_cache_size);
 	printf("    tmo.stats:                0x%" PRIx64 "\n", pool_capa.tmo.stats.all);
+#if ODP_DEPRECATED_API
 	printf("    vector.max_pools:         %u\n", pool_capa.vector.max_pools);
 	printf("    vector.max_num:           %u\n", pool_capa.vector.max_num);
 	printf("    vector.max_size:          %u\n", pool_capa.vector.max_size);
@@ -942,6 +945,7 @@ int main(int argc, char **argv)
 	printf("    vector.min_cache_size:    %u\n", pool_capa.vector.min_cache_size);
 	printf("    vector.max_cache_size:    %u\n", pool_capa.vector.max_cache_size);
 	printf("    vector.stats:             0x%" PRIx64 "\n", pool_capa.vector.stats.all);
+#endif
 #define capa pool_capa.event_vector
 	printf("    event_vector.max_pools:         %u\n", capa.max_pools);
 	printf("    event_vector.max_num:           %u\n", capa.max_num);
@@ -1208,6 +1212,7 @@ int main(int argc, char **argv)
 		printf("    max destination queues:       %u\n", ipsec_capa.max_queues);
 		printf("    queue_type_sched:             %i\n", ipsec_capa.queue_type_sched);
 		printf("    queue_type_plain:             %i\n", ipsec_capa.queue_type_plain);
+#if ODP_DEPRECATED_API
 		printf("    vector support:               %s\n",
 		       support_level(ipsec_capa.vector.supported));
 		printf("      min_size:                   %u\n", ipsec_capa.vector.min_size);
@@ -1216,6 +1221,7 @@ int main(int argc, char **argv)
 		       ipsec_capa.vector.min_tmo_ns);
 		printf("      max_tmo_ns:                 %" PRIu64 " ns\n",
 		       ipsec_capa.vector.max_tmo_ns);
+#endif
 		printf("    max anti-replay window size:  %u\n",
 		       ipsec_capa.max_antireplay_ws);
 		printf("    inline TM pipelining:         %s\n",

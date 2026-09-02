@@ -86,9 +86,11 @@ static void test_param_init(uint8_t fill)
 	CU_ASSERT(param.tmo.cache_size >= global_pool_capa.tmo.min_cache_size &&
 		  param.tmo.cache_size <= global_pool_capa.tmo.max_cache_size);
 
+#if ODP_DEPRECATED_API
 	CU_ASSERT(param.vector.uarea_size == 0);
 	CU_ASSERT(param.vector.cache_size >= global_pool_capa.vector.min_cache_size &&
 		  param.vector.cache_size <= global_pool_capa.vector.max_cache_size);
+#endif
 
 	CU_ASSERT(param.event_vector.uarea_size == 0);
 	CU_ASSERT(param.event_vector.cache_size >= global_pool_capa.event_vector.min_cache_size &&
@@ -150,6 +152,7 @@ static void pool_test_create_destroy_timeout(void)
 	pool_create_destroy(&param);
 }
 
+#if ODP_DEPRECATED_API
 static void pool_test_create_destroy_packet_vector(void)
 {
 	odp_pool_param_t param;
@@ -170,6 +173,7 @@ static void pool_test_create_destroy_packet_vector(void)
 
 	pool_create_destroy(&param);
 }
+#endif
 
 static void pool_test_create_destroy_event_vector(void)
 {
@@ -207,6 +211,7 @@ static int pool_check_packet_uarea_init(void)
 	return ODP_TEST_ACTIVE;
 }
 
+#if ODP_DEPRECATED_API
 static int check_pkt_vector_uarea_init(void)
 {
 	if (global_pool_capa.vector.max_uarea_size == 0 ||
@@ -215,6 +220,7 @@ static int check_pkt_vector_uarea_init(void)
 
 	return ODP_TEST_ACTIVE;
 }
+#endif
 
 static int check_ev_vector_uarea_init(void)
 {
@@ -327,6 +333,7 @@ static void pool_test_packet_uarea_init(void)
 	odp_pool_destroy(pool);
 }
 
+#if ODP_DEPRECATED_API
 static void pool_test_packet_vector_uarea_init(void)
 {
 	odp_pool_param_t param;
@@ -370,6 +377,7 @@ static void pool_test_packet_vector_uarea_init(void)
 
 	odp_pool_destroy(pool);
 }
+#endif
 
 static void pool_test_event_vector_uarea_init(void)
 {
@@ -579,6 +587,7 @@ static void pool_test_same_name_tmo(void)
 	pool_test_same_name(&param);
 }
 
+#if ODP_DEPRECATED_API
 static void pool_test_same_name_packet_vector(void)
 {
 	odp_pool_param_t param;
@@ -591,6 +600,7 @@ static void pool_test_same_name_packet_vector(void)
 
 	pool_test_same_name(&param);
 }
+#endif
 
 static void pool_test_same_name_event_vector(void)
 {
@@ -695,6 +705,7 @@ static void pool_test_alloc_buffer_align(void)
 	buffer_align(global_pool_capa.buf.max_align, global_pool_capa.buf.max_align);
 }
 
+#if ODP_DEPRECATED_API
 static void alloc_packet_vector(uint32_t cache_size)
 {
 	odp_pool_t pool;
@@ -755,6 +766,7 @@ static void pool_test_alloc_packet_vector_max_cache(void)
 {
 	alloc_packet_vector(global_pool_capa.vector.max_cache_size);
 }
+#endif
 
 static void alloc_event_vector(uint32_t cache_size)
 {
@@ -1209,6 +1221,7 @@ static void pool_test_pkt_max_num(void)
 	CU_ASSERT(odp_pool_destroy(pool) == 0);
 }
 
+#if ODP_DEPRECATED_API
 static void pool_test_packet_vector_max_num(void)
 {
 	odp_pool_t pool;
@@ -1256,6 +1269,7 @@ static void pool_test_packet_vector_max_num(void)
 	CU_ASSERT(odp_shm_free(shm) == 0);
 	CU_ASSERT(odp_pool_destroy(pool) == 0);
 }
+#endif
 
 static void pool_test_event_vector_max_num(void)
 {
@@ -1623,6 +1637,7 @@ static int pool_check_packet_pool_statistics(void)
 	return ODP_TEST_ACTIVE;
 }
 
+#if ODP_DEPRECATED_API
 static int pool_check_packet_vector_pool_statistics(void)
 {
 	if (global_pool_capa.vector.stats.all == 0)
@@ -1630,6 +1645,7 @@ static int pool_check_packet_vector_pool_statistics(void)
 
 	return ODP_TEST_ACTIVE;
 }
+#endif
 
 static int pool_check_event_vector_pool_statistics(void)
 {
@@ -1687,6 +1703,7 @@ static void pool_test_pool_statistics(odp_pool_type_t pool_type)
 		param.pkt.len = PKT_LEN;
 		param.pkt.num = num_obj;
 		param.pkt.max_num = num_obj;
+#if ODP_DEPRECATED_API
 	} else if (pool_type == ODP_POOL_VECTOR) {
 		max_pools = global_pool_capa.vector.max_pools < max_pools ?
 				global_pool_capa.vector.max_pools : max_pools;
@@ -1701,6 +1718,7 @@ static void pool_test_pool_statistics(odp_pool_type_t pool_type)
 		param.vector.num = num_obj;
 		param.vector.max_size = global_pool_capa.vector.max_size  < VEC_LEN ?
 						global_pool_capa.vector.max_size : VEC_LEN;
+#endif
 	} else if (pool_type == ODP_POOL_EVENT_VECTOR) {
 		max_pools = global_pool_capa.event_vector.max_pools < max_pools ?
 				global_pool_capa.event_vector.max_pools : max_pools;
@@ -1813,11 +1831,13 @@ static void pool_test_pool_statistics(odp_pool_type_t pool_type)
 
 				if (pkt != ODP_PACKET_INVALID)
 					new_event = odp_packet_to_event(pkt);
+#if ODP_DEPRECATED_API
 			} else if (pool_type == ODP_POOL_VECTOR) {
 				odp_packet_vector_t pktv = odp_packet_vector_alloc(pool[i]);
 
 				if (pktv != ODP_PACKET_VECTOR_INVALID)
 					new_event = odp_packet_vector_to_event(pktv);
+#endif
 			} else if (pool_type == ODP_POOL_EVENT_VECTOR) {
 				odp_event_vector_t evv = odp_event_vector_alloc(pool[i]);
 
@@ -1998,10 +2018,12 @@ static void pool_test_packet_pool_statistics(void)
 	pool_test_pool_statistics(ODP_POOL_PACKET);
 }
 
+#if ODP_DEPRECATED_API
 static void pool_test_packet_vector_pool_statistics(void)
 {
 	pool_test_pool_statistics(ODP_POOL_VECTOR);
 }
+#endif
 
 static void pool_test_event_vector_pool_statistics(void)
 {
@@ -2124,7 +2146,10 @@ static void test_pool_ext_capa(void)
 	odp_pool_type_t type;
 	const odp_pool_type_t unsupported_types[] = {ODP_POOL_TIMEOUT,
 						     ODP_POOL_EVENT_VECTOR,
-						     ODP_POOL_VECTOR, ODP_POOL_DMA_COMPL,
+#if ODP_DEPRECATED_API
+						     ODP_POOL_VECTOR,
+#endif
+						     ODP_POOL_DMA_COMPL,
 						     ODP_POOL_ML_COMPL};
 	const int num_types = ODPH_ARRAY_SIZE(unsupported_types);
 
@@ -3132,11 +3157,9 @@ odp_testinfo_t pool_suite[] = {
 	ODP_TEST_INFO(pool_test_create_destroy_buffer),
 	ODP_TEST_INFO(pool_test_create_destroy_packet),
 	ODP_TEST_INFO(pool_test_create_destroy_timeout),
-	ODP_TEST_INFO(pool_test_create_destroy_packet_vector),
 	ODP_TEST_INFO_CONDITIONAL(pool_test_create_destroy_event_vector, check_event_vector),
 	ODP_TEST_INFO_CONDITIONAL(pool_test_buffer_uarea_init, pool_check_buffer_uarea_init),
 	ODP_TEST_INFO_CONDITIONAL(pool_test_packet_uarea_init, pool_check_packet_uarea_init),
-	ODP_TEST_INFO_CONDITIONAL(pool_test_packet_vector_uarea_init, check_pkt_vector_uarea_init),
 	ODP_TEST_INFO_CONDITIONAL(pool_test_event_vector_uarea_init, check_ev_vector_uarea_init),
 	ODP_TEST_INFO_CONDITIONAL(pool_test_timeout_uarea_init, pool_check_timeout_uarea_init),
 	ODP_TEST_INFO(pool_test_lookup_info_print),
@@ -3144,15 +3167,11 @@ odp_testinfo_t pool_suite[] = {
 	ODP_TEST_INFO(pool_test_same_name_buf),
 	ODP_TEST_INFO(pool_test_same_name_pkt),
 	ODP_TEST_INFO(pool_test_same_name_tmo),
-	ODP_TEST_INFO(pool_test_same_name_packet_vector),
 	ODP_TEST_INFO_CONDITIONAL(pool_test_same_name_event_vector, check_event_vector_2_pools),
 	ODP_TEST_INFO(pool_test_alloc_buffer),
 	ODP_TEST_INFO(pool_test_alloc_buffer_min_cache),
 	ODP_TEST_INFO(pool_test_alloc_buffer_max_cache),
 	ODP_TEST_INFO(pool_test_alloc_buffer_align),
-	ODP_TEST_INFO(pool_test_alloc_packet_vector),
-	ODP_TEST_INFO(pool_test_alloc_packet_vector_min_cache),
-	ODP_TEST_INFO(pool_test_alloc_packet_vector_max_cache),
 	ODP_TEST_INFO_CONDITIONAL(pool_test_alloc_event_vector,           check_event_vector),
 	ODP_TEST_INFO_CONDITIONAL(pool_test_alloc_event_vector_min_cache, check_event_vector),
 	ODP_TEST_INFO_CONDITIONAL(pool_test_alloc_event_vector_max_cache, check_event_vector),
@@ -3168,7 +3187,6 @@ odp_testinfo_t pool_suite[] = {
 	ODP_TEST_INFO(pool_test_info_data_range),
 	ODP_TEST_INFO(pool_test_buf_max_num),
 	ODP_TEST_INFO(pool_test_pkt_max_num),
-	ODP_TEST_INFO(pool_test_packet_vector_max_num),
 	ODP_TEST_INFO_CONDITIONAL(pool_test_event_vector_max_num, check_event_vector),
 	ODP_TEST_INFO(pool_test_pkt_seg_len),
 	ODP_TEST_INFO(pool_test_tmo_max_num),
@@ -3179,12 +3197,21 @@ odp_testinfo_t pool_suite[] = {
 				  pool_check_buffer_pool_statistics),
 	ODP_TEST_INFO_CONDITIONAL(pool_test_packet_pool_statistics,
 				  pool_check_packet_pool_statistics),
-	ODP_TEST_INFO_CONDITIONAL(pool_test_packet_vector_pool_statistics,
-				  pool_check_packet_vector_pool_statistics),
 	ODP_TEST_INFO_CONDITIONAL(pool_test_event_vector_pool_statistics,
 				  pool_check_event_vector_pool_statistics),
 	ODP_TEST_INFO_CONDITIONAL(pool_test_timeout_pool_statistics,
 				  pool_check_timeout_pool_statistics),
+#if ODP_DEPRECATED_API
+	ODP_TEST_INFO(pool_test_create_destroy_packet_vector),
+	ODP_TEST_INFO_CONDITIONAL(pool_test_packet_vector_uarea_init, check_pkt_vector_uarea_init),
+	ODP_TEST_INFO(pool_test_same_name_packet_vector),
+	ODP_TEST_INFO(pool_test_alloc_packet_vector),
+	ODP_TEST_INFO(pool_test_alloc_packet_vector_min_cache),
+	ODP_TEST_INFO(pool_test_alloc_packet_vector_max_cache),
+	ODP_TEST_INFO(pool_test_packet_vector_max_num),
+	ODP_TEST_INFO_CONDITIONAL(pool_test_packet_vector_pool_statistics,
+				  pool_check_packet_vector_pool_statistics),
+#endif
 	ODP_TEST_INFO_NULL,
 };
 

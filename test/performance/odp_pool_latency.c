@@ -195,15 +195,17 @@ static void init_config(prog_config_t *config)
 		config->dyn_defs.num_evs_buf = COND_MIN(capa.buf.max_num, DEF_CNT);
 		config->dyn_defs.num_evs_pkt = COND_MIN(capa.pkt.max_num, DEF_CNT);
 		config->dyn_defs.num_evs_tmo = COND_MIN(capa.tmo.max_num, DEF_CNT);
-		config->dyn_defs.num_evs_vec = COND_MIN(capa.vector.max_num, DEF_CNT);
 		config->dyn_defs.data_size_buf = COND_MIN(capa.buf.max_size, DEF_SIZE);
 		config->dyn_defs.data_size_pkt = COND_MIN(capa.pkt.max_len, DEF_SIZE);
-		config->dyn_defs.data_size_vec = COND_MIN(capa.vector.max_size, DEF_SIZE);
 		odp_pool_param_init(&param);
 		config->dyn_defs.cache_size_buf = param.buf.cache_size;
 		config->dyn_defs.cache_size_pkt = param.pkt.cache_size;
 		config->dyn_defs.cache_size_tmo = param.tmo.cache_size;
+#if ODP_DEPRECATED_API
+		config->dyn_defs.num_evs_vec = COND_MIN(capa.vector.max_num, DEF_CNT);
+		config->dyn_defs.data_size_vec = COND_MIN(capa.vector.max_size, DEF_SIZE);
 		config->dyn_defs.cache_size_vec = param.vector.cache_size;
+#endif
 	}
 
 	config->cache_size = -1;
@@ -342,6 +344,13 @@ static parse_result_t check_options(prog_config_t *config)
 		return PRS_NOK;
 	}
 
+#if !ODP_DEPRECATED_API
+	if (config->type == VECTOR) {
+		ODPH_ERR("Packet vector pool type is deprecated and disabled\n");
+		return PRS_NOK;
+	}
+#endif
+
 	if (odp_pool_capability(&pool_capa) < 0) {
 		ODPH_ERR("Error querying pool capabilities\n");
 		return PRS_NOK;
@@ -465,6 +474,7 @@ static parse_result_t check_options(prog_config_t *config)
 
 		config->handle_size = sizeof(odp_timeout_t);
 		config->uarea_size = ODPH_MIN(config->uarea_size, pool_capa.tmo.max_uarea_size);
+#if ODP_DEPRECATED_API
 	} else {
 		if (config->num_evs == 0U)
 			config->num_evs = config->dyn_defs.num_evs_vec;
@@ -503,6 +513,7 @@ static parse_result_t check_options(prog_config_t *config)
 
 		config->handle_size = sizeof(odp_packet_vector_t);
 		config->uarea_size = ODPH_MIN(config->uarea_size, pool_capa.vector.max_uarea_size);
+#endif
 	}
 
 	if (config->num_elems == 0U) {
@@ -904,6 +915,7 @@ static void free_timeouts(void *data, uint32_t idx, uint32_t num, stats_t *stats
 		save_free_stats(t1, t2, round, pattern, stats);
 }
 
+#if ODP_DEPRECATED_API
 static uint32_t allocate_vectors(worker_config_t *config, void *data, uint32_t idx, uint32_t num,
 				 uint64_t round, uint8_t pattern, odp_bool_t is_saved)
 {
@@ -962,6 +974,7 @@ static void free_vectors(void *data, uint32_t idx, uint32_t num, stats_t *stats,
 	if (odp_likely(is_saved))
 		save_free_stats(t1, t2, round, pattern, stats);
 }
+#endif
 
 static odp_pool_t create_pool(const char *name, const odp_pool_param_t *params, uint8_t policy)
 {
@@ -1009,6 +1022,7 @@ static odp_bool_t setup_worker_config(prog_config_t *config)
 		param.tmo.cache_size = config->cache_size;
 		config->alloc_fn = allocate_timeouts;
 		config->free_fn = free_timeouts;
+#if ODP_DEPRECATED_API
 	} else {
 		param.type = ODP_POOL_VECTOR;
 		param.vector.num = config->num_evs;
@@ -1017,6 +1031,7 @@ static odp_bool_t setup_worker_config(prog_config_t *config)
 		param.vector.cache_size = config->cache_size;
 		config->alloc_fn = allocate_vectors;
 		config->free_fn = free_vectors;
+#endif
 	}
 
 	for (uint32_t i = 0U; i < config->num_workers; ++i) {
