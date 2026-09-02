@@ -8,6 +8,7 @@
 #include <odp/api/event.h>
 #include <odp/api/buffer.h>
 #include <odp/api/crypto.h>
+#include <odp/api/deprecated.h>
 #include <odp/api/dma.h>
 #include <odp/api/event_vector.h>
 #include <odp/api/packet.h>
@@ -48,8 +49,8 @@ void odp_event_free(odp_event_t event)
 	case ODP_EVENT_VECTOR:
 		_odp_event_vector_free_full(odp_event_vector_from_event(event));
 		break;
-	case ODP_EVENT_PACKET_VECTOR:
-		_odp_packet_vector_free_full(odp_packet_vector_from_event(event));
+	case ODP_DEPRECATE(ODP_EVENT_PACKET_VECTOR):
+		_odp_packet_vector_free_full(ODP_DEPRECATE(odp_packet_vector_from_event)(event));
 		break;
 	case ODP_EVENT_TIMEOUT:
 		odp_timeout_free(odp_timeout_from_event(event));
@@ -122,7 +123,7 @@ static inline void event_free_multi(const odp_event_t event[], int num, odp_even
 	case ODP_EVENT_VECTOR:
 		event_vector_free_full_multi((odp_event_vector_t *)(uintptr_t)event, num);
 		break;
-	case ODP_EVENT_PACKET_VECTOR:
+	case ODP_DEPRECATE(ODP_EVENT_PACKET_VECTOR):
 		packet_vector_free_full_multi((odp_packet_vector_t *)(uintptr_t)event, num);
 		break;
 	case ODP_EVENT_TIMEOUT:
@@ -160,7 +161,7 @@ static inline void event_free_sp(const odp_event_t event[], int num, odp_event_t
 	case ODP_EVENT_VECTOR:
 		event_vector_free_full_multi((odp_event_vector_t *)(uintptr_t)event, num);
 		break;
-	case ODP_EVENT_PACKET_VECTOR:
+	case ODP_DEPRECATE(ODP_EVENT_PACKET_VECTOR):
 		packet_vector_free_full_multi((odp_packet_vector_t *)(uintptr_t)event, num);
 		break;
 	case ODP_EVENT_TIMEOUT:
@@ -244,7 +245,7 @@ static const char *event_type_str(odp_event_type_t type)
 		return "ODP_EVENT_VECTOR";
 	case ODP_EVENT_IPSEC_STATUS:
 		return "ODP_EVENT_IPSEC_STATUS";
-	case ODP_EVENT_PACKET_VECTOR:
+	case ODP_DEPRECATE(ODP_EVENT_PACKET_VECTOR):
 		return "ODP_EVENT_PACKET_VECTOR";
 	case ODP_EVENT_PACKET_TX_COMPL:
 		return "ODP_EVENT_PACKET_TX_COMPL";
@@ -327,8 +328,9 @@ void odp_event_print(odp_event_t event)
 	case ODP_EVENT_VECTOR:
 		odp_event_vector_print(odp_event_vector_from_event(event));
 		break;
-	case ODP_EVENT_PACKET_VECTOR:
-		odp_packet_vector_print(odp_packet_vector_from_event(event));
+	case ODP_DEPRECATE(ODP_EVENT_PACKET_VECTOR):
+		ODP_DEPRECATE(odp_packet_vector_print)
+			(ODP_DEPRECATE(odp_packet_vector_from_event)(event));
 		break;
 	case ODP_EVENT_TIMEOUT:
 		odp_timeout_print(odp_timeout_from_event(event));
@@ -365,7 +367,7 @@ int odp_event_is_valid(odp_event_t event)
 		/* Fall through */
 	case ODP_EVENT_IPSEC_STATUS:
 		/* Fall through */
-	case ODP_EVENT_PACKET_VECTOR:
+	case ODP_DEPRECATE(ODP_EVENT_PACKET_VECTOR):
 		/* Fall through */
 	case ODP_EVENT_DMA_COMPL:
 		/* Fall through */

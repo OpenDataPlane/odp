@@ -58,7 +58,8 @@ extern "C" {
  * - ODP_EVENT_VECTOR
  *     - Vector of events (odp_event_t) as odp_event_vector_t
  * - ODP_EVENT_PACKET_VECTOR
- *     - Vector of packet events (odp_packet_t) as odp_packet_vector_t
+ *     - Vector of packet events (odp_packet_t) as odp_packet_vector_t. Deprecated,
+ *       use ODP_EVENT_VECTOR instead.
  * - ODP_EVENT_PACKET_TX_COMPL
  *     - Packet Tx completion event (odp_packet_tx_compl_t) generated as a result of a Packet Tx
  *       completion.
