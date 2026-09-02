@@ -10,6 +10,7 @@ env:
 jobs:
   Checkpatch:
     runs-on: ubuntu-22.04
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
         with:
@@ -37,6 +38,7 @@ jobs:
 
   Documentation:
     runs-on: ubuntu-24.04
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
       - name: Install dependencies
@@ -59,6 +61,7 @@ jobs:
 
   Build_gcc:
     runs-on: ubuntu-22.04
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -78,6 +81,7 @@ jobs:
 
   Build_clang:
     runs-on: ubuntu-22.04
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -97,6 +101,7 @@ jobs:
 
   Build_static:
     runs-on: ubuntu-22.04
+    timeout-minutes: 30
     env:
       CONF: "--disable-shared --without-openssl --without-pcap"
     strategy:
@@ -113,6 +118,7 @@ jobs:
 
   Build_arm64:
     runs-on: ubuntu-22.04
+    timeout-minutes: 30
     env:
       ARCH: arm64
       CONF: "--enable-dpdk-shared"
@@ -131,6 +137,7 @@ jobs:
 
   Build_armhf:
     runs-on: ubuntu-22.04
+    timeout-minutes: 30
     env:
       ARCH: armhf
       OS: ubuntu_20.04
@@ -148,6 +155,7 @@ jobs:
 
   Build_ppc64el:
     runs-on: ubuntu-22.04
+    timeout-minutes: 30
     env:
       ARCH: ppc64el
       CONF: "--enable-dpdk-shared"
@@ -165,6 +173,7 @@ jobs:
 
   Build_i386:
     runs-on: ubuntu-22.04
+    timeout-minutes: 30
     env:
       ARCH: i386
       OS: debian_12
@@ -182,6 +191,7 @@ jobs:
 
   Build_riscv64:
     runs-on: ubuntu-22.04
+    timeout-minutes: 30
     env:
       ARCH: riscv64
     strategy:
@@ -198,6 +208,7 @@ jobs:
 
   Build_OS:
     runs-on: ubuntu-22.04
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -213,6 +224,7 @@ jobs:
 
   Build_gcc_versions:
     runs-on: ubuntu-22.04
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -228,6 +240,7 @@ jobs:
 
   Build_gcc_15:
     runs-on: ubuntu-22.04
+    timeout-minutes: 30
     env:
       OS: ubuntu_26.04
     strategy:
@@ -243,6 +256,7 @@ jobs:
 
   Build_clang_21:
     runs-on: ubuntu-22.04
+    timeout-minutes: 30
     env:
       OS: ubuntu_26.04
     strategy:
@@ -258,6 +272,7 @@ jobs:
 
   Build_out-of-tree:
     runs-on: ubuntu-22.04
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}"
@@ -267,6 +282,7 @@ jobs:
 
   Build_XDP:
     runs-on: ubuntu-22.04
+    timeout-minutes: 30
     env:
         CONF: "--enable-xdp"
     strategy:
@@ -282,6 +298,7 @@ jobs:
 
   Run_distcheck:
     runs-on: ubuntu-22.04
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -295,6 +312,7 @@ jobs:
 
   Run_gcc:
     runs-on: ubuntu-22.04
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -317,6 +335,7 @@ jobs:
 
   Run_clang:
     runs-on: ubuntu-22.04
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -335,6 +354,7 @@ jobs:
 
   Run_OS:
     runs-on: ubuntu-22.04
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -349,6 +369,7 @@ jobs:
 
   Run_sched_config:
     runs-on: ubuntu-22.04
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}" -e ARCH="${ARCH}"
@@ -358,6 +379,7 @@ jobs:
 
   Run_scheduler_sp:
     runs-on: ubuntu-22.04
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}" -e ARCH="${ARCH}"
@@ -367,6 +389,7 @@ jobs:
 
   Run_process_mode:
     runs-on: ubuntu-22.04
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}" -e ARCH="${ARCH}"
@@ -377,6 +400,7 @@ jobs:
 
   Run_inline_timer:
     runs-on: ubuntu-22.04
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}" -e ARCH="${ARCH}"
@@ -387,6 +411,7 @@ jobs:
 
   Run_packet_align:
     runs-on: ubuntu-22.04
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}" -e ARCH="${ARCH}"
@@ -397,6 +422,7 @@ jobs:
 
   Run_dpdk-23_11:
     runs-on: ubuntu-22.04
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}" -e ARCH="${ARCH}"
@@ -406,6 +432,7 @@ jobs:
 
   Run_dpdk-25_11:
     runs-on: ubuntu-22.04
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}" -e ARCH="${ARCH}"
@@ -415,6 +442,7 @@ jobs:
 
   Run_sanitizer:
     runs-on: ubuntu-22.04
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
