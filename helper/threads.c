@@ -149,10 +149,12 @@ static int wait_process(odph_thread_t *thread, odph_thread_join_result_t *res)
 	pid_t pid;
 	int status = 0, estatus;
 
-	pid = waitpid(thread->proc.pid, &status, 0);
+	do {
+		pid = waitpid(thread->proc.pid, &status, 0);
+	} while (pid < 0 && errno == EINTR);
 
 	if (pid < 0) {
-		ODPH_ERR("waitpid() failed\n");
+		ODPH_ERR("waitpid() failed: %s\n", strerror(errno));
 		return -1;
 	}
 
