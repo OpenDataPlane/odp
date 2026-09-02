@@ -12,6 +12,7 @@
 #define ODP_API_SPEC_POOL_TYPES_H_
 #include <odp/visibility_begin.h>
 
+#include <odp/api/deprecated.h>
 #include <odp/api/std_types.h>
 #include <odp/api/dma_types.h>
 #include <odp/api/ml_types.h>
@@ -350,7 +351,9 @@ typedef struct odp_pool_capability_t {
 		odp_pool_stats_opt_t stats;
 	} tmo;
 
-	/** Vector pool capabilities */
+	/** Packet vector pool capabilities
+	 *
+	 * @deprecated Use event_vector pool capabilities instead. */
 	struct {
 		/** Maximum number of vector pools */
 		uint32_t max_pools;
@@ -380,7 +383,7 @@ typedef struct odp_pool_capability_t {
 
 		/** Supported statistics counters */
 		odp_pool_stats_opt_t stats;
-	} vector;
+	} ODP_DEPRECATE(vector);
 
 	/** Event vector pool capabilities */
 	struct {
@@ -446,8 +449,10 @@ typedef enum odp_pool_type_t {
 	 * Each vector event holds an array of handles. All handles of a vector
 	 * are the same type (such as odp_packet_t).
 	 * @see ODP_EVENT_PACKET_VECTOR
+	 *
+	 * @deprecated Use ODP_POOL_EVENT_VECTOR instead.
 	 */
-	ODP_POOL_VECTOR,
+	ODP_DEPRECATE(ODP_POOL_VECTOR),
 
 	/** Event vector pool */
 	ODP_POOL_EVENT_VECTOR,
@@ -627,7 +632,9 @@ typedef struct odp_pool_param_t {
 		uint32_t cache_size;
 	} tmo;
 
-	/** Parameters for vector pools */
+	/** Parameters for packet vector pools
+	 *
+	 *  @deprecated Use event_vector pool parameters instead. */
 	struct {
 		/** Number of vectors in the pool */
 		uint32_t num;
@@ -646,7 +653,7 @@ typedef struct odp_pool_param_t {
 		 *  See buf.cache_size documentation for details.
 		 */
 		uint32_t cache_size;
-	} vector;
+	} ODP_DEPRECATE(vector);
 
 	/** Parameters for event vector pools */
 	struct {

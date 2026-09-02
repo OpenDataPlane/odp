@@ -13,6 +13,7 @@
 #define ODP_API_SPEC_PACKET_IO_TYPES_H_
 #include <odp/visibility_begin.h>
 
+#include <odp/api/deprecated.h>
 #include <odp/api/packet_types.h>
 #include <odp/api/packet_io_stats.h>
 #include <odp/api/pool_types.h>
@@ -179,6 +180,8 @@ typedef struct odp_pktin_queue_param_ovr_t {
 
 /**
  * Packet input vector configuration
+ *
+ * @deprecated Use event aggregator queues to generate event vectors instead.
  */
 typedef struct odp_pktin_vector_config_t {
 	/** Enable packet input vector
@@ -312,8 +315,11 @@ typedef struct odp_pktin_queue_param_t {
 	 * configuration or by using event aggregators as destination queue(s).
 	 * Both options cannot be enabled simultaneously in the same ODP
 	 * application.
+	 *
+	 * @deprecated Use event aggregator queues to generate event vectors
+	 *             instead.
 	 */
-	odp_pktin_vector_config_t vector;
+	odp_pktin_vector_config_t ODP_DEPRECATE(vector);
 
 } odp_pktin_queue_param_t;
 
@@ -988,6 +994,8 @@ typedef struct odp_lso_capability_t {
 
 /**
  * Packet input vector capabilities
+ *
+ * @deprecated Use event aggregator queues to generate event vectors instead.
  */
 typedef struct odp_pktin_vector_capability_t {
 	/** Packet input vector availability */
@@ -1064,8 +1072,11 @@ typedef struct odp_pktio_capability_t {
 	 * set to zero. */
 	odp_pktio_set_op_t set_op;
 
-	/** Packet input vector capability */
-	odp_pktin_vector_capability_t vector;
+	/** Packet input vector capability
+	 *
+	 * @deprecated Use event aggregator queues to generate event vectors
+	 *             instead. */
+	odp_pktin_vector_capability_t ODP_DEPRECATE(vector);
 
 	/** LSO capabilities */
 	odp_lso_capability_t lso;

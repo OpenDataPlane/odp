@@ -48,7 +48,9 @@ static odp_event_t event_types_alloc_event(odp_pool_type_t pool_type)
 	odp_packet_t pkt;
 	odp_timeout_t tmo;
 	odp_event_vector_t evv;
+#if ODP_DEPRECATED_API
 	odp_packet_vector_t pv;
+#endif
 	odp_dma_compl_t dma_compl;
 	odp_ml_compl_t ml_compl;
 
@@ -76,11 +78,13 @@ static odp_event_t event_types_alloc_event(odp_pool_type_t pool_type)
 		if (evv == ODP_EVENT_VECTOR_INVALID)
 			return ODP_EVENT_INVALID;
 		return odp_event_vector_to_event(evv);
+#if ODP_DEPRECATED_API
 	case ODP_POOL_VECTOR:
 		pv = odp_packet_vector_alloc(ctx->type[idx].pool);
 		if (pv == ODP_PACKET_VECTOR_INVALID)
 			return ODP_EVENT_INVALID;
 		return odp_packet_vector_to_event(pv);
+#endif
 	case ODP_POOL_DMA_COMPL:
 		dma_compl = odp_dma_compl_alloc(ctx->type[idx].pool);
 		if (dma_compl == ODP_DMA_COMPL_INVALID)
@@ -185,10 +189,12 @@ static int event_types_suite_init(void)
 		ctx->type[n++].pool_type = ODP_POOL_EVENT_VECTOR;
 	}
 
+#if ODP_DEPRECATED_API
 	if (p_capa.vector.max_num > 0) {
 		ctx->type[n].event_type = ODP_EVENT_PACKET_VECTOR;
 		ctx->type[n++].pool_type = ODP_POOL_VECTOR;
 	}
+#endif
 
 	if (dma_capa.max_sessions && (dma_capa.compl_mode_mask & ODP_DMA_COMPL_EVENT) &&
 	    dma_capa.pool.max_num > 0) {
@@ -234,11 +240,13 @@ static int event_types_suite_init(void)
 			prm.event_vector.uarea_size = ODPH_MIN(sizeof(uint64_t),
 							       p_capa.event_vector.max_uarea_size);
 		break;
-		case ODP_POOL_VECTOR:
+		case ODP_DEPRECATE(ODP_POOL_VECTOR):
+#if ODP_DEPRECATED_API
 			prm.vector.num = NUM_EVENTS;
 			prm.vector.max_size = 1;
 			prm.vector.uarea_size = ODPH_MIN(sizeof(uint64_t),
 							 p_capa.vector.max_uarea_size);
+#endif
 		break;
 		case ODP_POOL_DMA_COMPL:
 			odp_dma_pool_param_init(&dma_prm);
@@ -409,7 +417,9 @@ static void event_test_user_area_flag(void)
 				break;
 			case ODP_EVENT_PACKET:
 			case ODP_EVENT_VECTOR:
+#if ODP_DEPRECATED_API
 			case ODP_EVENT_PACKET_VECTOR:
+#endif
 				CU_ASSERT(flag > 0);
 				break;
 			default:
@@ -1025,7 +1035,9 @@ static void event_test_is_valid(void)
 	CU_ASSERT(odp_event_is_valid(ODP_EVENT_INVALID) == 0);
 	CU_ASSERT(odp_buffer_is_valid(ODP_BUFFER_INVALID) == 0);
 	CU_ASSERT(odp_packet_is_valid(ODP_PACKET_INVALID) == 0);
+#if ODP_DEPRECATED_API
 	CU_ASSERT(odp_packet_vector_valid(ODP_PACKET_VECTOR_INVALID) == 0);
+#endif
 }
 
 odp_testinfo_t event_suite[] = {

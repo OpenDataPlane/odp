@@ -7,6 +7,7 @@
 #define ODP_PLAT_EVENT_INLINES_H_
 
 #include <odp/api/buffer_types.h>
+#include <odp/api/deprecated.h>
 #include <odp/api/event_types.h>
 #include <odp/api/packet_types.h>
 #include <odp/api/pool_types.h>
@@ -90,7 +91,7 @@ _ODP_INLINE odp_pool_t odp_event_pool(odp_event_t event)
 	case ODP_EVENT_BUFFER:
 	case ODP_EVENT_PACKET:
 	case ODP_EVENT_VECTOR:
-	case ODP_EVENT_PACKET_VECTOR:
+	case ODP_DEPRECATE(ODP_EVENT_PACKET_VECTOR):
 		return _odp_event_hdr_field(event, odp_pool_t, pool);
 	default:
 		return ODP_POOL_INVALID;
@@ -109,7 +110,7 @@ _ODP_INLINE void *odp_event_user_area(odp_event_t event)
 	case ODP_EVENT_PACKET:
 		return _odp_pkt_get((odp_packet_t)event, void *, user_area);
 	case ODP_EVENT_VECTOR:
-	case ODP_EVENT_PACKET_VECTOR:
+	case ODP_DEPRECATE(ODP_EVENT_PACKET_VECTOR):
 		return _odp_event_vect_get(event, void *, uarea_addr);
 	case ODP_EVENT_TIMEOUT:
 		return _odp_timeout_hdr_field((odp_timeout_t)event, void *, uarea_addr);
@@ -141,7 +142,7 @@ _ODP_INLINE void *odp_event_user_area_and_flag(odp_event_t event, int *flag)
 		return _odp_pkt_get(pkt, void *, user_area);
 	}
 	case ODP_EVENT_VECTOR:
-	case ODP_EVENT_PACKET_VECTOR:
+	case ODP_DEPRECATE(ODP_EVENT_PACKET_VECTOR):
 	{
 		_odp_event_vector_flags_t v_flags;
 
@@ -173,7 +174,7 @@ _ODP_INLINE void odp_event_user_flag_set(odp_event_t event, int val)
 		return;
 	}
 	case ODP_EVENT_VECTOR:
-	case ODP_EVENT_PACKET_VECTOR:
+	case ODP_DEPRECATE(ODP_EVENT_PACKET_VECTOR):
 	{
 		_odp_event_vector_flags_t *flags =
 				_odp_event_vect_get_ptr(event, _odp_event_vector_flags_t, flags);
