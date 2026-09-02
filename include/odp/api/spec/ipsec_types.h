@@ -15,6 +15,7 @@
 
 #include <odp/api/classification.h>
 #include <odp/api/crypto_types.h>
+#include <odp/api/deprecated.h>
 #include <odp/api/packet_io_types.h>
 #include <odp/api/protocols.h>
 #include <odp/api/std_types.h>
@@ -392,8 +393,11 @@ typedef struct odp_ipsec_capability_t {
 	 *  be used for many SAs. */
 	uint32_t max_queues;
 
-	/** Support for returning completion packets as vectors */
-	odp_pktin_vector_capability_t vector;
+	/** Support for returning completion packets as vectors
+	 *
+	 * @deprecated Use event aggregator queues to generate event vectors
+	 *             instead. */
+	odp_pktin_vector_capability_t ODP_DEPRECATE(vector);
 
 	/** Maximum anti-replay window size. */
 	uint32_t max_antireplay_ws;
@@ -498,8 +502,11 @@ typedef struct odp_ipsec_config_t {
 	 * configuration or by using event aggregators as destination queue(s).
 	 * Both options cannot be enabled simultaneously in the same ODP
 	 * application.
+	 *
+	 * @deprecated Use event aggregator queues to generate event vectors
+	 *             instead.
 	 */
-	odp_pktin_vector_config_t vector;
+	odp_pktin_vector_config_t ODP_DEPRECATE(vector);
 
 } odp_ipsec_config_t;
 

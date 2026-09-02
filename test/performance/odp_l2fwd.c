@@ -787,7 +787,9 @@ static int run_worker_sched_mode_vector(void *arg)
 			continue;
 
 		for (i = 0; i < events; i++) {
+#if ODP_DEPRECATED_API
 			odp_packet_vector_t pkt_vec = ODP_PACKET_VECTOR_INVALID;
+#endif
 			odp_packet_t *pkt_tbl = NULL;
 			odp_packet_t pkt;
 			int src_idx, dst_idx;
@@ -797,9 +799,11 @@ static int run_worker_sched_mode_vector(void *arg)
 				pkt = odp_packet_from_event(ev_tbl[i]);
 				pkt_tbl = &pkt;
 				pkts = 1;
+#if ODP_DEPRECATED_API
 			} else if (odp_event_type(ev_tbl[i]) == ODP_EVENT_PACKET_VECTOR) {
 				pkt_vec = odp_packet_vector_from_event(ev_tbl[i]);
 				pkts = odp_packet_vector_tbl(pkt_vec, &pkt_tbl);
+#endif
 			} else if (state != NULL) {
 				pkts = handle_rx_state(state, ev_tbl, events);
 
@@ -812,8 +816,10 @@ static int run_worker_sched_mode_vector(void *arg)
 			pkts = process_extra_features(appl_args, pkt_tbl, pkts, stats, memcpy_src);
 
 			if (odp_unlikely(pkts == 0)) {
+#if ODP_DEPRECATED_API
 				if (pkt_vec != ODP_PACKET_VECTOR_INVALID)
 					odp_packet_vector_free(pkt_vec);
+#endif
 				continue;
 			}
 
@@ -829,8 +835,10 @@ static int run_worker_sched_mode_vector(void *arg)
 			send_packets(pkt_tbl, pkts, use_event_queue, dst_idx, tx_queue[dst_idx],
 				     pktout[dst_idx], state, stats);
 
+#if ODP_DEPRECATED_API
 			if (pkt_vec != ODP_PACKET_VECTOR_INVALID)
 				odp_packet_vector_free(pkt_vec);
+#endif
 		}
 	}
 
@@ -1354,6 +1362,7 @@ static int run_worker_direct_mode(void *arg)
 	return 0;
 }
 
+#if ODP_DEPRECATED_API
 static int set_pktin_vector_params(odp_pktin_queue_param_t *pktin_param, odp_pool_t vec_pool,
 				   const odp_pktio_capability_t *pktio_capa)
 {
@@ -1402,6 +1411,7 @@ static int set_pktin_vector_params(odp_pktin_queue_param_t *pktin_param, odp_poo
 
 	return 0;
 }
+#endif
 
 static int set_event_aggr_config(odp_event_aggr_config_t *config, odp_pool_t vec_pool,
 				 const odp_schedule_capability_t *capa)
@@ -1688,6 +1698,7 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx, odp_po
 	pktout_param.op_mode    = mode_tx;
 	pktout_param.num_queues = num_tx;
 
+#if ODP_DEPRECATED_API
 	if (gbl_args->appl.vector_mode == VECTOR_MODE_PACKET) {
 		if (!pktio_capa.vector.supported) {
 			ODPH_ERR("Packet vector input not supported: %s\n", dev);
@@ -1696,6 +1707,7 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx, odp_po
 		if (set_pktin_vector_params(&pktin_param, vec_pool, &pktio_capa))
 			return -1;
 	}
+#endif
 
 	if (gbl_args->appl.vector_mode == VECTOR_MODE_EVENT) {
 		odp_schedule_capability_t sched_capa;
@@ -2814,6 +2826,13 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		exit(EXIT_FAILURE);
 	}
 
+#if !ODP_DEPRECATED_API
+	if (appl_args->vector_mode == VECTOR_MODE_PACKET) {
+		ODPH_ERR("Packet vector mode is deprecated and disabled\n");
+		exit(EXIT_FAILURE);
+	}
+#endif
+
 	if (appl_args->tx_compl.mode != ODP_PACKET_TX_COMPL_DISABLED &&
 	    appl_args->tx_compl.nth == 0) {
 		ODPH_ERR("Invalid packet interval for transmit completion: %u\n",
@@ -3034,6 +3053,7 @@ static void create_groups(int num, odp_schedule_group_t *group,
 	}
 }
 
+#if ODP_DEPRECATED_API
 static int set_vector_pool_params(odp_pool_param_t *params, const odp_pool_capability_t *pool_capa)
 {
 	uint32_t num_vec, vec_size;
@@ -3078,6 +3098,7 @@ static int set_vector_pool_params(odp_pool_param_t *params, const odp_pool_capab
 
 	return 0;
 }
+#endif
 
 static int set_event_vector_pool_params(odp_pool_param_t *params,
 					const odp_pool_capability_t *pool_capa)
@@ -3165,7 +3186,10 @@ static int create_vector_pools(args_t *args, odp_pool_capability_t *pool_capa,
 
 	num_vec_pools = args->appl.pool_per_if ? gbl_args->appl.if_count : 1;
 
-	if ((mode == VECTOR_MODE_PACKET && num_vec_pools > (int)pool_capa->vector.max_pools) ||
+	if (
+#if ODP_DEPRECATED_API
+	    (mode == VECTOR_MODE_PACKET && num_vec_pools > (int)pool_capa->vector.max_pools) ||
+#endif
 	    (mode == VECTOR_MODE_EVENT && num_vec_pools > (int)pool_capa->event_vector.max_pools)) {
 		ODPH_ERR("Too many vector pools %i\n", num_vec_pools);
 		return -1;
@@ -3173,17 +3197,25 @@ static int create_vector_pools(args_t *args, odp_pool_capability_t *pool_capa,
 
 	odp_pool_param_init(&params);
 
+#if ODP_DEPRECATED_API
 	if (mode == VECTOR_MODE_PACKET) {
 		if (set_vector_pool_params(&params, pool_capa))
 			return -1;
-	} else {
+	} else
+#endif
+	{
 		if (set_event_vector_pool_params(&params, pool_capa))
 			return -1;
 	}
 
+#if ODP_DEPRECATED_API
 	args->vector_num = mode == VECTOR_MODE_PACKET ? params.vector.num : params.event_vector.num;
 	args->vector_max_size = mode == VECTOR_MODE_PACKET ? params.vector.max_size :
 				params.event_vector.max_size;
+#else
+	args->vector_num = params.event_vector.num;
+	args->vector_max_size = params.event_vector.max_size;
+#endif
 
 	/* Print resulting values */
 	printf("Vectors per pool:   %u\n", args->vector_num);

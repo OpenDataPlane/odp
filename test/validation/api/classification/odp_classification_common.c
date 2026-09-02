@@ -205,6 +205,7 @@ odp_packet_t receive_packet(odp_queue_t *queue, uint64_t ns, vector_mode_t vecto
 
 	if (odp_event_type(ev) == ODP_EVENT_PACKET) {
 		return odp_packet_from_event(ev);
+#if ODP_DEPRECATED_API
 	} else if (vector_mode == VECTOR_MODE_PACKET &&
 		   odp_event_type(ev) == ODP_EVENT_PACKET_VECTOR) {
 		odp_packet_vector_t pktv;
@@ -222,6 +223,7 @@ odp_packet_t receive_packet(odp_queue_t *queue, uint64_t ns, vector_mode_t vecto
 			odp_packet_free_multi(&pkt_tbl[1], pktv_len - 1);
 		odp_packet_vector_free(pktv);
 		return pkt;
+#endif
 	} else if (vector_mode == VECTOR_MODE_EVENT &&
 		   odp_event_type(ev) == ODP_EVENT_VECTOR) {
 		odp_event_vector_t evv;
@@ -296,6 +298,7 @@ odp_pool_t pool_create(const char *poolname)
 	return odp_pool_create(poolname, &param);
 }
 
+#if ODP_DEPRECATED_API
 odp_pool_t pktv_pool_create(const char *poolname)
 {
 	odp_pool_capability_t capa;
@@ -324,6 +327,7 @@ odp_pool_t pktv_pool_create(const char *poolname)
 
 	return odp_pool_create(poolname, &param);
 }
+#endif
 
 odp_pool_t evv_pool_create(const char *poolname)
 {

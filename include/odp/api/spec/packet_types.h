@@ -192,11 +192,15 @@ typedef uint8_t odp_proto_l4_type_t;
 /**
  * @typedef odp_packet_vector_t
  * ODP packet vector
+ *
+ * @deprecated Use the event vector API (odp_event_vector_t) instead.
  */
 
 /**
  * @def ODP_PACKET_VECTOR_INVALID
  * Invalid packet vector
+ *
+ * @deprecated Use the event vector API (ODP_EVENT_VECTOR_INVALID) instead.
  */
 
 /**

@@ -78,9 +78,9 @@ typedef struct odp_event_aggr_config_t {
 	 * 'event_type' are allowed.
 	 *
 	 * Regardless of 'event_type', an application is never allowed to
-	 * enqueue event vector or packet vector events (ODP_EVENT_VECTOR or
-	 * ODP_EVENT_PACKET_VECTOR) to an event aggregator queue
-	 * (i.e. vectors within vectors).
+	 * enqueue event vector or (deprecated) packet vector events
+	 * (ODP_EVENT_VECTOR or ODP_EVENT_PACKET_VECTOR) to an event aggregator
+	 * queue (i.e. vectors within vectors).
 	 */
 	odp_event_type_t event_type;
 
