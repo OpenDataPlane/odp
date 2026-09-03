@@ -2711,6 +2711,7 @@ int odp_crypto_op_enq(const odp_packet_t pkt_in[],
 		      int num_pkt)
 {
 	odp_packet_t pkt;
+	odp_packet_t in_pkt;
 	odp_event_t event;
 	odp_crypto_generic_session_t *session;
 	int i, rc;
@@ -2719,6 +2720,8 @@ int odp_crypto_op_enq(const odp_packet_t pkt_in[],
 		session = odp_crypto_session_from_handle(param[i].session);
 		_ODP_ASSERT(ODP_CRYPTO_ASYNC == session->p.op_mode);
 		_ODP_ASSERT(ODP_QUEUE_INVALID != session->p.compl_queue);
+
+		in_pkt = ODP_PACKET_INVALID;
 
 		if (odp_likely(session->p.op_type == ODP_CRYPTO_OP_TYPE_BASIC ||
 			       pkt_out[i] == ODP_PACKET_INVALID)) {
@@ -2731,15 +2734,26 @@ int odp_crypto_op_enq(const odp_packet_t pkt_in[],
 				    session->p.op_type == ODP_CRYPTO_OP_TYPE_BASIC_AND_OOP);
 
 			pkt = pkt_out[i];
+			in_pkt = pkt_in[i];
 			rc = crypto_int_oop(pkt_in[i], &pkt, &param[i]);
 		}
 		if (rc < 0)
 			break;
 
 		event = odp_packet_to_event(pkt);
-		if (odp_queue_enq(session->p.compl_queue, event)) {
-			odp_event_free(event);
-			break;
+		if (odp_unlikely(odp_queue_enq(session->p.compl_queue, event))) {
+			/*
+			 * Enqueuing failed, so this crypto operation does not complete.
+			 * We cannot anymore indicate the input packet as not consumed
+			 * and the crypto operation as not done. Free the output packet
+			 * so that it is not leaked. Free also the OOP input packet as the
+			 * application cannot access it without the completion happening.
+			 * With this, applications that do not rely on all operations to
+			 * properly complete may still work, with some packet loss in crypto.
+			 */
+			odp_packet_free(pkt);
+			if (in_pkt != ODP_PACKET_INVALID)
+				odp_packet_free(in_pkt);
 		}
 	}
 

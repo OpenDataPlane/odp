@@ -442,10 +442,8 @@ int odp_crypto_op_enq(const odp_packet_t pkt_in[],
 			break;
 
 		event = odp_packet_to_event(pkt);
-		if (odp_queue_enq(session->p.compl_queue, event)) {
-			odp_event_free(event);
-			break;
-		}
+		if (odp_unlikely(odp_queue_enq(session->p.compl_queue, event)))
+			odp_packet_free(pkt);
 	}
 
 	return i;
