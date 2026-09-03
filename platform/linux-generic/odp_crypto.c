@@ -1,13 +1,15 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright (c) 2025 Nokia
+ * Copyright (c) 2025-2026 Nokia
  */
 
 #include <odp/api/crypto.h>
+#include <odp/api/hints.h>
 #include <odp/api/pool.h>
 #include <odp/api/queue.h>
 
 #include <odp_crypto_internal.h>
 #include <odp_debug_internal.h>
+#include <odp_packet_internal.h>
 #include <odp_string_internal.h>
 
 #include <inttypes.h>
@@ -215,4 +217,53 @@ void _odp_crypto_session_print(const char *type, uint32_t index,
 	len += _odp_snprint(&str[len], n - len, "  output_pool               %" PRIu64 "\n",
 			    odp_pool_to_u64(param->output_pool));
 	_ODP_PRINT("%s\n", str);
+}
+
+static void do_enqueue(odp_queue_t queue, const odp_event_t events[], int num)
+{
+	int rc;
+
+	rc = odp_queue_enq_multi(queue, events, num);
+	if (odp_likely(rc == num))
+		return;
+	if (rc < 0)
+		rc = 0;
+
+	/* Give up if the queue becomes full. Some operations will never complete */
+	for (int i = rc; i < num; i++) {
+		odp_packet_t pkt_in;
+
+		/*
+		 * Free OOP input packets of unsent completions. The application cannot
+		 * access the input packets without the completion happening.
+		 */
+		pkt_in = packet_hdr(odp_packet_from_event(events[i]))->crypto_op_result.pkt_in;
+		if (pkt_in != ODP_PACKET_INVALID)
+			odp_packet_free(pkt_in);
+	}
+	/* Free unsent completion events */
+	odp_event_free_multi(&events[rc], num - rc);
+}
+
+void _odp_crypto_enqueue_completions(const odp_event_t events[],
+				     const odp_queue_t queues[],
+				     int num)
+{
+	odp_queue_t queue;
+	int num_enqueued = 0;
+
+	if (odp_unlikely(num <= 0))
+		return;
+
+	queue = queues[0];
+
+	for (int i = 1; i < num; i++) {
+		if (queues[i] != queue) {
+			do_enqueue(queue, &events[num_enqueued], i - num_enqueued);
+			num_enqueued = i;
+			queue = queues[i];
+		}
+	}
+
+	do_enqueue(queue, &events[num_enqueued], num - num_enqueued);
 }
