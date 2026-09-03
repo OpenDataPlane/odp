@@ -8,27 +8,27 @@
 
 #include <odp/api/crypto.h>
 #include <odp/api/spinlock.h>
-#include <odp/api/sync.h>
 #include <odp/api/debug.h>
 #include <odp/api/align.h>
 #include <odp/api/shared_memory.h>
 #include <odp/api/hints.h>
-#include <odp/api/random.h>
+#include <odp/api/thread.h>
 
 #include <odp/api/plat/event_inlines.h>
 #include <odp/api/plat/packet_inlines.h>
 #include <odp/api/plat/queue_inlines.h>
-#include <odp/api/plat/thread_inlines.h>
 
 #include <odp_crypto_internal.h>
 #include <odp_debug_internal.h>
 #include <odp_global_data.h>
 #include <odp_init_internal.h>
 #include <odp_packet_internal.h>
+#include <odp_pending_queue_internal.h>
 
 #include "AArch64cryptolib.h"
 
 #define MAX_SESSIONS 4000
+#define MAX_BURST 32
 /* Length in bytes */
 #define ARM_CRYPTO_MAX_CIPHER_KEY_LENGTH      32
 #define ARM_CRYPTO_MAX_AUTH_KEY_LENGTH        32
@@ -93,9 +93,6 @@ static const odp_crypto_auth_capability_t auth_capa_aes_gcm[] = {
 {.digest_len = AES_GCM_TAG_LEN, .key_len = 0, .aad_len = {.min = 8, .max = 12, .inc = 4} } };
 #endif
 
-/** Forward declaration of session structure */
-typedef struct odp_crypto_generic_session_t odp_crypto_generic_session_t;
-
 /**
  * Algorithm handler function prototype
  */
@@ -132,6 +129,8 @@ struct odp_crypto_global_s {
 	odp_spinlock_t                lock;
 	odp_crypto_generic_session_t *free;
 	odp_crypto_generic_session_t  sessions[MAX_SESSIONS];
+	odp_pending_queue_t           pending;
+	uint64_t                      flexible_data[] ODP_ALIGNED_CACHE;
 };
 
 static odp_crypto_global_t *global;
@@ -645,7 +644,7 @@ odp_crypto_session_create(const odp_crypto_session_param_t *param,
 	}
 
 	/* We're happy */
-	*session_out = (intptr_t)session;
+	*session_out = odp_crypto_session_to_handle(session);
 	*status = ODP_CRYPTO_SES_ERR_NONE;
 	return 0;
 
@@ -661,7 +660,7 @@ int odp_crypto_session_destroy(odp_crypto_session_t session)
 {
 	odp_crypto_generic_session_t *generic;
 
-	generic = (odp_crypto_generic_session_t *)(intptr_t)session;
+	generic = odp_crypto_session_from_handle(session);
 	memset(generic, 0, sizeof(*generic));
 	free_session(generic);
 	return 0;
@@ -678,8 +677,11 @@ int _odp_crypto_init_global(void)
 		return 0;
 	}
 
+	const uint32_t max_pending = odp_thread_count_max() * MAX_BURST;
+
 	/* Calculate the memory size we need */
 	mem_size  = sizeof(odp_crypto_global_t);
+	mem_size += _odp_pending_queue_mem_size(max_pending);
 
 	/* Allocate our globally shared memory */
 	shm = odp_shm_reserve("_odp_crypto_pool_armv8crypto", mem_size,
@@ -694,6 +696,9 @@ int _odp_crypto_init_global(void)
 
 	/* Clear it out */
 	memset(global, 0, mem_size);
+
+	_odp_pending_queue_init(&global->pending, max_pending,
+				NULL, &global->flexible_data);
 
 	/* Initialize free list and lock */
 	for (idx = 0; idx < MAX_SESSIONS; idx++) {
@@ -714,6 +719,8 @@ int _odp_crypto_term_global(void)
 
 	if (odp_global_ro.disable.crypto)
 		return 0;
+
+	_odp_pending_queue_destroy(&global->pending);
 
 	for (session = global->free; session != NULL; session = session->next)
 		count++;
@@ -766,7 +773,7 @@ void odp_crypto_session_print(odp_crypto_session_t hdl)
 		return;
 	}
 
-	session = (odp_crypto_generic_session_t *)(uintptr_t)hdl;
+	session = odp_crypto_session_from_handle(hdl);
 
 	_odp_crypto_session_print("armv8", session->idx, &session->p);
 }
@@ -785,7 +792,7 @@ int crypto_int(odp_packet_t pkt_in,
 			return -1;
 	out_pkt = pkt_in;
 
-	session = (odp_crypto_generic_session_t *)(intptr_t)param->session;
+	session = odp_crypto_session_from_handle(param->session);
 
 	if (odp_unlikely(session->p.null_crypto_enable &&
 			 param->null_crypto))
@@ -812,7 +819,7 @@ int odp_crypto_op(const odp_packet_t pkt_in[],
 	odp_crypto_generic_session_t *session;
 
 	for (i = 0; i < num_pkt; i++) {
-		session = (odp_crypto_generic_session_t *)(intptr_t)param[i].session;
+		session = odp_crypto_session_from_handle(param[i].session);
 		_ODP_ASSERT(ODP_CRYPTO_SYNC == session->p.op_mode);
 
 		rc = crypto_int(pkt_in[i], &pkt_out[i], &param[i]);
@@ -828,13 +835,24 @@ int odp_crypto_op_enq(const odp_packet_t pkt_in[],
 		      const odp_crypto_packet_op_param_t param[],
 		      int num_pkt)
 {
-	odp_packet_t pkt;
-	odp_event_t event;
-	odp_crypto_generic_session_t *session;
-	int i, rc;
+	odp_event_t events[MAX_BURST];
+	odp_queue_t queues[MAX_BURST];
+	int i;
+
+	if (odp_unlikely(!_odp_pending_queue_is_empty(&global->pending))) {
+		if (_odp_pending_queue_retry(&global->pending))
+			return 0;
+	}
+
+	if (num_pkt > MAX_BURST)
+		num_pkt = MAX_BURST;
 
 	for (i = 0; i < num_pkt; i++) {
-		session = (odp_crypto_generic_session_t *)(intptr_t)param[i].session;
+		odp_packet_t pkt;
+		odp_crypto_generic_session_t *session;
+		int rc;
+
+		session = odp_crypto_session_from_handle(param[i].session);
 		_ODP_ASSERT(ODP_CRYPTO_ASYNC == session->p.op_mode);
 		_ODP_ASSERT(ODP_QUEUE_INVALID != session->p.compl_queue);
 
@@ -845,12 +863,10 @@ int odp_crypto_op_enq(const odp_packet_t pkt_in[],
 		if (rc < 0)
 			break;
 
-		event = odp_packet_to_event(pkt);
-		if (odp_queue_enq(session->p.compl_queue, event)) {
-			odp_event_free(event);
-			break;
-		}
+		events[i] = odp_packet_to_event(pkt);
+		queues[i] = session->p.compl_queue;
 	}
+	_odp_crypto_enqueue_completions(&global->pending, events, queues, i);
 
 	return i;
 }

@@ -2354,7 +2354,7 @@ static inline void update_post_lifetime_stats(ipsec_sa_t *sa, ipsec_state_t *sta
 	}
 }
 
-static inline void finish_packet_proc(odp_packet_t pkt, ipsec_op_t *op, odp_queue_t queue)
+static inline odp_queue_t finish_packet_proc(odp_packet_t pkt, ipsec_op_t *op, odp_bool_t is_enq)
 {
 	odp_ipsec_packet_result_t *res;
 
@@ -2371,20 +2371,51 @@ static inline void finish_packet_proc(odp_packet_t pkt, ipsec_op_t *op, odp_queu
 	if (op->sa_hdl == ODP_IPSEC_SA_INVALID && op->sa)
 		_odp_ipsec_sa_unuse(op->sa);
 
-	if (queue != ODP_QUEUE_INVALID) {
-		res->orig_ip_len = op->orig_ip_len;
-		/* What should be done if enqueue fails? */
-		if (odp_unlikely(odp_queue_enq(queue, odp_ipsec_packet_to_event(pkt)) < 0))
-			odp_packet_free(pkt);
+	if (!is_enq)
+		return ODP_QUEUE_INVALID;
+
+	res->orig_ip_len = op->orig_ip_len;
+
+	return NULL != op->sa ? op->sa->queue : ipsec_config->inbound.default_queue;
+}
+
+static void do_enqueue(odp_queue_t queue, const odp_event_t events[], int num)
+{
+	int rc;
+
+	rc = odp_queue_enq_multi(queue, events, num);
+	if (odp_likely(rc == num))
+		return;
+
+	if (rc < 0)
+		rc = 0;
+	/* some IPsec operations will never complete */
+	odp_event_free_multi(&events[rc], num - rc);
+}
+
+static void enqueue_completions(const odp_event_t events[], const odp_queue_t queues[], int num)
+{
+	odp_queue_t queue = queues[0];
+	int num_enqueued = 0;
+
+	for (int i = 1; i < num; i++) {
+		if (queues[i] != queue) {
+			do_enqueue(queue, &events[num_enqueued], i - num_enqueued);
+			num_enqueued = i;
+			queue = queues[i];
+		}
 	}
+	do_enqueue(queue, &events[num_enqueued], num - num_enqueued);
 }
 
 static void ipsec_in_finalize(odp_packet_t pkt_in[], ipsec_op_t ops[], int num, odp_bool_t is_enq)
 {
+	odp_queue_t queues[MAX_BURST];
+	odp_event_t events[MAX_BURST];
+
 	for (int i = 0; i < num; i++) {
 		ipsec_op_t *op = &ops[i];
 		odp_packet_t *pkt = &pkt_in[i];
-		odp_queue_t q = ODP_QUEUE_INVALID;
 
 		if (odp_unlikely(op->status.error.all))
 			goto finish;
@@ -2410,11 +2441,12 @@ static void ipsec_in_finalize(odp_packet_t pkt_in[], ipsec_op_t ops[], int num, 
 		ipsec_in_parse_decap_packet(*pkt, &op->state, op->sa);
 
 finish:
-		if (is_enq)
-			q = NULL != op->sa ? op->sa->queue : ipsec_config->inbound.default_queue;
-
-		finish_packet_proc(*pkt, op, q);
+		queues[i] = finish_packet_proc(*pkt, op, is_enq);
+		events[i] = odp_ipsec_packet_to_event(*pkt);
 	}
+
+	if (is_enq && num > 0)
+		enqueue_completions(events, queues, num);
 }
 
 int odp_ipsec_in(const odp_packet_t pkt_in[], int num_in, odp_packet_t pkt_out[], int *num_out,
@@ -2509,10 +2541,12 @@ static int ipsec_out_check_crypto_result(odp_packet_t pkt, odp_ipsec_op_status_t
 
 static void ipsec_out_finalize(odp_packet_t pkt_in[], ipsec_op_t ops[], int num, odp_bool_t is_enq)
 {
+	odp_queue_t queues[MAX_BURST];
+	odp_event_t events[MAX_BURST];
+
 	for (int i = 0; i < num; i++) {
 		ipsec_op_t *op = &ops[i];
 		odp_packet_t *pkt = &pkt_in[i];
-		odp_queue_t q = ODP_QUEUE_INVALID;
 
 		if (odp_unlikely(op->status.error.all))
 			goto finish;
@@ -2526,11 +2560,12 @@ static void ipsec_out_finalize(odp_packet_t pkt_in[], ipsec_op_t ops[], int num,
 			update_post_lifetime_stats(op->sa, &op->state);
 
 finish:
-		if (is_enq)
-			q = NULL != op->sa ? op->sa->queue : ipsec_config->inbound.default_queue;
-
-		finish_packet_proc(*pkt, op, q);
+		queues[i] = finish_packet_proc(*pkt, op, is_enq);
+		events[i] = odp_ipsec_packet_to_event(*pkt);
 	}
+
+	if (is_enq && num > 0)
+		enqueue_completions(events, queues, num);
 }
 
 int odp_ipsec_out(const odp_packet_t pkt_in[], int num_in, odp_packet_t pkt_out[], int *num_out,
@@ -2737,12 +2772,12 @@ static void ipsec_out_inline_finish_packet_proc(odp_packet_t *pkt,
 	}
 }
 
-static void ipsec_out_inline_handle_err(odp_packet_t pkt, ipsec_inline_op_t *op)
+static odp_queue_t ipsec_out_inline_handle_err(odp_packet_t pkt, ipsec_inline_op_t *op)
 {
 	odp_ipsec_packet_result_t *res;
 
 	if (odp_likely(!op->op.status.error.all))
-		return;
+		return ODP_QUEUE_INVALID;
 
 	if (ipsec_config->stats_en)
 		ipsec_sa_err_stats_update(op->op.sa, &op->op.status);
@@ -2753,17 +2788,21 @@ static void ipsec_out_inline_handle_err(odp_packet_t pkt, ipsec_inline_op_t *op)
 	res->sa = op->op.sa_hdl;
 	res->status = op->op.status;
 
-	if (odp_unlikely(odp_queue_enq(op->op.sa->queue, odp_ipsec_packet_to_event(pkt)) < 0))
-		odp_packet_free(pkt);
+	return op->op.sa->queue;
 }
 
 static void ipsec_out_inline_finalize(odp_packet_t pkt_in[],
 				      const odp_ipsec_out_inline_param_t *inline_param,
 				      ipsec_inline_op_t ops[], int num)
 {
+	odp_event_t err_events[MAX_BURST];
+	odp_queue_t queues[MAX_BURST];
+	int num_err = 0;
+
 	for (int i = 0; i < num; i++) {
 		ipsec_inline_op_t *op = &ops[i];
 		odp_packet_t *pkt = &pkt_in[i];
+		odp_queue_t queue;
 
 		if (op->op.status.warn.soft_exp_packets || op->op.status.warn.soft_exp_bytes) {
 			if (!odp_atomic_load_u32(&op->op.sa->soft_expiry_notified)) {
@@ -2800,8 +2839,16 @@ finish:
 		ipsec_out_inline_finish_packet_proc(pkt, &inline_param[i], op);
 
 handle_err:
-		ipsec_out_inline_handle_err(*pkt, op);
+		queue = ipsec_out_inline_handle_err(*pkt, op);
+		if (odp_unlikely(queue != ODP_QUEUE_INVALID)) {
+			err_events[num_err] = odp_ipsec_packet_to_event(*pkt);
+			queues[num_err] = queue;
+			num_err++;
+		}
 	}
+
+	if (odp_unlikely(num_err > 0))
+		enqueue_completions(err_events, queues, num_err);
 }
 
 int odp_ipsec_out_inline(const odp_packet_t pkt_in[], int num_in,

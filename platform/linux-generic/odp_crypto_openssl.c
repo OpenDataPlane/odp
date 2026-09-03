@@ -4,30 +4,27 @@
  */
 
 #include <odp_posix_extensions.h>
-#include <odp/api/crypto.h>
-#include <odp_init_internal.h>
-#include <odp/api/spinlock.h>
-#include <odp/api/sync.h>
-#include <odp/api/debug.h>
-#include <odp/api/align.h>
-#include <odp/api/shared_memory.h>
-#include <odp_debug_internal.h>
-#include <odp/api/hints.h>
-#include <odp/api/random.h>
-#include <odp/api/plat/packet_inlines.h>
-#include <odp/api/plat/thread_inlines.h>
-#include <odp_macros_internal.h>
-#include <odp_packet_internal.h>
-#include <odp/api/plat/queue_inlines.h>
-#include <odp_global_data.h>
 
-/* Inlined API functions */
+#include <odp/api/align.h>
+#include <odp/api/crypto.h>
+#include <odp/api/hints.h>
+#include <odp/api/shared_memory.h>
+#include <odp/api/spinlock.h>
+
 #include <odp/api/plat/event_inlines.h>
+#include <odp/api/plat/packet_inlines.h>
+#include <odp/api/plat/queue_inlines.h>
+#include <odp/api/plat/thread_inlines.h>
 
 #include <odp_crypto_internal.h>
+#include <odp_debug_internal.h>
+#include <odp_global_data.h>
+#include <odp_init_internal.h>
+#include <odp_macros_internal.h>
+#include <odp_packet_internal.h>
+#include <odp_pending_queue_internal.h>
 
 #include <string.h>
-#include <stdlib.h>
 
 #include <openssl/hmac.h>
 #include <openssl/cmac.h>
@@ -46,6 +43,7 @@
 #endif
 
 #define MAX_SESSIONS 4000
+#define MAX_BURST 32
 #define AES_BLOCK_SIZE 16
 #define AES_KEY_LENGTH 16
 
@@ -192,9 +190,6 @@ static const odp_crypto_auth_capability_t auth_capa_sha384[] = {
 static const odp_crypto_auth_capability_t auth_capa_sha512[] = {
 {.digest_len = 64, .key_len = 0, .aad_len = {.min = 0, .max = 0, .inc = 0} } };
 
-/** Forward declaration of session structure */
-typedef struct odp_crypto_generic_session_t odp_crypto_generic_session_t;
-
 /**
  * Algorithm handler function prototype
  */
@@ -248,6 +243,9 @@ struct odp_crypto_global_s {
 
 	/* These flags are cleared at alloc_session() */
 	uint8_t ctx_valid[ODP_THREAD_COUNT_MAX][MAX_SESSIONS];
+
+	odp_pending_queue_t pending;
+	uint64_t flexible_data[] ODP_ALIGNED_CACHE;
 };
 
 static odp_crypto_global_t *global;
@@ -2307,7 +2305,7 @@ odp_crypto_session_create(const odp_crypto_session_param_t *param,
 	}
 
 	/* We're happy */
-	*session_out = (intptr_t)session;
+	*session_out = odp_crypto_session_to_handle(session);
 	*status = ODP_CRYPTO_SES_ERR_NONE;
 	return 0;
 
@@ -2323,10 +2321,26 @@ int odp_crypto_session_destroy(odp_crypto_session_t session)
 {
 	odp_crypto_generic_session_t *generic;
 
-	generic = (odp_crypto_generic_session_t *)(intptr_t)session;
+	generic = odp_crypto_session_from_handle(session);
 	memset(generic, 0, sizeof(*generic));
 	free_session(generic);
 	return 0;
+}
+
+/*
+ * Free a completion event that could not be delivered. The input packet of an
+ * out-of-place operation may not be accessed by the application without the
+ * completion, so free it too.
+ */
+static void free_completion(odp_event_t event)
+{
+	odp_packet_t pkt = odp_packet_from_event(event);
+	odp_packet_t pkt_in = packet_hdr(pkt)->crypto_op_result.pkt_in;
+
+	if (pkt_in != ODP_PACKET_INVALID)
+		odp_packet_free(pkt_in);
+
+	odp_packet_free(pkt);
 }
 
 int _odp_crypto_init_global(void)
@@ -2340,8 +2354,16 @@ int _odp_crypto_init_global(void)
 		return 0;
 	}
 
+	/*
+	 * Reserving space for one burst per thread guarantees that all deferred
+	 * events fit in the queue as long as no thread tries to defer events
+	 * after it has seen that the queue is not empty.
+	 */
+	const uint32_t max_pending = odp_thread_count_max() * MAX_BURST;
+
 	/* Calculate the memory size we need */
 	mem_size  = sizeof(odp_crypto_global_t);
+	mem_size += _odp_pending_queue_mem_size(max_pending);
 
 	/* Allocate our globally shared memory */
 	shm = odp_shm_reserve("_odp_crypto_ssl_global", mem_size,
@@ -2356,6 +2378,9 @@ int _odp_crypto_init_global(void)
 
 	/* Clear it out */
 	memset(global, 0, mem_size);
+
+	_odp_pending_queue_init(&global->pending, max_pending,
+				free_completion, &global->flexible_data);
 
 	/* Initialize free list and lock */
 	for (idx = 0; idx < MAX_SESSIONS; idx++) {
@@ -2376,6 +2401,8 @@ int _odp_crypto_term_global(void)
 
 	if (odp_global_ro.disable.crypto)
 		return 0;
+
+	_odp_pending_queue_destroy(&global->pending);
 
 	for (session = global->free; session != NULL; session = session->next)
 		count++;
@@ -2470,9 +2497,20 @@ void odp_crypto_session_print(odp_crypto_session_t hdl)
 		return;
 	}
 
-	session = (odp_crypto_generic_session_t *)(uintptr_t)hdl;
+	session = odp_crypto_session_from_handle(hdl);
 
 	_odp_crypto_session_print("openssl", session->idx, &session->p);
+}
+
+static void set_crypto_result(odp_packet_t pkt,
+			      odp_crypto_alg_err_t cipher_err,
+			      odp_crypto_alg_err_t auth_err)
+{
+	odp_crypto_packet_result_t *op_result = &packet_hdr(pkt)->crypto_op_result;
+
+	packet_subtype_set(pkt, ODP_EVENT_PACKET_CRYPTO);
+	op_result->cipher_status.alg_err = cipher_err;
+	op_result->auth_status.alg_err = auth_err;
 }
 
 static
@@ -2484,7 +2522,6 @@ int crypto_int(odp_packet_t pkt_in,
 	odp_crypto_alg_err_t rc_auth = ODP_CRYPTO_ALG_ERR_NONE;
 	odp_crypto_generic_session_t *session;
 	odp_packet_t out_pkt;
-	odp_crypto_packet_result_t *op_result;
 
 	if (odp_unlikely(odp_packet_is_referencing(pkt_in) ||
 			 odp_packet_has_ref(pkt_in)))
@@ -2492,7 +2529,7 @@ int crypto_int(odp_packet_t pkt_in,
 			return -1;
 	out_pkt = pkt_in;
 
-	session = (odp_crypto_generic_session_t *)(intptr_t)param->session;
+	session = odp_crypto_session_from_handle(param->session);
 
 	if (odp_unlikely(session->null_crypto_enable && param->null_crypto))
 		goto out;
@@ -2522,11 +2559,7 @@ int crypto_int(odp_packet_t pkt_in,
 	}
 
 out:
-	/* Fill in result */
-	packet_subtype_set(out_pkt, ODP_EVENT_PACKET_CRYPTO);
-	op_result = &packet_hdr(out_pkt)->crypto_op_result;
-	op_result->cipher_status.alg_err = rc_cipher;
-	op_result->auth_status.alg_err = rc_auth;
+	set_crypto_result(out_pkt, rc_cipher, rc_auth);
 
 	/* Synchronous, simply return results */
 	*pkt_out = out_pkt;
@@ -2534,19 +2567,32 @@ out:
 	return 0;
 }
 
+static int copy_range(odp_packet_t dst,
+		      odp_packet_t src,
+		      int32_t shift,
+		      uint32_t offset,
+		      uint32_t length)
+{
+	int rc = odp_packet_copy_from_pkt(dst, offset + shift, src, offset, length);
+
+	if (odp_unlikely(rc))
+		_ODP_ERR("range copying failed\n");
+
+	return rc;
+}
+
 /*
- * Copy cipher range and auth range from src to dst,
- * with shifting by dst_offset_shift.
+ * Copy cipher range and auth range from src to dst, with shifting by
+ * param->dst_offset_shift.
  */
-static void copy_ranges(odp_packet_t dst,
-			odp_packet_t src,
-			const odp_crypto_generic_session_t *session,
-			const odp_crypto_packet_op_param_t *param)
+static int copy_ranges(odp_packet_t dst,
+		       odp_packet_t src,
+		       const odp_crypto_generic_session_t *session,
+		       const odp_crypto_packet_op_param_t *param)
 {
 	odp_packet_data_range_t c_range = param->cipher_range;
 	odp_packet_data_range_t a_range = param->auth_range;
 	int32_t shift = param->dst_offset_shift;
-	int rc;
 
 	if (session->cipher_range_in_bits) {
 		c_range.offset /= 8;
@@ -2557,24 +2603,33 @@ static void copy_ranges(odp_packet_t dst,
 		a_range.length = (a_range.length + 7) / 8;
 	}
 
-	if (c_range.length > 0) {
-		rc = odp_packet_copy_from_pkt(dst, c_range.offset + shift,
-					      src, c_range.offset,
-					      c_range.length);
-		if (rc) {
-			_ODP_ERR("cipher range copying failed\n");
-			return;
-		}
+	/* For AEAD only the cipher range is copied. */
+	if (!session->auth_range_used || a_range.length == 0) {
+		if (c_range.length > 0)
+			return copy_range(dst, src, shift, c_range.offset, c_range.length);
+		return 0;
 	}
-	if (session->auth_range_used && a_range.length > 0) {
-		rc = odp_packet_copy_from_pkt(dst, a_range.offset + shift,
-					      src, a_range.offset,
-					      a_range.length);
-		if (rc) {
-			_ODP_ERR("auth range copying failed\n");
-			return;
-		}
+
+	if (c_range.length == 0)
+		return copy_range(dst, src, shift, a_range.offset, a_range.length);
+
+	uint32_t c_start = c_range.offset;
+	uint32_t c_end = c_range.offset + c_range.length;
+	uint32_t a_start = a_range.offset;
+	uint32_t a_end = a_range.offset + a_range.length;
+
+	if (_ODP_MAX(c_start, a_start) <= _ODP_MIN(c_end, a_end)) {
+		/* Overlapping or adjacent ranges: single copy of the union. */
+		uint32_t start = _ODP_MIN(c_start, a_start);
+		uint32_t end = _ODP_MAX(c_end, a_end);
+
+		return copy_range(dst, src, shift, start, end - start);
 	}
+
+	/* Disjoint ranges: two separate copies. */
+	if (copy_range(dst, src, shift, c_start, c_range.length))
+		return -1;
+	return copy_range(dst, src, shift, a_start, a_range.length);
 }
 
 static int crypto_int_oop_encode(odp_packet_t pkt_in,
@@ -2586,7 +2641,10 @@ static int crypto_int_oop_encode(odp_packet_t pkt_in,
 	const uint32_t c_scale = session->cipher_range_in_bits ? 8 : 1;
 	const uint32_t a_scale = session->auth_range_in_bits ? 8 : 1;
 
-	copy_ranges(*pkt_out, pkt_in, session, param);
+	if (odp_unlikely(copy_ranges(*pkt_out, pkt_in, session, param))) {
+		set_crypto_result(*pkt_out, ODP_CRYPTO_ALG_ERR_OTHER, ODP_CRYPTO_ALG_ERR_OTHER);
+		return 0;
+	}
 
 	new_param.cipher_range.offset += param->dst_offset_shift * c_scale;
 	new_param.auth_range.offset += param->dst_offset_shift * a_scale;
@@ -2612,7 +2670,11 @@ static int crypto_int_oop_decode(odp_packet_t pkt_in,
 		return rc;
 	}
 
-	copy_ranges(*pkt_out, copy, session, param);
+	if (odp_unlikely(copy_ranges(*pkt_out, copy, session, param))) {
+		odp_packet_free(copy);
+		set_crypto_result(*pkt_out, ODP_CRYPTO_ALG_ERR_OTHER, ODP_CRYPTO_ALG_ERR_OTHER);
+		return 0;
+	}
 
 	packet_subtype_set(*pkt_out, ODP_EVENT_PACKET_CRYPTO);
 	packet_hdr(*pkt_out)->crypto_op_result = packet_hdr(copy)->crypto_op_result;
@@ -2631,19 +2693,13 @@ static int crypto_int_oop(odp_packet_t pkt_in,
 	odp_crypto_generic_session_t *session;
 	int rc;
 
-	session = (odp_crypto_generic_session_t *)(intptr_t)param->session;
+	session = odp_crypto_session_from_handle(param->session);
 
 	if (session->p.op == ODP_CRYPTO_OP_ENCODE)
 		rc = crypto_int_oop_encode(pkt_in, pkt_out, session, param);
 	else
 		rc = crypto_int_oop_decode(pkt_in, pkt_out, session, param);
-	if (rc)
-		return rc;
-
-	if (session->p.op_mode == ODP_CRYPTO_ASYNC)
-		packet_hdr(*pkt_out)->crypto_op_result.pkt_in = pkt_in;
-
-	return 0;
+	return rc;
 }
 
 int odp_crypto_op(const odp_packet_t pkt_in[],
@@ -2655,7 +2711,7 @@ int odp_crypto_op(const odp_packet_t pkt_in[],
 	odp_crypto_generic_session_t *session;
 
 	for (i = 0; i < num_pkt; i++) {
-		session = (odp_crypto_generic_session_t *)(intptr_t)param[i].session;
+		session = odp_crypto_session_from_handle(param[i].session);
 		_ODP_ASSERT(ODP_CRYPTO_SYNC == session->p.op_mode);
 
 		if (odp_likely(session->p.op_type == ODP_CRYPTO_OP_TYPE_BASIC ||
@@ -2682,15 +2738,29 @@ int odp_crypto_op_enq(const odp_packet_t pkt_in[],
 		      const odp_crypto_packet_op_param_t param[],
 		      int num_pkt)
 {
-	odp_packet_t pkt;
-	odp_event_t event;
-	odp_crypto_generic_session_t *session;
-	int i, rc;
+	odp_event_t events[MAX_BURST];
+	odp_queue_t queues[MAX_BURST];
+	int i;
+
+	if (odp_unlikely(!_odp_pending_queue_is_empty(&global->pending))) {
+		if (_odp_pending_queue_retry(&global->pending))
+			return 0;
+	}
+
+	if (num_pkt > MAX_BURST)
+		num_pkt = MAX_BURST;
 
 	for (i = 0; i < num_pkt; i++) {
-		session = (odp_crypto_generic_session_t *)(intptr_t)param[i].session;
+		odp_packet_t pkt;
+		odp_packet_t in_pkt;
+		odp_crypto_generic_session_t *session;
+		int rc;
+
+		session = odp_crypto_session_from_handle(param[i].session);
 		_ODP_ASSERT(ODP_CRYPTO_ASYNC == session->p.op_mode);
 		_ODP_ASSERT(ODP_QUEUE_INVALID != session->p.compl_queue);
+
+		in_pkt = ODP_PACKET_INVALID;
 
 		if (odp_likely(session->p.op_type == ODP_CRYPTO_OP_TYPE_BASIC ||
 			       pkt_out[i] == ODP_PACKET_INVALID)) {
@@ -2703,17 +2773,17 @@ int odp_crypto_op_enq(const odp_packet_t pkt_in[],
 				    session->p.op_type == ODP_CRYPTO_OP_TYPE_BASIC_AND_OOP);
 
 			pkt = pkt_out[i];
+			in_pkt = pkt_in[i];
 			rc = crypto_int_oop(pkt_in[i], &pkt, &param[i]);
 		}
 		if (rc < 0)
 			break;
 
-		event = odp_packet_to_event(pkt);
-		if (odp_queue_enq(session->p.compl_queue, event)) {
-			odp_event_free(event);
-			break;
-		}
+		packet_hdr(pkt)->crypto_op_result.pkt_in = in_pkt;
+		events[i] = odp_packet_to_event(pkt);
+		queues[i] = session->p.compl_queue;
 	}
+	_odp_crypto_enqueue_completions(&global->pending, events, queues, i);
 
 	return i;
 }
