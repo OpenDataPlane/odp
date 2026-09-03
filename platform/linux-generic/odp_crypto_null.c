@@ -4,26 +4,23 @@
  */
 
 #include <odp_posix_extensions.h>
-#include <odp/api/crypto.h>
-#include <odp_init_internal.h>
-#include <odp/api/spinlock.h>
-#include <odp/api/sync.h>
-#include <odp/api/debug.h>
+
 #include <odp/api/align.h>
-#include <odp/api/shared_memory.h>
-#include <odp_debug_internal.h>
-#include <odp_global_data.h>
+#include <odp/api/crypto.h>
+#include <odp/api/event.h>
 #include <odp/api/hints.h>
-#include <odp/api/random.h>
+#include <odp/api/shared_memory.h>
+#include <odp/api/spinlock.h>
+
+#include <odp/api/plat/event_inlines.h>
 #include <odp/api/plat/packet_inlines.h>
-#include <odp/api/plat/thread_inlines.h>
-#include <odp_packet_internal.h>
 #include <odp/api/plat/queue_inlines.h>
 
-/* Inlined API functions */
-#include <odp/api/plat/event_inlines.h>
-
 #include <odp_crypto_internal.h>
+#include <odp_debug_internal.h>
+#include <odp_global_data.h>
+#include <odp_init_internal.h>
+#include <odp_packet_internal.h>
 
 #define MAX_SESSIONS 32
 
@@ -73,11 +70,6 @@ struct odp_crypto_global_s {
 	odp_spinlock_t                lock;
 	odp_crypto_generic_session_t *free;
 	odp_crypto_generic_session_t  sessions[MAX_SESSIONS];
-
-	/* These flags are cleared at alloc_session() */
-	uint8_t ctx_valid[ODP_THREAD_COUNT_MAX][MAX_SESSIONS];
-
-	odp_ticketlock_t              openssl_lock[];
 };
 
 static odp_crypto_global_t *global;
@@ -86,7 +78,6 @@ static
 odp_crypto_generic_session_t *alloc_session(void)
 {
 	odp_crypto_generic_session_t *session = NULL;
-	unsigned int i;
 
 	odp_spinlock_lock(&global->lock);
 	session = global->free;
@@ -100,9 +91,6 @@ odp_crypto_generic_session_t *alloc_session(void)
 		return NULL;
 
 	session->idx = session - global->sessions;
-
-	for (i = 0; i < ODP_THREAD_COUNT_MAX; i++)
-		global->ctx_valid[i][session->idx] = 0;
 
 	return session;
 }
