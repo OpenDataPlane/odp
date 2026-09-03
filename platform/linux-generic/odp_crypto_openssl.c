@@ -42,6 +42,7 @@
 #endif
 
 #define MAX_SESSIONS 4000
+#define MAX_BURST 32
 #define AES_BLOCK_SIZE 16
 #define AES_KEY_LENGTH 16
 
@@ -2665,13 +2666,7 @@ static int crypto_int_oop(odp_packet_t pkt_in,
 		rc = crypto_int_oop_encode(pkt_in, pkt_out, session, param);
 	else
 		rc = crypto_int_oop_decode(pkt_in, pkt_out, session, param);
-	if (rc)
-		return rc;
-
-	if (session->p.op_mode == ODP_CRYPTO_ASYNC)
-		packet_hdr(*pkt_out)->crypto_op_result.pkt_in = pkt_in;
-
-	return 0;
+	return rc;
 }
 
 int odp_crypto_op(const odp_packet_t pkt_in[],
@@ -2710,13 +2705,19 @@ int odp_crypto_op_enq(const odp_packet_t pkt_in[],
 		      const odp_crypto_packet_op_param_t param[],
 		      int num_pkt)
 {
-	odp_packet_t pkt;
-	odp_packet_t in_pkt;
-	odp_event_t event;
-	odp_crypto_generic_session_t *session;
-	int i, rc;
+	odp_event_t events[MAX_BURST];
+	odp_queue_t queues[MAX_BURST];
+	int i;
+
+	if (num_pkt > MAX_BURST)
+		num_pkt = MAX_BURST;
 
 	for (i = 0; i < num_pkt; i++) {
+		odp_packet_t pkt;
+		odp_packet_t in_pkt;
+		odp_crypto_generic_session_t *session;
+		int rc;
+
 		session = odp_crypto_session_from_handle(param[i].session);
 		_ODP_ASSERT(ODP_CRYPTO_ASYNC == session->p.op_mode);
 		_ODP_ASSERT(ODP_QUEUE_INVALID != session->p.compl_queue);
@@ -2740,22 +2741,11 @@ int odp_crypto_op_enq(const odp_packet_t pkt_in[],
 		if (rc < 0)
 			break;
 
-		event = odp_packet_to_event(pkt);
-		if (odp_unlikely(odp_queue_enq(session->p.compl_queue, event))) {
-			/*
-			 * Enqueuing failed, so this crypto operation does not complete.
-			 * We cannot anymore indicate the input packet as not consumed
-			 * and the crypto operation as not done. Free the output packet
-			 * so that it is not leaked. Free also the OOP input packet as the
-			 * application cannot access it without the completion happening.
-			 * With this, applications that do not rely on all operations to
-			 * properly complete may still work, with some packet loss in crypto.
-			 */
-			odp_packet_free(pkt);
-			if (in_pkt != ODP_PACKET_INVALID)
-				odp_packet_free(in_pkt);
-		}
+		packet_hdr(pkt)->crypto_op_result.pkt_in = in_pkt;
+		events[i] = odp_packet_to_event(pkt);
+		queues[i] = session->p.compl_queue;
 	}
+	_odp_crypto_enqueue_completions(events, queues, i);
 
 	return i;
 }

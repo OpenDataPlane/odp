@@ -25,6 +25,7 @@
 #include <ipsec-mb.h>
 
 #define MAX_SESSIONS 4000
+#define MAX_BURST 32
 /* Length in bytes */
 #define IPSEC_MB_CRYPTO_MAX_CIPHER_KEY_LENGTH      32
 #define IPSEC_MB_CRYPTO_MAX_AUTH_KEY_LENGTH        32
@@ -821,12 +822,18 @@ int odp_crypto_op_enq(const odp_packet_t pkt_in[],
 		      const odp_crypto_packet_op_param_t param[],
 		      int num_pkt)
 {
-	odp_packet_t pkt;
-	odp_event_t event;
-	odp_crypto_generic_session_t *session;
-	int i, rc;
+	odp_event_t events[MAX_BURST];
+	odp_queue_t queues[MAX_BURST];
+	int i;
+
+	if (num_pkt > MAX_BURST)
+		num_pkt = MAX_BURST;
 
 	for (i = 0; i < num_pkt; i++) {
+		odp_packet_t pkt;
+		odp_crypto_generic_session_t *session;
+		int rc;
+
 		session = odp_crypto_session_from_handle(param[i].session);
 		_ODP_ASSERT(ODP_CRYPTO_ASYNC == session->p.op_mode);
 		_ODP_ASSERT(ODP_QUEUE_INVALID != session->p.compl_queue);
@@ -838,10 +845,11 @@ int odp_crypto_op_enq(const odp_packet_t pkt_in[],
 		if (rc < 0)
 			break;
 
-		event = odp_packet_to_event(pkt);
-		if (odp_unlikely(odp_queue_enq(session->p.compl_queue, event)))
-			odp_packet_free(pkt);
+		packet_hdr(pkt)->crypto_op_result.pkt_in = ODP_PACKET_INVALID;
+		events[i] = odp_packet_to_event(pkt);
+		queues[i] = session->p.compl_queue;
 	}
+	_odp_crypto_enqueue_completions(events, queues, i);
 
 	return i;
 }
