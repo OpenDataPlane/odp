@@ -2468,6 +2468,17 @@ void odp_crypto_session_print(odp_crypto_session_t hdl)
 	_odp_crypto_session_print("openssl", session->idx, &session->p);
 }
 
+static void set_crypto_result(odp_packet_t pkt,
+			      odp_crypto_alg_err_t cipher_err,
+			      odp_crypto_alg_err_t auth_err)
+{
+	odp_crypto_packet_result_t *op_result = &packet_hdr(pkt)->crypto_op_result;
+
+	packet_subtype_set(pkt, ODP_EVENT_PACKET_CRYPTO);
+	op_result->cipher_status.alg_err = cipher_err;
+	op_result->auth_status.alg_err = auth_err;
+}
+
 static
 int crypto_int(odp_packet_t pkt_in,
 	       odp_packet_t *pkt_out,
@@ -2477,7 +2488,6 @@ int crypto_int(odp_packet_t pkt_in,
 	odp_crypto_alg_err_t rc_auth = ODP_CRYPTO_ALG_ERR_NONE;
 	odp_crypto_generic_session_t *session;
 	odp_packet_t out_pkt;
-	odp_crypto_packet_result_t *op_result;
 
 	if (odp_unlikely(odp_packet_is_referencing(pkt_in) ||
 			 odp_packet_has_ref(pkt_in)))
@@ -2515,11 +2525,7 @@ int crypto_int(odp_packet_t pkt_in,
 	}
 
 out:
-	/* Fill in result */
-	packet_subtype_set(out_pkt, ODP_EVENT_PACKET_CRYPTO);
-	op_result = &packet_hdr(out_pkt)->crypto_op_result;
-	op_result->cipher_status.alg_err = rc_cipher;
-	op_result->auth_status.alg_err = rc_auth;
+	set_crypto_result(out_pkt, rc_cipher, rc_auth);
 
 	/* Synchronous, simply return results */
 	*pkt_out = out_pkt;
@@ -2527,19 +2533,32 @@ out:
 	return 0;
 }
 
+static int copy_range(odp_packet_t dst,
+		      odp_packet_t src,
+		      int32_t shift,
+		      uint32_t offset,
+		      uint32_t length)
+{
+	int rc = odp_packet_copy_from_pkt(dst, offset + shift, src, offset, length);
+
+	if (odp_unlikely(rc))
+		_ODP_ERR("range copying failed\n");
+
+	return rc;
+}
+
 /*
- * Copy cipher range and auth range from src to dst,
- * with shifting by dst_offset_shift.
+ * Copy cipher range and auth range from src to dst, with shifting by
+ * param->dst_offset_shift.
  */
-static void copy_ranges(odp_packet_t dst,
-			odp_packet_t src,
-			const odp_crypto_generic_session_t *session,
-			const odp_crypto_packet_op_param_t *param)
+static int copy_ranges(odp_packet_t dst,
+		       odp_packet_t src,
+		       const odp_crypto_generic_session_t *session,
+		       const odp_crypto_packet_op_param_t *param)
 {
 	odp_packet_data_range_t c_range = param->cipher_range;
 	odp_packet_data_range_t a_range = param->auth_range;
 	int32_t shift = param->dst_offset_shift;
-	int rc;
 
 	if (session->cipher_range_in_bits) {
 		c_range.offset /= 8;
@@ -2550,24 +2569,33 @@ static void copy_ranges(odp_packet_t dst,
 		a_range.length = (a_range.length + 7) / 8;
 	}
 
-	if (c_range.length > 0) {
-		rc = odp_packet_copy_from_pkt(dst, c_range.offset + shift,
-					      src, c_range.offset,
-					      c_range.length);
-		if (rc) {
-			_ODP_ERR("cipher range copying failed\n");
-			return;
-		}
+	/* For AEAD only the cipher range is copied. */
+	if (!session->auth_range_used || a_range.length == 0) {
+		if (c_range.length > 0)
+			return copy_range(dst, src, shift, c_range.offset, c_range.length);
+		return 0;
 	}
-	if (session->auth_range_used && a_range.length > 0) {
-		rc = odp_packet_copy_from_pkt(dst, a_range.offset + shift,
-					      src, a_range.offset,
-					      a_range.length);
-		if (rc) {
-			_ODP_ERR("auth range copying failed\n");
-			return;
-		}
+
+	if (c_range.length == 0)
+		return copy_range(dst, src, shift, a_range.offset, a_range.length);
+
+	uint32_t c_start = c_range.offset;
+	uint32_t c_end = c_range.offset + c_range.length;
+	uint32_t a_start = a_range.offset;
+	uint32_t a_end = a_range.offset + a_range.length;
+
+	if (_ODP_MAX(c_start, a_start) <= _ODP_MIN(c_end, a_end)) {
+		/* Overlapping or adjacent ranges: single copy of the union. */
+		uint32_t start = _ODP_MIN(c_start, a_start);
+		uint32_t end = _ODP_MAX(c_end, a_end);
+
+		return copy_range(dst, src, shift, start, end - start);
 	}
+
+	/* Disjoint ranges: two separate copies. */
+	if (copy_range(dst, src, shift, c_start, c_range.length))
+		return -1;
+	return copy_range(dst, src, shift, a_start, a_range.length);
 }
 
 static int crypto_int_oop_encode(odp_packet_t pkt_in,
@@ -2579,7 +2607,10 @@ static int crypto_int_oop_encode(odp_packet_t pkt_in,
 	const uint32_t c_scale = session->cipher_range_in_bits ? 8 : 1;
 	const uint32_t a_scale = session->auth_range_in_bits ? 8 : 1;
 
-	copy_ranges(*pkt_out, pkt_in, session, param);
+	if (odp_unlikely(copy_ranges(*pkt_out, pkt_in, session, param))) {
+		set_crypto_result(*pkt_out, ODP_CRYPTO_ALG_ERR_OTHER, ODP_CRYPTO_ALG_ERR_OTHER);
+		return 0;
+	}
 
 	new_param.cipher_range.offset += param->dst_offset_shift * c_scale;
 	new_param.auth_range.offset += param->dst_offset_shift * a_scale;
@@ -2605,7 +2636,11 @@ static int crypto_int_oop_decode(odp_packet_t pkt_in,
 		return rc;
 	}
 
-	copy_ranges(*pkt_out, copy, session, param);
+	if (odp_unlikely(copy_ranges(*pkt_out, copy, session, param))) {
+		odp_packet_free(copy);
+		set_crypto_result(*pkt_out, ODP_CRYPTO_ALG_ERR_OTHER, ODP_CRYPTO_ALG_ERR_OTHER);
+		return 0;
+	}
 
 	packet_subtype_set(*pkt_out, ODP_EVENT_PACKET_CRYPTO);
 	packet_hdr(*pkt_out)->crypto_op_result = packet_hdr(copy)->crypto_op_result;
