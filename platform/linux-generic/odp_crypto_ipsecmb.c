@@ -66,9 +66,6 @@ static const odp_crypto_auth_capability_t auth_capa_snow3g_uia2[] = {
 {.digest_len = SNOW3G_DIGEST_LENGTH, .key_len = 16, .aad_len = {.min = 0, .max = 0, .inc = 0},
 	.iv_len = 16} };
 
-/** Forward declaration of session structure */
-typedef struct odp_crypto_generic_session_t odp_crypto_generic_session_t;
-
 /**
  * Algorithm handler function prototype
  */
@@ -618,7 +615,7 @@ odp_crypto_session_create(const odp_crypto_session_param_t *param,
 		goto err;
 	}
 
-	*session_out = (intptr_t)session;
+	*session_out = odp_crypto_session_to_handle(session);
 	*status = ODP_CRYPTO_SES_ERR_NONE;
 	return 0;
 
@@ -634,7 +631,7 @@ int odp_crypto_session_destroy(odp_crypto_session_t session)
 {
 	odp_crypto_generic_session_t *generic;
 
-	generic = (odp_crypto_generic_session_t *)(intptr_t)session;
+	generic = odp_crypto_session_from_handle(session);
 	memset(generic, 0, sizeof(*generic));
 	free_session(generic);
 	return 0;
@@ -751,7 +748,7 @@ void odp_crypto_session_print(odp_crypto_session_t hdl)
 		return;
 	}
 
-	session = (odp_crypto_generic_session_t *)(uintptr_t)hdl;
+	session = odp_crypto_session_from_handle(hdl);
 
 	_odp_crypto_session_print("ipsecmb", session->idx, &session->p);
 }
@@ -773,7 +770,7 @@ int crypto_int(odp_packet_t pkt_in,
 			return -1;
 	out_pkt = pkt_in;
 
-	session = (odp_crypto_generic_session_t *)(intptr_t)param->session;
+	session = odp_crypto_session_from_handle(param->session);
 
 	if (odp_unlikely(session->null_crypto_enable && param->null_crypto))
 		goto out;
@@ -808,7 +805,7 @@ int odp_crypto_op(const odp_packet_t pkt_in[],
 	odp_crypto_generic_session_t *session;
 
 	for (i = 0; i < num_pkt; i++) {
-		session = (odp_crypto_generic_session_t *)(intptr_t)param[i].session;
+		session = odp_crypto_session_from_handle(param[i].session);
 		_ODP_ASSERT(ODP_CRYPTO_SYNC == session->p.op_mode);
 
 		rc = crypto_int(pkt_in[i], &pkt_out[i], &param[i]);
@@ -830,7 +827,7 @@ int odp_crypto_op_enq(const odp_packet_t pkt_in[],
 	int i, rc;
 
 	for (i = 0; i < num_pkt; i++) {
-		session = (odp_crypto_generic_session_t *)(intptr_t)param[i].session;
+		session = odp_crypto_session_from_handle(param[i].session);
 		_ODP_ASSERT(ODP_CRYPTO_ASYNC == session->p.op_mode);
 		_ODP_ASSERT(ODP_QUEUE_INVALID != session->p.compl_queue);
 
