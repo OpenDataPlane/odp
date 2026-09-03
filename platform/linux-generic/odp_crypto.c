@@ -9,7 +9,7 @@
 
 #include <odp_crypto_internal.h>
 #include <odp_debug_internal.h>
-#include <odp_packet_internal.h>
+#include <odp_pending_queue_internal.h>
 #include <odp_string_internal.h>
 
 #include <inttypes.h>
@@ -219,38 +219,14 @@ void _odp_crypto_session_print(const char *type, uint32_t index,
 	_ODP_PRINT("%s\n", str);
 }
 
-static void do_enqueue(odp_queue_t queue, const odp_event_t events[], int num)
-{
-	int rc;
-
-	rc = odp_queue_enq_multi(queue, events, num);
-	if (odp_likely(rc == num))
-		return;
-	if (rc < 0)
-		rc = 0;
-
-	/* Give up if the queue becomes full. Some operations will never complete */
-	for (int i = rc; i < num; i++) {
-		odp_packet_t pkt_in;
-
-		/*
-		 * Free OOP input packets of unsent completions. The application cannot
-		 * access the input packets without the completion happening.
-		 */
-		pkt_in = packet_hdr(odp_packet_from_event(events[i]))->crypto_op_result.pkt_in;
-		if (pkt_in != ODP_PACKET_INVALID)
-			odp_packet_free(pkt_in);
-	}
-	/* Free unsent completion events */
-	odp_event_free_multi(&events[rc], num - rc);
-}
-
-void _odp_crypto_enqueue_completions(const odp_event_t events[],
+void _odp_crypto_enqueue_completions(odp_pending_queue_t *pending,
+				     const odp_event_t events[],
 				     const odp_queue_t queues[],
 				     int num)
 {
 	odp_queue_t queue;
 	int num_enqueued = 0;
+	int rc;
 
 	if (odp_unlikely(num <= 0))
 		return;
@@ -259,11 +235,28 @@ void _odp_crypto_enqueue_completions(const odp_event_t events[],
 
 	for (int i = 1; i < num; i++) {
 		if (queues[i] != queue) {
-			do_enqueue(queue, &events[num_enqueued], i - num_enqueued);
+			rc = odp_queue_enq_multi(queue, &events[num_enqueued], i - num_enqueued);
+			if (odp_unlikely(rc != i - num_enqueued)) {
+				/*
+				 * Do not continue with the rest of the burst
+				 * to preserve event ordering.
+				 */
+				goto defer;
+			}
 			num_enqueued = i;
 			queue = queues[i];
 		}
 	}
 
-	do_enqueue(queue, &events[num_enqueued], num - num_enqueued);
+	rc = odp_queue_enq_multi(queue, &events[num_enqueued], num - num_enqueued);
+	if (odp_likely(rc == num - num_enqueued))
+		return;
+
+defer:
+	if (rc < 0)
+		rc = 0;
+	num_enqueued += rc;
+	/* Completion queue is full. Retry enqueuing the rest later. */
+	_odp_pending_queue_defer(pending, &events[num_enqueued], &queues[num_enqueued],
+				 num - num_enqueued);
 }

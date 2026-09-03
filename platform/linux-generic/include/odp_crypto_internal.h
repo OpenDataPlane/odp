@@ -9,6 +9,8 @@
 #include <odp/api/event.h>
 #include <odp/api/queue.h>
 
+#include <odp_pending_queue_internal.h>
+
 #include <stdint.h>
 
 #ifdef __cplusplus
@@ -32,7 +34,8 @@ odp_crypto_session_to_handle(odp_crypto_generic_session_t *session)
 void _odp_crypto_session_print(const char *type, uint32_t index,
 			       const odp_crypto_session_param_t *param);
 
-void _odp_crypto_enqueue_completions(const odp_event_t events[],
+void _odp_crypto_enqueue_completions(odp_pending_queue_t *pending,
+				     const odp_event_t events[],
 				     const odp_queue_t queues[],
 				     int num);
 

@@ -12,6 +12,7 @@
 #include <odp/api/align.h>
 #include <odp/api/shared_memory.h>
 #include <odp/api/hints.h>
+#include <odp/api/thread.h>
 
 #include <odp/api/plat/event_inlines.h>
 #include <odp/api/plat/packet_inlines.h>
@@ -22,6 +23,7 @@
 #include <odp_global_data.h>
 #include <odp_init_internal.h>
 #include <odp_packet_internal.h>
+#include <odp_pending_queue_internal.h>
 
 #include "AArch64cryptolib.h"
 
@@ -127,6 +129,8 @@ struct odp_crypto_global_s {
 	odp_spinlock_t                lock;
 	odp_crypto_generic_session_t *free;
 	odp_crypto_generic_session_t  sessions[MAX_SESSIONS];
+	odp_pending_queue_t           pending;
+	uint64_t                      flexible_data[] ODP_ALIGNED_CACHE;
 };
 
 static odp_crypto_global_t *global;
@@ -673,8 +677,11 @@ int _odp_crypto_init_global(void)
 		return 0;
 	}
 
+	const uint32_t max_pending = odp_thread_count_max() * MAX_BURST;
+
 	/* Calculate the memory size we need */
 	mem_size  = sizeof(odp_crypto_global_t);
+	mem_size += _odp_pending_queue_mem_size(max_pending);
 
 	/* Allocate our globally shared memory */
 	shm = odp_shm_reserve("_odp_crypto_pool_armv8crypto", mem_size,
@@ -689,6 +696,9 @@ int _odp_crypto_init_global(void)
 
 	/* Clear it out */
 	memset(global, 0, mem_size);
+
+	_odp_pending_queue_init(&global->pending, max_pending,
+				NULL, &global->flexible_data);
 
 	/* Initialize free list and lock */
 	for (idx = 0; idx < MAX_SESSIONS; idx++) {
@@ -709,6 +719,8 @@ int _odp_crypto_term_global(void)
 
 	if (odp_global_ro.disable.crypto)
 		return 0;
+
+	_odp_pending_queue_destroy(&global->pending);
 
 	for (session = global->free; session != NULL; session = session->next)
 		count++;
@@ -827,6 +839,11 @@ int odp_crypto_op_enq(const odp_packet_t pkt_in[],
 	odp_queue_t queues[MAX_BURST];
 	int i;
 
+	if (odp_unlikely(!_odp_pending_queue_is_empty(&global->pending))) {
+		if (_odp_pending_queue_retry(&global->pending))
+			return 0;
+	}
+
 	if (num_pkt > MAX_BURST)
 		num_pkt = MAX_BURST;
 
@@ -846,11 +863,10 @@ int odp_crypto_op_enq(const odp_packet_t pkt_in[],
 		if (rc < 0)
 			break;
 
-		packet_hdr(pkt)->crypto_op_result.pkt_in = ODP_PACKET_INVALID;
 		events[i] = odp_packet_to_event(pkt);
 		queues[i] = session->p.compl_queue;
 	}
-	_odp_crypto_enqueue_completions(events, queues, i);
+	_odp_crypto_enqueue_completions(&global->pending, events, queues, i);
 
 	return i;
 }
