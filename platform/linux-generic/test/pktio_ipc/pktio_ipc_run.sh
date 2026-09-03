@@ -30,12 +30,12 @@ run()
 	pktio_ipc2${EXEEXT} -p ${IPC_PID}  -s ${STARTTIME} -t ${RUNTIME}
 	ret=$?
 
-	(kill ${IPC_PID} 2>&1 > /dev/null ) > /dev/null
+	kill ${IPC_PID} >/dev/null 2>&1
 	if [ $? -eq 0 ]; then
 		wait $IPC_PID
 		echo "pktio_ipc1${EXEEXT} was killed"
 		ls -l /dev/shm/${UID}/odp* 2> /dev/null
-		rm -rf /dev/shm/${UID}/odp-${IPC_PID}* 2>&1 > /dev/null
+		rm -rf /dev/shm/${UID}/odp-${IPC_PID}* >/dev/null 2>&1
 	else
 		echo "normal exit of 2 application"
 		ls -l /dev/shm/${UID}/odp* 2> /dev/null
@@ -55,12 +55,12 @@ run()
 	pktio_ipc1${EXEEXT} -p ${IPC_PID}  -s ${STARTTIME} -t ${RUNTIME}
 	ret=$?
 
-	(kill ${IPC_PID} 2>&1 > /dev/null ) > /dev/null
+	kill ${IPC_PID} >/dev/null 2>&1
 	if [ $? -eq 0 ]; then
 		wait $IPC_PID
 		echo "pktio_ipc2${EXEEXT} was killed"
 		ls -l /dev/shm/${UID}/odp* 2> /dev/null
-		rm -rf /dev/shm/${UID}/odp-${IPC_PID}* 2>&1 > /dev/null
+		rm -rf /dev/shm/${UID}/odp-${IPC_PID}* >/dev/null 2>&1
 	else
 		echo "normal exit of 2 application"
 		ls -l /dev/shm/${UID}/odp* 2> /dev/null
@@ -69,7 +69,7 @@ run()
 	if [ $ret -ne 0 ]; then
 		echo "!!! FAILED !!!"
 		ls -l /dev/shm/${UID}/odp* 2> /dev/null
-		rm -rf /dev/shm/${UID}/odp-${IPC_PID}* 2>&1 > /dev/null
+		rm -rf /dev/shm/${UID}/odp-${IPC_PID}* >/dev/null 2>&1
 		exit $ret
 	else
 		ls -l /dev/shm/${UID}/odp* 2> /dev/null
