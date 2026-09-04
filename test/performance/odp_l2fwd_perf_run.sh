@@ -53,7 +53,7 @@ run_l2fwd_perf()
 
 	# Run odp_packet_gen with one tx thread
 	GEN_LOG=odp_packet_gen_tmp.log
-	odp_packet_gen${EXEEXT} --gap 0 -i $IF0 \
+	env $PKTIO_GEN_ENV odp_packet_gen${EXEEXT} --gap 0 -i $IF0 \
 			--ipv4_src 192.168.0.1 --ipv4_dst 192.168.0.2 \
 			-r 0 -t 1 >$GEN_LOG 2>&1 &
 	GEN_PID=$!
