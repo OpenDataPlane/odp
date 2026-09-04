@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright (c) 2015-2018 Linaro Limited
+# Copyright (c) 2026 Nokia
 #
 # Test script wrapper for running ODP pktio apps on linux-generic.
 #
@@ -101,6 +102,11 @@ setup_pktio_env()
 			return 5
 		fi
 	done
+
+	# We want packet generator to run with DPDK and process mode
+	# disabled to save memory and to avoid possible problems caused
+	# by multiple parallel DPDK and process mode apps.
+	PKTIO_GEN_ENV="ODP_PKTIO_DISABLE_DPDK=1 ODPH_PROC_MODE=0"
 }
 
 cleanup_pktio_env()

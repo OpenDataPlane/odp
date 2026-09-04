@@ -126,7 +126,7 @@ int _odp_pktio_init_global(void)
 	pktio_entry_t *pktio_entry;
 	int i;
 	odp_shm_t shm;
-	int pktio_if;
+	int pktio_if = 0;
 
 	shm = odp_shm_reserve("_odp_pktio_global", sizeof(pktio_global_t),
 			      ODP_CACHE_LINE_SIZE, 0);
@@ -139,11 +139,8 @@ int _odp_pktio_init_global(void)
 
 	odp_spinlock_init(&pktio_global->lock);
 
-	if (read_config_file(pktio_global)) {
-		odp_shm_free(shm);
-		pktio_global = NULL;
-		return -1;
-	}
+	if (read_config_file(pktio_global))
+		goto err;
 
 	for (i = 0; i < CONFIG_PKTIO_ENTRIES; ++i) {
 		pktio_entry = &pktio_global->entries[i];
@@ -155,22 +152,33 @@ int _odp_pktio_init_global(void)
 		_odp_pktio_entry_ptr[i] = pktio_entry;
 	}
 
-	for (pktio_if = 0; _odp_pktio_if_ops[pktio_if]; ++pktio_if) {
+	for (; _odp_pktio_if_ops[pktio_if]; ++pktio_if) {
 		if (_odp_pktio_if_ops[pktio_if]->init_global)
 			if (_odp_pktio_if_ops[pktio_if]->init_global()) {
-				_ODP_ERR("failed to initialized pktio type %d", pktio_if);
-				return -1;
+				_ODP_ERR("failed to initialize pktio type %d\n", pktio_if);
+				goto err;
 			}
 	}
 
 	if (_ODP_PCAPNG) {
 		if (_odp_pcapng_init_global()) {
 			_ODP_ERR("Failed to initialize pcapng\n");
-			return -1;
+			goto err;
 		}
 	}
 
 	return 0;
+
+err:
+	for (i = 0; i < pktio_if; i++) {
+		int (*term)(void) = _odp_pktio_if_ops[i]->term;
+
+		if (term && term())
+			_ODP_ERR("failed to terminate pktio type %d\n", i);
+	}
+	odp_shm_free(shm);
+	pktio_global = NULL;
+	return -1;
 }
 
 int _odp_pktio_init_local(void)
@@ -180,7 +188,7 @@ int _odp_pktio_init_local(void)
 	for (pktio_if = 0; _odp_pktio_if_ops[pktio_if]; ++pktio_if) {
 		if (_odp_pktio_if_ops[pktio_if]->init_local)
 			if (_odp_pktio_if_ops[pktio_if]->init_local()) {
-				_ODP_ERR("failed to initialized pktio type %d", pktio_if);
+				_ODP_ERR("failed to initialize pktio type %d\n", pktio_if);
 				return -1;
 			}
 	}

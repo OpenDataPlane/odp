@@ -14,6 +14,7 @@ jobs:
   Build_gcc:
     if: ${{ github.repository == 'OpenDataPlane/odp' }}
     runs-on: ah-ubuntu_22_04-c7g_2x-50
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -35,6 +36,7 @@ jobs:
   Build_clang:
     if: ${{ github.repository == 'OpenDataPlane/odp' }}
     runs-on: ah-ubuntu_22_04-c7g_2x-50
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -59,6 +61,7 @@ jobs:
   Build_static:
     if: ${{ github.repository == 'OpenDataPlane/odp' }}
     runs-on: ah-ubuntu_22_04-c7g_2x-50
+    timeout-minutes: 30
     env:
       CONF: "--disable-shared --without-openssl --without-pcap"
     strategy:
@@ -77,6 +80,7 @@ jobs:
   Build_OS:
     if: ${{ github.repository == 'OpenDataPlane/odp' }}
     runs-on: ah-ubuntu_22_04-c7g_2x-50
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -93,6 +97,7 @@ jobs:
   Build_gcc_versions:
     if: ${{ github.repository == 'OpenDataPlane/odp' }}
     runs-on: ah-ubuntu_22_04-c7g_2x-50
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -110,6 +115,7 @@ jobs:
   Build_gcc_15:
     if: ${{ github.repository == 'OpenDataPlane/odp' }}
     runs-on: ah-ubuntu_22_04-c7g_2x-50
+    timeout-minutes: 30
     env:
       OS: ubuntu_26.04
     strategy:
@@ -127,6 +133,7 @@ jobs:
   Build_clang_21:
     if: ${{ github.repository == 'OpenDataPlane/odp' }}
     runs-on: ah-ubuntu_22_04-c7g_2x-50
+    timeout-minutes: 30
     env:
       OS: ubuntu_26.04
     strategy:
@@ -144,6 +151,7 @@ jobs:
   Build_out-of-tree:
     if: ${{ github.repository == 'OpenDataPlane/odp' }}
     runs-on: ah-ubuntu_22_04-c7g_2x-50
+    timeout-minutes: 30
     steps:
       - uses: OpenDataPlane/action-clean-up@main
       - uses: actions/checkout@v6
@@ -155,6 +163,7 @@ jobs:
   Build_XDP:
     if: ${{ github.repository == 'OpenDataPlane/odp' }}
     runs-on: ah-ubuntu_22_04-c7g_2x-50
+    timeout-minutes: 30
     env:
       CONF: "--enable-xdp"
     strategy:
@@ -172,6 +181,7 @@ jobs:
   Run_distcheck:
     if: ${{ github.repository == 'OpenDataPlane/odp' }}
     runs-on: ah-ubuntu_22_04-c7g_2x-50
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -187,6 +197,7 @@ jobs:
   Run_gcc:
     if: ${{ github.repository == 'OpenDataPlane/odp' }}
     runs-on: ah-ubuntu_22_04-c7g_2x-50
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -212,6 +223,7 @@ jobs:
   Run_clang:
     if: ${{ github.repository == 'OpenDataPlane/odp' }}
     runs-on: ah-ubuntu_22_04-c7g_2x-50
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -232,6 +244,7 @@ jobs:
   Run_alt_crypto:
     if: ${{ github.repository == 'OpenDataPlane/odp' }}
     runs-on: ah-ubuntu_22_04-c7g_2x-50
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -250,6 +263,7 @@ jobs:
   Run_CFLAGS:
     if: ${{ github.repository == 'OpenDataPlane/odp' }}
     runs-on: ah-ubuntu_22_04-c7g_2x-50
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -266,6 +280,7 @@ jobs:
   Run_OS:
     if: ${{ github.repository == 'OpenDataPlane/odp' }}
     runs-on: ah-ubuntu_22_04-c7g_2x-50
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -281,6 +296,7 @@ jobs:
   Run_sched_config:
     if: ${{ github.repository == 'OpenDataPlane/odp' }}
     runs-on: ah-ubuntu_22_04-c7g_2x-50
+    timeout-minutes: 30
     steps:
       - uses: OpenDataPlane/action-clean-up@main
       - uses: actions/checkout@v6
@@ -292,6 +308,7 @@ jobs:
   Run_scheduler_sp:
     if: ${{ github.repository == 'OpenDataPlane/odp' }}
     runs-on: ah-ubuntu_22_04-c7g_2x-50
+    timeout-minutes: 30
     steps:
       - uses: OpenDataPlane/action-clean-up@main
       - uses: actions/checkout@v6
@@ -303,6 +320,7 @@ jobs:
   Run_process_mode:
     if: ${{ github.repository == 'OpenDataPlane/odp' }}
     runs-on: ah-ubuntu_22_04-c7g_2x-50
+    timeout-minutes: 30
     steps:
       - uses: OpenDataPlane/action-clean-up@main
       - uses: actions/checkout@v6
@@ -315,6 +333,7 @@ jobs:
   Run_inline_timer:
     if: ${{ github.repository == 'OpenDataPlane/odp' }}
     runs-on: ah-ubuntu_22_04-c7g_2x-50
+    timeout-minutes: 30
     steps:
       - uses: OpenDataPlane/action-clean-up@main
       - uses: actions/checkout@v6
@@ -327,6 +346,7 @@ jobs:
   Run_packet_align:
     if: ${{ github.repository == 'OpenDataPlane/odp' }}
     runs-on: ah-ubuntu_22_04-c7g_2x-50
+    timeout-minutes: 30
     steps:
       - uses: OpenDataPlane/action-clean-up@main
       - uses: actions/checkout@v6
@@ -339,6 +359,7 @@ jobs:
   Run_dpdk-23_11:
     if: ${{ github.repository == 'OpenDataPlane/odp' }}
     runs-on: ah-ubuntu_22_04-c7g_2x-50
+    timeout-minutes: 30
     steps:
       - uses: OpenDataPlane/action-clean-up@main
       - uses: actions/checkout@v6
@@ -350,6 +371,7 @@ jobs:
   Run_dpdk-25_11:
     if: ${{ github.repository == 'OpenDataPlane/odp' }}
     runs-on: ah-ubuntu_22_04-c7g_2x-50
+    timeout-minutes: 30
     steps:
       - uses: OpenDataPlane/action-clean-up@main
       - uses: actions/checkout@v6

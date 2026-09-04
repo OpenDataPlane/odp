@@ -36,6 +36,7 @@
 
 #include <rte_config.h>
 #include <rte_common.h>
+#include <rte_eal.h>
 #include <rte_ethdev.h>
 #include <rte_mbuf.h>
 #include <rte_malloc.h>
@@ -1128,6 +1129,20 @@ static int dpdk_close(pktio_entry_t *pktio_entry)
 	return 0;
 }
 
+static void disable_pktio_after_init_failure(void)
+{
+	/*
+	 * rte_eal_init() may leave file locks on huge page related files
+	 * behind when it fails, e.g. due to huge page shortage. Retrying
+	 * rte_eal_init() after that can easily cause a dead lock. To
+	 * avoid that, we disable this pktio after the first init failure.
+	 *
+	 * We do this even if the init failure was not due to rte_eal_init()
+	 * to avoid a non-lazy DPDK init turn into a lazy init.
+	 */
+	disable_pktio = 1;
+}
+
 static int dpdk_pktio_init(void)
 {
 	int dpdk_argc;
@@ -1155,6 +1170,7 @@ static int dpdk_pktio_init(void)
 				   sizeof(original_cpuset), &original_cpuset);
 	if (i != 0) {
 		_ODP_ERR("Failed to read thread affinity: %d\n", i);
+		disable_pktio_after_init_failure();
 		return -1;
 	}
 
@@ -1169,6 +1185,7 @@ static int dpdk_pktio_init(void)
 
 	if (masklen < 0) {
 		_ODP_ERR("CPU mask error: %" PRId32 "\n", masklen);
+		disable_pktio_after_init_failure();
 		return -1;
 	}
 
@@ -1221,6 +1238,7 @@ static int dpdk_pktio_init(void)
 
 	if (i < 0) {
 		_ODP_ERR("Cannot init the Intel DPDK EAL!\n");
+		disable_pktio_after_init_failure();
 		return -1;
 	} else if (i + 1 != dpdk_argc) {
 		_ODP_DBG("Some DPDK args were not processed!\n");
@@ -1247,9 +1265,24 @@ static int dpdk_pktio_init_global(void)
 		_ODP_PRINT("PKTIO: dpdk pktio skipped,"
 			   " enabled export ODP_PKTIO_DISABLE_DPDK=1.\n");
 		disable_pktio = 1;
+		return 0;
 	} else  {
 		_ODP_PRINT("PKTIO: initialized dpdk pktio,"
 			   " use export ODP_PKTIO_DISABLE_DPDK=1 to disable.\n");
+	}
+
+	if (odp_global_ro.init_param.mem_model == ODP_MEM_MODEL_PROCESS) {
+		/*
+		 * We cannot allow lazy DPDK initialization to happen after fork,
+		 * so we do it now. In thread mode we postpone DPDK init until we
+		 * need it, so apps that do not need it do not eat the costs and
+		 * do not need additional privileges in typical environments.
+		 */
+		if (dpdk_pktio_init()) {
+			_ODP_ERR("Initializing DPDK failed\n");
+			return -1;
+		}
+		odp_global_rw->dpdk_initialized = 1;
 	}
 	return 0;
 }
@@ -1274,19 +1307,52 @@ static void dpdk_mempool_free(struct rte_mempool *mp, void *arg ODP_UNUSED)
 	rte_mempool_free(mp);
 }
 
+extern const _odp_pool_mem_src_ops_t _odp_pool_dpdk_mem_src_ops;
+
+static int zero_copy_mempools_still_active(void)
+{
+	uint32_t i;
+
+	if (_odp_pool_glb == NULL)
+		return 0;
+
+	for (i = 0; i < CONFIG_POOLS; i++) {
+		pool_t *pool = _odp_pool_entry_from_idx(i);
+
+		if (!pool->reserved || pool->mem_src_ops != &_odp_pool_dpdk_mem_src_ops)
+			continue;
+
+		if (mem_src_priv(pool->mem_src_data)->pkt_pool != NULL)
+			return 1;
+	}
+
+	return 0;
+}
+
 static int dpdk_pktio_term(void)
 {
 	uint16_t port_id;
 
 	if (!odp_global_rw->dpdk_initialized)
 		return 0;
+	odp_global_rw->dpdk_initialized = 0;
 
 	RTE_ETH_FOREACH_DEV(port_id) {
 		rte_eth_dev_close(port_id);
 	}
 
-	if (!_ODP_DPDK_ZERO_COPY)
+	if (!_ODP_DPDK_ZERO_COPY) {
 		rte_mempool_walk(dpdk_mempool_free, NULL);
+	} else if (zero_copy_mempools_still_active()) {
+		_ODP_ERR("Zero-copy DPDK pools are still active. "
+			 "Destroy pools before calling odp_term_global().\n");
+		return -1;
+	}
+
+	if (rte_eal_cleanup() != 0) {
+		_ODP_ERR("rte_eal_cleanup() failed\n");
+		return -1;
+	}
 
 	return 0;
 }
@@ -1569,7 +1635,8 @@ static int dpdk_open(odp_pktio_t id ODP_UNUSED,
 	/* Initialize DPDK here instead of odp_init_global() to enable running
 	 * 'make check' without root privileges */
 	if (odp_global_rw->dpdk_initialized == 0) {
-		dpdk_pktio_init();
+		if (dpdk_pktio_init())
+			return -1;
 		odp_global_rw->dpdk_initialized = 1;
 	}
 
