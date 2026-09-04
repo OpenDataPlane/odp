@@ -7,6 +7,10 @@
 PATH=$(dirname $0):$PATH
 PATH=.:$PATH
 
+# DPDK pktio of the linux-generic ODP may require extra permissions in
+# process mode even when it is not used, so we disable it for this test.
+export ODP_PKTIO_DISABLE_DPDK=1
+
 # The odpthreads test recognise the "--odph_proc" option to create
 # odp threads as linux processes:
 odpthreads${EXEEXT} --odph_proc
