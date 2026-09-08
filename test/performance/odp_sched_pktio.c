@@ -11,12 +11,18 @@
  * @cond _ODP_HIDE_FROM_DOXYGEN_
  */
 
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE /* for sigaction and pthread_sigmask */
+#endif
+
 #include <stdio.h>
 #include <string.h>
 #include <signal.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <inttypes.h>
+#include <pthread.h>
+#include <time.h>
 
 #include <odp_api.h>
 #include <odp/helper/odph_api.h>
@@ -32,7 +38,6 @@
 #define MAX_PKT_LEN       1514
 #define MAX_PKT_NUM       (16 * 1024)
 #define MIN_PKT_SEG_LEN   64
-#define CHECK_PERIOD      10000
 #define TEST_PASSED_LIMIT 5000
 #define SCHED_MODE_PARAL  1
 #define SCHED_MODE_ATOMIC 2
@@ -87,7 +92,7 @@ typedef struct pipe_queue_context_t {
 } pipe_queue_context_t;
 
 typedef struct {
-	volatile int  stop_workers;
+	odp_atomic_u32_t stop_workers;
 	odp_barrier_t worker_start;
 
 	test_options_t opt;
@@ -145,6 +150,8 @@ enum longopt_only {
 };
 
 static test_global_t *test_global;
+
+static volatile sig_atomic_t sigint_received;
 
 static inline void set_dst_eth_addr(odph_ethaddr_t *eth_addr, int index)
 {
@@ -204,7 +211,6 @@ static int worker_thread_direct(void *arg)
 	worker_arg_t *worker_arg = arg;
 	test_global_t *test_global = worker_arg->test_global_ptr;
 	int worker_id = worker_arg->worker_id;
-	uint32_t polls = 0;
 	int burst_size = test_global->opt.burst_size;
 
 	printf("Worker %i started\n", worker_id);
@@ -216,13 +222,8 @@ static int worker_thread_direct(void *arg)
 		odp_event_t ev[burst_size];
 		odp_packet_t pkt[burst_size];
 
-		polls++;
-
-		if (polls == CHECK_PERIOD) {
-			polls = 0;
-			if (test_global->stop_workers)
-				break;
-		}
+		if (odp_atomic_load_u32(&test_global->stop_workers))
+			break;
 
 		num_pkt = odp_schedule_multi(&queue, ODP_SCHED_NO_WAIT,
 					     ev, burst_size);
@@ -311,7 +312,6 @@ static int worker_thread_pipeline(void *arg)
 	int pipe_queues = test_global->opt.pipe_queues;
 	int num_pktio = test_global->opt.num_pktio;
 	int num_pktio_queue = test_global->opt.num_pktio_queue;
-	uint32_t polls = 0;
 	int burst_size = test_global->opt.burst_size;
 
 	printf("Worker %i started\n", worker_id);
@@ -323,16 +323,11 @@ static int worker_thread_pipeline(void *arg)
 		odp_event_t ev[burst_size];
 		odp_packet_t pkt[burst_size];
 
+		if (odp_atomic_load_u32(&test_global->stop_workers))
+			break;
+
 		num_pkt = odp_schedule_multi(&queue, ODP_SCHED_NO_WAIT,
 					     ev, burst_size);
-
-		polls++;
-
-		if (polls == CHECK_PERIOD) {
-			polls = 0;
-			if (test_global->stop_workers)
-				break;
-		}
 
 		if (num_pkt <= 0)
 			continue;
@@ -442,7 +437,6 @@ static int worker_thread_timers(void *arg)
 	worker_arg_t *worker_arg = arg;
 	test_global_t *test_global = worker_arg->test_global_ptr;
 	int worker_id = worker_arg->worker_id;
-	uint32_t polls = 0;
 	int burst_size = test_global->opt.burst_size;
 	uint64_t tick = test_global->timer.timeout_tick;
 
@@ -455,16 +449,11 @@ static int worker_thread_timers(void *arg)
 		odp_event_t ev[burst_size];
 		odp_packet_t pkt[burst_size];
 
+		if (odp_atomic_load_u32(&test_global->stop_workers))
+			break;
+
 		num = odp_schedule_multi(&queue, ODP_SCHED_NO_WAIT,
 					 ev, burst_size);
-
-		polls++;
-
-		if (polls == CHECK_PERIOD) {
-			polls = 0;
-			if (test_global->stop_workers)
-				break;
-		}
 
 		if (num <= 0)
 			continue;
@@ -554,10 +543,21 @@ static void sig_handler(int signo)
 {
 	(void)signo;
 
-	if (test_global) {
-		test_global->stop_workers = 1;
-		odp_mb_full();
-	}
+	sigint_received = 1;
+}
+
+static int setup_sig_handler(void)
+{
+	struct sigaction action;
+
+	memset(&action, 0, sizeof(action));
+	action.sa_handler = sig_handler;
+
+	if (sigemptyset(&action.sa_mask))
+		return -1;
+	if (sigaction(SIGINT, &action, NULL))
+		return -1;
+	return 0;
 }
 
 /* Get rid of path in filename - only for unix-type paths using '/' */
@@ -1486,7 +1486,24 @@ int main(int argc, char *argv[])
 	odph_helper_options_t helper_options;
 	odph_thread_t thread[MAX_WORKERS];
 	test_options_t test_options;
+	sigset_t sigint_set;
 	int ret = 0;
+
+	/* SIGINT may be ignored, so install the handler before anything else. */
+	if (setup_sig_handler()) {
+		printf("Error: sigaction failed.\n");
+		return -1;
+	}
+
+	/*
+	 * We want SIGINT to be delivered to this initial thread/process.
+	 * Block it now so that child threads/processes inherit the blocking.
+	 */
+	if (sigemptyset(&sigint_set) || sigaddset(&sigint_set, SIGINT) ||
+	    pthread_sigmask(SIG_BLOCK, &sigint_set, NULL)) {
+		printf("Error: blocking SIGINT failed.\n");
+		return -1;
+	}
 
 	/* Let helper collect its own arguments (e.g. --odph_proc) */
 	argc = odph_parse_options(argc, argv);
@@ -1494,8 +1511,6 @@ int main(int argc, char *argv[])
 		printf("Error: reading ODP helper options failed.\n");
 		exit(EXIT_FAILURE);
 	}
-
-	signal(SIGINT, sig_handler);
 
 	if (parse_options(argc, argv, &test_options))
 		return -1;
@@ -1543,6 +1558,7 @@ int main(int argc, char *argv[])
 
 	test_global->instance = instance;
 	test_global->pool     = ODP_POOL_INVALID;
+	odp_atomic_init_u32(&test_global->stop_workers, 0);
 
 	memcpy(&test_global->opt, &test_options, sizeof(test_options_t));
 
@@ -1572,16 +1588,37 @@ int main(int argc, char *argv[])
 
 	start_workers(thread, test_global);
 
-	if (start_timers(test_global)) {
-		test_global->stop_workers = 1;
-		odp_mb_full();
-	}
+	if (start_timers(test_global))
+		odp_atomic_store_u32(&test_global->stop_workers, 1);
 
 	/* Synchronize pktio configuration with workers. Worker are now ready
 	 * to process packets. */
 	odp_barrier_wait(&test_global->worker_start);
 
+	/*
+	 * Unblock SIGINT for this thread. If the signal is already pending,
+	 * it gets delivered now.
+	 */
+	if (pthread_sigmask(SIG_UNBLOCK, &sigint_set, NULL)) {
+		printf("Error: unblocking SIGINT failed.\n");
+		odp_atomic_store_u32(&test_global->stop_workers, 1);
+	}
+
 	t1 = odp_time_local();
+
+	while (!odp_atomic_load_u32(&test_global->stop_workers)) {
+		struct timespec ts = { .tv_sec = 0, .tv_nsec = 100 * 1000 * 1000 };
+
+		if (sigint_received) {
+			odp_atomic_store_u32(&test_global->stop_workers, 1);
+			break;
+		}
+		/*
+		 * This gets interrupted by the signal. But the signal may have
+		 * already come.
+		 */
+		nanosleep(&ts, NULL);
+	}
 
 	wait_workers(thread, test_global);
 
@@ -1605,7 +1642,6 @@ quit:
 			ret += 2;
 	}
 	test_global = NULL;
-	odp_mb_full();
 
 	if (odp_shm_free(shm)) {
 		printf("Error: shm free failed.\n");
