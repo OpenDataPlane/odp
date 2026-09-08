@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2018 Linaro Limited
- * Copyright (c) 2021-2025 Nokia
+ * Copyright (c) 2021-2026 Nokia
  * Copyright (c) 2023 Arm
  */
 
@@ -477,7 +477,9 @@ int main(int argc, char **argv)
 	init.not_used.feat.cls = 1;
 	init.not_used.feat.compress = 1;
 	init.not_used.feat.crypto = 1;
+	init.not_used.feat.dma = 1;
 	init.not_used.feat.ipsec = 1;
+	init.not_used.feat.ml = 1;
 	init.not_used.feat.schedule = 1;
 	init.not_used.feat.timer = 1;
 	init.not_used.feat.tm = 1;
