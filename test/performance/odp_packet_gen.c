@@ -218,7 +218,8 @@ typedef struct test_global_t {
 	uint64_t drained;
 	odph_thread_t thread_tbl[MAX_WORKERS];
 	thread_stat_t stat[MAX_THREADS];
-	thread_arg_t thread_arg[MAX_WORKERS];
+	thread_arg_t *thread_arg;
+	odp_shm_t thread_arg_shm;
 
 	struct {
 		odph_ethaddr_t eth_src;
@@ -2332,6 +2333,7 @@ static int init_global_data(test_global_t *global)
 	memset(global, 0, sizeof(test_global_t));
 	odp_atomic_init_u32(&global->exit_test, 0);
 	odp_spinlock_init(&global->verbose_lock);
+	global->thread_arg_shm = ODP_SHM_INVALID;
 
 	for (int i = 0; i < MAX_THREADS; i++) {
 		uint8_t *rand_data = (uint8_t *)global->rand_data[i];
@@ -2339,9 +2341,43 @@ static int init_global_data(test_global_t *global)
 		if (odp_unlikely(update_rand_data(rand_data, RAND_16BIT_WORDS * 2)))
 			return -1;
 	}
+	return 0;
+}
 
-	for (int i = 0; i < MAX_WORKERS; i++)
+static int create_thread_args(test_global_t *global)
+{
+	uint32_t i;
+	uint32_t num_cpu = global->test_options.num_cpu;
+	uint64_t size = num_cpu * sizeof(thread_arg_t);
+	odp_shm_t shm;
+
+	shm = odp_shm_reserve("packet_gen_thread_arg", size, ODP_CACHE_LINE_SIZE, 0);
+	if (shm == ODP_SHM_INVALID) {
+		ODPH_ERR("Error: Thread arg SHM reserve failed.\n");
+		return -1;
+	}
+
+	global->thread_arg_shm = shm;
+	global->thread_arg = odp_shm_addr(shm);
+	if (global->thread_arg == NULL) {
+		ODPH_ERR("Error: Thread arg SHM addr failed.\n");
+		return -1;
+	}
+
+	memset(global->thread_arg, 0, size);
+
+	for (i = 0; i < num_cpu; i++)
 		global->thread_arg[i].global = global;
+
+	return 0;
+}
+
+static int destroy_thread_args(test_global_t *global)
+{
+	if (global->thread_arg_shm != ODP_SHM_INVALID && odp_shm_free(global->thread_arg_shm)) {
+		ODPH_ERR("Error: Thread arg SHM free failed.\n");
+		return -1;
+	}
 
 	return 0;
 }
@@ -3089,6 +3125,11 @@ int main(int argc, char **argv)
 		goto term;
 	}
 
+	if (create_thread_args(global)) {
+		ret = 1;
+		goto term;
+	}
+
 	odp_sys_info_print();
 
 	/* Avoid all scheduler API calls in direct input mode */
@@ -3157,6 +3198,11 @@ int main(int argc, char **argv)
 term:
 	if (destroy_packet_pool(global)) {
 		ODPH_ERR("Error: destroy_packet_pool() failed.\n");
+		return 1;
+	}
+
+	if (destroy_thread_args(global)) {
+		ODPH_ERR("Error: destroy_thread_args() failed.\n");
 		return 1;
 	}
 
