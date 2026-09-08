@@ -216,17 +216,17 @@ typedef struct test_global_t {
 	odp_pool_t pool;
 	odp_spinlock_t verbose_lock;
 	uint64_t drained;
-	odph_thread_t thread_tbl[MAX_THREADS];
+	odph_thread_t thread_tbl[MAX_WORKERS];
 	thread_stat_t stat[MAX_THREADS];
-	thread_arg_t thread_arg[MAX_THREADS];
+	thread_arg_t thread_arg[MAX_WORKERS];
 
 	struct {
 		odph_ethaddr_t eth_src;
 		odph_ethaddr_t eth_dst;
 		odp_pktio_t pktio;
 		odp_lso_profile_t lso_profile;
-		odp_pktout_queue_t pktout[MAX_THREADS];
-		odp_pktin_queue_t pktin[MAX_THREADS];
+		odp_pktout_queue_t pktout[MAX_WORKERS];
+		odp_pktin_queue_t pktin[MAX_WORKERS];
 		int started;
 
 	} pktio[MAX_PKTIOS];
@@ -1788,7 +1788,7 @@ static int open_pktios(test_global_t *global)
 		}
 
 		if (num_tx > 0) {
-			odp_pktout_queue_t pktout[MAX_THREADS];
+			odp_pktout_queue_t pktout[MAX_WORKERS];
 
 			if (odp_pktout_queue(pktio, pktout, num_tx) != num_tx) {
 				ODPH_ERR("Error (%s): Pktout queue request failed.\n", name);
@@ -1800,7 +1800,7 @@ static int open_pktios(test_global_t *global)
 		}
 
 		if (num_rx > 0 && test_options->direct_rx) {
-			odp_pktin_queue_t pktin[MAX_THREADS];
+			odp_pktin_queue_t pktin[MAX_WORKERS];
 
 			if (odp_pktin_queue(pktio, pktin, num_rx) != num_rx) {
 				ODPH_ERR("Error (%s): Pktin queue request failed.\n", name);
@@ -2338,9 +2338,11 @@ static int init_global_data(test_global_t *global)
 
 		if (odp_unlikely(update_rand_data(rand_data, RAND_16BIT_WORDS * 2)))
 			return -1;
-
-		global->thread_arg[i].global = global;
 	}
+
+	for (int i = 0; i < MAX_WORKERS; i++)
+		global->thread_arg[i].global = global;
+
 	return 0;
 }
 
