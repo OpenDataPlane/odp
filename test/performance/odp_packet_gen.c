@@ -23,6 +23,9 @@
 #include <stdlib.h>
 #include <getopt.h>
 #include <unistd.h>
+#include <errno.h>
+#include <pthread.h>
+#include <time.h>
 
 #include <odp_api.h>
 #include <odp/helper/odph_api.h>
@@ -255,7 +258,7 @@ typedef struct {
 typedef int (*send_fn_t)(odp_pktout_queue_t pktout, odp_packet_t pkt[], uint32_t num,
 			 int tx_mode, uint64_t *drop_bytes, const odp_packet_lso_opt_t *lso_opt);
 
-static test_global_t *test_global;
+static volatile sig_atomic_t sigint_received;
 
 static void print_usage(void)
 {
@@ -2775,10 +2778,31 @@ static void periodic_print_loop(test_global_t *global)
 
 	t1 = odp_time_local();
 	while (odp_atomic_load_u32(&global->exit_test) == 0) {
+		if (sigint_received) {
+			odp_atomic_store_u32(&global->exit_test, 1);
+			break;
+		}
 		usleep(1000 * global->test_options.update_msec);
 		t2 = odp_time_local();
 		nsec = odp_time_diff_ns(t2, t1);
 		print_periodic_stat(global, nsec);
+	}
+}
+
+static void wait_for_exit(test_global_t *global)
+{
+	while (odp_atomic_load_u32(&global->exit_test) == 0) {
+		struct timespec ts = { .tv_sec = 0, .tv_nsec = 100 * 1000 * 1000 };
+
+		if (sigint_received) {
+			odp_atomic_store_u32(&global->exit_test, 1);
+			break;
+		}
+		/*
+		 * This gets interrupted by the signal. But the signal may have
+		 * already come.
+		 */
+		nanosleep(&ts, NULL);
 	}
 }
 
@@ -2964,10 +2988,21 @@ static void sig_handler(int signo)
 {
 	(void)signo;
 
-	if (test_global == NULL)
-		return;
+	sigint_received = 1;
+}
 
-	odp_atomic_add_u32(&test_global->exit_test, 1);
+static int setup_sig_handler(void)
+{
+	struct sigaction action;
+
+	memset(&action, 0, sizeof(action));
+	action.sa_handler = sig_handler;
+
+	if (sigemptyset(&action.sa_mask))
+		return -1;
+	if (sigaction(SIGINT, &action, NULL))
+		return -1;
+	return 0;
 }
 
 int main(int argc, char **argv)
@@ -2977,9 +3012,27 @@ int main(int argc, char **argv)
 	odp_init_t init;
 	test_global_t *global;
 	odp_shm_t shm;
+	sigset_t sigint_set;
 	int ret = 0;
 
-	signal(SIGINT, sig_handler);
+	/*
+	 * SIGINT may be ignored when this program is run from a script, so
+	 * install the handler before anything else.
+	 */
+	if (setup_sig_handler()) {
+		ODPH_ERR("Error: sigaction() failed: %s\n", strerror(errno));
+		return 1;
+	}
+
+	/*
+	 * We want SIGINT to be delivered to this initial thread/process.
+	 * Block it now so that child threads/processes inherit the blocking.
+	 */
+	if (sigemptyset(&sigint_set) || sigaddset(&sigint_set, SIGINT) ||
+	    pthread_sigmask(SIG_BLOCK, &sigint_set, NULL)) {
+		ODPH_ERR("Error: blocking SIGINT failed.\n");
+		return 1;
+	}
 
 	/* Let helper collect its own arguments (e.g. --odph_proc) */
 	argc = odph_parse_options(argc, argv);
@@ -3023,7 +3076,6 @@ int main(int argc, char **argv)
 	}
 
 	global = odp_shm_addr(shm);
-	test_global = global;
 
 	if (init_global_data(global)) {
 		ret = 1;
@@ -3067,9 +3119,20 @@ int main(int argc, char **argv)
 	/* Wait until workers have started. */
 	odp_barrier_wait(&global->barrier);
 
+	/*
+	 * Unblock SIGINT for this thread. If the signal is already pending,
+	 * it gets delivered now.
+	 */
+	if (pthread_sigmask(SIG_UNBLOCK, &sigint_set, NULL)) {
+		ODPH_ERR("Error: unblocking SIGINT failed.\n");
+		odp_atomic_store_u32(&global->exit_test, 1);
+	}
+
 	/* Periodic statistics printing */
 	if (global->test_options.update_msec)
 		periodic_print_loop(global);
+	else
+		wait_for_exit(global);
 
 	/* Wait workers to exit */
 	odph_thread_join(global->thread_tbl,
