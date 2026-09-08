@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright (c) 2024 Nokia
+ * Copyright (c) 2024-2026 Nokia
  */
 
 /**
@@ -782,6 +782,7 @@ int main(int argc, char *argv[])
 	init.not_used.feat.dma = 1;
 	init.not_used.feat.ipsec = 1;
 	init.not_used.feat.schedule = 1;
+	init.not_used.feat.stash = 1;
 	init.not_used.feat.timer = 1;
 	init.not_used.feat.tm = 1;
 	init.mem_model = helper_options.mem_model;

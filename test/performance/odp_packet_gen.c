@@ -2993,7 +2993,10 @@ int main(int argc, char **argv)
 	init.not_used.feat.cls      = 1;
 	init.not_used.feat.compress = 1;
 	init.not_used.feat.crypto   = 1;
+	init.not_used.feat.dma      = 1;
 	init.not_used.feat.ipsec    = 1;
+	init.not_used.feat.ml       = 1;
+	init.not_used.feat.stash    = 1;
 	init.not_used.feat.timer    = 1;
 	init.not_used.feat.tm       = 1;
 
