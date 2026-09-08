@@ -147,8 +147,8 @@ static inline ml_model_t *ml_model_from_handle(odp_ml_model_t model)
 int odp_ml_num_engines(void)
 {
 	if (odp_global_ro.disable.ml) {
-		_ODP_PRINT("ML is disabled\n");
-		return 0;
+		_ODP_ERR("ML is disabled\n");
+		return -1;
 	}
 
 	return ML_MAX_ENGINES;
@@ -161,8 +161,8 @@ int odp_ml_capability(odp_ml_capability_t *capa)
 	memset(capa, 0, sizeof(odp_ml_capability_t));
 
 	if (odp_global_ro.disable.ml) {
-		_ODP_PRINT("ML is disabled\n");
-		return 0;
+		_ODP_ERR("ML is disabled\n");
+		return -1;
 	}
 
 	capa->max_model_size = ML_MAX_MODEL_SIZE;
@@ -2614,7 +2614,7 @@ int _odp_ml_init_global(void)
 	const OrtApi *ort_api;
 
 	if (odp_global_ro.disable.ml) {
-		_ODP_ERR("ML is disabled\n");
+		_ODP_PRINT("ML is disabled\n");
 		return 0;
 	}
 
