@@ -58,7 +58,8 @@ static struct cipher_param ciphers[] = {
 	ALG(ODP_CIPHER_ALG_AES_CBC, &key_a5_256, NULL),
 	ALG(ODP_CIPHER_ALG_AES_CTR, &key_a5_128, &key_mcgrew_gcm_salt_3),
 	ALG(ODP_CIPHER_ALG_AES_CTR, &key_a5_192, &key_mcgrew_gcm_salt_3),
-	ALG(ODP_CIPHER_ALG_AES_CTR, &key_a5_256, &key_mcgrew_gcm_salt_3)
+	ALG(ODP_CIPHER_ALG_AES_CTR, &key_a5_256, &key_mcgrew_gcm_salt_3),
+	ALG(ODP_CIPHER_ALG_SM4_CBC, &key_sm4, NULL),
 };
 
 /*
@@ -73,7 +74,8 @@ static struct auth_param auths[] = {
 	ALG(ODP_AUTH_ALG_SHA384_HMAC, &key_5a_384, NULL),
 	ALG(ODP_AUTH_ALG_SHA512_HMAC, &key_5a_512, NULL),
 	ALG(ODP_AUTH_ALG_AES_CMAC, &key_5a_128, NULL),
-	ALG(ODP_AUTH_ALG_AES_XCBC_MAC, &key_5a_128, NULL)
+	ALG(ODP_AUTH_ALG_AES_XCBC_MAC, &key_5a_128, NULL),
+	ALG(ODP_AUTH_ALG_SM3_HMAC, &key_sm3, NULL),
 };
 
 /*
@@ -264,6 +266,38 @@ static void test_out_ipv4_ah_sha256_tun_ipv6(void)
 			{ .status.warn.all = 0,
 			  .status.error.all = 0,
 			  .pkt_res = &pkt_ipv4_icmp_0_ah_tun_ipv6_sha256_1,
+			  .seq_num = 1,
+			},
+		},
+	};
+
+	ipsec_check_out_one(&test, sa);
+
+	ipsec_sa_destroy(sa);
+}
+
+static void test_out_ipv4_ah_sm3(void)
+{
+	odp_ipsec_sa_param_t param;
+	odp_ipsec_sa_t sa;
+
+	ipsec_sa_param_fill(&param,
+			    ODP_IPSEC_DIR_OUTBOUND, ODP_IPSEC_AH, 123, NULL,
+			    ODP_CIPHER_ALG_NULL, NULL,
+			    ODP_AUTH_ALG_SM3_HMAC, &key_sm3,
+			    NULL, NULL);
+
+	sa = odp_ipsec_sa_create(&param);
+
+	CU_ASSERT_FATAL(ODP_IPSEC_SA_INVALID != sa);
+
+	ipsec_test_part test = {
+		.pkt_in = &pkt_ipv4_icmp_0,
+		.num_pkt = 1,
+		.out = {
+			{ .status.warn.all = 0,
+			  .status.error.all = 0,
+			  .pkt_res = &pkt_ipv4_icmp_0_ah_sm3_1,
 			  .seq_num = 1,
 			},
 		},
@@ -580,6 +614,11 @@ static int sa_creation_failure_ok(const odp_ipsec_sa_param_t *param)
 {
 	odp_cipher_alg_t cipher = param->crypto.cipher_alg;
 	odp_auth_alg_t auth     = param->crypto.auth_alg;
+
+	/* If SM4 and SM3 are not properly paired, SA creation failure is acceptable. */
+	if ((cipher == ODP_CIPHER_ALG_SM4_CBC && auth != ODP_AUTH_ALG_SM3_HMAC) ||
+	    (auth == ODP_AUTH_ALG_SM3_HMAC && cipher != ODP_CIPHER_ALG_SM4_CBC))
+		return 1;
 
 	/* Single algorithm must not fail */
 	if (cipher == ODP_CIPHER_ALG_NULL || auth == ODP_AUTH_ALG_NULL)
@@ -2143,6 +2182,8 @@ odp_testinfo_t ipsec_out_suite[] = {
 				  ipsec_check_ah_sha256),
 	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_ah_sha256_tun_ipv6,
 				  ipsec_check_ah_sha256),
+	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_ah_sm3,
+				  ipsec_check_ah_sm3),
 	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_esp_null_sha256,
 				  ipsec_check_esp_null_sha256),
 	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_esp_null_sha256_tun_ipv4,
