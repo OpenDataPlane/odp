@@ -1401,9 +1401,24 @@ static int destroy_packet_pool(test_global_t *global)
 	return 0;
 }
 
+static void pktio_capa_print(const char *name, const odp_pktio_capability_t *capa)
+{
+	printf("Packet IO capabilities (%s)\n", name);
+	printf("  max_input_queues:       %" PRIu32 "\n", capa->max_input_queues);
+	printf("  max_output_queues:      %" PRIu32 "\n", capa->max_output_queues);
+	printf("  min_input_queue_size:   %" PRIu32 "\n", capa->min_input_queue_size);
+	printf("  max_input_queue_size:   %" PRIu32 "\n", capa->max_input_queue_size);
+	printf("  min_output_queue_size:  %" PRIu32 "\n", capa->min_output_queue_size);
+	printf("  max_output_queue_size:  %" PRIu32 "\n", capa->max_output_queue_size);
+	printf("  maxlen.max_input:       %" PRIu32 "\n", capa->maxlen.max_input);
+	printf("  maxlen.max_output:      %" PRIu32 "\n", capa->maxlen.max_output);
+	printf("\n");
+}
+
 static int open_pktios(test_global_t *global)
 {
 	odp_pktio_capability_t pktio_capa;
+	odp_schedule_capability_t sched_capa;
 	odp_pktio_param_t pktio_param;
 	odp_pktio_t pktio;
 	odp_pktio_config_t pktio_config;
@@ -1419,6 +1434,11 @@ static int open_pktios(test_global_t *global)
 	uint32_t num_pkt = test_options->num_pkt;
 	uint32_t pkt_len = test_options->use_rand_pkt_len ?
 				test_options->rand_pkt_len_max : test_options->pkt_len;
+
+	if (odp_schedule_capability(&sched_capa)) {
+		ODPH_ERR("Error: Schedule capability failed.\n");
+		return -1;
+	}
 
 	printf("\nODP packet generator\n");
 	printf("  quit test after:   %" PRIu64 " rounds\n",
@@ -1586,6 +1606,11 @@ static int open_pktios(test_global_t *global)
 		global->pktio[i].lso_profile = ODP_LSO_PROFILE_INVALID;
 	}
 
+	printf("Scheduler capabilities\n");
+	printf("  max_queues:        %" PRIu32 "\n", sched_capa.max_queues);
+	printf("  max_queue_size:    %" PRIu32 "\n", sched_capa.max_queue_size);
+	printf("\n");
+
 	/* Open and configure interfaces */
 	for (i = 0; i < num_pktio; i++) {
 		name  = test_options->pktio_name[i];
@@ -1611,6 +1636,8 @@ static int open_pktios(test_global_t *global)
 			ODPH_ERR("Error (%s): Pktio capability failed.\n", name);
 			return -1;
 		}
+
+		pktio_capa_print(name, &pktio_capa);
 
 		if (num_rx > (int)pktio_capa.max_input_queues) {
 			ODPH_ERR("Error (%s): Too many RX threads. Interface supports max %u input queues.\n",
