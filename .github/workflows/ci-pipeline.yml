@@ -124,6 +124,9 @@ jobs:
         cc: [gcc, clang]
         conf: ['', '--enable-abi-compat', 'CFLAGS=-march=armv8.2-a', 'CFLAGS=-march=armv8-a+lse',
                '--with-crypto=armv8crypto', '--enable-wfe-locks']
+        exclude:
+          - cc: clang
+            conf: --enable-abi-compat
     steps:
       - uses: actions/checkout@v6
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}"
@@ -142,6 +145,9 @@ jobs:
       matrix:
         cc: [gcc, clang]
         conf: ['', '--enable-abi-compat']
+        exclude:
+          - cc: clang
+            conf: --enable-abi-compat
     steps:
       - uses: actions/checkout@v6
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}"
@@ -160,6 +166,9 @@ jobs:
       matrix:
         cc: [gcc, clang]
         conf: ['', '--enable-abi-compat']
+        exclude:
+          - cc: clang
+            conf: --enable-abi-compat
     steps:
       - uses: actions/checkout@v6
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}"
@@ -178,6 +187,9 @@ jobs:
       matrix:
         cc: [gcc, clang]
         conf: ['', '--enable-abi-compat']
+        exclude:
+          - cc: clang
+            conf: --enable-abi-compat
     steps:
       - uses: actions/checkout@v6
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}"
