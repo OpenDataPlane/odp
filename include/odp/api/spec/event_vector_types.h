@@ -112,6 +112,69 @@ typedef struct odp_event_aggr_capability_t {
 	 */
 	uint64_t min_tmo_ns;
 
+	/** Event aggregation support per event source
+	 *
+	 *  Specifies for each source of events whether events enqueued by the
+	 *  source may be aggregated into event vectors by an event aggregator
+	 *  of this queue type.
+	 *
+	 *  A bit set to one indicates a supported event source. When a bit is
+	 *  zero, events from the source are never aggregated. Passing an
+	 *  aggregator queue handle to the source is still allowed, but has the
+	 *  same effect as passing the handle of the underlying queue (see
+	 *  odp_queue_aggr()). Sources which are not passed an aggregator queue
+	 *  handle, but which use an aggregator implicitly based on queue
+	 *  parameters (packet input and classifier), simply enqueue directly to
+	 *  the underlying queue. Queue creation does not fail and the aggregator
+	 *  remains usable by other sources.
+	 */
+	union {
+		/** Event source flags */
+		struct {
+			/** Events enqueued by the application (odp_queue_enq(),
+			 *  etc.). This is always set when 'max_num' is
+			 *  non-zero.
+			 */
+			uint32_t queue    : 1;
+
+			/** Packets from packet input */
+			uint32_t pktin    : 1;
+
+			/** Packet transmit completion events */
+			uint32_t tx_compl : 1;
+
+			/** Packets from the classifier */
+			uint32_t cls      : 1;
+
+			/** Timeout events */
+			uint32_t timer    : 1;
+
+			/** Crypto completion events */
+			uint32_t crypto   : 1;
+
+			/** Compression completion events */
+			uint32_t comp     : 1;
+
+			/** IPsec result events */
+			uint32_t ipsec    : 1;
+
+			/** DMA completion events */
+			uint32_t dma      : 1;
+
+			/** ML completion events */
+			uint32_t ml       : 1;
+
+		} bit;
+
+		/** All bits of the bit field structure
+		 *
+		 *  This field can be used to set/clear all bits, or to perform
+		 *  bitwise operations over those.
+		 */
+		uint32_t all_bits;
+
+	} source;
+
 	/** Supported aggregator statistics counters */
 	odp_queue_stats_opt_t stats;
 
