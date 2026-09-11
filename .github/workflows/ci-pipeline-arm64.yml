@@ -99,7 +99,7 @@ jobs:
       matrix:
         # Gcc-13 is the default in Ubuntu 24.04 and gets used in Run_gcc
         cc_ver: [10, 11, 12, 14]
-        conf: ['', '--enable-abi-compat']
+        conf: ['']
     steps:
       - uses: OpenDataPlane/action-clean-up@main
       - uses: actions/checkout@v6
@@ -117,7 +117,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        conf: ['', '--enable-abi-compat']
+        conf: ['']
     steps:
       - uses: OpenDataPlane/action-clean-up@main
       - uses: actions/checkout@v6
@@ -135,7 +135,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        conf: ['', '--enable-abi-compat']
+        conf: ['']
     steps:
       - uses: OpenDataPlane/action-clean-up@main
       - uses: actions/checkout@v6

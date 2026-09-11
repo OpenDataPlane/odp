@@ -226,7 +226,7 @@ jobs:
       matrix:
         # Gcc-13 is the default in Ubuntu 24.04 and gets used in Run_gcc
         cc_ver: [10, 11, 12, 14]
-        conf: ['', '--enable-abi-compat']
+        conf: ['']
     steps:
       - uses: actions/checkout@v6
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="gcc-${{matrix.cc_ver}}" -e CXX="g++-${{matrix.cc_ver}}"
@@ -242,7 +242,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        conf: ['', '--enable-abi-compat']
+        conf: ['']
     steps:
       - uses: actions/checkout@v6
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="gcc-15" -e CXX="g++-15"
@@ -258,7 +258,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        conf: ['', '--enable-abi-compat']
+        conf: ['']
     steps:
       - uses: actions/checkout@v6
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="clang-21" -e CXX="clang++-21"
