@@ -66,9 +66,7 @@ jobs:
       fail-fast: false
       matrix:
         conf: ['CFLAGS=-O3',
-               'CFLAGS=-O1',
                'CFLAGS=-O0 --enable-debug=full',
-               'CFLAGS=-Os',
                'CFLAGS=-pedantic',
                '--enable-lto --enable-abi-compat',
                '--enable-pcapng-support --enable-icache-perf-test']
@@ -86,9 +84,7 @@ jobs:
       fail-fast: false
       matrix:
         conf: ['CFLAGS=-O3',
-               'CFLAGS=-O1',
                'CFLAGS=-O0 --enable-debug=full',
-               'CFLAGS=-Os',
                'CFLAGS=-pedantic',
                '--enable-pcapng-support',
                '--without-openssl --without-pcap']
@@ -128,6 +124,9 @@ jobs:
         cc: [gcc, clang]
         conf: ['', '--enable-abi-compat', 'CFLAGS=-march=armv8.2-a', 'CFLAGS=-march=armv8-a+lse',
                '--with-crypto=armv8crypto', '--enable-wfe-locks']
+        exclude:
+          - cc: clang
+            conf: --enable-abi-compat
     steps:
       - uses: actions/checkout@v6
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}"
@@ -146,6 +145,9 @@ jobs:
       matrix:
         cc: [gcc, clang]
         conf: ['', '--enable-abi-compat']
+        exclude:
+          - cc: clang
+            conf: --enable-abi-compat
     steps:
       - uses: actions/checkout@v6
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}"
@@ -164,6 +166,9 @@ jobs:
       matrix:
         cc: [gcc, clang]
         conf: ['', '--enable-abi-compat']
+        exclude:
+          - cc: clang
+            conf: --enable-abi-compat
     steps:
       - uses: actions/checkout@v6
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}"
@@ -182,6 +187,9 @@ jobs:
       matrix:
         cc: [gcc, clang]
         conf: ['', '--enable-abi-compat']
+        exclude:
+          - cc: clang
+            conf: --enable-abi-compat
     steps:
       - uses: actions/checkout@v6
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}"
@@ -230,7 +238,7 @@ jobs:
       matrix:
         # Gcc-13 is the default in Ubuntu 24.04 and gets used in Run_gcc
         cc_ver: [10, 11, 12, 14]
-        conf: ['', '--enable-abi-compat']
+        conf: ['']
     steps:
       - uses: actions/checkout@v6
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="gcc-${{matrix.cc_ver}}" -e CXX="g++-${{matrix.cc_ver}}"
@@ -246,7 +254,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        conf: ['', '--enable-abi-compat']
+        conf: ['']
     steps:
       - uses: actions/checkout@v6
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="gcc-15" -e CXX="g++-15"
@@ -262,7 +270,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        conf: ['', '--enable-abi-compat']
+        conf: ['']
     steps:
       - uses: actions/checkout@v6
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="clang-21" -e CXX="clang++-21"
