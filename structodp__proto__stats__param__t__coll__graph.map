@@ -1,0 +1,5 @@
+<map id="odp_proto_stats_param_t" name="odp_proto_stats_param_t">
+<area shape="rect" id="Node000001" title="ODP proto stats params." alt="" coords="13,93,199,119"/>
+<area shape="rect" id="Node000002" href="$unionodp__proto__stats__counters__t.html" title="ODP proto stats counters." alt="" coords="5,5,207,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="109,45,109,93,103,93,103,45"/>
+</map>

@@ -1,0 +1,7 @@
+<map id="odp_ml_compl_param_t" name="odp_ml_compl_param_t">
+<area shape="rect" id="Node000001" title="ML completion parameters." alt="" coords="64,93,243,119"/>
+<area shape="rect" id="Node000002" href="$struct__odp__abi__event__t.html" title=" " alt="" coords="5,5,141,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="95,39,144,91,140,95,91,43"/>
+<area shape="rect" id="Node000003" href="$struct__odp__abi__queue__t.html" title=" " alt="" coords="165,5,304,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="216,43,167,95,163,91,212,39"/>
+</map>

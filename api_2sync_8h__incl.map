@@ -1,0 +1,11 @@
+<map id="sync.h" name="sync.h">
+<area shape="rect" id="Node000001" title="ODP synchronisation." alt="" coords="127,5,191,31"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,79,145,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="148,33,101,72,98,67,144,29"/>
+<area shape="rect" id="Node000003" href="$api_2spec_2sync_8h.html" title="ODP memory barriers." alt="" coords="169,79,320,104"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="175,29,222,68,219,72,171,33"/>
+<area shape="rect" id="Node000004" href="$visibility__begin_8h_source.html" title=" " alt="" coords="73,152,235,177"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="232,106,181,145,178,141,228,102"/>
+<area shape="rect" id="Node000005" href="$visibility__end_8h_source.html" title=" " alt="" coords="259,152,409,177"/>
+<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="261,102,310,141,307,145,257,106"/>
+</map>

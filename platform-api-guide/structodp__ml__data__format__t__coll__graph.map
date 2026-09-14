@@ -1,0 +1,5 @@
+<map id="odp_ml_data_format_t" name="odp_ml_data_format_t">
+<area shape="rect" id="Node000001" title="Model input / output data format." alt="" coords="5,93,175,119"/>
+<area shape="rect" id="Node000002" href="$structodp__ml__shape__info__t.html" title="Model input / output data shape information." alt="" coords="10,5,170,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="93,45,93,93,87,93,87,45"/>
+</map>

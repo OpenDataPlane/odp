@@ -1,0 +1,11 @@
+<map id="odp_pktio_config_t" name="odp_pktio_config_t">
+<area shape="rect" id="Node000001" title="Packet IO configuration options." alt="" coords="327,80,471,105"/>
+<area shape="rect" id="Node000002" href="$unionodp__pktin__config__opt__t.html" title="Packet input configuration options bit field." alt="" coords="15,5,187,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="195,31,303,55,367,77,365,82,302,61,194,36"/>
+<area shape="rect" id="Node000003" href="$unionodp__pktout__config__opt__t.html" title="Packet output configuration options bit field." alt="" coords="11,55,192,80"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="206,74,327,84,326,89,205,79"/>
+<area shape="rect" id="Node000004" href="$structodp__pktio__parser__config__t.html" title="Parser configuration." alt="" coords="5,104,197,129"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="211,114,302,109,341,103,341,108,303,114,211,120"/>
+<area shape="rect" id="Node000005" href="$structodp__reass__config__t.html" title="Fragment reassembly configuration." alt="" coords="28,153,175,179"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="188,156,245,148,302,134,340,119,374,103,376,108,342,124,303,139,246,153,189,162"/>
+</map>

@@ -1,0 +1,5 @@
+<map id="odp_dma_seg_t" name="odp_dma_seg_t">
+<area shape="rect" id="Node000001" title="DMA segment." alt="" coords="15,93,139,119"/>
+<area shape="rect" id="Node000002" href="$struct__odp__abi__packet__t.html" title=" " alt="" coords="5,5,148,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="79,45,79,93,74,93,74,45"/>
+</map>
