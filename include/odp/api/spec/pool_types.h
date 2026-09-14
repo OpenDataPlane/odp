@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright (c) 2021-2025 Nokia
+ * Copyright (c) 2021-2026 Nokia
  */
 
 /**
@@ -738,6 +738,77 @@ typedef struct odp_pool_ext_capability_t {
 	/** Supported statistics counters */
 	odp_pool_stats_opt_t stats;
 
+	/** Buffer pool capabilities  */
+	struct {
+		/** Maximum number of buffers */
+		uint32_t max_num_buf;
+
+		/** Maximum buffer size in bytes */
+		uint32_t max_buf_size;
+
+		/** ODP header size in bytes
+		 *
+		 *  Application must reserve this many bytes from the start of a buffer
+		 *  for ODP implementation usage. When the value is zero, ODP implementation does
+		 *  not need header space to be reserved for it. Application will not modify this
+		 *  memory area (after buffer populate call).
+		 */
+		uint32_t odp_header_size;
+
+		/** ODP trailer size in bytes
+		 *
+		 *  Application must reserve this many bytes from the end of a buffer
+		 *  for ODP implementation usage. When the value is zero, ODP implementation does
+		 *  not need trailer space to be reserved for it. Application will not modify this
+		 *  memory area (after buffer populate call).
+		 */
+		uint32_t odp_trailer_size;
+
+		/** Minimum buffer pool memory area alignment in bytes
+		 *
+		 *  The memory area used for a buffer pool, starting from (or before) the lowest
+		 *  addressed buffer and extending to the end (or after) of the highest addressed
+		 *  buffer, must have at least this (power of two) alignment. The value is 1 when
+		 *  there is no alignment requirement.
+		 */
+		uint32_t min_mem_align;
+
+		/** Minimum buffer pointer alignment in bytes
+		 *
+		 *  Buffer pointers populated into a pool must be evenly divisible with
+		 *  this value. The value is 1 when there is no alignment requirement.
+		 */
+		uint32_t min_buf_align;
+
+		/** Buffer alignment flags
+		 *
+		 *  These flags specify additional alignment requirements for buffers.
+		 *  If not stated otherwise, min_buf_align alignment requirement applies also.
+		 */
+		struct {
+			/** Buffers are size aligned
+			 *
+			 *  When set, buffer pointers must be aligned to the buffer size.
+			 *  For example, if the buffer size would be 2304 bytes (0x900),
+			 *  each buffer start address must be a multiple of 0x900
+			 *  (e.g. 0x12000900, 0x12001200, 0x12004800, etc).
+			 */
+			uint16_t buf_size_aligned : 1;
+
+		};
+
+		/** Maximum user area size in bytes */
+		uint32_t max_uarea_size;
+
+		/** Pool user area persistence
+		 *
+		 *  See buf.uarea_persistence of odp_pool_capability_t for details
+		 *  (odp_pool_capability_t::uarea_persistence).
+		 */
+		odp_bool_t uarea_persistence;
+
+	} buf;
+
 	/** Packet pool capabilities  */
 	struct {
 		/** Maximum number of packet buffers */
@@ -874,6 +945,44 @@ typedef struct odp_pool_ext_param_t {
 	 * counters that are actually used. Counters may be read with odp_pool_stats().
 	 */
 	odp_pool_stats_opt_t stats;
+
+	/** Parameters for buffer pools */
+	struct {
+		/** Number of buffers
+		 *
+		 *  The number of buffers application will populate into the pool.
+		 *  The maximum value is defined by pool capability buf.max_num_buf.
+		 */
+		uint32_t num_buf;
+
+		/** Buffer size
+		 *
+		 *  Total buffer size in bytes including all headers, trailer and data.
+		 *  This is calculated from buffer start pointer to the end of buffer
+		 *  data area or ODP trailer (see odp_trailer_size capability).
+		 *  All buffers application populates into the pool are of this size.
+		 */
+		uint32_t buf_size;
+
+		/** Application header size
+		 *
+		 *  Application reserves this many bytes for its own buffer header usage.
+		 *  The application header follows immediately the ODP buffer header
+		 *  (see odp_header_size capability). ODP implementation will not modify this
+		 *  memory area. The default value is 0.
+		 */
+		uint32_t app_header_size;
+
+		/** User area size
+		 *
+		 *  Per buffer user area size in bytes. As with normal pools, user area location
+		 *  is ODP implementation specific. Use zero if no user area is needed.
+		 *  The maximum value is defined by pool capability buf.max_uarea_size.
+		 *  The default value is 0.
+		 */
+		uint32_t uarea_size;
+
+	} buf;
 
 	/** Parameters for packet pools */
 	struct {
