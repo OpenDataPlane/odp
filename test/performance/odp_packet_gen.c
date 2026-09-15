@@ -133,6 +133,10 @@ typedef struct test_options_t {
 	uint32_t mtu;
 	uint32_t num_custom_l3;
 	struct {
+		uint32_t rx;
+		uint32_t tx;
+	} queue_size;
+	struct {
 		odp_lso_profile_param_t param;
 		uint32_t payload_offset;
 		uint32_t max_payload_len;
@@ -326,7 +330,11 @@ static void print_usage(void)
 	       "                            Overrides standard packet length option.\n"
 	       "  -D, --direct_rx           Direct input mode (default: 0)\n"
 	       "                              0: Use scheduler for packet input\n"
-	       "                              1: Poll packet input in direct mode\n",
+	       "                              1: Poll packet input in direct mode\n"
+	       "  -Q, --queue_size <rx,tx>  Packet IO queue sizes. Comma-separated (no spaces)\n"
+	       "                            RX and TX queue sizes applied to all input and\n"
+	       "                            output queues. Zero means implementation default.\n"
+	       "                            Default: 0,0\n",
 	       ODP_LSO_MAX_CUSTOM, MAX_BINS);
 	printf("  -m, --tx_mode             Transmit mode (default 1):\n"
 	       "                              0: Re-send packets with don't free option\n"
@@ -747,6 +755,7 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 		{"align",       required_argument, NULL, 'I'},
 		{"len_range",   required_argument, NULL, 'L'},
 		{"direct_rx",   required_argument, NULL, 'D'},
+		{"queue_size",  required_argument, NULL, 'Q'},
 		{"tx_mode",     required_argument, NULL, 'm'},
 		{"burst_size",  required_argument, NULL, 'b'},
 		{"bursts",      required_argument, NULL, 'x'},
@@ -773,7 +782,7 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+i:e:r:t:T:n:N:l:I:L:D:m:M:b:x:g:v:s:d:o:"
+	static const char *shortopts = "+i:e:r:t:T:n:N:l:I:L:D:Q:m:M:b:x:g:v:s:d:o:"
 				       "p:c:CXAVq:u:w:W:PaU:h";
 
 	test_options->num_pktio  = 0;
@@ -818,6 +827,8 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 	test_options->mtu = 0;
 	test_options->l4_proto = L4_PROTO_UDP;
 	test_options->lso.enabled = false;
+	test_options->queue_size.rx = 0;
+	test_options->queue_size.tx = 0;
 
 	for (i = 0; i < MAX_PKTIOS; i++) {
 		memcpy(global->pktio[i].eth_dst.addr, default_eth_dst, 6);
@@ -947,6 +958,11 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 			break;
 		case 'D':
 			test_options->direct_rx = atoi(optarg);
+			break;
+		case 'Q':
+			test_options->queue_size.rx = strtoul(optarg, &end, 0);
+			end++;
+			test_options->queue_size.tx = strtoul(end, NULL, 0);
 			break;
 		case 'm':
 			test_options->tx_mode = atoi(optarg);
@@ -1401,24 +1417,46 @@ static int destroy_packet_pool(test_global_t *global)
 	return 0;
 }
 
+static void pktio_capa_print(const char *name, const odp_pktio_capability_t *capa)
+{
+	printf("Packet IO capabilities (%s)\n", name);
+	printf("  max_input_queues:       %" PRIu32 "\n", capa->max_input_queues);
+	printf("  max_output_queues:      %" PRIu32 "\n", capa->max_output_queues);
+	printf("  min_input_queue_size:   %" PRIu32 "\n", capa->min_input_queue_size);
+	printf("  max_input_queue_size:   %" PRIu32 "\n", capa->max_input_queue_size);
+	printf("  min_output_queue_size:  %" PRIu32 "\n", capa->min_output_queue_size);
+	printf("  max_output_queue_size:  %" PRIu32 "\n", capa->max_output_queue_size);
+	printf("  maxlen.max_input:       %" PRIu32 "\n", capa->maxlen.max_input);
+	printf("  maxlen.max_output:      %" PRIu32 "\n", capa->maxlen.max_output);
+	printf("\n");
+}
+
 static int open_pktios(test_global_t *global)
 {
 	odp_pktio_capability_t pktio_capa;
+	odp_schedule_capability_t sched_capa;
 	odp_pktio_param_t pktio_param;
 	odp_pktio_t pktio;
 	odp_pktio_config_t pktio_config;
 	odp_pktin_queue_param_t pktin_param;
 	odp_pktout_queue_param_t pktout_param;
 	char *name;
-	uint32_t i;
+	uint32_t i, min_rx_size, max_rx_size;
 	int j, pktio_idx;
 	test_options_t *test_options = &global->test_options;
 	int num_rx = test_options->num_rx;
 	int num_tx = test_options->num_tx;
+	uint32_t rx_size = test_options->queue_size.rx;
+	uint32_t tx_size = test_options->queue_size.tx;
 	uint32_t num_pktio = test_options->num_pktio;
 	uint32_t num_pkt = test_options->num_pkt;
 	uint32_t pkt_len = test_options->use_rand_pkt_len ?
 				test_options->rand_pkt_len_max : test_options->pkt_len;
+
+	if (odp_schedule_capability(&sched_capa)) {
+		ODPH_ERR("Error: Schedule capability failed.\n");
+		return -1;
+	}
 
 	printf("\nODP packet generator\n");
 	printf("  quit test after:   %" PRIu64 " rounds\n",
@@ -1444,6 +1482,16 @@ static int open_pktios(test_global_t *global)
 	else
 		printf("interface default\n");
 	printf("  packet input mode: %s\n", test_options->direct_rx ? "direct" : "scheduler");
+	printf("  rx queue size:     ");
+	if (rx_size)
+		printf("%" PRIu32 "\n", rx_size);
+	else
+		printf("default\n");
+	printf("  tx queue size:     ");
+	if (tx_size)
+		printf("%" PRIu32 "\n", tx_size);
+	else
+		printf("default\n");
 	printf("  promisc mode:      %s\n", test_options->promisc_mode ? "enabled" : "disabled");
 	printf("  transmit mode:     %i\n", test_options->tx_mode);
 	printf("  measure latency:   %s\n", test_options->calc_latency ? "enabled" : "disabled");
@@ -1586,6 +1634,16 @@ static int open_pktios(test_global_t *global)
 		global->pktio[i].lso_profile = ODP_LSO_PROFILE_INVALID;
 	}
 
+	printf("Scheduler capabilities\n");
+	printf("  max_queues:        %" PRIu32 "\n", sched_capa.max_queues);
+	printf("  max_queue_size:    %" PRIu32 "\n", sched_capa.max_queue_size);
+	printf("\n");
+
+	min_rx_size = 1;
+	max_rx_size = UINT32_MAX;
+	if (test_options->direct_rx == 0 && sched_capa.max_queue_size != 0)
+		max_rx_size = sched_capa.max_queue_size;
+
 	/* Open and configure interfaces */
 	for (i = 0; i < num_pktio; i++) {
 		name  = test_options->pktio_name[i];
@@ -1612,6 +1670,8 @@ static int open_pktios(test_global_t *global)
 			return -1;
 		}
 
+		pktio_capa_print(name, &pktio_capa);
+
 		if (num_rx > (int)pktio_capa.max_input_queues) {
 			ODPH_ERR("Error (%s): Too many RX threads. Interface supports max %u input queues.\n",
 				 name, pktio_capa.max_input_queues);
@@ -1621,6 +1681,39 @@ static int open_pktios(test_global_t *global)
 		if (num_tx > (int)pktio_capa.max_output_queues) {
 			ODPH_ERR("Error (%s): Too many TX threads. Interface supports max %u output queues.\n",
 				 name, pktio_capa.max_output_queues);
+			return -1;
+		}
+
+		if (test_options->direct_rx) {
+			min_rx_size = pktio_capa.min_input_queue_size;
+			max_rx_size = pktio_capa.max_input_queue_size;
+		}
+
+		if (rx_size && max_rx_size == 0) {
+			ODPH_ERR("Error (%s): RX queue size configuration is not supported\n",
+				 name);
+			return -1;
+		}
+
+		if (rx_size && (rx_size < min_rx_size || rx_size > max_rx_size)) {
+			ODPH_ERR("Error (%s): unsupported RX queue size %" PRIu32 " "
+				 "(min %" PRIu32 ", max %" PRIu32 ")\n", name, rx_size,
+				 min_rx_size, max_rx_size);
+			return -1;
+		}
+
+		if (tx_size && pktio_capa.max_output_queue_size == 0) {
+			ODPH_ERR("Error (%s): TX queue size configuration is not supported\n",
+				 name);
+			return -1;
+		}
+
+		if (tx_size && (tx_size < pktio_capa.min_output_queue_size ||
+				tx_size > pktio_capa.max_output_queue_size)) {
+			ODPH_ERR("Error (%s): unsupported TX queue size %" PRIu32 " "
+				 "(min %" PRIu32 ", max %" PRIu32 ")\n", name, tx_size,
+				 pktio_capa.min_output_queue_size,
+				 pktio_capa.max_output_queue_size);
 			return -1;
 		}
 
@@ -1759,15 +1852,19 @@ static int open_pktios(test_global_t *global)
 
 		odp_pktin_queue_param_init(&pktin_param);
 
+		pktin_param.num_queues = num_rx;
+
 		if (test_options->direct_rx) {
 			pktin_param.op_mode = ODP_PKTIO_OP_MT_UNSAFE;
+
+			for (j = 0; j < num_rx; j++)
+				pktin_param.queue_size[j] = rx_size;
 		} else {
 			pktin_param.queue_param.sched.prio  = odp_schedule_default_prio();
 			pktin_param.queue_param.sched.sync  = ODP_SCHED_SYNC_PARALLEL;
 			pktin_param.queue_param.sched.group = ODP_SCHED_GROUP_ALL;
+			pktin_param.queue_param.size        = rx_size;
 		}
-
-		pktin_param.num_queues = num_rx;
 
 		if (num_rx > 1) {
 			pktin_param.hash_enable = 1;
@@ -1782,6 +1879,9 @@ static int open_pktios(test_global_t *global)
 		odp_pktout_queue_param_init(&pktout_param);
 		pktout_param.op_mode = ODP_PKTIO_OP_MT_UNSAFE;
 		pktout_param.num_queues = num_tx;
+
+		for (j = 0; j < num_tx; j++)
+			pktout_param.queue_size[j] = tx_size;
 
 		if (odp_pktout_queue_config(pktio, &pktout_param)) {
 			ODPH_ERR("Error (%s): Pktout config failed.\n", name);
