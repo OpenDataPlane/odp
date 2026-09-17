@@ -67,10 +67,11 @@ static void print_usage(void)
 	       "  -p, --private          0: The same memory area is shared between threads (default)\n"
 	       "                         1: Memory areas are private to each thread. This increases\n"
 	       "                            memory consumption to num_cpu * data_len.\n"
-	       "  -m, --mode             0: Memset data (default)\n"
-	       "                         1: Memcpy data. On each round, reads data from one half of the memory area\n"
+	       "  -m, --mode             0: Memset data with varying value (default)\n"
+	       "                         1: Memset data with zero\n"
+	       "                         2: Memcpy data. On each round, reads data from one half of the memory area\n"
 	       "                            and writes it to the other half.\n"
-	       "                         2: Read data. On each round, reads through the entire memory area.\n"
+	       "                         3: Read data. On each round, reads through the entire memory area.\n"
 	       "  -h, --help             This help\n"
 	       "\n");
 }
@@ -134,7 +135,7 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 		}
 	}
 
-	if (test_options->mode < 0 || test_options->mode > 2) {
+	if (test_options->mode < 0 || test_options->mode > 3) {
 		ODPH_ERR("Bad mode: %i\n", test_options->mode);
 		return -1;
 	}
@@ -327,6 +328,9 @@ static int run_test(void *arg)
 		for (i = 0; i < num_round; i++)
 			memset(addr, thr + i, data_len);
 	} else if (mode == 1) {
+		for (i = 0; i < num_round; i++)
+			memset(addr, 0, data_len);
+	} else if (mode == 2) {
 		for (i = 0; i < num_round; i++) {
 			if ((i & 0x1) == 0)
 				memcpy(&addr[half_len], addr, half_len);
