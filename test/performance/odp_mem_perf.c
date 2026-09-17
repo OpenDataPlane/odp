@@ -36,6 +36,7 @@ typedef struct test_thread_ctx_t {
 	test_global_t *global;
 	void *shm_addr;
 	uint64_t nsec;
+	uint64_t dummy_sum;
 
 } test_thread_ctx_t;
 
@@ -60,8 +61,8 @@ static void print_usage(void)
 	       "Usage: odp_mem_perf [options]\n"
 	       "\n"
 	       "  -c, --num_cpu          Number of CPUs (worker threads). 0: all available CPUs. Default 1.\n"
-	       "  -r, --num_round        Number of rounds\n"
-	       "  -l, --data_len         Data length in bytes\n"
+	       "  -r, --num_round        Number of rounds. Default 1000.\n"
+	       "  -l, --data_len         Data length in bytes. Default 10MB.\n"
 	       "  -f, --flags            SHM flags parameter. Default 0.\n"
 	       "  -p, --private          0: The same memory area is shared between threads (default)\n"
 	       "                         1: Memory areas are private to each thread. This increases\n"
@@ -69,6 +70,7 @@ static void print_usage(void)
 	       "  -m, --mode             0: Memset data (default)\n"
 	       "                         1: Memcpy data. On each round, reads data from one half of the memory area\n"
 	       "                            and writes it to the other half.\n"
+	       "                         2: Read data. On each round, reads through the entire memory area.\n"
 	       "  -h, --help             This help\n"
 	       "\n");
 }
@@ -130,6 +132,11 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 			ret = -1;
 			break;
 		}
+	}
+
+	if (test_options->mode < 0 || test_options->mode > 2) {
+		ODPH_ERR("Bad mode: %i\n", test_options->mode);
+		return -1;
 	}
 
 	return ret;
@@ -263,6 +270,32 @@ static int free_shm(test_global_t *global)
 	return 0;
 }
 
+/* Read through the data area. Calculate sum, so that the compiler
+ * cannot optimize the reads away. */
+static inline uint64_t read_data(const uint64_t *data, uint64_t num_word)
+{
+	uint64_t i;
+	uint64_t sum_0 = 0;
+	uint64_t sum_1 = 0;
+	uint64_t sum_2 = 0;
+	uint64_t sum_3 = 0;
+	uint64_t num_unroll = num_word & ~(uint64_t)0x7;
+
+	/* Data start is cache line aligned. Read 8 words per loop. */
+	for (i = 0; i < num_unroll; i += 8) {
+		sum_0 += data[i + 0] + data[i + 1];
+		sum_1 += data[i + 2] + data[i + 3];
+		sum_2 += data[i + 4] + data[i + 5];
+		sum_3 += data[i + 6] + data[i + 7];
+	}
+
+	/* Left over words */
+	for (; i < num_word; i++)
+		sum_0 += data[i];
+
+	return sum_0 + sum_1 + sum_2 + sum_3;
+}
+
 static int run_test(void *arg)
 {
 	int thr;
@@ -275,10 +308,15 @@ static int run_test(void *arg)
 	uint32_t num_round = test_options->num_round;
 	uint64_t data_len = test_options->data_len;
 	uint64_t half_len = data_len / 2;
+	uint64_t num_word = data_len / sizeof(uint64_t);
+	uint64_t dummy_sum = 0;
 	int mode = test_options->mode;
 	uint8_t *addr = thread_ctx->shm_addr;
 
 	thr = odp_thread_id();
+
+	/* Write the data area so that all pages are faulted in before test starts */
+	memset(addr, thr, data_len);
 
 	/* Start all workers at the same time */
 	odp_barrier_wait(&global->barrier);
@@ -288,13 +326,16 @@ static int run_test(void *arg)
 	if (mode == 0) {
 		for (i = 0; i < num_round; i++)
 			memset(addr, thr + i, data_len);
-	} else {
+	} else if (mode == 1) {
 		for (i = 0; i < num_round; i++) {
 			if ((i & 0x1) == 0)
 				memcpy(&addr[half_len], addr, half_len);
 			else
 				memcpy(addr, &addr[half_len], half_len);
 		}
+	} else {
+		for (i = 0; i < num_round; i++)
+			dummy_sum += read_data((const uint64_t *)(uintptr_t)addr, num_word);
 	}
 
 	t2 = odp_time_local();
@@ -303,6 +344,7 @@ static int run_test(void *arg)
 
 	/* Update stats */
 	thread_ctx->nsec   = nsec;
+	thread_ctx->dummy_sum = dummy_sum;
 
 	return 0;
 }
@@ -352,9 +394,12 @@ static void print_stat(test_global_t *global)
 	uint32_t num_round = test_options->num_round;
 	uint64_t data_len = test_options->data_len;
 	uint64_t nsec_sum = 0;
+	uint64_t dummy_sum = 0;
 
-	for (i = 0; i < ODP_THREAD_COUNT_MAX; i++)
-		nsec_sum += global->thread_ctx[i].nsec;
+	for (i = 0; i < ODP_THREAD_COUNT_MAX; i++) {
+		nsec_sum  += global->thread_ctx[i].nsec;
+		dummy_sum += global->thread_ctx[i].dummy_sum;
+	}
 
 	if (nsec_sum == 0) {
 		printf("No results.\n");
@@ -364,6 +409,8 @@ static void print_stat(test_global_t *global)
 	data_touch = num_round * data_len;
 	nsec_ave = nsec_sum / num_cpu;
 	num = 0;
+
+	printf("\ndummy_sum: %" PRIu64 "\n\n", dummy_sum);
 
 	printf("RESULTS - per thread (MB per sec):\n");
 	printf("----------------------------------\n");
@@ -379,6 +426,9 @@ static void print_stat(test_global_t *global)
 		}
 	}
 	printf("\n\n");
+
+	if (num != num_cpu)
+		printf("WARNING: thread result miss-match %i/%i!\n\n", num, num_cpu);
 
 	printf("RESULTS - average over %i threads:\n", num_cpu);
 	printf("----------------------------------\n");
