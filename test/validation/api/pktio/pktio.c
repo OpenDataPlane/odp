@@ -5302,6 +5302,14 @@ static void pktio_test_evv_pktin_queue_config_sched(void)
 	pktio_test_evv_pktin_queue_config(ODP_PKTIN_MODE_SCHED);
 }
 
+static int pktio_check_recv_maxlen_set(void)
+{
+	if (!global.iface[tx_iface_idx()].capa.direct.set_op.op.maxlen ||
+	    !global.iface[rx_iface_idx()].capa.direct.set_op.op.maxlen)
+		return ODP_TEST_INACTIVE;
+	return ODP_TEST_ACTIVE;
+}
+
 static void pktio_test_recv_maxlen_set(void)
 {
 	odp_pktio_t pktio_tx, pktio_rx;
@@ -5333,17 +5341,20 @@ static void pktio_test_recv_maxlen_set(void)
 		odp_pktio_config_init(&config);
 		CU_ASSERT_FATAL(!odp_pktio_config(pktio[i], &config));
 
-		maxlen_tmp = capa.maxlen.max_input;
-		if (maxlen_tmp == 0)
-			maxlen_tmp = odp_pktin_maxlen(pktio[i]);
-		if (maxlen_tmp < max_len)
-			max_len = maxlen_tmp;
-
-		maxlen_tmp = capa.maxlen.max_output;
-		if (maxlen_tmp == 0)
-			maxlen_tmp = odp_pktout_maxlen(pktio[i]);
-		if (maxlen_tmp < max_len)
-			max_len = maxlen_tmp;
+		if (i == rx_iface_idx()) {
+			maxlen_tmp = capa.maxlen.max_input;
+			if (maxlen_tmp == 0)
+				maxlen_tmp = odp_pktin_maxlen(pktio[i]);
+			if (maxlen_tmp < max_len)
+				max_len = maxlen_tmp;
+		}
+		if (i == tx_iface_idx()) {
+			maxlen_tmp = capa.maxlen.max_output;
+			if (maxlen_tmp == 0)
+				maxlen_tmp = odp_pktout_maxlen(pktio[i]);
+			if (maxlen_tmp < max_len)
+				max_len = maxlen_tmp;
+		}
 
 		CU_ASSERT_FATAL(!odp_pktio_maxlen_set(pktio[i], capa.maxlen.max_input,
 						      capa.maxlen.max_output));
@@ -5959,7 +5970,7 @@ odp_testinfo_t pktio_suite_unsegmented[] = {
 	ODP_TEST_INFO_CONDITIONAL(pktio_test_chksum_out_sctp_ovr,
 				  pktio_check_chksum_out_sctp),
 	ODP_TEST_INFO_CONDITIONAL(pktio_test_recv_maxlen_set,
-				  pktio_check_maxlen_set),
+				  pktio_check_recv_maxlen_set),
 	ODP_TEST_INFO_CONDITIONAL(pktio_test_pktout_aging_tmo,
 				  pktio_check_pktout_aging_tmo),
 	ODP_TEST_INFO_CONDITIONAL(pktio_test_pktout_compl_event_plain_queue,
