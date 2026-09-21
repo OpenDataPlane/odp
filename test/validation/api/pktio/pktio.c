@@ -1530,20 +1530,23 @@ static void pktio_test_recv_queue(void)
 
 		CU_ASSERT_FATAL(odp_pktio_capability(pktio[i], &capa) == 0);
 
-		odp_pktin_queue_param_init(&in_queue_param);
-		num_queues = capa.max_input_queues;
-		in_queue_param.num_queues  = num_queues;
-		in_queue_param.hash_enable = (num_queues > 1) ? 1 : 0;
-		in_queue_param.hash_proto.proto.ipv4_udp = 1;
+		if (i == rx_iface_idx()) {
+			odp_pktin_queue_param_init(&in_queue_param);
+			num_queues = capa.max_input_queues;
+			in_queue_param.num_queues  = num_queues;
+			in_queue_param.hash_enable = (num_queues > 1) ? 1 : 0;
+			in_queue_param.hash_proto.proto.ipv4_udp = 1;
 
-		ret = odp_pktin_queue_config(pktio[i], &in_queue_param);
-		CU_ASSERT_FATAL(ret == 0);
+			ret = odp_pktin_queue_config(pktio[i], &in_queue_param);
+			CU_ASSERT_FATAL(ret == 0);
+		}
+		if (i == tx_iface_idx()) {
+			odp_pktout_queue_param_init(&out_queue_param);
+			out_queue_param.num_queues  = capa.max_output_queues;
 
-		odp_pktout_queue_param_init(&out_queue_param);
-		out_queue_param.num_queues  = capa.max_output_queues;
-
-		ret = odp_pktout_queue_config(pktio[i], &out_queue_param);
-		CU_ASSERT_FATAL(ret == 0);
+			ret = odp_pktout_queue_config(pktio[i], &out_queue_param);
+			CU_ASSERT_FATAL(ret == 0);
+		}
 
 		CU_ASSERT_FATAL(odp_pktio_start(pktio[i]) == 0);
 	}
@@ -1634,20 +1637,18 @@ static void test_recv_tmo(recv_tmo_mode_e mode)
 					ODP_PKTOUT_MODE_DIRECT);
 		CU_ASSERT_FATAL(pktio[i] != ODP_PKTIO_INVALID);
 
-		CU_ASSERT_FATAL(odp_pktio_capability(pktio[i], &capa) == 0);
-
-		odp_pktin_queue_param_init(&in_queue_param);
-		if (mode == RECV_TMO)
-			num_q = 1;
-		else
+		if (i == rx_iface_idx() && mode != RECV_TMO) {
+			CU_ASSERT_FATAL(odp_pktio_capability(pktio[i], &capa) == 0);
+			odp_pktin_queue_param_init(&in_queue_param);
 			num_q = (capa.max_input_queues < MAX_QUEUES) ?
-					capa.max_input_queues : MAX_QUEUES;
-		in_queue_param.num_queues  = num_q;
-		in_queue_param.hash_enable = (num_q > 1) ? 1 : 0;
-		in_queue_param.hash_proto.proto.ipv4_udp = 1;
+				capa.max_input_queues : MAX_QUEUES;
+			in_queue_param.num_queues  = num_q;
+			in_queue_param.hash_enable = (num_q > 1) ? 1 : 0;
+			in_queue_param.hash_proto.proto.ipv4_udp = 1;
 
-		ret = odp_pktin_queue_config(pktio[i], &in_queue_param);
-		CU_ASSERT_FATAL(ret == 0);
+			ret = odp_pktin_queue_config(pktio[i], &in_queue_param);
+			CU_ASSERT_FATAL(ret == 0);
+		}
 
 		CU_ASSERT_FATAL(odp_pktio_start(pktio[i]) == 0);
 	}
@@ -5518,8 +5519,6 @@ static void pktio_test_pktout_aging_tmo(void)
 static void pktio_test_pktin_event_queue(odp_pktin_mode_t pktin_mode)
 {
 	odp_pktio_t pktio_tx, pktio_rx;
-	odp_pktin_queue_param_t in_queue_param;
-	odp_pktout_queue_param_t out_queue_param;
 	odp_pktout_queue_t pktout_queue;
 	odp_queue_t queue, from = ODP_QUEUE_INVALID;
 	odp_pool_t buf_pool;
@@ -5551,32 +5550,10 @@ static void pktio_test_pktin_event_queue(odp_pktin_mode_t pktin_mode)
 	buf = odp_buffer_alloc(buf_pool);
 	CU_ASSERT_FATAL(buf != ODP_BUFFER_INVALID);
 
-	odp_pktin_queue_param_init(&in_queue_param);
-	in_queue_param.num_queues  = 1;
-	in_queue_param.hash_enable = 0;
-	in_queue_param.classifier_enable = 0;
-
-	if (pktin_mode == ODP_PKTIN_MODE_SCHED) {
-		in_queue_param.queue_param.type = ODP_QUEUE_TYPE_SCHED;
-		in_queue_param.queue_param.sched.prio  = odp_schedule_default_prio();
-		in_queue_param.queue_param.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
-		in_queue_param.queue_param.sched.group = ODP_SCHED_GROUP_ALL;
-	}
-
-	odp_pktout_queue_param_init(&out_queue_param);
-	out_queue_param.num_queues  = 1;
-
 	/* Open and configure interfaces */
 	for (i = 0; i < global.num_ifaces; ++i) {
 		pktio[i] = create_pktio(i, pktin_mode, ODP_PKTOUT_MODE_DIRECT);
 		CU_ASSERT_FATAL(pktio[i] != ODP_PKTIO_INVALID);
-
-		ret = odp_pktin_queue_config(pktio[i], &in_queue_param);
-		CU_ASSERT_FATAL(ret == 0);
-
-		ret = odp_pktout_queue_config(pktio[i], &out_queue_param);
-		CU_ASSERT_FATAL(ret == 0);
-
 		CU_ASSERT_FATAL(odp_pktio_start(pktio[i]) == 0);
 	}
 
