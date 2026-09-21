@@ -1956,8 +1956,11 @@ static void test_defaults(uint8_t fill)
 	CU_ASSERT(qp_in.hash_enable == 0);
 	CU_ASSERT(qp_in.hash_proto.all_bits == 0);
 	CU_ASSERT(qp_in.num_queues == 1);
-	CU_ASSERT(qp_in.queue_size[0] == 0);
+	for (int i = 0; i < ODP_PKTIN_MAX_QUEUES; i++)
+		CU_ASSERT(qp_in.queue_size[i] == 0);
+	CU_ASSERT(qp_in.queue_param.type == ODP_QUEUE_TYPE_PLAIN);
 	CU_ASSERT(qp_in.queue_param.enq_mode == ODP_QUEUE_OP_MT);
+	CU_ASSERT(qp_in.queue_param.deq_mode == ODP_QUEUE_OP_MT);
 	CU_ASSERT(qp_in.queue_param.sched.prio == odp_schedule_default_prio());
 	CU_ASSERT(qp_in.queue_param.sched.sync == ODP_SCHED_SYNC_PARALLEL);
 	CU_ASSERT(qp_in.queue_param.sched.group == ODP_SCHED_GROUP_ALL);
@@ -1966,6 +1969,9 @@ static void test_defaults(uint8_t fill)
 	CU_ASSERT(qp_in.queue_param.nonblocking == ODP_BLOCKING);
 	CU_ASSERT(qp_in.queue_param.context == NULL);
 	CU_ASSERT(qp_in.queue_param.context_len == 0);
+	CU_ASSERT(qp_in.queue_param.size == 0);
+	CU_ASSERT(qp_in.queue_param.num_aggr == 0);
+	CU_ASSERT(qp_in.queue_param.aggr == NULL);
 	CU_ASSERT(qp_in.queue_param_ovr == NULL);
 	CU_ASSERT(qp_in.vector.enable == false);
 
@@ -1973,7 +1979,8 @@ static void test_defaults(uint8_t fill)
 	odp_pktout_queue_param_init(&qp_out);
 	CU_ASSERT(qp_out.op_mode == ODP_PKTIO_OP_MT);
 	CU_ASSERT(qp_out.num_queues == 1);
-	CU_ASSERT(qp_out.queue_size[0] == 0);
+	for (int i = 0; i < ODP_PKTOUT_MAX_QUEUES; i++)
+		CU_ASSERT(qp_out.queue_size[i] == 0);
 
 	memset(&pktio_conf, fill, sizeof(pktio_conf));
 	odp_pktio_config_init(&pktio_conf);
@@ -1988,6 +1995,11 @@ static void test_defaults(uint8_t fill)
 	CU_ASSERT(pktio_conf.reassembly.en_ipv6 == false);
 	CU_ASSERT(pktio_conf.reassembly.max_wait_time == 0);
 	CU_ASSERT(pktio_conf.reassembly.max_num_frags == 2);
+	CU_ASSERT(pktio_conf.flow_control.pause_rx == ODP_PKTIO_LINK_PAUSE_OFF);
+	CU_ASSERT(pktio_conf.flow_control.pause_tx == ODP_PKTIO_LINK_PAUSE_OFF);
+	CU_ASSERT(pktio_conf.tx_compl.mode_event == 0);
+	CU_ASSERT(pktio_conf.tx_compl.mode_poll == 0);
+	CU_ASSERT(pktio_conf.tx_compl.max_compl_id == 0);
 }
 
 static void pktio_test_default_values(void)
@@ -2088,29 +2100,9 @@ static void pktio_test_pktio_config(void)
 	pktio = create_pktio(0, ODP_PKTIN_MODE_DIRECT, ODP_PKTOUT_MODE_DIRECT);
 	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
 
-	memset(&config, 0xff, sizeof(config));
-	odp_pktio_config_init(&config);
-
-	/* Check default values */
-	CU_ASSERT(config.pktin.all_bits == 0);
-	CU_ASSERT(config.pktout.all_bits == 0);
-	CU_ASSERT(config.parser.layer == ODP_PROTO_LAYER_ALL);
-	CU_ASSERT(!config.enable_loop);
-	CU_ASSERT(!config.inbound_ipsec);
-	CU_ASSERT(!config.outbound_ipsec);
-	CU_ASSERT(!config.enable_lso);
-	CU_ASSERT(!config.reassembly.en_ipv4);
-	CU_ASSERT(!config.reassembly.en_ipv6);
-	CU_ASSERT(config.reassembly.max_wait_time == 0);
-	CU_ASSERT(config.reassembly.max_num_frags == 2);
-	CU_ASSERT(config.flow_control.pause_rx == ODP_PKTIO_LINK_PAUSE_OFF);
-	CU_ASSERT(config.flow_control.pause_tx == ODP_PKTIO_LINK_PAUSE_OFF);
-
-	/* Indicate packet refs might be used */
-	config.pktout.bit.no_packet_refs = 0;
-
 	CU_ASSERT(odp_pktio_config(pktio, NULL) == 0);
 
+	odp_pktio_config_init(&config);
 	CU_ASSERT(odp_pktio_config(pktio, &config) == 0);
 
 	CU_ASSERT_FATAL(odp_pktio_capability(pktio, &capa) == 0);
