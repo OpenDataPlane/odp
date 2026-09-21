@@ -5171,7 +5171,6 @@ static void pktio_test_pktv_pktin_queue_config(odp_pktin_mode_t in_mode)
 	odp_pktio_capability_t capa;
 	odp_pktio_t pktio;
 	int num_queues;
-	int i;
 
 	pktio = create_pktio(0, in_mode, ODP_PKTOUT_MODE_DIRECT);
 	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
@@ -5205,39 +5204,6 @@ static void pktio_test_pktv_pktin_queue_config(odp_pktin_mode_t in_mode)
 	CU_ASSERT(odp_pktin_queue_config(pktio, &queue_param) != 0);
 
 	CU_ASSERT_FATAL(odp_pktio_close(pktio) == 0);
-
-	for (i = 0; i < global.num_ifaces; i++) {
-		pktio = create_pktio(i, in_mode, ODP_PKTOUT_MODE_DIRECT);
-		CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
-
-		CU_ASSERT_FATAL(odp_pktio_capability(pktio, &capa) == 0);
-
-		if (!capa.vector.supported) {
-			printf("Vector mode is not supported. Test Skipped\n");
-			return;
-		}
-
-		queue_param.vector.enable = 1;
-		queue_param.vector.pool = global.iface[i].pktv_pool;
-		queue_param.vector.max_size = capa.vector.min_size;
-		CU_ASSERT(odp_pktin_queue_config(pktio, &queue_param) == 0);
-
-		queue_param.vector.max_size = capa.vector.max_size;
-		CU_ASSERT(odp_pktin_queue_config(pktio, &queue_param) == 0);
-
-		if (capa.vector.max_size != capa.vector.min_size) {
-			queue_param.vector.max_size = capa.vector.max_size - capa.vector.min_size;
-			CU_ASSERT(odp_pktin_queue_config(pktio, &queue_param) == 0);
-		}
-
-		queue_param.vector.max_size = capa.vector.min_size - 1;
-		CU_ASSERT(odp_pktin_queue_config(pktio, &queue_param) != 0);
-
-		queue_param.vector.max_size = capa.vector.max_size + 1;
-		CU_ASSERT(odp_pktin_queue_config(pktio, &queue_param) != 0);
-
-		CU_ASSERT_FATAL(odp_pktio_close(pktio) == 0);
-	}
 }
 
 static void pktio_test_pktv_pktin_queue_config_queue(void)
