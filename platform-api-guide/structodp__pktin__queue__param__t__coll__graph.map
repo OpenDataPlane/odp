@@ -1,0 +1,18 @@
+<map id="odp_pktin_queue_param_t" name="odp_pktin_queue_param_t">
+<area shape="rect" id="Node000001" title="Packet input queue parameters." alt="" coords="989,81,1184,107"/>
+<area shape="rect" id="Node000002" href="$unionodp__pktin__hash__proto__t.html" title="Packet input hash protocols." alt="" coords="640,5,817,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="832,29,966,54,1050,79,1048,84,965,59,831,34"/>
+<area shape="rect" id="Node000003" href="$structodp__queue__param__t.html" title="ODP Queue parameters." alt="" coords="651,55,806,80"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="820,71,989,84,989,89,820,77"/>
+<area shape="rect" id="Node000004" href="$structodp__schedule__param__t.html" title="Scheduler parameters." alt="" coords="219,7,391,32"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="405,24,614,46,655,52,654,57,613,51,405,30"/>
+<area shape="rect" id="Node000005" href="$structodp__event__aggr__config__t.html" title="Event vector configuration." alt="" coords="213,56,397,81"/>
+<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="411,66,651,65,651,70,411,71"/>
+<area shape="rect" id="Node000006" href="$struct__odp__abi__pool__t.html" title=" " alt="" coords="5,84,132,109"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="146,85,213,77,213,82,146,90"/>
+<area shape="rect" id="Node000008" href="$structodp__pktin__vector__config__t.html" title="Packet input vector configuration." alt="" coords="421,107,613,132"/>
+<area shape="poly" id="edge8_Node000008_Node000006" title=" " alt="" coords="146,103,156,103,421,115,421,120,156,109,146,108"/>
+<area shape="rect" id="Node000007" href="$structodp__pktin__queue__param__ovr__t.html" title="Packet input queue parameters override." alt="" coords="637,167,820,207"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="833,176,899,166,965,150,1019,128,1063,104,1066,109,1021,133,966,155,900,171,834,182"/>
+<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="627,112,820,103,989,96,989,101,820,109,627,117"/>
+</map>

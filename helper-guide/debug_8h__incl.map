@@ -1,0 +1,9 @@
+<map id="debug.h" name="debug.h">
+<area shape="rect" id="Node000001" title="Helper debug." alt="" coords="195,5,270,31"/>
+<area shape="rect" id="Node000002" href="$autoheader__external_8h_source.html" title=" " alt="" coords="5,79,175,119"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="213,33,138,74,135,70,210,29"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="199,86,266,111"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="235,31,235,72,230,72,230,31"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="291,86,361,111"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="248,29,303,75,300,79,245,33"/>
+</map>

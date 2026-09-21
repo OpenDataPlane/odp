@@ -1,0 +1,10 @@
+<map id="odp_timer_pool_info_t" name="odp_timer_pool_info_t">
+<area shape="rect" id="Node000001" title="ODP timer pool information and configuration." alt="" coords="113,211,279,236"/>
+<area shape="rect" id="Node000002" href="$structodp__timer__pool__param__t.html" title="Timer pool parameters." alt="" coords="5,123,189,148"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="123,155,184,208,181,212,119,159"/>
+<area shape="rect" id="Node000003" href="$structodp__fract__u64__t.html" title="Unsigned 64 bit fractional number." alt="" coords="131,5,258,31"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="172,42,157,56,128,93,107,124,102,121,124,89,153,53,168,38"/>
+<area shape="rect" id="Node000004" href="$structodp__timer__tick__info__t.html" title="Timer tick information." alt="" coords="213,123,376,148"/>
+<area shape="poly" id="edge4_Node000004_Node000003" title=" " alt="" coords="228,36,247,53,274,89,292,121,287,124,270,92,243,56,224,40"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="273,159,211,212,208,208,269,155"/>
+</map>

@@ -1,0 +1,11 @@
+<map id="cpu.h" name="cpu.h">
+<area shape="rect" id="Node000001" title="ODP CPU." alt="" coords="269,5,327,31"/>
+<area shape="rect" id="Node000002" href="$packet__inlines_8h.html" title="Packet inline functions." alt="" coords="5,79,132,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="257,35,107,81,105,76,255,30"/>
+<area shape="rect" id="Node000003" href="$rwlock__inlines_8h_source.html" title=" " alt="" coords="156,79,283,104"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="277,42,234,80,230,76,273,38"/>
+<area shape="rect" id="Node000004" href="$spinlock__inlines_8h_source.html" title=" " alt="" coords="307,79,446,104"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="323,38,366,76,362,80,319,42"/>
+<area shape="rect" id="Node000005" href="$ticketlock__inlines_8h_source.html" title=" " alt="" coords="470,79,617,104"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="341,29,504,76,503,81,340,34"/>
+</map>
