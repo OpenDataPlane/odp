@@ -150,6 +150,9 @@ typedef struct pktio_global_t {
 	/** Type of pool segmentation */
 	pkt_segmented_e pool_segmentation;
 
+	/** Saved pool capabilities */
+	odp_pool_capability_t pool_capa;
+
 } pktio_global_t;
 
 static pktio_global_t global;
@@ -481,17 +484,13 @@ static int pktio_fixup_checksums(odp_packet_t pkt)
 static int default_pool_create(void)
 {
 	odp_pool_param_t params;
-	odp_pool_capability_t pool_capa;
 	char pool_name[ODP_POOL_NAME_LEN];
-
-	if (odp_pool_capability(&pool_capa) != 0)
-		return -1;
 
 	if (global.default_pkt_pool != ODP_POOL_INVALID)
 		return -1;
 
 	odp_pool_param_init(&params);
-	set_pool_len(&params, &pool_capa);
+	set_pool_len(&params, &global.pool_capa);
 	params.pkt.num     = PKT_BUF_NUM;
 	params.type        = ODP_POOL_PACKET;
 
@@ -507,13 +506,10 @@ static int default_pool_create(void)
 static int default_pktv_pool_create(void)
 {
 	char pool_name[ODP_POOL_NAME_LEN];
-	odp_pool_capability_t pool_capa;
 	odp_pool_param_t params;
 
-	if (odp_pool_capability(&pool_capa) != 0)
-		return -1;
-
-	if (pool_capa.vector.max_num && pool_capa.vector.max_num < PKT_BUF_NUM)
+	if (global.pool_capa.vector.max_num > 0 &&
+	    global.pool_capa.vector.max_num < PKT_BUF_NUM)
 		return -1;
 
 	if (global.default_pktv_pool != ODP_POOL_INVALID)
@@ -522,7 +518,7 @@ static int default_pktv_pool_create(void)
 	odp_pool_param_init(&params);
 	params.type = ODP_POOL_VECTOR;
 	params.vector.num = PKT_BUF_NUM;
-	params.vector.max_size = pool_capa.vector.max_size;
+	params.vector.max_size = global.pool_capa.vector.max_size;
 
 	snprintf(pool_name, sizeof(pool_name),
 		 "pktv_pool_default_%d", global.pool_segmentation);
@@ -536,13 +532,10 @@ static int default_pktv_pool_create(void)
 static int default_evv_pool_create(void)
 {
 	char pool_name[ODP_POOL_NAME_LEN];
-	odp_pool_capability_t pool_capa;
 	odp_pool_param_t params;
 
-	if (odp_pool_capability(&pool_capa) != 0)
-		return -1;
-
-	if (pool_capa.event_vector.max_num && pool_capa.event_vector.max_num < PKT_BUF_NUM)
+	if (global.pool_capa.event_vector.max_num > 0 &&
+	    global.pool_capa.event_vector.max_num < PKT_BUF_NUM)
 		return -1;
 
 	if (global.default_evv_pool != ODP_POOL_INVALID)
@@ -551,7 +544,7 @@ static int default_evv_pool_create(void)
 	odp_pool_param_init(&params);
 	params.type = ODP_POOL_EVENT_VECTOR;
 	params.event_vector.num = PKT_BUF_NUM;
-	params.event_vector.max_size = pool_capa.event_vector.max_size;
+	params.event_vector.max_size = global.pool_capa.event_vector.max_size;
 
 	snprintf(pool_name, sizeof(pool_name), "evv_pool_default_%d", global.pool_segmentation);
 	global.default_evv_pool = odp_pool_create(pool_name, &params);
@@ -1245,7 +1238,6 @@ static void pktio_txrx_multi(pktio_info_t *pktio_info_a,
 	check_parser_capa(pktio_b, &parser_l2, &parser_l3, &parser_l4);
 
 	if (global.packet_len == USE_MTU) {
-		odp_pool_capability_t pool_capa;
 		uint32_t maxlen;
 
 		maxlen = odp_pktout_maxlen(pktio_a);
@@ -1256,11 +1248,9 @@ static void pktio_txrx_multi(pktio_info_t *pktio_info_a,
 		if (global.packet_len > PKT_BUF_SIZE)
 			global.packet_len = PKT_BUF_SIZE;
 
-		CU_ASSERT_FATAL(odp_pool_capability(&pool_capa) == 0);
-
-		if (pool_capa.pkt.max_len &&
-		    global.packet_len > pool_capa.pkt.max_len)
-			global.packet_len = pool_capa.pkt.max_len;
+		if (global.pool_capa.pkt.max_len > 0 &&
+		    global.packet_len > global.pool_capa.pkt.max_len)
+			global.packet_len = global.pool_capa.pkt.max_len;
 	}
 
 	/* generate test packets to send */
@@ -5013,13 +5003,9 @@ static int create_pool(const char *iface, int num)
 {
 	char pool_name[ODP_POOL_NAME_LEN];
 	odp_pool_param_t params;
-	odp_pool_capability_t pool_capa;
-
-	if (odp_pool_capability(&pool_capa) != 0)
-		return -1;
 
 	odp_pool_param_init(&params);
-	set_pool_len(&params, &pool_capa);
+	set_pool_len(&params, &global.pool_capa);
 	/* Allocate enough buffers taking into consideration core starvation
 	 * due to caching */
 	params.pkt.num     = PKT_BUF_NUM + params.pkt.cache_size;
@@ -5040,20 +5026,16 @@ static int create_pool(const char *iface, int num)
 static int create_pktv_pool(const char *iface, int num)
 {
 	char pool_name[ODP_POOL_NAME_LEN];
-	odp_pool_capability_t pool_capa;
 	odp_pool_param_t params;
 
-	if (odp_pool_capability(&pool_capa) != 0)
-		return -1;
-
-	if (pool_capa.vector.max_num && pool_capa.vector.max_num < PKT_BUF_NUM)
+	if (global.pool_capa.vector.max_num > 0 &&
+	    global.pool_capa.vector.max_num < PKT_BUF_NUM)
 		return -1;
 
 	odp_pool_param_init(&params);
-	set_pool_len(&params, &pool_capa);
 	params.type = ODP_POOL_VECTOR;
 	params.vector.num = PKT_BUF_NUM;
-	params.vector.max_size = pool_capa.vector.max_size;
+	params.vector.max_size = global.pool_capa.vector.max_size;
 
 	snprintf(pool_name, sizeof(pool_name), "pktv_pool_%s_%d",
 		 iface, global.pool_segmentation);
@@ -5070,19 +5052,16 @@ static int create_pktv_pool(const char *iface, int num)
 static int create_evv_pool(const char *iface, int num)
 {
 	char pool_name[ODP_POOL_NAME_LEN];
-	odp_pool_capability_t pool_capa;
 	odp_pool_param_t params;
 
-	if (odp_pool_capability(&pool_capa) != 0)
-		return -1;
-
-	if (pool_capa.event_vector.max_num && pool_capa.event_vector.max_num < PKT_BUF_NUM)
+	if (global.pool_capa.event_vector.max_num > 0 &&
+	    global.pool_capa.event_vector.max_num < PKT_BUF_NUM)
 		return -1;
 
 	odp_pool_param_init(&params);
 	params.type = ODP_POOL_EVENT_VECTOR;
 	params.event_vector.num = PKT_BUF_NUM;
-	params.event_vector.max_size = pool_capa.event_vector.max_size;
+	params.event_vector.max_size = global.pool_capa.event_vector.max_size;
 
 	snprintf(pool_name, sizeof(pool_name), "evv_pool_%s_%d", iface, global.pool_segmentation);
 
@@ -5751,6 +5730,11 @@ static int pktio_suite_init(pkt_segmented_e pool_segmentation)
 
 	if (getenv("ODP_WAIT_FOR_NETWORK"))
 		global.wait_for_network = true;
+
+	if (odp_pool_capability(&global.pool_capa)) {
+		ODPH_ERR("odp_pool_capability() failed\n");
+		return -1;
+	}
 
 	global.packet_len = PKT_LEN_NORMAL;
 	global.default_pkt_pool = ODP_POOL_INVALID;
