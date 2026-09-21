@@ -5192,10 +5192,8 @@ static void pktio_test_pktv_pktin_queue_config(odp_pktin_mode_t in_mode)
 	queue_param.vector.max_size = capa.vector.max_size;
 	CU_ASSERT(odp_pktin_queue_config(pktio, &queue_param) == 0);
 
-	if (capa.vector.max_size != capa.vector.min_size) {
-		queue_param.vector.max_size = capa.vector.max_size - capa.vector.min_size;
-		CU_ASSERT(odp_pktin_queue_config(pktio, &queue_param) == 0);
-	}
+	queue_param.vector.max_size = (capa.vector.min_size + capa.vector.max_size) / 2;
+	CU_ASSERT(odp_pktin_queue_config(pktio, &queue_param) == 0);
 
 	queue_param.vector.max_size = capa.vector.min_size - 1;
 	CU_ASSERT(odp_pktin_queue_config(pktio, &queue_param) != 0);
@@ -5273,10 +5271,10 @@ static void pktio_test_evv_pktin_queue_config(odp_pktin_mode_t in_mode)
 	CU_ASSERT_FATAL(odp_queue_info(pktin_queue, &queue_info) == 0);
 	CU_ASSERT(queue_info.type == queue_type);
 
-	aggr_config[0].max_size = aggr_capa.max_size;
+	aggr_config[0].max_size = (aggr_capa.min_size + aggr_capa.max_size) / 2;
 	CU_ASSERT(odp_pktin_queue_config(pktio, &pktin_param) == 0);
 
-	aggr_config[0].max_size = aggr_capa.min_size + aggr_capa.max_size - aggr_capa.min_size;
+	aggr_config[0].max_size = aggr_capa.max_size;
 	CU_ASSERT(odp_pktin_queue_config(pktio, &pktin_param) == 0);
 
 	aggr_config[0].max_tmo_ns = aggr_capa.max_tmo_ns;
