@@ -127,6 +127,9 @@ typedef struct pktio_global_t {
 	/** Size of transmitted packets */
 	uint32_t packet_len;
 
+	/** Maximum packet length */
+	uint32_t packet_len_max;
+
 	/** Default packet pool */
 	odp_pool_t default_pkt_pool;
 
@@ -226,10 +229,9 @@ static void set_pool_len(odp_pool_param_t *params, odp_pool_capability_t *capa)
 	uint32_t len;
 	uint32_t seg_len;
 
-	len = (capa->pkt.max_len && capa->pkt.max_len < PKT_BUF_SIZE) ?
-			capa->pkt.max_len : PKT_BUF_SIZE;
-	seg_len = (capa->pkt.max_seg_len && capa->pkt.max_seg_len < PKT_BUF_SIZE) ?
-			capa->pkt.max_seg_len : PKT_BUF_SIZE;
+	len = global.packet_len_max;
+	seg_len = (capa->pkt.max_seg_len && capa->pkt.max_seg_len < len) ?
+			capa->pkt.max_seg_len : len;
 
 	switch (global.pool_segmentation) {
 	case PKT_POOL_SEGMENTED:
@@ -1244,13 +1246,9 @@ static void pktio_txrx_multi(pktio_info_t *pktio_info_a,
 		if (odp_pktout_maxlen(pktio_b) < maxlen)
 			maxlen = odp_pktout_maxlen(pktio_b);
 		CU_ASSERT_FATAL(maxlen > 0);
+		if (maxlen > global.packet_len_max)
+			maxlen = global.packet_len_max;
 		global.packet_len = maxlen;
-		if (global.packet_len > PKT_BUF_SIZE)
-			global.packet_len = PKT_BUF_SIZE;
-
-		if (global.pool_capa.pkt.max_len > 0 &&
-		    global.packet_len > global.pool_capa.pkt.max_len)
-			global.packet_len = global.pool_capa.pkt.max_len;
 	}
 
 	/* generate test packets to send */
@@ -5716,6 +5714,12 @@ static int pktio_capa(int pktio_idx, odp_pktin_mode_t in_mode, odp_pktout_mode_t
 	return ret;
 }
 
+static uint32_t packet_len_max(const odp_pool_capability_t *capa)
+{
+	return (capa->pkt.max_len > 0 && capa->pkt.max_len < PKT_BUF_SIZE) ?
+		capa->pkt.max_len : PKT_BUF_SIZE;
+}
+
 static int pktio_suite_init(pkt_segmented_e pool_segmentation)
 {
 	memset(&global, 0, sizeof(global));
@@ -5737,6 +5741,7 @@ static int pktio_suite_init(pkt_segmented_e pool_segmentation)
 	}
 
 	global.packet_len = PKT_LEN_NORMAL;
+	global.packet_len_max = packet_len_max(&global.pool_capa);
 	global.default_pkt_pool = ODP_POOL_INVALID;
 	global.default_pktv_pool = ODP_POOL_INVALID;
 	global.default_evv_pool = ODP_POOL_INVALID;
