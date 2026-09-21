@@ -17,8 +17,6 @@
 #define PKT_BUF_NUM            128
 #define PKT_BUF_SIZE           (9 * 1024)
 #define PKT_LEN_NORMAL         64
-#define PKT_LEN_MAX            (PKT_BUF_SIZE - ODPH_ETHHDR_LEN - \
-				ODPH_IPV4HDR_LEN - ODPH_UDPHDR_LEN)
 
 #define NUM_TEST_PKTS          100
 #define NUM_RX_ATTEMPTS        200
@@ -1255,8 +1253,8 @@ static void pktio_txrx_multi(pktio_info_t *pktio_info_a,
 			maxlen = odp_pktout_maxlen(pktio_b);
 		CU_ASSERT_FATAL(maxlen > 0);
 		global.packet_len = maxlen;
-		if (global.packet_len > PKT_LEN_MAX)
-			global.packet_len = PKT_LEN_MAX;
+		if (global.packet_len > PKT_BUF_SIZE)
+			global.packet_len = PKT_BUF_SIZE;
 
 		CU_ASSERT_FATAL(odp_pool_capability(&pool_capa) == 0);
 
@@ -5360,7 +5358,7 @@ static void pktio_test_recv_maxlen_set(void)
 	odp_pktout_queue_t pktout_queue;
 	odp_packet_t pkt_tbl[TX_BATCH_LEN];
 	uint32_t pkt_seq[TX_BATCH_LEN];
-	uint32_t max_len = PKT_LEN_MAX;
+	uint32_t max_len = PKT_BUF_SIZE;
 	int num_rx = 0;
 	int ret;
 	int i;
