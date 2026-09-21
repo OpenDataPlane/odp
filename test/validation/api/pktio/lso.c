@@ -13,7 +13,7 @@
 
 #define MAX_NUM_IFACES  2
 #define PKT_POOL_NUM    256
-#define PKT_POOL_LEN    (2 * 1024)
+#define PKT_POOL_LEN    1500
 
 /* Maximum number of segments test is prepared to receive per outgoing packet */
 #define MAX_NUM_SEG     256
@@ -206,6 +206,8 @@ static odp_pktio_t create_pktio(int idx, const char *name, odp_pool_t pool)
 static odp_packet_t create_packet(const uint8_t *data, uint32_t len)
 {
 	odp_packet_t pkt;
+
+	CU_ASSERT(len <= PKT_POOL_LEN);
 
 	pkt = odp_packet_alloc(lso_pool, len);
 	if (pkt == ODP_PACKET_INVALID)
