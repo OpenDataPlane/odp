@@ -3642,7 +3642,7 @@ static void pktio_test_send_on_ronly(void)
 
 static int pktio_check_pktin_ts(void)
 {
-	return global.iface[tx_iface_idx()].capa.direct.config.pktin.bit.ts_all ?
+	return global.iface[rx_iface_idx()].capa.direct.config.pktin.bit.ts_all ?
 		ODP_TEST_ACTIVE : ODP_TEST_INACTIVE;
 }
 
@@ -3675,16 +3675,18 @@ static void test_pktin_ts(uint32_t test_flags)
 		CU_ASSERT_FATAL(pktio[i] != ODP_PKTIO_INVALID);
 
 		CU_ASSERT_FATAL(odp_pktio_capability(pktio[i], &capa) == 0);
-		CU_ASSERT_FATAL(capa.config.pktin.bit.ts_all);
 
 		if (i == tx_iface_idx() && !has_packet_ref_capa(&capa, test_flags)) {
 			CU_ASSERT_FATAL(odp_pktio_close(pktio[i]) == 0);
 			return;
 		}
 
-		odp_pktio_config_init(&config);
-		config.pktin.bit.ts_all = 1;
-		CU_ASSERT_FATAL(odp_pktio_config(pktio[i], &config) == 0);
+		if (i == rx_iface_idx()) {
+			CU_ASSERT_FATAL(capa.config.pktin.bit.ts_all);
+			odp_pktio_config_init(&config);
+			config.pktin.bit.ts_all = 1;
+			CU_ASSERT_FATAL(odp_pktio_config(pktio[i], &config) == 0);
+		}
 
 		CU_ASSERT_FATAL(odp_pktio_start(pktio[i]) == 0);
 	}
@@ -3699,11 +3701,11 @@ static void test_pktin_ts(uint32_t test_flags)
 	pktio_rx_info.in_mode = ODP_PKTIN_MODE_DIRECT;
 
 	/* Test odp_pktio_ts_res() and odp_pktio_ts_from_ns() */
-	res = odp_pktio_ts_res(pktio_tx);
+	res = odp_pktio_ts_res(pktio_rx);
 	CU_ASSERT(res > PKTIO_TS_MIN_RES);
 	CU_ASSERT(res < PKTIO_TS_MAX_RES);
 	ns1 = 100;
-	ts = odp_pktio_ts_from_ns(pktio_tx, ns1);
+	ts = odp_pktio_ts_from_ns(pktio_rx, ns1);
 	ns2 = odp_time_to_ns(ts);
 	CU_ASSERT_FATAL(res != 0);
 	res_ns = ODP_TIME_SEC_IN_NS / res;
@@ -3804,16 +3806,18 @@ static void test_pktout_ts(uint32_t test_flags)
 		CU_ASSERT_FATAL(pktio[i] != ODP_PKTIO_INVALID);
 
 		CU_ASSERT_FATAL(odp_pktio_capability(pktio[i], &capa) == 0);
-		CU_ASSERT_FATAL(capa.config.pktin.bit.ts_all);
 
 		if (i == tx_iface_idx() && !has_packet_ref_capa(&capa, test_flags)) {
 			CU_ASSERT_FATAL(odp_pktio_close(pktio[i]) == 0);
 			return;
 		}
 
-		odp_pktio_config_init(&config);
-		config.pktout.bit.ts_ena = 1;
-		CU_ASSERT_FATAL(odp_pktio_config(pktio[i], &config) == 0);
+		if (i == tx_iface_idx()) {
+			CU_ASSERT_FATAL(capa.config.pktout.bit.ts_ena);
+			odp_pktio_config_init(&config);
+			config.pktout.bit.ts_ena = 1;
+			CU_ASSERT_FATAL(odp_pktio_config(pktio[i], &config) == 0);
+		}
 
 		CU_ASSERT_FATAL(odp_pktio_start(pktio[i]) == 0);
 	}
