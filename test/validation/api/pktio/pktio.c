@@ -39,22 +39,18 @@
 #define PKTIO_DST_MAC		{6, 5, 4, 3, 2, 1}
 #undef DEBUG_STATS
 
-/* Optional test flags that can be or'ed */
 typedef enum {
-	TEST_WITH_DEF_POOL = 1,
-	TEST_WITH_STATIC_REFS = 2,
-	TEST_WITH_REFFED_PKTS = 4,
-	TEST_WITH_DYN_REFS = 8,
-} test_flag_values_t;
-
-#define NUM_TEST_FLAGS 4
-#define NUM_TEST_FLAG_COMBOS (1 << NUM_TEST_FLAGS)
-
-#define TEST_WITH_REFS (TEST_WITH_STATIC_REFS | TEST_WITH_REFFED_PKTS | TEST_WITH_DYN_REFS)
+	PKT_TYPE_NORMAL,
+	PKT_TYPE_STATIC_REF,
+	PKT_TYPE_REFERENCED,
+	PKT_TYPE_DYN_REF,
+	PKT_TYPE_MAX = PKT_TYPE_DYN_REF
+} pkt_type_t;
 
 typedef enum {
 	POOL_DEFAULT,
 	POOL_PKTIO,
+	POOL_MAX = POOL_PKTIO
 } pool_sel_t;
 
 /** local container for pktio attributes */
@@ -200,26 +196,20 @@ static const uint8_t *l4_chksum_insert_0 = &dummy[2];
 static const uint8_t *l4_chksum_insert_1 = &dummy[3];
 static const uint8_t *ts_request         = &dummy[4];
 
-static void test_flags_next(uint32_t *test_flags)
+static int has_packet_ref_capa(const odp_pktio_capability_t *capa, pkt_type_t pkt_type)
 {
-	uint32_t ref_flags;
-
-	/* keep looping until ref_flags has at most one bit set */
-	do {
-		*test_flags += 1;
-		ref_flags = *test_flags & TEST_WITH_REFS;
-	} while (ref_flags & (ref_flags - 1));
-}
-
-static int has_packet_ref_capa(const odp_pktio_capability_t *capa, uint32_t test_flags)
-{
-	if ((test_flags & TEST_WITH_STATIC_REFS) && !capa->packet_ref.static_ref)
-		return 0;
-	if ((test_flags & TEST_WITH_DYN_REFS)    && !capa->packet_ref.referencing_pkt)
-		return 0;
-	if ((test_flags & TEST_WITH_REFFED_PKTS) && !capa->packet_ref.referenced_pkt)
-		return 0;
-	return 1;
+	switch (pkt_type) {
+	case PKT_TYPE_NORMAL:
+		return 1;
+	case PKT_TYPE_STATIC_REF:
+		return capa->packet_ref.static_ref;
+	case PKT_TYPE_DYN_REF:
+		return capa->packet_ref.referencing_pkt;
+	case PKT_TYPE_REFERENCED:
+		return capa->packet_ref.referenced_pkt;
+	}
+	CU_FAIL("unknown packet type");
+	return 0;
 }
 
 static odp_pool_t select_pktio_pool(int iface_idx, pool_sel_t pool_sel)
@@ -1240,36 +1230,45 @@ static odp_packet_t make_dyn_ref(odp_packet_t pkt)
 	return ref;
 }
 
-static void make_refs(odp_packet_t ref[], odp_packet_t pkt[], uint32_t num, uint32_t test_flags)
+static void make_refs(odp_packet_t ref[], odp_packet_t pkt[], uint32_t num, pkt_type_t pkt_type)
 {
 	for (uint32_t i = 0; i < num; i++) {
-		if (test_flags & TEST_WITH_STATIC_REFS) {
+		switch (pkt_type) {
+		case PKT_TYPE_NORMAL:
+			break;
+		case PKT_TYPE_STATIC_REF:
 			ref[i] = odp_packet_ref_static(pkt[i]);
 			CU_ASSERT_FATAL(ref[i] != ODP_PACKET_INVALID);
 			CU_ASSERT(odp_packet_has_ref(ref[i]));
 			CU_ASSERT(odp_packet_has_ref(pkt[i]));
-		} else if (test_flags & TEST_WITH_REFFED_PKTS) {
+			break;
+		case PKT_TYPE_REFERENCED:
 			ref[i] = odp_packet_ref(pkt[i], 0);
 			CU_ASSERT_FATAL(ref[i] != ODP_PACKET_INVALID);
 			CU_ASSERT(odp_packet_is_referencing(ref[i]));
 			CU_ASSERT(odp_packet_has_ref(pkt[i]));
-		} else if (test_flags & TEST_WITH_DYN_REFS) {
+			break;
+		case PKT_TYPE_DYN_REF:
 			/* change pkt to a reference and store original to ref */
 			ref[i] = pkt[i];
 			pkt[i] = make_dyn_ref(pkt[i]);
+			break;
+		default:
+			CU_FAIL("unknown packet type");
+			break;
 		}
 	}
 }
 
-static void free_refs(odp_packet_t ref[], uint32_t num, uint32_t test_flags)
+static void free_refs(odp_packet_t ref[], uint32_t num, pkt_type_t pkt_type)
 {
-	if ((test_flags & TEST_WITH_REFS) == 0)
+	if (pkt_type == PKT_TYPE_NORMAL)
 		return;
 
 	for (uint32_t i = 0; i < num; i++) {
 		CU_ASSERT(odp_packet_has_ref(ref[i]) == 0);
 
-		if (test_flags & TEST_WITH_REFFED_PKTS) {
+		if (pkt_type == PKT_TYPE_REFERENCED) {
 			/* We expect a referencing packet still be
 			 * a referencing packet even if the referenced
 			 * packet has been freed or consumed
@@ -1285,7 +1284,7 @@ static void free_refs(odp_packet_t ref[], uint32_t num, uint32_t test_flags)
 static void pktio_txrx_multi(const pktio_pair_t *pair,
 			     int num_pkts, txrx_mode_e mode,
 			     vector_mode_t vector_mode,
-			     uint32_t test_flags)
+			     pkt_type_t pkt_type)
 {
 	odp_packet_t tx_pkt[num_pkts];
 	odp_packet_t rx_pkt[num_pkts];
@@ -1333,7 +1332,7 @@ static void pktio_txrx_multi(const pktio_pair_t *pair,
 		}
 	}
 
-	make_refs(ref_tbl, tx_pkt, num_pkts, test_flags);
+	make_refs(ref_tbl, tx_pkt, num_pkts, pkt_type);
 
 	/* send packet(s) out */
 	if (mode == TXRX_MODE_SINGLE) {
@@ -1367,7 +1366,7 @@ static void pktio_txrx_multi(const pktio_pair_t *pair,
 	if (num_rx != num_pkts)
 		ODPH_ERR("received %i, out of %i packets\n", num_rx, num_pkts);
 
-	free_refs(ref_tbl, num_pkts, test_flags);
+	free_refs(ref_tbl, num_pkts, pkt_type);
 
 	for (i = 0; i < num_rx; ++i) {
 		odp_packet_data_range_t range;
@@ -1420,20 +1419,19 @@ static void pktio_txrx_multi(const pktio_pair_t *pair,
 
 static void do_test_txrx(odp_pktin_mode_t in_mode, int num_pkts,
 			 txrx_mode_e mode, odp_schedule_sync_t sync_mode,
-			 vector_mode_t vector_mode, uint32_t test_flags)
+			 vector_mode_t vector_mode, pool_sel_t pool_sel, pkt_type_t pkt_type)
 {
 	pktio_pair_t pair;
 	odp_pktout_mode_t out_mode = ODP_PKTOUT_MODE_DIRECT;
-	pool_sel_t pool_sel = (test_flags & TEST_WITH_DEF_POOL) ? POOL_DEFAULT : POOL_PKTIO;
 
 	if (mode == TXRX_MODE_MULTI_EVENT)
 		out_mode = ODP_PKTOUT_MODE_QUEUE;
 
 	pktio_pair_create_full(&pair, in_mode, out_mode, sync_mode, vector_mode, pool_sel);
 
-	if (has_packet_ref_capa(&pair.tx->capa, test_flags)) {
+	if (has_packet_ref_capa(&pair.tx->capa, pkt_type)) {
 		pktio_pair_start(&pair);
-		pktio_txrx_multi(&pair, num_pkts, mode, vector_mode, test_flags);
+		pktio_txrx_multi(&pair, num_pkts, mode, vector_mode, pkt_type);
 		pktio_pair_stop(&pair);
 		pktio_pair_flush_input_queues(&pair);
 	}
@@ -1444,8 +1442,10 @@ static void test_txrx(odp_pktin_mode_t in_mode, int num_pkts,
 		      txrx_mode_e mode, odp_schedule_sync_t sync_mode,
 		      vector_mode_t vector_mode)
 {
-	for (uint32_t flags = 0; flags < NUM_TEST_FLAG_COMBOS; test_flags_next(&flags))
-		do_test_txrx(in_mode, num_pkts, mode, sync_mode, vector_mode, flags);
+	for (pool_sel_t pool_sel = 0; pool_sel <= POOL_MAX; pool_sel++)
+		for (pkt_type_t pkt_type = 0; pkt_type <= PKT_TYPE_MAX; pkt_type++)
+			do_test_txrx(in_mode, num_pkts, mode, sync_mode, vector_mode,
+				     pool_sel, pkt_type);
 }
 
 static void pktio_test_plain_queue(void)
@@ -3476,7 +3476,7 @@ static int pktio_check_pktin_ts(void)
 		ODP_TEST_ACTIVE : ODP_TEST_INACTIVE;
 }
 
-static void test_pktin_ts(uint32_t test_flags)
+static void test_pktin_ts(pool_sel_t pool_sel, pkt_type_t pkt_type)
 {
 	pktio_pair_t pair;
 	odp_pktio_config_t config;
@@ -3491,10 +3491,9 @@ static void test_pktin_ts(uint32_t test_flags)
 	int ret;
 	int i;
 
-	pktio_pair_create(&pair, ODP_PKTIN_MODE_DIRECT, ODP_PKTOUT_MODE_DIRECT,
-			  (test_flags & TEST_WITH_DEF_POOL) ? POOL_DEFAULT : POOL_PKTIO);
+	pktio_pair_create(&pair, ODP_PKTIN_MODE_DIRECT, ODP_PKTOUT_MODE_DIRECT, pool_sel);
 
-	if (!has_packet_ref_capa(&pair.tx->capa, test_flags)) {
+	if (!has_packet_ref_capa(&pair.tx->capa, pkt_type)) {
 		pktio_pair_destroy(&pair);
 		return;
 	}
@@ -3523,7 +3522,7 @@ static void test_pktin_ts(uint32_t test_flags)
 	ret = create_packets(pkt_tbl, pkt_seq, TX_BATCH_LEN, pair.tx->id, pair.rx->id);
 	CU_ASSERT_FATAL(ret == TX_BATCH_LEN);
 
-	make_refs(ref_tbl, pkt_tbl, TX_BATCH_LEN, test_flags);
+	make_refs(ref_tbl, pkt_tbl, TX_BATCH_LEN, pkt_type);
 
 	/* Send packets one at a time and add delay between the packets */
 	for (i = 0; i < TX_BATCH_LEN;  i++) {
@@ -3552,7 +3551,7 @@ static void test_pktin_ts(uint32_t test_flags)
 	num_rx = i;
 	CU_ASSERT(num_rx == TX_BATCH_LEN);
 
-	free_refs(ref_tbl, TX_BATCH_LEN, test_flags);
+	free_refs(ref_tbl, TX_BATCH_LEN, pkt_type);
 
 	ts_prev = ODP_TIME_NULL;
 	for (i = 0; i < num_rx; i++) {
@@ -3570,8 +3569,9 @@ static void test_pktin_ts(uint32_t test_flags)
 
 static void pktio_test_pktin_ts(void)
 {
-	for (uint32_t flags = 0; flags < NUM_TEST_FLAG_COMBOS; test_flags_next(&flags))
-		test_pktin_ts(flags);
+	for (pool_sel_t pool_sel = 0; pool_sel <= POOL_MAX; pool_sel++)
+		for (pkt_type_t pkt_type = 0; pkt_type <= PKT_TYPE_MAX; pkt_type++)
+			test_pktin_ts(pool_sel, pkt_type);
 }
 
 static int pktio_check_pktout_ts(void)
@@ -3580,7 +3580,7 @@ static int pktio_check_pktout_ts(void)
 		ODP_TEST_ACTIVE : ODP_TEST_INACTIVE;
 }
 
-static void test_pktout_ts(uint32_t test_flags)
+static void test_pktout_ts(pool_sel_t pool_sel, pkt_type_t pkt_type)
 {
 	pktio_pair_t pair;
 	odp_packet_t pkt_tbl[TX_BATCH_LEN];
@@ -3592,10 +3592,9 @@ static void test_pktout_ts(uint32_t test_flags)
 	int ret;
 	int i;
 
-	pktio_pair_create(&pair, ODP_PKTIN_MODE_DIRECT, ODP_PKTOUT_MODE_DIRECT,
-			  (test_flags & TEST_WITH_DEF_POOL) ? POOL_DEFAULT : POOL_PKTIO);
+	pktio_pair_create(&pair, ODP_PKTIN_MODE_DIRECT, ODP_PKTOUT_MODE_DIRECT, pool_sel);
 
-	if (!has_packet_ref_capa(&pair.tx->capa, test_flags)) {
+	if (!has_packet_ref_capa(&pair.tx->capa, pkt_type)) {
 		pktio_pair_destroy(&pair);
 		return;
 	}
@@ -3622,7 +3621,7 @@ static void test_pktout_ts(uint32_t test_flags)
 		odp_packet_ts_request(pkt_tbl[i], 1);
 		odp_packet_user_ptr_set(pkt_tbl[i], ts_request);
 
-		make_refs(&ref_pkt, &pkt_tbl[i], 1, test_flags);
+		make_refs(&ref_pkt, &pkt_tbl[i], 1, pkt_type);
 
 		CU_ASSERT_FATAL(odp_pktout_send(pair.tx->pktout_queue,
 						&pkt_tbl[i], 1) == 1);
@@ -3630,7 +3629,7 @@ static void test_pktout_ts(uint32_t test_flags)
 				       1, TXRX_MODE_SINGLE, ODP_TIME_SEC_IN_NS,
 				       VECTOR_MODE_DISABLED);
 
-		free_refs(&ref_pkt, 1, test_flags);
+		free_refs(&ref_pkt, 1, pkt_type);
 
 		if (ret != 1)
 			break;
@@ -3657,8 +3656,9 @@ static void test_pktout_ts(uint32_t test_flags)
 
 static void pktio_test_pktout_ts(void)
 {
-	for (uint32_t flags = 0; flags < NUM_TEST_FLAG_COMBOS; test_flags_next(&flags))
-		test_pktout_ts(flags);
+	for (pool_sel_t pool_sel = 0; pool_sel <= POOL_MAX; pool_sel++)
+		for (pkt_type_t pkt_type = 0; pkt_type <= PKT_TYPE_MAX; pkt_type++)
+			test_pktout_ts(pool_sel, pkt_type);
 }
 
 static void request_tx_completion(odp_packet_t pkt_tbl[],
@@ -3684,7 +3684,8 @@ static void request_tx_completion(odp_packet_t pkt_tbl[],
 	}
 }
 
-static void pktio_test_pktout_compl_event(bool use_plain_queue, uint32_t test_flags)
+static void pktio_test_pktout_compl_event(bool use_plain_queue,
+					  pool_sel_t pool_sel, pkt_type_t pkt_type)
 {
 	pktio_pair_t pair;
 	odp_queue_t compl_queue[TX_BATCH_LEN];
@@ -3703,10 +3704,9 @@ static void pktio_test_pktout_compl_event(bool use_plain_queue, uint32_t test_fl
 	odp_event_t ev;
 	uint64_t wait, u64;
 
-	pktio_pair_create(&pair, ODP_PKTIN_MODE_DIRECT, ODP_PKTOUT_MODE_DIRECT,
-			  (test_flags & TEST_WITH_DEF_POOL) ? POOL_DEFAULT : POOL_PKTIO);
+	pktio_pair_create(&pair, ODP_PKTIN_MODE_DIRECT, ODP_PKTOUT_MODE_DIRECT, pool_sel);
 
-	if (!has_packet_ref_capa(&pair.tx->capa, test_flags)) {
+	if (!has_packet_ref_capa(&pair.tx->capa, pkt_type)) {
 		pktio_pair_destroy(&pair);
 		return;
 	}
@@ -3775,12 +3775,12 @@ static void pktio_test_pktout_compl_event(bool use_plain_queue, uint32_t test_fl
 	 * in that case. For static references we have to do it now since we are
 	 * not allowed to alter any metadata after static reference creation.
 	 */
-	if ((test_flags & TEST_WITH_DYN_REFS) == 0)
+	if (pkt_type != PKT_TYPE_DYN_REF)
 		request_tx_completion(pkt_tbl, pkt_seq, ODP_PACKET_TX_COMPL_EVENT, compl_queue);
 
-	make_refs(ref_tbl, pkt_tbl, TX_BATCH_LEN, test_flags);
+	make_refs(ref_tbl, pkt_tbl, TX_BATCH_LEN, pkt_type);
 
-	if ((test_flags & TEST_WITH_DYN_REFS) != 0)
+	if (pkt_type == PKT_TYPE_DYN_REF)
 		request_tx_completion(pkt_tbl, pkt_seq, ODP_PACKET_TX_COMPL_EVENT, compl_queue);
 
 	CU_ASSERT_FATAL(odp_pktout_send(pair.tx->pktout_queue, pkt_tbl, TX_BATCH_LEN)
@@ -3790,7 +3790,7 @@ static void pktio_test_pktout_compl_event(bool use_plain_queue, uint32_t test_fl
 				  ODP_TIME_SEC_IN_NS, VECTOR_MODE_DISABLED);
 	CU_ASSERT(num_rx == TX_BATCH_LEN);
 
-	free_refs(ref_tbl, TX_BATCH_LEN, test_flags);
+	free_refs(ref_tbl, TX_BATCH_LEN, pkt_type);
 
 	for (i = 0; i < num_rx; i++) {
 		CU_ASSERT(odp_packet_pool(pkt_tbl[i]) == pair.rx->rx_pool);
@@ -3907,7 +3907,7 @@ static void pktio_test_pktout_compl_event(bool use_plain_queue, uint32_t test_fl
 		odp_queue_destroy(compl_queue[i]);
 }
 
-static void test_pktout_compl_poll(uint32_t test_flags)
+static void test_pktout_compl_poll(pool_sel_t pool_sel, pkt_type_t pkt_type)
 {
 	pktio_pair_t pair;
 	odp_packet_t pkt_tbl[TX_BATCH_LEN];
@@ -3917,10 +3917,9 @@ static void test_pktout_compl_poll(uint32_t test_flags)
 	odp_pktio_config_t config;
 	int ret, i, num_rx = 0;
 
-	pktio_pair_create(&pair, ODP_PKTIN_MODE_DIRECT, ODP_PKTOUT_MODE_DIRECT,
-			  (test_flags & TEST_WITH_DEF_POOL) ? POOL_DEFAULT : POOL_PKTIO);
+	pktio_pair_create(&pair, ODP_PKTIN_MODE_DIRECT, ODP_PKTOUT_MODE_DIRECT, pool_sel);
 
-	if (!has_packet_ref_capa(&pair.tx->capa, test_flags)) {
+	if (!has_packet_ref_capa(&pair.tx->capa, pkt_type)) {
 		pktio_pair_destroy(&pair);
 		return;
 	}
@@ -3963,12 +3962,12 @@ static void test_pktout_compl_poll(uint32_t test_flags)
 	 * in that case. For static references we have to do it now since we are
 	 * not allowed to alter any metadata after static reference creation.
 	 */
-	if ((test_flags & TEST_WITH_DYN_REFS) == 0)
+	if (pkt_type != PKT_TYPE_DYN_REF)
 		request_tx_completion(pkt_tbl, pkt_seq, ODP_PACKET_TX_COMPL_POLL, NULL);
 
-	make_refs(ref_tbl, pkt_tbl, TX_BATCH_LEN, test_flags);
+	make_refs(ref_tbl, pkt_tbl, TX_BATCH_LEN, pkt_type);
 
-	if ((test_flags & TEST_WITH_DYN_REFS) != 0)
+	if (pkt_type == PKT_TYPE_DYN_REF)
 		request_tx_completion(pkt_tbl, pkt_seq, ODP_PACKET_TX_COMPL_POLL, NULL);
 
 	for (i = 0; i < TX_BATCH_LEN;  i++) {
@@ -3983,7 +3982,7 @@ static void test_pktout_compl_poll(uint32_t test_flags)
 				  ODP_TIME_SEC_IN_NS, VECTOR_MODE_DISABLED);
 	CU_ASSERT(num_rx == TX_BATCH_LEN);
 
-	free_refs(ref_tbl, TX_BATCH_LEN, test_flags);
+	free_refs(ref_tbl, TX_BATCH_LEN, pkt_type);
 
 	for (i = 0; i < num_rx; i++) {
 		CU_ASSERT(odp_packet_pool(pkt_tbl[i]) == pair.rx->rx_pool);
@@ -4003,8 +4002,9 @@ static void test_pktout_compl_poll(uint32_t test_flags)
 
 static void pktio_test_pktout_compl_poll(void)
 {
-	for (uint32_t flags = 0; flags < NUM_TEST_FLAG_COMBOS; test_flags_next(&flags))
-		test_pktout_compl_poll(flags);
+	for (pool_sel_t pool_sel = 0; pool_sel <= POOL_MAX; pool_sel++)
+		for (pkt_type_t pkt_type = 0; pkt_type <= PKT_TYPE_MAX; pkt_type++)
+			test_pktout_compl_poll(pool_sel, pkt_type);
 }
 
 static int pktio_check_pktout_compl_event(bool plain)
@@ -4042,17 +4042,19 @@ static int pktio_check_pktout_compl_event_sched_queue(void)
 
 static void pktio_test_pktout_compl_event_plain_queue(void)
 {
-	for (uint32_t flags = 0; flags < NUM_TEST_FLAG_COMBOS; test_flags_next(&flags))
-		pktio_test_pktout_compl_event(true, flags);
+	for (pool_sel_t pool_sel = 0; pool_sel <= POOL_MAX; pool_sel++)
+		for (pkt_type_t pkt_type = 0; pkt_type <= PKT_TYPE_MAX; pkt_type++)
+			pktio_test_pktout_compl_event(true, pool_sel, pkt_type);
 }
 
 static void pktio_test_pktout_compl_event_sched_queue(void)
 {
-	for (uint32_t flags = 0; flags < NUM_TEST_FLAG_COMBOS; test_flags_next(&flags))
-		pktio_test_pktout_compl_event(false, flags);
+	for (pool_sel_t pool_sel = 0; pool_sel <= POOL_MAX; pool_sel++)
+		for (pkt_type_t pkt_type = 0; pkt_type <= PKT_TYPE_MAX; pkt_type++)
+			pktio_test_pktout_compl_event(false, pool_sel, pkt_type);
 }
 
-static void test_pktout_dont_free(uint32_t test_flags)
+static void test_pktout_dont_free(pool_sel_t pool_sel, pkt_type_t pkt_type)
 {
 	pktio_pair_t pair;
 	odp_packet_t pkt, rx_pkt;
@@ -4063,8 +4065,7 @@ static void test_pktout_dont_free(uint32_t test_flags)
 	int num_rx = 0;
 	odp_packet_t ref_tbl[num_pkt];
 
-	pktio_pair_create(&pair, ODP_PKTIN_MODE_DIRECT, ODP_PKTOUT_MODE_DIRECT,
-			  (test_flags & TEST_WITH_DEF_POOL) ? POOL_DEFAULT : POOL_PKTIO);
+	pktio_pair_create(&pair, ODP_PKTIN_MODE_DIRECT, ODP_PKTOUT_MODE_DIRECT, pool_sel);
 
 	CU_ASSERT_FATAL(pair.tx->capa.free_ctrl.dont_free == 1);
 	pktio_pair_start(&pair);
@@ -4077,7 +4078,7 @@ static void test_pktout_dont_free(uint32_t test_flags)
 	odp_packet_free_ctrl_set(pkt, ODP_PACKET_FREE_CTRL_DONT_FREE);
 	CU_ASSERT_FATAL(odp_packet_free_ctrl(pkt) == ODP_PACKET_FREE_CTRL_DONT_FREE);
 
-	make_refs(ref_tbl, &pkt, num_pkt, test_flags);
+	make_refs(ref_tbl, &pkt, num_pkt, pkt_type);
 
 	while (transmits--) {
 		/* Retransmit the same packet after it has been received from the RX interface */
@@ -4098,7 +4099,7 @@ static void test_pktout_dont_free(uint32_t test_flags)
 
 	odp_packet_free(pkt);
 
-	free_refs(ref_tbl, num_pkt, test_flags);
+	free_refs(ref_tbl, num_pkt, pkt_type);
 
 	pktio_pair_stop(&pair);
 	pktio_pair_destroy(&pair);
@@ -4106,8 +4107,9 @@ static void test_pktout_dont_free(uint32_t test_flags)
 
 static void pktio_test_pktout_dont_free(void)
 {
-	for (uint32_t flags = 0; flags < NUM_TEST_FLAG_COMBOS; test_flags_next(&flags))
-		test_pktout_dont_free(flags);
+	for (pool_sel_t pool_sel = 0; pool_sel <= POOL_MAX; pool_sel++)
+		for (pkt_type_t pkt_type = 0; pkt_type <= PKT_TYPE_MAX; pkt_type++)
+			test_pktout_dont_free(pool_sel, pkt_type);
 }
 
 static int pktio_check_pktout_dont_free(void)
@@ -4119,7 +4121,7 @@ static int pktio_check_pktout_dont_free(void)
 static void test_chksum(void (*config_fn)(const pktio_pair_t *),
 			void (*prep_fn)(odp_packet_t pkt),
 			void (*test_fn)(odp_packet_t pkt),
-			uint32_t test_flags,
+			pool_sel_t pool_sel, pkt_type_t pkt_type,
 			int is_sctp)
 {
 	pktio_pair_t pair;
@@ -4130,10 +4132,9 @@ static void test_chksum(void (*config_fn)(const pktio_pair_t *),
 	int i, num_rx;
 	size_t hdr_len = is_sctp ? ODPH_SCTPHDR_LEN : ODPH_UDPHDR_LEN;
 
-	pktio_pair_create(&pair, ODP_PKTIN_MODE_DIRECT, ODP_PKTOUT_MODE_DIRECT,
-			  (test_flags & TEST_WITH_DEF_POOL) ? POOL_DEFAULT : POOL_PKTIO);
+	pktio_pair_create(&pair, ODP_PKTIN_MODE_DIRECT, ODP_PKTOUT_MODE_DIRECT, pool_sel);
 
-	if (!has_packet_ref_capa(&pair.tx->capa, test_flags)) {
+	if (!has_packet_ref_capa(&pair.tx->capa, pkt_type)) {
 		pktio_pair_destroy(&pair);
 		return;
 	}
@@ -4161,7 +4162,7 @@ static void test_chksum(void (*config_fn)(const pktio_pair_t *),
 			prep_fn(pkt_tbl[i]);
 	}
 
-	make_refs(ref_tbl, pkt_tbl, TX_BATCH_LEN, test_flags);
+	make_refs(ref_tbl, pkt_tbl, TX_BATCH_LEN, pkt_type);
 
 	send_packets(pair.tx->pktout_queue, pkt_tbl, TX_BATCH_LEN);
 
@@ -4170,7 +4171,7 @@ static void test_chksum(void (*config_fn)(const pktio_pair_t *),
 				      ODP_TIME_SEC_IN_NS, hdr_len,
 				      VECTOR_MODE_DISABLED);
 	CU_ASSERT(num_rx == TX_BATCH_LEN);
-	free_refs(ref_tbl, TX_BATCH_LEN, test_flags);
+	free_refs(ref_tbl, TX_BATCH_LEN, pkt_type);
 	for (i = 0; i < num_rx; i++) {
 		CU_ASSERT(odp_packet_pool(pkt_tbl[i]) == pair.rx->rx_pool);
 		CU_ASSERT(odp_packet_has_ref(pkt_tbl[i]) == 0);
@@ -4186,16 +4187,18 @@ static void pktio_test_chksum(void (*config_fn)(const pktio_pair_t *),
 			      void (*prep_fn)(odp_packet_t pkt),
 			      void (*test_fn)(odp_packet_t pkt))
 {
-	for (uint32_t flags = 0; flags < NUM_TEST_FLAG_COMBOS; test_flags_next(&flags))
-		test_chksum(config_fn, prep_fn, test_fn, flags, 0);
+	for (pool_sel_t pool_sel = 0; pool_sel <= POOL_MAX; pool_sel++)
+		for (pkt_type_t pkt_type = 0; pkt_type <= PKT_TYPE_MAX; pkt_type++)
+			test_chksum(config_fn, prep_fn, test_fn, pool_sel, pkt_type, 0);
 }
 
 static void pktio_test_chksum_sctp(void (*config_fn)(const pktio_pair_t *),
 				   void (*prep_fn)(odp_packet_t pkt),
 				   void (*test_fn)(odp_packet_t pkt))
 {
-	for (uint32_t flags = 0; flags < NUM_TEST_FLAG_COMBOS; test_flags_next(&flags))
-		test_chksum(config_fn, prep_fn, test_fn, flags, 1);
+	for (pool_sel_t pool_sel = 0; pool_sel <= POOL_MAX; pool_sel++)
+		for (pkt_type_t pkt_type = 0; pkt_type <= PKT_TYPE_MAX; pkt_type++)
+			test_chksum(config_fn, prep_fn, test_fn, pool_sel, pkt_type, 1);
 }
 
 static int pktio_check_chksum_in_ipv4(void)
@@ -5013,7 +5016,7 @@ static int pktio_check_pktout_aging_tmo(void)
 		ODP_TEST_ACTIVE : ODP_TEST_INACTIVE;
 }
 
-static void test_pktout_aging_tmo(uint32_t test_flags)
+static void test_pktout_aging_tmo(pool_sel_t pool_sel, pkt_type_t pkt_type)
 {
 	pktio_pair_t pair;
 	odp_packet_t pkt_tbl[TX_BATCH_LEN];
@@ -5023,10 +5026,9 @@ static void test_pktout_aging_tmo(uint32_t test_flags)
 	int ret, i, num_rx = 0;
 	uint64_t tmo_0, tmo_1;
 
-	pktio_pair_create(&pair, ODP_PKTIN_MODE_DIRECT, ODP_PKTOUT_MODE_DIRECT,
-			  (test_flags & TEST_WITH_DEF_POOL) ? POOL_DEFAULT : POOL_PKTIO);
+	pktio_pair_create(&pair, ODP_PKTIN_MODE_DIRECT, ODP_PKTOUT_MODE_DIRECT, pool_sel);
 
-	if (!has_packet_ref_capa(&pair.tx->capa, test_flags)) {
+	if (!has_packet_ref_capa(&pair.tx->capa, pkt_type)) {
 		pktio_pair_destroy(&pair);
 		return;
 	}
@@ -5059,7 +5061,7 @@ static void test_pktout_aging_tmo(uint32_t test_flags)
 		CU_ASSERT(odp_packet_aging_tmo(pkt_tbl[i]) != 0);
 	}
 
-	make_refs(ref_tbl, pkt_tbl, TX_BATCH_LEN, test_flags);
+	make_refs(ref_tbl, pkt_tbl, TX_BATCH_LEN, pkt_type);
 
 	CU_ASSERT_FATAL(odp_pktout_send(pair.tx->pktout_queue, pkt_tbl, TX_BATCH_LEN)
 			== TX_BATCH_LEN);
@@ -5067,7 +5069,7 @@ static void test_pktout_aging_tmo(uint32_t test_flags)
 	num_rx = wait_for_packets(pair.rx, pkt_tbl, pkt_seq, TX_BATCH_LEN, TXRX_MODE_SINGLE,
 				  ODP_TIME_SEC_IN_NS, VECTOR_MODE_DISABLED);
 	CU_ASSERT(num_rx == TX_BATCH_LEN);
-	free_refs(ref_tbl, TX_BATCH_LEN, test_flags);
+	free_refs(ref_tbl, TX_BATCH_LEN, pkt_type);
 
 	for (i = 0; i < num_rx; i++) {
 		CU_ASSERT(odp_packet_pool(pkt_tbl[i]) == pair.rx->rx_pool);
@@ -5080,8 +5082,9 @@ static void test_pktout_aging_tmo(uint32_t test_flags)
 
 static void pktio_test_pktout_aging_tmo(void)
 {
-	for (uint32_t flags = 0; flags < NUM_TEST_FLAG_COMBOS; test_flags_next(&flags))
-		test_pktout_aging_tmo(flags);
+	for (pool_sel_t pool_sel = 0; pool_sel <= POOL_MAX; pool_sel++)
+		for (pkt_type_t pkt_type = 0; pkt_type <= PKT_TYPE_MAX; pkt_type++)
+			test_pktout_aging_tmo(pool_sel, pkt_type);
 }
 
 static void pktio_test_pktin_event_queue(odp_pktin_mode_t pktin_mode)
