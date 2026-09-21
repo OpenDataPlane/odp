@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2015-2018 Linaro Limited
- * Copyright (c) 2020-2025 Nokia
+ * Copyright (c) 2020-2026 Nokia
  */
 
 #include "odp_classification_testsuites.h"
@@ -32,7 +32,6 @@ odp_pktio_t create_pktio(odp_queue_type_t q_type, odp_pool_t pool,
 	odp_pktio_t pktio;
 	odp_pktio_param_t pktio_param;
 	odp_pktin_queue_param_t pktin_param;
-	int ret;
 
 	if (pool == ODP_POOL_INVALID)
 		return ODP_PKTIO_INVALID;
@@ -44,12 +43,8 @@ odp_pktio_t create_pktio(odp_queue_type_t q_type, odp_pool_t pool,
 		pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
 
 	pktio = odp_pktio_open("loop", pool, &pktio_param);
-	if (pktio == ODP_PKTIO_INVALID) {
-		ret = odp_pool_destroy(pool);
-		if (ret)
-			ODPH_ERR("Unable to destroy pool\n");
+	if (pktio == ODP_PKTIO_INVALID)
 		return ODP_PKTIO_INVALID;
-	}
 
 	odp_pktin_queue_param_init(&pktin_param);
 	pktin_param.queue_param.sched.sync = ODP_SCHED_SYNC_ATOMIC;
@@ -57,11 +52,13 @@ odp_pktio_t create_pktio(odp_queue_type_t q_type, odp_pool_t pool,
 	pktin_param.hash_enable = false;
 
 	if (odp_pktin_queue_config(pktio, &pktin_param)) {
+		CU_ASSERT(odp_pktio_close(pktio) == 0);
 		ODPH_ERR("Pktin queue config failed\n");
 		return ODP_PKTIO_INVALID;
 	}
 
 	if (odp_pktout_queue_config(pktio, NULL)) {
+		CU_ASSERT(odp_pktio_close(pktio) == 0);
 		ODPH_ERR("Pktout queue config failed\n");
 		return ODP_PKTIO_INVALID;
 	}

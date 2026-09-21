@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2015-2018 Linaro Limited
- * Copyright (c) 2019-2025 Nokia
+ * Copyright (c) 2019-2026 Nokia
  */
 
 #include "odp_classification_testsuites.h"
@@ -129,8 +129,8 @@ static test_state_t test_init(cls_flag_t cls)
 
 	ts.pktio = create_pktio(ODP_QUEUE_TYPE_SCHED, pkt_pool, cls == ENABLE_CLS);
 	CU_ASSERT_FATAL(ts.pktio != ODP_PKTIO_INVALID);
-	CU_ASSERT(odp_pktin_event_queue(ts.pktio, &ts.pktin_queue, 1) == 1);
-	CU_ASSERT(start_pktio(ts.pktio) == 0);
+	CU_ASSERT_FATAL(odp_pktin_event_queue(ts.pktio, &ts.pktin_queue, 1) == 1);
+	CU_ASSERT_FATAL(start_pktio(ts.pktio) == 0);
 
 	configure_default_cos(ts.pktio, &ts.default_cos, &ts.default_queue, &ts.default_pool);
 	return ts;
