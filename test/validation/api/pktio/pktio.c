@@ -118,6 +118,8 @@ typedef struct pktio_global_t {
 			odp_pktio_capability_t sched_queue;
 			/** Queue pktin / direct pktout */
 			odp_pktio_capability_t queue_direct;
+			/** Queue pktin / queue pktout */
+			odp_pktio_capability_t queue_queue;
 		} capa;
 		odp_pool_t pool;
 		odp_pool_t evv_pool;
@@ -636,12 +638,8 @@ static odp_pktio_t create_pktv_pktio(int iface_idx, odp_pktin_mode_t imode,
 
 	pktio = odp_pktio_open(iface, pktio_pool, &pktio_param);
 	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
-
-	CU_ASSERT(odp_pktio_capability(pktio, &capa) == 0);
-	if (!capa.vector.supported) {
-		printf("Vector mode is not supported. Test Skipped.\n");
-		return ODP_PKTIO_INVALID;
-	}
+	CU_ASSERT_FATAL(odp_pktio_capability(pktio, &capa) == 0);
+	CU_ASSERT_FATAL(capa.vector.supported);
 
 	odp_pktin_queue_param_init(&pktin_param);
 
@@ -1394,11 +1392,7 @@ static void do_test_txrx(odp_pktin_mode_t in_mode, int num_pkts,
 						  &aggr_tmo);
 		else
 			io->id = create_pktio_with_flags(i, in_mode, out_mode, test_flags);
-		if (io->id == ODP_PKTIO_INVALID) {
-			CU_FAIL("failed to open iface");
-			return;
-		}
-
+		CU_ASSERT_FATAL(io->id != ODP_PKTIO_INVALID);
 		CU_ASSERT_FATAL(odp_pktio_capability(io->id, &capa) == 0);
 		if (i == tx_iface_idx() && !has_packet_ref_capa(&capa, test_flags)) {
 			CU_ASSERT_FATAL(odp_pktio_close(io->id) == 0);
@@ -5087,6 +5081,22 @@ static int pktio_check_pktv_sched(void)
 		ODP_TEST_ACTIVE : ODP_TEST_INACTIVE;
 }
 
+static int pktio_check_pktv_queue_txrx(void)
+{
+	if (!global.iface[tx_iface_idx()].capa.queue_queue.vector.supported ||
+	    !global.iface[rx_iface_idx()].capa.queue_queue.vector.supported)
+		return ODP_TEST_INACTIVE;
+	return ODP_TEST_ACTIVE;
+}
+
+static int pktio_check_pktv_sched_txrx(void)
+{
+	if (!global.iface[tx_iface_idx()].capa.sched_queue.vector.supported ||
+	    !global.iface[rx_iface_idx()].capa.sched_queue.vector.supported)
+		return ODP_TEST_INACTIVE;
+	return ODP_TEST_ACTIVE;
+}
+
 static void pktio_test_pktv_recv_plain(void)
 {
 	test_txrx(ODP_PKTIN_MODE_QUEUE, PKTV_TX_BATCH_LEN, TXRX_MODE_MULTI_EVENT,
@@ -5798,7 +5808,9 @@ static int pktio_suite_init(pkt_segmented_e pool_segmentation)
 		    pktio_capa(i, ODP_PKTIN_MODE_SCHED, ODP_PKTOUT_MODE_QUEUE,
 			       &global.iface[i].capa.sched_queue) ||
 		    pktio_capa(i, ODP_PKTIN_MODE_QUEUE, ODP_PKTOUT_MODE_DIRECT,
-			       &global.iface[i].capa.queue_direct))
+			       &global.iface[i].capa.queue_direct) ||
+		    pktio_capa(i, ODP_PKTIN_MODE_QUEUE, ODP_PKTOUT_MODE_QUEUE,
+			       &global.iface[i].capa.queue_queue))
 			return -1;
 	}
 	return 0;
@@ -6016,10 +6028,10 @@ odp_testinfo_t pktio_suite_segmented[] = {
 odp_testinfo_t pktv_suite[] = {
 	ODP_TEST_INFO_CONDITIONAL(pktio_test_pktv_pktin_queue_config_queue, pktio_check_pktv_queue),
 	ODP_TEST_INFO_CONDITIONAL(pktio_test_pktv_pktin_queue_config_sched, pktio_check_pktv_sched),
-	ODP_TEST_INFO_CONDITIONAL(pktio_test_pktv_recv_plain, pktio_check_pktv_queue),
-	ODP_TEST_INFO_CONDITIONAL(pktio_test_pktv_recv_parallel, pktio_check_pktv_sched),
-	ODP_TEST_INFO_CONDITIONAL(pktio_test_pktv_recv_ordered, pktio_check_pktv_sched),
-	ODP_TEST_INFO_CONDITIONAL(pktio_test_pktv_recv_atomic, pktio_check_pktv_sched),
+	ODP_TEST_INFO_CONDITIONAL(pktio_test_pktv_recv_plain, pktio_check_pktv_queue_txrx),
+	ODP_TEST_INFO_CONDITIONAL(pktio_test_pktv_recv_parallel, pktio_check_pktv_sched_txrx),
+	ODP_TEST_INFO_CONDITIONAL(pktio_test_pktv_recv_ordered, pktio_check_pktv_sched_txrx),
+	ODP_TEST_INFO_CONDITIONAL(pktio_test_pktv_recv_atomic, pktio_check_pktv_sched_txrx),
 	ODP_TEST_INFO_NULL
 };
 
