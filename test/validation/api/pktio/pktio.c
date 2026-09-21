@@ -1430,7 +1430,7 @@ static void do_test_txrx(odp_pktin_mode_t in_mode, int num_pkts,
 		}
 
 		ret = odp_pktio_start(io->id);
-		CU_ASSERT(ret == 0);
+		CU_ASSERT_FATAL(ret == 0);
 
 		_pktio_wait_linkup(io->id);
 	}
@@ -2346,7 +2346,7 @@ static void pktio_config_flow_control(int pfc, int rx, int tx)
 	}
 
 	ret = odp_pktio_start(pktio);
-	CU_ASSERT(ret == 0);
+	CU_ASSERT_FATAL(ret == 0);
 
 	if (pfc && tx) {
 		odp_queue_param_t qparam;
@@ -2799,10 +2799,10 @@ static void pktio_test_statistics_counters(void)
 	CU_ASSERT_FATAL(odp_pktout_queue(pktio_tx, &pktout, 1) == 1);
 
 	ret = odp_pktio_start(pktio_tx);
-	CU_ASSERT(ret == 0);
+	CU_ASSERT_FATAL(ret == 0);
 	if (global.num_ifaces > 1) {
 		ret = odp_pktio_start(pktio_rx);
-		CU_ASSERT(ret == 0);
+		CU_ASSERT_FATAL(ret == 0);
 	}
 
 	alloc = create_packets(tx_pkt, pkt_seq, NUM_TEST_PKTS, pktio_tx, pktio_rx);
@@ -3381,10 +3381,10 @@ static void pktio_test_proto_statistics_counters(void)
 	CU_ASSERT_FATAL(odp_pktout_queue(pktio_tx, &pktout, 1) == 1);
 
 	ret = odp_pktio_start(pktio_tx);
-	CU_ASSERT(ret == 0);
+	CU_ASSERT_FATAL(ret == 0);
 	if (global.num_ifaces > 1) {
 		ret = odp_pktio_start(pktio_rx);
-		CU_ASSERT(ret == 0);
+		CU_ASSERT_FATAL(ret == 0);
 	}
 
 	odp_proto_stats_param_init(&param);
@@ -3498,10 +3498,10 @@ static void pktio_test_start_stop(void)
 
 	/* start first */
 	ret = odp_pktio_start(pktio[0]);
-	CU_ASSERT(ret == 0);
+	CU_ASSERT_FATAL(ret == 0);
 	/* Check that start when started generates an error */
 	ret = odp_pktio_start(pktio[0]);
-	CU_ASSERT(ret < 0);
+	CU_ASSERT_FATAL(ret < 0);
 
 	_pktio_wait_linkup(pktio[0]);
 
@@ -3538,7 +3538,7 @@ static void pktio_test_start_stop(void)
 		/* start both, send and get packets */
 		/* 0 already started */
 		ret = odp_pktio_start(pktio[1]);
-		CU_ASSERT(ret == 0);
+		CU_ASSERT_FATAL(ret == 0);
 
 		_pktio_wait_linkup(pktio[1]);
 		/* flush packets with magic number in pipes */
