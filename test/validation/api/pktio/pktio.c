@@ -4113,7 +4113,7 @@ static int pktio_check_pktout_dont_free(void)
 		ODP_TEST_ACTIVE : ODP_TEST_INACTIVE;
 }
 
-static void test_chksum(void (*config_fn)(odp_pktio_t, odp_pktio_t),
+static void test_chksum(void (*config_fn)(const pktio_pair_t *),
 			void (*prep_fn)(odp_packet_t pkt),
 			void (*test_fn)(odp_packet_t pkt),
 			uint32_t test_flags,
@@ -4135,7 +4135,7 @@ static void test_chksum(void (*config_fn)(odp_pktio_t, odp_pktio_t),
 		return;
 	}
 
-	config_fn(pair.tx->id, pair.rx->id);
+	config_fn(&pair);
 
 	pktio_pair_start(&pair);
 
@@ -4179,7 +4179,7 @@ static void test_chksum(void (*config_fn)(odp_pktio_t, odp_pktio_t),
 	pktio_pair_destroy(&pair);
 }
 
-static void pktio_test_chksum(void (*config_fn)(odp_pktio_t, odp_pktio_t),
+static void pktio_test_chksum(void (*config_fn)(const pktio_pair_t *),
 			      void (*prep_fn)(odp_packet_t pkt),
 			      void (*test_fn)(odp_packet_t pkt))
 {
@@ -4187,7 +4187,7 @@ static void pktio_test_chksum(void (*config_fn)(odp_pktio_t, odp_pktio_t),
 		test_chksum(config_fn, prep_fn, test_fn, flags, 0);
 }
 
-static void pktio_test_chksum_sctp(void (*config_fn)(odp_pktio_t, odp_pktio_t),
+static void pktio_test_chksum_sctp(void (*config_fn)(const pktio_pair_t *),
 				   void (*prep_fn)(odp_packet_t pkt),
 				   void (*test_fn)(odp_packet_t pkt))
 {
@@ -4201,18 +4201,15 @@ static int pktio_check_chksum_in_ipv4(void)
 		ODP_TEST_ACTIVE : ODP_TEST_INACTIVE;
 }
 
-static void pktio_test_chksum_in_ipv4_config(odp_pktio_t pktio_tx ODP_UNUSED,
-					     odp_pktio_t pktio_rx)
+static void pktio_test_chksum_in_ipv4_config(const pktio_pair_t *pair)
 {
-	odp_pktio_capability_t capa;
 	odp_pktio_config_t config;
 
-	CU_ASSERT_FATAL(odp_pktio_capability(pktio_rx, &capa) == 0);
-	CU_ASSERT_FATAL(capa.config.pktin.bit.ipv4_chksum);
+	CU_ASSERT_FATAL(pair->rx->capa.config.pktin.bit.ipv4_chksum);
 
 	odp_pktio_config_init(&config);
 	config.pktin.bit.ipv4_chksum = 1;
-	CU_ASSERT_FATAL(odp_pktio_config(pktio_rx, &config) == 0);
+	CU_ASSERT_FATAL(odp_pktio_config(pair->rx->id, &config) == 0);
 }
 
 static void pktio_test_chksum_in_ipv4_prep(odp_packet_t pkt)
@@ -4238,18 +4235,15 @@ static int pktio_check_chksum_in_udp(void)
 		ODP_TEST_ACTIVE : ODP_TEST_INACTIVE;
 }
 
-static void pktio_test_chksum_in_udp_config(odp_pktio_t pktio_tx ODP_UNUSED,
-					    odp_pktio_t pktio_rx)
+static void pktio_test_chksum_in_udp_config(const pktio_pair_t *pair)
 {
-	odp_pktio_capability_t capa;
 	odp_pktio_config_t config;
 
-	CU_ASSERT_FATAL(odp_pktio_capability(pktio_rx, &capa) == 0);
-	CU_ASSERT_FATAL(capa.config.pktin.bit.udp_chksum);
+	CU_ASSERT_FATAL(pair->rx->capa.config.pktin.bit.udp_chksum);
 
 	odp_pktio_config_init(&config);
 	config.pktin.bit.udp_chksum = 1;
-	CU_ASSERT_FATAL(odp_pktio_config(pktio_rx, &config) == 0);
+	CU_ASSERT_FATAL(odp_pktio_config(pair->rx->id, &config) == 0);
 }
 
 static void pktio_test_chksum_in_udp_prep(odp_packet_t pkt)
@@ -4278,18 +4272,15 @@ static int pktio_check_chksum_in_sctp(void)
 		ODP_TEST_ACTIVE : ODP_TEST_INACTIVE;
 }
 
-static void pktio_test_chksum_in_sctp_config(odp_pktio_t pktio_tx ODP_UNUSED,
-					     odp_pktio_t pktio_rx)
+static void pktio_test_chksum_in_sctp_config(const pktio_pair_t *pair)
 {
-	odp_pktio_capability_t capa;
 	odp_pktio_config_t config;
 
-	CU_ASSERT_FATAL(odp_pktio_capability(pktio_rx, &capa) == 0);
-	CU_ASSERT_FATAL(capa.config.pktin.bit.sctp_chksum);
+	CU_ASSERT_FATAL(pair->rx->capa.config.pktin.bit.sctp_chksum);
 
 	odp_pktio_config_init(&config);
 	config.pktin.bit.sctp_chksum = 1;
-	CU_ASSERT_FATAL(odp_pktio_config(pktio_rx, &config) == 0);
+	CU_ASSERT_FATAL(odp_pktio_config(pair->rx->id, &config) == 0);
 }
 
 static void pktio_test_chksum_in_sctp_prep(odp_packet_t pkt)
@@ -4323,19 +4314,16 @@ static int pktio_check_chksum_out_ipv4(void)
 	return ODP_TEST_ACTIVE;
 }
 
-static void pktio_test_chksum_out_ipv4_config(odp_pktio_t pktio_tx,
-					      odp_pktio_t pktio_rx ODP_UNUSED)
+static void pktio_test_chksum_out_ipv4_config(const pktio_pair_t *pair)
 {
-	odp_pktio_capability_t capa;
 	odp_pktio_config_t config;
 
-	CU_ASSERT_FATAL(odp_pktio_capability(pktio_tx, &capa) == 0);
-	CU_ASSERT_FATAL(capa.config.pktout.bit.ipv4_chksum_ena);
-	CU_ASSERT_FATAL(capa.config.pktout.bit.ipv4_chksum);
+	CU_ASSERT_FATAL(pair->tx->capa.config.pktout.bit.ipv4_chksum_ena);
+	CU_ASSERT_FATAL(pair->tx->capa.config.pktout.bit.ipv4_chksum);
 
 	odp_pktio_config_init(&config);
 	config.pktout.bit.ipv4_chksum_ena = 1;
-	CU_ASSERT_FATAL(odp_pktio_config(pktio_tx, &config) == 0);
+	CU_ASSERT_FATAL(odp_pktio_config(pair->tx->id, &config) == 0);
 }
 
 static void pktio_test_chksum_out_ipv4_test(odp_packet_t pkt)
@@ -4391,21 +4379,17 @@ static void pktio_test_chksum_out_ipv4_ovr(void)
 			  pktio_test_chksum_out_ipv4_ovr_test);
 }
 
-static void pktio_test_chksum_out_ipv4_pktio_config(odp_pktio_t pktio_tx,
-						    odp_pktio_t pktio_rx
-						    ODP_UNUSED)
+static void pktio_test_chksum_out_ipv4_pktio_config(const pktio_pair_t *pair)
 {
-	odp_pktio_capability_t capa;
 	odp_pktio_config_t config;
 
-	CU_ASSERT_FATAL(odp_pktio_capability(pktio_tx, &capa) == 0);
-	CU_ASSERT_FATAL(capa.config.pktout.bit.ipv4_chksum_ena);
-	CU_ASSERT_FATAL(capa.config.pktout.bit.ipv4_chksum);
+	CU_ASSERT_FATAL(pair->tx->capa.config.pktout.bit.ipv4_chksum_ena);
+	CU_ASSERT_FATAL(pair->tx->capa.config.pktout.bit.ipv4_chksum);
 
 	odp_pktio_config_init(&config);
 	config.pktout.bit.ipv4_chksum_ena = 1;
 	config.pktout.bit.ipv4_chksum = 1;
-	CU_ASSERT_FATAL(odp_pktio_config(pktio_tx, &config) == 0);
+	CU_ASSERT_FATAL(odp_pktio_config(pair->tx->id, &config) == 0);
 }
 
 static void pktio_test_chksum_out_ipv4_pktio(void)
@@ -4426,19 +4410,16 @@ static int pktio_check_chksum_out_udp(void)
 	return ODP_TEST_ACTIVE;
 }
 
-static void pktio_test_chksum_out_udp_config(odp_pktio_t pktio_tx,
-					     odp_pktio_t pktio_rx ODP_UNUSED)
+static void pktio_test_chksum_out_udp_config(const pktio_pair_t *pair)
 {
-	odp_pktio_capability_t capa;
 	odp_pktio_config_t config;
 
-	CU_ASSERT_FATAL(odp_pktio_capability(pktio_tx, &capa) == 0);
-	CU_ASSERT_FATAL(capa.config.pktout.bit.udp_chksum_ena);
-	CU_ASSERT_FATAL(capa.config.pktout.bit.udp_chksum);
+	CU_ASSERT_FATAL(pair->tx->capa.config.pktout.bit.udp_chksum_ena);
+	CU_ASSERT_FATAL(pair->tx->capa.config.pktout.bit.udp_chksum);
 
 	odp_pktio_config_init(&config);
 	config.pktout.bit.udp_chksum_ena = 1;
-	CU_ASSERT_FATAL(odp_pktio_config(pktio_tx, &config) == 0);
+	CU_ASSERT_FATAL(odp_pktio_config(pair->tx->id, &config) == 0);
 }
 
 static void pktio_test_chksum_out_udp_test(odp_packet_t pkt)
@@ -4501,21 +4482,17 @@ static void pktio_test_chksum_out_udp_ovr(void)
 			  pktio_test_chksum_out_udp_ovr_test);
 }
 
-static void pktio_test_chksum_out_udp_pktio_config(odp_pktio_t pktio_tx,
-						   odp_pktio_t pktio_rx
-						   ODP_UNUSED)
+static void pktio_test_chksum_out_udp_pktio_config(const pktio_pair_t *pair)
 {
-	odp_pktio_capability_t capa;
 	odp_pktio_config_t config;
 
-	CU_ASSERT_FATAL(odp_pktio_capability(pktio_tx, &capa) == 0);
-	CU_ASSERT_FATAL(capa.config.pktout.bit.udp_chksum_ena);
-	CU_ASSERT_FATAL(capa.config.pktout.bit.udp_chksum);
+	CU_ASSERT_FATAL(pair->tx->capa.config.pktout.bit.udp_chksum_ena);
+	CU_ASSERT_FATAL(pair->tx->capa.config.pktout.bit.udp_chksum);
 
 	odp_pktio_config_init(&config);
 	config.pktout.bit.udp_chksum_ena = 1;
 	config.pktout.bit.udp_chksum = 1;
-	CU_ASSERT_FATAL(odp_pktio_config(pktio_tx, &config) == 0);
+	CU_ASSERT_FATAL(odp_pktio_config(pair->tx->id, &config) == 0);
 }
 
 static void pktio_test_chksum_out_udp_pktio_prep(odp_packet_t pkt)
@@ -4541,19 +4518,16 @@ static int pktio_check_chksum_out_sctp(void)
 	return ODP_TEST_ACTIVE;
 }
 
-static void pktio_test_chksum_out_sctp_config(odp_pktio_t pktio_tx,
-					      odp_pktio_t pktio_rx ODP_UNUSED)
+static void pktio_test_chksum_out_sctp_config(const pktio_pair_t *pair)
 {
-	odp_pktio_capability_t capa;
 	odp_pktio_config_t config;
 
-	CU_ASSERT_FATAL(odp_pktio_capability(pktio_tx, &capa) == 0);
-	CU_ASSERT_FATAL(capa.config.pktout.bit.sctp_chksum_ena);
-	CU_ASSERT_FATAL(capa.config.pktout.bit.sctp_chksum);
+	CU_ASSERT_FATAL(pair->tx->capa.config.pktout.bit.sctp_chksum_ena);
+	CU_ASSERT_FATAL(pair->tx->capa.config.pktout.bit.sctp_chksum);
 
 	odp_pktio_config_init(&config);
 	config.pktout.bit.sctp_chksum_ena = 1;
-	CU_ASSERT_FATAL(odp_pktio_config(pktio_tx, &config) == 0);
+	CU_ASSERT_FATAL(odp_pktio_config(pair->tx->id, &config) == 0);
 }
 
 static void pktio_test_chksum_out_sctp_test(odp_packet_t pkt)
@@ -4616,21 +4590,17 @@ static void pktio_test_chksum_out_sctp_ovr(void)
 			       pktio_test_chksum_out_sctp_ovr_test);
 }
 
-static void pktio_test_chksum_out_sctp_pktio_config(odp_pktio_t pktio_tx,
-						    odp_pktio_t pktio_rx
-						    ODP_UNUSED)
+static void pktio_test_chksum_out_sctp_pktio_config(const pktio_pair_t *pair)
 {
-	odp_pktio_capability_t capa;
 	odp_pktio_config_t config;
 
-	CU_ASSERT_FATAL(odp_pktio_capability(pktio_tx, &capa) == 0);
-	CU_ASSERT_FATAL(capa.config.pktout.bit.sctp_chksum_ena);
-	CU_ASSERT_FATAL(capa.config.pktout.bit.sctp_chksum);
+	CU_ASSERT_FATAL(pair->tx->capa.config.pktout.bit.sctp_chksum_ena);
+	CU_ASSERT_FATAL(pair->tx->capa.config.pktout.bit.sctp_chksum);
 
 	odp_pktio_config_init(&config);
 	config.pktout.bit.sctp_chksum_ena = 1;
 	config.pktout.bit.sctp_chksum = 1;
-	CU_ASSERT_FATAL(odp_pktio_config(pktio_tx, &config) == 0);
+	CU_ASSERT_FATAL(odp_pktio_config(pair->tx->id, &config) == 0);
 }
 
 static void pktio_test_chksum_out_sctp_pktio_prep(odp_packet_t pkt)
