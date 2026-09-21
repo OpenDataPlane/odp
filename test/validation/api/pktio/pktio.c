@@ -5335,7 +5335,8 @@ static void pktio_test_recv_maxlen_set(void)
 	odp_pktout_queue_t pktout_queue;
 	odp_packet_t pkt_tbl[TX_BATCH_LEN];
 	uint32_t pkt_seq[TX_BATCH_LEN];
-	uint32_t max_len = PKT_BUF_SIZE;
+	uint32_t max_len = global.packet_len_max;
+	uint32_t saved_packet_len;
 	int num_rx = 0;
 	int ret;
 	int i;
@@ -5382,6 +5383,7 @@ static void pktio_test_recv_maxlen_set(void)
 	pktio_rx_info.inq  = ODP_QUEUE_INVALID;
 	pktio_rx_info.in_mode = ODP_PKTIN_MODE_DIRECT;
 
+	saved_packet_len = global.packet_len;
 	global.packet_len = max_len;
 	ret = create_packets(pkt_tbl, pkt_seq, TX_BATCH_LEN, pktio_tx,
 			     pktio_rx);
@@ -5390,7 +5392,6 @@ static void pktio_test_recv_maxlen_set(void)
 	ret = odp_pktout_queue(pktio_tx, &pktout_queue, 1);
 	CU_ASSERT_FATAL(ret > 0);
 
-	/* Send packets one at a time and add delay between the packets */
 	for (i = 0; i < TX_BATCH_LEN;  i++) {
 		CU_ASSERT_FATAL(odp_pktout_send(pktout_queue,
 						&pkt_tbl[i], 1) == 1);
@@ -5416,7 +5417,7 @@ static void pktio_test_recv_maxlen_set(void)
 	}
 
 	/* Restore global variable */
-	global.packet_len = PKT_LEN_NORMAL;
+	global.packet_len = saved_packet_len;
 }
 
 static int pktio_check_pktout_aging_tmo(void)
