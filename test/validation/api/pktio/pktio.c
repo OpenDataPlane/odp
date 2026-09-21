@@ -5417,6 +5417,8 @@ static void test_pktout_aging_tmo(uint32_t test_flags)
 	int ret, i, num_rx = 0;
 	uint64_t tmo_0, tmo_1;
 
+	CU_ASSERT_FATAL(global.num_ifaces >= 1);
+
 	/* Open and configure interfaces */
 	for (i = 0; i < global.num_ifaces; ++i) {
 		pktio[i] = create_pktio_with_flags(i, ODP_PKTIN_MODE_DIRECT,
@@ -5424,10 +5426,9 @@ static void test_pktout_aging_tmo(uint32_t test_flags)
 						   test_flags);
 		CU_ASSERT_FATAL(pktio[i] != ODP_PKTIO_INVALID);
 
-		CU_ASSERT_FATAL(odp_pktio_capability(pktio[i], &pktio_capa) == 0);
-
 		/* Configure Tx aging for PKTIO Tx */
 		if (i == tx_iface_idx()) {
+			CU_ASSERT_FATAL(odp_pktio_capability(pktio[i], &pktio_capa) == 0);
 			CU_ASSERT_FATAL(pktio_capa.max_tx_aging_tmo_ns > 0);
 
 			if (!has_packet_ref_capa(&pktio_capa, test_flags)) {
