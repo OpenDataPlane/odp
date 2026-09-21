@@ -691,7 +691,7 @@ static int event_aggr_capability(odp_event_aggr_capability_t *aggr_capa, odp_pkt
 
 static odp_pktio_t create_evv_pktio(int iface_idx, odp_pktin_mode_t imode,
 				    odp_pktout_mode_t omode, odp_schedule_sync_t sync_mode,
-				    uint64_t *aggr_tmo)
+				    uint32_t test_flags, uint64_t *aggr_tmo)
 {
 	const char *iface = global.iface[iface_idx].name;
 	odp_pktout_queue_param_t pktout_param;
@@ -700,13 +700,17 @@ static odp_pktio_t create_evv_pktio(int iface_idx, odp_pktin_mode_t imode,
 	odp_event_aggr_capability_t aggr_capa;
 	odp_pktio_t pktio;
 	odp_event_aggr_config_t aggr_config;
+	odp_pool_t pktio_pool = global.iface[iface_idx].pool;
+
+	if (test_flags & TEST_WITH_DEF_POOL)
+		pktio_pool = global.default_pkt_pool;
 
 	odp_pktio_param_init(&pktio_param);
 
 	pktio_param.in_mode = imode;
 	pktio_param.out_mode = omode;
 
-	pktio = odp_pktio_open(iface, global.iface[iface_idx].pool, &pktio_param);
+	pktio = odp_pktio_open(iface, pktio_pool, &pktio_param);
 	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
 
 	CU_ASSERT_FATAL(event_aggr_capability(&aggr_capa, imode) == 0);
@@ -1388,7 +1392,8 @@ static void do_test_txrx(odp_pktin_mode_t in_mode, int num_pkts,
 		if (vector_mode == VECTOR_MODE_PACKET)
 			io->id = create_pktv_pktio(i, in_mode, out_mode, sync_mode, test_flags);
 		else if (vector_mode == VECTOR_MODE_EVENT)
-			io->id = create_evv_pktio(i, in_mode, out_mode, sync_mode, &aggr_tmo);
+			io->id = create_evv_pktio(i, in_mode, out_mode, sync_mode, test_flags,
+						  &aggr_tmo);
 		else
 			io->id = create_pktio_with_flags(i, in_mode, out_mode, test_flags);
 		if (io->id == ODP_PKTIO_INVALID) {
@@ -1446,7 +1451,7 @@ static void do_test_txrx(odp_pktin_mode_t in_mode, int num_pkts,
 
 static void test_txrx(odp_pktin_mode_t in_mode, int num_pkts,
 		      txrx_mode_e mode, odp_schedule_sync_t sync_mode,
-		      odp_bool_t vector_mode)
+		      vector_mode_t vector_mode)
 {
 	for (uint32_t flags = 0; flags < NUM_TEST_FLAG_COMBOS; test_flags_next(&flags))
 		do_test_txrx(in_mode, num_pkts, mode, sync_mode, vector_mode, flags);
