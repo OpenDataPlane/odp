@@ -44,7 +44,9 @@ static void test_defaults(uint8_t fill)
 	CU_ASSERT(param.auth_alg == ODP_AUTH_ALG_NULL);
 	CU_ASSERT(param.auth_iv_len == 0);
 	CU_ASSERT(param.auth_aad_len == 0);
+#if ODP_DEPRECATED_API
 	CU_ASSERT(param.output_pool == ODP_POOL_INVALID);
+#endif
 }
 
 static void test_default_values(void)
