@@ -11,15 +11,6 @@ EXECUTABLES = odph_version \
 #They are a convenience to app writers who have chosen to
 #restrict their application to Linux.
 
-if helper_linux
-if helper_deprecated
-EXECUTABLES += linux/odph_pthread \
-	       linux/odph_process
-linux_odph_pthread_SOURCES = linux/pthread.c
-linux_odph_process_SOURCES = linux/process.c
-endif
-endif
-
 if helper_cli
 EXECUTABLES += odph_cli
 odph_cli_SOURCES = cli.c
