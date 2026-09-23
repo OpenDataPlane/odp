@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2017-2018 Linaro Limited
- * Copyright (c) 2023-2025 Nokia
+ * Copyright (c) 2023-2026 Nokia
  */
 
 #include <odp_api.h>
@@ -441,6 +441,18 @@ static void event_test_debug(void)
 
 			event_ids[idx] = event_id;
 		}
+	}
+}
+
+static void event_test_print(void)
+{
+	event_type_ctx_t *ctx = &g_type_ctx;
+
+	odp_event_print(ODP_EVENT_INVALID);
+
+	for (int i = 0; i < ctx->num_types; i++) {
+		printf("\n");
+		odp_event_print(ctx->type[i].events[0]);
 	}
 }
 
@@ -1045,6 +1057,7 @@ static odp_testinfo_t event_types_suite[] = {
 	ODP_TEST_INFO(event_test_pool),
 	ODP_TEST_INFO(event_test_user_area_flag),
 	ODP_TEST_INFO(event_test_debug),
+	ODP_TEST_INFO(event_test_print),
 	ODP_TEST_INFO(event_test_flow_id),
 	ODP_TEST_INFO(event_test_types_filter_packets),
 	ODP_TEST_INFO(event_test_event_frees),
