@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2015-2018 Linaro Limited
- * Copyright (c) 2020-2025 Nokia
+ * Copyright (c) 2020-2026 Nokia
  */
 
 #include <odp/autoheader_external.h>
@@ -9,6 +9,7 @@
 #include <odp/api/buffer.h>
 #include <odp/api/crypto.h>
 #include <odp/api/dma.h>
+#include <odp/api/event_vector.h>
 #include <odp/api/packet.h>
 #include <odp/api/timer.h>
 #include <odp/api/pool.h>
@@ -22,6 +23,9 @@
 #include <odp_timer_internal.h>
 #include <odp_event_validation_internal.h>
 #include <odp_event_vector_internal.h>
+#include <odp_string_internal.h>
+
+#include <inttypes.h>
 
 /* Inlined API functions */
 #include <odp/api/plat/event_inlines.h>
@@ -223,6 +227,118 @@ void odp_event_free_sp(const odp_event_t event[], int num)
 	}
 
 	event_free_sp(event, num, odp_event_type(event[0]), _ODP_EV_EVENT_FREE_SP);
+}
+
+static const char *event_type_str(odp_event_type_t type)
+{
+	switch (type) {
+	case ODP_EVENT_ANY:
+		return "ODP_EVENT_ANY";
+	case ODP_EVENT_BUFFER:
+		return "ODP_EVENT_BUFFER";
+	case ODP_EVENT_PACKET:
+		return "ODP_EVENT_PACKET";
+	case ODP_EVENT_TIMEOUT:
+		return "ODP_EVENT_TIMEOUT";
+	case ODP_EVENT_VECTOR:
+		return "ODP_EVENT_VECTOR";
+	case ODP_EVENT_IPSEC_STATUS:
+		return "ODP_EVENT_IPSEC_STATUS";
+	case ODP_EVENT_PACKET_VECTOR:
+		return "ODP_EVENT_PACKET_VECTOR";
+	case ODP_EVENT_PACKET_TX_COMPL:
+		return "ODP_EVENT_PACKET_TX_COMPL";
+	case ODP_EVENT_DMA_COMPL:
+		return "ODP_EVENT_DMA_COMPL";
+	case ODP_EVENT_ML_COMPL:
+		return "ODP_EVENT_ML_COMPL";
+	default:
+		return "unknown";
+	}
+}
+
+static const char *event_subtype_str(odp_event_subtype_t subtype)
+{
+	switch (subtype) {
+	case ODP_EVENT_NO_SUBTYPE:
+		return "ODP_EVENT_NO_SUBTYPE";
+	case ODP_EVENT_PACKET_BASIC:
+		return "ODP_EVENT_PACKET_BASIC";
+	case ODP_EVENT_PACKET_CRYPTO:
+		return "ODP_EVENT_PACKET_CRYPTO";
+	case ODP_EVENT_PACKET_IPSEC:
+		return "ODP_EVENT_PACKET_IPSEC";
+	case ODP_EVENT_PACKET_COMP:
+		return "ODP_EVENT_PACKET_COMP";
+	case ODP_EVENT_ML_COMPL_LOAD:
+		return "ODP_EVENT_ML_COMPL_LOAD";
+	case ODP_EVENT_ML_COMPL_RUN:
+		return "ODP_EVENT_ML_COMPL_RUN";
+	default:
+		return "unknown";
+	}
+}
+
+void odp_event_print(odp_event_t event)
+{
+	const _odp_event_hdr_t *event_hdr = _odp_event_hdr(event);
+	odp_event_subtype_t subtype;
+	odp_event_type_t type;
+	void *user_area;
+	int user_flag;
+	int len = 0;
+	int max_len = 512;
+	int n = max_len - 1;
+	char str[max_len];
+
+	if (!odp_event_is_valid(event)) {
+		_ODP_ERR("Event is not valid.\n");
+		return;
+	}
+
+	type = odp_event_types(event, &subtype);
+	user_area = odp_event_user_area_and_flag(event, &user_flag);
+
+	len += _odp_snprint(&str[len], n - len, "Event info\n");
+	len += _odp_snprint(&str[len], n - len, "----------\n");
+	len += _odp_snprint(&str[len], n - len, "  handle         0x%" PRIx64 "\n",
+			    odp_event_to_u64(event));
+	len += _odp_snprint(&str[len], n - len, "  type           %s\n", event_type_str(type));
+	len += _odp_snprint(&str[len], n - len, "  subtype        %s\n",
+			    event_subtype_str(subtype));
+	len += _odp_snprint(&str[len], n - len, "  pool index     %u\n", event_hdr->index.pool);
+	len += _odp_snprint(&str[len], n - len, "  event index    %u\n", event_hdr->index.event);
+	len += _odp_snprint(&str[len], n - len, "  flow id        %" PRIu32 "\n",
+			    odp_event_flow_id(event));
+	len += _odp_snprint(&str[len], n - len, "  user area      %p\n", user_area);
+	len += _odp_snprint(&str[len], n - len, "  user flag      %d\n", user_flag);
+
+	str[len] = 0;
+
+	_ODP_PRINT("%s\n", str);
+
+	switch (type) {
+	case ODP_EVENT_BUFFER:
+		odp_buffer_print(odp_buffer_from_event(event));
+		break;
+	case ODP_EVENT_PACKET:
+		odp_packet_print(odp_packet_from_event(event));
+		break;
+	case ODP_EVENT_VECTOR:
+		odp_event_vector_print(odp_event_vector_from_event(event));
+		break;
+	case ODP_EVENT_PACKET_VECTOR:
+		odp_packet_vector_print(odp_packet_vector_from_event(event));
+		break;
+	case ODP_EVENT_TIMEOUT:
+		odp_timeout_print(odp_timeout_from_event(event));
+		break;
+	case ODP_EVENT_DMA_COMPL:
+		odp_dma_compl_print(odp_dma_compl_from_event(event));
+		break;
+	default:
+		break;
+	}
 }
 
 uint64_t odp_event_to_u64(odp_event_t hdl)
