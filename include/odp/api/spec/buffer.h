@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2013-2018 Linaro Limited
- * Copyright (c) 2022-2023 Nokia
+ * Copyright (c) 2022-2026 Nokia
  */
 
 /**
@@ -171,7 +171,10 @@ void odp_buffer_free(odp_buffer_t buf);
 void odp_buffer_free_multi(const odp_buffer_t buf[], int num);
 
 /**
- * Print buffer metadata to STDOUT
+ * Print buffer debug information
+ *
+ * Print implementation specific debug information about the buffer to the ODP
+ * log.
  *
  * @param buf      Buffer handle
  *
