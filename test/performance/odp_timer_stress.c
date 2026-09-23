@@ -43,7 +43,8 @@ enum {
 
 enum {
 	SHARED_TMR,
-	PRIV_TMR
+	PRIV_TMR,
+	PRIV_POOL
 };
 
 #define DEF_MODE SINGLE_SHOT
@@ -85,6 +86,7 @@ typedef struct ODP_ALIGNED_CACHE {
 	} scd;
 
 	tmr_hdls_t *tmrs;
+	odp_timer_pool_t tmr_pool;
 	prog_config_t *prog_config;
 	uint32_t num_boot_tmr;
 } worker_config_t;
@@ -154,6 +156,7 @@ static void init_config(prog_config_t *config)
 		worker = &config->worker_config[i];
 		worker->scd.grp = ODP_SCHED_GROUP_INVALID;
 		worker->scd.q = ODP_QUEUE_INVALID;
+		worker->tmr_pool = ODP_TIMER_POOL_INVALID;
 	}
 
 	config->def_opts = opts;
@@ -188,6 +191,7 @@ static void print_usage(const opts_t *opts)
 	       "  -p, --policy       Timer sharing policy. %u by default. Policies:\n"
 	       "                         0: Timers shared by workers\n"
 	       "                         1: Private timers per worker\n"
+	       "                         2: Private timer pool per worker\n"
 	       "  -t, --time_sec     Time in seconds to run. 0 means infinite. %u by default.\n"
 	       "  -c, --worker_count Number of workers. %u by default.\n"
 	       "  -h, --help         This help.\n"
@@ -214,7 +218,7 @@ static parse_result_t check_options(prog_config_t *config)
 	opts_t *opts = &config->opts;
 	odp_timer_capability_t tmr_capa;
 	int ret;
-	uint32_t req_tmr, max_workers, req_shm;
+	uint32_t req_tmr, req_pool, max_workers, req_shm;
 	odp_fract_u64_t hz;
 	double hz_d, min_hz_d, max_hz_d;
 	odp_pool_capability_t pool_capa;
@@ -226,12 +230,12 @@ static parse_result_t check_options(prog_config_t *config)
 		return PRS_NOK;
 	}
 
-	if (opts->policy != SHARED_TMR && opts->policy != PRIV_TMR) {
+	if (opts->policy != SHARED_TMR && opts->policy != PRIV_TMR && opts->policy != PRIV_POOL) {
 		ODPH_ERR("Invalid pool policy: %d\n", opts->policy);
 		return PRS_NOK;
 	}
 
-	if (opts->mode == CANCEL && opts->policy != PRIV_TMR) {
+	if (opts->mode == CANCEL && opts->policy == SHARED_TMR) {
 		ODPH_ERR("Single shot with cancel mode supported only with worker-private "
 			 "timers\n");
 		return PRS_NOK;
@@ -276,10 +280,17 @@ static parse_result_t check_options(prog_config_t *config)
 	(void)odp_cpumask_default_worker(&config->worker_mask, opts->num_workers);
 
 	req_tmr = opts->num_tmr * (opts->policy == PRIV_TMR ? opts->num_workers : 1U);
+	req_pool = opts->policy == PRIV_POOL ? opts->num_workers : 1U;
 
 	if (opts->mode == SINGLE_SHOT || opts->mode == CANCEL) {
 		if (tmr_capa.max_pools == 0U) {
 			ODPH_ERR("Single shot timers not supported\n");
+			return PRS_NOK;
+		}
+
+		if (req_pool > tmr_capa.max_pools) {
+			ODPH_ERR("Invalid number of timer pools: %u (max: %u)\n", req_pool,
+				 tmr_capa.max_pools);
 			return PRS_NOK;
 		}
 
@@ -330,6 +341,12 @@ static parse_result_t check_options(prog_config_t *config)
 			return PRS_NOK;
 		}
 
+		if (req_pool > tmr_capa.periodic.max_pools) {
+			ODPH_ERR("Invalid number of timer pools: %u (max: %u)\n", req_pool,
+				 tmr_capa.periodic.max_pools);
+			return PRS_NOK;
+		}
+
 		if (req_tmr > tmr_capa.periodic.max_timers) {
 			ODPH_ERR("Invalid number of timers: %u (max: %u)\n", req_tmr,
 				 tmr_capa.periodic.max_timers);
@@ -367,8 +384,8 @@ static parse_result_t check_options(prog_config_t *config)
 		return PRS_NOK;
 	}
 
-	if (pool_capa.tmo.max_num > 0U && req_tmr > pool_capa.tmo.max_num) {
-		ODPH_ERR("Invalid timeout event count: %u (max: %u)\n", req_tmr,
+	if (pool_capa.tmo.max_num > 0U && req_tmr * req_pool > pool_capa.tmo.max_num) {
+		ODPH_ERR("Invalid timeout event count: %u (max: %u)\n", req_tmr * req_pool,
 			 pool_capa.tmo.max_num);
 		return PRS_NOK;
 	}
@@ -477,17 +494,18 @@ static odp_timer_pool_t create_timer_pool(odp_timer_pool_param_t *param)
 static odp_bool_t setup_config(prog_config_t *config)
 {
 	opts_t *opts = &config->opts;
-	odp_bool_t is_priv = opts->policy == PRIV_TMR;
+	odp_bool_t is_priv = opts->policy != SHARED_TMR;
+	odp_bool_t is_priv_pool = opts->policy == PRIV_POOL;
 	const uint32_t num_barrier = opts->num_workers + 1,
-	max_tmr = opts->num_tmr * (is_priv ? opts->num_workers : 1U),
-	tmr_size = ODP_CACHE_LINE_ROUNDUP(sizeof(tmr_hdls_t));
+		       max_tmr = opts->num_tmr * (is_priv ? opts->num_workers : 1U),
+		       tmr_size = ODP_CACHE_LINE_ROUNDUP(sizeof(tmr_hdls_t));
 	odp_pool_param_t tmo_param;
 	odp_timer_pool_param_t tmr_param;
 	odp_queue_param_t q_param;
 	odp_thrmask_t zero;
 	void *tmrs_addr = NULL;
 	uint32_t num_tmr_p_w = ODPH_DIV_ROUNDUP(opts->num_tmr, opts->num_workers),
-	num_tmr = opts->num_tmr;
+		 num_tmr = opts->num_tmr;
 	worker_config_t *worker;
 
 	if (odp_schedule_config(NULL) < 0) {
@@ -511,7 +529,7 @@ static odp_bool_t setup_config(prog_config_t *config)
 	odp_timer_pool_param_init(&tmr_param);
 	tmr_param.clk_src = opts->clk_src;
 	tmr_param.res_ns = opts->res_ns;
-	tmr_param.num_timers = max_tmr;
+	tmr_param.num_timers = is_priv_pool ? opts->num_tmr : max_tmr;
 
 	if (opts->mode == SINGLE_SHOT || opts->mode == CANCEL) {
 		tmr_param.timer_type = ODP_TIMER_TYPE_SINGLE;
@@ -524,10 +542,12 @@ static odp_bool_t setup_config(prog_config_t *config)
 			config->per_capa.base_mul.max_multiplier;
 	}
 
-	config->tmr_pool = create_timer_pool(&tmr_param);
+	if (!is_priv_pool) {
+		config->tmr_pool = create_timer_pool(&tmr_param);
 
-	if (config->tmr_pool == ODP_TIMER_POOL_INVALID)
-		return false;
+		if (config->tmr_pool == ODP_TIMER_POOL_INVALID)
+			return false;
+	}
 
 	odp_queue_param_init(&q_param);
 	q_param.type = ODP_QUEUE_TYPE_SCHED;
@@ -574,6 +594,15 @@ static odp_bool_t setup_config(prog_config_t *config)
 		if (worker->scd.q == ODP_QUEUE_INVALID) {
 			ODPH_ERR("Error creating completion queue for worker %u\n", i);
 			return false;
+		}
+
+		worker->tmr_pool = config->tmr_pool;
+
+		if (is_priv_pool) {
+			worker->tmr_pool = create_timer_pool(&tmr_param);
+
+			if (worker->tmr_pool == ODP_TIMER_POOL_INVALID)
+				return false;
 		}
 
 		worker->prog_config = config;
@@ -661,7 +690,7 @@ static int process_single_shot(void *args)
 	worker_config_t *worker = args;
 	odp_thrmask_t mask;
 	prog_config_t *config = worker->prog_config;
-	odp_timer_pool_t tmr_pool = config->tmr_pool;
+	odp_timer_pool_t tmr_pool = worker->tmr_pool;
 	const uint64_t res_ns = prog_conf->opts.res_ns;
 	odp_time_t tm;
 	odp_atomic_u32_t *is_running = &config->is_running;
@@ -792,7 +821,7 @@ static int process_periodic(void *args)
 				   "\n", odp_schedule_group_to_u64(worker->scd.grp));
 	}
 
-	boot_periodic(worker, config->tmr_pool, config->per_capa.base_mul.max_multiplier);
+	boot_periodic(worker, worker->tmr_pool, config->per_capa.base_mul.max_multiplier);
 	odp_barrier_wait(&config->init_barrier);
 	tm = odp_time_local_strict();
 
@@ -858,7 +887,7 @@ static int process_cancel(void *args)
 	worker_config_t *worker = args;
 	odp_thrmask_t mask;
 	prog_config_t *config = worker->prog_config;
-	odp_timer_pool_t tmr_pool = config->tmr_pool;
+	odp_timer_pool_t tmr_pool = worker->tmr_pool;
 	const uint64_t res_ns = prog_conf->opts.res_ns;
 	odp_time_t tm;
 	odp_atomic_u32_t *is_running = &config->is_running;
@@ -1017,7 +1046,8 @@ static void print_stats(const prog_config_t *config)
 							opts->mode == PERIODIC ?
 							    "periodic" : "single shot with cancel",
 	       opts->clk_src, opts->res_ns, opts->num_tmr,
-	       opts->policy == SHARED_TMR ? "shared" : "private");
+	       opts->policy == SHARED_TMR ? "shared" :
+	       opts->policy == PRIV_TMR ? "private" : "private pool");
 
 	for (uint32_t i = 0U; i < config->opts.num_workers; ++i) {
 		stats = &config->worker_config[i].stats;
@@ -1061,7 +1091,7 @@ static void print_stats(const prog_config_t *config)
 		       "    max start mul:      %" PRIu64 "\n", tot_retry, max_mul);
 	}
 
-	printf("    rate:               ");
+	printf("    total rate:         ");
 	print_humanised(tot_rate);
 	printf("\n=====================\n");
 }
@@ -1079,6 +1109,9 @@ static void teardown(const prog_config_t *config)
 
 		if (worker->scd.grp != ODP_SCHED_GROUP_INVALID)
 			(void)odp_schedule_group_destroy(worker->scd.grp);
+
+		if (opts->policy == PRIV_POOL && worker->tmr_pool != ODP_TIMER_POOL_INVALID)
+			(void)odp_timer_pool_destroy(worker->tmr_pool);
 	}
 
 	if (config->tmrs_shm != ODP_SHM_INVALID)
