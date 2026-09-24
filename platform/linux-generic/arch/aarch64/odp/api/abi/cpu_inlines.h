@@ -7,6 +7,7 @@
 #define ODP_ARCH_CPU_INLINES_H_
 
 #include <odp/api/abi/time_cpu.h>
+#include <odp/autoheader_build.h>
 
 #include <stdint.h>
 
@@ -28,12 +29,17 @@ extern _odp_cpu_cycles_global_t _odp_cpu_cycles_glob;
 
 static inline void _odp_cpu_pause(void)
 {
+#if defined(ENABLE_WFXT_CPU_PAUSE) && defined(__ARM_FEATURE_WFXT)
+	__asm__ volatile("sevl" : : : "memory");
+		__asm__ volatile("wfet %x0" : : "r"(100) : "memory");
+#else
 	/* YIELD hints the CPU to switch to another thread if possible
 	 * and executes as a NOP otherwise.
 	 * ISB flushes the pipeline, then restarts. This is guaranteed to
 	 * stall the CPU a number of cycles.
 	 */
 	__asm volatile("isb" ::: "memory");
+#endif
 }
 
 static inline uint64_t _odp_cpu_cycles(void)
