@@ -6,6 +6,7 @@
 #include <odp/api/classification.h>
 #include <odp/api/align.h>
 #include <odp/api/debug.h>
+#include <odp/api/deprecated.h>
 #include <odp/api/hints.h>
 #include <odp/api/packet_io.h>
 #include <odp/api/pool.h>
@@ -141,7 +142,7 @@ void odp_cls_cos_param_init(odp_cls_cos_param_t *param)
 	param->queue = ODP_QUEUE_INVALID;
 	param->pool = ODP_POOL_INVALID;
 	param->num_queue = 1;
-	param->vector.enable = false;
+	param->ODP_DEPRECATE(vector).enable = false;
 	odp_queue_param_init(&param->queue_param);
 }
 
@@ -243,7 +244,7 @@ odp_cos_t odp_cls_cos_create(const char *name, const odp_cls_cos_param_t *param_
 		param.num_queue = 1;
 		param.queue = ODP_QUEUE_INVALID;
 		param.pool = ODP_POOL_INVALID;
-		param.vector.enable = false;
+		param.ODP_DEPRECATE(vector).enable = false;
 	} else {
 		if (param.num_queue == 1 && param.queue == ODP_QUEUE_INVALID)
 			return ODP_COS_INVALID;
@@ -258,8 +259,8 @@ odp_cos_t odp_cls_cos_create(const char *name, const odp_cls_cos_param_t *param_
 			     (param.num_queue > 1 && param.queue_param.num_aggr);
 
 	/* Validate packet vector parameters */
-	if (param.vector.enable) {
-		odp_pool_t pool = param.vector.pool;
+	if (param.ODP_DEPRECATE(vector).enable) {
+		odp_pool_t pool = param.ODP_DEPRECATE(vector).pool;
 		odp_pool_info_t pool_info;
 
 		/* Check that packet and event vectors are not enabled simultaneously */
@@ -272,15 +273,16 @@ odp_cos_t odp_cls_cos_create(const char *name, const odp_cls_cos_param_t *param_
 			_ODP_ERR("invalid packet vector pool\n");
 			return ODP_COS_INVALID;
 		}
-		if (pool_info.params.type != ODP_POOL_VECTOR) {
+		if (pool_info.params.type != ODP_DEPRECATE(ODP_POOL_VECTOR)) {
 			_ODP_ERR("wrong pool type\n");
 			return ODP_COS_INVALID;
 		}
-		if (param.vector.max_size == 0) {
+		if (param.ODP_DEPRECATE(vector).max_size == 0) {
 			_ODP_ERR("vector.max_size is zero\n");
 			return ODP_COS_INVALID;
 		}
-		if (param.vector.max_size > pool_info.params.vector.max_size) {
+		if (param.ODP_DEPRECATE(vector).max_size >
+		    pool_info.params.ODP_DEPRECATE(vector).max_size) {
 			_ODP_ERR("vector.max_size larger than pool max vector size\n");
 			return ODP_COS_INVALID;
 		}
@@ -351,11 +353,11 @@ odp_cos_t odp_cls_cos_create(const char *name, const odp_cls_cos_param_t *param_
 			odp_atomic_init_u32(&cos->num_rule, 0);
 			cos->index = i;
 
-			if (param.vector.enable) {
-				cos->vector.pool = param.vector.pool;
-				cos->vector.max_size = param.vector.max_size;
+			if (param.ODP_DEPRECATE(vector).enable) {
+				cos->vector.pool = param.ODP_DEPRECATE(vector).pool;
+				cos->vector.max_size = param.ODP_DEPRECATE(vector).max_size;
 			}
-			cos->vector.use_std_enq = !param.vector.enable;
+			cos->vector.use_std_enq = !param.ODP_DEPRECATE(vector).enable;
 			cos->vector.use_aggr = event_aggr_enabled && param.num_queue > 1;
 
 			cos->stats_enable = param.stats_enable;

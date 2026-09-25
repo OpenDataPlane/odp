@@ -13,6 +13,7 @@
 #define ODP_API_SPEC_CLASSIFICATION_H_
 #include <odp/visibility_begin.h>
 
+#include <odp/api/deprecated.h>
 #include <odp/api/packet_io_types.h>
 #include <odp/api/pool_types.h>
 #include <odp/api/std_types.h>
@@ -752,8 +753,11 @@ typedef struct odp_cls_cos_param {
 	 * configuration or by using event aggregators as destination queue(s).
 	 * Both options cannot be enabled simultaneously in the same ODP
 	 * application.
+	 *
+	 * @deprecated Use event aggregator queues to generate event vectors
+	 *             instead.
 	 */
-	odp_pktin_vector_config_t vector;
+	odp_pktin_vector_config_t ODP_DEPRECATE(vector);
 
 	/** Event aggregator enqueuing profile
 	 *

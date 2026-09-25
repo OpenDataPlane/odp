@@ -764,6 +764,7 @@ static uint32_t dequeue_burst(odp_queue_t polled_queue,
 	return num;
 }
 
+#if ODP_DEPRECATED_API
 static inline uint32_t vec_pkt_handle(int debug, odp_event_t ev)
 {
 	odp_packet_vector_t vec = odp_packet_vector_from_event(ev);
@@ -783,6 +784,7 @@ static inline uint32_t vec_pkt_handle(int debug, odp_event_t ev)
 
 	return vec_size;
 }
+#endif
 
 static int
 run_measure_one_async(ipsec_args_t *cargs,
@@ -880,13 +882,16 @@ run_measure_one_async(ipsec_args_t *cargs,
 				num = dequeue_burst(polled_queue, events, MAX_DEQUEUE_BURST);
 
 				for (uint32_t n = 0; n < num; n++) {
+#if ODP_DEPRECATED_API
 					if (odp_event_type(events[n]) == ODP_EVENT_PACKET_VECTOR) {
 						uint32_t vec_size;
 
 						vec_size = vec_pkt_handle(debug, events[n]);
 						packets_received += vec_size - 1;
 						packets_allowed += vec_size - 1;
-					} else {
+					} else
+#endif
+					{
 						pkt_out[i] = odp_ipsec_packet_from_event(events[n]);
 						check_ipsec_result(pkt_out[i]);
 						i++;
@@ -1262,6 +1267,7 @@ int main(int argc, char *argv[])
 	}
 
 	if (cargs.vec_pkt_size) {
+#if ODP_DEPRECATED_API
 		if (capa.vector.max_pools < 1) {
 			ODPH_ERR("Vector packet pool not available");
 			exit(EXIT_FAILURE);
@@ -1295,6 +1301,10 @@ int main(int argc, char *argv[])
 		}
 
 		odp_pool_print(vec_pool);
+#else
+		ODPH_ERR("Packet vector is deprecated and disabled.\n");
+		exit(EXIT_FAILURE);
+#endif
 	}
 
 	odp_ipsec_config_init(&config);

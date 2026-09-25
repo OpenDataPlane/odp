@@ -12,6 +12,8 @@
 #ifndef ODP_API_ABI_EVENT_TYPES_H_
 #define ODP_API_ABI_EVENT_TYPES_H_
 
+#include <odp/api/deprecated.h>
+
 #include <odp/api/plat/strong_types.h>
 
 #ifdef __cplusplus
@@ -33,7 +35,7 @@ typedef enum odp_event_type_t {
 	ODP_EVENT_TIMEOUT = 3,
 	ODP_EVENT_VECTOR = 4,
 	ODP_EVENT_IPSEC_STATUS = 5,
-	ODP_EVENT_PACKET_VECTOR = 6,
+	ODP_DEPRECATE(ODP_EVENT_PACKET_VECTOR) = 6,
 	ODP_EVENT_PACKET_TX_COMPL = 7,
 	ODP_EVENT_DMA_COMPL = 8,
 	ODP_EVENT_ML_COMPL = 9

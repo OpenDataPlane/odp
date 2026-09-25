@@ -13,6 +13,7 @@
 
 #include <odp/api/align.h>
 #include <odp/api/debug.h>
+#include <odp/api/deprecated.h>
 #include <odp/api/packet.h>
 #include <odp/api/buffer.h>
 #include <odp/api/event_vector.h>
@@ -94,7 +95,7 @@ static inline void _odp_packet_vector_free_full(odp_packet_vector_t pktv)
 	if (pktv_hdr->size)
 		odp_packet_free_multi((odp_packet_t *)pktv_hdr->event, pktv_hdr->size);
 
-	odp_packet_vector_free(pktv);
+	ODP_DEPRECATE(odp_packet_vector_free)(pktv);
 }
 
 /**
@@ -106,7 +107,8 @@ static inline void _odp_event_vector_free_full(odp_event_vector_t evv)
 
 	for (uint32_t i = 0; i < evv_hdr->size; i++) {
 		_ODP_ASSERT(odp_event_type(evv_hdr->event[i]) != ODP_EVENT_VECTOR &&
-			    odp_event_type(evv_hdr->event[i]) != ODP_EVENT_PACKET_VECTOR);
+			    odp_event_type(evv_hdr->event[i]) !=
+				    ODP_DEPRECATE(ODP_EVENT_PACKET_VECTOR));
 		_ODP_ASSERT(evv_hdr->event_type == ODP_EVENT_ANY ||
 			    evv_hdr->event_type == odp_event_type(evv_hdr->event[i]));
 	}
