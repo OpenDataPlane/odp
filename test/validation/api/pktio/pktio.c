@@ -3925,6 +3925,7 @@ static void request_tx_completion(odp_packet_t pkt_tbl[],
 
 static void pktio_test_pktout_compl_event(bool use_plain_queue, uint32_t test_flags)
 {
+	static int print_event = 1;
 	odp_pktio_t pktio[MAX_NUM_IFACES] = {ODP_PKTIO_INVALID};
 	odp_queue_t compl_queue[TX_BATCH_LEN];
 	odp_schedule_capability_t sched_capa;
@@ -4087,6 +4088,12 @@ static void pktio_test_pktout_compl_event(bool use_plain_queue, uint32_t test_fl
 			u64 = odp_packet_tx_compl_to_u64(tx_compl);
 			CU_ASSERT(u64 != odp_packet_tx_compl_to_u64(ODP_PACKET_TX_COMPL_INVALID));
 
+			if (print_event) {
+				print_event = 0;
+				printf("\n");
+				odp_event_print(ev);
+			}
+
 			/* User ptr should be same as packet's user ptr */
 			CU_ASSERT(odp_packet_tx_compl_user_ptr(tx_compl) ==
 				  (const void *)&pkt_seq[i]);
@@ -4122,6 +4129,12 @@ static void pktio_test_pktout_compl_event(bool use_plain_queue, uint32_t test_fl
 
 			u64 = odp_packet_tx_compl_to_u64(tx_compl);
 			CU_ASSERT(u64 != odp_packet_tx_compl_to_u64(ODP_PACKET_TX_COMPL_INVALID));
+
+			if (print_event) {
+				print_event = 0;
+				printf("\n");
+				odp_event_print(ev);
+			}
 
 			/* User ptr should be same as packet's user ptr i.e seq array ptr */
 			for (j = 0; j < TX_BATCH_LEN; j++) {

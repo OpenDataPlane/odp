@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2015-2018 Linaro Limited
- * Copyright (c) 2022-2024 Nokia
+ * Copyright (c) 2022-2026 Nokia
  */
 
 /**
@@ -177,6 +177,16 @@ void odp_event_user_flag_set(odp_event_t event, int val);
 int odp_event_filter_packet(const odp_event_t event[],
 			    odp_packet_t packet[],
 			    odp_event_t remain[], int num);
+
+/**
+ * Print event debug information
+ *
+ * Print implementation specific debug information about the event to the ODP
+ * log.
+ *
+ * @param event    Event handle
+ */
+void odp_event_print(odp_event_t event);
 
 /**
  * Get printable value for an odp_event_t

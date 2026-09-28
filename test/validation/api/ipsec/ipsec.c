@@ -470,6 +470,7 @@ static void ipsec_status_event_handle(odp_event_t ev_status,
 				      odp_ipsec_sa_t sa,
 				      enum ipsec_test_sa_expiry sa_expiry)
 {
+	static int print_event = 1;
 	int flag = 0;
 	odp_ipsec_status_t status = {
 		.id = 0,
@@ -481,6 +482,12 @@ static void ipsec_status_event_handle(odp_event_t ev_status,
 	CU_ASSERT_FATAL(ODP_EVENT_INVALID != ev_status);
 	CU_ASSERT(1 == odp_event_is_valid(ev_status));
 	CU_ASSERT_FATAL(ODP_EVENT_IPSEC_STATUS == odp_event_type(ev_status));
+
+	if (print_event) {
+		print_event = 0;
+		printf("\n");
+		odp_event_print(ev_status);
+	}
 
 	/* No user area/flag or source pool for IPsec status events */
 	odp_event_user_flag_set(ev_status, 1);
