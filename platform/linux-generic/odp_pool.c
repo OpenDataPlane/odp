@@ -5,6 +5,7 @@
 
 #include <odp/api/align.h>
 #include <odp/api/atomic.h>
+#include <odp/api/deprecated.h>
 #include <odp/api/hints.h>
 #include <odp/api/pool.h>
 #include <odp/api/shared_memory.h>
@@ -536,7 +537,7 @@ static void init_event_hdr(pool_t *pool, _odp_event_hdr_t *event_hdr, uint32_t e
 		hdr_len = sizeof(odp_buffer_hdr_t);
 	else if (type == ODP_POOL_PACKET)
 		hdr_len = sizeof(odp_packet_hdr_t);
-	else if (type == ODP_POOL_VECTOR)
+	else if (type == ODP_DEPRECATE(ODP_POOL_VECTOR))
 		hdr_len = sizeof(odp_event_vector_hdr_t);
 	else if (type == ODP_POOL_EVENT_VECTOR)
 		hdr_len = sizeof(odp_event_vector_hdr_t);
@@ -583,10 +584,10 @@ static void init_event_hdr(pool_t *pool, _odp_event_hdr_t *event_hdr, uint32_t e
 	}
 
 	/* Initialize packet vector metadata */
-	if (type == ODP_POOL_VECTOR) {
+	if (type == ODP_DEPRECATE(ODP_POOL_VECTOR)) {
 		odp_event_vector_hdr_t *vect_hdr = (void *)event_hdr;
 
-		event_hdr->event_type = ODP_EVENT_PACKET_VECTOR;
+		event_hdr->event_type = ODP_DEPRECATE(ODP_EVENT_PACKET_VECTOR);
 		vect_hdr->uarea_addr = uarea;
 	}
 
@@ -906,11 +907,11 @@ odp_pool_t _odp_pool_create(const char *name, const odp_pool_param_t *params,
 		cache_size = params->tmo.cache_size;
 		break;
 
-	case ODP_POOL_VECTOR:
-		num = params->vector.num;
-		uarea_size = params->vector.uarea_size;
-		cache_size = params->vector.cache_size;
-		seg_len = params->vector.max_size * sizeof(odp_event_t);
+	case ODP_DEPRECATE(ODP_POOL_VECTOR):
+		num = params->ODP_DEPRECATE(vector).num;
+		uarea_size = params->ODP_DEPRECATE(vector).uarea_size;
+		cache_size = params->ODP_DEPRECATE(vector).cache_size;
+		seg_len = params->ODP_DEPRECATE(vector).max_size * sizeof(odp_event_t);
 		break;
 
 	case ODP_POOL_EVENT_VECTOR:
@@ -1187,36 +1188,39 @@ static int check_params(const odp_pool_param_t *params)
 
 		break;
 
-	case ODP_POOL_VECTOR:
-		num = params->vector.num;
-		cache_size = params->vector.cache_size;
+	case ODP_DEPRECATE(ODP_POOL_VECTOR):
+		num = params->ODP_DEPRECATE(vector).num;
+		cache_size = params->ODP_DEPRECATE(vector).cache_size;
 
-		if (params->vector.num == 0) {
+		if (params->ODP_DEPRECATE(vector).num == 0) {
 			_ODP_ERR("vector.num zero\n");
 			return -1;
 		}
 
-		if (params->vector.num > capa.vector.max_num) {
-			_ODP_ERR("vector.num too large %u\n", params->vector.num);
+		if (params->ODP_DEPRECATE(vector).num > capa.ODP_DEPRECATE(vector).max_num) {
+			_ODP_ERR("vector.num too large %u\n", params->ODP_DEPRECATE(vector).num);
 			return -1;
 		}
 
-		if (params->vector.max_size == 0) {
+		if (params->ODP_DEPRECATE(vector).max_size == 0) {
 			_ODP_ERR("vector.max_size zero\n");
 			return -1;
 		}
 
-		if (params->vector.max_size > capa.vector.max_size) {
-			_ODP_ERR("vector.max_size too large %u\n", params->vector.max_size);
+		if (params->ODP_DEPRECATE(vector).max_size > capa.ODP_DEPRECATE(vector).max_size) {
+			_ODP_ERR("vector.max_size too large %u\n",
+				 params->ODP_DEPRECATE(vector).max_size);
 			return -1;
 		}
 
-		if (params->vector.uarea_size > capa.vector.max_uarea_size) {
-			_ODP_ERR("vector.uarea_size too large %u\n", params->vector.uarea_size);
+		if (params->ODP_DEPRECATE(vector).uarea_size >
+		    capa.ODP_DEPRECATE(vector).max_uarea_size) {
+			_ODP_ERR("vector.uarea_size too large %u\n",
+				 params->ODP_DEPRECATE(vector).uarea_size);
 			return -1;
 		}
 
-		if (params->stats.all & ~capa.vector.stats.all) {
+		if (params->stats.all & ~capa.ODP_DEPRECATE(vector).stats.all) {
 			_ODP_ERR("Unsupported pool statistics counter\n");
 			return -1;
 		}
@@ -1716,14 +1720,14 @@ int odp_pool_capability(odp_pool_capability_t *capa)
 	capa->tmo.stats.all = supported_stats.all;
 
 	/* Packet vector pools */
-	capa->vector.max_pools = max_pools;
-	capa->vector.max_num   = CONFIG_POOL_MAX_NUM;
-	capa->vector.max_size = CONFIG_PACKET_VECTOR_MAX_SIZE;
-	capa->vector.max_uarea_size = MAX_UAREA_SIZE;
-	capa->vector.uarea_persistence = true;
-	capa->vector.min_cache_size = 0;
-	capa->vector.max_cache_size = CONFIG_POOL_CACHE_MAX_SIZE;
-	capa->vector.stats.all = supported_stats.all;
+	capa->ODP_DEPRECATE(vector).max_pools = max_pools;
+	capa->ODP_DEPRECATE(vector).max_num   = CONFIG_POOL_MAX_NUM;
+	capa->ODP_DEPRECATE(vector).max_size = CONFIG_PACKET_VECTOR_MAX_SIZE;
+	capa->ODP_DEPRECATE(vector).max_uarea_size = MAX_UAREA_SIZE;
+	capa->ODP_DEPRECATE(vector).uarea_persistence = true;
+	capa->ODP_DEPRECATE(vector).min_cache_size = 0;
+	capa->ODP_DEPRECATE(vector).max_cache_size = CONFIG_POOL_CACHE_MAX_SIZE;
+	capa->ODP_DEPRECATE(vector).stats.all = supported_stats.all;
 
 	/* Event vector pools */
 	capa->event_vector.max_pools = max_pools;
@@ -1747,7 +1751,7 @@ static const char *get_long_type_str(odp_pool_type_t type)
 		return "packet";
 	case ODP_POOL_TIMEOUT:
 		return "timeout";
-	case ODP_POOL_VECTOR:
+	case ODP_DEPRECATE(ODP_POOL_VECTOR):
 		return "packet vector";
 	case ODP_POOL_EVENT_VECTOR:
 		return "event vector";
@@ -1769,7 +1773,7 @@ static const char *get_short_type_str(odp_pool_type_t type)
 		return "P";
 	case ODP_POOL_TIMEOUT:
 		return "T";
-	case ODP_POOL_VECTOR:
+	case ODP_DEPRECATE(ODP_POOL_VECTOR):
 		return "V";
 	case ODP_POOL_EVENT_VECTOR:
 		return "E";
@@ -1872,7 +1876,7 @@ void odp_pool_param_init(odp_pool_param_t *params)
 	params->buf.cache_size = default_cache_size;
 	params->pkt.cache_size = default_cache_size;
 	params->tmo.cache_size = default_cache_size;
-	params->vector.cache_size = default_cache_size;
+	params->ODP_DEPRECATE(vector).cache_size = default_cache_size;
 }
 
 uint64_t odp_pool_to_u64(odp_pool_t hdl)
@@ -2076,7 +2080,7 @@ int odp_pool_ext_capability(odp_pool_type_t type, odp_pool_ext_capability_t *cap
 		break;
 	case ODP_POOL_BUFFER:
 	case ODP_POOL_TIMEOUT:
-	case ODP_POOL_VECTOR:
+	case ODP_DEPRECATE(ODP_POOL_VECTOR):
 	case ODP_POOL_EVENT_VECTOR:
 	case ODP_POOL_DMA_COMPL:
 	case ODP_POOL_ML_COMPL:

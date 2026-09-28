@@ -51,10 +51,12 @@ static uint32_t segmented_packet_len;
 static odp_bool_t segmentation_supported = true;
 
 odp_packet_t test_packet, segmented_test_packet;
+#if ODP_DEPRECATED_API
 /* Packet vector globals */
 static odp_packet_t pkt_vec[PKT_VEC_PACKET_NUM];
 static odp_packet_vector_t pktv_default = ODP_PACKET_VECTOR_INVALID;
 static odp_pool_t vector_default_pool = ODP_POOL_INVALID;
+#endif
 
 static struct udata_struct {
 	uint64_t u64;
@@ -3111,6 +3113,7 @@ static void packet_test_ref(void)
 	odp_packet_free(ref_pkt[1]);
 }
 
+#if ODP_DEPRECATED_API
 static void packet_vector_test_event_conversion(void)
 {
 	odp_packet_vector_t pktv0 = pktv_default;
@@ -3529,6 +3532,7 @@ static int packet_vector_suite_term(void)
 
 	return odp_cunit_print_inactive();
 }
+#endif
 
 static void packet_test_max_pools(void)
 {
@@ -4653,6 +4657,7 @@ odp_testinfo_t packet_suite[] = {
 	ODP_TEST_INFO_NULL,
 };
 
+#if ODP_DEPRECATED_API
 odp_testinfo_t packet_vector_parse_suite[] = {
 	ODP_TEST_INFO(packet_vector_test_debug),
 	ODP_TEST_INFO(packet_vector_basic_test),
@@ -4662,6 +4667,7 @@ odp_testinfo_t packet_vector_parse_suite[] = {
 	ODP_TEST_INFO(packet_vector_test_event_conversion),
 	ODP_TEST_INFO_NULL,
 };
+#endif
 
 odp_testinfo_t packet_parse_suite[] = {
 	ODP_TEST_INFO(parse_eth_ipv4_udp),
@@ -4706,11 +4712,13 @@ odp_suiteinfo_t packet_suites[] = {
 	  .init_func    = packet_parse_suite_init,
 	  .term_func    = packet_parse_suite_term,
 	},
+#if ODP_DEPRECATED_API
 	{ .name         = "packet vector tests",
 	  .testinfo_tbl = packet_vector_parse_suite,
 	  .init_func    = packet_vector_suite_init,
 	  .term_func    = packet_vector_suite_term,
 	},
+#endif
 	{ .name         = "packet ref tests",
 	  .testinfo_tbl = packet_ref_suite,
 	  .init_func    = packet_ref_suite_init,

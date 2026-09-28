@@ -13,6 +13,7 @@
 #define ODP_API_SPEC_PACKET_H_
 #include <odp/visibility_begin.h>
 
+#include <odp/api/deprecated.h>
 #include <odp/api/event_types.h>
 #include <odp/api/packet_types.h>
 #include <odp/api/packet_io_types.h>
@@ -2374,8 +2375,10 @@ odp_proto_stats_t odp_packet_proto_stats(odp_packet_t pkt);
  * @return Packet vector handle
  *
  * @see odp_event_type()
+ *
+ * @deprecated Use the event vector API (odp_event_vector_from_event()) instead.
  */
-odp_packet_vector_t odp_packet_vector_from_event(odp_event_t ev);
+odp_packet_vector_t ODP_DEPRECATE(odp_packet_vector_from_event)(odp_event_t ev);
 
 /**
  * Convert packet vector handle to event
@@ -2383,8 +2386,10 @@ odp_packet_vector_t odp_packet_vector_from_event(odp_event_t ev);
  * @param pktv Packet vector handle
  *
  * @return Event handle
+ *
+ * @deprecated Use the event vector API (odp_event_vector_to_event()) instead.
  */
-odp_event_t odp_packet_vector_to_event(odp_packet_vector_t pktv);
+odp_event_t ODP_DEPRECATE(odp_packet_vector_to_event)(odp_packet_vector_t pktv);
 
 /**
  * Allocate a packet vector from a packet vector pool
@@ -2399,8 +2404,10 @@ odp_event_t odp_packet_vector_to_event(odp_packet_vector_t pktv);
  *
  * @note A newly allocated vector shall not contain any packets, instead, alloc
  * operation shall reserve the space for odp_pool_param_t::vector::max_size packets.
+ *
+ * @deprecated Use the event vector API (odp_event_vector_alloc()) instead.
  */
-odp_packet_vector_t odp_packet_vector_alloc(odp_pool_t pool);
+odp_packet_vector_t ODP_DEPRECATE(odp_packet_vector_alloc)(odp_pool_t pool);
 
 /**
  * Free packet vector
@@ -2412,8 +2419,10 @@ odp_packet_vector_t odp_packet_vector_alloc(odp_pool_t pool);
  * @note This API just frees the vector, not any packets inside the vector.
  * Application can use odp_event_free() to free the vector and packets inside
  * the vector.
+ *
+ * @deprecated Use the event vector API (odp_event_vector_free()) instead.
  */
-void odp_packet_vector_free(odp_packet_vector_t pktv);
+void ODP_DEPRECATE(odp_packet_vector_free)(odp_packet_vector_t pktv);
 
 /**
  * Get packet vector table
@@ -2450,8 +2459,10 @@ void odp_packet_vector_free(odp_packet_vector_t pktv);
  * @note The table memory is backed by a vector pool buffer. The ownership of
  * the table memory is linked to the ownership of the event. I.e. after sending
  * the event to a queue, the sender loses ownership to the table also.
+ *
+ * @deprecated Use the event vector API (odp_event_vector_tbl()) instead.
  */
-uint32_t odp_packet_vector_tbl(odp_packet_vector_t pktv, odp_packet_t **pkt_tbl);
+uint32_t ODP_DEPRECATE(odp_packet_vector_tbl)(odp_packet_vector_t pktv, odp_packet_t **pkt_tbl);
 
 /**
  * Number of packets in a vector
@@ -2459,8 +2470,10 @@ uint32_t odp_packet_vector_tbl(odp_packet_vector_t pktv, odp_packet_t **pkt_tbl)
  * @param pktv Packet vector handle
  *
  * @return The number of packets available in the vector
+ *
+ * @deprecated Use the event vector API (odp_event_vector_size()) instead.
  */
-uint32_t odp_packet_vector_size(odp_packet_vector_t pktv);
+uint32_t ODP_DEPRECATE(odp_packet_vector_size)(odp_packet_vector_t pktv);
 
 /**
  * Set the number of packets stored in a vector
@@ -2481,8 +2494,9 @@ uint32_t odp_packet_vector_size(odp_packet_vector_t pktv);
  *
  * @see odp_packet_vector_tbl()
  *
+ * @deprecated Use the event vector API (odp_event_vector_size_set()) instead.
  */
-void odp_packet_vector_size_set(odp_packet_vector_t pktv, uint32_t size);
+void ODP_DEPRECATE(odp_packet_vector_size_set)(odp_packet_vector_t pktv, uint32_t size);
 
 /**
  * Packet vector user area
@@ -2494,8 +2508,10 @@ void odp_packet_vector_size_set(odp_packet_vector_t pktv, uint32_t size);
  *
  * @return       Pointer to the user area of the packet vector
  * @retval NULL  The packet vector does not have user area
+ *
+ * @deprecated Use the event vector API (odp_event_vector_user_area()) instead.
  */
-void *odp_packet_vector_user_area(odp_packet_vector_t pktv);
+void *ODP_DEPRECATE(odp_packet_vector_user_area)(odp_packet_vector_t pktv);
 
 /**
  * Check user flag
@@ -2509,8 +2525,10 @@ void *odp_packet_vector_user_area(odp_packet_vector_t pktv);
  *
  * @retval 0    User flag is clear
  * @retval >0   User flag is set
+ *
+ * @deprecated Use the event vector API (odp_event_vector_user_flag()) instead.
  */
-int odp_packet_vector_user_flag(odp_packet_vector_t pktv);
+int ODP_DEPRECATE(odp_packet_vector_user_flag)(odp_packet_vector_t pktv);
 
 /**
  * Set user flag
@@ -2519,8 +2537,10 @@ int odp_packet_vector_user_flag(odp_packet_vector_t pktv);
  *
  * @param pktv  Packet vector handle
  * @param val   New value for the flag. Zero clears the flag, other values set the flag.
+ *
+ * @deprecated Use the event vector API (odp_event_vector_user_flag_set()) instead.
  */
-void odp_packet_vector_user_flag_set(odp_packet_vector_t pktv, int val);
+void ODP_DEPRECATE(odp_packet_vector_user_flag_set)(odp_packet_vector_t pktv, int val);
 
 /**
  * Check that packet vector is valid
@@ -2534,8 +2554,10 @@ void odp_packet_vector_user_flag_set(odp_packet_vector_t pktv, int val);
  *
  * @retval 0 Packet vector is not valid
  * @retval 1 Packet vector is valid
+ *
+ * @deprecated Use the event vector API instead.
  */
-int odp_packet_vector_valid(odp_packet_vector_t pktv);
+int ODP_DEPRECATE(odp_packet_vector_valid)(odp_packet_vector_t pktv);
 
 /**
  * Packet vector pool
@@ -2546,8 +2568,10 @@ int odp_packet_vector_valid(odp_packet_vector_t pktv);
  * @param pktv Packet vector handle
  *
  * @return Packet vector pool handle
+ *
+ * @deprecated Use the event vector API (odp_event_vector_pool()) instead.
  */
-odp_pool_t odp_packet_vector_pool(odp_packet_vector_t pktv);
+odp_pool_t ODP_DEPRECATE(odp_packet_vector_pool)(odp_packet_vector_t pktv);
 
 /**
  * Print packet vector debug information
@@ -2555,8 +2579,10 @@ odp_pool_t odp_packet_vector_pool(odp_packet_vector_t pktv);
  * Print all packet vector debug information to ODP log.
  *
  * @param pktv Packet vector handle
+ *
+ * @deprecated Use the event vector API (odp_event_vector_print()) instead.
  */
-void odp_packet_vector_print(odp_packet_vector_t pktv);
+void ODP_DEPRECATE(odp_packet_vector_print)(odp_packet_vector_t pktv);
 
 /**
  * Get printable value for packet vector handle
@@ -2564,8 +2590,10 @@ void odp_packet_vector_print(odp_packet_vector_t pktv);
  * @param pktv Handle to be converted for debugging
  *
  * @return uint64_t value that can be used to print/display this handle
+ *
+ * @deprecated Use the event vector API (odp_event_vector_to_u64()) instead.
  */
-uint64_t odp_packet_vector_to_u64(odp_packet_vector_t pktv);
+uint64_t ODP_DEPRECATE(odp_packet_vector_to_u64)(odp_packet_vector_t pktv);
 
 /**
  * Check reassembly status of the packet
