@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright (c) 2019-2023 Nokia
+ * Copyright (c) 2019-2026 Nokia
  */
 
 #ifndef ODP_PLAT_BUFFER_INLINES_H_
@@ -7,6 +7,7 @@
 
 #include <odp/api/buffer_types.h>
 #include <odp/api/event.h>
+#include <odp/api/hints.h>
 #include <odp/api/pool_types.h>
 
 #include <odp/api/plat/buffer_inline_types.h>
@@ -28,6 +29,7 @@ extern "C" {
 	#define odp_buffer_to_event __odp_buffer_to_event
 	#define odp_buffer_to_event_multi __odp_buffer_to_event_multi
 	#define odp_buffer_addr __odp_buffer_addr
+	#define odp_buffer_from_addr __odp_buffer_from_addr
 	#define odp_buffer_size __odp_buffer_size
 	#define odp_buffer_pool __odp_buffer_pool
 	#define odp_buffer_user_area __odp_buffer_user_area
@@ -62,6 +64,17 @@ _ODP_INLINE void odp_buffer_to_event_multi(const odp_buffer_t buf[], odp_event_t
 _ODP_INLINE void *odp_buffer_addr(odp_buffer_t buf)
 {
 	return _odp_event_hdr_field((odp_event_t)buf, void *, base_data);
+}
+
+_ODP_INLINE odp_buffer_t odp_buffer_from_addr(odp_pool_t pool, void *addr)
+{
+	const uint32_t head_offset = _odp_pool_get(pool, uint32_t, ext_head_offset);
+
+	/* Check that pool is external */
+	if (odp_unlikely(!head_offset))
+		return ODP_BUFFER_INVALID;
+
+	return (odp_buffer_t)((uintptr_t)addr - head_offset);
 }
 
 _ODP_INLINE uint32_t odp_buffer_size(odp_buffer_t buf)
