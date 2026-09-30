@@ -1463,7 +1463,7 @@ aes_ccm_decrypt_init(odp_crypto_generic_session_t *session)
 
 	EVP_DecryptInit_ex(ctx, session->cipher.evp_cipher, NULL,
 			   session->cipher.key_data, NULL);
-	EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN,
+	EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_CCM_SET_IVLEN,
 			    session->p.cipher_iv_len, NULL);
 	EVP_CIPHER_CTX_set_padding(ctx, 0);
 }
