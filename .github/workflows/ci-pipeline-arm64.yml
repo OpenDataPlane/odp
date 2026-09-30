@@ -77,6 +77,8 @@ jobs:
     if: ${{ github.repository == 'OpenDataPlane/odp' }}
     runs-on: ah-ubuntu_22_04-c7g_2x-50
     timeout-minutes: 30
+    env:
+      CONF: "--without-openssl"
     strategy:
       fail-fast: false
       matrix:
