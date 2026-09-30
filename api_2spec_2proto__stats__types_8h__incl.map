@@ -1,0 +1,25 @@
+<map id="proto_stats_types.h" name="proto_stats_types.h">
+<area shape="rect" id="Node000001" title="ODP proto stats types." alt="" coords="187,5,337,31"/>
+<area shape="rect" id="Node000002" href="$visibility__begin_8h_source.html" title=" " alt="" coords="5,372,167,397"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="201,33,147,50,94,76,72,93,54,113,42,137,38,164,38,239,42,273,51,305,75,359,70,361,46,307,36,274,33,239,33,163,37,135,50,110,68,89,91,72,146,45,200,28"/>
+<area shape="rect" id="Node000003" href="$api_2std__types_8h.html" title="Standard C language types and definitions for ODP." alt="" coords="187,79,337,104"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="265,31,265,65,259,65,259,31"/>
+<area shape="rect" id="Node000010" href="$visibility__end_8h_source.html" title=" " alt="" coords="406,372,555,397"/>
+<area shape="poly" id="edge13_Node000001_Node000010" title=" " alt="" coords="338,25,402,39,465,65,493,83,514,105,529,132,534,163,534,239,530,274,521,307,497,361,492,359,516,305,525,273,529,239,529,164,524,134,510,108,489,87,463,70,401,44,337,30"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="74,152,247,177"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="247,106,190,146,187,142,244,102"/>
+<area shape="rect" id="Node000005" href="$api_2spec_2std__types_8h.html" title="Common types and definitions for ODP API files." alt="" coords="272,152,455,177"/>
+<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="280,102,337,142,334,146,277,106"/>
+<area shape="poly" id="edge5_Node000005_Node000002" title=" " alt="" coords="312,180,262,196,207,220,155,255,133,276,114,300,100,329,92,359,87,358,95,328,109,297,129,272,152,250,205,216,260,191,310,175"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="211,225,281,251"/>
+<area shape="poly" id="edge6_Node000005_Node000006" title=" " alt="" coords="346,180,278,220,276,216,343,175"/>
+<area shape="rect" id="Node000007" href="$api_2align_8h.html" title="ODP alignments." alt="" coords="305,225,424,251"/>
+<area shape="poly" id="edge7_Node000005_Node000007" title=" " alt="" coords="366,178,367,212,362,212,361,178"/>
+<area shape="poly" id="edge12_Node000005_Node000010" title=" " alt="" coords="385,175,413,196,439,224,457,258,469,294,481,358,476,359,464,296,452,260,434,227,410,200,382,180"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="124,299,267,324"/>
+<area shape="poly" id="edge8_Node000007_Node000008" title=" " alt="" coords="338,253,237,296,235,291,336,248"/>
+<area shape="rect" id="Node000009" href="$api_2spec_2align_8h.html" title="ODP alignments." alt="" coords="291,299,443,324"/>
+<area shape="poly" id="edge9_Node000007_Node000009" title=" " alt="" coords="368,251,369,285,364,285,362,251"/>
+<area shape="poly" id="edge10_Node000009_Node000002" title=" " alt="" coords="323,327,145,371,144,366,321,321"/>
+<area shape="poly" id="edge11_Node000009_Node000010" title=" " alt="" coords="387,322,452,362,449,367,384,326"/>
+</map>

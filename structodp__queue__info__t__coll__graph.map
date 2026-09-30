@@ -1,0 +1,12 @@
+<map id="odp_queue_info_t" name="odp_queue_info_t">
+<area shape="rect" id="Node000001" title="Queue information." alt="" coords="163,269,300,295"/>
+<area shape="rect" id="Node000002" href="$structodp__queue__param__t.html" title="ODP Queue parameters." alt="" coords="91,181,246,207"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="187,216,225,267,220,270,183,219"/>
+<area shape="rect" id="Node000003" href="$structodp__schedule__param__t.html" title="Scheduler parameters." alt="" coords="5,93,177,119"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="111,128,135,156,158,179,154,183,131,159,107,131"/>
+<area shape="rect" id="Node000004" href="$structodp__event__aggr__config__t.html" title="Event vector configuration." alt="" coords="202,93,386,119"/>
+<area shape="poly" id="edge5_Node000001_Node000004" title=" " alt="" coords="292,133,279,186,258,246,243,270,239,267,253,244,274,184,287,131"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="267,129,244,145,187,183,184,179,240,140,264,124"/>
+<area shape="rect" id="Node000005" href="$struct__odp__abi__pool__t.html" title=" " alt="" coords="231,5,357,31"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="297,45,297,93,291,93,291,45"/>
+</map>

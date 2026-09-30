@@ -1,0 +1,11 @@
+<map id="ipsec_types.h" name="ipsec_types.h">
+<area shape="rect" id="Node000001" title="ODP IPsec API type definitions." alt="" coords="43,5,153,31"/>
+<area shape="rect" id="Node000002" href="$ipsec__types_8h.html" title="ODP IPsec." alt="" coords="43,79,153,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="101,44,101,79,95,79,95,44"/>
+<area shape="rect" id="Node000003" href="$spec_2ipsec_8h.html" title="ODP IPsec API." alt="" coords="5,152,73,177"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="82,116,51,154,47,150,78,113"/>
+<area shape="rect" id="Node000005" href="$ipsec__inlines_8h_source.html" title=" " alt="" coords="97,152,216,177"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="118,113,149,150,145,154,114,116"/>
+<area shape="rect" id="Node000004" href="$ipsec_8h.html" title="ODP IPSEC API &#45; platform specific header." alt="" coords="5,225,73,251"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="42,191,42,225,37,225,37,191"/>
+</map>

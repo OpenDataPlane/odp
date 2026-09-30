@@ -1,0 +1,23 @@
+<map id="time_types.h" name="time_types.h">
+<area shape="rect" id="Node000001" title="ODP time." alt="" coords="351,5,457,31"/>
+<area shape="rect" id="Node000002" href="$spec_2packet_8h.html" title="ODP packet descriptor." alt="" coords="103,79,180,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="350,37,181,82,179,77,348,32"/>
+<area shape="rect" id="Node000006" href="$packet__inlines_8h.html" title="Packet inline functions." alt="" coords="205,79,331,104"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="372,39,291,81,289,76,369,34"/>
+<area shape="rect" id="Node000007" href="$spec_2packet__io_8h.html" title="ODP Packet IO." alt="" coords="356,79,452,104"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="407,44,407,79,401,79,401,44"/>
+<area shape="rect" id="Node000009" href="$spec_2time_8h.html" title="ODP time." alt="" coords="476,79,540,104"/>
+<area shape="poly" id="edge8_Node000001_Node000009" title=" " alt="" coords="434,36,492,76,489,81,431,41"/>
+<area shape="rect" id="Node000011" href="$time__inlines_8h_source.html" title=" " alt="" coords="564,79,679,104"/>
+<area shape="poly" id="edge10_Node000001_Node000011" title=" " alt="" coords="453,32,587,76,585,81,451,37"/>
+<area shape="rect" id="Node000003" href="$packet_8h.html" title="ODP packet descriptor." alt="" coords="103,152,180,177"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="144,118,144,152,139,152,139,118"/>
+<area shape="rect" id="Node000004" href="$crypto__inlines_8h_source.html" title=" " alt="" coords="5,225,131,251"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="121,189,82,227,78,223,118,185"/>
+<area shape="rect" id="Node000005" href="$ipsec__inlines_8h_source.html" title=" " alt="" coords="155,225,274,251"/>
+<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="165,185,205,223,201,227,161,189"/>
+<area shape="rect" id="Node000008" href="$packet__io_8h.html" title="ODP Packet IO." alt="" coords="356,152,452,177"/>
+<area shape="poly" id="edge7_Node000007_Node000008" title=" " alt="" coords="407,118,407,152,401,152,401,118"/>
+<area shape="rect" id="Node000010" href="$time_8h.html" title="ODP time." alt="" coords="476,152,540,177"/>
+<area shape="poly" id="edge9_Node000009_Node000010" title=" " alt="" coords="511,118,511,152,505,152,505,118"/>
+</map>

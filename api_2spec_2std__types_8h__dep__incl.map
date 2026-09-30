@@ -1,0 +1,127 @@
+<map id="std_types.h" name="std_types.h">
+<area shape="rect" id="Node000001" title="Common types and definitions for ODP API files." alt="" coords="2929,5,3027,31"/>
+<area shape="rect" id="Node000002" href="$api_2std__types_8h.html" title="Standard C language types and definitions for ODP." alt="" coords="2929,79,3027,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="2981,44,2981,79,2975,79,2975,44"/>
+<area shape="rect" id="Node000003" href="$api_2abi-default_2atomic_8h.html" title="ODP atomic operations." alt="" coords="313,152,392,177"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="2916,96,1995,114,1301,132,585,155,392,164,392,158,585,149,1301,126,1995,109,2916,91"/>
+<area shape="rect" id="Node000010" href="$api_2abi-default_2barrier_8h.html" title="ODP barrier." alt="" coords="597,152,673,177"/>
+<area shape="poly" id="edge9_Node000002_Node000010" title=" " alt="" coords="2915,96,2496,98,1852,107,1184,125,904,138,693,155,674,158,673,152,692,149,904,133,1184,119,1852,102,2496,93,2915,90"/>
+<area shape="rect" id="Node000017" href="$api_2barrier_8h.html" title="ODP execution barriers." alt="" coords="1001,225,1077,251"/>
+<area shape="poly" id="edge11_Node000002_Node000017" title=" " alt="" coords="2916,96,2439,101,1733,112,1086,129,875,141,814,148,789,154,784,164,789,175,818,189,874,203,1001,228,1000,233,873,208,816,194,785,179,779,164,786,150,813,142,875,136,1086,124,1733,106,2439,95,2916,91"/>
+<area shape="rect" id="Node000018" href="$odp__api_8h.html" title="The OpenDataPlane API." alt="" coords="1095,299,1181,324"/>
+<area shape="poly" id="edge37_Node000002_Node000018" title=" " alt="" coords="2916,96,1990,114,1486,131,1315,142,1262,148,1234,154,1209,168,1193,183,1166,227,1150,265,1142,299,1137,298,1145,264,1161,224,1189,179,1206,164,1232,150,1261,143,1315,137,1486,126,1990,108,2916,91"/>
+<area shape="rect" id="Node000019" href="$api_2spec_2buffer_8h.html" title="ODP buffer." alt="" coords="800,152,871,177"/>
+<area shape="poly" id="edge13_Node000002_Node000019" title=" " alt="" coords="2915,95,2527,97,1938,105,1330,123,1075,137,884,155,871,157,870,151,883,149,1075,132,1330,118,1938,100,2527,92,2915,90"/>
+<area shape="rect" id="Node000021" href="$api_2abi-default_2byteorder_8h.html" title="ODP byteorder." alt="" coords="895,152,991,177"/>
+<area shape="poly" id="edge14_Node000002_Node000021" title=" " alt="" coords="2916,96,2548,100,1994,111,1423,128,1184,140,1004,155,992,156,991,151,1003,149,1184,135,1423,123,1994,105,2548,95,2916,91"/>
+<area shape="rect" id="Node000028" href="$spec_2chksum_8h.html" title="ODP checksum functions." alt="" coords="1015,152,1101,177"/>
+<area shape="poly" id="edge15_Node000002_Node000028" title=" " alt="" coords="2916,96,2047,112,1512,130,1288,141,1120,155,1101,157,1100,152,1119,149,1288,136,1512,124,2047,107,2916,91"/>
+<area shape="rect" id="Node000030" href="$api_2spec_2classification_8h.html" title="ODP classification descriptor." alt="" coords="3721,152,3840,177"/>
+<area shape="poly" id="edge16_Node000002_Node000030" title=" " alt="" coords="3041,93,3330,113,3519,129,3710,149,3721,151,3721,156,3710,155,3519,134,3330,118,3040,99"/>
+<area shape="rect" id="Node000031" href="$api_2classification_8h.html" title="ODP classification descriptor." alt="" coords="2513,225,2632,251"/>
+<area shape="poly" id="edge20_Node000002_Node000031" title=" " alt="" coords="2916,95,2539,96,2000,102,1734,109,1506,120,1342,135,1292,144,1268,154,1263,165,1268,175,1285,183,1322,190,1444,203,1614,213,1812,220,2219,230,2513,234,2513,239,2219,235,1812,226,1614,218,1444,208,1321,196,1284,188,1264,179,1257,165,1264,150,1290,139,1341,129,1506,114,1734,104,2000,97,2539,90,2916,90"/>
+<area shape="rect" id="Node000032" href="$api_2spec_2ipsec__types_8h.html" title="ODP IPsec API type definitions." alt="" coords="4001,299,4112,324"/>
+<area shape="poly" id="edge33_Node000002_Node000032" title=" " alt="" coords="3041,90,3584,94,4406,103,4815,111,5164,121,5412,134,5485,141,5517,150,5524,165,5517,179,5488,199,5439,216,5372,231,5292,245,5097,267,4874,284,4426,305,4112,312,4112,307,4426,299,4873,279,5096,262,5291,239,5371,226,5437,211,5485,194,5513,176,5518,165,5514,154,5484,146,5412,139,5164,126,4815,116,4406,109,3584,99,3041,96"/>
+<area shape="rect" id="Node000038" href="$api_2spec_2comp_8h.html" title="ODP Compression." alt="" coords="1277,152,1348,177"/>
+<area shape="poly" id="edge21_Node000002_Node000038" title=" " alt="" coords="2916,96,2607,101,2157,111,1698,128,1506,140,1361,155,1349,157,1348,152,1360,149,1505,135,1697,123,2157,105,2607,95,2916,91"/>
+<area shape="rect" id="Node000040" href="$api_2spec_2cpu_8h.html" title="ODP CPU API." alt="" coords="1372,152,1429,177"/>
+<area shape="poly" id="edge22_Node000002_Node000040" title=" " alt="" coords="2916,96,2621,100,2195,109,1760,127,1579,139,1442,155,1430,157,1429,152,1442,149,1578,134,1760,122,2194,104,2621,94,2916,91"/>
+<area shape="rect" id="Node000042" href="$api_2abi-default_2cpumask_8h.html" title="ODP CPU masks and enumeration." alt="" coords="1454,152,1547,177"/>
+<area shape="poly" id="edge23_Node000002_Node000042" title=" " alt="" coords="2915,95,2693,95,2358,101,1963,119,1759,135,1560,155,1548,156,1548,151,1559,149,1759,129,1963,114,2358,96,2693,89,2915,89"/>
+<area shape="rect" id="Node000049" href="$api_2spec_2crypto_8h.html" title="ODP crypto." alt="" coords="1571,152,1646,177"/>
+<area shape="poly" id="edge24_Node000002_Node000049" title=" " alt="" coords="2916,97,2295,115,1928,132,1775,143,1660,155,1647,157,1646,152,1659,149,1775,138,1928,127,2295,110,2916,91"/>
+<area shape="rect" id="Node000051" href="$api_2spec_2crypto__types_8h.html" title="ODP crypto types." alt="" coords="1671,152,1789,177"/>
+<area shape="poly" id="edge25_Node000002_Node000051" title=" " alt="" coords="2916,96,2727,100,2452,110,2130,127,1802,155,1790,156,1789,151,1802,149,2130,122,2452,105,2727,95,2916,91"/>
+<area shape="rect" id="Node000053" href="$api_2spec_2dma__types_8h.html" title="ODP DMA." alt="" coords="1814,152,1921,177"/>
+<area shape="poly" id="edge26_Node000002_Node000053" title=" " alt="" coords="2915,96,2502,111,2220,128,1933,155,1921,156,1920,151,1932,149,2220,123,2502,105,2915,91"/>
+<area shape="rect" id="Node000075" href="$api_2spec_2event__vector__types_8h.html" title="ODP event vector API type definitions." alt="" coords="1945,152,2107,177"/>
+<area shape="poly" id="edge27_Node000002_Node000075" title=" " alt="" coords="2916,99,2577,119,2121,155,2108,156,2107,151,2120,149,2576,114,2916,93"/>
+<area shape="rect" id="Node000095" href="$api_2spec_2hash_8h.html" title="ODP Hash functions." alt="" coords="2132,152,2197,177"/>
+<area shape="poly" id="edge28_Node000002_Node000095" title=" " alt="" coords="2916,97,2787,101,2611,111,2412,128,2210,155,2198,157,2197,152,2210,149,2411,123,2611,106,2786,96,2915,91"/>
+<area shape="rect" id="Node000097" href="$api_2spec_2init_8h.html" title=" " alt="" coords="2221,152,2276,177"/>
+<area shape="poly" id="edge29_Node000002_Node000097" title=" " alt="" coords="2916,97,2799,101,2643,111,2466,128,2289,155,2277,157,2275,152,2288,149,2466,123,2642,106,2799,96,2916,91"/>
+<area shape="rect" id="Node000101" href="$api_2abi-default_2init_8h.html" title="ODP initialization." alt="" coords="2300,152,2355,177"/>
+<area shape="poly" id="edge30_Node000002_Node000101" title=" " alt="" coords="2916,98,2674,114,2521,131,2368,155,2355,157,2354,152,2367,149,2521,125,2674,109,2916,92"/>
+<area shape="rect" id="Node000034" href="$api_2spec_2ipsec_8h.html" title="ODP IPsec API." alt="" coords="2379,152,2447,177"/>
+<area shape="poly" id="edge31_Node000002_Node000034" title=" " alt="" coords="2916,100,2712,119,2586,135,2460,155,2447,157,2446,152,2459,149,2585,130,2712,114,2915,95"/>
+<area shape="rect" id="Node000108" href="$api_2abi-default_2ipsec__types_8h_source.html" title=" " alt="" coords="2471,152,2581,177"/>
+<area shape="poly" id="edge32_Node000002_Node000108" title=" " alt="" coords="2916,105,2594,155,2582,157,2581,151,2594,149,2915,99"/>
+<area shape="rect" id="Node000063" href="$spec_2ml_8h.html" title="ODP Machine Learning (ML) offload." alt="" coords="2606,152,2657,177"/>
+<area shape="poly" id="edge34_Node000002_Node000063" title=" " alt="" coords="2916,105,2801,126,2669,155,2658,158,2656,153,2668,149,2800,121,2915,100"/>
+<area shape="rect" id="Node000115" href="$spec_2ml__quantize_8h.html" title="ODP Machine Learning (ML) quantization functions." alt="" coords="2681,152,2795,177"/>
+<area shape="poly" id="edge35_Node000002_Node000115" title=" " alt="" coords="2927,110,2778,154,2776,149,2925,105"/>
+<area shape="rect" id="Node000079" href="$api_2spec_2ml__types_8h.html" title="ODP Machine Learning (ML) types." alt="" coords="2820,152,2915,177"/>
+<area shape="poly" id="edge36_Node000002_Node000079" title=" " alt="" coords="2950,114,2887,154,2884,150,2947,109"/>
+<area shape="rect" id="Node000065" href="$api_2spec_2packet_8h.html" title="ODP packet descriptor." alt="" coords="2939,152,3017,177"/>
+<area shape="poly" id="edge38_Node000002_Node000065" title=" " alt="" coords="2981,118,2981,152,2975,152,2975,118"/>
+<area shape="rect" id="Node000085" href="$api_2spec_2packet__flags_8h.html" title="ODP packet flags." alt="" coords="3041,152,3155,177"/>
+<area shape="poly" id="edge39_Node000002_Node000085" title=" " alt="" coords="3011,109,3080,149,3077,154,3008,113"/>
+<area shape="rect" id="Node000117" href="$api_2abi-default_2packet__io__types_8h.html" title="ODP Packet IO." alt="" coords="3179,152,3318,177"/>
+<area shape="poly" id="edge40_Node000002_Node000117" title=" " alt="" coords="3035,105,3206,149,3204,154,3034,110"/>
+<area shape="rect" id="Node000067" href="$api_2spec_2packet__io__types_8h.html" title="ODP Packet IO types." alt="" coords="3342,152,3481,177"/>
+<area shape="poly" id="edge41_Node000002_Node000067" title=" " alt="" coords="3041,100,3342,149,3342,155,3040,105"/>
+<area shape="rect" id="Node000071" href="$api_2spec_2pool_8h.html" title="ODP pool." alt="" coords="3505,152,3568,177"/>
+<area shape="poly" id="edge42_Node000002_Node000071" title=" " alt="" coords="3041,94,3243,113,3368,129,3493,149,3506,152,3505,157,3492,155,3367,134,3242,119,3040,100"/>
+<area shape="rect" id="Node000057" href="$api_2spec_2pool__types_8h.html" title="Type definitions for pools." alt="" coords="3592,152,3697,177"/>
+<area shape="poly" id="edge43_Node000002_Node000057" title=" " alt="" coords="3041,95,3278,115,3581,149,3592,151,3592,156,3580,155,3278,120,3040,100"/>
+<area shape="rect" id="Node000124" href="$api_2proto__stats_8h.html" title="ODP proto stats." alt="" coords="1175,225,1282,251"/>
+<area shape="poly" id="edge44_Node000002_Node000124" title=" " alt="" coords="2916,95,2538,98,1998,106,1731,114,1501,124,1334,137,1282,146,1257,154,1244,169,1236,189,1231,225,1226,225,1231,187,1239,167,1254,150,1281,140,1333,132,1501,119,1731,108,1998,101,2538,93,2915,90"/>
+<area shape="rect" id="Node000125" href="$api_2spec_2proto__stats__types_8h.html" title="ODP proto stats types." alt="" coords="3864,152,4015,177"/>
+<area shape="poly" id="edge46_Node000002_Node000125" title=" " alt="" coords="3041,93,3387,112,3618,129,3853,149,3864,151,3863,156,3852,155,3618,134,3386,118,3040,98"/>
+<area shape="rect" id="Node000087" href="$api_2spec_2queue_8h.html" title="ODP queue." alt="" coords="4039,152,4114,177"/>
+<area shape="poly" id="edge47_Node000002_Node000087" title=" " alt="" coords="3040,90,3211,92,3456,100,3739,118,3885,132,4028,149,4040,151,4039,157,4027,155,3885,137,3739,123,3456,105,3211,97,3040,95"/>
+<area shape="rect" id="Node000128" href="$api_2spec_2random_8h.html" title="ODP random number API." alt="" coords="4139,152,4223,177"/>
+<area shape="poly" id="edge48_Node000002_Node000128" title=" " alt="" coords="3041,90,3226,92,3494,100,3807,118,3969,132,4126,149,4139,151,4138,157,4126,155,3968,137,3807,123,3494,105,3226,97,3041,95"/>
+<area shape="rect" id="Node000130" href="$spec_2random__types_8h.html" title="ODP random number API." alt="" coords="4247,152,4373,177"/>
+<area shape="poly" id="edge49_Node000002_Node000130" title=" " alt="" coords="3040,91,3240,94,3535,104,3882,121,4236,149,4247,151,4246,156,4235,155,3881,127,3535,109,3240,100,3040,96"/>
+<area shape="rect" id="Node000132" href="$spec_2reassembly_8h.html" title="ODP REASSEMBLY API." alt="" coords="4397,152,4505,177"/>
+<area shape="poly" id="edge50_Node000002_Node000132" title=" " alt="" coords="3040,90,3261,91,3593,99,3985,117,4188,131,4386,149,4398,151,4397,156,4386,155,4187,136,3985,122,3593,104,3261,97,3040,95"/>
+<area shape="rect" id="Node000134" href="$api_2abi-default_2rwlock__recursive_8h.html" title="ODP recursive read/write lock." alt="" coords="4530,152,4674,177"/>
+<area shape="poly" id="edge51_Node000002_Node000134" title=" " alt="" coords="3041,90,3280,93,3644,102,4076,119,4299,133,4518,149,4530,150,4529,156,4518,155,4299,138,4075,125,3644,107,3280,98,3041,96"/>
+<area shape="rect" id="Node000089" href="$api_2spec_2schedule_8h.html" title="ODP schedule." alt="" coords="4699,152,4791,177"/>
+<area shape="poly" id="edge52_Node000002_Node000089" title=" " alt="" coords="3040,91,3840,108,4328,125,4532,136,4686,149,4699,151,4698,156,4686,155,4532,142,4328,130,3840,113,3040,96"/>
+<area shape="rect" id="Node000141" href="$api_2abi-default_2schedule__types_8h.html" title="ODP schedule." alt="" coords="4815,152,4949,177"/>
+<area shape="poly" id="edge53_Node000002_Node000141" title=" " alt="" coords="3040,90,3317,90,3751,96,4270,114,4539,129,4804,149,4815,150,4814,156,4803,155,4539,135,4270,120,3750,102,3317,95,3040,95"/>
+<area shape="rect" id="Node000093" href="$api_2spec_2schedule__types_8h.html" title="ODP schedule types." alt="" coords="4973,152,5108,177"/>
+<area shape="poly" id="edge54_Node000002_Node000093" title=" " alt="" coords="3041,91,3966,109,4540,127,4781,137,4962,149,4973,150,4973,156,4962,155,4780,143,4540,132,3966,115,3040,96"/>
+<area shape="rect" id="Node000148" href="$api_2abi-default_2spinlock__recursive_8h.html" title="ODP recursive spinlock." alt="" coords="5133,152,5287,177"/>
+<area shape="poly" id="edge55_Node000002_Node000148" title=" " alt="" coords="3040,89,3358,89,3869,95,4485,113,4806,129,5121,149,5133,150,5132,156,5120,155,4806,134,4485,118,3869,100,3358,95,3040,95"/>
+<area shape="rect" id="Node000155" href="$api_2spec_2stash__types_8h.html" title="ODP stash types." alt="" coords="5311,152,5423,177"/>
+<area shape="poly" id="edge56_Node000002_Node000155" title=" " alt="" coords="3040,90,3465,94,4120,104,4799,122,5085,134,5300,149,5311,151,5311,156,5299,155,5084,140,4799,127,4119,110,3465,100,3040,96"/>
+<area shape="rect" id="Node000159" href="$api_2spec_2std_8h.html" title="ODP standard types and optimized C library functions." alt="" coords="5448,152,5503,177"/>
+<area shape="poly" id="edge57_Node000002_Node000159" title=" " alt="" coords="3041,91,4282,107,5009,125,5278,136,5436,149,5449,152,5447,157,5435,155,5277,142,5009,130,4282,113,3041,96"/>
+<area shape="rect" id="Node000161" href="$system__info_8h.html" title="ODP system information." alt="" coords="815,225,930,251"/>
+<area shape="poly" id="edge58_Node000002_Node000161" title=" " alt="" coords="2915,96,2437,101,1727,112,1077,129,865,141,804,148,778,154,773,163,773,172,787,191,814,209,844,223,841,228,811,213,783,195,768,174,768,162,775,150,803,142,865,136,1077,124,1727,106,2437,95,2915,90"/>
+<area shape="rect" id="Node000162" href="$spec_2threshold_8h.html" title="ODP threshold descriptor." alt="" coords="5579,152,5673,177"/>
+<area shape="poly" id="edge60_Node000002_Node000162" title=" " alt="" coords="3041,90,3508,93,4237,102,4999,120,5319,133,5560,149,5579,152,5578,157,5559,155,5318,138,4999,125,4237,107,3508,98,3041,96"/>
+<area shape="rect" id="Node000164" href="$api_2spec_2thrmask_8h.html" title="ODP thread masks." alt="" coords="5698,152,5786,177"/>
+<area shape="poly" id="edge61_Node000002_Node000164" title=" " alt="" coords="3040,90,3527,91,4294,97,4706,104,5096,115,5433,130,5686,149,5698,151,5697,156,5686,155,5432,135,5096,120,4706,109,4294,102,3527,96,3040,95"/>
+<area shape="rect" id="Node000166" href="$api_2spec_2time_8h.html" title="ODP time." alt="" coords="5810,152,5874,177"/>
+<area shape="poly" id="edge62_Node000002_Node000166" title=" " alt="" coords="3041,90,3597,95,4460,106,5304,124,5615,136,5798,149,5810,152,5809,157,5798,155,5615,141,5303,130,4460,112,3597,101,3041,96"/>
+<area shape="rect" id="Node000091" href="$api_2spec_2timer__types_8h.html" title="ODP timer API type definitions." alt="" coords="5898,152,6010,177"/>
+<area shape="poly" id="edge63_Node000002_Node000091" title=" " alt="" coords="3040,90,3559,92,4384,100,5248,117,5612,131,5886,149,5898,151,5897,156,5886,155,5612,137,5248,123,4384,105,3559,97,3040,95"/>
+<area shape="rect" id="Node000069" href="$api_2spec_2traffic__mngr_8h.html" title=" " alt="" coords="6034,152,6146,177"/>
+<area shape="poly" id="edge64_Node000002_Node000069" title=" " alt="" coords="3041,90,3581,91,4445,99,4911,106,5353,116,5735,131,6022,149,6034,151,6033,156,6022,155,5735,136,5353,122,4911,111,4445,104,3581,97,3041,95"/>
+<area shape="rect" id="Node000168" href="$api_2abi-default_2traffic__mngr_8h.html" title="ODP traffic mngr." alt="" coords="6170,152,6282,177"/>
+<area shape="poly" id="edge65_Node000002_Node000168" title=" " alt="" coords="3040,90,3602,91,4506,97,4994,105,5457,115,5857,130,6158,149,6170,151,6169,156,6158,155,5857,135,5456,121,4994,110,4506,103,3602,96,3040,95"/>
+<area shape="rect" id="Node000004" href="$arch_2arm32-linux_2odp_2api_2abi_2atomic_8h_source.html" title=" " alt="" coords="519,225,597,251"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="399,179,526,223,524,228,398,184"/>
+<area shape="rect" id="Node000005" href="$arch_2arm64-linux_2odp_2api_2abi_2atomic_8h_source.html" title=" " alt="" coords="5,225,84,251"/>
+<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="300,181,85,230,84,225,299,176"/>
+<area shape="rect" id="Node000006" href="$arch_2default-linux_2odp_2api_2abi_2atomic_8h_source.html" title=" " alt="" coords="108,225,187,251"/>
+<area shape="poly" id="edge5_Node000003_Node000006" title=" " alt="" coords="308,184,181,228,180,223,306,179"/>
+<area shape="rect" id="Node000007" href="$arch_2power64-linux_2odp_2api_2abi_2atomic_8h_source.html" title=" " alt="" coords="211,225,289,251"/>
+<area shape="poly" id="edge6_Node000003_Node000007" title=" " alt="" coords="326,187,268,227,265,223,323,183"/>
+<area shape="rect" id="Node000008" href="$arch_2x86__32-linux_2odp_2api_2abi_2atomic_8h_source.html" title=" " alt="" coords="313,225,392,251"/>
+<area shape="poly" id="edge7_Node000003_Node000008" title=" " alt="" coords="355,191,355,225,350,225,350,191"/>
+<area shape="rect" id="Node000009" href="$arch_2x86__64-linux_2odp_2api_2abi_2atomic_8h_source.html" title=" " alt="" coords="416,225,495,251"/>
+<area shape="poly" id="edge8_Node000003_Node000009" title=" " alt="" coords="382,183,440,223,437,227,379,187"/>
+<area shape="rect" id="Node000011" href="$arch_2arm32-linux_2odp_2api_2abi_2barrier_8h_source.html" title=" " alt="" coords="621,225,697,251"/>
+<area shape="poly" id="edge10_Node000010_Node000011" title=" " alt="" coords="646,189,658,224,653,226,641,191"/>
+<area shape="poly" id="edge12_Node000017_Node000018" title=" " alt="" coords="1068,256,1123,296,1120,301,1064,261"/>
+<area shape="poly" id="edge17_Node000030_Node000031" title=" " alt="" coords="3708,180,3386,207,3075,225,2632,238,2632,233,3075,219,3386,202,3707,175"/>
+<area shape="poly" id="edge19_Node000031_Node000018" title=" " alt="" coords="2500,246,1181,311,1181,305,2500,240"/>
+<area shape="poly" id="edge18_Node000031_Node000032" title=" " alt="" coords="2646,240,4001,305,4001,310,2646,245"/>
+<area shape="poly" id="edge45_Node000124_Node000018" title=" " alt="" coords="1205,261,1154,301,1151,296,1202,257"/>
+<area shape="poly" id="edge59_Node000161_Node000018" title=" " alt="" coords="929,252,1096,296,1094,301,928,257"/>
+</map>
