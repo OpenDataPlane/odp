@@ -87,6 +87,8 @@ static void print_usage(void)
 	       "                         2: Memcpy data. On each round, reads data from one half of the memory area\n"
 	       "                            and writes it to the other half.\n"
 	       "                         3: Read data. On each round, reads through the entire memory area.\n"
+	       "                         4: Memcmp data. On each round, compares data of one half of the memory\n"
+	       "                            area to the other half.\n"
 	       "  -h, --help             This help\n"
 	       "\n", MIN_BLOCK_LEN);
 }
@@ -155,7 +157,7 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 		}
 	}
 
-	if (test_options->mode < 0 || test_options->mode > 3) {
+	if (test_options->mode < 0 || test_options->mode > 4) {
 		ODPH_ERR("Bad mode: %i\n", test_options->mode);
 		return -1;
 	}
@@ -500,9 +502,15 @@ static int run_test_private(void *arg)
 			else
 				memcpy(addr, &addr[half_len], half_len);
 		}
-	} else {
+	} else if (mode == 3) {
 		for (i = 0; i < num_round; i++)
 			dummy_sum += read_data((const uint64_t *)(uintptr_t)addr, num_word);
+	} else {
+		/* volatile prevents compiler from optimizing the loop away */
+		uint8_t *volatile cmp_addr = addr;
+
+		for (i = 0; i < num_round; i++)
+			dummy_sum += memcmp(cmp_addr, &cmp_addr[half_len], half_len);
 	}
 
 	t2 = odp_time_local();
@@ -588,8 +596,12 @@ static int run_test_shared(void *arg)
 	thr = odp_thread_id();
 
 	/* Fault in the shared area before the timed section. During the test, a block
-	 * is held by only one worker at a time. */
-	memset(base, thr, area_len);
+	 * is held by only one worker at a time. In memcmp mode, all workers write the same
+	 * value, so that block halves match regardless of the write order between workers. */
+	if (mode == 4)
+		memset(base, 0, area_len);
+	else
+		memset(base, thr, area_len);
 
 	/* Start all workers at the same time */
 	odp_barrier_wait(&global->barrier);
@@ -609,8 +621,10 @@ static int run_test_shared(void *arg)
 				memcpy(&addr[half_len], addr, half_len);
 			else
 				memcpy(addr, &addr[half_len], half_len);
-		} else {
+		} else if (mode == 3) {
 			dummy_sum += read_data((const uint64_t *)(uintptr_t)addr, num_word);
+		} else {
+			dummy_sum += memcmp(addr, &addr[half_len], half_len);
 		}
 
 		if (put_block(stash, addr))
@@ -673,10 +687,14 @@ static void print_stat(test_global_t *global)
 	uint64_t round_len = test_options->private ? test_options->data_len : global->block_len;
 	uint64_t nsec_sum = 0;
 	uint64_t dummy_sum = 0;
+	int num_mismatch = 0;
 
 	for (i = 0; i < ODP_THREAD_COUNT_MAX; i++) {
 		nsec_sum  += global->thread_ctx[i].nsec;
 		dummy_sum += global->thread_ctx[i].dummy_sum;
+
+		if (global->thread_ctx[i].dummy_sum)
+			num_mismatch++;
 	}
 
 	if (nsec_sum == 0) {
@@ -689,6 +707,9 @@ static void print_stat(test_global_t *global)
 	num = 0;
 
 	printf("\ndummy_sum: %" PRIu64 "\n\n", dummy_sum);
+
+	if (test_options->mode == 4 && num_mismatch)
+		printf("WARNING: memcmp mismatch on %i/%i threads!\n\n", num_mismatch, num_cpu);
 
 	printf("RESULTS - per thread (MB per sec):\n");
 	printf("----------------------------------\n");
