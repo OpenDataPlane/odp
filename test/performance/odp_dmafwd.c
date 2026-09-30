@@ -618,8 +618,13 @@ static transfer_t *init_dma_ev_trs(odp_dma_transfer_param_t *trs_param,
 	trs_param->num_dst = 0U;
 	trs_param->src_seg = src_segs;
 	trs_param->dst_seg = dst_segs;
-	if (config->prog_config->seg_free)
+
+	if (config->prog_config->seg_free) {
 		trs_param->opts.seg_free = 1;
+		/* Always unique packets in a transfer, optimize */
+		trs_param->opts.unique_src_segs = 1;
+	}
+
 	compl_param->compl_mode = ODP_DMA_COMPL_EVENT;
 	c_ev = odp_dma_compl_alloc(config->compl_pool);
 
@@ -663,8 +668,13 @@ static transfer_t *init_dma_poll_trs(odp_dma_transfer_param_t *trs_param,
 	trs_param->num_dst = 0U;
 	trs_param->src_seg = src_segs;
 	trs_param->dst_seg = dst_segs;
-	if (config->prog_config->seg_free)
+
+	if (config->prog_config->seg_free) {
 		trs_param->opts.seg_free = 1;
+		/* Always unique packets in a transfer, optimize */
+		trs_param->opts.unique_src_segs = 1;
+	}
+
 	compl_param->compl_mode = ODP_DMA_COMPL_POLL;
 	compl_param->transfer_id = odp_dma_transfer_id_alloc(config->dma_handle);
 
@@ -790,8 +800,10 @@ static void drain_events(thread_config_t *config ODP_UNUSED)
 			odp_dma_compl_result(odp_dma_compl_from_event(ev), &res);
 			buf = (odp_buffer_t)res.user_ptr;
 			trs = (transfer_t *)odp_buffer_addr(buf);
+
 			if (!seg_free)
 				odp_packet_free_multi(trs->src_pkts, trs->num);
+
 			odp_packet_free_multi(trs->dst_pkts, trs->num);
 			odp_buffer_free(buf);
 		}
@@ -826,8 +838,10 @@ static void drain_polled(thread_config_t *config)
 
 		buf = (odp_buffer_t)res.user_ptr;
 		trs = (transfer_t *)odp_buffer_addr(buf);
+
 		if (!seg_free)
 			odp_packet_free_multi(trs->src_pkts, trs->num);
+
 		odp_packet_free_multi(trs->dst_pkts, trs->num);
 		odp_buffer_free(buf);
 	}
@@ -1085,6 +1099,7 @@ static inline void send_dma_poll_trs_pkts(int burst_size, thread_config_t *confi
 				++stats->trs;
 				stats->fwd_pkts += num_sent;
 				stats->discards += trs->num - num_sent;
+
 				if (!seg_free)
 					odp_packet_free_multi(trs->src_pkts, trs->num);
 			} else {
@@ -1342,11 +1357,11 @@ static void print_stats(const prog_config_t *config)
 
 	printf("\n==================\n\n"
 	       "DMA forwarder done\n\n"
-	       "    copy mode:       %s\n"
-	       "    burst size:      %u\n"
-	       "    packet length:   %u\n"
-	       "    max cache size:  %u\n"
-	       "    use DMA source segment free: %s\n", config->copy_type == SW_COPY ? "SW" :
+	       "    copy mode:      %s\n"
+	       "    burst size:     %u\n"
+	       "    packet length:  %u\n"
+	       "    max cache size: %u\n"
+	       "    segment free:   %s\n", config->copy_type == SW_COPY ? "SW" :
 	       config->copy_type == DMA_COPY_EV ? "DMA-event" : "DMA-poll",
 	       config->burst_size, config->pkt_len, config->cache_size,
 	       config->seg_free ? "yes" : "no");
