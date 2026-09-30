@@ -144,10 +144,10 @@ jobs:
       fail-fast: false
       matrix:
         cc: [gcc, clang]
-        conf: ['', '--enable-abi-compat']
+        conf: ['--without-openssl', '--without-openssl --enable-abi-compat']
         exclude:
           - cc: clang
-            conf: --enable-abi-compat
+            conf: '--without-openssl --enable-abi-compat'
     steps:
       - uses: actions/checkout@v6
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}"
@@ -222,7 +222,7 @@ jobs:
       matrix:
         cc: [gcc, clang]
         os: ['rocky_linux_8']
-        conf: ['--enable-abi-compat']
+        conf: ['--without-openssl --enable-abi-compat']
     steps:
       - uses: actions/checkout@v6
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}"

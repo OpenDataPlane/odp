@@ -24,22 +24,17 @@
 #include <odp_packet_internal.h>
 #include <odp_pending_queue_internal.h>
 
+#include <stdint.h>
 #include <string.h>
 
-#include <openssl/hmac.h>
-#include <openssl/cmac.h>
+#include <openssl/core_names.h>
 #include <openssl/evp.h>
-#include <openssl/opensslv.h>
+#include <openssl/params.h>
 
 #if !defined(OPENSSL_NO_POLY1305)
 #define _ODP_HAVE_CHACHA20_POLY1305 1
 #else
 #define _ODP_HAVE_CHACHA20_POLY1305 0
-#endif
-
-/* Ignore warnings about APIs deprecated in OpenSSL 3.0 */
-#if OPENSSL_VERSION_NUMBER >= 0x30000000L
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #endif
 
 #define MAX_SESSIONS 4000
@@ -244,6 +239,9 @@ struct odp_crypto_global_s {
 	/* These flags are cleared at alloc_session() */
 	uint8_t ctx_valid[ODP_THREAD_COUNT_MAX][MAX_SESSIONS];
 
+	EVP_MAC *evp_hmac;
+	EVP_MAC *evp_cmac;
+
 	_odp_pending_queue_t pending;
 	uint64_t flexible_data[] ODP_ALIGNED_CACHE;
 };
@@ -252,8 +250,8 @@ static odp_crypto_global_t *global;
 
 typedef struct crypto_local_t {
 	EVP_MD_CTX *md_ctx[MAX_SESSIONS];
-	HMAC_CTX *hmac_ctx[MAX_SESSIONS];
-	CMAC_CTX *cmac_ctx[MAX_SESSIONS];
+	EVP_MAC_CTX *hmac_ctx[MAX_SESSIONS];
+	EVP_MAC_CTX *cmac_ctx[MAX_SESSIONS];
 	EVP_CIPHER_CTX *cipher_ctx[MAX_SESSIONS];
 	EVP_CIPHER_CTX *mac_cipher_ctx[MAX_SESSIONS];
 	uint8_t *ctx_valid;
@@ -276,7 +274,6 @@ static
 odp_crypto_generic_session_t *alloc_session(void)
 {
 	odp_crypto_generic_session_t *session = NULL;
-	unsigned i;
 
 	odp_spinlock_lock(&global->lock);
 	session = global->free;
@@ -291,7 +288,7 @@ odp_crypto_generic_session_t *alloc_session(void)
 
 	session->idx = session - global->sessions;
 
-	for (i = 0; i < ODP_THREAD_COUNT_MAX; i++)
+	for (int i = 0; i < odp_thread_count_max(); i++)
 		global->ctx_valid[i][session->idx] = 0;
 
 	return session;
@@ -320,16 +317,37 @@ null_crypto_init_routine(odp_crypto_generic_session_t *session)
 	(void)session;
 }
 
+static void mac_init(odp_crypto_generic_session_t *session, EVP_MAC_CTX *ctx,
+		     const char *param_name, const char *alg_name)
+{
+	OSSL_PARAM params[2];
+
+	/* OpenSSL does not modify the name even though the parameter is not const */
+	params[0] = OSSL_PARAM_construct_utf8_string(param_name, (char *)(uintptr_t)alg_name, 0);
+	params[1] = OSSL_PARAM_construct_end();
+
+	EVP_MAC_init(ctx, session->auth.key, session->p.auth_key.length, params);
+}
+
+/* Reinitialize a keyed MAC context with the same key */
+static inline int mac_reinit(EVP_MAC_CTX *ctx, const odp_crypto_generic_session_t *session)
+{
+	/*
+	 * OpenSSL versions before 3.0.3 do not reinitialize HMAC and
+	 * CMAC contexts if EVP_MAC_init() is called without a key.
+	 * Fixed in OpenSSL 3.0.3 by commit 4f675d8c60.
+	 */
+	if (OPENSSL_VERSION_NUMBER < 0x30000030L)
+		return EVP_MAC_init(ctx, session->auth.key, session->p.auth_key.length, NULL);
+
+	return EVP_MAC_init(ctx, NULL, 0, NULL);
+}
+
 static void
 auth_hmac_init(odp_crypto_generic_session_t *session)
 {
-	HMAC_CTX *ctx = local.hmac_ctx[session->idx];
-
-	HMAC_Init_ex(ctx,
-		     session->auth.key,
-		     session->p.auth_key.length,
-		     session->auth.evp_md,
-		     NULL);
+	mac_init(session, local.hmac_ctx[session->idx], OSSL_MAC_PARAM_DIGEST,
+		 EVP_MD_get0_name(session->auth.evp_md));
 }
 
 static
@@ -338,14 +356,15 @@ void packet_hmac(odp_packet_t pkt,
 		 odp_crypto_generic_session_t *session,
 		 uint8_t *hash)
 {
-	HMAC_CTX *ctx = local.hmac_ctx[session->idx];
+	EVP_MAC_CTX *ctx = local.hmac_ctx[session->idx];
 	uint32_t offset = param->auth_range.offset;
 	uint32_t len   = param->auth_range.length;
+	size_t outlen;
 
 	_ODP_ASSERT(offset + len <= odp_packet_len(pkt));
 
 	/* Reinitialize HMAC calculation without resetting the key */
-	HMAC_Init_ex(ctx, NULL, 0, NULL, NULL);
+	mac_reinit(ctx, session);
 
 	/* Hash it */
 	while (len > 0) {
@@ -353,12 +372,12 @@ void packet_hmac(odp_packet_t pkt,
 		void *mapaddr = odp_packet_offset(pkt, offset, &seglen, NULL);
 		uint32_t maclen = len > seglen ? seglen : len;
 
-		HMAC_Update(ctx, mapaddr, maclen);
+		EVP_MAC_update(ctx, mapaddr, maclen);
 		offset  += maclen;
 		len     -= maclen;
 	}
 
-	HMAC_Final(ctx, hash, NULL);
+	EVP_MAC_final(ctx, hash, &outlen, EVP_MAX_MD_SIZE);
 }
 
 static void xor_block(uint8_t *res, const uint8_t *op)
@@ -577,13 +596,8 @@ odp_crypto_alg_err_t auth_hmac_check(odp_packet_t pkt,
 static void
 auth_cmac_init(odp_crypto_generic_session_t *session)
 {
-	CMAC_CTX *ctx = local.cmac_ctx[session->idx];
-
-	CMAC_Init(ctx,
-		  session->auth.key,
-		  session->p.auth_key.length,
-		  session->auth.evp_cipher,
-		  NULL);
+	mac_init(session, local.cmac_ctx[session->idx], OSSL_MAC_PARAM_CIPHER,
+		 EVP_CIPHER_get0_name(session->auth.evp_cipher));
 }
 
 static
@@ -592,7 +606,7 @@ void packet_cmac(odp_packet_t pkt,
 		 odp_crypto_generic_session_t *session,
 		 uint8_t *hash)
 {
-	CMAC_CTX *ctx = local.cmac_ctx[session->idx];
+	EVP_MAC_CTX *ctx = local.cmac_ctx[session->idx];
 	uint32_t offset = param->auth_range.offset;
 	uint32_t len   = param->auth_range.length;
 	size_t outlen;
@@ -600,19 +614,19 @@ void packet_cmac(odp_packet_t pkt,
 	_ODP_ASSERT(offset + len <= odp_packet_len(pkt));
 
 	/* Reinitialize CMAC calculation without resetting the key */
-	CMAC_Init(ctx, NULL, 0, NULL, NULL);
+	mac_reinit(ctx, session);
 
 	while (len > 0) {
 		uint32_t seglen = 0; /* GCC */
 		void *mapaddr = odp_packet_offset(pkt, offset, &seglen, NULL);
 		uint32_t maclen = len > seglen ? seglen : len;
 
-		CMAC_Update(ctx, mapaddr, maclen);
+		EVP_MAC_update(ctx, mapaddr, maclen);
 		offset  += maclen;
 		len     -= maclen;
 	}
 
-	CMAC_Final(ctx, hash, &outlen);
+	EVP_MAC_final(ctx, hash, &outlen, EVP_MAX_MD_SIZE);
 }
 
 static
@@ -667,7 +681,7 @@ int packet_cmac_eia2(odp_packet_t pkt,
 		     odp_crypto_generic_session_t *session,
 		     uint8_t *hash)
 {
-	CMAC_CTX *ctx = local.cmac_ctx[session->idx];
+	EVP_MAC_CTX *ctx = local.cmac_ctx[session->idx];
 	const void *iv_ptr = param->auth_iv_ptr;
 	uint32_t offset = param->auth_range.offset;
 	uint32_t len    = param->auth_range.length;
@@ -676,21 +690,21 @@ int packet_cmac_eia2(odp_packet_t pkt,
 	_ODP_ASSERT(offset + len <= odp_packet_len(pkt));
 
 	/* Reinitialize CMAC calculation without resetting the key */
-	CMAC_Init(ctx, NULL, 0, NULL, NULL);
+	mac_reinit(ctx, session);
 
-	CMAC_Update(ctx, iv_ptr, session->p.auth_iv_len);
+	EVP_MAC_update(ctx, iv_ptr, session->p.auth_iv_len);
 
 	while (len > 0) {
 		uint32_t seglen = 0; /* GCC */
 		void *mapaddr = odp_packet_offset(pkt, offset, &seglen, NULL);
 		uint32_t maclen = len > seglen ? seglen : len;
 
-		CMAC_Update(ctx, mapaddr, maclen);
+		EVP_MAC_update(ctx, mapaddr, maclen);
 		offset  += maclen;
 		len     -= maclen;
 	}
 
-	if (1 != CMAC_Final(ctx, hash, &outlen))
+	if (1 != EVP_MAC_final(ctx, hash, &outlen, EVP_MAX_MD_SIZE))
 		return ODP_CRYPTO_ALG_ERR_DATA_SIZE;
 	else
 		return ODP_CRYPTO_ALG_ERR_NONE;
@@ -1463,7 +1477,7 @@ aes_ccm_decrypt_init(odp_crypto_generic_session_t *session)
 
 	EVP_DecryptInit_ex(ctx, session->cipher.evp_cipher, NULL,
 			   session->cipher.key_data, NULL);
-	EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN,
+	EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_CCM_SET_IVLEN,
 			    session->p.cipher_iv_len, NULL);
 	EVP_CIPHER_CTX_set_padding(ctx, 0);
 }
@@ -2343,6 +2357,21 @@ static void free_completion(odp_event_t event)
 	odp_packet_free(pkt);
 }
 
+static int crypto_init_global_algs(void)
+{
+	global->evp_hmac = EVP_MAC_fetch(NULL, OSSL_MAC_NAME_HMAC, NULL);
+	global->evp_cmac = EVP_MAC_fetch(NULL, OSSL_MAC_NAME_CMAC, NULL);
+
+	if (global->evp_hmac == NULL || global->evp_cmac == NULL) {
+		_ODP_ERR("EVP_MAC_fetch() failed\n");
+		EVP_MAC_free(global->evp_hmac);
+		EVP_MAC_free(global->evp_cmac);
+		return -1;
+	}
+
+	return 0;
+}
+
 int _odp_crypto_init_global(void)
 {
 	size_t mem_size;
@@ -2379,6 +2408,11 @@ int _odp_crypto_init_global(void)
 	/* Clear it out */
 	memset(global, 0, mem_size);
 
+	if (crypto_init_global_algs()) {
+		odp_shm_free(shm);
+		return -1;
+	}
+
 	_odp_pending_queue_init(&global->pending, max_pending,
 				free_completion, &global->flexible_data);
 
@@ -2411,6 +2445,9 @@ int _odp_crypto_term_global(void)
 		rc = -1;
 	}
 
+	EVP_MAC_free(global->evp_hmac);
+	EVP_MAC_free(global->evp_cmac);
+
 	ret = odp_shm_free(odp_shm_lookup("_odp_crypto_ssl_global"));
 	if (ret < 0) {
 		_ODP_ERR("shm free failed for crypto_pool\n");
@@ -2431,8 +2468,8 @@ int _odp_crypto_init_local(void)
 		return 0;
 
 	for (i = 0; i < MAX_SESSIONS; i++) {
-		local.hmac_ctx[i] = HMAC_CTX_new();
-		local.cmac_ctx[i] = CMAC_CTX_new();
+		local.hmac_ctx[i] = EVP_MAC_CTX_new(global->evp_hmac);
+		local.cmac_ctx[i] = EVP_MAC_CTX_new(global->evp_cmac);
 		local.cipher_ctx[i] = EVP_CIPHER_CTX_new();
 		local.mac_cipher_ctx[i] = EVP_CIPHER_CTX_new();
 		local.md_ctx[i] = EVP_MD_CTX_new();
@@ -2463,9 +2500,9 @@ int _odp_crypto_term_local(void)
 
 	for (i = 0; i < MAX_SESSIONS; i++) {
 		if (local.cmac_ctx[i] != NULL)
-			CMAC_CTX_free(local.cmac_ctx[i]);
+			EVP_MAC_CTX_free(local.cmac_ctx[i]);
 		if (local.hmac_ctx[i] != NULL)
-			HMAC_CTX_free(local.hmac_ctx[i]);
+			EVP_MAC_CTX_free(local.hmac_ctx[i]);
 		if (local.cipher_ctx[i] != NULL)
 			EVP_CIPHER_CTX_free(local.cipher_ctx[i]);
 		if (local.mac_cipher_ctx[i] != NULL)
