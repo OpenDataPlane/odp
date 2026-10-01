@@ -193,14 +193,20 @@ static const char *cipher_alg_name(odp_cipher_alg_t cipher)
 		return "snow3g_uea2";
 	case ODP_CIPHER_ALG_SNOW5G_NEA4:
 		return "snow5g_nea4";
+	case ODP_CIPHER_ALG_SNOW5G_NCA4:
+		return "snow5g_nca4";
 	case ODP_CIPHER_ALG_AES_EEA2:
 		return "aes_eea2";
 	case ODP_CIPHER_ALG_AES_NEA5:
 		return "aes_nea5";
+	case ODP_CIPHER_ALG_AES_NCA5:
+		return "aes_nca5";
 	case ODP_CIPHER_ALG_ZUC_EEA3:
 		return "zuc_eea3";
 	case ODP_CIPHER_ALG_ZUC_NEA6:
 		return "zuc_nea6";
+	case ODP_CIPHER_ALG_ZUC_NCA6:
+		return "zuc_nca6";
 	case ODP_CIPHER_ALG_SNOW_V:
 		return "snow_v";
 	case ODP_CIPHER_ALG_SNOW_V_GCM:
@@ -263,14 +269,20 @@ static const char *auth_alg_name(odp_auth_alg_t auth)
 		return "snow3g_uia2";
 	case ODP_AUTH_ALG_SNOW5G_NIA4:
 		return "snow5g_nia4";
+	case ODP_AUTH_ALG_SNOW5G_NCA4:
+		return "snow5g_nca4";
 	case ODP_AUTH_ALG_AES_EIA2:
 		return "aes_eia2";
 	case ODP_AUTH_ALG_AES_NIA5:
 		return "aes_nia5";
+	case ODP_AUTH_ALG_AES_NCA5:
+		return "aes_nca5";
 	case ODP_AUTH_ALG_ZUC_EIA3:
 		return "zuc_eia3";
 	case ODP_AUTH_ALG_ZUC_NIA6:
 		return "zuc_nia6";
+	case ODP_AUTH_ALG_ZUC_NCA6:
+		return "zuc_nca6";
 	case ODP_AUTH_ALG_SNOW_V_GCM:
 		return "snow_v_gcm";
 	case ODP_AUTH_ALG_SNOW_V_GMAC:
@@ -345,14 +357,20 @@ static void foreach_cipher(odp_crypto_cipher_algos_t ciphers, cipher_op_t op)
 		op(ODP_CIPHER_ALG_SNOW3G_UEA2);
 	if (ciphers.bit.snow5g_nea4)
 		op(ODP_CIPHER_ALG_SNOW5G_NEA4);
+	if (ciphers.bit.snow5g_nca4)
+		op(ODP_CIPHER_ALG_SNOW5G_NCA4);
 	if (ciphers.bit.aes_eea2)
 		op(ODP_CIPHER_ALG_AES_EEA2);
 	if (ciphers.bit.aes_nea5)
 		op(ODP_CIPHER_ALG_AES_NEA5);
+	if (ciphers.bit.aes_nca5)
+		op(ODP_CIPHER_ALG_AES_NCA5);
 	if (ciphers.bit.zuc_eea3)
 		op(ODP_CIPHER_ALG_ZUC_EEA3);
 	if (ciphers.bit.zuc_nea6)
 		op(ODP_CIPHER_ALG_ZUC_NEA6);
+	if (ciphers.bit.zuc_nca6)
+		op(ODP_CIPHER_ALG_ZUC_NCA6);
 	if (ciphers.bit.snow_v)
 		op(ODP_CIPHER_ALG_SNOW_V);
 	if (ciphers.bit.snow_v_gcm)
@@ -411,14 +429,20 @@ static void foreach_auth(odp_crypto_auth_algos_t auths, auth_op_t op)
 		op(ODP_AUTH_ALG_SNOW3G_UIA2);
 	if (auths.bit.snow5g_nia4)
 		op(ODP_AUTH_ALG_SNOW5G_NIA4);
+	if (auths.bit.snow5g_nca4)
+		op(ODP_AUTH_ALG_SNOW5G_NCA4);
 	if (auths.bit.aes_eia2)
 		op(ODP_AUTH_ALG_AES_EIA2);
 	if (auths.bit.aes_nia5)
 		op(ODP_AUTH_ALG_AES_NIA5);
+	if (auths.bit.aes_nca5)
+		op(ODP_AUTH_ALG_AES_NCA5);
 	if (auths.bit.zuc_eia3)
 		op(ODP_AUTH_ALG_ZUC_EIA3);
 	if (auths.bit.zuc_nia6)
 		op(ODP_AUTH_ALG_ZUC_NIA6);
+	if (auths.bit.zuc_nca6)
+		op(ODP_AUTH_ALG_ZUC_NCA6);
 	if (auths.bit.snow_v_gcm)
 		op(ODP_AUTH_ALG_SNOW_V_GCM);
 	if (auths.bit.snow_v_gmac)
