@@ -162,148 +162,16 @@ static const char *cpu_arch_isa(odp_system_info_t *sysinfo, int isa_sw)
 
 static const char *cipher_alg_name(odp_cipher_alg_t cipher)
 {
-	switch (cipher) {
-	case ODP_CIPHER_ALG_NULL:
-		return "null";
-	case ODP_CIPHER_ALG_DES:
-		return "des";
-	case ODP_CIPHER_ALG_3DES_CBC:
-		return "3des_cbc";
-	case ODP_CIPHER_ALG_3DES_ECB:
-		return "3des_ecb";
-	case ODP_CIPHER_ALG_AES_CBC:
-		return "aes_cbc";
-	case ODP_CIPHER_ALG_AES_CTR:
-		return "aes_ctr";
-	case ODP_CIPHER_ALG_AES_ECB:
-		return "aes_ecb";
-	case ODP_CIPHER_ALG_AES_CFB128:
-		return "aes_cfb128";
-	case ODP_CIPHER_ALG_AES_XTS:
-		return "aes_xts";
-	case ODP_CIPHER_ALG_AES_GCM:
-		return "aes_gcm";
-	case ODP_CIPHER_ALG_AES_CCM:
-		return "aes_ccm";
-	case ODP_CIPHER_ALG_CHACHA20_POLY1305:
-		return "chacha20_poly1305";
-	case ODP_CIPHER_ALG_KASUMI_F8:
-		return "kasumi_f8";
-	case ODP_CIPHER_ALG_SNOW3G_UEA2:
-		return "snow3g_uea2";
-	case ODP_CIPHER_ALG_SNOW5G_NEA4:
-		return "snow5g_nea4";
-	case ODP_CIPHER_ALG_AES_EEA2:
-		return "aes_eea2";
-	case ODP_CIPHER_ALG_ZUC_EEA3:
-		return "zuc_eea3";
-	case ODP_CIPHER_ALG_ZUC_NEA6:
-		return "zuc_nea6";
-	case ODP_CIPHER_ALG_SNOW_V:
-		return "snow_v";
-	case ODP_CIPHER_ALG_SNOW_V_GCM:
-		return "snow_v_gcm";
-	case ODP_CIPHER_ALG_SM4_ECB:
-		return "sm4_ecb";
-	case ODP_CIPHER_ALG_SM4_CBC:
-		return "sm4_cbc";
-	case ODP_CIPHER_ALG_SM4_CTR:
-		return "sm4_ctr";
-	case ODP_CIPHER_ALG_SM4_GCM:
-		return "sm4_gcm";
-	case ODP_CIPHER_ALG_SM4_CCM:
-		return "sm4_ccm";
-	default:
-		return "Unknown";
-	}
+	const char *name = odph_cipher_alg_to_str(cipher);
+
+	return name ? name : "Unknown";
 }
 
 static const char *auth_alg_name(odp_auth_alg_t auth)
 {
-	switch (auth) {
-	case ODP_AUTH_ALG_NULL:
-		return "null";
-	case ODP_AUTH_ALG_MD5_HMAC:
-		return "md5_hmac";
-	case ODP_AUTH_ALG_SHA1_HMAC:
-		return "sha1_hmac";
-	case ODP_AUTH_ALG_SHA224_HMAC:
-		return "sha224_hmac";
-	case ODP_AUTH_ALG_SHA256_HMAC:
-		return "sha256_hmac";
-	case ODP_AUTH_ALG_SHA384_HMAC:
-		return "sha384_hmac";
-	case ODP_AUTH_ALG_SHA512_HMAC:
-		return "sha512_hmac";
-	case ODP_AUTH_ALG_SHA3_224_HMAC:
-		return "sha3_224_hmac";
-	case ODP_AUTH_ALG_SHA3_256_HMAC:
-		return "sha3_256_hmac";
-	case ODP_AUTH_ALG_SHA3_384_HMAC:
-		return "sha3_384_hmac";
-	case ODP_AUTH_ALG_SHA3_512_HMAC:
-		return "sha3_512_hmac";
-	case ODP_AUTH_ALG_AES_GCM:
-		return "aes_gcm";
-	case ODP_AUTH_ALG_AES_GMAC:
-		return "aes_gmac";
-	case ODP_AUTH_ALG_AES_CCM:
-		return "aes_ccm";
-	case ODP_AUTH_ALG_AES_CMAC:
-		return "aes_cmac";
-	case ODP_AUTH_ALG_AES_XCBC_MAC:
-		return "aes_xcbc_mac";
-	case ODP_AUTH_ALG_CHACHA20_POLY1305:
-		return "chacha20_poly1305";
-	case ODP_AUTH_ALG_KASUMI_F9:
-		return "kasumi_f9";
-	case ODP_AUTH_ALG_SNOW3G_UIA2:
-		return "snow3g_uia2";
-	case ODP_AUTH_ALG_SNOW5G_NIA4:
-		return "snow5g_nia4";
-	case ODP_AUTH_ALG_AES_EIA2:
-		return "aes_eia2";
-	case ODP_AUTH_ALG_ZUC_EIA3:
-		return "zuc_eia3";
-	case ODP_AUTH_ALG_ZUC_NIA6:
-		return "zuc_nia6";
-	case ODP_AUTH_ALG_SNOW_V_GCM:
-		return "snow_v_gcm";
-	case ODP_AUTH_ALG_SNOW_V_GMAC:
-		return "snow_v_gmac";
-	case ODP_AUTH_ALG_SM3_HMAC:
-		return "sm3_hmac";
-	case ODP_AUTH_ALG_SM4_GCM:
-		return "sm4_gcm";
-	case ODP_AUTH_ALG_SM4_GMAC:
-		return "sm4_gmac";
-	case ODP_AUTH_ALG_SM4_CCM:
-		return "sm4_ccm";
-	case ODP_AUTH_ALG_MD5:
-		return "md5";
-	case ODP_AUTH_ALG_SHA1:
-		return "sha1";
-	case ODP_AUTH_ALG_SHA224:
-		return "sha224";
-	case ODP_AUTH_ALG_SHA256:
-		return "sha256";
-	case ODP_AUTH_ALG_SHA384:
-		return "sha384";
-	case ODP_AUTH_ALG_SHA512:
-		return "sha512";
-	case ODP_AUTH_ALG_SHA3_224:
-		return "sha3_224";
-	case ODP_AUTH_ALG_SHA3_256:
-		return "sha3_256";
-	case ODP_AUTH_ALG_SHA3_384:
-		return "sha3_384";
-	case ODP_AUTH_ALG_SHA3_512:
-		return "sha3_512";
-	case ODP_AUTH_ALG_SM3:
-		return "sm3";
-	default:
-		return "Unknown";
-	}
+	const char *name = odph_auth_alg_to_str(auth);
+
+	return name ? name : "Unknown";
 }
 
 typedef void (*cipher_op_t)(odp_cipher_alg_t alg);
