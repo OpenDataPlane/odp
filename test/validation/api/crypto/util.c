@@ -58,6 +58,8 @@ const char *auth_alg_name(odp_auth_alg_t auth)
 		return "ODP_AUTH_ALG_SNOW5G_NIA4";
 	case ODP_AUTH_ALG_AES_EIA2:
 		return "ODP_AUTH_ALG_AES_EIA2";
+	case ODP_AUTH_ALG_AES_NIA5:
+		return "ODP_AUTH_ALG_AES_NIA5";
 	case ODP_AUTH_ALG_ZUC_EIA3:
 		return "ODP_AUTH_ALG_ZUC_EIA3";
 	case ODP_AUTH_ALG_ZUC_NIA6:
@@ -136,6 +138,8 @@ const char *cipher_alg_name(odp_cipher_alg_t cipher)
 		return "ODP_CIPHER_ALG_SNOW5G_NEA4";
 	case ODP_CIPHER_ALG_AES_EEA2:
 		return "ODP_CIPHER_ALG_AES_EEA2";
+	case ODP_CIPHER_ALG_AES_NEA5:
+		return "ODP_CIPHER_ALG_AES_NEA5";
 	case ODP_CIPHER_ALG_ZUC_EEA3:
 		return "ODP_CIPHER_ALG_ZUC_EEA3";
 	case ODP_CIPHER_ALG_ZUC_NEA6:
@@ -249,6 +253,10 @@ int check_alg_support(odp_cipher_alg_t cipher, odp_auth_alg_t auth)
 		break;
 	case ODP_CIPHER_ALG_AES_EEA2:
 		if (!capability.ciphers.bit.aes_eea2)
+			return ODP_TEST_INACTIVE;
+		break;
+	case ODP_CIPHER_ALG_AES_NEA5:
+		if (!capability.ciphers.bit.aes_nea5)
 			return ODP_TEST_INACTIVE;
 		break;
 	case ODP_CIPHER_ALG_ZUC_EEA3:
@@ -376,6 +384,10 @@ int check_alg_support(odp_cipher_alg_t cipher, odp_auth_alg_t auth)
 		break;
 	case ODP_AUTH_ALG_AES_EIA2:
 		if (!capability.auths.bit.aes_eia2)
+			return ODP_TEST_INACTIVE;
+		break;
+	case ODP_AUTH_ALG_AES_NIA5:
+		if (!capability.auths.bit.aes_nia5)
 			return ODP_TEST_INACTIVE;
 		break;
 	case ODP_AUTH_ALG_ZUC_EIA3:
