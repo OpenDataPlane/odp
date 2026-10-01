@@ -244,9 +244,9 @@ memory allocation failures and name lookups which cannot be satisfied, abort imm
     - type: string
     - values: `"null"`, `"des"`, `"3des_cbc"`, `"3des_ecb"`, `"aes_cbc"`, `"aes_ctr"`, `"aes_ecb"`,
               `"aes_cfb128"`, `"aes_xts"`, `"aes_gcm"`, `"aes_ccm"`, `"chacha20_poly1305"`,
-              `"kasumi_f8"`, `"snow3g_uae2"`, `"aes_eea2"`, `"zuc_eea3"`, `"snow_v"`,
-              `"snow_v_gcm"`, `"sm4_ecb"`, `"sm4_cbc"`, `"sm4_ctr"`, `"sm4_gcm"`, `"sm4_ccm"`,
-              mapping to `odp_cipher_alg_t`
+              `"kasumi_f8"`, `"snow3g_uea2"`, `"snow5g_nea4"`, `"aes_eea2"`, `"zuc_eea3"`,
+              `"zuc_nea6"`, `"snow_v"`, `"snow_v_gcm"`, `"sm4_ecb"`, `"sm4_cbc"`, `"sm4_ctr"`,
+              `"sm4_gcm"`, `"sm4_ccm"`, mapping to `odp_cipher_alg_t`
     - default: `odp_crypto_session_param_init()`
   - element: `cipher_key_data`
     - necessity: required if `cipher_alg` != `"null"`
@@ -263,9 +263,11 @@ memory allocation failures and name lookups which cannot be satisfied, abort imm
     - type: string
     - values: `"null"`, `"md5_hmac"`, `"sha1_hmac"`, `"sha224_hmac"`, `"sha256_hmac"`,
               `"sha384_hmac"`, `"sha512_hmac"`, `"sha3_224_hmac"`, `"sha3_256_hmac"`,
-              `"sha3_384_hmac"`, `"sha3_512_hmac"`, `"aes_gmac"`, `"aes_cmac"`, `"aed_xcbc_mac"`,
-              `"kasumi_f9"`, `"snow3g_uia2"`, `"aes_eia2"`, `"zuc_eia3"`, `"snow_v_gmac"`,
-              `"sm3_hmac"`, `"sm4_gmac"`, `"md5"`, `"sha1"`, `"sha224"`, `"sha3_256"`,
+              `"sha3_384_hmac"`, `"sha3_512_hmac"`, `"aes_gcm"`, `"aes_gmac"`, `"aes_ccm"`,
+              `"aes_cmac"`, `"aes_xcbc_mac"`, `"chacha20_poly1305"`, `"kasumi_f9"`, `"snow3g_uia2"`,
+              `"snow5g_nia4"`, `"aes_eia2"`, `"zuc_eia3"`, `"zuc_nia6"`, `"snow_v_gcm"`,
+              `"snow_v_gmac"`, `"sm3_hmac"`, `"sm4_gcm"`, `"sm4_gmac"`, `"sm4_ccm"`, `"md5"`,
+              `"sha1"`, `"sha224"`, `"sha256"`, `"sha384"`, `"sha512"`, `"sha3_224"`, `"sha3_256"`,
               `"sha3_384"`, `"sha3_512"`, `"sm3"`, mapping to `odp_auth_alg_t`
   - element: `auth_key_data`
     - necessity: required if `auth_alg` != `"null"`

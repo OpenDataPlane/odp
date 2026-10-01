@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright (c) 2025 Nokia
+ * Copyright (c) 2025-2026 Nokia
  */
 
 /** @cond _ODP_HIDE_FROM_DOXYGEN_ */
@@ -21,7 +21,7 @@
 
 #define CONF_STR_NAME "name"
 #define CONF_STR_OP "op"
-#define CONF_STR_CIPHER_ALG "chiper_alg"
+#define CONF_STR_CIPHER_ALG "cipher_alg"
 #define CONF_STR_CIPHER_KEY_DATA "cipher_key_data"
 #define CONF_STR_CIPHER_KEY_LEN "cipher_key_len"
 #define CONF_STR_CIPHER_IV_LEN "cipher_iv_len"
@@ -48,9 +48,11 @@
 #define CIPHER_AUTH_AES_CCM "aes_ccm"
 #define CIPHER_AUTH_CHACHA20_POLY1305 "chacha20_poly1305"
 #define CIPHER_KASUMI_F8 "kasumi_f8"
-#define CIPHER_SNOW3G_UEA2 "snow3g_uae2"
+#define CIPHER_SNOW3G_UEA2 "snow3g_uea2"
+#define CIPHER_SNOW5G_NEA4 "snow5g_nea4"
 #define CIPHER_AES_EEA2 "aes_eea2"
 #define CIPHER_ZUC_EEA3 "zuc_eea3"
+#define CIPHER_ZUC_NEA6 "zuc_nea6"
 #define CIPHER_SNOW_V "snow_v"
 #define CIPHER_AUTH_SNOW_V_GCM "snow_v_gcm"
 #define CIPHER_SM4_ECB "sm4_ecb"
@@ -70,11 +72,13 @@
 #define AUTH_SHA3_512_HMAC "sha3_512_hmac"
 #define AUTH_AES_GMAC "aes_gmac"
 #define AUTH_AES_CMAC "aes_cmac"
-#define AUTH_AES_XCBC_MAC "aed_xcbc_mac"
+#define AUTH_AES_XCBC_MAC "aes_xcbc_mac"
 #define AUTH_KASUMI_F9 "kasumi_f9"
 #define AUTH_SNOW3G_UIA2 "snow3g_uia2"
+#define AUTH_SNOW5G_NIA4 "snow5g_nia4"
 #define AUTH_AES_EIA2 "aes_eia2"
 #define AUTH_ZUC_EIA3 "zuc_eia3"
+#define AUTH_ZUC_NIA6 "zuc_nia6"
 #define AUTH_SNOW_V_GMAC "snow_v_gmac"
 #define AUTH_SM3_HMAC "sm3_hmac"
 #define AUTH_SM4_GMAC "sm4_gmac"
@@ -148,6 +152,8 @@ static odp_bool_t parse_crypto_entry(config_setting_t *cs, crypto_parse_t *crypt
 			crypto->param.cipher_alg = ODP_CIPHER_ALG_3DES_ECB;
 		} else if (strcmp(val_str, CIPHER_AES_CBC) == 0) {
 			crypto->param.cipher_alg = ODP_CIPHER_ALG_AES_CBC;
+		} else if (strcmp(val_str, CIPHER_AES_CTR) == 0) {
+			crypto->param.cipher_alg = ODP_CIPHER_ALG_AES_CTR;
 		} else if (strcmp(val_str, CIPHER_AES_ECB) == 0) {
 			crypto->param.cipher_alg = ODP_CIPHER_ALG_AES_ECB;
 		} else if (strcmp(val_str, CIPHER_AES_CFB128) == 0) {
@@ -164,10 +170,14 @@ static odp_bool_t parse_crypto_entry(config_setting_t *cs, crypto_parse_t *crypt
 			crypto->param.cipher_alg = ODP_CIPHER_ALG_KASUMI_F8;
 		} else if (strcmp(val_str, CIPHER_SNOW3G_UEA2) == 0) {
 			crypto->param.cipher_alg = ODP_CIPHER_ALG_SNOW3G_UEA2;
+		} else if (strcmp(val_str, CIPHER_SNOW5G_NEA4) == 0) {
+			crypto->param.cipher_alg = ODP_CIPHER_ALG_SNOW5G_NEA4;
 		} else if (strcmp(val_str, CIPHER_AES_EEA2) == 0) {
 			crypto->param.cipher_alg = ODP_CIPHER_ALG_AES_EEA2;
 		} else if (strcmp(val_str, CIPHER_ZUC_EEA3) == 0) {
 			crypto->param.cipher_alg = ODP_CIPHER_ALG_ZUC_EEA3;
+		} else if (strcmp(val_str, CIPHER_ZUC_NEA6) == 0) {
+			crypto->param.cipher_alg = ODP_CIPHER_ALG_ZUC_NEA6;
 		} else if (strcmp(val_str, CIPHER_SNOW_V) == 0) {
 			crypto->param.cipher_alg = ODP_CIPHER_ALG_SNOW_V;
 		} else if (strcmp(val_str, CIPHER_AUTH_SNOW_V_GCM) == 0) {
@@ -235,26 +245,42 @@ static odp_bool_t parse_crypto_entry(config_setting_t *cs, crypto_parse_t *crypt
 			crypto->param.auth_alg = ODP_AUTH_ALG_SHA3_384_HMAC;
 		} else if (strcmp(val_str, AUTH_SHA3_512_HMAC) == 0) {
 			crypto->param.auth_alg = ODP_AUTH_ALG_SHA3_512_HMAC;
+		} else if (strcmp(val_str, CIPHER_AUTH_AES_GCM) == 0) {
+			crypto->param.auth_alg = ODP_AUTH_ALG_AES_GCM;
 		} else if (strcmp(val_str, AUTH_AES_GMAC) == 0) {
 			crypto->param.auth_alg = ODP_AUTH_ALG_AES_GMAC;
+		} else if (strcmp(val_str, CIPHER_AUTH_AES_CCM) == 0) {
+			crypto->param.auth_alg = ODP_AUTH_ALG_AES_CCM;
 		} else if (strcmp(val_str, AUTH_AES_CMAC) == 0) {
 			crypto->param.auth_alg = ODP_AUTH_ALG_AES_CMAC;
 		} else if (strcmp(val_str, AUTH_AES_XCBC_MAC) == 0) {
 			crypto->param.auth_alg = ODP_AUTH_ALG_AES_XCBC_MAC;
+		} else if (strcmp(val_str, CIPHER_AUTH_CHACHA20_POLY1305) == 0) {
+			crypto->param.auth_alg = ODP_AUTH_ALG_CHACHA20_POLY1305;
 		} else if (strcmp(val_str, AUTH_KASUMI_F9) == 0) {
 			crypto->param.auth_alg = ODP_AUTH_ALG_KASUMI_F9;
 		} else if (strcmp(val_str, AUTH_SNOW3G_UIA2) == 0) {
 			crypto->param.auth_alg = ODP_AUTH_ALG_SNOW3G_UIA2;
+		} else if (strcmp(val_str, AUTH_SNOW5G_NIA4) == 0) {
+			crypto->param.auth_alg = ODP_AUTH_ALG_SNOW5G_NIA4;
 		} else if (strcmp(val_str, AUTH_AES_EIA2) == 0) {
 			crypto->param.auth_alg = ODP_AUTH_ALG_AES_EIA2;
 		} else if (strcmp(val_str, AUTH_ZUC_EIA3) == 0) {
 			crypto->param.auth_alg = ODP_AUTH_ALG_ZUC_EIA3;
+		} else if (strcmp(val_str, AUTH_ZUC_NIA6) == 0) {
+			crypto->param.auth_alg = ODP_AUTH_ALG_ZUC_NIA6;
+		} else if (strcmp(val_str, CIPHER_AUTH_SNOW_V_GCM) == 0) {
+			crypto->param.auth_alg = ODP_AUTH_ALG_SNOW_V_GCM;
 		} else if (strcmp(val_str, AUTH_SNOW_V_GMAC) == 0) {
 			crypto->param.auth_alg = ODP_AUTH_ALG_SNOW_V_GMAC;
 		} else if (strcmp(val_str, AUTH_SM3_HMAC) == 0) {
 			crypto->param.auth_alg = ODP_AUTH_ALG_SM3_HMAC;
+		} else if (strcmp(val_str, CIPHER_AUTH_SM4_GCM) == 0) {
+			crypto->param.auth_alg = ODP_AUTH_ALG_SM4_GCM;
 		} else if (strcmp(val_str, AUTH_SM4_GMAC) == 0) {
 			crypto->param.auth_alg = ODP_AUTH_ALG_SM4_GMAC;
+		} else if (strcmp(val_str, CIPHER_AUTH_SM4_CCM) == 0) {
+			crypto->param.auth_alg = ODP_AUTH_ALG_SM4_CCM;
 		} else if (strcmp(val_str, AUTH_MD5) == 0) {
 			crypto->param.auth_alg = ODP_AUTH_ALG_MD5;
 		} else if (strcmp(val_str, AUTH_SHA1) == 0) {
