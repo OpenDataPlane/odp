@@ -10,6 +10,7 @@
 #include <odp_cunit_common.h>
 #include "test_vectors.h"
 #include "test_vector_defs.h"
+#include "test_vector_file.h"
 #include "crypto_op_test.h"
 #include "util.h"
 
@@ -2191,6 +2192,33 @@ static int crypto_suite_term(void)
 	return odp_cunit_print_inactive();
 }
 
+static int check_file_vectors(void)
+{
+	return test_vector_file_num_sets() > 0 ? ODP_TEST_ACTIVE : ODP_TEST_INACTIVE;
+}
+
+static void test_file_vectors(void)
+{
+	int num_sets = test_vector_file_num_sets();
+
+	for (int n = 0; n < num_sets; n++) {
+		const test_vector_set_t *set = test_vector_file_set(n);
+		crypto_test_reference_t *ref = set->refs;
+
+		if (check_alg_support(ref->cipher, ref->auth) == ODP_TEST_INACTIVE) {
+			printf("\n    Skipping %s: unsupported algorithms %s, %s\n",
+			       set->location,
+			       cipher_alg_name(ref->cipher),
+			       auth_alg_name(ref->auth));
+			continue;
+		}
+
+		printf("\n    %s\n", set->location);
+		check_alg(ODP_CRYPTO_OP_ENCODE, ref, set->num_refs);
+		check_alg(ODP_CRYPTO_OP_DECODE, ref, set->num_refs);
+	}
+}
+
 odp_testinfo_t crypto_suite[] = {
 	ODP_TEST_INFO(test_capability),
 	ODP_TEST_INFO(test_default_values),
@@ -2332,6 +2360,8 @@ odp_testinfo_t crypto_suite[] = {
 				  check_alg_sha512),
 	ODP_TEST_INFO(test_auth_hashes_in_auth_range),
 	ODP_TEST_INFO(test_all_combinations),
+	ODP_TEST_INFO_CONDITIONAL(test_file_vectors,
+				  check_file_vectors),
 	ODP_TEST_INFO_NULL,
 };
 
@@ -2459,6 +2489,11 @@ int main(int argc, char *argv[])
 	if (odp_cunit_parse_options(&argc, argv))
 		return -1;
 
+	for (int i = 1; i < argc; i++) {
+		if (test_vector_file_load(argv[i]))
+			return -1;
+	}
+
 	odp_cunit_register_global_init(crypto_init);
 	odp_cunit_register_global_term(crypto_term);
 
@@ -2467,5 +2502,6 @@ int main(int argc, char *argv[])
 	if (ret == 0)
 		ret = odp_cunit_run();
 
+	test_vector_file_free();
 	return ret;
 }

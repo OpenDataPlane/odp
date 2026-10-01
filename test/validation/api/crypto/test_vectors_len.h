@@ -9,7 +9,7 @@
 #define MAX_KEY_LEN         64
 #define MAX_IV_LEN          32
 #define MAX_DATA_LEN        1000
-#define MAX_AAD_LEN         12
+#define MAX_AAD_LEN         128
 #define MAX_DIGEST_LEN      64
 
 /* TDES-CBC */
