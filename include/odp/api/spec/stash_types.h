@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright (c) 2020-2023 Nokia
+ * Copyright (c) 2020-2026 Nokia
  */
 
 /**
@@ -181,6 +181,12 @@ typedef struct odp_stash_capability_t {
 
 		/** Maximum number of 16 byte object handles */
 		uint64_t u128;
+
+		/** Maximum number of pointers
+		 *
+		 *  Equal to the maximum number of sizeof(uintptr_t) byte object handles.
+		 */
+		uint64_t ptr;
 
 		/** Maximum number of 'max_obj_size' object handles */
 		uint64_t max_obj_size;
