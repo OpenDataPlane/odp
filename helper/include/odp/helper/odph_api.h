@@ -18,6 +18,7 @@
 #include <odp/helper/autoheader_external.h>
 
 #include <odp/helper/chksum.h>
+#include <odp/helper/crypto.h>
 #include <odp/helper/debug.h>
 #include <odp/helper/eth.h>
 #include <odp/helper/gtp.h>
