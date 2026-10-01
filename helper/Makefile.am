@@ -16,6 +16,7 @@ helperinclude_HEADERS = \
 		  include/odp/helper/autoheader_external.h\
 		  include/odp/helper/deprecated.h\
 		  include/odp/helper/chksum.h\
+		  include/odp/helper/crypto.h\
 		  include/odp/helper/debug.h \
 		  include/odp/helper/eth.h\
 		  include/odp/helper/gtp.h\
@@ -53,6 +54,7 @@ __LIB__libodphelper_la_SOURCES = \
 					eth.c \
 					ip.c \
 					chksum.c \
+					crypto.c \
 					ipsec.c \
 					threads.c \
 					version.c
