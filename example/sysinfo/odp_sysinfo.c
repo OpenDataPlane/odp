@@ -195,6 +195,8 @@ static const char *cipher_alg_name(odp_cipher_alg_t cipher)
 		return "snow5g_nea4";
 	case ODP_CIPHER_ALG_AES_EEA2:
 		return "aes_eea2";
+	case ODP_CIPHER_ALG_AES_NEA5:
+		return "aes_nea5";
 	case ODP_CIPHER_ALG_ZUC_EEA3:
 		return "zuc_eea3";
 	case ODP_CIPHER_ALG_ZUC_NEA6:
@@ -263,6 +265,8 @@ static const char *auth_alg_name(odp_auth_alg_t auth)
 		return "snow5g_nia4";
 	case ODP_AUTH_ALG_AES_EIA2:
 		return "aes_eia2";
+	case ODP_AUTH_ALG_AES_NIA5:
+		return "aes_nia5";
 	case ODP_AUTH_ALG_ZUC_EIA3:
 		return "zuc_eia3";
 	case ODP_AUTH_ALG_ZUC_NIA6:
@@ -343,6 +347,8 @@ static void foreach_cipher(odp_crypto_cipher_algos_t ciphers, cipher_op_t op)
 		op(ODP_CIPHER_ALG_SNOW5G_NEA4);
 	if (ciphers.bit.aes_eea2)
 		op(ODP_CIPHER_ALG_AES_EEA2);
+	if (ciphers.bit.aes_nea5)
+		op(ODP_CIPHER_ALG_AES_NEA5);
 	if (ciphers.bit.zuc_eea3)
 		op(ODP_CIPHER_ALG_ZUC_EEA3);
 	if (ciphers.bit.zuc_nea6)
@@ -407,6 +413,8 @@ static void foreach_auth(odp_crypto_auth_algos_t auths, auth_op_t op)
 		op(ODP_AUTH_ALG_SNOW5G_NIA4);
 	if (auths.bit.aes_eia2)
 		op(ODP_AUTH_ALG_AES_EIA2);
+	if (auths.bit.aes_nia5)
+		op(ODP_AUTH_ALG_AES_NIA5);
 	if (auths.bit.zuc_eia3)
 		op(ODP_AUTH_ALG_ZUC_EIA3);
 	if (auths.bit.zuc_nia6)
