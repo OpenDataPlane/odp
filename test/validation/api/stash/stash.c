@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright (c) 2020-2023 Nokia
+ * Copyright (c) 2020-2026 Nokia
  */
 
 #include <odp_api.h>
@@ -135,6 +135,14 @@ static void stash_capability(void)
 		CU_ASSERT(capa.max_num.u128 >= capa.max_num_obj);
 	if (capa.max_obj_size < 16)
 		CU_ASSERT(capa.max_num.u128 == 0);
+	if (capa.max_obj_size >= sizeof(uintptr_t))
+		CU_ASSERT(capa.max_num.ptr >= capa.max_num_obj);
+	if (capa.max_obj_size < sizeof(uintptr_t))
+		CU_ASSERT(capa.max_num.ptr == 0);
+	if (sizeof(uintptr_t) == sizeof(uint32_t))
+		CU_ASSERT(capa.max_num.ptr == capa.max_num.u32);
+	if (sizeof(uintptr_t) == sizeof(uint64_t))
+		CU_ASSERT(capa.max_num.ptr == capa.max_num.u64);
 
 	memset(&capa, 0, sizeof(odp_stash_capability_t));
 	CU_ASSERT_FATAL(odp_stash_capability(&capa, ODP_STASH_TYPE_FIFO) == 0);
@@ -160,6 +168,14 @@ static void stash_capability(void)
 		CU_ASSERT(capa.max_num.u128 >= capa.max_num_obj);
 	if (capa.max_obj_size < 16)
 		CU_ASSERT(capa.max_num.u128 == 0);
+	if (capa.max_obj_size >= sizeof(uintptr_t))
+		CU_ASSERT(capa.max_num.ptr >= capa.max_num_obj);
+	if (capa.max_obj_size < sizeof(uintptr_t))
+		CU_ASSERT(capa.max_num.ptr == 0);
+	if (sizeof(uintptr_t) == sizeof(uint32_t))
+		CU_ASSERT(capa.max_num.ptr == capa.max_num.u32);
+	if (sizeof(uintptr_t) == sizeof(uint64_t))
+		CU_ASSERT(capa.max_num.ptr == capa.max_num.u64);
 }
 
 static void param_defaults(uint8_t fill)
