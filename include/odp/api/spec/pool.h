@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2015-2018 Linaro Limited
- * Copyright (c) 2020-2023 Nokia
+ * Copyright (c) 2020-2026 Nokia
  */
 
 /**
@@ -261,7 +261,8 @@ odp_pool_t odp_pool_ext_create(const char *name, const odp_pool_ext_param_t *par
  * Populate can be called multiple times to add memory buffers into the pool. Application must
  * populate the pool with the exact number of buffers specified in pool parameters. The pool is
  * ready to be used for allocations only after all populate calls have returned successfully.
- * Application marks the last populate call with ODP_POOL_POPULATE_DONE flag.
+ * Application marks the last populate call with ODP_POOL_POPULATE_DONE flag. Pool population status
+ * can be checked with odp_pool_info() (see odp_pool_info_t::pool_ext_populated).
  *
  * Depending on pool usage (and ODP implementation), the memory may need to be accessible by
  * HW accelerators. Application may use e.g. odp_shm_reserve() with ODP_SHM_HW_ACCESS flag to
