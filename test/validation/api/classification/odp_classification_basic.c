@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2015-2018 Linaro Limited
- * Copyright (c) 2021-2025 Nokia
+ * Copyright (c) 2021-2026 Nokia
  */
 
 #include <odp_cunit_common.h>
@@ -242,7 +242,11 @@ static void cls_create_pmr_match(void)
 	CU_ASSERT_FATAL(pkt_pool != ODP_POOL_INVALID);
 
 	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED, pkt_pool, true);
-	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
+	if (pktio == ODP_PKTIO_INVALID) {
+		CU_FAIL("pktio creation failed");
+		CU_ASSERT(odp_pool_destroy(pkt_pool) == 0);
+		return;
+	}
 
 	configure_default_cos(pktio, &default_cos,
 			      &default_queue, &default_pool);
@@ -318,7 +322,11 @@ static void cls_max_pmr_from_default_action(int drop)
 	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
 
 	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED, pool, true);
-	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
+	if (pktio == ODP_PKTIO_INVALID) {
+		CU_FAIL("pktio creation failed");
+		CU_ASSERT(odp_pool_destroy(pool) == 0);
+		return;
+	}
 
 	num_cos = capa.max_cos;
 
@@ -450,7 +458,11 @@ static void cls_create_pmr_multi(void)
 	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
 
 	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED, pool, true);
-	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
+	if (pktio == ODP_PKTIO_INVALID) {
+		CU_FAIL("pktio creation failed");
+		CU_ASSERT(odp_pool_destroy(pool) == 0);
+		return;
+	}
 
 	num_cos = capa.max_cos;
 	if (num_cos > MAX_HANDLES)
@@ -651,7 +663,11 @@ static void cls_pmr_composite_create(void)
 	CU_ASSERT_FATAL(pkt_pool != ODP_POOL_INVALID);
 
 	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED, pkt_pool, true);
-	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
+	if (pktio == ODP_PKTIO_INVALID) {
+		CU_FAIL("pktio creation failed");
+		CU_ASSERT(odp_pool_destroy(pkt_pool) == 0);
+		return;
+	}
 
 	configure_default_cos(pktio, &default_cos,
 			      &default_queue, &default_pool);
