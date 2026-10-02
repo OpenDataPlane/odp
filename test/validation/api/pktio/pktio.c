@@ -14,7 +14,17 @@
 #include "parser.h"
 #include "lso.h"
 
-#define PKT_BUF_NUM            128
+/*
+ * pktios may reserve packets for RX and may not free all sent packets back
+ * to the packet pool after TX completion. This makes the pool effectively
+ * smaller than requested (and the same applies to vector pools).
+ *
+ * Since there is no way in ODP API to get information on how many packets
+ * or vectors pktios may keep to themselves, we just make the pools somewhat
+ * larger than we would need ourselves.
+ */
+#define PKT_BUF_NUM            1500
+
 #define PKT_BUF_SIZE           (9 * 1024)
 #define PKT_LEN_NORMAL         64
 
@@ -4620,10 +4630,7 @@ static int create_pool(const char *iface, int num)
 
 	odp_pool_param_init(&params);
 	set_pool_len(&params, &global.pool_capa);
-	/* Allocate enough buffers taking into consideration core starvation
-	 * due to caching */
-	params.pkt.num     = clamp_to_capa(PKT_BUF_NUM + params.pkt.cache_size,
-					   global.pool_capa.pkt.max_num);
+	params.pkt.num     = clamp_to_capa(PKT_BUF_NUM, global.pool_capa.pkt.max_num);
 	params.type        = ODP_POOL_PACKET;
 
 	snprintf(pool_name, sizeof(pool_name), "pkt_pool_%s_%d",
