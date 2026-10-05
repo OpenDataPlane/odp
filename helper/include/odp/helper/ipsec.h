@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2014-2018 Linaro Limited
- * Copyright (c) 2021 Nokia
+ * Copyright (c) 2021-2026 Nokia
  */
 
 
@@ -77,14 +77,17 @@ ODP_STATIC_ASSERT(sizeof(odph_ahhdr_t) == ODPH_AHHDR_LEN,
  * is supported by the implementation. The caller provides the IPSEC
  * capability structure as an argument to the helper function.
  *
+ * If the default ICV length is undefined or implementation specific, this
+ * function returns a negative value.
+ *
  * @param      capa            IPSEC capability structure
  * @param      cipher_alg      Cipher algorithm
  * @param      cipher_key_len  Length of cipher key in bytes
  * @param      auth_alg        Authentication algorithm
  * @param      auth_key_len    Length of authentication key in bytes
  *
- * @retval 0  on success
- * @retval <0 on failure
+ * @retval 0   configuration is supported
+ * @retval <0  configuration is not supported
  */
 int odph_ipsec_alg_check(const odp_ipsec_capability_t *capa,
 			 odp_cipher_alg_t cipher_alg,
@@ -97,12 +100,15 @@ int odph_ipsec_alg_check(const odp_ipsec_capability_t *capa,
  *
  * IPsec API specifies default ICV length for each authentication and
  * combined mode algorithm. This function returns the default ICV length.
+ * If the default value is undefined or implementation specific, this
+ * function returns a negative value.
  *
  * @param      auth_alg   Authentication algorithm
  *
- * @return                The default ICV length in bytes
+ * @retval >=0            The default ICV length in bytes
+ * @retval <0             Default ICV length is not defined
  */
-uint32_t odph_ipsec_auth_icv_len_default(odp_auth_alg_t auth_alg);
+int odph_ipsec_auth_icv_len_default(odp_auth_alg_t auth_alg);
 
 /**
  * @}

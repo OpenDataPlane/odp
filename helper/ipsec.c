@@ -8,9 +8,9 @@
 #include <odp/helper/debug.h>
 #include <odp/helper/ipsec.h>
 
-uint32_t odph_ipsec_auth_icv_len_default(odp_auth_alg_t auth_alg)
+int odph_ipsec_auth_icv_len_default(odp_auth_alg_t auth_alg)
 {
-	uint32_t icv_len;
+	int icv_len;
 
 	switch (auth_alg) {
 	case ODP_AUTH_ALG_NULL:
@@ -53,8 +53,7 @@ uint32_t odph_ipsec_auth_icv_len_default(odp_auth_alg_t auth_alg)
 		icv_len = 32;
 		break;
 	default:
-		ODPH_DBG("Unsupported authentication algorithm\n");
-		icv_len = 0;
+		icv_len = -1;
 		break;
 	}
 	return icv_len;
@@ -67,12 +66,18 @@ int odph_ipsec_alg_check(const odp_ipsec_capability_t *capa,
 			 uint32_t auth_key_len)
 {
 	int i, num, max_capa;
-	uint32_t default_icv_len;
+	int default_icv_len;
 	odp_bool_t found;
 
 	if (!odph_cipher_supported(&capa->ciphers, cipher_alg) ||
 	    !odph_auth_supported(&capa->auths, auth_alg))
 		return -1;
+
+	default_icv_len = odph_ipsec_auth_icv_len_default(auth_alg);
+	if (default_icv_len < 0) {
+		ODPH_DBG("No default ICV length defined\n");
+		return -1;
+	}
 
 	/* Check whether requested cipher key length is supported */
 	max_capa = odp_ipsec_cipher_capability(cipher_alg, NULL, 0);
@@ -113,18 +118,17 @@ int odph_ipsec_alg_check(const odp_ipsec_capability_t *capa,
 		return -1;
 	}
 
-	default_icv_len = odph_ipsec_auth_icv_len_default(auth_alg);
 	found = false;
 	for (i = 0; i < num; i++) {
 		if (auth_capa[i].key_len == auth_key_len &&
-		    auth_capa[i].icv_len == default_icv_len) {
+		    (int)auth_capa[i].icv_len == default_icv_len) {
 			found = 1;
 			break;
 		}
 	}
 
 	if (!found) {
-		ODPH_DBG("Unsupported auth key length & ICV length pair\n");
+		ODPH_DBG("Unsupported auth key length & default ICV length pair\n");
 		return -1;
 	}
 
