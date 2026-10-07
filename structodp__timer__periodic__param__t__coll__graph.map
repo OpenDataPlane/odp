@@ -1,0 +1,7 @@
+<map id="odp_timer_periodic_param_t" name="odp_timer_periodic_param_t">
+<area shape="rect" id="Node000001" title="Periodic timer parameters." alt="" coords="80,93,227,133"/>
+<area shape="rect" id="Node000002" href="$struct__odp__abi__queue__t.html" title=" " alt="" coords="5,5,144,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="95,39,139,91,135,95,91,43"/>
+<area shape="rect" id="Node000003" href="$structodp__fract__u64__t.html" title="Unsigned 64 bit fractional number." alt="" coords="169,5,295,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="216,43,171,95,167,91,211,39"/>
+</map>

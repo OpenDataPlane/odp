@@ -1,0 +1,7 @@
+<map id="rwlock_recursive.h" name="rwlock_recursive.h">
+<area shape="rect" id="Node000001" title="ODP recursive read/write lock." alt="" coords="103,5,247,31"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,79,167,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="163,33,113,72,110,68,159,29"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="191,79,341,104"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="192,29,242,68,239,72,188,33"/>
+</map>

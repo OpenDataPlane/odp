@@ -1,0 +1,28 @@
+<map id="odp_cls_cos_param" name="odp_cls_cos_param">
+<area shape="rect" id="Node000001" title="Class of service parameters Used to communicate class of service creation options." alt="" coords="976,191,1125,217"/>
+<area shape="rect" id="Node000002" href="$struct__odp__abi__queue__t.html" title=" " alt="" coords="657,9,795,34"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="810,14,883,23,919,34,953,51,989,83,1017,122,1036,161,1048,190,1043,192,1031,163,1012,125,985,87,951,56,917,39,881,28,809,20"/>
+<area shape="rect" id="Node000003" href="$structodp__queue__param__t.html" title="ODP Queue parameters." alt="" coords="649,58,803,83"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="817,67,886,77,920,87,953,100,983,120,1008,145,1043,189,1039,193,1005,148,980,124,951,105,919,92,885,82,817,73"/>
+<area shape="rect" id="Node000004" href="$structodp__schedule__param__t.html" title="Scheduler parameters." alt="" coords="219,9,391,34"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="405,26,614,48,659,55,658,61,613,53,405,31"/>
+<area shape="rect" id="Node000005" href="$structodp__event__aggr__config__t.html" title="Event vector configuration." alt="" coords="213,58,397,83"/>
+<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="411,68,648,68,648,73,411,73"/>
+<area shape="rect" id="Node000006" href="$struct__odp__abi__pool__t.html" title=" " alt="" coords="5,109,132,134"/>
+<area shape="poly" id="edge7_Node000001_Node000006" title=" " alt="" coords="146,121,440,133,815,156,884,160,953,171,1015,189,1014,194,951,176,883,166,815,161,439,138,146,126"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="142,103,245,81,246,86,143,108"/>
+<area shape="rect" id="Node000011" href="$structodp__pktin__vector__config__t.html" title="Packet input vector configuration." alt="" coords="421,161,613,186"/>
+<area shape="poly" id="edge13_Node000011_Node000006" title=" " alt="" coords="110,137,157,152,225,164,295,170,421,174,421,179,294,176,224,169,155,157,108,142"/>
+<area shape="rect" id="Node000007" href="$unionodp__pktin__hash__proto__t.html" title="Packet input hash protocols." alt="" coords="637,222,815,247"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="829,222,976,208,976,214,829,228"/>
+<area shape="rect" id="Node000008" href="$structodp__red__param__t.html" title="Random Early Detection (RED) Random Early Detection is enabled to initiate a drop probability for the..." alt="" coords="659,271,793,297"/>
+<area shape="poly" id="edge8_Node000001_Node000008" title=" " alt="" coords="807,271,878,259,951,241,1022,214,1024,219,953,247,879,264,808,277"/>
+<area shape="rect" id="Node000009" href="$structodp__threshold__t.html" title="ODP Threshold." alt="" coords="242,295,369,321"/>
+<area shape="poly" id="edge9_Node000008_Node000009" title=" " alt="" coords="382,301,658,285,659,290,383,306"/>
+<area shape="rect" id="Node000010" href="$structodp__bp__param__t.html" title="Back pressure (BP)" alt="" coords="661,321,791,346"/>
+<area shape="poly" id="edge11_Node000010_Node000009" title=" " alt="" coords="383,315,422,319,660,330,660,335,421,324,382,320"/>
+<area shape="poly" id="edge10_Node000001_Node000010" title=" " alt="" coords="805,326,878,313,915,302,951,287,977,271,1001,251,1037,215,1041,219,1005,255,980,275,953,292,917,307,879,318,806,331"/>
+<area shape="poly" id="edge12_Node000001_Node000011" title=" " alt="" coords="627,175,952,192,976,194,975,199,952,197,627,180"/>
+<area shape="rect" id="Node000012" href="$structodp__aggr__enq__profile__t.html" title="Event aggregator enqueuing profile." alt="" coords="639,370,813,395"/>
+<area shape="poly" id="edge14_Node000001_Node000012" title=" " alt="" coords="826,380,890,368,922,357,951,342,984,313,1010,278,1030,243,1042,216,1047,218,1034,246,1015,281,988,317,953,346,924,362,892,373,827,385"/>
+</map>
