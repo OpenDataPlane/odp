@@ -48,6 +48,9 @@ uint32_t odph_ipsec_auth_icv_len_default(odp_auth_alg_t auth_alg)
 	case ODP_AUTH_ALG_CHACHA20_POLY1305:
 		icv_len = 16;
 		break;
+	case ODP_AUTH_ALG_SM3_HMAC:
+		icv_len = 16;
+		break;
 	default:
 		ODPH_DBG("Unsupported authentication algorithm\n");
 		icv_len = 0;
@@ -98,6 +101,10 @@ int odph_ipsec_alg_check(const odp_ipsec_capability_t *capa,
 		break;
 	case ODP_CIPHER_ALG_CHACHA20_POLY1305:
 		if (!capa->ciphers.bit.chacha20_poly1305)
+			return -1;
+		break;
+	case ODP_CIPHER_ALG_SM4_CBC:
+		if (!capa->ciphers.bit.sm4_cbc)
 			return -1;
 		break;
 	default:
@@ -153,6 +160,10 @@ int odph_ipsec_alg_check(const odp_ipsec_capability_t *capa,
 		break;
 	case ODP_AUTH_ALG_CHACHA20_POLY1305:
 		if (!capa->auths.bit.chacha20_poly1305)
+			return -1;
+		break;
+	case ODP_AUTH_ALG_SM3_HMAC:
+		if (!capa->auths.bit.sm3_hmac)
 			return -1;
 		break;
 	default:
