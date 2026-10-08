@@ -532,6 +532,11 @@ odp_crypto_session_create(const odp_crypto_session_param_t *param,
 		*session_out = ODP_CRYPTO_SESSION_INVALID;
 		return -1;
 	}
+	if (param->auth_aad_len_in_bits && !_odp_crypto_aad_len_ignored(param->auth_alg)) {
+		*status = ODP_CRYPTO_SES_ERR_AUTH;
+		*session_out = ODP_CRYPTO_SESSION_INVALID;
+		return -1;
+	}
 	if (param->op_type == ODP_CRYPTO_OP_TYPE_OOP ||
 	    param->op_type == ODP_CRYPTO_OP_TYPE_BASIC_AND_OOP) {
 		*status = ODP_CRYPTO_SES_ERR_PARAMS;

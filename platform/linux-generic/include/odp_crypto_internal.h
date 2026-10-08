@@ -31,6 +31,14 @@ odp_crypto_session_to_handle(odp_crypto_generic_session_t *session)
 	return (odp_crypto_session_t)(uintptr_t)session;
 }
 
+static inline odp_bool_t _odp_crypto_aad_len_ignored(odp_auth_alg_t auth_alg)
+{
+	return auth_alg == ODP_AUTH_ALG_NULL ||
+	       auth_alg == ODP_AUTH_ALG_AES_GMAC ||
+	       auth_alg == ODP_AUTH_ALG_SNOW_V_GMAC ||
+	       auth_alg == ODP_AUTH_ALG_SM4_GMAC;
+}
+
 void _odp_crypto_session_print(const char *type, uint32_t index,
 			       const odp_crypto_session_param_t *param);
 
