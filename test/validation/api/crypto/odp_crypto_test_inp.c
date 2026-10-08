@@ -36,6 +36,7 @@ static void test_defaults(uint8_t fill)
 	CU_ASSERT(param.op_type == ODP_CRYPTO_OP_TYPE_BASIC);
 	CU_ASSERT(param.cipher_range_in_bits == false);
 	CU_ASSERT(param.auth_range_in_bits == false);
+	CU_ASSERT(param.auth_aad_len_in_bits == false);
 	CU_ASSERT(param.auth_cipher_text == false);
 	CU_ASSERT(param.null_crypto_enable == false);
 	CU_ASSERT(param.op_mode == ODP_CRYPTO_SYNC);
