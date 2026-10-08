@@ -1278,6 +1278,7 @@ int main(int argc, char **argv)
 	printf("    max_num.u32:          %" PRIu64 "\n", stash_capa.max_num.u32);
 	printf("    max_num.u64:          %" PRIu64 "\n", stash_capa.max_num.u64);
 	printf("    max_num.u128:         %" PRIu64 "\n", stash_capa.max_num.u128);
+	printf("    max_num.ptr:          %" PRIu64 "\n", stash_capa.max_num.ptr);
 	printf("    max_num.max_obj_size: %" PRIu64 "\n", stash_capa.max_num.max_obj_size);
 	printf("    max_obj_size:         %u B\n", stash_capa.max_obj_size);
 	printf("    max_cache_size:       %u\n", stash_capa.max_cache_size);
