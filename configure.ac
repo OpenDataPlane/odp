@@ -199,6 +199,17 @@ if test "x$enable_host_optimization" = "xno" ; then
 	ARCH_ABI=default-linux
 fi
 
+AC_ARG_ENABLE([wfxt-cpu-pause],
+    [AS_HELP_STRING([--enable-wfxt-cpu-pause],
+    [Enable WFXT support in cpu_pause code])],
+    [enable_wfxt_cpu_pause=$enableval],
+    [enable_wfxt_cpu_pause=no])
+AM_CONDITIONAL([ENABLE_WFXT_CPU_PAUSE], [test "x$enable_wfxt_cpu_pause" = "xyes"])
+
+if test "x$enable_wfxt_cpu_pause" = "xyes"; then
+    AC_DEFINE([ENABLE_WFXT_CPU_PAUSE], [1], [Enable WFXT in cpu_pause])
+fi
+
 ##########################################################################
 # Warn on the defaults if arch is undefined
 ##########################################################################
