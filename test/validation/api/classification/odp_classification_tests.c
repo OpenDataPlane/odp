@@ -34,8 +34,10 @@ static odp_atomic_u32_t seq;
 /* default packet info */
 static cls_packet_info_t default_pkt_info;
 
+#if ODP_DEPRECATED_API
 /* Packet vector configuration */
 static odp_pktin_vector_config_t pktv_config;
+#endif
 
 typedef struct {
 	struct {
@@ -89,6 +91,7 @@ static int classification_suite_common_init(vector_mode_t vector_mode)
 	pktin_param.classifier_enable = true;
 	pktin_param.hash_enable = false;
 
+#if ODP_DEPRECATED_API
 	if (vector_mode == VECTOR_MODE_PACKET) {
 		odp_pktio_capability_t capa;
 		odp_pool_t pktv_pool;
@@ -119,6 +122,7 @@ static int classification_suite_common_init(vector_mode_t vector_mode)
 			pktv_config = pktin_param.vector;
 		}
 	}
+#endif
 
 	if (vector_mode == VECTOR_MODE_EVENT) {
 		odp_schedule_capability_t sched_capa;
@@ -217,12 +221,14 @@ static int classification_suite_common_term(vector_mode_t vector_mode)
 		retcode = -1;
 	}
 
+#if ODP_DEPRECATED_API
 	if (vector_mode == VECTOR_MODE_PACKET) {
 		if (odp_pool_destroy(pktv_config.pool)) {
 			ODPH_ERR("Packet vector pool destroy failed\n");
 			retcode = -1;
 		}
 	}
+#endif
 
 	if (vector_mode == VECTOR_MODE_EVENT && global.event_aggr.enabled) {
 		if (odp_pool_destroy(global.event_aggr.config.pool)) {
@@ -257,6 +263,7 @@ int classification_suite_term(void)
 	return classification_suite_common_term(VECTOR_MODE_DISABLED);
 }
 
+#if ODP_DEPRECATED_API
 int classification_suite_pktv_init(void)
 {
 	return classification_suite_common_init(VECTOR_MODE_PACKET);
@@ -266,6 +273,7 @@ int classification_suite_pktv_term(void)
 {
 	return classification_suite_common_term(VECTOR_MODE_PACKET);
 }
+#endif
 
 int classification_suite_evv_init(void)
 {
@@ -361,12 +369,14 @@ void configure_cls_pmr_chain(vector_mode_t vector_mode, int src, int dst, const 
 	cls_param.pool = pool_list[src];
 	cls_param.queue = queue_list[src];
 
+#if ODP_DEPRECATED_API
 	if (vector_mode == VECTOR_MODE_PACKET) {
 		cls_param.vector.enable = true;
 		cls_param.vector.pool = pktv_config.pool;
 		cls_param.vector.max_size = pktv_config.max_size;
 		cls_param.vector.max_tmo_ns = pktv_config.max_tmo_ns;
 	}
+#endif
 
 	cos_list[src] = odp_cls_cos_create(cosname, &cls_param);
 	CU_ASSERT_FATAL(cos_list[src] != ODP_COS_INVALID);
@@ -395,12 +405,14 @@ void configure_cls_pmr_chain(vector_mode_t vector_mode, int src, int dst, const 
 	cls_param.pool = pool_list[dst];
 	cls_param.queue = queue_list[dst];
 
+#if ODP_DEPRECATED_API
 	if (vector_mode == VECTOR_MODE_PACKET) {
 		cls_param.vector.enable = true;
 		cls_param.vector.pool = pktv_config.pool;
 		cls_param.vector.max_size = pktv_config.max_size;
 		cls_param.vector.max_tmo_ns = pktv_config.max_tmo_ns;
 	}
+#endif
 
 	cos_list[dst] = odp_cls_cos_create(cosname, &cls_param);
 	CU_ASSERT_FATAL(cos_list[dst] != ODP_COS_INVALID);
@@ -494,12 +506,14 @@ void configure_pktio_default_cos(vector_mode_t vector_mode)
 				queue_list[CLS_DEFAULT];
 	CU_ASSERT_FATAL(cls_param.queue != ODP_QUEUE_INVALID);
 
+#if ODP_DEPRECATED_API
 	if (vector_mode == VECTOR_MODE_PACKET) {
 		cls_param.vector.enable = true;
 		cls_param.vector.pool = pktv_config.pool;
 		cls_param.vector.max_size = pktv_config.max_size;
 		cls_param.vector.max_tmo_ns = pktv_config.max_tmo_ns;
 	}
+#endif
 
 	cos_list[CLS_DEFAULT] = odp_cls_cos_create(cosname, &cls_param);
 	CU_ASSERT_FATAL(cos_list[CLS_DEFAULT] != ODP_COS_INVALID);
@@ -533,12 +547,14 @@ static odp_cos_t create_alt_cos(const char *name, odp_pool_t pool, odp_queue_t *
 				odp_queue_aggr(queue, 0) : queue;
 	CU_ASSERT_FATAL(cls_param.queue != ODP_QUEUE_INVALID);
 
+#if ODP_DEPRECATED_API
 	if (vector_mode == VECTOR_MODE_PACKET) {
 		cls_param.vector.enable = true;
 		cls_param.vector.pool = pktv_config.pool;
 		cls_param.vector.max_size = pktv_config.max_size;
 		cls_param.vector.max_tmo_ns = pktv_config.max_tmo_ns;
 	}
+#endif
 
 	cos = odp_cls_cos_create(name, &cls_param);
 	CU_ASSERT_FATAL(cos != ODP_COS_INVALID);
@@ -611,12 +627,18 @@ void configure_pktio_drop_cos(vector_mode_t vector_mode, uint32_t max_cos_stats)
 	cls_param.action = ODP_COS_ACTION_DROP;
 	cls_param.stats_enable = max_cos_stats > 0;
 
+#if !ODP_DEPRECATED_API
+	(void)vector_mode;
+#endif
+
+#if ODP_DEPRECATED_API
 	if (vector_mode == VECTOR_MODE_PACKET) {
 		cls_param.vector.enable = true;
 		cls_param.vector.pool = pktv_config.pool;
 		cls_param.vector.max_size = pktv_config.max_size;
 		cls_param.vector.max_tmo_ns = pktv_config.max_tmo_ns;
 	}
+#endif
 
 	cos_list[CLS_DROP] = odp_cls_cos_create(cosname, &cls_param);
 	CU_ASSERT_FATAL(cos_list[CLS_DROP] != ODP_COS_INVALID);
@@ -734,10 +756,12 @@ static void cls_queue_stats_pkt(void)
 	cls_queue_stats(VECTOR_MODE_DISABLED);
 }
 
+#if ODP_DEPRECATED_API
 static void cls_queue_stats_pktv(void)
 {
 	cls_queue_stats(VECTOR_MODE_PACKET);
 }
+#endif
 
 static void cls_queue_stats_evv(void)
 {
@@ -777,12 +801,14 @@ void configure_pktio_error_cos(vector_mode_t vector_mode)
 	cls_param.pool = pool_list[CLS_ERROR];
 	cls_param.queue = queue_list[CLS_ERROR];
 
+#if ODP_DEPRECATED_API
 	if (vector_mode == VECTOR_MODE_PACKET) {
 		cls_param.vector.enable = true;
 		cls_param.vector.pool = pktv_config.pool;
 		cls_param.vector.max_size = pktv_config.max_size;
 		cls_param.vector.max_tmo_ns = pktv_config.max_tmo_ns;
 	}
+#endif
 
 	cos_list[CLS_ERROR] = odp_cls_cos_create(cosname, &cls_param);
 	CU_ASSERT_FATAL(cos_list[CLS_ERROR] != ODP_COS_INVALID);
@@ -916,12 +942,14 @@ void configure_pmr_cos(vector_mode_t vector_mode)
 	cls_param.pool = pool_list[CLS_PMR];
 	cls_param.queue = queue_list[CLS_PMR];
 
+#if ODP_DEPRECATED_API
 	if (vector_mode == VECTOR_MODE_PACKET) {
 		cls_param.vector.enable = true;
 		cls_param.vector.pool = pktv_config.pool;
 		cls_param.vector.max_size = pktv_config.max_size;
 		cls_param.vector.max_tmo_ns = pktv_config.max_tmo_ns;
 	}
+#endif
 
 	cos_list[CLS_PMR] = odp_cls_cos_create(cosname, &cls_param);
 	CU_ASSERT_FATAL(cos_list[CLS_PMR] != ODP_COS_INVALID);
@@ -996,12 +1024,14 @@ void configure_pktio_pmr_composite(vector_mode_t vector_mode)
 	cls_param.pool = pool_list[CLS_PMR_SET];
 	cls_param.queue = queue_list[CLS_PMR_SET];
 
+#if ODP_DEPRECATED_API
 	if (vector_mode == VECTOR_MODE_PACKET) {
 		cls_param.vector.enable = true;
 		cls_param.vector.pool = pktv_config.pool;
 		cls_param.vector.max_size = pktv_config.max_size;
 		cls_param.vector.max_tmo_ns = pktv_config.max_tmo_ns;
 	}
+#endif
 
 	cos_list[CLS_PMR_SET] = odp_cls_cos_create(cosname, &cls_param);
 	CU_ASSERT_FATAL(cos_list[CLS_PMR_SET] != ODP_COS_INVALID);
@@ -1122,10 +1152,12 @@ static void cls_pktio_configure(void)
 	cls_pktio_configure_common(VECTOR_MODE_DISABLED);
 }
 
+#if ODP_DEPRECATED_API
 static void cls_pktio_configure_pktv(void)
 {
 	cls_pktio_configure_common(VECTOR_MODE_PACKET);
 }
+#endif
 
 static void cls_pktio_configure_evv(void)
 {
@@ -1158,16 +1190,19 @@ static void cls_pktio_test(void)
 	cls_pktio_test_common(VECTOR_MODE_DISABLED);
 }
 
+#if ODP_DEPRECATED_API
 static void cls_pktio_test_pktv(void)
 {
 	cls_pktio_test_common(VECTOR_MODE_PACKET);
 }
+#endif
 
 static void cls_pktio_test_evv(void)
 {
 	cls_pktio_test_common(VECTOR_MODE_EVENT);
 }
 
+#if ODP_DEPRECATED_API
 static int check_pktv(void)
 {
 	return pktv_config.enable ? ODP_TEST_ACTIVE : ODP_TEST_INACTIVE;
@@ -1179,6 +1214,7 @@ static int check_pktv_queue_stats(void)
 		return ODP_TEST_INACTIVE;
 	return check_queue_stats();
 }
+#endif
 
 static int check_evv(void)
 {
@@ -1212,12 +1248,14 @@ odp_testinfo_t classification_suite[] = {
 	ODP_TEST_INFO_NULL,
 };
 
+#if ODP_DEPRECATED_API
 odp_testinfo_t classification_suite_pktv[] = {
 	ODP_TEST_INFO_CONDITIONAL(cls_pktio_configure_pktv, check_pktv),
 	ODP_TEST_INFO_CONDITIONAL(cls_pktio_test_pktv, check_pktv),
 	ODP_TEST_INFO_CONDITIONAL(cls_queue_stats_pktv, check_pktv_queue_stats),
 	ODP_TEST_INFO_NULL,
 };
+#endif
 
 odp_testinfo_t classification_suite_evv[] = {
 	ODP_TEST_INFO_CONDITIONAL(cls_pktio_configure_evv, check_evv),

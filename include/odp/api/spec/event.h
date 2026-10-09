@@ -211,7 +211,7 @@ int odp_event_is_valid(odp_event_t event);
  * Frees the event based on its type. Results are undefined if event type is
  * unknown.
  *
- * In case of vector events (ODP_EVENT_VECTOR and ODP_EVENT_PACKET_VECTOR)
+ * In case of vector events (ODP_EVENT_VECTOR and (deprecated) ODP_EVENT_PACKET_VECTOR)
  * the function frees the vector and all events or packets stored inside it.
  *
  * @param event    Event handle
