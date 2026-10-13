@@ -501,6 +501,44 @@ static void print_auth_capa(odp_auth_alg_t auth)
 	}
 }
 
+static void print_ipsec_cipher_capa(odp_cipher_alg_t cipher)
+{
+	int caps = odp_ipsec_cipher_capability(cipher, NULL, 0);
+	int rc, i;
+
+	if (caps <= 0)
+		return;
+
+	odp_ipsec_cipher_capability_t capa[caps];
+
+	rc = odp_ipsec_cipher_capability(cipher, capa, caps);
+	if (rc < 0)
+		return;
+
+	printf("        %s:\n", cipher_alg_name(cipher));
+	for (i = 0; i < rc; i++)
+		printf("            key %d\n", capa[i].key_len);
+}
+
+static void print_ipsec_auth_capa(odp_auth_alg_t auth)
+{
+	int caps = odp_ipsec_auth_capability(auth, NULL, 0);
+	int rc, i;
+
+	if (caps <= 0)
+		return;
+
+	odp_ipsec_auth_capability_t capa[caps];
+
+	rc = odp_ipsec_auth_capability(auth, capa, caps);
+	if (rc < 0)
+		return;
+
+	printf("        %s:\n", auth_alg_name(auth));
+	for (i = 0; i < rc; i++)
+		printf("            key %d icv %d\n", capa[i].key_len, capa[i].icv_len);
+}
+
 static void print_cipher(odp_cipher_alg_t alg)
 {
 	printf("%s ", cipher_alg_name(alg));
@@ -1425,9 +1463,11 @@ int main(int argc, char **argv)
 		printf("    cipher algorithms:            ");
 		foreach_cipher(ipsec_capa.ciphers, print_cipher);
 		printf("\n");
+		foreach_cipher(ipsec_capa.ciphers, print_ipsec_cipher_capa);
 		printf("    auth algorithms:              ");
 		foreach_auth(ipsec_capa.auths, print_auth);
 		printf("\n");
+		foreach_auth(ipsec_capa.auths, print_ipsec_auth_capa);
 	}
 
 	printf("\n");
