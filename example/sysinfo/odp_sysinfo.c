@@ -462,9 +462,12 @@ static void print_cipher_capa(odp_cipher_alg_t cipher)
 		return;
 
 	printf("        %s:\n", cipher_alg_name(cipher));
-	for (i = 0; i < rc; i++)
-		printf("            key %d iv %d\n",
-		       capa[i].key_len, capa[i].iv_len);
+	for (i = 0; i < rc; i++) {
+		printf("            key %d iv %d", capa[i].key_len, capa[i].iv_len);
+		if (capa[i].bit_mode)
+			printf(" bit_mode");
+		printf("\n");
+	}
 }
 
 static void print_auth_capa(odp_auth_alg_t auth)
@@ -492,6 +495,8 @@ static void print_auth_capa(odp_auth_alg_t auth)
 			printf(" aad %d, %d, %d",
 			       capa[i].aad_len.min, capa[i].aad_len.max,
 			       capa[i].aad_len.inc);
+		if (capa[i].bit_mode)
+			printf(" bit_mode");
 		printf("\n");
 	}
 }
