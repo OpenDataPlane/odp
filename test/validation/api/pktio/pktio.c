@@ -39,6 +39,7 @@
 #define PKTV_TX_BATCH_LEN      32
 #define PKTV_DEFAULT_SIZE      8
 #define EVV_DEFAULT_SIZE       8
+#define MAX_NUM_BATCH_SIZES    2
 #define MAX_QUEUES             128
 
 #define PKTIO_TS_INTERVAL      (10 * ODP_TIME_MSEC_IN_NS)
@@ -48,6 +49,11 @@
 #define PKTIO_SRC_MAC		{1, 2, 3, 4, 5, 6}
 #define PKTIO_DST_MAC		{6, 5, 4, 3, 2, 1}
 #undef DEBUG_STATS
+
+typedef struct {
+	uint8_t num_sizes;
+	int num_pkts[MAX_NUM_BATCH_SIZES];
+} batch_sizes_t;
 
 typedef enum {
 	PKT_TYPE_NORMAL,
@@ -1424,20 +1430,22 @@ static void pktio_txrx_multi(const pktio_pair_t *pair,
 	}
 }
 
-static void do_test_txrx(const pktio_pair_t *pair, int num_pkts, txrx_mode_e mode,
-			 vector_mode_t vector_mode, pkt_type_t pkt_type)
+static void do_test_txrx(const pktio_pair_t *pair, const batch_sizes_t *batch_sizes,
+			 txrx_mode_e mode, vector_mode_t vector_mode, pkt_type_t pkt_type)
 {
 	if (has_packet_ref_capa(&pair->tx->capa, pkt_type)) {
 		pktio_pair_start(pair);
-		pktio_txrx_multi(pair, num_pkts, mode, vector_mode, pkt_type);
+		for (int i = 0; i < batch_sizes->num_sizes; i++)
+			pktio_txrx_multi(pair, batch_sizes->num_pkts[i], mode,
+					 vector_mode, pkt_type);
 		pktio_pair_stop(pair);
 		pktio_pair_flush_input_queues(pair);
 	}
 }
 
-static void test_txrx(odp_pktin_mode_t in_mode, int num_pkts,
-		      txrx_mode_e mode, odp_schedule_sync_t sync_mode,
-		      vector_mode_t vector_mode)
+static void test_txrx_many(odp_pktin_mode_t in_mode, const batch_sizes_t *batch_sizes,
+			   txrx_mode_e mode, odp_schedule_sync_t sync_mode,
+			   vector_mode_t vector_mode)
 {
 	odp_pktout_mode_t out_mode = (mode == TXRX_MODE_MULTI_EVENT) ?
 				     ODP_PKTOUT_MODE_QUEUE : ODP_PKTOUT_MODE_DIRECT;
@@ -1448,53 +1456,57 @@ static void test_txrx(odp_pktin_mode_t in_mode, int num_pkts,
 		pktio_pair_create_full(&pair, in_mode, out_mode, sync_mode, vector_mode, pool_sel);
 
 		for (pkt_type_t pkt_type = 0; pkt_type <= PKT_TYPE_MAX; pkt_type++)
-			do_test_txrx(&pair, num_pkts, mode, vector_mode, pkt_type);
+			do_test_txrx(&pair, batch_sizes, mode, vector_mode, pkt_type);
 
 		pktio_pair_destroy(&pair);
 	}
 }
 
+static void test_txrx(odp_pktin_mode_t in_mode, int num_pkts,
+		      txrx_mode_e mode, odp_schedule_sync_t sync_mode,
+		      vector_mode_t vector_mode)
+{
+	const batch_sizes_t batch_sizes = {.num_sizes = 1, .num_pkts = {num_pkts}};
+
+	test_txrx_many(in_mode, &batch_sizes, mode, sync_mode, vector_mode);
+}
+
+static const batch_sizes_t batch_sizes_all = {.num_sizes = 2, .num_pkts = {1, TX_BATCH_LEN}};
+
 static void pktio_test_plain_queue(void)
 {
-	test_txrx(ODP_PKTIN_MODE_QUEUE, 1, TXRX_MODE_SINGLE, 0, VECTOR_MODE_DISABLED);
-	test_txrx(ODP_PKTIN_MODE_QUEUE, TX_BATCH_LEN, TXRX_MODE_SINGLE, 0, VECTOR_MODE_DISABLED);
+	test_txrx_many(ODP_PKTIN_MODE_QUEUE, &batch_sizes_all, TXRX_MODE_SINGLE,
+		       0, VECTOR_MODE_DISABLED);
 }
 
 static void pktio_test_plain_multi(void)
 {
-	test_txrx(ODP_PKTIN_MODE_QUEUE, TX_BATCH_LEN, TXRX_MODE_MULTI, 0, VECTOR_MODE_DISABLED);
-	test_txrx(ODP_PKTIN_MODE_QUEUE, 1, TXRX_MODE_MULTI, 0, VECTOR_MODE_DISABLED);
+	test_txrx_many(ODP_PKTIN_MODE_QUEUE, &batch_sizes_all, TXRX_MODE_MULTI,
+		       0, VECTOR_MODE_DISABLED);
 }
 
 static void pktio_test_plain_multi_event(void)
 {
-	test_txrx(ODP_PKTIN_MODE_QUEUE, 1, TXRX_MODE_MULTI_EVENT, 0, VECTOR_MODE_DISABLED);
-	test_txrx(ODP_PKTIN_MODE_QUEUE, TX_BATCH_LEN, TXRX_MODE_MULTI_EVENT, 0,
-		  VECTOR_MODE_DISABLED);
+	test_txrx_many(ODP_PKTIN_MODE_QUEUE, &batch_sizes_all, TXRX_MODE_MULTI_EVENT,
+		       0, VECTOR_MODE_DISABLED);
 }
 
 static void pktio_test_sched_queue(void)
 {
-	test_txrx(ODP_PKTIN_MODE_SCHED, 1, TXRX_MODE_SINGLE,
-		  ODP_SCHED_SYNC_ATOMIC, VECTOR_MODE_DISABLED);
-	test_txrx(ODP_PKTIN_MODE_SCHED, TX_BATCH_LEN, TXRX_MODE_SINGLE,
-		  ODP_SCHED_SYNC_ATOMIC, VECTOR_MODE_DISABLED);
+	test_txrx_many(ODP_PKTIN_MODE_SCHED, &batch_sizes_all, TXRX_MODE_SINGLE,
+		       ODP_SCHED_SYNC_ATOMIC, VECTOR_MODE_DISABLED);
 }
 
 static void pktio_test_sched_multi(void)
 {
-	test_txrx(ODP_PKTIN_MODE_SCHED, TX_BATCH_LEN, TXRX_MODE_MULTI,
-		  ODP_SCHED_SYNC_ATOMIC, VECTOR_MODE_DISABLED);
-	test_txrx(ODP_PKTIN_MODE_SCHED, 1, TXRX_MODE_MULTI,
-		  ODP_SCHED_SYNC_ATOMIC, VECTOR_MODE_DISABLED);
+	test_txrx_many(ODP_PKTIN_MODE_SCHED, &batch_sizes_all, TXRX_MODE_MULTI,
+		       ODP_SCHED_SYNC_ATOMIC, VECTOR_MODE_DISABLED);
 }
 
 static void pktio_test_sched_multi_event(void)
 {
-	test_txrx(ODP_PKTIN_MODE_SCHED, 1, TXRX_MODE_MULTI_EVENT,
-		  ODP_SCHED_SYNC_ATOMIC, VECTOR_MODE_DISABLED);
-	test_txrx(ODP_PKTIN_MODE_SCHED, TX_BATCH_LEN, TXRX_MODE_MULTI_EVENT,
-		  ODP_SCHED_SYNC_ATOMIC, VECTOR_MODE_DISABLED);
+	test_txrx_many(ODP_PKTIN_MODE_SCHED, &batch_sizes_all, TXRX_MODE_MULTI_EVENT,
+		       ODP_SCHED_SYNC_ATOMIC, VECTOR_MODE_DISABLED);
 }
 
 static void pktio_test_recv(void)
@@ -1509,9 +1521,8 @@ static void pktio_test_recv_multi(void)
 
 static void pktio_test_recv_multi_event(void)
 {
-	test_txrx(ODP_PKTIN_MODE_DIRECT, 1, TXRX_MODE_MULTI_EVENT, 0, VECTOR_MODE_DISABLED);
-	test_txrx(ODP_PKTIN_MODE_DIRECT, TX_BATCH_LEN, TXRX_MODE_MULTI_EVENT, 0,
-		  VECTOR_MODE_DISABLED);
+	test_txrx_many(ODP_PKTIN_MODE_DIRECT, &batch_sizes_all, TXRX_MODE_MULTI_EVENT,
+		       0, VECTOR_MODE_DISABLED);
 }
 
 static void pktio_test_recv_queue(void)
