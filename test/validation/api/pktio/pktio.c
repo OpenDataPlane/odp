@@ -2854,8 +2854,8 @@ static void pktio_test_statistics_counters_bcast(void)
 {
 	pktio_pair_t pair;
 	odp_packet_t pkt;
-	odp_packet_t tx_pkt[1000];
-	uint32_t pkt_seq[1000];
+	odp_packet_t tx_pkt[NUM_TEST_PKTS];
+	uint32_t pkt_seq[NUM_TEST_PKTS];
 	odp_event_t ev;
 	int i, pkts, tx_pkts, ret, alloc = 0;
 	uint64_t wait = odp_schedule_wait_time(ODP_TIME_MSEC_IN_NS);
@@ -2866,7 +2866,7 @@ static void pktio_test_statistics_counters_bcast(void)
 	pktio_pair_create(&pair, ODP_PKTIN_MODE_SCHED, ODP_PKTOUT_MODE_DIRECT, POOL_PKTIO);
 	pktio_pair_start_nowait(&pair);
 
-	alloc = create_packets_udp(tx_pkt, pkt_seq, 1000, pair.tx->id, pair.rx->id,
+	alloc = create_packets_udp(tx_pkt, pkt_seq, NUM_TEST_PKTS, pair.tx->id, pair.rx->id,
 				   true, ETH_BROADCAST);
 	pktio_pair_stats_reset(&pair);
 
@@ -2882,7 +2882,7 @@ static void pktio_test_statistics_counters_bcast(void)
 	tx_pkts = pkts;
 
 	/* get */
-	for (i = 0, pkts = 0; i < 1000 && pkts != tx_pkts; i++) {
+	for (i = 0, pkts = 0; i < NUM_RX_ATTEMPTS && pkts != tx_pkts; i++) {
 		ev = odp_schedule(NULL, wait);
 		if (ev != ODP_EVENT_INVALID) {
 			if (odp_event_type(ev) == ODP_EVENT_PACKET) {
