@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright (c) 2021-2025 Nokia
+ * Copyright (c) 2021-2026 Nokia
  */
 
 /**
@@ -942,6 +942,18 @@ typedef struct odp_pool_info_t {
 	 *  1: Pool is an external memory pool
 	 */
 	odp_bool_t pool_ext;
+
+	/** External memory pool population status
+	 *
+	 *  Valid only when pool_ext is 1. Indicates whether the population phase of the pool has
+	 *  been completed, i.e. odp_pool_ext_populate() has been successfully called with
+	 *  ODP_POOL_POPULATE_DONE flag. The pool may be used for allocations only after population
+	 *  has been completed.
+	 *
+	 *  0: Pool population is not complete
+	 *  1: Pool population is complete
+	 */
+	odp_bool_t pool_ext_populated;
 
 	/** Pool parameters union */
 	union {

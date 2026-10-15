@@ -2173,6 +2173,7 @@ static void test_packet_pool_ext_info(void)
 	CU_ASSERT_FATAL(odp_pool_info(pool, &info) == 0);
 
 	CU_ASSERT(info.pool_ext);
+	CU_ASSERT(!info.pool_ext_populated);
 	CU_ASSERT(info.type == ODP_POOL_PACKET);
 	CU_ASSERT(info.pool_ext_param.type == ODP_POOL_PACKET);
 	CU_ASSERT(strncmp(name, info.name, strlen(name)) == 0);
@@ -2208,6 +2209,7 @@ static void test_packet_pool_ext_long_name(void)
 static odp_shm_t populate_pool(odp_pool_t pool, odp_pool_ext_capability_t *capa,
 			       void *buf[], uint32_t num, uint32_t buf_size)
 {
+	odp_pool_info_t info;
 	odp_shm_t shm;
 	uint8_t *buf_ptr;
 	uint32_t i;
@@ -2248,6 +2250,9 @@ static odp_shm_t populate_pool(odp_pool_t pool, odp_pool_ext_capability_t *capa,
 		buf_ptr++;
 
 	for (i = 0; i < num; i++) {
+		CU_ASSERT_FATAL(odp_pool_info(pool, &info) == 0);
+		CU_ASSERT(!info.pool_ext_populated);
+
 		if (i == num - 1)
 			flags = ODP_POOL_POPULATE_DONE;
 
@@ -2258,6 +2263,9 @@ static odp_shm_t populate_pool(odp_pool_t pool, odp_pool_ext_capability_t *capa,
 		while ((uintptr_t)buf_ptr % buf_align)
 			buf_ptr++;
 	}
+
+	CU_ASSERT_FATAL(odp_pool_info(pool, &info) == 0);
+	CU_ASSERT(info.pool_ext_populated);
 
 	return shm;
 }

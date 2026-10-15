@@ -1359,6 +1359,7 @@ int odp_pool_info(odp_pool_t pool_hdl, odp_pool_info_t *info)
 
 	if (pool->pool_ext) {
 		info->pool_ext = 1;
+		info->pool_ext_populated = pool->populate_done;
 		info->pool_ext_param = pool->ext_param;
 
 	} else if (pool->type_2 == ODP_POOL_DMA_COMPL) {
@@ -2277,6 +2278,11 @@ int odp_pool_ext_populate(odp_pool_t pool_hdl, void *buf[], uint32_t buf_size, u
 		return -1;
 	}
 
+	if (pool->populate_done) {
+		_ODP_ERR("Pool already populated\n");
+		return -1;
+	}
+
 	min_addr = pool->base_addr;
 	max_addr = pool->max_addr;
 
@@ -2334,8 +2340,6 @@ int odp_pool_ext_populate(odp_pool_t pool_hdl, void *buf[], uint32_t buf_size, u
 		init_event_hdr(pool, event_hdr, buf_index, data_ptr, uarea);
 		pool->ring->event_hdr_by_index[buf_index] = event_hdr;
 		buf_index++;
-
-		ring_mpmc_rst_ptr_enq(ring, (void **)ring_data, ring_mask, event_hdr);
 	}
 
 	pool->num_populated += num;
@@ -2353,6 +2357,12 @@ int odp_pool_ext_populate(odp_pool_t pool_hdl, void *buf[], uint32_t buf_size, u
 								   i);
 			}
 		}
+
+		/* Buffers become available for allocation only after the pool is fully populated */
+		ring_mpmc_rst_ptr_enq_multi(ring, (void **)ring_data, ring_mask,
+					    (void **)pool->ring->event_hdr_by_index,
+					    pool->num_populated);
+		pool->populate_done = 1;
 	}
 
 	return 0;
