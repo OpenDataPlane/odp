@@ -316,8 +316,15 @@ static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 		if (ret == -2 && _pcapif_reopen(pcap) == 0)
 			continue;
 
-		if (ret != 1)
+		if (ret != 1) {
+			/* More packets may be appended to the input file after EOF has
+			 * been seen (e.g. when the file is the output of another pcap
+			 * pktio). Clear the sticky EOF indicator of the underlying stream
+			 * so that subsequent receive calls can see the appended packets. */
+			if (ret == -2 && pcap->rx)
+				clearerr(pcap_file(pcap->rx));
 			break;
+		}
 
 		pkt_len = hdr->caplen;
 
