@@ -134,13 +134,22 @@ typedef enum {
 	 */
 	ODP_CIPHER_ALG_SNOW3G_UEA2,
 
-	/** NEA4 confidentiality algorithm
+	/** 256-NEA4 confidentiality algorithm
 	 *
-	 *  SNOW 5G based NEA4 algorithm.
-	 *
-	 *  IV is 128 bits.
+	 *  SNOW 5G based 256-NEA4 algorithm.
+	 *  Key size is 32 bytes. IV size is 16 bytes.
 	 */
 	ODP_CIPHER_ALG_SNOW5G_NEA4,
+
+	/** 256-NCA4 AEAD algorithm based on SNOW 5G
+	 *
+	 *  Key size is 32 bytes. IV size is 16 bytes.
+	 *
+	 *  256-NCA4 provides both authentication and encryption. This cipher
+	 *  algorithm must always be paired with ODP_AUTH_ALG_SNOW5G_NCA4 auth
+	 *  algorithm in crypto session creation.
+	 */
+	ODP_CIPHER_ALG_SNOW5G_NCA4,
 
 	/** Confidentiality 128-EEA2 algorithm
 	 *
@@ -151,6 +160,23 @@ typedef enum {
 	 *  COUNT || BEARER || DIRECTION || 0....0
 	 */
 	ODP_CIPHER_ALG_AES_EEA2,
+
+	/** 256-NEA5 confidentiality algorithm
+	 *
+	 *  AES-256 based 256-NEA5 algorithm.
+	 *  Key size is 32 bytes. IV size is 16 bytes.
+	 */
+	ODP_CIPHER_ALG_AES_NEA5,
+
+	/** 256-NCA5 AEAD algorithm based on AES-256
+	 *
+	 *  Key size is 32 bytes. IV size is 16 bytes.
+	 *
+	 *  256-NCA5 provides both authentication and encryption. This cipher
+	 *  algorithm must always be paired with ODP_AUTH_ALG_AES_NCA5 auth
+	 *  algorithm in crypto session creation.
+	 */
+	ODP_CIPHER_ALG_AES_NCA5,
 
 	/** ZUC based confidentiality algorithm
 	 *
@@ -172,13 +198,22 @@ typedef enum {
 	 */
 	ODP_CIPHER_ALG_ZUC_EEA3,
 
-	/** NEA6 confidentiality algorithm
+	/** 256-NEA6 confidentiality algorithm
 	 *
-	 *  256-NEA6 algorithm.
-	 *
-	 *  Key length is 256 bits. IV size is 16 bytes.
+	 *  ZUC-256 based 256-NEA6 algorithm.
+	 *  Key size is 32 bytes. IV size is 16 bytes.
 	 */
 	ODP_CIPHER_ALG_ZUC_NEA6,
+
+	/** 256-NCA6 AEAD algorithm based on ZUC-256
+	 *
+	 *  Key size is 32 bytes. IV size is 16 bytes.
+	 *
+	 *  256-NCA6 provides both authentication and encryption. This cipher
+	 *  algorithm must always be paired with ODP_AUTH_ALG_ZUC_NCA6 auth
+	 *  algorithm in crypto session creation.
+	 */
+	ODP_CIPHER_ALG_ZUC_NCA6,
 
 	/** SNOW-V stream cipher */
 	ODP_CIPHER_ALG_SNOW_V,
@@ -356,13 +391,20 @@ typedef enum {
 	 */
 	ODP_AUTH_ALG_SNOW3G_UIA2,
 
-	/** NIA4 integrity algorithm
+	/** 256-NIA4 integrity algorithm
 	 *
-	 *  SNOW 5G based NIA4 algorithm.
-	 *
-	 *  IV is 128 bits.
+	 *  SNOW 5G based 256-NIA4 algorithm.
+	 *  Key size is 32 bytes. IV size is 16 bytes.
 	 */
 	ODP_AUTH_ALG_SNOW5G_NIA4,
+
+	/** 256-NCA4 AEAD algorithm based on SNOW 5G
+	 *
+	 *  256-NCA4 provides both authentication and encryption. This auth
+	 *  algorithm must always be paired with ODP_CIPHER_ALG_SNOW5G_NCA4
+	 *  cipher algorithm in crypto session creation.
+	 */
+	ODP_AUTH_ALG_SNOW5G_NCA4,
 
 	/** Integrity 128-EIA2 algorithm
 	 *
@@ -373,6 +415,21 @@ typedef enum {
 	 *  COUNT || BEARER || DIRECTION || 0....0
 	 */
 	ODP_AUTH_ALG_AES_EIA2,
+
+	/** 256-NIA5 integrity algorithm
+	 *
+	 *  AES-256 based 256-NIA5 algorithm.
+	 *  Key size is 32 bytes. IV size is 16 bytes.
+	 */
+	ODP_AUTH_ALG_AES_NIA5,
+
+	/** 256-NCA5 AEAD algorithm based on AES-256
+	 *
+	 *  256-NCA5 provides both authentication and encryption. This auth
+	 *  algorithm must always be paired with ODP_CIPHER_ALG_AES_NCA5
+	 *  cipher algorithm in crypto session creation.
+	 */
+	ODP_AUTH_ALG_AES_NCA5,
 
 	/** ZUC-based integrity algorithm.
 	 *
@@ -395,13 +452,20 @@ typedef enum {
 	 */
 	ODP_AUTH_ALG_ZUC_EIA3,
 
-	/** NIA6 integrity algorithm
+	/** 256-NIA6 integrity algorithm
 	 *
-	 *  256-NIA6 algorithm.
-	 *
-	 *  Key length is 256 bits. IV size is 16 bytes.
+	 *  ZUC-256 based 256-NIA6 algorithm.
+	 *  Key size is 32 bytes. IV size is 16 bytes.
 	 */
 	ODP_AUTH_ALG_ZUC_NIA6,
+
+	/** 256-NCA6 AEAD algorithm based on ZUC-256
+	 *
+	 *  256-NCA6 provides both authentication and encryption. This auth
+	 *  algorithm must always be paired with ODP_CIPHER_ALG_ZUC_NCA6
+	 *  cipher algorithm in crypto session creation.
+	 */
+	ODP_AUTH_ALG_ZUC_NCA6,
 
 	/** SNOW-V-GCM AEAD algorithm
 	 *
@@ -546,14 +610,26 @@ typedef union odp_crypto_cipher_algos_t {
 		/** ODP_CIPHER_ALG_SNOW5G_NEA4 */
 		uint32_t snow5g_nea4 : 1;
 
+		/** ODP_CIPHER_ALG_SNOW5G_NCA4 */
+		uint32_t snow5g_nca4 : 1;
+
 		/** ODP_CIPHER_ALG_AES_EEA2 */
 		uint32_t aes_eea2 : 1;
+
+		/** ODP_CIPHER_ALG_AES_NEA5 */
+		uint32_t aes_nea5 : 1;
+
+		/** ODP_CIPHER_ALG_AES_NCA5 */
+		uint32_t aes_nca5 : 1;
 
 		/** ODP_CIPHER_ALG_ZUC_EEA3 */
 		uint32_t zuc_eea3    : 1;
 
 		/** ODP_CIPHER_ALG_ZUC_NEA6 */
 		uint32_t zuc_nea6    : 1;
+
+		/** ODP_CIPHER_ALG_ZUC_NCA6 */
+		uint32_t zuc_nca6    : 1;
 
 		/** ODP_CIPHER_ALG_SNOW_V */
 		uint32_t snow_v      : 1;
@@ -651,14 +727,26 @@ typedef union odp_crypto_auth_algos_t {
 		/** ODP_AUTH_ALG_SNOW5G_NIA4 */
 		uint32_t snow5g_nia4 : 1;
 
+		/** ODP_AUTH_ALG_SNOW5G_NCA4 */
+		uint32_t snow5g_nca4 : 1;
+
 		/** ODP_AUTH_ALG_AES_EIA2 */
 		uint32_t aes_eia2 : 1;
+
+		/** ODP_AUTH_ALG_AES_NIA5 */
+		uint32_t aes_nia5 : 1;
+
+		/** ODP_AUTH_ALG_AES_NCA5 */
+		uint32_t aes_nca5 : 1;
 
 		/** ODP_AUTH_ALG_ZUC_EIA3 */
 		uint32_t zuc_eia3    : 1;
 
 		/** ODP_AUTH_ALG_ZUC_NIA6 */
 		uint32_t zuc_nia6    : 1;
+
+		/** ODP_AUTH_ALG_ZUC_NCA6 */
+		uint32_t zuc_nca6    : 1;
 
 		/** ODP_AUTH_ALG_SNOW_V_GCM */
 		uint32_t snow_v_gcm : 1;
