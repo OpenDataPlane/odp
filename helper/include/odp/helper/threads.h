@@ -34,30 +34,6 @@ extern "C" {
  * @{
  */
 
-/** Thread parameter for Linux pthreads and processes */
-typedef struct {
-	void *(*start)(void *);    /**< Thread entry point function */
-	void *arg;                  /**< Argument for the function */
-	odp_thread_type_t thr_type; /**< ODP thread type */
-	odp_instance_t instance;    /**< ODP instance handle */
-} odph_linux_thr_params_t;
-
-/** Linux pthread state information */
-typedef struct {
-	pthread_t      thread; /**< Pthread ID */
-	pthread_attr_t attr;   /**< Pthread attributes */
-	int            cpu;    /**< CPU ID */
-	/** Copy of thread params */
-	odph_linux_thr_params_t thr_params;
-} odph_linux_pthread_t;
-
-/** Linux process state information */
-typedef struct {
-	pid_t pid;      /**< Process ID */
-	int   cpu;      /**< CPU ID */
-	int   status;   /**< Process state change status */
-} odph_linux_process_t;
-
 /** Thread parameters (pthreads and processes) */
 typedef struct {
 	/** Thread entry point function */
