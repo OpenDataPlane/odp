@@ -1,0 +1,5 @@
+<map id="odp_event_aggr_capability_t" name="odp_event_aggr_capability_t">
+<area shape="rect" id="Node000001" title="Event aggregator capabilities." alt="" coords="5,93,215,119"/>
+<area shape="rect" id="Node000002" href="$unionodp__queue__stats__opt__t.html" title="Queue statistics counters options." alt="" coords="24,5,196,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="113,45,113,93,107,93,107,45"/>
+</map>

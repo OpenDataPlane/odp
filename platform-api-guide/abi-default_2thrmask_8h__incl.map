@@ -1,0 +1,13 @@
+<map id="thrmask.h" name="thrmask.h">
+<area shape="rect" id="Node000001" title="ODP thread masks." alt="" coords="145,5,233,31"/>
+<area shape="rect" id="Node000002" href="$cpumask_8h.html" title="ODP CPU masks and enumeration." alt="" coords="116,79,261,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="191,31,191,65,186,65,186,31"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="5,152,175,177"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="174,106,119,146,116,142,171,102"/>
+<area shape="rect" id="Node000004" href="$spec_2cpumask_8h.html" title="ODP CPU masks and enumeration." alt="" coords="199,152,378,177"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="206,102,263,142,260,146,203,106"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="117,225,279,251"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="276,179,225,219,222,214,272,175"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="303,225,453,251"/>
+<area shape="poly" id="edge5_Node000004_Node000006" title=" " alt="" coords="305,175,354,214,351,219,301,179"/>
+</map>

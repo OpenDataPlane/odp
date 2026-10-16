@@ -1,0 +1,13 @@
+<map id="odp_ipsec_packet_result_t" name="odp_ipsec_packet_result_t">
+<area shape="rect" id="Node000001" title="IPSEC operation result for a packet." alt="" coords="244,181,437,207"/>
+<area shape="rect" id="Node000002" href="$structodp__ipsec__op__status__t.html" title="IPSEC operation status." alt="" coords="71,93,240,119"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="194,122,317,179,314,183,192,127"/>
+<area shape="rect" id="Node000003" href="$structodp__ipsec__error__t.html" title="IPSEC errors." alt="" coords="5,5,143,31"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="96,39,146,91,142,95,92,43"/>
+<area shape="rect" id="Node000004" href="$structodp__ipsec__warn__t.html" title="IPSEC warnings." alt="" coords="167,5,306,31"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="218,43,169,95,165,91,214,39"/>
+<area shape="rect" id="Node000005" href="$structodp__ipsec__op__flag__t.html" title="IPSEC operation flags." alt="" coords="264,93,417,119"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="343,133,343,181,338,181,338,133"/>
+<area shape="rect" id="Node000006" href="$struct__odp__abi__ipsec__sa__t.html" title=" " alt="" coords="442,93,597,119"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="484,127,366,183,364,179,482,122"/>
+</map>
