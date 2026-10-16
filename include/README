@@ -1,6 +1,6 @@
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2017 Linaro Limited
-Copyright (c) 2023-2025 Nokia
+Copyright (c) 2023-2026 Nokia
 
 # ODP specification
 
@@ -34,7 +34,31 @@ Application gains ODP handle ownership when it receives it from an ODP API call.
 For example, application can receive an odp_event_t handle from `odp_schedule()`
 call. The ownership ends when the handle is passed back to ODP, for example with
 `odp_queue_enq()` call. Application MUST NOT use the handle anymore after it
-has lost the ownership.
+has lost the ownership. This applies also to any pointers to object data or
+metadata (e.g. from `odp_packet_data()`) obtained through the handle.
+
+An ODP API function uses a handle passed to it in one of the following ways:
+
+- Temporary use: The function accesses the object only during the call and
+  does not retain a reference to it after returning. Ownership of the object
+  does not change.
+
+- Ownership transfer: The function takes over the object and the application
+  MUST NOT use the handle anymore. Examples of such functions include
+  `odp_queue_enq()`, `odp_pktout_send()` and functions that destroy objects,
+  such as `odp_packet_free()` and `odp_pktio_close()`.
+
+- Retained reference: The function stores the handle for later use until
+  another ODP function call releases the reference. The referenced object
+  MUST NOT be destroyed before the reference is released. Typical examples
+  include functions that create objects and take other object handles
+  as creation parameters and retain the references until the created object
+  gets destroyed (e.g. `odp_pktio_open()` starts to reference a pool until
+  `odp_pktio_close()` destroys the pktio and releases the reference to the
+  pool).
+
+Failed function calls typically do not take ownership of, or a reference
+to, an object, but fall into the temporary use category.
 
 Lifetimes of structures passed by reference to ODP API do not need to be
 longer than the duration of the API function being called. In other words,
