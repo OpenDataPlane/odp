@@ -362,19 +362,14 @@ static int create_stash(test_global_t *global)
 	if (opt->private)
 		return 0;
 
-	if (sizeof(uintptr_t) > sizeof(uint64_t)) {
-		ODPH_ERR("Pointer size exceeds uint64_t.\n");
-		return -1;
-	}
-
 	if (odp_stash_capability(&capa, ODP_STASH_TYPE_FIFO) || capa.max_stashes == 0) {
 		ODPH_ERR("FIFO stash is not supported.\n");
 		return -1;
 	}
 
-	if (num_block > capa.max_num.u64) {
+	if (num_block > capa.max_num.ptr) {
 		ODPH_ERR("Too many shared blocks for stash (%u). Maximum %" PRIu64 ".\n",
-			 num_block, capa.max_num.u64);
+			 num_block, capa.max_num.ptr);
 		return -1;
 	}
 
