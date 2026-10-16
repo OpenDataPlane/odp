@@ -492,9 +492,10 @@ static void print_auth_capa(odp_auth_alg_t auth)
 		if (capa[i].iv_len != 0)
 			printf(" iv %d", capa[i].iv_len);
 		if (capa[i].aad_len.max != 0)
-			printf(" aad %d, %d, %d",
+			printf(" aad (min %d, max %d, inc %d%s)",
 			       capa[i].aad_len.min, capa[i].aad_len.max,
-			       capa[i].aad_len.inc);
+			       capa[i].aad_len.inc,
+			       capa[i].aad_len.bit_mode ? ", bit_mode" : "");
 		if (capa[i].bit_mode)
 			printf(" bit_mode");
 		printf("\n");

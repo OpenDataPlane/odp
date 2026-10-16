@@ -292,7 +292,7 @@ typedef enum {
 	 *  NIST and RFC specifications of GMAC refer to all data to be
 	 *  authenticated as AAD. In ODP the data to be authenticated, i.e.
 	 *  AAD, is ODP packet data and specified using the auth_range
-	 *  parameter. The aad_length and aad_ptr parameters, which would
+	 *  parameter. The auth_aad_len and aad_ptr parameters, which would
 	 *  require the data to be contiguous in memory, are ignored with
 	 *  AES-GMAC.
 	 *
@@ -818,6 +818,24 @@ typedef struct odp_crypto_session_param_t {
 	 */
 	odp_bool_t auth_range_in_bits;
 
+	/** AAD length unit
+	 *
+	 *  When this flag is true, AAD length is in bits. Otherwise it is in
+	 *  bytes.
+	 *
+	 *  If auth capabilities do not include aad_len.bit_mode, setting this
+	 *  to true causes a session creation failure.
+	 *
+	 *  When true, the most significant bit is considered to be the first
+	 *  bit of a byte and the bits of the last byte that fall out of the
+	 *  AAD length are ignored.
+	 *
+	 *  This parameter is ignored whenever auth_aad_len is ignored.
+	 *
+	 *  The default value is false.
+	 */
+	odp_bool_t auth_aad_len_in_bits;
+
 	/** Authenticate cipher vs. plain text
 	 *
 	 *  Controls ordering of authentication and cipher operations,
@@ -925,11 +943,14 @@ typedef struct odp_crypto_session_param_t {
 	 */
 	uint32_t auth_digest_len;
 
-	/** Additional Authenticated Data (AAD) length in bytes
+	/** Additional Authenticated Data (AAD) length
 	 *
 	 *  AAD length is constant for all operations (packets) of the session.
 	 *  Set to zero when AAD is not used. Use odp_crypto_auth_capability()
 	 *  for supported AAD lengths. The default value is zero.
+	 *
+	 *  This field expresses AAD length in bits or bytes depending on the
+	 *  auth_aad_len_in_bits parameter.
 	 */
 	uint32_t auth_aad_len;
 
@@ -987,8 +1008,9 @@ typedef struct odp_crypto_packet_op_param_t {
 	 */
 	uint32_t hash_result_offset;
 
-	/** Pointer to AAD. AAD length is defined by 'auth_aad_len'
-	 *  session parameter.
+	/** Pointer to AAD. AAD length is defined by 'auth_aad_len' session
+	 *  parameter in bits or bytes. This pointer must point to a memory area
+	 *  that is large enough to contain the AAD.
 	 */
 	const uint8_t *aad_ptr;
 
@@ -1240,8 +1262,16 @@ typedef struct odp_crypto_auth_capability_t {
 		uint32_t max;
 
 		/** Increment of supported lengths between min and max
-		 *  (in bytes) */
+		 *  (in bytes) when AAD is expressed in bytes */
 		uint32_t inc;
+
+		/** AAD length can be expressed in bits by setting the
+		 *  auth_aad_len_in_bits session parameter to true.
+		 *  In that case all AAD bit lengths in the range from
+		 *  min to max (which are always in bytes) are allowed
+		 *  and the inc capability does not apply. */
+		odp_bool_t bit_mode;
+
 	} aad_len;
 
 	/** Auth algorithm supports bit mode
