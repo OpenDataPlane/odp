@@ -1924,7 +1924,9 @@ static void test_defaults(uint8_t fill)
 	CU_ASSERT(!config.inbound.reass_inline);
 	CU_ASSERT(config.outbound.all_chksum == 0);
 	CU_ASSERT(!config.stats_en);
+#if ODP_DEPRECATED_API
 	CU_ASSERT(!config.vector.enable);
+#endif
 
 	memset(&sa_param, fill, sizeof(sa_param));
 	odp_ipsec_sa_param_init(&sa_param);

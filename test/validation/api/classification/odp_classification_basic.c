@@ -25,7 +25,9 @@ static void test_defaults(uint8_t fill)
 	CU_ASSERT(cos_param.pool == ODP_POOL_INVALID);
 	CU_ASSERT(cos_param.red.enable == false);
 	CU_ASSERT(cos_param.bp.enable == false);
+#if ODP_DEPRECATED_API
 	CU_ASSERT(cos_param.vector.enable == false);
+#endif
 	CU_ASSERT(cos_param.aggr_enq_profile.type == ODP_AEP_TYPE_NONE);
 	CU_ASSERT(cos_param.aggr_enq_profile.param == 0);
 

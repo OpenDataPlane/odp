@@ -537,6 +537,7 @@ static int default_pool_create(void)
 	return 0;
 }
 
+#if ODP_DEPRECATED_API
 static int default_pktv_pool_create(void)
 {
 	char pool_name[ODP_POOL_NAME_LEN];
@@ -558,6 +559,7 @@ static int default_pktv_pool_create(void)
 
 	return 0;
 }
+#endif
 
 static int default_evv_pool_create(void)
 {
@@ -615,6 +617,7 @@ static void config_normal_pktio(odp_pktio_t pktio, odp_schedule_sync_t sync_mode
 		odp_time_wait_ns(ODP_TIME_SEC_IN_NS / 4);
 }
 
+#if ODP_DEPRECATED_API
 static void config_pktv_pktio(odp_pktio_t pktio, int iface_idx, odp_schedule_sync_t sync_mode)
 {
 	odp_pktout_queue_param_t pktout_param;
@@ -641,6 +644,7 @@ static void config_pktv_pktio(odp_pktio_t pktio, int iface_idx, odp_schedule_syn
 	if (global.wait_for_network)
 		odp_time_wait_ns(ODP_TIME_SEC_IN_NS / 4);
 }
+#endif
 
 static int event_aggr_capability(odp_event_aggr_capability_t *aggr_capa, odp_pktin_mode_t imode)
 {
@@ -747,9 +751,12 @@ static void pktio_pair_create_full(pktio_pair_t *pair, odp_pktin_mode_t in_mode,
 
 		pktio = open_pktio(i, in_mode, out_mode, rx_pool);
 
+#if ODP_DEPRECATED_API
 		if (vector_mode == VECTOR_MODE_PACKET)
 			config_pktv_pktio(pktio, i, sync_mode);
-		else if (vector_mode == VECTOR_MODE_EVENT)
+		else
+#endif
+		if (vector_mode == VECTOR_MODE_EVENT)
 			config_evv_pktio(pktio, i, in_mode, sync_mode, &aggr_tmo);
 		else
 			config_normal_pktio(pktio, sync_mode);
@@ -958,6 +965,7 @@ static int get_packets(const pktio_info_t *pktio_rx, odp_packet_t pkt_tbl[],
 	for (i = 0; i < num_evts; ++i) {
 		if (odp_event_type(evt_tbl[i]) == ODP_EVENT_PACKET) {
 			pkt_tbl[num_pkts++] = odp_packet_from_event(evt_tbl[i]);
+#if ODP_DEPRECATED_API
 		} else if (vector_mode == VECTOR_MODE_PACKET &&
 			   odp_event_type(evt_tbl[i]) == ODP_EVENT_PACKET_VECTOR &&
 			   num_pkts < num) {
@@ -982,6 +990,7 @@ static int get_packets(const pktio_info_t *pktio_rx, odp_packet_t pkt_tbl[],
 				num_pkts += pktv_len;
 			}
 			odp_packet_vector_free(pktv);
+#endif
 		} else if (vector_mode == VECTOR_MODE_EVENT &&
 			   odp_event_type(evt_tbl[i]) == ODP_EVENT_VECTOR &&
 			   num_pkts < num) {
@@ -1925,7 +1934,9 @@ static void test_defaults(uint8_t fill)
 	CU_ASSERT(qp_in.queue_param.num_aggr == 0);
 	CU_ASSERT(qp_in.queue_param.aggr == NULL);
 	CU_ASSERT(qp_in.queue_param_ovr == NULL);
+#if ODP_DEPRECATED_API
 	CU_ASSERT(qp_in.vector.enable == false);
+#endif
 
 	memset(&qp_out, fill, sizeof(qp_out));
 	odp_pktout_queue_param_init(&qp_out);
@@ -4648,6 +4659,7 @@ static int create_pool(const char *iface, int num)
 	return 0;
 }
 
+#if ODP_DEPRECATED_API
 static int create_pktv_pool(const char *iface, int num)
 {
 	char pool_name[ODP_POOL_NAME_LEN];
@@ -4669,6 +4681,7 @@ static int create_pktv_pool(const char *iface, int num)
 
 	return 0;
 }
+#endif
 
 static int create_evv_pool(const char *iface, int num)
 {
@@ -4691,6 +4704,7 @@ static int create_evv_pool(const char *iface, int num)
 	return 0;
 }
 
+#if ODP_DEPRECATED_API
 static int pktio_check_pktv_queue(void)
 {
 	return global.iface[0].capa.queue_direct.vector.supported ?
@@ -4742,6 +4756,7 @@ static void pktio_test_pktv_recv_atomic(void)
 	test_txrx(ODP_PKTIN_MODE_SCHED, PKTV_TX_BATCH_LEN, TXRX_MODE_MULTI_EVENT,
 		  ODP_SCHED_SYNC_ATOMIC, VECTOR_MODE_PACKET);
 }
+#endif
 
 static int pktio_check_evv(odp_pktin_mode_t in_mode)
 {
@@ -4787,6 +4802,7 @@ static void pktio_test_evv_recv_atomic(void)
 		  ODP_SCHED_SYNC_ATOMIC, VECTOR_MODE_EVENT);
 }
 
+#if ODP_DEPRECATED_API
 static void pktio_test_pktv_pktin_queue_config(odp_pktin_mode_t in_mode)
 {
 	odp_pktin_queue_param_t queue_param;
@@ -4835,6 +4851,7 @@ static void pktio_test_pktv_pktin_queue_config_sched(void)
 {
 	pktio_test_pktv_pktin_queue_config(ODP_PKTIN_MODE_SCHED);
 }
+#endif
 
 static void pktio_test_evv_pktin_queue_config(odp_pktin_mode_t in_mode)
 {
@@ -5277,8 +5294,10 @@ static int pktio_suite_init(pkt_segmented_e pool_segmentation)
 		if (create_pool(global.iface[i].name, i) != 0)
 			return -1;
 
+#if ODP_DEPRECATED_API
 		if (create_pktv_pool(global.iface[i].name, i) != 0)
 			return -1;
+#endif
 
 		if (create_evv_pool(global.iface[i].name, i) != 0)
 			return -1;
@@ -5289,10 +5308,12 @@ static int pktio_suite_init(pkt_segmented_e pool_segmentation)
 		return -1;
 	}
 
+#if ODP_DEPRECATED_API
 	if (default_pktv_pool_create() != 0) {
 		ODPH_ERR("failed to create default pktv pool\n");
 		return -1;
 	}
+#endif
 
 	if (default_evv_pool_create() != 0) {
 		ODPH_ERR("failed to create default event vector pool\n");
@@ -5326,10 +5347,12 @@ static int pktio_suite_init_segmented(void)
 	return pktio_suite_init(PKT_POOL_SEGMENTED);
 }
 
+#if ODP_DEPRECATED_API
 static int pktv_suite_init(void)
 {
 	return pktio_suite_init(PKT_POOL_UNSEGMENTED);
 }
+#endif
 
 static int evv_suite_init(void)
 {
@@ -5388,11 +5411,13 @@ static int pktio_suite_term(void)
 	}
 	global.default_pkt_pool = ODP_POOL_INVALID;
 
+#if ODP_DEPRECATED_API
 	if (odp_pool_destroy(global.default_pktv_pool) != 0) {
 		ODPH_ERR("failed to destroy default pktv pool\n");
 		ret = -1;
 	}
 	global.default_pktv_pool = ODP_POOL_INVALID;
+#endif
 
 	if (odp_pool_destroy(global.default_evv_pool) != 0) {
 		ODPH_ERR("failed to destroy default event vector pool\n");
@@ -5406,10 +5431,12 @@ static int pktio_suite_term(void)
 	return ret;
 }
 
+#if ODP_DEPRECATED_API
 static int pktv_suite_term(void)
 {
 	return pktio_suite_term();
 }
+#endif
 
 static int evv_suite_term(void)
 {
@@ -5525,6 +5552,7 @@ odp_testinfo_t pktio_suite_segmented[] = {
 	ODP_TEST_INFO_NULL
 };
 
+#if ODP_DEPRECATED_API
 odp_testinfo_t pktv_suite[] = {
 	ODP_TEST_INFO_CONDITIONAL(pktio_test_pktv_pktin_queue_config_queue, pktio_check_pktv_queue),
 	ODP_TEST_INFO_CONDITIONAL(pktio_test_pktv_pktin_queue_config_sched, pktio_check_pktv_sched),
@@ -5534,6 +5562,7 @@ odp_testinfo_t pktv_suite[] = {
 	ODP_TEST_INFO_CONDITIONAL(pktio_test_pktv_recv_atomic, pktio_check_pktv_sched_txrx),
 	ODP_TEST_INFO_NULL
 };
+#endif
 
 odp_testinfo_t evv_suite[] = {
 	ODP_TEST_INFO_CONDITIONAL(pktio_test_evv_pktin_queue_config_queue, pktio_check_evv_queue),
@@ -5551,7 +5580,9 @@ odp_suiteinfo_t pktio_suites[] = {
 	{"Packet I/O Segmented", pktio_suite_init_segmented,
 	 pktio_suite_term, pktio_suite_segmented},
 	{"Packet parser", parser_suite_init, parser_suite_term, parser_suite},
+#if ODP_DEPRECATED_API
 	{"Packet vector", pktv_suite_init, pktv_suite_term, pktv_suite},
+#endif
 	{"Event vector", evv_suite_init, evv_suite_term, evv_suite},
 	{"Large Segment Offload", lso_suite_init, lso_suite_term, lso_suite},
 	ODP_SUITE_INFO_NULL

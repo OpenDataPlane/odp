@@ -19,6 +19,7 @@ extern "C" {
 
 #include <odp/api/atomic.h>
 #include <odp/api/classification.h>
+#include <odp/api/deprecated.h>
 #include <odp/api/event.h>
 #include <odp/api/event_vector.h>
 #include <odp/api/hints.h>
@@ -94,11 +95,11 @@ static inline void _odp_cos_vector_enq(odp_queue_t queue, odp_event_t events[], 
 	odp_event_t event_tbl[num_pktv];
 
 	for (i = 0; i < num_pktv; i++) {
-		pktv = odp_packet_vector_alloc(pool);
+		pktv = ODP_DEPRECATE(odp_packet_vector_alloc)(pool);
 		if (odp_unlikely(pktv == ODP_PACKET_VECTOR_INVALID))
 			break;
 		pktv_tbl[i] = pktv;
-		event_tbl[i] = odp_packet_vector_to_event(pktv);
+		event_tbl[i] = ODP_DEPRECATE(odp_packet_vector_to_event)(pktv);
 	}
 	if (odp_unlikely(i == 0)) {
 		odp_event_free_multi(events, num);
@@ -116,9 +117,9 @@ static inline void _odp_cos_vector_enq(odp_queue_t queue, odp_event_t events[], 
 		if (num_enq + max_size > num)
 			pktv_size = num - num_enq;
 
-		odp_packet_vector_tbl(pktv, &pkt_tbl);
+		ODP_DEPRECATE(odp_packet_vector_tbl)(pktv, &pkt_tbl);
 		odp_packet_from_event_multi(pkt_tbl, &events[num_enq], pktv_size);
-		odp_packet_vector_size_set(pktv, pktv_size);
+		ODP_DEPRECATE(odp_packet_vector_size_set)(pktv, pktv_size);
 		num_enq += pktv_size;
 	}
 
