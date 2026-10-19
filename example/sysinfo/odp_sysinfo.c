@@ -1068,6 +1068,7 @@ int main(int argc, char **argv)
 	printf("    plain.aggr.min_size:  %u\n", queue_capa.plain.aggr.min_size);
 	printf("    plain.aggr.max_tmo_ns: %" PRIu64 "\n", queue_capa.plain.aggr.max_tmo_ns);
 	printf("    plain.aggr.min_tmo_ns: %" PRIu64 "\n", queue_capa.plain.aggr.min_tmo_ns);
+	printf("    plain.aggr.source:    0x%" PRIx32 "\n", queue_capa.plain.aggr.source.all_bits);
 
 	printf("\n");
 	printf("  SCHEDULER\n");
@@ -1088,6 +1089,7 @@ int main(int argc, char **argv)
 	printf("    aggr.min_size:        %u\n", schedule_capa.aggr.min_size);
 	printf("    aggr.max_tmo_ns:      %" PRIu64 "\n", schedule_capa.aggr.max_tmo_ns);
 	printf("    aggr.min_tmo_ns:      %" PRIu64 "\n", schedule_capa.aggr.min_tmo_ns);
+	printf("    aggr.source:          0x%" PRIx32 "\n", schedule_capa.aggr.source.all_bits);
 
 	printf("\n");
 	printf("  STASH\n");
