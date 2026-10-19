@@ -1467,17 +1467,16 @@ static int schedule_ord_enq_multi_no_stash(odp_queue_t dst_queue,
 
 static inline void schedule_ord_stash_release(odp_queue_t dst_queue)
 {
-	if (odp_likely(sched_local.sync_ctx != ODP_SCHED_SYNC_ORDERED ||
-		       sched_local.ordered.stash_num == 0))
+	if (odp_likely(sched_local.sync_ctx != ODP_SCHED_SYNC_ORDERED))
 		return;
 
 	schedule_ord_enq_multi_no_stash(dst_queue, NULL, 0, NULL);
 	ordered_stash_release();
 }
 
-static inline void schedule_ord_stash_release_no_stash(odp_queue_t dst_queue ODP_UNUSED)
+static inline void schedule_ord_stash_release_no_stash(odp_queue_t dst_queue)
 {
-	/* Nothing to do */
+	schedule_ord_enq_multi_no_stash(dst_queue, NULL, 0, NULL);
 }
 
 static inline int queue_is_pktin(uint32_t queue_index)
