@@ -148,7 +148,6 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 	struct ring *ring;
 	odp_pool_t pool = pkt_sock->pool;
 	uint16_t frame_offset = pktio_entry->pktin_frame_offset;
-	uint16_t vlan_len = 0;
 	const odp_proto_layer_t layer = pktio_entry->parse_layer;
 	const odp_pktin_config_opt_t opt = pktio_entry->config.pktin;
 
@@ -161,6 +160,7 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 
 	for (i = 0; i < num; i++) {
 		struct tpacket2_hdr *tp_hdr;
+		uint16_t vlan_len = 0;
 		odp_packet_t pkt;
 		odp_packet_hdr_t *hdr;
 		int ret;
