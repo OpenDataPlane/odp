@@ -73,6 +73,16 @@ static int queue_capa(odp_queue_capability_t *capa, int sched ODP_UNUSED)
 	capa->plain.aggr.min_size = 2;
 	capa->plain.aggr.max_tmo_ns = 0;
 	capa->plain.aggr.min_tmo_ns = 0;
+	capa->plain.aggr.source.bit.queue = 1;
+	capa->plain.aggr.source.bit.pktin = 1;
+	capa->plain.aggr.source.bit.tx_compl = 1;
+	capa->plain.aggr.source.bit.cls = 1;
+	capa->plain.aggr.source.bit.timer = 1;
+	capa->plain.aggr.source.bit.crypto = 1;
+	capa->plain.aggr.source.bit.comp = 1;
+	capa->plain.aggr.source.bit.ipsec = 1;
+	capa->plain.aggr.source.bit.dma = 1;
+	capa->plain.aggr.source.bit.ml = 1;
 	capa->plain.aggr.stats.bit.len = 1;
 
 	return 0;
