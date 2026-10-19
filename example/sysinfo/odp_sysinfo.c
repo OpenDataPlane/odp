@@ -688,6 +688,7 @@ int main(int argc, char **argv)
 	odp_shm_capability_t shm_capa;
 	odp_pool_capability_t pool_capa;
 	odp_pool_ext_capability_t pool_ext_capa;
+	odp_pool_ext_capability_t pool_ext_buf_capa;
 	odp_cls_capability_t cls_capa;
 	odp_comp_capability_t comp_capa;
 	odp_dma_capability_t dma_capa;
@@ -765,6 +766,11 @@ int main(int argc, char **argv)
 
 	if (odp_pool_capability(&pool_capa)) {
 		ODPH_ERR("pool capability failed\n");
+		exit(EXIT_FAILURE);
+	}
+
+	if (odp_pool_ext_capability(ODP_POOL_BUFFER, &pool_ext_buf_capa)) {
+		ODPH_ERR("external buffer pool capability failed\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -945,6 +951,25 @@ int main(int argc, char **argv)
 	printf("    event_vector.max_cache_size:    %u\n", capa.max_cache_size);
 	printf("    event_vector.stats:             0x%" PRIx64 "\n", capa.stats.all);
 #undef capa
+
+	printf("\n");
+	printf("  POOL EXT (buf)\n");
+	printf("    max_pools:             %u\n", pool_ext_buf_capa.max_pools);
+	if (pool_ext_buf_capa.max_pools) {
+		printf("    min_cache_size:        %u\n", pool_ext_buf_capa.min_cache_size);
+		printf("    max_cache_size:        %u\n", pool_ext_buf_capa.max_cache_size);
+		printf("    stats:                 0x%" PRIx64 "\n", pool_ext_buf_capa.stats.all);
+		printf("    buf.max_num_buf:       %u\n", pool_ext_buf_capa.buf.max_num_buf);
+		printf("    buf.max_buf_size:      %u B\n", pool_ext_buf_capa.buf.max_buf_size);
+		printf("    buf.odp_header_size:   %u B\n", pool_ext_buf_capa.buf.odp_header_size);
+		printf("    buf.odp_trailer_size:  %u B\n", pool_ext_buf_capa.buf.odp_trailer_size);
+		printf("    buf.min_mem_align:     %u B\n", pool_ext_buf_capa.buf.min_mem_align);
+		printf("    buf.min_buf_align:     %u B\n", pool_ext_buf_capa.buf.min_buf_align);
+		printf("    buf.min_data_align:    %u B\n", pool_ext_buf_capa.buf.min_data_align);
+		printf("    buf.buf_size_aligned:  %u\n", pool_ext_buf_capa.buf.buf_size_aligned);
+		printf("    buf.max_uarea_size:    %u B\n", pool_ext_buf_capa.buf.max_uarea_size);
+		printf("    buf.uarea_persistence: %i\n", pool_ext_buf_capa.buf.uarea_persistence);
+	}
 
 	printf("\n");
 	printf("  POOL EXT (pkt)\n");
