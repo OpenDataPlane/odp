@@ -888,7 +888,8 @@ static int queue_api_enq_aggr(odp_queue_t handle, odp_event_t ev,
 	if (odp_unlikely(base_queue->pktin.pktio != ODP_PKTIO_INVALID))
 		return base_queue->enqueue(base_queue->handle, (_odp_event_hdr_t *)(uintptr_t)ev);
 
-	/* Cannot stash events as ordered_stash_release() ignores odp_aggr_enq_param_t */
+	/* Cannot stash events as ordered_stash_release() ignores odp_aggr_enq_param_t. Wait for
+	 * order before taking the aggregator lock, so that events end up in correct order. */
 	_odp_sched_fn->ord_stash_release(handle);
 
 	odp_ticketlock_lock(&aggr->lock);
