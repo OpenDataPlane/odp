@@ -1471,7 +1471,8 @@ static inline void schedule_ord_stash_release(odp_queue_t dst_queue)
 		return;
 
 	schedule_ord_enq_multi_no_stash(dst_queue, NULL, 0, NULL);
-	ordered_stash_release();
+	if (sched_local.ordered.in_order)
+		ordered_stash_release();
 }
 
 static inline void schedule_ord_stash_release_no_stash(odp_queue_t dst_queue)
