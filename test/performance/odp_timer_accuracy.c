@@ -373,6 +373,16 @@ static int parse_options(int argc, char *argv[], test_opt_t *test_opt)
 		}
 	}
 
+	if (test_opt->num < 1) {
+		ODPH_ERR("Number of periods must be at least 1\n");
+		return -1;
+	}
+
+	if (test_opt->burst < 1) {
+		ODPH_ERR("Burst size must be at least 1\n");
+		return -1;
+	}
+
 	if (test_opt->mode == MODE_PERIODIC) {
 		if ((test_opt->freq.integer == 0 && test_opt->freq.numer == 0) ||
 		    (test_opt->freq.numer != 0 && test_opt->freq.denom == 0)) {
@@ -418,6 +428,9 @@ static int single_shot_params(test_global_t *test_global, odp_timer_pool_param_t
 	uint64_t period_ns = test_global->opt.period_ns;
 	uint64_t num_tmo = test_global->opt.num + test_global->opt.num_warmup;
 	uint64_t offset_ns = test_global->opt.offset_ns;
+	uint64_t burst = test_global->opt.burst;
+	uint64_t burst_gap = test_global->opt.burst_gap;
+	uint64_t first_tmo = offset_ns + ((burst - 1) * burst_gap);
 	enum mode_e mode = test_global->opt.mode;
 
 	max_res_ns = timer_capa->max_res.res_ns;
@@ -458,13 +471,13 @@ static int single_shot_params(test_global_t *test_global, odp_timer_pool_param_t
 
 	if (mode == MODE_ONESHOT) {
 		timer_param->min_tmo = offset_ns / 2;
-		timer_param->max_tmo = offset_ns + ((num_tmo + 1) * period_ns);
+		timer_param->max_tmo = first_tmo + ((num_tmo - 1) * period_ns);
 	} else {
 		if (mode == MODE_RESTART_ABS)
 			timer_param->min_tmo = period_ns / 10;
 		else
 			timer_param->min_tmo = period_ns;
-		timer_param->max_tmo = offset_ns + (2 * period_ns);
+		timer_param->max_tmo = ODPH_MAX(first_tmo, period_ns);
 	}
 
 	if (test_global->opt.max_tmo_ns) {
