@@ -78,6 +78,36 @@ const char *odph_auth_alg_to_str(odp_auth_alg_t alg);
 int odph_auth_alg_from_str(const char *str, odp_auth_alg_t *alg);
 
 /**
+ * Check if a cipher algorithm is supported
+ *
+ * Check if the bitfield corresponding to a given cipher is set in an
+ * odp_crypto_cipher_algos_t struct got from odp_crypto_capability() or
+ * odp_ipsec_capability().
+ *
+ * @param algs    Supported algorithms
+ * @param cipher  The algorithm being queried
+ *
+ * @retval 1 : The cipher algorithm is supported
+ * @retval 0 : The cipher algorithm is not supported or is unknown
+ */
+int odph_cipher_supported(const odp_crypto_cipher_algos_t *algs, odp_cipher_alg_t cipher);
+
+/**
+ * Check if an auth algorithm is supported
+ *
+ * Check if the bitfield corresponding to a given auth alg is set in an
+ * odp_crypto_auth_algos_t struct got from odp_crypto_capability() or
+ * odp_ipsec_capability().
+ *
+ * @param algs    Supported algorithms
+ * @param auth    The algorithm being queried
+ *
+ * @retval 1 : The auth algorithm is supported
+ * @retval 0 : The auth algorithm is not supported or is unknown
+ */
+int odph_auth_supported(const odp_crypto_auth_algos_t *algs, odp_auth_alg_t auth);
+
+/**
  * @}
  */
 
