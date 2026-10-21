@@ -1,9 +1,10 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2017-2018 Linaro Limited
  * Copyright (c) 2020 Marvell
- * Copyright (c) 2021 Nokia
+ * Copyright (c) 2021-2026 Nokia
  */
 
+#include <odp/helper/crypto.h>
 #include <odp/helper/debug.h>
 #include <odp/helper/ipsec.h>
 
@@ -66,99 +67,9 @@ int odph_ipsec_alg_check(const odp_ipsec_capability_t *capa,
 	uint32_t default_icv_len;
 	odp_bool_t found;
 
-	/* Check whether requested cipher algorithm is supported */
-	switch (cipher_alg) {
-	case ODP_CIPHER_ALG_NULL:
-		if (!capa->ciphers.bit.null)
-			return -1;
-		break;
-	case ODP_CIPHER_ALG_DES:
-		if (!capa->ciphers.bit.des)
-			return -1;
-		break;
-	case ODP_CIPHER_ALG_3DES_CBC:
-		if (!capa->ciphers.bit.trides_cbc)
-			return -1;
-		break;
-	case ODP_CIPHER_ALG_AES_CBC:
-		if (!capa->ciphers.bit.aes_cbc)
-			return -1;
-		break;
-	case ODP_CIPHER_ALG_AES_CTR:
-		if (!capa->ciphers.bit.aes_ctr)
-			return -1;
-		break;
-	case ODP_CIPHER_ALG_AES_GCM:
-		if (!capa->ciphers.bit.aes_gcm)
-			return -1;
-		break;
-	case ODP_CIPHER_ALG_AES_CCM:
-		if (!capa->ciphers.bit.aes_ccm)
-			return -1;
-		break;
-	case ODP_CIPHER_ALG_CHACHA20_POLY1305:
-		if (!capa->ciphers.bit.chacha20_poly1305)
-			return -1;
-		break;
-	default:
-		ODPH_DBG("Unsupported cipher algorithm\n");
+	if (!odph_cipher_supported(&capa->ciphers, cipher_alg) ||
+	    !odph_auth_supported(&capa->auths, auth_alg))
 		return -1;
-	}
-
-	/* Check whether requested auth algorithm is supported */
-	switch (auth_alg) {
-	case ODP_AUTH_ALG_NULL:
-		if (!capa->auths.bit.null)
-			return -1;
-		break;
-	case ODP_AUTH_ALG_MD5_HMAC:
-		if (!capa->auths.bit.md5_hmac)
-			return -1;
-		break;
-	case ODP_AUTH_ALG_SHA1_HMAC:
-		if (!capa->auths.bit.sha1_hmac)
-			return -1;
-		break;
-	case ODP_AUTH_ALG_SHA256_HMAC:
-		if (!capa->auths.bit.sha256_hmac)
-			return -1;
-		break;
-	case ODP_AUTH_ALG_SHA384_HMAC:
-		if (!capa->auths.bit.sha384_hmac)
-			return -1;
-		break;
-	case ODP_AUTH_ALG_SHA512_HMAC:
-		if (!capa->auths.bit.sha512_hmac)
-			return -1;
-		break;
-	case ODP_AUTH_ALG_AES_XCBC_MAC:
-		if (!capa->auths.bit.aes_xcbc_mac)
-			return -1;
-		break;
-	case ODP_AUTH_ALG_AES_GCM:
-		if (!capa->auths.bit.aes_gcm)
-			return -1;
-		break;
-	case ODP_AUTH_ALG_AES_GMAC:
-		if (!capa->auths.bit.aes_gmac)
-			return -1;
-		break;
-	case ODP_AUTH_ALG_AES_CCM:
-		if (!capa->auths.bit.aes_ccm)
-			return -1;
-		break;
-	case ODP_AUTH_ALG_AES_CMAC:
-		if (!capa->auths.bit.aes_cmac)
-			return -1;
-		break;
-	case ODP_AUTH_ALG_CHACHA20_POLY1305:
-		if (!capa->auths.bit.chacha20_poly1305)
-			return -1;
-		break;
-	default:
-		ODPH_DBG("Unsupported authentication algorithm\n");
-		return -1;
-	}
 
 	/* Check whether requested cipher key length is supported */
 	max_capa = odp_ipsec_cipher_capability(cipher_alg, NULL, 0);
