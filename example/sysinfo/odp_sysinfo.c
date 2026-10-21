@@ -33,6 +33,10 @@
 
 #define PROG_NAME "odp_sysinfo"
 
+/* Crypto API cannot support more than this many algorithms */
+#define MAX_NUM_CIPHERS 64
+#define MAX_NUM_AUTHS   64
+
 typedef struct {
 	char name[MAX_NAME_LEN];
 	odp_pktio_capability_t capa;
@@ -179,140 +183,16 @@ typedef void (*auth_op_t)(odp_auth_alg_t alg);
 
 static void foreach_cipher(odp_crypto_cipher_algos_t ciphers, cipher_op_t op)
 {
-	if (ciphers.bit.null)
-		op(ODP_CIPHER_ALG_NULL);
-	if (ciphers.bit.des)
-		op(ODP_CIPHER_ALG_DES);
-	if (ciphers.bit.trides_cbc)
-		op(ODP_CIPHER_ALG_3DES_CBC);
-	if (ciphers.bit.trides_ecb)
-		op(ODP_CIPHER_ALG_3DES_ECB);
-	if (ciphers.bit.aes_cbc)
-		op(ODP_CIPHER_ALG_AES_CBC);
-	if (ciphers.bit.aes_ctr)
-		op(ODP_CIPHER_ALG_AES_CTR);
-	if (ciphers.bit.aes_ecb)
-		op(ODP_CIPHER_ALG_AES_ECB);
-	if (ciphers.bit.aes_cfb128)
-		op(ODP_CIPHER_ALG_AES_CFB128);
-	if (ciphers.bit.aes_xts)
-		op(ODP_CIPHER_ALG_AES_XTS);
-	if (ciphers.bit.aes_gcm)
-		op(ODP_CIPHER_ALG_AES_GCM);
-	if (ciphers.bit.aes_ccm)
-		op(ODP_CIPHER_ALG_AES_CCM);
-	if (ciphers.bit.chacha20_poly1305)
-		op(ODP_CIPHER_ALG_CHACHA20_POLY1305);
-	if (ciphers.bit.kasumi_f8)
-		op(ODP_CIPHER_ALG_KASUMI_F8);
-	if (ciphers.bit.snow3g_uea2)
-		op(ODP_CIPHER_ALG_SNOW3G_UEA2);
-	if (ciphers.bit.snow5g_nea4)
-		op(ODP_CIPHER_ALG_SNOW5G_NEA4);
-	if (ciphers.bit.aes_eea2)
-		op(ODP_CIPHER_ALG_AES_EEA2);
-	if (ciphers.bit.zuc_eea3)
-		op(ODP_CIPHER_ALG_ZUC_EEA3);
-	if (ciphers.bit.zuc_nea6)
-		op(ODP_CIPHER_ALG_ZUC_NEA6);
-	if (ciphers.bit.snow_v)
-		op(ODP_CIPHER_ALG_SNOW_V);
-	if (ciphers.bit.snow_v_gcm)
-		op(ODP_CIPHER_ALG_SNOW_V_GCM);
-	if (ciphers.bit.sm4_ecb)
-		op(ODP_CIPHER_ALG_SM4_ECB);
-	if (ciphers.bit.sm4_cbc)
-		op(ODP_CIPHER_ALG_SM4_CBC);
-	if (ciphers.bit.sm4_ctr)
-		op(ODP_CIPHER_ALG_SM4_CTR);
-	if (ciphers.bit.sm4_gcm)
-		op(ODP_CIPHER_ALG_SM4_GCM);
-	if (ciphers.bit.sm4_ccm)
-		op(ODP_CIPHER_ALG_SM4_CCM);
+	for (int alg = 0; alg < MAX_NUM_CIPHERS; alg++)
+		if (odph_cipher_supported(&ciphers, alg))
+			op(alg);
 }
 
 static void foreach_auth(odp_crypto_auth_algos_t auths, auth_op_t op)
 {
-	if (auths.bit.null)
-		op(ODP_AUTH_ALG_NULL);
-	if (auths.bit.md5_hmac)
-		op(ODP_AUTH_ALG_MD5_HMAC);
-	if (auths.bit.sha1_hmac)
-		op(ODP_AUTH_ALG_SHA1_HMAC);
-	if (auths.bit.sha224_hmac)
-		op(ODP_AUTH_ALG_SHA224_HMAC);
-	if (auths.bit.sha256_hmac)
-		op(ODP_AUTH_ALG_SHA256_HMAC);
-	if (auths.bit.sha384_hmac)
-		op(ODP_AUTH_ALG_SHA384_HMAC);
-	if (auths.bit.sha512_hmac)
-		op(ODP_AUTH_ALG_SHA512_HMAC);
-	if (auths.bit.sha3_224_hmac)
-		op(ODP_AUTH_ALG_SHA3_224_HMAC);
-	if (auths.bit.sha3_256_hmac)
-		op(ODP_AUTH_ALG_SHA3_256_HMAC);
-	if (auths.bit.sha3_384_hmac)
-		op(ODP_AUTH_ALG_SHA3_384_HMAC);
-	if (auths.bit.sha3_512_hmac)
-		op(ODP_AUTH_ALG_SHA3_512_HMAC);
-	if (auths.bit.aes_gcm)
-		op(ODP_AUTH_ALG_AES_GCM);
-	if (auths.bit.aes_gmac)
-		op(ODP_AUTH_ALG_AES_GMAC);
-	if (auths.bit.aes_ccm)
-		op(ODP_AUTH_ALG_AES_CCM);
-	if (auths.bit.aes_cmac)
-		op(ODP_AUTH_ALG_AES_CMAC);
-	if (auths.bit.aes_xcbc_mac)
-		op(ODP_AUTH_ALG_AES_XCBC_MAC);
-	if (auths.bit.chacha20_poly1305)
-		op(ODP_AUTH_ALG_CHACHA20_POLY1305);
-	if (auths.bit.kasumi_f9)
-		op(ODP_AUTH_ALG_KASUMI_F9);
-	if (auths.bit.snow3g_uia2)
-		op(ODP_AUTH_ALG_SNOW3G_UIA2);
-	if (auths.bit.snow5g_nia4)
-		op(ODP_AUTH_ALG_SNOW5G_NIA4);
-	if (auths.bit.aes_eia2)
-		op(ODP_AUTH_ALG_AES_EIA2);
-	if (auths.bit.zuc_eia3)
-		op(ODP_AUTH_ALG_ZUC_EIA3);
-	if (auths.bit.zuc_nia6)
-		op(ODP_AUTH_ALG_ZUC_NIA6);
-	if (auths.bit.snow_v_gcm)
-		op(ODP_AUTH_ALG_SNOW_V_GCM);
-	if (auths.bit.snow_v_gmac)
-		op(ODP_AUTH_ALG_SNOW_V_GMAC);
-	if (auths.bit.sm3_hmac)
-		op(ODP_AUTH_ALG_SM3_HMAC);
-	if (auths.bit.sm4_gcm)
-		op(ODP_AUTH_ALG_SM4_GCM);
-	if (auths.bit.sm4_gmac)
-		op(ODP_AUTH_ALG_SM4_GMAC);
-	if (auths.bit.sm4_ccm)
-		op(ODP_AUTH_ALG_SM4_CCM);
-	if (auths.bit.md5)
-		op(ODP_AUTH_ALG_MD5);
-	if (auths.bit.sha1)
-		op(ODP_AUTH_ALG_SHA1);
-	if (auths.bit.sha224)
-		op(ODP_AUTH_ALG_SHA224);
-	if (auths.bit.sha256)
-		op(ODP_AUTH_ALG_SHA256);
-	if (auths.bit.sha384)
-		op(ODP_AUTH_ALG_SHA384);
-	if (auths.bit.sha512)
-		op(ODP_AUTH_ALG_SHA512);
-	if (auths.bit.sha3_224)
-		op(ODP_AUTH_ALG_SHA3_224);
-	if (auths.bit.sha3_256)
-		op(ODP_AUTH_ALG_SHA3_256);
-	if (auths.bit.sha3_384)
-		op(ODP_AUTH_ALG_SHA3_384);
-	if (auths.bit.sha3_512)
-		op(ODP_AUTH_ALG_SHA3_512);
-	if (auths.bit.sm3)
-		op(ODP_AUTH_ALG_SM3);
+	for (int alg = 0; alg < MAX_NUM_AUTHS; alg++)
+		if (odph_auth_supported(&auths, alg))
+			op(alg);
 }
 
 static void print_cipher_capa(odp_cipher_alg_t cipher)
