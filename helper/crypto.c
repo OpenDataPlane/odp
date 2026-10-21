@@ -131,3 +131,151 @@ int odph_auth_alg_from_str(const char *str, odp_auth_alg_t *alg)
 
 	return -1;
 }
+
+int odph_cipher_supported(const odp_crypto_cipher_algos_t *algs, odp_cipher_alg_t cipher)
+{
+	switch (cipher) {
+	case ODP_CIPHER_ALG_NULL:
+		return algs->bit.null;
+	case ODP_CIPHER_ALG_DES:
+		return algs->bit.des;
+	case ODP_CIPHER_ALG_3DES_CBC:
+		return algs->bit.trides_cbc;
+	case ODP_CIPHER_ALG_3DES_ECB:
+		return algs->bit.trides_ecb;
+	case ODP_CIPHER_ALG_AES_CBC:
+		return algs->bit.aes_cbc;
+	case ODP_CIPHER_ALG_AES_CTR:
+		return algs->bit.aes_ctr;
+	case ODP_CIPHER_ALG_AES_ECB:
+		return algs->bit.aes_ecb;
+	case ODP_CIPHER_ALG_AES_CFB128:
+		return algs->bit.aes_cfb128;
+	case ODP_CIPHER_ALG_AES_XTS:
+		return algs->bit.aes_xts;
+	case ODP_CIPHER_ALG_AES_GCM:
+		return algs->bit.aes_gcm;
+	case ODP_CIPHER_ALG_AES_CCM:
+		return algs->bit.aes_ccm;
+	case ODP_CIPHER_ALG_CHACHA20_POLY1305:
+		return algs->bit.chacha20_poly1305;
+	case ODP_CIPHER_ALG_KASUMI_F8:
+		return algs->bit.kasumi_f8;
+	case ODP_CIPHER_ALG_SNOW3G_UEA2:
+		return algs->bit.snow3g_uea2;
+	case ODP_CIPHER_ALG_SNOW5G_NEA4:
+		return algs->bit.snow5g_nea4;
+	case ODP_CIPHER_ALG_AES_EEA2:
+		return algs->bit.aes_eea2;
+	case ODP_CIPHER_ALG_ZUC_EEA3:
+		return algs->bit.zuc_eea3;
+	case ODP_CIPHER_ALG_ZUC_NEA6:
+		return algs->bit.zuc_nea6;
+	case ODP_CIPHER_ALG_SNOW_V:
+		return algs->bit.snow_v;
+	case ODP_CIPHER_ALG_SNOW_V_GCM:
+		return algs->bit.snow_v_gcm;
+	case ODP_CIPHER_ALG_SM4_ECB:
+		return algs->bit.sm4_ecb;
+	case ODP_CIPHER_ALG_SM4_CBC:
+		return algs->bit.sm4_cbc;
+	case ODP_CIPHER_ALG_SM4_CTR:
+		return algs->bit.sm4_ctr;
+	case ODP_CIPHER_ALG_SM4_GCM:
+		return algs->bit.sm4_gcm;
+	case ODP_CIPHER_ALG_SM4_CCM:
+		return algs->bit.sm4_ccm;
+	default:
+		break;
+	}
+	return 0;
+}
+
+int odph_auth_supported(const odp_crypto_auth_algos_t *algs, odp_auth_alg_t auth)
+{
+	switch (auth) {
+	case ODP_AUTH_ALG_NULL:
+		return algs->bit.null;
+	case ODP_AUTH_ALG_MD5_HMAC:
+		return algs->bit.md5_hmac;
+	case ODP_AUTH_ALG_SHA1_HMAC:
+		return algs->bit.sha1_hmac;
+	case ODP_AUTH_ALG_SHA224_HMAC:
+		return algs->bit.sha224_hmac;
+	case ODP_AUTH_ALG_SHA256_HMAC:
+		return algs->bit.sha256_hmac;
+	case ODP_AUTH_ALG_SHA384_HMAC:
+		return algs->bit.sha384_hmac;
+	case ODP_AUTH_ALG_SHA512_HMAC:
+		return algs->bit.sha512_hmac;
+	case ODP_AUTH_ALG_SHA3_224_HMAC:
+		return algs->bit.sha3_224_hmac;
+	case ODP_AUTH_ALG_SHA3_256_HMAC:
+		return algs->bit.sha3_256_hmac;
+	case ODP_AUTH_ALG_SHA3_384_HMAC:
+		return algs->bit.sha3_384_hmac;
+	case ODP_AUTH_ALG_SHA3_512_HMAC:
+		return algs->bit.sha3_512_hmac;
+	case ODP_AUTH_ALG_AES_GCM:
+		return algs->bit.aes_gcm;
+	case ODP_AUTH_ALG_AES_GMAC:
+		return algs->bit.aes_gmac;
+	case ODP_AUTH_ALG_AES_CCM:
+		return algs->bit.aes_ccm;
+	case ODP_AUTH_ALG_AES_CMAC:
+		return algs->bit.aes_cmac;
+	case ODP_AUTH_ALG_AES_XCBC_MAC:
+		return algs->bit.aes_xcbc_mac;
+	case ODP_AUTH_ALG_CHACHA20_POLY1305:
+		return algs->bit.chacha20_poly1305;
+	case ODP_AUTH_ALG_KASUMI_F9:
+		return algs->bit.kasumi_f9;
+	case ODP_AUTH_ALG_SNOW3G_UIA2:
+		return algs->bit.snow3g_uia2;
+	case ODP_AUTH_ALG_SNOW5G_NIA4:
+		return algs->bit.snow5g_nia4;
+	case ODP_AUTH_ALG_AES_EIA2:
+		return algs->bit.aes_eia2;
+	case ODP_AUTH_ALG_ZUC_EIA3:
+		return algs->bit.zuc_eia3;
+	case ODP_AUTH_ALG_ZUC_NIA6:
+		return algs->bit.zuc_nia6;
+	case ODP_AUTH_ALG_SNOW_V_GCM:
+		return algs->bit.snow_v_gcm;
+	case ODP_AUTH_ALG_SNOW_V_GMAC:
+		return algs->bit.snow_v_gmac;
+	case ODP_AUTH_ALG_SM3_HMAC:
+		return algs->bit.sm3_hmac;
+	case ODP_AUTH_ALG_SM4_GCM:
+		return algs->bit.sm4_gcm;
+	case ODP_AUTH_ALG_SM4_GMAC:
+		return algs->bit.sm4_gmac;
+	case ODP_AUTH_ALG_SM4_CCM:
+		return algs->bit.sm4_ccm;
+	case ODP_AUTH_ALG_MD5:
+		return algs->bit.md5;
+	case ODP_AUTH_ALG_SHA1:
+		return algs->bit.sha1;
+	case ODP_AUTH_ALG_SHA224:
+		return algs->bit.sha224;
+	case ODP_AUTH_ALG_SHA256:
+		return algs->bit.sha256;
+	case ODP_AUTH_ALG_SHA384:
+		return algs->bit.sha384;
+	case ODP_AUTH_ALG_SHA512:
+		return algs->bit.sha512;
+	case ODP_AUTH_ALG_SHA3_224:
+		return algs->bit.sha3_224;
+	case ODP_AUTH_ALG_SHA3_256:
+		return algs->bit.sha3_256;
+	case ODP_AUTH_ALG_SHA3_384:
+		return algs->bit.sha3_384;
+	case ODP_AUTH_ALG_SHA3_512:
+		return algs->bit.sha3_512;
+	case ODP_AUTH_ALG_SM3:
+		return algs->bit.sm3;
+	default:
+		break;
+	}
+	return 0;
+}
