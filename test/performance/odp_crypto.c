@@ -940,123 +940,13 @@ run_measure_one(crypto_args_t *cargs,
 	return rc < 0 ? rc : 0;
 }
 
-static int check_cipher_alg(const odp_crypto_capability_t *capa,
-			    odp_cipher_alg_t alg)
-{
-	switch (alg) {
-	case ODP_CIPHER_ALG_NULL:
-		if (capa->ciphers.bit.null)
-			return 0;
-		break;
-	case ODP_CIPHER_ALG_DES:
-		if (capa->ciphers.bit.des)
-			return 0;
-		break;
-	case ODP_CIPHER_ALG_3DES_CBC:
-		if (capa->ciphers.bit.trides_cbc)
-			return 0;
-		break;
-	case ODP_CIPHER_ALG_AES_CBC:
-		if (capa->ciphers.bit.aes_cbc)
-			return 0;
-		break;
-	case ODP_CIPHER_ALG_AES_CTR:
-		if (capa->ciphers.bit.aes_ctr)
-			return 0;
-		break;
-	case ODP_CIPHER_ALG_AES_GCM:
-		if (capa->ciphers.bit.aes_gcm)
-			return 0;
-		break;
-	case ODP_CIPHER_ALG_AES_CCM:
-		if (capa->ciphers.bit.aes_ccm)
-			return 0;
-		break;
-	case ODP_CIPHER_ALG_CHACHA20_POLY1305:
-		if (capa->ciphers.bit.chacha20_poly1305)
-			return 0;
-		break;
-	case ODP_CIPHER_ALG_ZUC_EEA3:
-		if (capa->ciphers.bit.zuc_eea3)
-			return 0;
-		break;
-	case ODP_CIPHER_ALG_SNOW3G_UEA2:
-		if (capa->ciphers.bit.snow3g_uea2)
-			return 0;
-		break;
-	default:
-		break;
-	}
-
-	return -1;
-}
-
-static int check_auth_alg(const odp_crypto_capability_t *capa,
-			  odp_auth_alg_t alg)
-{
-	switch (alg) {
-	case ODP_AUTH_ALG_NULL:
-		if (capa->auths.bit.null)
-			return 0;
-		break;
-	case ODP_AUTH_ALG_MD5_HMAC:
-		if (capa->auths.bit.md5_hmac)
-			return 0;
-		break;
-	case ODP_AUTH_ALG_SHA1_HMAC:
-		if (capa->auths.bit.sha1_hmac)
-			return 0;
-		break;
-	case ODP_AUTH_ALG_SHA256_HMAC:
-		if (capa->auths.bit.sha256_hmac)
-			return 0;
-		break;
-	case ODP_AUTH_ALG_SHA384_HMAC:
-		if (capa->auths.bit.sha384_hmac)
-			return 0;
-		break;
-	case ODP_AUTH_ALG_SHA512_HMAC:
-		if (capa->auths.bit.sha512_hmac)
-			return 0;
-		break;
-	case ODP_AUTH_ALG_AES_GCM:
-		if (capa->auths.bit.aes_gcm)
-			return 0;
-		break;
-	case ODP_AUTH_ALG_AES_GMAC:
-		if (capa->auths.bit.aes_gmac)
-			return 0;
-		break;
-	case ODP_AUTH_ALG_AES_CCM:
-		if (capa->auths.bit.aes_ccm)
-			return 0;
-		break;
-	case ODP_AUTH_ALG_CHACHA20_POLY1305:
-		if (capa->auths.bit.chacha20_poly1305)
-			return 0;
-		break;
-	case ODP_AUTH_ALG_ZUC_EIA3:
-		if (capa->auths.bit.zuc_eia3)
-			return 0;
-		break;
-	case ODP_AUTH_ALG_SNOW3G_UIA2:
-		if (capa->auths.bit.snow3g_uia2)
-			return 0;
-		break;
-	default:
-		break;
-	}
-
-	return -1;
-}
-
 static int check_cipher_params(const odp_crypto_capability_t *crypto_capa,
 			       const odp_crypto_session_param_t *param,
 			       int *bit_mode)
 {
 	int num, rc;
 
-	if (check_cipher_alg(crypto_capa, param->cipher_alg))
+	if (!odph_cipher_supported(&crypto_capa->ciphers, param->cipher_alg))
 		return 1;
 
 	num = odp_crypto_cipher_capability(param->cipher_alg, NULL, 0);
@@ -1106,7 +996,7 @@ static int check_auth_params(const odp_crypto_capability_t *crypto_capa,
 		return 1;
 	}
 
-	if (check_auth_alg(crypto_capa, param->auth_alg))
+	if (!odph_auth_supported(&crypto_capa->auths, param->auth_alg))
 		return 1;
 
 	num = odp_crypto_auth_capability(param->auth_alg, NULL, 0);
