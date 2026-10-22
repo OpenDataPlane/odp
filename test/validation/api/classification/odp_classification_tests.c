@@ -137,6 +137,10 @@ static int classification_suite_common_init(vector_mode_t vector_mode)
 		} else {
 			odp_event_aggr_config_t aggr;
 
+			if (!sched_capa.aggr.source.bit.cls)
+				printf("\nWarning: cls event source not supported (source: 0x%"
+				       PRIx32 ")\n", sched_capa.aggr.source.all_bits);
+
 			memset(&aggr, 0, sizeof(odp_event_aggr_config_t));
 
 			aggr.pool = evv_pool_create("event_vector_pool");
