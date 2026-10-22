@@ -1,5 +1,170 @@
 # Changelog
 
+## OpenDataPlane (1.52.0.0)
+
+### Backward incompatible API changes
+
+#### Classifier
+* Deprecate packet vector configuration of CoS (`odp_cls_cos_param_t.vector`).
+Use event aggregator queues to generate event vectors instead.
+
+#### Crypto
+* Deprecate `odp_crypto_session_param_t.output_pool`. The pool is not used by
+any of the crypto operation types.
+
+#### Event
+* Deprecate `ODP_EVENT_PACKET_VECTOR` event type. Use `ODP_EVENT_VECTOR`
+instead.
+
+#### IPsec
+* Deprecate packet vector capability (`odp_ipsec_capability_t.vector`) and
+configuration (`odp_ipsec_config_t.vector`). Use event aggregator queues to
+generate event vectors instead.
+
+#### Packet
+* Deprecate all packet vector APIs. The more generic event vector API is now the
+main vectorization interface. Deprecate `odp_packet_vector_t` type,
+`ODP_PACKET_VECTOR_INVALID` define, and all `odp_packet_vector_*()` functions.
+Use the matching event vector API types and functions (`odp_event_vector_t`,
+`odp_event_vector_*()`) instead.
+
+#### Packet IO
+* Deprecate packet input vector configuration (`odp_pktin_vector_config_t`,
+`odp_pktin_queue_param_t.vector`) and capability
+(`odp_pktin_vector_capability_t`, `odp_pktio_capability_t.vector`). Use event
+aggregator queues to generate event vectors instead.
+
+#### Pool
+* Deprecate packet vector pool type `ODP_POOL_VECTOR`, and the related pool
+capabilities (`odp_pool_capability_t.vector`) and parameters
+(`odp_pool_param_t.vector`). Use event vector pools (`ODP_POOL_EVENT_VECTOR`)
+instead.
+
+### Backward compatible API changes
+
+#### General
+* Describe the different ways API functions use handles in the API principles
+section of the API README file.
+
+#### Buffer
+* Update `odp_buffer_print()` specification to match the other print functions.
+* Add `odp_buffer_from_addr()` function for converting a buffer start address
+of an external memory pool buffer back to a buffer handle.
+
+#### Crypto
+* Add 3GPP defined AES-256 based `ODP_CIPHER_ALG_AES_NEA5` (256-NEA5) cipher
+algorithm and `ODP_AUTH_ALG_AES_NIA5` (256-NIA5) authentication algorithm.
+* Add 3GPP defined SNOW 5G, AES-256, and ZUC-256 based 256-NCA4, 256-NCA5, and
+256-NCA6 AEAD algorithms (`ODP_CIPHER_ALG_SNOW5G_NCA4`/
+`ODP_AUTH_ALG_SNOW5G_NCA4`, `ODP_CIPHER_ALG_AES_NCA5`/`ODP_AUTH_ALG_AES_NCA5`,
+and `ODP_CIPHER_ALG_ZUC_NCA6`/`ODP_AUTH_ALG_ZUC_NCA6`).
+* Harmonize the documentation of the NEAx and NIAx algorithms and express both
+key and IV sizes in bytes.
+* Add support for AAD lengths expressed in bits. A new
+`odp_crypto_session_param_t.auth_aad_len_in_bits` session parameter selects
+the AAD length unit, and a new `odp_crypto_auth_capability_t.aad_len.bit_mode`
+capability indicates whether the algorithm supports it.
+
+#### Event
+* Add `odp_event_print()` function for printing implementation specific debug
+information about any event to the ODP log.
+
+#### Event Vector
+* Add `odp_event_aggr_capability_t.source` capability for indicating which
+event sources (queue, packet input, classifier, timer, crypto, IPsec, DMA, etc.)
+may generate event vectors when configured with an event aggregator queue.
+
+#### IPsec
+* Specify 32 bytes as the default ICV length for `ODP_AUTH_ALG_SM3_HMAC`.
+* Remove the "Other lengths" column from the ICV length table. Implementations
+may support other ICV lengths and advertise them through IPsec capabilities.
+
+#### Pool
+* Add support for buffer pools (`ODP_POOL_BUFFER`) to external memory pools.
+Buffer pool capabilities are in `odp_pool_ext_capability_t.buf` and parameters
+in `odp_pool_ext_param_t.buf`.
+
+#### Stash
+* Add `odp_stash_capability_t.max_num.ptr` capability for the maximum number of
+pointers per stash.
+
+### Helper (1.8.0)
+
+#### Backward incompatible changes
+* Change the return type of `odph_ipsec_auth_icv_len_default()` to `int`.
+The function returns a negative value when the default ICV length is undefined
+or implementation specific.
+* Change `odph_ipsec_alg_check()` to always fail if the default ICV length of
+the authentication algorithm is undefined or implementation specific.
+* Remove deprecated `odph_linux_pthread_create()`, `odph_linux_pthread_join()`,
+`odph_linux_process_fork()`, `odph_linux_process_fork_n()`, and
+`odph_linux_process_wait_n()` functions, the related `odph_linux_thr_params_t`,
+`odph_linux_pthread_t`, and `odph_linux_process_t` types, and the
+`--disable-helper-linux` configure option.
+
+#### Backward compatible changes
+* Add crypto helper functions for converting cipher and authentication
+algorithm enum values to name strings and back (`odph_cipher_alg_to_str()`,
+`odph_cipher_alg_from_str()`, `odph_auth_alg_to_str()`,
+`odph_auth_alg_from_str()`).
+* Add crypto helper functions `odph_cipher_supported()` and
+`odph_auth_supported()` for checking algorithm support from crypto capabilities.
+* Add `odph_ipsec_cipher_capa_check()` function that checks whether the IPsec
+cipher capabilities indicate support for a given cipher algorithm with a given
+key length.
+* Add `odph_ipsec_auth_capa_check()` function that checks whether the IPsec auth
+capabilities indicate support for a given auth algorithm with a given key length
+and ICV length.
+* Stop whitelisting supported IPsec cipher algorithms in
+`odph_ipsec_alg_check()`. Any cipher algorithm indicated as supported by the
+IPsec capabilities is now reported as supported.
+* Clarify that a successful `odph_ipsec_alg_check()` call does not guarantee
+that the cipher and auth algorithms can be used together in the same IPsec SA.
+
+### Implementation
+* Remove support for OpenSSL 1.x. OpenSSL version 3.0.0 or newer is now
+required.
+* In process mode, DPDK is now initialized during global init instead of when
+the first DPDK pktio device is opened.
+* When enqueuing crypto completion events fails (i.e. the completion queue is
+full), store the events to a global ring buffer and retry the enqueue the next
+time `odp_crypto_op_enq()` is called.
+
+### Performance Tests
+
+#### mem_perf
+* Change shared memory mode (`-p 0`) to access the memory area in blocks, which
+are circulated between threads through a stash. Add `-s, --shared_blocks`
+option for configuring the number of blocks.
+* Add new test modes for memset zero (`-m 1`), memory read (`-m 3`), and
+memcmp (`-m 4`). The memcpy mode is now `-m 2`.
+
+#### packet_gen
+* Add `-I, --align` option for configuring packet data alignment.
+* Add `-Q, --queue_size` option for configuring packet IO RX and TX queue sizes.
+* Add `-V, --verbose` option for printing received packets.
+
+#### pipeline
+* Add `-l, --lib` option for loading additional work from shared libraries at
+runtime.
+* Add `odp_pl_request_termination()` function (`odp_pipeline_orchestrator.h`)
+to enable loaded work to request tester termination.
+* Add support for configuring DMA session completion mode mask and transfer
+ordering.
+* Add work library example and rename example configuration files to use `.conf`
+suffix.
+
+#### timer_stress
+* Add new timer sharing policy (`-p 2`) where each worker uses its own private
+timer pool.
+
+### Validation Tests
+
+#### crypto
+* Add support for loading additional test vectors from files given as command
+line arguments. The test vector files use libconfig format, so the feature
+requires libconfig.
+
 ## OpenDataPlane (1.51.0.0)
 
 ### Backward incompatible API changes
