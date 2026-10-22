@@ -33,9 +33,13 @@ static const cipher_name_t cipher_names[] = {
 	{ "kasumi_f8",		ODP_CIPHER_ALG_KASUMI_F8 },
 	{ "snow3g_uea2",	ODP_CIPHER_ALG_SNOW3G_UEA2 },
 	{ "snow5g_nea4",	ODP_CIPHER_ALG_SNOW5G_NEA4 },
+	{ "snow5g_nca4",	ODP_CIPHER_ALG_SNOW5G_NCA4 },
 	{ "aes_eea2",		ODP_CIPHER_ALG_AES_EEA2 },
+	{ "aes_nea5",		ODP_CIPHER_ALG_AES_NEA5 },
+	{ "aes_nca5",		ODP_CIPHER_ALG_AES_NCA5 },
 	{ "zuc_eea3",		ODP_CIPHER_ALG_ZUC_EEA3 },
 	{ "zuc_nea6",		ODP_CIPHER_ALG_ZUC_NEA6 },
+	{ "zuc_nca6",		ODP_CIPHER_ALG_ZUC_NCA6 },
 	{ "snow_v",		ODP_CIPHER_ALG_SNOW_V },
 	{ "snow_v_gcm",		ODP_CIPHER_ALG_SNOW_V_GCM },
 	{ "sm4_ecb",		ODP_CIPHER_ALG_SM4_ECB },
@@ -66,9 +70,13 @@ static const auth_name_t auth_names[] = {
 	{ "kasumi_f9",		ODP_AUTH_ALG_KASUMI_F9 },
 	{ "snow3g_uia2",	ODP_AUTH_ALG_SNOW3G_UIA2 },
 	{ "snow5g_nia4",	ODP_AUTH_ALG_SNOW5G_NIA4 },
+	{ "snow5g_nca4",	ODP_AUTH_ALG_SNOW5G_NCA4 },
 	{ "aes_eia2",		ODP_AUTH_ALG_AES_EIA2 },
+	{ "aes_nia5",		ODP_AUTH_ALG_AES_NIA5 },
+	{ "aes_nca5",		ODP_AUTH_ALG_AES_NCA5 },
 	{ "zuc_eia3",		ODP_AUTH_ALG_ZUC_EIA3 },
 	{ "zuc_nia6",		ODP_AUTH_ALG_ZUC_NIA6 },
+	{ "zuc_nca6",		ODP_AUTH_ALG_ZUC_NCA6 },
 	{ "snow_v_gcm",		ODP_AUTH_ALG_SNOW_V_GCM },
 	{ "snow_v_gmac",	ODP_AUTH_ALG_SNOW_V_GMAC },
 	{ "sm3_hmac",		ODP_AUTH_ALG_SM3_HMAC },
@@ -165,12 +173,20 @@ int odph_cipher_supported(const odp_crypto_cipher_algos_t *algs, odp_cipher_alg_
 		return algs->bit.snow3g_uea2;
 	case ODP_CIPHER_ALG_SNOW5G_NEA4:
 		return algs->bit.snow5g_nea4;
+	case ODP_CIPHER_ALG_SNOW5G_NCA4:
+		return algs->bit.snow5g_nca4;
 	case ODP_CIPHER_ALG_AES_EEA2:
 		return algs->bit.aes_eea2;
+	case ODP_CIPHER_ALG_AES_NEA5:
+		return algs->bit.aes_nea5;
+	case ODP_CIPHER_ALG_AES_NCA5:
+		return algs->bit.aes_nca5;
 	case ODP_CIPHER_ALG_ZUC_EEA3:
 		return algs->bit.zuc_eea3;
 	case ODP_CIPHER_ALG_ZUC_NEA6:
 		return algs->bit.zuc_nea6;
+	case ODP_CIPHER_ALG_ZUC_NCA6:
+		return algs->bit.zuc_nca6;
 	case ODP_CIPHER_ALG_SNOW_V:
 		return algs->bit.snow_v;
 	case ODP_CIPHER_ALG_SNOW_V_GCM:
@@ -234,12 +250,20 @@ int odph_auth_supported(const odp_crypto_auth_algos_t *algs, odp_auth_alg_t auth
 		return algs->bit.snow3g_uia2;
 	case ODP_AUTH_ALG_SNOW5G_NIA4:
 		return algs->bit.snow5g_nia4;
+	case ODP_AUTH_ALG_SNOW5G_NCA4:
+		return algs->bit.snow5g_nca4;
 	case ODP_AUTH_ALG_AES_EIA2:
 		return algs->bit.aes_eia2;
+	case ODP_AUTH_ALG_AES_NIA5:
+		return algs->bit.aes_nia5;
+	case ODP_AUTH_ALG_AES_NCA5:
+		return algs->bit.aes_nca5;
 	case ODP_AUTH_ALG_ZUC_EIA3:
 		return algs->bit.zuc_eia3;
 	case ODP_AUTH_ALG_ZUC_NIA6:
 		return algs->bit.zuc_nia6;
+	case ODP_AUTH_ALG_ZUC_NCA6:
+		return algs->bit.zuc_nca6;
 	case ODP_AUTH_ALG_SNOW_V_GCM:
 		return algs->bit.snow_v_gcm;
 	case ODP_AUTH_ALG_SNOW_V_GMAC:
