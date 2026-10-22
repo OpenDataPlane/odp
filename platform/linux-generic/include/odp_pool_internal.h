@@ -111,6 +111,7 @@ typedef struct pool_t {
 	uint32_t         num_populated;
 	odp_pool_type_t  type_2; /* Pool type from application PoV */
 	uint8_t          mem_from_huge_pages;
+	uint8_t          populate_done;
 	char             name[ODP_POOL_NAME_LEN];
 
 } pool_t;

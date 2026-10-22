@@ -2350,12 +2350,17 @@ int odp_pool_ext_populate(odp_pool_t pool_hdl, void *buf[], uint32_t buf_size, u
 	min_addr = pool->base_addr;
 	max_addr = pool->max_addr;
 
+	if (pool->populate_done) {
+		_ODP_ERR("Pool already populated\n");
+		return -1;
+	}
+
 	if (pool->type == ODP_POOL_BUFFER)
 		expected_buf_size = pool->ext_param.buf.buf_size;
 	else
 		expected_buf_size = pool->ext_param.pkt.buf_size;
 
-	if (buf_size != expected_buf_size) {
+	if (num && buf_size != expected_buf_size) {
 		_ODP_ERR("Bad buffer size\n");
 		return -1;
 	}
@@ -2364,11 +2369,6 @@ int odp_pool_ext_populate(odp_pool_t pool_hdl, void *buf[], uint32_t buf_size, u
 
 	if (num_populated + num > pool->num) {
 		_ODP_ERR("Trying to over populate the pool\n");
-		return -1;
-	}
-
-	if ((num_populated + num == pool->num) && !(flags & ODP_POOL_POPULATE_DONE)) {
-		_ODP_ERR("Missing ODP_POOL_POPULATE_DONE flag\n");
 		return -1;
 	}
 
@@ -2424,7 +2424,8 @@ int odp_pool_ext_populate(odp_pool_t pool_hdl, void *buf[], uint32_t buf_size, u
 	pool->max_addr = max_addr;
 
 	if (flags & ODP_POOL_POPULATE_DONE) {
-		pool->max_addr = max_addr + buf_size - 1;
+		pool->max_addr = max_addr + expected_buf_size - 1;
+		pool->populate_done = 1;
 
 		if (pool->uarea_size && pool->ext_param.uarea_init.init_fn) {
 			for (i = 0; i < pool->num_populated; i++) {
