@@ -1521,6 +1521,10 @@ static void aggr_queue_test(const odp_event_aggr_capability_t *capa, odp_queue_t
 	uint32_t num_events;
 	uint64_t timeout = ODP_TIME_MSEC_IN_NS;
 
+	if (!capa->source.bit.queue)
+		printf("\nWarning: queue event source not supported (source: 0x%" PRIx32 ")\n",
+		       capa->source.all_bits);
+
 	CU_ASSERT_FATAL(odp_pool_capability(&pool_capa) == 0);
 	if (uarea_size > pool_capa.event_vector.max_uarea_size)
 		uarea_size = pool_capa.event_vector.max_uarea_size;
