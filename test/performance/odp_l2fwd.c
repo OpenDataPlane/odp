@@ -1721,6 +1721,11 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx, odp_po
 			ODPH_ERR("Event vector input not supported: %s\n", dev);
 			return -1;
 		}
+
+		if (!sched_capa.aggr.source.bit.pktin)
+			printf("Warning: %s: pktin event source not supported (source: 0x%"
+			       PRIx32 ")\n", dev, sched_capa.aggr.source.all_bits);
+
 		if (set_event_aggr_config(&aggr_config, vec_pool, &sched_capa))
 			return -1;
 		pktin_param.queue_param.aggr = &aggr_config;
