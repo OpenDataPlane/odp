@@ -2383,6 +2383,7 @@ int odp_pool_ext_populate(odp_pool_t pool_hdl, void *buf[], uint32_t buf_size, u
 	buf_index = pool->num_populated;
 	head_offset = pool->ext_head_offset;
 
+	/* Validate all buffers before modifying anything, so that a failed call is a no-op */
 	for (i = 0; i < num; i++) {
 		event_hdr = buf[i];
 
@@ -2402,6 +2403,10 @@ int odp_pool_ext_populate(odp_pool_t pool_hdl, void *buf[], uint32_t buf_size, u
 				 pool->type == ODP_POOL_PACKET ? "head" : "data", i);
 			return -1;
 		}
+	}
+
+	for (i = 0; i < num; i++) {
+		event_hdr = buf[i];
 
 		if (pool->uarea_size)
 			uarea = &pool->uarea_base_addr[buf_index * pool->uarea_size];
