@@ -686,6 +686,10 @@ static void config_evv_pktio(odp_pktio_t pktio, int iface_idx, odp_pktin_mode_t 
 
 	CU_ASSERT_FATAL(event_aggr_capability(&aggr_capa, imode) == 0);
 
+	if (!aggr_capa.source.bit.pktin)
+		printf("\nWarning: pktin event source not supported (source: 0x%" PRIx32 ")\n",
+		       aggr_capa.source.all_bits);
+
 	odp_pktin_queue_param_init(&pktin_param);
 	pktin_param.queue_param.sched.sync = sync_mode;
 	pktin_param.op_mode = ODP_PKTIO_OP_MT_UNSAFE;
