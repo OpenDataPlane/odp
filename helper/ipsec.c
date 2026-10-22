@@ -49,6 +49,9 @@ uint32_t odph_ipsec_auth_icv_len_default(odp_auth_alg_t auth_alg)
 	case ODP_AUTH_ALG_CHACHA20_POLY1305:
 		icv_len = 16;
 		break;
+	case ODP_AUTH_ALG_SM3_HMAC:
+		icv_len = 32;
+		break;
 	default:
 		ODPH_DBG("Unsupported authentication algorithm\n");
 		icv_len = 0;
