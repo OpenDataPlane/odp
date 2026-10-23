@@ -108,7 +108,7 @@ int odph_ipsec_alg_check(const odp_ipsec_capability_t *capa,
 	/* Check whether requested auth key length is supported */
 	max_capa = odp_ipsec_auth_capability(auth_alg, NULL, 0);
 	if (max_capa <= 0)
-		return max_capa;
+		return -1;
 
 	odp_ipsec_auth_capability_t auth_capa[max_capa];
 
