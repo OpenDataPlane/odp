@@ -1,0 +1,29 @@
+<map id="cpumask.h" name="cpumask.h">
+<area shape="rect" id="Node000001" title="ODP CPU masks and enumeration." alt="" coords="162,5,255,31"/>
+<area shape="rect" id="Node000002" href="$api_2spec_2init_8h.html" title=" " alt="" coords="96,79,150,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="186,41,139,80,135,76,183,37"/>
+<area shape="rect" id="Node000004" href="$odp__api_8h.html" title="The OpenDataPlane API." alt="" coords="59,372,144,397"/>
+<area shape="poly" id="edge7_Node000001_Node000004" title=" " alt="" coords="211,44,211,163,211,239,207,285,199,304,185,326,157,354,126,374,123,370,153,350,181,322,194,302,201,284,206,239,206,163,206,44"/>
+<area shape="rect" id="Node000007" href="$api_2abi-default_2thrmask_8h.html" title="ODP thread masks." alt="" coords="470,79,558,104"/>
+<area shape="poly" id="edge8_Node000001_Node000007" title=" " alt="" coords="269,31,470,77,469,82,268,36"/>
+<area shape="rect" id="Node000003" href="$api_2init_8h.html" title="ODP initialization." alt="" coords="74,152,129,177"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="118,118,108,153,102,151,113,117"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="64,186,41,204,23,227,12,252,8,275,12,297,23,323,33,338,46,351,76,370,73,374,43,355,29,341,18,325,6,298,3,275,6,251,18,224,37,200,61,182"/>
+<area shape="rect" id="Node000005" href="$api_2spec_2shared__memory_8h.html" title="ODP shared memory." alt="" coords="32,225,171,251"/>
+<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="104,191,104,225,99,225,99,191"/>
+<area shape="rect" id="Node000006" href="$api_2shared__memory_8h.html" title="ODP shared memory." alt="" coords="32,299,171,324"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="104,264,104,299,99,299,99,264"/>
+<area shape="poly" id="edge6_Node000006_Node000004" title=" " alt="" coords="104,338,104,372,99,372,99,338"/>
+<area shape="rect" id="Node000008" href="$arch_2arm32-linux_2odp_2api_2abi_2thrmask_8h_source.html" title=" " alt="" coords="246,152,334,177"/>
+<area shape="poly" id="edge9_Node000007_Node000008" title=" " alt="" coords="465,111,327,154,325,149,464,106"/>
+<area shape="rect" id="Node000009" href="$arch_2arm64-linux_2odp_2api_2abi_2thrmask_8h_source.html" title=" " alt="" coords="358,152,446,177"/>
+<area shape="poly" id="edge10_Node000007_Node000009" title=" " alt="" coords="485,114,421,154,418,150,482,109"/>
+<area shape="rect" id="Node000010" href="$arch_2default-linux_2odp_2api_2abi_2thrmask_8h_source.html" title=" " alt="" coords="470,152,558,177"/>
+<area shape="poly" id="edge11_Node000007_Node000010" title=" " alt="" coords="516,118,516,152,511,152,511,118"/>
+<area shape="rect" id="Node000011" href="$arch_2power64-linux_2odp_2api_2abi_2thrmask_8h_source.html" title=" " alt="" coords="582,152,670,177"/>
+<area shape="poly" id="edge12_Node000007_Node000011" title=" " alt="" coords="545,109,609,150,606,154,542,114"/>
+<area shape="rect" id="Node000012" href="$arch_2x86__32-linux_2odp_2api_2abi_2thrmask_8h_source.html" title=" " alt="" coords="694,152,782,177"/>
+<area shape="poly" id="edge13_Node000007_Node000012" title=" " alt="" coords="563,106,702,149,700,154,562,111"/>
+<area shape="rect" id="Node000013" href="$arch_2x86__64-linux_2odp_2api_2abi_2thrmask_8h_source.html" title=" " alt="" coords="806,152,894,177"/>
+<area shape="poly" id="edge14_Node000007_Node000013" title=" " alt="" coords="571,102,806,151,805,157,570,107"/>
+</map>

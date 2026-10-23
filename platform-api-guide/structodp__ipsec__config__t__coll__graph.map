@@ -1,0 +1,17 @@
+<map id="odp_ipsec_config_t" name="odp_ipsec_config_t">
+<area shape="rect" id="Node000001" title="IPSEC configuration options." alt="" coords="382,196,527,221"/>
+<area shape="rect" id="Node000002" href="$structodp__ipsec__inbound__config__t.html" title="Configuration options for IPSEC inbound processing." alt="" coords="149,101,353,126"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="289,129,431,193,428,198,287,134"/>
+<area shape="rect" id="Node000003" href="$struct__odp__abi__queue__t.html" title=" " alt="" coords="5,5,144,31"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="102,37,149,67,220,98,217,103,147,72,99,41"/>
+<area shape="rect" id="Node000004" href="$unionodp__proto__chksums__t.html" title="Flags to control packet data checksum checking." alt="" coords="169,5,333,31"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="253,44,253,101,248,101,248,44"/>
+<area shape="rect" id="Node000005" href="$structodp__reass__config__t.html" title="Fragment reassembly configuration." alt="" coords="357,5,504,31"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="398,39,274,103,272,98,395,34"/>
+<area shape="rect" id="Node000006" href="$structodp__ipsec__outbound__config__t.html" title="Configuration options for IPSEC outbound processing." alt="" coords="377,93,532,133"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="457,147,457,196,452,196,452,147"/>
+<area shape="rect" id="Node000007" href="$structodp__pktin__vector__config__t.html" title="Packet input vector configuration." alt="" coords="556,101,748,126"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="616,134,480,198,478,193,614,130"/>
+<area shape="rect" id="Node000008" href="$struct__odp__abi__pool__t.html" title=" " alt="" coords="589,5,715,31"/>
+<area shape="poly" id="edge7_Node000007_Node000008" title=" " alt="" coords="655,44,655,101,649,101,649,44"/>
+</map>

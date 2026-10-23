@@ -1,0 +1,11 @@
+<map id="buffer_types.h" name="buffer_types.h">
+<area shape="rect" id="Node000001" title="ODP buffer types." alt="" coords="99,5,213,31"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,79,141,119"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="146,33,105,71,101,67,142,29"/>
+<area shape="rect" id="Node000003" href="$spec_2buffer__types_8h.html" title="ODP buffer types." alt="" coords="165,79,312,119"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="170,29,211,67,207,71,166,33"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="67,167,229,192"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="218,121,174,160,170,155,215,117"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="253,167,403,192"/>
+<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="262,117,306,155,303,159,259,121"/>
+</map>

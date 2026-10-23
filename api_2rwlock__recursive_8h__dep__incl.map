@@ -1,0 +1,5 @@
+<map id="rwlock_recursive.h" name="rwlock_recursive.h">
+<area shape="rect" id="Node000001" title="ODP recursive read/write lock." alt="" coords="5,5,149,31"/>
+<area shape="rect" id="Node000002" href="$odp__api_8h.html" title="The OpenDataPlane API." alt="" coords="35,79,120,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="80,44,80,79,75,79,75,44"/>
+</map>
