@@ -59,19 +59,74 @@ int odph_ipsec_auth_icv_len_default(odp_auth_alg_t auth_alg)
 	return icv_len;
 }
 
+int odph_ipsec_cipher_capa_check(const odp_ipsec_capability_t *capa,
+				 odp_cipher_alg_t cipher,
+				 uint32_t key_len)
+{
+	int num, max_capa;
+
+	if (!odph_cipher_supported(&capa->ciphers, cipher))
+		return -1;
+
+	max_capa = odp_ipsec_cipher_capability(cipher, NULL, 0);
+	if (max_capa <= 0)
+		return -1;
+
+	odp_ipsec_cipher_capability_t cipher_capa[max_capa];
+
+	num = odp_ipsec_cipher_capability(cipher, cipher_capa, max_capa);
+	if (num <= 0) {
+		ODPH_DBG("Could not get cipher capabilities\n");
+		return -1;
+	}
+
+	for (int i = 0; i < num; i++)
+		if (cipher_capa[i].key_len == key_len)
+			return 0;
+
+	ODPH_DBG("Unsupported key length\n");
+	return -1;
+}
+
+int odph_ipsec_auth_capa_check(const odp_ipsec_capability_t *capa,
+			       odp_auth_alg_t auth,
+			       uint32_t key_len,
+			       uint32_t icv_len)
+{
+	int num, max_capa;
+
+	if (!odph_auth_supported(&capa->auths, auth))
+		return -1;
+
+	/* Check whether requested auth key length is supported */
+	max_capa = odp_ipsec_auth_capability(auth, NULL, 0);
+	if (max_capa <= 0)
+		return -1;
+
+	odp_ipsec_auth_capability_t auth_capa[max_capa];
+
+	num = odp_ipsec_auth_capability(auth, auth_capa, max_capa);
+	if (num <= 0) {
+		ODPH_DBG("Could not get auth capabilities\n");
+		return -1;
+	}
+
+	for (int i = 0; i < num; i++)
+		if (auth_capa[i].key_len == key_len &&
+		    auth_capa[i].icv_len == icv_len)
+			return 0;
+
+	ODPH_DBG("Unsupported key length & ICV length pair\n");
+	return -1;
+}
+
 int odph_ipsec_alg_check(const odp_ipsec_capability_t *capa,
 			 odp_cipher_alg_t cipher_alg,
 			 uint32_t cipher_key_len,
 			 odp_auth_alg_t auth_alg,
 			 uint32_t auth_key_len)
 {
-	int i, num, max_capa;
 	int default_icv_len;
-	odp_bool_t found;
-
-	if (!odph_cipher_supported(&capa->ciphers, cipher_alg) ||
-	    !odph_auth_supported(&capa->auths, auth_alg))
-		return -1;
 
 	default_icv_len = odph_ipsec_auth_icv_len_default(auth_alg);
 	if (default_icv_len < 0) {
@@ -79,58 +134,11 @@ int odph_ipsec_alg_check(const odp_ipsec_capability_t *capa,
 		return -1;
 	}
 
-	/* Check whether requested cipher key length is supported */
-	max_capa = odp_ipsec_cipher_capability(cipher_alg, NULL, 0);
-	if (max_capa <= 0)
+	if (odph_ipsec_cipher_capa_check(capa, cipher_alg, cipher_key_len))
 		return -1;
 
-	odp_ipsec_cipher_capability_t cipher_capa[max_capa];
-
-	num = odp_ipsec_cipher_capability(cipher_alg, cipher_capa, max_capa);
-	if (num <= 0) {
-		ODPH_DBG("Could not get cipher capabilities\n");
+	if (odph_ipsec_auth_capa_check(capa, auth_alg, auth_key_len, default_icv_len))
 		return -1;
-	}
-
-	found = false;
-	for (i = 0; i < num; i++) {
-		if (cipher_capa[i].key_len == cipher_key_len) {
-			found = 1;
-			break;
-		}
-	}
-
-	if (!found) {
-		ODPH_DBG("Unsupported key length\n");
-		return -1;
-	}
-
-	/* Check whether requested auth key length is supported */
-	max_capa = odp_ipsec_auth_capability(auth_alg, NULL, 0);
-	if (max_capa <= 0)
-		return -1;
-
-	odp_ipsec_auth_capability_t auth_capa[max_capa];
-
-	num = odp_ipsec_auth_capability(auth_alg, auth_capa, max_capa);
-	if (num <= 0) {
-		ODPH_DBG("Could not get auth capabilities\n");
-		return -1;
-	}
-
-	found = false;
-	for (i = 0; i < num; i++) {
-		if (auth_capa[i].key_len == auth_key_len &&
-		    (int)auth_capa[i].icv_len == default_icv_len) {
-			found = 1;
-			break;
-		}
-	}
-
-	if (!found) {
-		ODPH_DBG("Unsupported auth key length & default ICV length pair\n");
-		return -1;
-	}
 
 	return 0;
 }
