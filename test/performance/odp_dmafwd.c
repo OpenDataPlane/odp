@@ -621,8 +621,10 @@ static transfer_t *init_dma_ev_trs(odp_dma_transfer_param_t *trs_param,
 
 	if (config->prog_config->seg_free) {
 		trs_param->opts.seg_free = 1;
-		/* Always unique packets in a transfer, optimize */
+		/* Always unique source packets from the same pool (packet I/O) in a transfer,
+		 * optimize */
 		trs_param->opts.unique_src_segs = 1;
+		trs_param->opts.single_pool = 1;
 	}
 
 	compl_param->compl_mode = ODP_DMA_COMPL_EVENT;
@@ -671,8 +673,10 @@ static transfer_t *init_dma_poll_trs(odp_dma_transfer_param_t *trs_param,
 
 	if (config->prog_config->seg_free) {
 		trs_param->opts.seg_free = 1;
-		/* Always unique packets in a transfer, optimize */
+		/* Always unique source packets from the same pool (packet I/O) in a transfer,
+		 * optimize */
 		trs_param->opts.unique_src_segs = 1;
+		trs_param->opts.single_pool = 1;
 	}
 
 	compl_param->compl_mode = ODP_DMA_COMPL_POLL;
