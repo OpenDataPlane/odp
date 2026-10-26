@@ -2096,8 +2096,10 @@ void odp_timeout_free(odp_timeout_t tmo)
 
 void odp_timeout_free_multi(odp_timeout_t tmo[], int num)
 {
+	if (odp_unlikely(num < 1))
+		return;
+
 	_ODP_ASSERT(tmo != NULL);
-	_ODP_ASSERT(num > 0);
 
 	_odp_event_free_multi((_odp_event_hdr_t **)(uintptr_t)tmo, num);
 }

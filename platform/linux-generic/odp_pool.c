@@ -1589,6 +1589,8 @@ void _odp_event_free_multi(_odp_event_hdr_t *event_hdr[], int num_total)
 	int i;
 	int first = 0;
 
+	_ODP_ASSERT(num_total > 0);
+
 	while (1) {
 		pool = _odp_pool_entry(event_hdr[first]->pool);
 
@@ -1655,6 +1657,9 @@ void odp_buffer_free(odp_buffer_t buf)
 
 void odp_buffer_free_multi(const odp_buffer_t buf[], int num)
 {
+	if (odp_unlikely(num < 1))
+		return;
+
 	_odp_buffer_validate_multi(buf, num, _ODP_EV_BUFFER_FREE_MULTI);
 
 	_odp_event_free_multi((_odp_event_hdr_t **)(uintptr_t)buf, num);
