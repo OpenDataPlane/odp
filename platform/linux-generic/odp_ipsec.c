@@ -170,6 +170,7 @@ static int set_ipsec_crypto_capa(odp_ipsec_capability_t *capa)
 	CHECK_CIPHER(aes_gcm,		ODP_CIPHER_ALG_AES_GCM);
 	CHECK_CIPHER(aes_ccm,		ODP_CIPHER_ALG_AES_CCM);
 	CHECK_CIPHER(chacha20_poly1305,	ODP_CIPHER_ALG_CHACHA20_POLY1305);
+	CHECK_CIPHER(sm4_cbc,		ODP_CIPHER_ALG_SM4_CBC);
 
 #define CHECK_AUTH(field, alg) do {				\
 	if (crypto_capa.auths.bit.field &&			\
@@ -189,6 +190,7 @@ static int set_ipsec_crypto_capa(odp_ipsec_capability_t *capa)
 	CHECK_AUTH(aes_cmac,		ODP_AUTH_ALG_AES_CMAC);
 	CHECK_AUTH(aes_xcbc_mac,	ODP_AUTH_ALG_AES_XCBC_MAC);
 	CHECK_AUTH(chacha20_poly1305,	ODP_AUTH_ALG_CHACHA20_POLY1305);
+	CHECK_AUTH(sm3_hmac,		ODP_AUTH_ALG_SM3_HMAC);
 
 	/*
 	 * Certain combined mode algorithms are configured by setting

@@ -37,6 +37,18 @@
 #define _ODP_HAVE_CHACHA20_POLY1305 0
 #endif
 
+#if !defined(OPENSSL_NO_SM4)
+#define _ODP_HAVE_SM4 1
+#else
+#define _ODP_HAVE_SM4 0
+#endif
+
+#if !defined(OPENSSL_NO_SM3)
+#define _ODP_HAVE_SM3 1
+#else
+#define _ODP_HAVE_SM3 0
+#endif
+
 #define MAX_SESSIONS 4000
 #define MAX_BURST 32
 #define AES_BLOCK_SIZE 16
@@ -93,13 +105,14 @@ static const odp_crypto_cipher_capability_t cipher_capa_aes_ccm[] = {
 {.key_len = 32, .iv_len = 11},
 {.key_len = 32, .iv_len = 13} };
 
-#if _ODP_HAVE_CHACHA20_POLY1305
 static const odp_crypto_cipher_capability_t cipher_capa_chacha20_poly1305[] = {
 {.key_len = 32, .iv_len = 12} };
-#endif
 
 static const odp_crypto_cipher_capability_t cipher_capa_aes_eea2[] = {
 {.key_len = 16, .iv_len = 16, .bit_mode = 1} };
+
+static const odp_crypto_cipher_capability_t cipher_capa_sm4_cbc[] = {
+{.key_len = 16, .iv_len = 16} };
 
 /*
  * Authentication algorithm capabilities
@@ -132,6 +145,9 @@ static const odp_crypto_auth_capability_t auth_capa_sha512_hmac[] = {
 {.digest_len = 32, .key_len = 64, .aad_len = {.min = 0, .max = 0, .inc = 0} },
 {.digest_len = 64, .key_len = 64, .aad_len = {.min = 0, .max = 0, .inc = 0} } };
 
+static const odp_crypto_auth_capability_t auth_capa_sm3_hmac[] = {
+{.digest_len = 32, .key_len = 32, .aad_len = {.min = 0, .max = 0, .inc = 0} } };
+
 static const odp_crypto_auth_capability_t auth_capa_aes_xcbc[] = {
 {.digest_len = 12, .key_len = 16, .aad_len = {.min = 0, .max = 0, .inc = 0} },
 {.digest_len = 16, .key_len = 16, .aad_len = {.min = 0, .max = 0, .inc = 0} } };
@@ -158,10 +174,8 @@ static const odp_crypto_auth_capability_t auth_capa_aes_cmac[] = {
 {.digest_len = 16, .key_len = 24, .aad_len = {.min = 0, .max = 0, .inc = 0} },
 {.digest_len = 16, .key_len = 32, .aad_len = {.min = 0, .max = 0, .inc = 0} } };
 
-#if _ODP_HAVE_CHACHA20_POLY1305
 static const odp_crypto_auth_capability_t auth_capa_chacha20_poly1305[] = {
 {.digest_len = 16, .key_len = 0, .aad_len = {.min = 8, .max = 12, .inc = 4} } };
-#endif
 
 static const odp_crypto_auth_capability_t auth_capa_aes_eia2[] = {
 {.digest_len = 4, .key_len = 16, .aad_len = {.min = 0, .max = 0, .inc = 0},
@@ -1791,10 +1805,9 @@ int odp_crypto_capability(odp_crypto_capability_t *capa)
 	capa->ciphers.bit.aes_xts    = 1;
 	capa->ciphers.bit.aes_gcm    = 1;
 	capa->ciphers.bit.aes_ccm    = 1;
-#if _ODP_HAVE_CHACHA20_POLY1305
-	capa->ciphers.bit.chacha20_poly1305 = 1;
-#endif
+	capa->ciphers.bit.chacha20_poly1305 = _ODP_HAVE_CHACHA20_POLY1305;
 	capa->ciphers.bit.aes_eea2   = 1;
+	capa->ciphers.bit.sm4_cbc    = _ODP_HAVE_SM4;
 
 	capa->auths.bit.null         = 1;
 	capa->auths.bit.md5_hmac     = 1;
@@ -1808,10 +1821,9 @@ int odp_crypto_capability(odp_crypto_capability_t *capa)
 	capa->auths.bit.aes_ccm      = 1;
 	capa->auths.bit.aes_gmac     = 1;
 	capa->auths.bit.aes_cmac     = 1;
-#if _ODP_HAVE_CHACHA20_POLY1305
-	capa->auths.bit.chacha20_poly1305 = 1;
-#endif
-	capa->auths.bit.aes_eia2 = 1;
+	capa->auths.bit.chacha20_poly1305 = _ODP_HAVE_CHACHA20_POLY1305;
+	capa->auths.bit.aes_eia2     = 1;
+	capa->auths.bit.sm3_hmac     = _ODP_HAVE_SM3;
 
 	capa->auths.bit.md5          = 1;
 	capa->auths.bit.sha1         = 1;
@@ -1872,15 +1884,21 @@ int odp_crypto_cipher_capability(odp_cipher_alg_t cipher,
 		src = cipher_capa_aes_ccm;
 		num = sizeof(cipher_capa_aes_ccm) / size;
 		break;
-#if _ODP_HAVE_CHACHA20_POLY1305
 	case ODP_CIPHER_ALG_CHACHA20_POLY1305:
+		if (!_ODP_HAVE_CHACHA20_POLY1305)
+			return -1;
 		src = cipher_capa_chacha20_poly1305;
 		num = sizeof(cipher_capa_chacha20_poly1305) / size;
 		break;
-#endif
 	case ODP_CIPHER_ALG_AES_EEA2:
 		src = cipher_capa_aes_eea2;
 		num = sizeof(cipher_capa_aes_eea2) / size;
+		break;
+	case ODP_CIPHER_ALG_SM4_CBC:
+		if (!_ODP_HAVE_SM4)
+			return -1;
+		src = cipher_capa_sm4_cbc;
+		num = sizeof(cipher_capa_sm4_cbc) / size;
 		break;
 	default:
 		return -1;
@@ -1951,15 +1969,21 @@ int odp_crypto_auth_capability(odp_auth_alg_t auth,
 		src = auth_capa_aes_cmac;
 		num = sizeof(auth_capa_aes_cmac) / size;
 		break;
-#if _ODP_HAVE_CHACHA20_POLY1305
 	case ODP_AUTH_ALG_CHACHA20_POLY1305:
+		if (!_ODP_HAVE_CHACHA20_POLY1305)
+			return -1;
 		src = auth_capa_chacha20_poly1305;
 		num = sizeof(auth_capa_chacha20_poly1305) / size;
 		break;
-#endif
 	case ODP_AUTH_ALG_AES_EIA2:
 		src = auth_capa_aes_eia2;
 		num = sizeof(auth_capa_aes_eia2) / size;
+		break;
+	case ODP_AUTH_ALG_SM3_HMAC:
+		if (!_ODP_HAVE_SM3)
+			return -1;
+		src = auth_capa_sm3_hmac;
+		num = sizeof(auth_capa_sm3_hmac) / size;
 		break;
 	case ODP_AUTH_ALG_MD5:
 		src = auth_capa_md5;
@@ -2183,6 +2207,11 @@ odp_crypto_session_create(const odp_crypto_session_param_t *param,
 			rc = -1;
 		cipher_bit_mode_supported = 1;
 		break;
+#if _ODP_HAVE_SM4
+	case ODP_CIPHER_ALG_SM4_CBC:
+		rc = process_cipher_param(session, EVP_sm4_cbc());
+		break;
+#endif
 	default:
 		rc = -1;
 	}
@@ -2272,7 +2301,6 @@ odp_crypto_session_create(const odp_crypto_session_param_t *param,
 		else
 			rc = -1;
 		break;
-#if _ODP_HAVE_CHACHA20_POLY1305
 	case ODP_AUTH_ALG_CHACHA20_POLY1305:
 		/* ChaCha20_Poly1305 requires to do both auth and
 		 * cipher at the same time */
@@ -2285,7 +2313,6 @@ odp_crypto_session_create(const odp_crypto_session_param_t *param,
 		}
 		session->auth_range_used = 0;
 		break;
-#endif
 	case ODP_AUTH_ALG_AES_EIA2:
 		if (param->auth_key.length == 16)
 			rc = process_auth_cmac_eia2_param(session,
@@ -2293,6 +2320,11 @@ odp_crypto_session_create(const odp_crypto_session_param_t *param,
 		else
 			rc = -1;
 		break;
+#if _ODP_HAVE_SM3
+	case ODP_AUTH_ALG_SM3_HMAC:
+		rc = process_auth_hmac_param(session, EVP_sm3());
+		break;
+#endif
 	case ODP_AUTH_ALG_MD5:
 		rc = process_digest_param(session, EVP_md5());
 		break;
