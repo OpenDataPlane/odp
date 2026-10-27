@@ -43,6 +43,12 @@
 #define _ODP_HAVE_SM4 0
 #endif
 
+#if !defined(OPENSSL_NO_SM3)
+#define _ODP_HAVE_SM3 1
+#else
+#define _ODP_HAVE_SM3 0
+#endif
+
 #define MAX_SESSIONS 4000
 #define MAX_BURST 32
 #define AES_BLOCK_SIZE 16
@@ -138,6 +144,9 @@ static const odp_crypto_auth_capability_t auth_capa_sha384_hmac[] = {
 static const odp_crypto_auth_capability_t auth_capa_sha512_hmac[] = {
 {.digest_len = 32, .key_len = 64, .aad_len = {.min = 0, .max = 0, .inc = 0} },
 {.digest_len = 64, .key_len = 64, .aad_len = {.min = 0, .max = 0, .inc = 0} } };
+
+static const odp_crypto_auth_capability_t auth_capa_sm3_hmac[] = {
+{.digest_len = 32, .key_len = 32, .aad_len = {.min = 0, .max = 0, .inc = 0} } };
 
 static const odp_crypto_auth_capability_t auth_capa_aes_xcbc[] = {
 {.digest_len = 12, .key_len = 16, .aad_len = {.min = 0, .max = 0, .inc = 0} },
@@ -1813,7 +1822,8 @@ int odp_crypto_capability(odp_crypto_capability_t *capa)
 	capa->auths.bit.aes_gmac     = 1;
 	capa->auths.bit.aes_cmac     = 1;
 	capa->auths.bit.chacha20_poly1305 = _ODP_HAVE_CHACHA20_POLY1305;
-	capa->auths.bit.aes_eia2 = 1;
+	capa->auths.bit.aes_eia2     = 1;
+	capa->auths.bit.sm3_hmac     = _ODP_HAVE_SM3;
 
 	capa->auths.bit.md5          = 1;
 	capa->auths.bit.sha1         = 1;
@@ -1968,6 +1978,12 @@ int odp_crypto_auth_capability(odp_auth_alg_t auth,
 	case ODP_AUTH_ALG_AES_EIA2:
 		src = auth_capa_aes_eia2;
 		num = sizeof(auth_capa_aes_eia2) / size;
+		break;
+	case ODP_AUTH_ALG_SM3_HMAC:
+		if (!_ODP_HAVE_SM3)
+			return -1;
+		src = auth_capa_sm3_hmac;
+		num = sizeof(auth_capa_sm3_hmac) / size;
 		break;
 	case ODP_AUTH_ALG_MD5:
 		src = auth_capa_md5;
@@ -2304,6 +2320,11 @@ odp_crypto_session_create(const odp_crypto_session_param_t *param,
 		else
 			rc = -1;
 		break;
+#if _ODP_HAVE_SM3
+	case ODP_AUTH_ALG_SM3_HMAC:
+		rc = process_auth_hmac_param(session, EVP_sm3());
+		break;
+#endif
 	case ODP_AUTH_ALG_MD5:
 		rc = process_digest_param(session, EVP_md5());
 		break;
