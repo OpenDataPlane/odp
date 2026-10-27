@@ -405,6 +405,8 @@ static void free_flow_entry(flow_parse_t *flow)
 		free_work_entry(&flow->work[i]);
 
 	free(flow->work);
+	free(flow->input);
+	free(flow->output);
 }
 
 static void free_flow_template(flow_parse_template_t *templ)
