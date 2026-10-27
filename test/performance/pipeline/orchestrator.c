@@ -432,7 +432,7 @@ void orchestrator_destroy(void)
 	}
 
 	if (orchestrator.shm != ODP_SHM_INVALID)
-		odp_shm_free(orchestrator.shm);
+		(void)odp_shm_free(orchestrator.shm);
 
 	if (orchestrator.odp_ready)
 		term_odp(orchestrator.instance);
