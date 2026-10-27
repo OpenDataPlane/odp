@@ -98,6 +98,4 @@ void flow_destroy_flow(flow_t flow)
 		work_print_work(work, priv->queue);
 		work_destroy_work(work);
 	}
-
-	free(priv->queue);
 }
