@@ -277,7 +277,7 @@ static int queue_context_set_plain(void)
 	int ret = 0;
 
 	for (uint32_t i = 0U; i < TEST_REPEAT_COUNT; i++)
-		ret += odp_queue_context_set(dst, context, len);
+		ret |= odp_queue_context_set(dst, context, len);
 
 	return !ret;
 }
@@ -293,7 +293,7 @@ static int queue_context_set_plain_tm(bench_tm_result_t *res, int repeat_count)
 
 	for (int i = 0U; i < repeat_count; i++) {
 		bench_tm_now(res, &s1);
-		ret += odp_queue_context_set(dst, context, len);
+		ret |= odp_queue_context_set(dst, context, len);
 		bench_tm_now(res, &s2);
 		bench_tm_func_record(&s2, &s1, res, id1);
 	}
@@ -337,7 +337,7 @@ static int queue_context_set_scheduled(void)
 	int ret = 0;
 
 	for (uint32_t i = 0U; i < TEST_REPEAT_COUNT; i++)
-		ret += odp_queue_context_set(dst, context, len);
+		ret |= odp_queue_context_set(dst, context, len);
 
 	return !ret;
 }
@@ -353,7 +353,7 @@ static int queue_context_set_scheduled_tm(bench_tm_result_t *res, int repeat_cou
 
 	for (int i = 0U; i < repeat_count; i++) {
 		bench_tm_now(res, &s1);
-		ret += odp_queue_context_set(dst, context, len);
+		ret |= odp_queue_context_set(dst, context, len);
 		bench_tm_now(res, &s2);
 		bench_tm_func_record(&s2, &s1, res, id1);
 	}
@@ -396,7 +396,7 @@ static int queue_enq_plain(void)
 	int ret = 0;
 
 	for (uint32_t i = 0U; i < TEST_REPEAT_COUNT; i++)
-		ret += odp_queue_enq(dst, src[i]);
+		ret |= odp_queue_enq(dst, src[i]);
 
 	return !ret;
 }
@@ -411,7 +411,7 @@ static int queue_enq_plain_tm(bench_tm_result_t *res, int repeat_count)
 
 	for (int i = 0; i < repeat_count; i++) {
 		bench_tm_now(res, &s1);
-		ret += odp_queue_enq(dst, src[i]);
+		ret |= odp_queue_enq(dst, src[i]);
 		bench_tm_now(res, &s2);
 		bench_tm_func_record(&s2, &s1, res, id1);
 	}
@@ -536,7 +536,7 @@ static int queue_enq_scheduled(void)
 	int ret = 0;
 
 	for (uint32_t i = 0U; i < TEST_REPEAT_COUNT; i++)
-		ret += odp_queue_enq(dst, src[i]);
+		ret |= odp_queue_enq(dst, src[i]);
 
 	return !ret;
 }
@@ -551,7 +551,7 @@ static int queue_enq_scheduled_tm(bench_tm_result_t *res, int repeat_count)
 
 	for (int i = 0; i < repeat_count; i++) {
 		bench_tm_now(res, &s1);
-		ret += odp_queue_enq(dst, src[i]);
+		ret |= odp_queue_enq(dst, src[i]);
 		bench_tm_now(res, &s2);
 		bench_tm_func_record(&s2, &s1, res, id1);
 	}
