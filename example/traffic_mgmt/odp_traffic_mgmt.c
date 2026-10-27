@@ -927,11 +927,14 @@ int main(int argc, char *argv[])
 	memset(&signal_action, 0, sizeof(signal_action));
 	signal_action.sa_handler = signal_handler;
 	sigfillset(&signal_action.sa_mask);
-	sigaction(SIGILL,  &signal_action, NULL);
-	sigaction(SIGFPE,  &signal_action, NULL);
-	sigaction(SIGSEGV, &signal_action, NULL);
-	sigaction(SIGTERM, &signal_action, NULL);
-	sigaction(SIGBUS,  &signal_action, NULL);
+	if (sigaction(SIGILL,  &signal_action, NULL) ||
+	    sigaction(SIGFPE,  &signal_action, NULL) ||
+	    sigaction(SIGSEGV, &signal_action, NULL) ||
+	    sigaction(SIGTERM, &signal_action, NULL) ||
+	    sigaction(SIGBUS,  &signal_action, NULL)) {
+		printf("Error: sigaction() failed\n");
+		return -1;
+	}
 
 	getrlimit(RLIMIT_CORE, &rlimit);
 	rlimit.rlim_cur = rlimit.rlim_max;
