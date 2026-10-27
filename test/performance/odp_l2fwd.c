@@ -804,11 +804,10 @@ static int run_worker_sched_mode_vector(void *arg)
 				pkt_vec = odp_packet_vector_from_event(ev_tbl[i]);
 				pkts = odp_packet_vector_tbl(pkt_vec, &pkt_tbl);
 #endif
-			} else if (state != NULL) {
-				pkts = handle_rx_state(state, ev_tbl, events);
-
-				if (pkts <= 0)
-					continue;
+			} else {
+				/* TX completion or unexpected event */
+				odp_event_free(ev_tbl[i]);
+				continue;
 			}
 
 			prefetch_data(appl_args->prefetch, pkt_tbl, pkts);
@@ -966,11 +965,10 @@ static int run_worker_sched_mode_event_vector(void *arg)
 				pkts = odp_event_vector_tbl(evv, &event_tbl);
 				odp_packet_from_event_multi(pkt_tbl, event_tbl, pkts);
 				odp_event_vector_free(evv);
-			} else if (state != NULL) {
-				pkts = handle_rx_state(state, ev_tbl, events);
-
-				if (pkts <= 0)
-					continue;
+			} else {
+				/* TX completion or unexpected event */
+				odp_event_free(ev_tbl[i]);
+				continue;
 			}
 
 			prefetch_data(appl_args->prefetch, pkt_tbl, pkts);
