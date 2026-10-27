@@ -37,6 +37,12 @@
 #define _ODP_HAVE_CHACHA20_POLY1305 0
 #endif
 
+#if !defined(OPENSSL_NO_SM4)
+#define _ODP_HAVE_SM4 1
+#else
+#define _ODP_HAVE_SM4 0
+#endif
+
 #define MAX_SESSIONS 4000
 #define MAX_BURST 32
 #define AES_BLOCK_SIZE 16
@@ -98,6 +104,9 @@ static const odp_crypto_cipher_capability_t cipher_capa_chacha20_poly1305[] = {
 
 static const odp_crypto_cipher_capability_t cipher_capa_aes_eea2[] = {
 {.key_len = 16, .iv_len = 16, .bit_mode = 1} };
+
+static const odp_crypto_cipher_capability_t cipher_capa_sm4_cbc[] = {
+{.key_len = 16, .iv_len = 16} };
 
 /*
  * Authentication algorithm capabilities
@@ -1789,6 +1798,7 @@ int odp_crypto_capability(odp_crypto_capability_t *capa)
 	capa->ciphers.bit.aes_ccm    = 1;
 	capa->ciphers.bit.chacha20_poly1305 = _ODP_HAVE_CHACHA20_POLY1305;
 	capa->ciphers.bit.aes_eea2   = 1;
+	capa->ciphers.bit.sm4_cbc    = _ODP_HAVE_SM4;
 
 	capa->auths.bit.null         = 1;
 	capa->auths.bit.md5_hmac     = 1;
@@ -1873,6 +1883,12 @@ int odp_crypto_cipher_capability(odp_cipher_alg_t cipher,
 	case ODP_CIPHER_ALG_AES_EEA2:
 		src = cipher_capa_aes_eea2;
 		num = sizeof(cipher_capa_aes_eea2) / size;
+		break;
+	case ODP_CIPHER_ALG_SM4_CBC:
+		if (!_ODP_HAVE_SM4)
+			return -1;
+		src = cipher_capa_sm4_cbc;
+		num = sizeof(cipher_capa_sm4_cbc) / size;
 		break;
 	default:
 		return -1;
@@ -2175,6 +2191,11 @@ odp_crypto_session_create(const odp_crypto_session_param_t *param,
 			rc = -1;
 		cipher_bit_mode_supported = 1;
 		break;
+#if _ODP_HAVE_SM4
+	case ODP_CIPHER_ALG_SM4_CBC:
+		rc = process_cipher_param(session, EVP_sm4_cbc());
+		break;
+#endif
 	default:
 		rc = -1;
 	}
