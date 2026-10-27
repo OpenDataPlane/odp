@@ -149,11 +149,10 @@ static int parse_queue_entry_template(config_setting_t *cs, queue_parse_template
 		return -1;
 	}
 
-	num = val_i;
-
-	if (num == 0U)
+	if (val_i <= 0)
 		return -1;
 
+	num = val_i;
 	elem = config_setting_lookup(cs, CONF_STR_NAME);
 
 	if (elem == NULL) {
