@@ -9,11 +9,34 @@
 extern "C" {
 #endif
 
+#include <odp/api/atomic.h>
 #include <odp/api/cpumask.h>
 #include <odp/api/init.h>
 #include <odp/api/thread.h>
 
 #include <odp/api/plat/thread_inline_types.h>
+
+#include <pthread.h>
+
+/* Service thread parameters */
+typedef struct {
+	/* Thread body. Called after the thread has been locally initialized as
+	 * _ODP_THR_INTERNAL. When it returns, the thread terminates locally and exits. */
+	void (*run)(void *arg);
+	/* Argument passed to 'run' */
+	void *arg;
+	/* CPU to pin the thread to. Must have been reserved with
+	 * _odp_service_cpus_reserve(). */
+	int cpu;
+} _odp_service_thread_param_t;
+
+/* Service thread handle. Owned by the caller, must stay valid and in place
+ * from _odp_service_thread_create() until _odp_service_thread_join(). */
+typedef struct {
+	_odp_service_thread_param_t param;
+	pthread_t thread;
+	odp_atomic_u32_t state;
+} _odp_service_thread_t;
 
 /* Internal variant of odp_init_local() that takes the extended internal
  * thread type. Linux-generic implementation internal threads must use this
@@ -43,6 +66,25 @@ int _odp_cpumask_term_global(void);
  *
  * Returns 0 on success, -1 on error. */
 int _odp_service_cpus_reserve(const odp_cpumask_t *cpus);
+
+/* Create 'num' service threads as described by 'param' and block until all
+ * of them have completed local initialization. On success, all threads have
+ * started executing their 'run' function. On failure, no threads remain
+ * running.
+ *
+ * Must be called after odp_init_global() has completed (e.g. from
+ * odp_schedule_config()), as the threads call _odp_init_local().
+ *
+ * Returns 0 on success, -1 on error. */
+int _odp_service_thread_create(_odp_service_thread_t thr[],
+			       const _odp_service_thread_param_t param[], int num);
+
+/* Wait for 'num' service threads created with _odp_service_thread_create()
+ * to exit. Stopping the threads, i.e. making their 'run' function return, is
+ * the caller's responsibility.
+ *
+ * Returns 0 on success, -1 on error. */
+int _odp_service_thread_join(_odp_service_thread_t thr[], int num);
 
 int _odp_system_info_init(void);
 int _odp_system_info_term(void);

@@ -6,8 +6,12 @@
 
 #include <sched.h>
 
+#include <odp/api/cpu.h>
 #include <odp/api/cpumask.h>
 #include <odp/api/init.h>
+
+#include <odp/api/plat/atomic_inlines.h>
+
 #include <odp_debug_internal.h>
 #include <odp_global_data.h>
 #include <odp_init_internal.h>
@@ -17,6 +21,7 @@
 
 #include <dirent.h>
 #include <errno.h>
+#include <pthread.h>
 #include <sys/types.h>
 
 /* Check that mask can hold all system CPUs*/
@@ -357,6 +362,135 @@ int _odp_service_cpus_reserve(const odp_cpumask_t *cpus)
 	odp_global_ro.num_cpus_installed = odp_cpumask_count(&odp_global_ro.all_cpus);
 
 	return 0;
+}
+
+/* Service thread startup states */
+#define SVC_THR_STARTING 0u
+#define SVC_THR_READY    1u
+#define SVC_THR_FAILED   2u
+#define SVC_THR_RUN      3u
+#define SVC_THR_EXIT     4u
+
+static void *service_thread_main(void *arg)
+{
+	_odp_service_thread_t *thr = arg;
+	uint32_t state;
+
+	if (_odp_init_local((odp_instance_t)odp_global_ro.main_pid, _ODP_THR_INTERNAL) < 0) {
+		odp_atomic_store_rel_u32(&thr->state, SVC_THR_FAILED);
+		return NULL;
+	}
+
+	odp_atomic_store_rel_u32(&thr->state, SVC_THR_READY);
+
+	while ((state = odp_atomic_load_acq_u32(&thr->state)) == SVC_THR_READY)
+		odp_cpu_pause();
+
+	if (state == SVC_THR_RUN)
+		thr->param.run(thr->param.arg);
+
+	if (odp_term_local() < 0)
+		_ODP_ERR("Service thread local term failed\n");
+
+	return NULL;
+}
+
+static int service_thread_start(_odp_service_thread_t *thr)
+{
+	pthread_attr_t attr;
+	cpu_set_t cpu_set;
+	int ret;
+
+	ret = pthread_attr_init(&attr);
+
+	if (ret) {
+		_ODP_ERR("pthread_attr_init() failed: %s\n", strerror(ret));
+		return -1;
+	}
+
+	CPU_ZERO(&cpu_set);
+	CPU_SET(thr->param.cpu, &cpu_set);
+	ret = pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpu_set);
+
+	if (ret) {
+		_ODP_ERR("pthread_attr_setaffinity_np() failed: %s\n", strerror(ret));
+		goto out;
+	}
+
+	ret = pthread_create(&thr->thread, &attr, service_thread_main, thr);
+
+	if (ret)
+		_ODP_ERR("pthread_create() failed: %s\n", strerror(ret));
+
+out:
+	(void)pthread_attr_destroy(&attr);
+
+	return ret ? -1 : 0;
+}
+
+int _odp_service_thread_create(_odp_service_thread_t thr[],
+			       const _odp_service_thread_param_t param[], int num)
+{
+	int num_created = 0;
+	int ret = 0;
+
+	for (int i = 0; i < num; i++) {
+		if (param[i].run == NULL || param[i].cpu < 0 || param[i].cpu >= CPU_SETSIZE ||
+		    !odp_cpumask_isset(&odp_global_ro.service_cpus, param[i].cpu)) {
+			_ODP_ERR("Bad service thread parameters (index: %i, CPU: %i)\n", i,
+				 param[i].cpu);
+			ret = -1;
+			break;
+		}
+
+		thr[i].param = param[i];
+		odp_atomic_init_u32(&thr[i].state, SVC_THR_STARTING);
+
+		if (service_thread_start(&thr[i])) {
+			ret = -1;
+			break;
+		}
+
+		num_created++;
+	}
+
+	for (int i = 0; i < num_created; i++) {
+		uint32_t state;
+
+		while ((state = odp_atomic_load_acq_u32(&thr[i].state)) == SVC_THR_STARTING)
+			odp_cpu_pause();
+
+		if (state == SVC_THR_FAILED) {
+			_ODP_ERR("Service thread %i local init failed\n", i);
+			ret = -1;
+		}
+	}
+
+	for (int i = 0; i < num_created; i++) {
+		if (odp_atomic_load_u32(&thr[i].state) == SVC_THR_READY)
+			odp_atomic_store_rel_u32(&thr[i].state, ret ? SVC_THR_EXIT : SVC_THR_RUN);
+	}
+
+	if (ret)
+		(void)_odp_service_thread_join(thr, num_created);
+
+	return ret;
+}
+
+int _odp_service_thread_join(_odp_service_thread_t thr[], int num)
+{
+	int ret = 0;
+
+	for (int i = 0; i < num; i++) {
+		int err = pthread_join(thr[i].thread, NULL);
+
+		if (err) {
+			_ODP_ERR("pthread_join() failed: %s\n", strerror(err));
+			ret = -1;
+		}
+	}
+
+	return ret;
 }
 
 /*
