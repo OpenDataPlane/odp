@@ -75,10 +75,11 @@ int odp_queue_create_multi(const char *name[], const odp_queue_param_t param[],
 /**
  * Destroy ODP queue
  *
- * Destroys ODP queue. The queue must be empty and detached from other
- * ODP API (crypto, pktio, classifier, timer, etc). Application must ensure
- * that no other operations on this queue are invoked in parallel. Otherwise
- * behavior is undefined.
+ * Destroys ODP queue. The queue must be empty and detached from other ODP APIs
+ * (crypto, pktio, classifier, timer, etc.). If the queue has event
+ * aggregator(s), they must not have events waiting for aggregation (see
+ * odp_queue_aggr_flush()). Application must ensure that no other operations on
+ * this queue are invoked in parallel. Otherwise behavior is undefined.
  *
  * @param queue    Queue handle
  *
@@ -174,9 +175,9 @@ void *odp_queue_context(odp_queue_t queue);
  * This function does not create a new queue but merely returns a reference
  * to an aggregator queue which has the same lifetime as the underlying
  * queue. The underlying queue must not be destroyed as long as any of its
- * aggregators is in use. The aggregator queue gets destroyed when the
- * underlying queue gets destroyed. An aggregator queue handle must not
- * be passed to odp_queue_destroy().
+ * aggregators is in use (see odp_queue_aggr_flush()). The aggregator queue gets
+ * destroyed when the underlying queue gets destroyed. An aggregator queue
+ * handle must not be passed to odp_queue_destroy().
  *
  * An aggregator queue has the same enq_mode as the underlying queue.
  *
@@ -203,6 +204,43 @@ void *odp_queue_context(odp_queue_t queue);
  * @see odp_queue_create()
  */
 odp_queue_t odp_queue_aggr(odp_queue_t queue, uint32_t aggr_index);
+
+/**
+ * Flush event aggregators
+ *
+ * Enqueue events waiting for aggregation into the underlying queue without
+ * waiting for odp_event_aggr_config_t::max_size events to be collected or
+ * odp_event_aggr_config_t::max_tmo_ns to pass. Depending on the implementation,
+ * the pending events may be delivered as event vectors or individual events.
+ *
+ * If 'queue' is a queue with event aggregators, all its aggregators are
+ * flushed. If 'queue' is an aggregator queue handle, only that aggregator is
+ * flushed. If the queue has no aggregators, the call does nothing and returns
+ * >0.
+ *
+ * When >0 is returned, all events that were waiting for aggregation when the
+ * call started have been enqueued into the underlying queue.
+ *
+ * When 0 is returned, the flush is not finished yet. The call may be retried,
+ * e.g. after dequeuing events from the underlying queue.
+ *
+ * This function can be used as part of the following queue teardown procedure:
+ * 1. Stop all event sources which may enqueue events into the queue or its
+ *    aggregators
+ * 2. Ensure that no thread is enqueuing events into the queue or its
+ *    aggregators
+ * 3. Call odp_queue_aggr_flush() until >0 is returned. If 0 is returned,
+ *    dequeue or schedule events from the queue before calling again.
+ * 4. Dequeue or schedule all remaining events from the queue
+ * 5. Call odp_queue_destroy()
+ *
+ * @param queue   Queue or aggregator queue handle
+ *
+ * @retval >0 when all events have been flushed
+ * @retval  0 when the flush is not finished yet
+ * @retval <0 on failure
+ */
+int odp_queue_aggr_flush(odp_queue_t queue);
 
 /**
  * Enqueue an event to a queue
