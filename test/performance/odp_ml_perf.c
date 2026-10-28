@@ -537,6 +537,7 @@ static int test_ml(void *ptr)
 
 	odp_barrier_wait(&glb->barrier);
 
+	time = ODP_TIME_NULL;
 	for (int i = 0; i < glb->opt.rounds + glb->opt.warmup; i++) {
 		if (i == glb->opt.warmup)
 			time_start(&time);
@@ -605,6 +606,7 @@ static int test_ml_create(void *ptr)
 
 	odp_barrier_wait(&glb->barrier);
 
+	time = ODP_TIME_NULL;
 	for (int i = 0; i < glb->opt.rounds + glb->opt.warmup; i++) {
 		if (i == glb->opt.warmup)
 			time_start(&time);
@@ -654,6 +656,7 @@ static int test_ml_load(void *ptr)
 
 	odp_barrier_wait(&glb->barrier);
 
+	time = ODP_TIME_NULL;
 	for (int i = 0; i < glb->opt.rounds + glb->opt.warmup; i++) {
 		if (i == glb->opt.warmup)
 			time_start(&time);
