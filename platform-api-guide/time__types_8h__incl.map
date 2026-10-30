@@ -1,0 +1,11 @@
+<map id="time_types.h" name="time_types.h">
+<area shape="rect" id="Node000001" title="ODP time." alt="" coords="149,5,255,31"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,79,188,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="187,33,126,73,124,69,184,28"/>
+<area shape="rect" id="Node000003" href="$spec_2time__types_8h.html" title="ODP time." alt="" coords="212,79,405,104"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="221,28,281,69,278,73,218,33"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="137,152,299,177"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="296,106,245,145,242,141,292,102"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="323,152,473,177"/>
+<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="325,102,374,141,371,145,321,106"/>
+</map>

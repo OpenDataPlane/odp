@@ -1,0 +1,17 @@
+<map id="std_types.h" name="std_types.h">
+<area shape="rect" id="Node000001" title="Common types and definitions for ODP API files." alt="" coords="111,5,208,31"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="9,225,171,251"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="131,33,92,53,54,81,26,113,11,153,8,165,11,176,29,199,53,216,49,221,25,203,6,178,3,165,6,151,22,110,51,77,89,48,128,28"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="65,79,136,104"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="152,33,121,70,117,67,148,29"/>
+<area shape="rect" id="Node000004" href="$align_8h.html" title="ODP alignments." alt="" coords="160,79,279,104"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="171,29,203,66,199,70,167,33"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="246,225,395,251"/>
+<area shape="poly" id="edge8_Node000001_Node000007" title=" " alt="" coords="199,28,241,45,286,71,327,105,343,127,355,151,358,168,355,185,341,215,336,213,350,184,353,168,350,153,339,130,323,109,283,75,239,50,197,33"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="21,152,164,177"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="200,106,127,147,124,143,198,102"/>
+<area shape="rect" id="Node000006" href="$spec_2align_8h.html" title="ODP alignments." alt="" coords="189,152,341,177"/>
+<area shape="poly" id="edge5_Node000004_Node000006" title=" " alt="" coords="229,103,252,139,248,142,225,106"/>
+<area shape="poly" id="edge6_Node000006_Node000002" title=" " alt="" coords="238,180,132,222,130,218,236,175"/>
+<area shape="poly" id="edge7_Node000006_Node000007" title=" " alt="" coords="276,176,305,213,301,216,272,179"/>
+</map>

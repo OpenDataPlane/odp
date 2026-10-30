@@ -1,0 +1,5 @@
+<map id="odp_comp_alg_capability_t" name="odp_comp_alg_capability_t">
+<area shape="rect" id="Node000001" title="Compression algorithm capabilities." alt="" coords="5,93,204,119"/>
+<area shape="rect" id="Node000002" href="$unionodp__comp__hash__algos__t.html" title="Hash algorithms in a bit field structure." alt="" coords="14,5,195,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="107,45,107,93,102,93,102,45"/>
+</map>

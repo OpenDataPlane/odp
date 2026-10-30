@@ -1,0 +1,8 @@
+<map id="odp_schedule_capability_t" name="odp_schedule_capability_t">
+<area shape="rect" id="Node000001" title="Scheduler capabilities." alt="" coords="5,181,200,207"/>
+<area shape="rect" id="Node000002" href="$unionodp__queue__stats__opt__t.html" title="Queue statistics counters options." alt="" coords="17,5,189,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="101,45,98,80,97,119,104,181,98,181,92,119,93,79,96,44"/>
+<area shape="rect" id="Node000003" href="$structodp__event__aggr__capability__t.html" title="Event aggregator capabilities." alt="" coords="190,93,399,119"/>
+<area shape="poly" id="edge3_Node000003_Node000002" title=" " alt="" coords="142,34,270,91,267,96,140,39"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="257,127,130,184,128,179,255,122"/>
+</map>

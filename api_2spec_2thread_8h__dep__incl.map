@@ -1,0 +1,24 @@
+<map id="thread.h" name="thread.h">
+<area shape="rect" id="Node000001" title="ODP thread API." alt="" coords="77,5,153,31"/>
+<area shape="rect" id="Node000002" href="$api_2thread_8h.html" title="ODP thread API." alt="" coords="77,79,153,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="117,44,117,79,112,79,112,44"/>
+<area shape="rect" id="Node000003" href="$api_2cpu_8h.html" title="ODP CPU." alt="" coords="19,152,77,177"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="96,116,61,154,57,150,92,113"/>
+<area shape="rect" id="Node000004" href="$odp__api_8h.html" title="The OpenDataPlane API." alt="" coords="5,225,91,251"/>
+<area shape="poly" id="edge4_Node000002_Node000004" title=" " alt="" coords="111,118,90,179,60,226,55,224,86,176,106,117"/>
+<area shape="rect" id="Node000005" href="$api_2abi-default_2rwlock__recursive_8h.html" title="ODP recursive read/write lock." alt="" coords="451,152,595,177"/>
+<area shape="poly" id="edge5_Node000002_Node000005" title=" " alt="" coords="167,99,457,149,456,155,166,104"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="51,191,51,225,45,225,45,191"/>
+<area shape="rect" id="Node000006" href="$arch_2arm32-linux_2odp_2api_2abi_2rwlock__recursive_8h_source.html" title=" " alt="" coords="115,225,259,251"/>
+<area shape="poly" id="edge6_Node000005_Node000006" title=" " alt="" coords="456,183,242,228,241,223,455,178"/>
+<area shape="rect" id="Node000007" href="$arch_2arm64-linux_2odp_2api_2abi_2rwlock__recursive_8h_source.html" title=" " alt="" coords="283,225,427,251"/>
+<area shape="poly" id="edge7_Node000005_Node000007" title=" " alt="" coords="484,185,383,228,381,223,482,180"/>
+<area shape="rect" id="Node000008" href="$arch_2default-linux_2odp_2api_2abi_2rwlock__recursive_8h_source.html" title=" " alt="" coords="451,225,595,251"/>
+<area shape="poly" id="edge8_Node000005_Node000008" title=" " alt="" coords="525,191,525,225,520,225,520,191"/>
+<area shape="rect" id="Node000009" href="$arch_2power64-linux_2odp_2api_2abi_2rwlock__recursive_8h_source.html" title=" " alt="" coords="619,225,763,251"/>
+<area shape="poly" id="edge9_Node000005_Node000009" title=" " alt="" coords="563,180,664,223,662,228,561,185"/>
+<area shape="rect" id="Node000010" href="$arch_2x86__32-linux_2odp_2api_2abi_2rwlock__recursive_8h_source.html" title=" " alt="" coords="787,225,931,251"/>
+<area shape="poly" id="edge10_Node000005_Node000010" title=" " alt="" coords="591,178,805,223,804,228,589,183"/>
+<area shape="rect" id="Node000011" href="$arch_2x86__64-linux_2odp_2api_2abi_2rwlock__recursive_8h_source.html" title=" " alt="" coords="955,225,1099,251"/>
+<area shape="poly" id="edge11_Node000005_Node000011" title=" " alt="" coords="609,175,955,224,954,229,608,181"/>
+</map>
