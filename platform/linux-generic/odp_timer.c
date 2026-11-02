@@ -33,6 +33,7 @@
 #include <odp/api/plat/time_inlines.h>
 #include <odp/api/plat/timer_inlines.h>
 
+#include <odp/api/plat/thread_inline_types.h>
 #include <odp/api/plat/timer_inline_types.h>
 
 #include <odp_atomic_internal.h>
@@ -256,6 +257,7 @@ typedef struct timer_local_t {
 	odp_time_t last_run;
 	int        run_cnt;
 	uint8_t    poll_shared;
+	uint8_t    poll_private;
 	uint64_t   prof_nsec;
 	uint64_t   prof_rounds;
 } timer_local_t;
@@ -837,7 +839,7 @@ static inline uint64_t timer_pool_scan_inline(int num, odp_time_t now, int force
 				continue;
 		} else {
 			/* Skip private pool, if this thread is not the owner */
-			if (tp->owner != odp_thread_id())
+			if (tp->owner != odp_thread_id() && !timer_local.poll_private)
 				continue;
 		}
 
@@ -2356,12 +2358,21 @@ int _odp_timer_init_local(void)
 	timer_local.last_run = odp_time_global_from_ns(0);
 	timer_local.run_cnt = 1;
 	timer_local.poll_shared = 0;
+	timer_local.poll_private = 0;
 	timer_local.prof_nsec = 0;
 	timer_local.prof_rounds = 0;
 
 	/* Timer feature disabled */
 	if (timer_global == NULL)
 		return 0;
+
+	/* Internal threads (e.g. scheduler service threads) process timer pools on behalf of
+	 * application threads, which may not do it themselves. */
+	if (_odp_this_thread->type == _ODP_THR_INTERNAL) {
+		timer_local.poll_shared = 1;
+		timer_local.poll_private = 1;
+		return 0;
+	}
 
 	/* Check if this thread polls shared (non-private) timer pools */
 	conf_thr_type = timer_global->thread_type;
