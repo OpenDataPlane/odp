@@ -1,0 +1,7 @@
+<map id="sync.h" name="sync.h">
+<area shape="rect" id="Node000001" title="ODP memory barriers." alt="" coords="16,5,80,31"/>
+<area shape="rect" id="Node000002" href="$api_2sync_8h.html" title="ODP synchronisation." alt="" coords="16,79,80,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="51,44,51,79,45,79,45,44"/>
+<area shape="rect" id="Node000003" href="$odp__api_8h.html" title="The OpenDataPlane API." alt="" coords="5,152,91,177"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="51,118,51,152,45,152,45,118"/>
+</map>

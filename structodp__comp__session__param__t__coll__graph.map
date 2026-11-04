@@ -1,0 +1,9 @@
+<map id="odp_comp_session_param_t" name="odp_comp_session_param_t">
+<area shape="rect" id="Node000001" title="Compression session creation parameters." alt="" coords="89,181,296,207"/>
+<area shape="rect" id="Node000002" href="$unionodp__comp__alg__param__t.html" title="Compression algorithm specific parameters." alt="" coords="12,93,189,119"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="124,127,154,155,181,179,177,183,151,159,121,131"/>
+<area shape="rect" id="Node000003" href="$structodp__comp__deflate__param.html" title="Compression DEFLATEe algorithm parameters." alt="" coords="5,5,196,31"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="103,45,103,93,98,93,98,45"/>
+<area shape="rect" id="Node000004" href="$struct__odp__abi__queue__t.html" title=" " alt="" coords="214,93,353,119"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="263,130,207,183,203,179,259,126"/>
+</map>

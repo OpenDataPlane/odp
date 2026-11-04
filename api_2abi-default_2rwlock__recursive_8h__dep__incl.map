@@ -1,0 +1,15 @@
+<map id="rwlock_recursive.h" name="rwlock_recursive.h">
+<area shape="rect" id="Node000001" title="ODP recursive read/write lock." alt="" coords="425,5,569,31"/>
+<area shape="rect" id="Node000002" href="$arch_2arm32-linux_2odp_2api_2abi_2rwlock__recursive_8h_source.html" title=" " alt="" coords="5,79,149,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="417,36,145,81,145,76,416,30"/>
+<area shape="rect" id="Node000003" href="$arch_2arm64-linux_2odp_2api_2abi_2rwlock__recursive_8h_source.html" title=" " alt="" coords="173,79,317,104"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="444,37,287,81,285,76,443,32"/>
+<area shape="rect" id="Node000004" href="$arch_2default-linux_2odp_2api_2abi_2rwlock__recursive_8h_source.html" title=" " alt="" coords="341,79,485,104"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="475,42,429,80,425,76,472,38"/>
+<area shape="rect" id="Node000005" href="$arch_2power64-linux_2odp_2api_2abi_2rwlock__recursive_8h_source.html" title=" " alt="" coords="509,79,653,104"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="523,38,569,76,566,80,520,42"/>
+<area shape="rect" id="Node000006" href="$arch_2x86__32-linux_2odp_2api_2abi_2rwlock__recursive_8h_source.html" title=" " alt="" coords="677,79,821,104"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="552,32,709,76,708,81,550,37"/>
+<area shape="rect" id="Node000007" href="$arch_2x86__64-linux_2odp_2api_2abi_2rwlock__recursive_8h_source.html" title=" " alt="" coords="845,79,989,104"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="579,30,850,76,849,81,578,36"/>
+</map>

@@ -1,0 +1,11 @@
+<map id="spinlock.h" name="spinlock.h">
+<area shape="rect" id="Node000001" title="ODP spinlock." alt="" coords="139,5,227,31"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,79,169,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="169,33,116,72,113,68,166,29"/>
+<area shape="rect" id="Node000003" href="$spec_2spinlock_8h.html" title="ODP spinlock." alt="" coords="193,79,368,104"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="201,29,255,68,252,72,197,33"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="109,152,271,177"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="268,106,217,145,214,141,264,102"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="295,152,445,177"/>
+<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="297,102,346,141,343,145,293,106"/>
+</map>

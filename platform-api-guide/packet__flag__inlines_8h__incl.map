@@ -1,0 +1,17 @@
+<map id="packet_flag_inlines.h" name="packet_flag_inlines.h">
+<area shape="rect" id="Node000001" title="Packet inline functions." alt="" coords="165,5,323,31"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,79,147,119"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="221,33,130,75,128,70,218,28"/>
+<area shape="rect" id="Node000003" href="$packet__inline__types_8h.html" title="ODP packet descriptor." alt="" coords="171,79,317,119"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="247,31,247,65,241,65,241,31"/>
+<area shape="rect" id="Node000005" href="$hints_8h.html" title="ODP compiler hints." alt="" coords="342,86,461,111"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="268,28,367,78,365,82,266,33"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="209,167,279,192"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="247,119,247,153,241,153,241,119"/>
+<area shape="rect" id="Node000006" href="$spec_2hints_8h.html" title="ODP compiler hints." alt="" coords="325,167,477,192"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="404,112,404,153,399,153,399,112"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="230,240,391,265"/>
+<area shape="poly" id="edge6_Node000006_Node000007" title=" " alt="" coords="388,194,338,233,335,229,385,190"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="416,240,565,265"/>
+<area shape="poly" id="edge7_Node000006_Node000008" title=" " alt="" coords="417,190,467,229,464,233,414,194"/>
+</map>

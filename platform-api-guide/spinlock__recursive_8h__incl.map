@@ -1,0 +1,11 @@
+<map id="spinlock_recursive.h" name="spinlock_recursive.h">
+<area shape="rect" id="Node000001" title="ODP recursive spinlock." alt="" coords="95,5,249,31"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,79,157,119"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="160,33,115,72,112,68,157,29"/>
+<area shape="rect" id="Node000003" href="$spec_2spinlock__recursive_8h.html" title="ODP recursive spinlock." alt="" coords="181,79,344,119"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="187,29,232,68,229,72,184,33"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="91,167,253,192"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="242,121,198,160,194,155,239,117"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="277,167,427,192"/>
+<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="286,117,330,155,327,159,283,121"/>
+</map>

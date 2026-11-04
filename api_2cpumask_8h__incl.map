@@ -1,0 +1,11 @@
+<map id="cpumask.h" name="cpumask.h">
+<area shape="rect" id="Node000001" title="ODP CPU masks and enumeration." alt="" coords="142,5,235,31"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,79,175,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="174,33,119,73,116,68,171,29"/>
+<area shape="rect" id="Node000003" href="$api_2spec_2cpumask_8h.html" title="ODP CPU masks and enumeration." alt="" coords="199,79,378,104"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="206,29,263,68,260,73,203,33"/>
+<area shape="rect" id="Node000004" href="$visibility__begin_8h_source.html" title=" " alt="" coords="117,152,279,177"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="276,106,225,145,222,141,272,102"/>
+<area shape="rect" id="Node000005" href="$visibility__end_8h_source.html" title=" " alt="" coords="303,152,453,177"/>
+<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="305,102,354,141,351,145,301,106"/>
+</map>
