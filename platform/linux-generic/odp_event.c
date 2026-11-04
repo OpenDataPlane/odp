@@ -282,7 +282,6 @@ static const char *event_subtype_str(odp_event_subtype_t subtype)
 
 void odp_event_print(odp_event_t event)
 {
-	const _odp_event_hdr_t *event_hdr = _odp_event_hdr(event);
 	odp_event_subtype_t subtype;
 	odp_event_type_t type;
 	void *user_area;
@@ -307,8 +306,9 @@ void odp_event_print(odp_event_t event)
 	len += _odp_snprint(&str[len], n - len, "  type           %s\n", event_type_str(type));
 	len += _odp_snprint(&str[len], n - len, "  subtype        %s\n",
 			    event_subtype_str(subtype));
-	len += _odp_snprint(&str[len], n - len, "  pool index     %u\n", event_hdr->index.pool);
-	len += _odp_snprint(&str[len], n - len, "  event index    %u\n", event_hdr->index.event);
+	len += _odp_snprint(&str[len], n - len, "  pool index     %d\n",
+			    odp_pool_index(_odp_event_pool(event)));
+	len += _odp_snprint(&str[len], n - len, "  event index    %u\n", _odp_event_index(event));
 	len += _odp_snprint(&str[len], n - len, "  flow id        %" PRIu32 "\n",
 			    odp_event_flow_id(event));
 	len += _odp_snprint(&str[len], n - len, "  user area      %p\n", user_area);
