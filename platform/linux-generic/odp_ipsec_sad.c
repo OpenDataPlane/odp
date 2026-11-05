@@ -145,7 +145,7 @@ static void init_sa_thread_local(ipsec_sa_t *sa)
 {
 	sa_thread_local_t *sa_tl;
 	int n;
-	int thread_count_max = odp_thread_count_max();
+	int thread_count_max = _odp_thread_count_max();
 
 	for (n = 0; n < thread_count_max; n++) {
 		sa_tl = &ipsec_sa_tbl->per_thread[n].sa[sa->ipsec_sa_idx];
@@ -160,7 +160,7 @@ int _odp_ipsec_sad_init_global(void)
 	odp_crypto_capability_t crypto_capa;
 	uint32_t max_num_sa = CONFIG_IPSEC_MAX_NUM_SA;
 	uint64_t shm_size;
-	unsigned int thread_count_max = odp_thread_count_max();
+	unsigned int thread_count_max = _odp_thread_count_max();
 	odp_shm_t shm;
 	unsigned i;
 
@@ -1138,7 +1138,7 @@ uint16_t _odp_ipsec_sa_alloc_ipv4_id(ipsec_sa_t *ipsec_sa)
 
 void _odp_ipsec_sa_stats_pkts(ipsec_sa_t *sa, odp_ipsec_stats_t *stats)
 {
-	int thread_count_max = odp_thread_count_max();
+	int thread_count_max = _odp_thread_count_max();
 	uint64_t tl_byte_quota = 0;
 	uint64_t tl_pkt_quota = 0;
 	sa_thread_local_t *sa_tl;

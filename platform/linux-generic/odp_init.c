@@ -629,7 +629,7 @@ static int term_local(enum init_stage stage)
 	return rc;
 }
 
-int odp_init_local(odp_instance_t instance, odp_thread_type_t thr_type)
+int _odp_init_local(odp_instance_t instance, _odp_internal_thread_type_t thr_type)
 {
 	enum init_stage stage = NO_INIT;
 
@@ -704,6 +704,16 @@ int odp_init_local(odp_instance_t instance, odp_thread_type_t thr_type)
 init_fail:
 	term_local(stage);
 	return -1;
+}
+
+int odp_init_local(odp_instance_t instance, odp_thread_type_t thr_type)
+{
+	if (thr_type != ODP_THREAD_WORKER && thr_type != ODP_THREAD_CONTROL) {
+		_ODP_ERR("Bad thread type: %d\n", (int)thr_type);
+		return -1;
+	}
+
+	return _odp_init_local(instance, (_odp_internal_thread_type_t)thr_type);
 }
 
 int odp_term_local(void)
