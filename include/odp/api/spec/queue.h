@@ -440,6 +440,31 @@ void odp_queue_print(odp_queue_t queue);
 void odp_queue_print_all(void);
 
 /**
+ * Read queue statistics
+ *
+ * Reads statistics counters of multiple queues. Counter values are written to
+ * the output array in the same order as queue handles are given in the input
+ * array.
+ *
+ * The function is intended for debugging and monitoring, not for fast path use.
+ * Counters may be less accurate than odp_queue_len() and counter values may
+ * be affected by implementation specific update latency and granularity.
+ * Counters of different queues, or different counters of the same queue, are
+ * not read atomically as a set.
+ *
+ * Counters that are not supported (see queue-type-specific capabilities) are
+ * written as zero. On failure, the contents of 'stats' array are undefined.
+ *
+ * @param      queue   Array of queue handles
+ * @param[out] stats   Array of statistics structures for output
+ * @param      num     Number of queues (and stats array elements)
+ *
+ * @retval  0 on success
+ * @retval <0 on failure
+ */
+int odp_queue_stats(const odp_queue_t queue[], odp_queue_stats_t stats[], int num);
+
+/**
  * @}
  */
 
