@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2017 ARM Limited
- * Copyright (c) 2023 Nokia
+ * Copyright (c) 2023-2026 Nokia
  */
 
 #include <odp/autoheader_internal.h>
@@ -112,6 +112,11 @@ void odp_queue_print(odp_queue_t queue)
 void odp_queue_print_all(void)
 {
 	_odp_queue_api->queue_print_all();
+}
+
+int odp_queue_stats(const odp_queue_t queue[], odp_queue_stats_t stats[], int num)
+{
+	return _odp_queue_api->queue_stats(queue, stats, num);
 }
 
 odp_queue_t odp_queue_aggr(odp_queue_t queue, uint32_t aggr_index)

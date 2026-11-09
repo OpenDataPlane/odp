@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2016-2018 Linaro Limited
- * Copyright (c) 2019-2025 Nokia
+ * Copyright (c) 2019-2026 Nokia
  */
 
 #include <odp/api/packet.h>
@@ -1267,6 +1267,8 @@ static int schedule_capability(odp_schedule_capability_t *capa)
 	capa->max_prios = sched_global->config_if.max_prios;
 	capa->max_queues = CONFIG_MAX_SCHED_QUEUES;
 	capa->max_queue_size = _odp_queue_glb->config.max_queue_size;
+	capa->queue_stats.bit.len = 1;
+	capa->queue_stats.bit.cur_len = 1;
 
 	return 0;
 }

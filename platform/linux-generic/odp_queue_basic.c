@@ -63,9 +63,11 @@ static int queue_capa(odp_queue_capability_t *capa, int sched ODP_UNUSED)
 	capa->plain.max_num     = CONFIG_MAX_PLAIN_QUEUES;
 	capa->plain.max_size    = _odp_queue_glb->config.max_queue_size;
 	capa->plain.stats.bit.len = 1;
+	capa->plain.stats.bit.cur_len = 1;
 	capa->plain.lockfree.max_num  = _odp_queue_glb->queue_lf_num;
 	capa->plain.lockfree.max_size = _odp_queue_glb->queue_lf_size;
 	capa->plain.lockfree.stats.bit.len = 1;
+	capa->plain.lockfree.stats.bit.cur_len = 1;
 
 	capa->plain.aggr.max_num = CONFIG_MAX_EVENT_AGGR;
 	capa->plain.aggr.max_num_per_queue = 1;
@@ -84,6 +86,7 @@ static int queue_capa(odp_queue_capability_t *capa, int sched ODP_UNUSED)
 	capa->plain.aggr.source.bit.dma = 1;
 	capa->plain.aggr.source.bit.ml = 1;
 	capa->plain.aggr.stats.bit.len = 1;
+	capa->plain.aggr.stats.bit.cur_len = 1;
 
 	return 0;
 }
@@ -1129,6 +1132,32 @@ static int queue_info(odp_queue_t handle, odp_queue_info_t *info)
 	return 0;
 }
 
+static int queue_stats(const odp_queue_t handle[], odp_queue_stats_t stats[], int num)
+{
+	if (!handle) {
+		_ODP_ERR("NULL queue handle array\n");
+		return -1;
+	}
+	if (!stats) {
+		_ODP_ERR("NULL stats array\n");
+		return -1;
+	}
+
+	for (int i = 0; i < num; i++) {
+		queue_entry_t *queue;
+
+		if (odp_unlikely(handle[i] == ODP_QUEUE_INVALID)) {
+			_ODP_ERR("Invalid queue handle\n");
+			return -1;
+		}
+		queue = qentry_from_handle(handle[i]);
+
+		stats[i] = (odp_queue_stats_t){ .cur_len = queue->len(handle[i]) };
+	}
+
+	return 0;
+}
+
 static void event_aggr_print(queue_entry_t *aggr_queue)
 {
 	event_aggr_t *aggr = &aggr_queue->aggr;
@@ -1443,6 +1472,18 @@ static inline int sched_queue_enq_multi(odp_queue_t handle,
 	return num_enq;
 }
 
+static inline uint32_t sched_queue_len(odp_queue_t handle)
+{
+	queue_entry_t *queue = qentry_from_handle(handle);
+	uint32_t len;
+
+	LOCK(queue);
+	len = ring_st_ptr_len(&queue->ring_st);
+	UNLOCK(queue);
+
+	return len;
+}
+
 int _odp_sched_queue_deq(uint32_t queue_index, odp_event_t ev[], int max_num,
 			 int update_status)
 {
@@ -1619,6 +1660,7 @@ static int queue_init(queue_entry_t *queue, const char *name,
 		} else {
 			queue->enqueue            = sched_queue_enq;
 			queue->enqueue_multi      = sched_queue_enq_multi;
+			queue->len                = sched_queue_len;
 
 			queue->ring_data = &_odp_queue_glb->ring_data[offset];
 			queue->ring_mask = queue_size - 1;
@@ -1790,7 +1832,8 @@ _odp_queue_api_fn_t _odp_queue_basic_api = {
 	.queue_param_init = queue_param_init,
 	.queue_info = queue_info,
 	.queue_print = queue_print,
-	.queue_print_all = queue_print_all
+	.queue_print_all = queue_print_all,
+	.queue_stats = queue_stats
 
 };
 
