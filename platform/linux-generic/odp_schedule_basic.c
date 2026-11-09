@@ -2497,6 +2497,7 @@ static int schedule_capability(odp_schedule_capability_t *capa)
 	capa->aggr.min_size = 2;
 	capa->aggr.max_tmo_ns = 0;
 	capa->aggr.min_tmo_ns = 0;
+	capa->aggr.wait_indef = 1;
 	capa->aggr.source.bit.queue = 1;
 	capa->aggr.source.bit.pktin = 1;
 	capa->aggr.source.bit.tx_compl = 1;
