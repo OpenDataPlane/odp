@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright (c) 2025 Nokia
+ * Copyright (c) 2025-2026 Nokia
  */
 
 /** @cond _ODP_HIDE_FROM_DOXYGEN_ */
@@ -22,6 +22,7 @@
 #define CONF_STR_NAME "name"
 #define CONF_STR_TYPE "type"
 #define CONF_STR_SIZE "size"
+#define CONF_STR_SEG_LEN "seg_len"
 #define CONF_STR_CACHE_SIZE "cache_size"
 #define CONF_STR_NUM "num"
 
@@ -49,7 +50,7 @@ static odp_bool_t parse_pool_entry(config_setting_t *cs, pool_parse_t *pool)
 {
 	const char *val_str;
 	int val_i;
-	uint32_t size = 0U, num;
+	uint32_t size = 0U, seg_len, num;
 
 	pool->pool = ODP_POOL_INVALID;
 	odp_pool_param_init(&pool->p_param);
@@ -109,8 +110,13 @@ static odp_bool_t parse_pool_entry(config_setting_t *cs, pool_parse_t *pool)
 	pool->p_param.type = pool->type;
 
 	if (pool->type == ODP_POOL_PACKET) {
+		seg_len = size;
+
+		if (config_setting_lookup_int(cs, CONF_STR_SEG_LEN, &val_i) == CONFIG_TRUE)
+			seg_len = val_i;
+
 		pool->p_param.pkt.len = size;
-		pool->p_param.pkt.seg_len = size;
+		pool->p_param.pkt.seg_len = seg_len;
 		pool->p_param.pkt.num = num;
 	} else if (pool->type == ODP_POOL_BUFFER) {
 		pool->p_param.buf.size = size;

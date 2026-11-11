@@ -469,6 +469,12 @@ memory allocation failures and name lookups which cannot be satisfied, abort imm
   - element: `size`
     - necessity: required if `type` == `"packet"` or `"buffer"`
     - type: integer
+  - element: `seg_len`
+    - necessity: optional, used only if `type` == `"packet"`
+    - type: integer
+    - values: minimum packet data bytes in the first segment, mapping to `odp_pool_param_t`
+              `pkt.seg_len`, `0` for implementation default
+    - default: `size`
   - element: `cache_size`
     - necessity: optional
     - type: integer
