@@ -26,6 +26,7 @@ static int work_wait(uintptr_t data, odp_event_t ev[] ODP_UNUSED, int num ODP_UN
 
 static void work_wait_init(const odp_pl_work_param_t *param, odp_pl_work_init_t *init)
 {
+	const config_setting_t *elem;
 	long long val_ll;
 
 	if (param->param == NULL)
@@ -34,10 +35,16 @@ static void work_wait_init(const odp_pl_work_param_t *param, odp_pl_work_init_t 
 	if (config_setting_length(param->param) != 1)
 		ODPH_ABORT("No valid parameters available\n");
 
-	val_ll = config_setting_get_int64_elem(param->param, 0);
+	elem = config_setting_get_elem(param->param, 0);
 
-	if (val_ll == -1)
+	if (elem == NULL || (config_setting_type(elem) != CONFIG_TYPE_INT &&
+			     config_setting_type(elem) != CONFIG_TYPE_INT64))
 		ODPH_ABORT("No \"" CONF_STR_WAIT_NS "\" found\n");
+
+	val_ll = config_setting_get_int64(elem);
+
+	if (val_ll < 0)
+		ODPH_ABORT("No valid \"" CONF_STR_WAIT_NS "\" found\n");
 
 	init->fn = work_wait;
 	init->data = (uintptr_t)val_ll;

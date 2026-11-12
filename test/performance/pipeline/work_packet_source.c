@@ -58,8 +58,8 @@ static void work_packet_source_init(const odp_pl_work_param_t *param, odp_pl_wor
 	data->pool = (odp_pool_t)odp_pl_config_parser_get(ODP_PL_POOL_DOMAIN, val_str);
 	val_i = config_setting_get_int_elem(param->param, 1);
 
-	if (val_i == 0)
-		ODPH_ABORT("No \"" CONF_STR_LEN "\" found\n");
+	if (val_i <= 0)
+		ODPH_ABORT("No valid \"" CONF_STR_LEN "\" found\n");
 
 	data->len = val_i;
 	init->fn = work_packet_source;

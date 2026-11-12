@@ -112,8 +112,8 @@ static void work_timeout_source_init(const odp_pl_work_param_t *param, odp_pl_wo
 
 	val_ll = config_setting_get_int64_elem(param->param, 2);
 
-	if (val_ll == 0)
-		ODPH_ABORT("No \"" CONF_STR_TIMEOUT_NS "\" found\n");
+	if (val_ll <= 0)
+		ODPH_ABORT("No valid \"" CONF_STR_TIMEOUT_NS "\" found\n");
 
 	data->timeout_ns = val_ll;
 	init->fn = work_timeout_source;
