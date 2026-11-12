@@ -807,7 +807,7 @@ static int parse_pmr_entry_template(config_setting_t *cs, pmr_parse_template_t *
 
 	if (config_setting_lookup_int(cs, CONF_STR_VAL_SZ, &val_i) == CONFIG_FALSE) {
 		ODPH_ERR("No \"" CONF_STR_VAL_SZ "\" found\n");
-		return PARSE_NOK;
+		return -1;
 	}
 
 	templ->val_sz = val_i;
@@ -815,7 +815,7 @@ static int parse_pmr_entry_template(config_setting_t *cs, pmr_parse_template_t *
 	if (strcmp(templ->term, CUSTOM_FRAME) == 0 || strcmp(templ->term, CUSTOM_L3) == 0) {
 		if (config_setting_lookup_int(cs, CONF_STR_OFFSET, &val_i) == CONFIG_FALSE) {
 			ODPH_ERR("No \"" CONF_STR_OFFSET "\" found\n");
-			return PARSE_NOK;
+			return -1;
 		}
 
 		templ->offset = val_i;
