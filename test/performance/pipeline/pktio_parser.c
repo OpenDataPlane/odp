@@ -255,11 +255,11 @@ static void free_pktio_entry(pktio_parse_t *pktio)
 		if (pktio->is_started) {
 			(void)odp_pktio_stop(pktio->pktio);
 			pktio->is_started = false;
-
-			if (pktio->mtu > 0U && pktio->mtu_orig_in > 0U && pktio->mtu_orig_out > 0U)
-				(void)odp_pktio_maxlen_set(pktio->pktio, pktio->mtu_orig_in,
-							   pktio->mtu_orig_out);
 		}
+
+		if (pktio->mtu > 0U && pktio->mtu_orig_in > 0U && pktio->mtu_orig_out > 0U)
+			(void)odp_pktio_maxlen_set(pktio->pktio, pktio->mtu_orig_in,
+						   pktio->mtu_orig_out);
 
 		(void)odp_pktio_close(pktio->pktio);
 	}
