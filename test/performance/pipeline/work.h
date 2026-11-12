@@ -21,4 +21,6 @@ void work_print_work(work_t work, const char *queue);
 
 void work_destroy_work(work_t work);
 
+void work_destroy_entries(void);
+
 #endif

@@ -11,6 +11,7 @@
 #include <sys/queue.h>
 
 #include "config_parser.h"
+#include "work.h"
 
 typedef struct parser_s {
 	TAILQ_ENTRY(parser_s) p;
@@ -165,22 +166,21 @@ void config_parser_undeploy(void)
 
 void config_parser_destroy(void)
 {
-	parser_t *parser, *drop;
+	parser_t *parser;
 
 	TAILQ_HEAD(tailhead, parser_s);
 
 	TAILQ_FOREACH_REVERSE(parser, &parsers.p, tailhead, p)
 		parser->destroy_fn();
 
-	for (parser = TAILQ_FIRST(&parsers.p); parser != NULL;) {
+	while ((parser = TAILQ_FIRST(&parsers.p)) != NULL) {
 		TAILQ_REMOVE(&parsers.p, parser, p);
-		drop = parser;
-		parser = TAILQ_NEXT(parser, p);
-		free(drop);
+		free(parser);
 	}
 
 	if (parsers.config_done)
 		config_destroy(&parsers.config);
 
+	work_destroy_entries();
 	unload_libs();
 }

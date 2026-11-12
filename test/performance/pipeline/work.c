@@ -106,3 +106,16 @@ void work_destroy_work(work_t work)
 	priv->entry->destroy_fn(priv->data);
 	free(priv);
 }
+
+void work_destroy_entries(void)
+{
+	work_entry_t *entry;
+
+	if (!entries.init_done)
+		return;
+
+	while ((entry = TAILQ_FIRST(&entries.w)) != NULL) {
+		TAILQ_REMOVE(&entries.w, entry, w);
+		free(entry);
+	}
+}
