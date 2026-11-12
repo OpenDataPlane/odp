@@ -284,22 +284,15 @@ static int parse_cos_entry_template(config_setting_t *cs, cos_parse_template_t *
 	if (templ->name_prefix == NULL)
 		ODPH_ABORT("Error allocating memory, aborting\n");
 
-	val_i = config_setting_get_int_elem(elem, 1);
-
-	if (val_i == -1) {
+	if (!helper_get_uint_elem_checked(elem, 1, &templ->name_idx)) {
 		ODPH_ERR("No \"" CONF_STR_NAME "\" \"" CONF_STR_IDX "\" found\n");
 		return -1;
 	}
 
-	templ->name_idx = val_i;
-	val_i = config_setting_get_int_elem(elem, 2);
-
-	if (val_i == -1) {
+	if (!helper_get_uint_elem_checked(elem, 2, &templ->name_inc)) {
 		ODPH_ERR("No \"" CONF_STR_NAME "\" \"" CONF_STR_INC "\" found\n");
 		return -1;
 	}
-
-	templ->name_inc = val_i;
 
 	if (config_setting_lookup_string(cs, CONF_STR_ACTION, &val_str) == CONFIG_TRUE) {
 		templ->action = strdup(val_str);
@@ -333,22 +326,15 @@ static int parse_cos_entry_template(config_setting_t *cs, cos_parse_template_t *
 	if (templ->queue_prefix == NULL)
 		ODPH_ABORT("Error allocating memory, aborting\n");
 
-	val_i = config_setting_get_int_elem(elem, 1);
-
-	if (val_i == -1) {
+	if (!helper_get_uint_elem_checked(elem, 1, &templ->queue_idx)) {
 		ODPH_ERR("No \"" CONF_STR_QUEUE "\" \"" CONF_STR_IDX "\" found\n");
 		return -1;
 	}
 
-	templ->queue_idx = val_i;
-	val_i = config_setting_get_int_elem(elem, 2);
-
-	if (val_i == -1) {
+	if (!helper_get_uint_elem_checked(elem, 2, &templ->queue_inc)) {
 		ODPH_ERR("No \"" CONF_STR_QUEUE "\" \"" CONF_STR_INC "\" found\n");
 		return -1;
 	}
-
-	templ->queue_inc = val_i;
 
 	if (config_setting_lookup_string(cs, CONF_STR_TYPE, &val_str) == CONFIG_TRUE) {
 		templ->type = strdup(val_str);
@@ -685,22 +671,16 @@ static int parse_pmr_entry_template(config_setting_t *cs, pmr_parse_template_t *
 	if (templ->name_prefix == NULL)
 		ODPH_ABORT("Error allocating memory, aborting\n");
 
-	val_i = config_setting_get_int_elem(elem1, 1);
-
-	if (val_i == -1) {
+	if (!helper_get_uint_elem_checked(elem1, 1, &templ->name_idx)) {
 		ODPH_ERR("No \"" CONF_STR_NAME "\" \"" CONF_STR_IDX "\" found\n");
 		return -1;
 	}
 
-	templ->name_idx = val_i;
-	val_i = config_setting_get_int_elem(elem1, 2);
-
-	if (val_i == -1) {
+	if (!helper_get_uint_elem_checked(elem1, 2, &templ->name_inc)) {
 		ODPH_ERR("No \"" CONF_STR_NAME "\" \"" CONF_STR_INC "\" found\n");
 		return -1;
 	}
 
-	templ->name_inc = val_i;
 	elem1 = config_setting_lookup(cs, CONF_STR_SRC_COS);
 
 	if (elem1 == NULL) {
@@ -720,22 +700,16 @@ static int parse_pmr_entry_template(config_setting_t *cs, pmr_parse_template_t *
 	if (templ->src_prefix == NULL)
 		ODPH_ABORT("Error allocating memory, aborting\n");
 
-	val_i = config_setting_get_int_elem(elem1, 1);
-
-	if (val_i == -1) {
+	if (!helper_get_uint_elem_checked(elem1, 1, &templ->src_idx)) {
 		ODPH_ERR("No \"" CONF_STR_SRC_COS "\" \"" CONF_STR_IDX "\" found\n");
 		return -1;
 	}
 
-	templ->src_idx = val_i;
-	val_i = config_setting_get_int_elem(elem1, 2);
-
-	if (val_i == -1) {
+	if (!helper_get_uint_elem_checked(elem1, 2, &templ->src_inc)) {
 		ODPH_ERR("No \"" CONF_STR_SRC_COS "\" \"" CONF_STR_INC "\" found\n");
 		return -1;
 	}
 
-	templ->src_inc = val_i;
 	elem1 = config_setting_lookup(cs, CONF_STR_DST_COS);
 
 	if (elem1 == NULL) {
@@ -755,22 +729,15 @@ static int parse_pmr_entry_template(config_setting_t *cs, pmr_parse_template_t *
 	if (templ->dst_prefix == NULL)
 		ODPH_ABORT("Error allocating memory, aborting\n");
 
-	val_i = config_setting_get_int_elem(elem1, 1);
-
-	if (val_i == -1) {
+	if (!helper_get_uint_elem_checked(elem1, 1, &templ->dst_idx)) {
 		ODPH_ERR("No \"" CONF_STR_DST_COS "\" \"" CONF_STR_IDX "\" found\n");
 		return -1;
 	}
 
-	templ->dst_idx = val_i;
-	val_i = config_setting_get_int_elem(elem1, 2);
-
-	if (val_i == -1) {
+	if (!helper_get_uint_elem_checked(elem1, 2, &templ->dst_inc)) {
 		ODPH_ERR("No \"" CONF_STR_DST_COS "\" \"" CONF_STR_INC "\" found\n");
 		return -1;
 	}
-
-	templ->dst_inc = val_i;
 
 	if (config_setting_lookup_string(cs, CONF_STR_TERM, &val_str) == CONFIG_FALSE) {
 		ODPH_ERR("No \"" CONF_STR_TERM "\" found\n");
@@ -811,14 +778,11 @@ static int parse_pmr_entry_template(config_setting_t *cs, pmr_parse_template_t *
 	for (int i = 0; i < val_i; ++i)
 		templ->val_arr[i] = (uint8_t)config_setting_get_int_elem(elem2, i);
 
-	val_i = config_setting_get_int_elem(elem1, 1);
-
-	if (val_i == -1) {
+	if (!helper_get_uint_elem_checked(elem1, 1, &templ->val_arr_inc)) {
 		ODPH_ERR("No \"" CONF_STR_MATCH_VALUE "\" \"" CONF_STR_INC "\" found\n");
 		return -1;
 	}
 
-	templ->val_arr_inc = val_i;
 	elem1 = config_setting_lookup(cs, CONF_STR_MATCH_MASK);
 
 	if (elem1 == NULL) {

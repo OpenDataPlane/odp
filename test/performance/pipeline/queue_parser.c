@@ -172,22 +172,15 @@ static int parse_queue_entry_template(config_setting_t *cs, queue_parse_template
 	if (templ->prefix == NULL)
 		ODPH_ABORT("Error allocating memory, aborting\n");
 
-	val_i = config_setting_get_int_elem(elem, 1);
-
-	if (val_i == -1) {
+	if (!helper_get_uint_elem_checked(elem, 1, &templ->idx)) {
 		ODPH_ERR("No \"" CONF_STR_NAME "\" \"" CONF_STR_IDX "\" found\n");
 		return -1;
 	}
 
-	templ->idx = val_i;
-	val_i = config_setting_get_int_elem(elem, 2);
-
-	if (val_i == -1) {
+	if (!helper_get_uint_elem_checked(elem, 2, &templ->inc)) {
 		ODPH_ERR("No \"" CONF_STR_NAME "\" \"" CONF_STR_INC "\" found\n");
 		return -1;
 	}
-
-	templ->inc = val_i;
 
 	if (config_setting_lookup_string(cs, CONF_STR_TYPE, &val_str) == CONFIG_TRUE) {
 		templ->type = strdup(val_str);
