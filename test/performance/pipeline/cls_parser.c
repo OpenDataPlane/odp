@@ -472,7 +472,7 @@ static void free_cos_template(cos_parse_template_t *templ)
 static res_t parse_pmr_entry(config_setting_t *cs, pmr_parse_t *pmr)
 {
 	const char *val_str;
-	int val_i, num;
+	int val_i, num, num_val;
 	config_setting_t *elem;
 
 	if (config_setting_lookup(cs, CONF_STR_PARSE_TEMPLATE) != NULL)
@@ -591,6 +591,7 @@ static res_t parse_pmr_entry(config_setting_t *cs, pmr_parse_t *pmr)
 		pmr->val_arr[i] = (uint8_t)config_setting_get_int_elem(elem, i);
 
 	pmr->param.match.value = pmr->val_arr;
+	num_val = num;
 	elem = config_setting_lookup(cs, CONF_STR_MATCH_MASK);
 
 	if (elem == NULL) {
@@ -620,6 +621,12 @@ static res_t parse_pmr_entry(config_setting_t *cs, pmr_parse_t *pmr)
 		return PARSE_NOK;
 	}
 
+	if (val_i <= 0 || val_i > num_val || val_i > num) {
+		ODPH_ERR("No valid \"" CONF_STR_VAL_SZ "\" found, must not exceed \""
+			 CONF_STR_MATCH_VALUE "\" or \"" CONF_STR_MATCH_MASK "\" length\n");
+		return PARSE_NOK;
+	}
+
 	pmr->param.val_sz = val_i;
 
 	if (pmr->param.term == ODP_PMR_CUSTOM_FRAME || pmr->param.term == ODP_PMR_CUSTOM_L3) {
@@ -636,7 +643,7 @@ static res_t parse_pmr_entry(config_setting_t *cs, pmr_parse_t *pmr)
 
 static int parse_pmr_entry_template(config_setting_t *cs, pmr_parse_template_t *templ)
 {
-	int val_i;
+	int val_i, num_val, num_mask;
 	uint32_t num;
 	config_setting_t *elem1, *elem2;
 	const char *val_str;
@@ -778,6 +785,8 @@ static int parse_pmr_entry_template(config_setting_t *cs, pmr_parse_template_t *
 	for (int i = 0; i < val_i; ++i)
 		templ->val_arr[i] = (uint8_t)config_setting_get_int_elem(elem2, i);
 
+	num_val = val_i;
+
 	if (!helper_get_uint_elem_checked(elem1, 1, &templ->val_arr_inc)) {
 		ODPH_ERR("No \"" CONF_STR_MATCH_VALUE "\" \"" CONF_STR_INC "\" found\n");
 		return -1;
@@ -805,8 +814,16 @@ static int parse_pmr_entry_template(config_setting_t *cs, pmr_parse_template_t *
 	for (int i = 0; i < val_i; ++i)
 		templ->mask_arr[i] = (uint8_t)config_setting_get_int_elem(elem1, i);
 
+	num_mask = val_i;
+
 	if (config_setting_lookup_int(cs, CONF_STR_VAL_SZ, &val_i) == CONFIG_FALSE) {
 		ODPH_ERR("No \"" CONF_STR_VAL_SZ "\" found\n");
+		return -1;
+	}
+
+	if (val_i <= 0 || val_i > num_val || val_i > num_mask) {
+		ODPH_ERR("No valid \"" CONF_STR_VAL_SZ "\" found, must not exceed \""
+			 CONF_STR_MATCH_VALUE "\" or \"" CONF_STR_MATCH_MASK "\" length\n");
 		return -1;
 	}
 

@@ -208,6 +208,7 @@ memory allocation failures and name lookups which cannot be satisfied, abort imm
   - element: `val_sz`
     - necessity: required
     - type: integer
+    - values: number of bytes to match, at most the length of `match_value` and `match_mask`
   - element: `offset`
     - necessity: required if `term` == `"custom_frame"` or `"custom_l3"`
     - type: integer
