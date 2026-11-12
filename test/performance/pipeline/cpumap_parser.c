@@ -79,6 +79,13 @@ static odp_bool_t cpumap_parser_init(config_t *config)
 		++cpumap.num;
 	}
 
+	if (odp_cpumask_count(&cpumap.cpumask) != num) {
+		ODPH_ERR("Number of \"" CONF_STR_WORKERS "\" (%d) does not match \""
+			 CONF_STR_CPUMASK "\" CPU count (%d)\n", num,
+			 odp_cpumask_count(&cpumap.cpumask));
+		return false;
+	}
+
 	return true;
 }
 

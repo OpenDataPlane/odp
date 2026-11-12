@@ -390,13 +390,18 @@ static void free_workers(void)
 	orchestrator.config->num_workers = 0U;
 }
 
-void orchestrator_deploy(void)
+odp_bool_t orchestrator_deploy(void)
 {
 	cpumap_t *map = (cpumap_t *)odp_pl_config_parser_get(ODP_PL_CPUMAP_DOMAIN, NULL);
 	odph_thread_common_param_t common;
 	const int num = map->num;
-	odph_thread_param_t params[num], *param;
+	odph_thread_param_t params[MAX_WORKERS], *param;
 	orchestrator_worker_t *worker;
+
+	if (num == 0 || num > MAX_WORKERS) {
+		ODPH_ERR("Invalid number of workers: %d (max %d)\n", num, MAX_WORKERS);
+		return false;
+	}
 
 	odp_barrier_init(&orchestrator.config->init_barrier, num + 1);
 	odp_barrier_init(&orchestrator.config->term_barrier, num + 1);
@@ -431,6 +436,8 @@ void orchestrator_deploy(void)
 	(void)odph_thread_join(orchestrator.config->thrs, orchestrator.config->num_workers);
 	print_stats();
 	free_workers();
+
+	return true;
 }
 
 void orchestrator_destroy(void)
