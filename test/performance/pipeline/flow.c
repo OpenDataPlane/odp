@@ -66,8 +66,13 @@ odp_bool_t flow_add_output(flow_t flow,  work_t *work, uint32_t num)
 
 int flow_issue(flow_type_t type, flow_t flow, odp_event_t ev[], int num)
 {
-	flow_sub_t *sub = &((flow_priv_t *)flow)->sub[type];
+	flow_sub_t *sub;
 	int num_procd = 0;
+
+	if (odp_unlikely(flow == NULL))
+		return 0;
+
+	sub = &((flow_priv_t *)flow)->sub[type];
 
 	for (uint32_t i = 0U; i < sub->num; ++i) {
 		num_procd += work_issue(sub->work[i], &ev[num_procd], num - num_procd);

@@ -634,7 +634,8 @@ either sets up polling or scheduling of events from these queues. Once events ar
 queue, flows which has the queue set as "input" gets executed. The events that were received can be
 consumed by the work steps in a flow. The execution of the flow is stopped once all the events are
 consumed and tester moves to poll/schedule additional events. If events remain unconsumed after
-a flow has been fully executed, they are simply freed.
+a flow has been fully executed, they are simply freed. Events received from a queue without an
+input flow are freed as well.
 
 Tester also supports event generation or generic code execution through output flows, where a
 queue is marked as "output" flow, where again a set of events is passed to flow work steps but
