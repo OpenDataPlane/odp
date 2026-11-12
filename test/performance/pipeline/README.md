@@ -338,8 +338,8 @@ memory allocation failures and name lookups which cannot be satisfied, abort imm
   - element: `type`
     - necessity: required
     - type: string
-    - values: `"work_forward"`, `"work_global_forward"`, `"work_packet_copy"`,
-              `"work_packet_source"`, `"work_sink"`, `"work_timeout_source"`, `"work_wait"`
+    - values: `"forward"`, `"global_forward"`, `"packet_copy"`, `"packet_source"`, `"sink"`,
+              `"timeout_source"`, `"wait"`, or a name of work registered by a loaded library
   - element: `param`
     - necessity: optional
     - type: list
@@ -690,7 +690,7 @@ in the destroy function.
 
 ### Forward
 
-- name in configuration file: `work_forward`
+- name in configuration file: `forward`
 - type: input
 - info: forward events to a queue, consumes successfully forwarded events
 - parameter list:
@@ -699,17 +699,18 @@ in the destroy function.
 
 ### Global forward
 
-- name in configuration file: `work_global_forward`
+- name in configuration file: `global_forward`
 - type: input
 - info: forward events to a set of queues based on worker thread ID, consumes successfully
-        forwarded events
+        forwarded events. The set of queues is shared by all global forward work, the set of the
+        first initialized work is used.
 - parameter list:
-  - index 0..N: queue resource names
-    - type: string
+  - index 0: queue resource names
+    - type: string list
 
 ### Packet copy
 
-- name in configuration file: `work_packet_copy`
+- name in configuration file: `packet_copy`
 - type: input
 - info: copies passed events in case of packet events, using given pool, no events consumed
 - parameter list:
@@ -717,7 +718,7 @@ in the destroy function.
 
 ### Packet source
 
-- name in configuration file: `work_packet_source`
+- name in configuration file: `packet_source`
 - type: output
 - info: produces events from given pool of given length
 - parameter list:
@@ -728,13 +729,13 @@ in the destroy function.
 
 ### Sink
 
-- name in configuration file: `work_sink`
+- name in configuration file: `sink`
 - type: input
 - info: frees all passed events, all events consumed
 
 ### Timeout source
 
-- name in configuration file: `work_timeout_source`
+- name in configuration file: `timeout_source`
 - type: output
 - info: produces timeouts from given timer with given timeout pool and timeout. Timer is rearmed
         once timeout is handled and freed to the pool
@@ -749,11 +750,12 @@ in the destroy function.
 
 ### Wait
 
-- name in configuration file: `work_wait`
+- name in configuration file: `wait`
 - type: input
 - info: waits a given amount, no events consumed
 - parameter list:
   - index 0: time to wait in nanoseconds
+    - type: integer
 
 ### External work libraries
 
