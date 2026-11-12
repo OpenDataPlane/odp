@@ -54,7 +54,7 @@ static odp_bool_t parse_crypto_entry(config_setting_t *cs, crypto_parse_t *crypt
 {
 	const char *val_str;
 	config_setting_t *elem;
-	int num, val_i;
+	int num, key_len, val_i;
 
 	crypto->crypto = ODP_CRYPTO_SESSION_INVALID;
 	odp_crypto_session_param_init(&crypto->param);
@@ -90,6 +90,7 @@ static odp_bool_t parse_crypto_entry(config_setting_t *cs, crypto_parse_t *crypt
 	}
 
 	elem = config_setting_lookup(cs, CONF_STR_CIPHER_KEY_DATA);
+	key_len = 0;
 
 	if (elem != NULL) {
 		num = config_setting_length(elem);
@@ -104,11 +105,20 @@ static odp_bool_t parse_crypto_entry(config_setting_t *cs, crypto_parse_t *crypt
 			for (int i = 0; i < num; ++i)
 				crypto->param.cipher_key.data[i] =
 					config_setting_get_int_elem(elem, i);
+
+			key_len = num;
 		}
 	}
 
-	if (config_setting_lookup_int(cs, CONF_STR_CIPHER_KEY_LEN, &val_i) == CONFIG_TRUE)
+	if (config_setting_lookup_int(cs, CONF_STR_CIPHER_KEY_LEN, &val_i) == CONFIG_TRUE) {
+		if (val_i < 0 || val_i > key_len) {
+			ODPH_ERR("No valid \"" CONF_STR_CIPHER_KEY_LEN "\" found, must not exceed \""
+				 CONF_STR_CIPHER_KEY_DATA "\" length\n");
+			return false;
+		}
+
 		crypto->param.cipher_key.length = val_i;
+	}
 
 	if (config_setting_lookup_int(cs, CONF_STR_CIPHER_IV_LEN, &val_i) == CONFIG_TRUE)
 		crypto->param.cipher_iv_len = val_i;
@@ -120,6 +130,7 @@ static odp_bool_t parse_crypto_entry(config_setting_t *cs, crypto_parse_t *crypt
 	}
 
 	elem = config_setting_lookup(cs, CONF_STR_AUTH_KEY_DATA);
+	key_len = 0;
 
 	if (elem != NULL) {
 		num = config_setting_length(elem);
@@ -134,11 +145,20 @@ static odp_bool_t parse_crypto_entry(config_setting_t *cs, crypto_parse_t *crypt
 			for (int i = 0; i < num; ++i)
 				crypto->param.auth_key.data[i] =
 					config_setting_get_int_elem(elem, i);
+
+			key_len = num;
 		}
 	}
 
-	if (config_setting_lookup_int(cs, CONF_STR_AUTH_KEY_LEN, &val_i) == CONFIG_TRUE)
+	if (config_setting_lookup_int(cs, CONF_STR_AUTH_KEY_LEN, &val_i) == CONFIG_TRUE) {
+		if (val_i < 0 || val_i > key_len) {
+			ODPH_ERR("No valid \"" CONF_STR_AUTH_KEY_LEN "\" found, must not exceed \""
+				 CONF_STR_AUTH_KEY_DATA "\" length\n");
+			return false;
+		}
+
 		crypto->param.auth_key.length = val_i;
+	}
 
 	if (config_setting_lookup_int(cs, CONF_STR_AUTH_IV_LEN, &val_i) == CONFIG_TRUE)
 		crypto->param.auth_iv_len = val_i;

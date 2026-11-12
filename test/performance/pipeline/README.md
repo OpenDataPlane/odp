@@ -253,6 +253,7 @@ memory allocation failures and name lookups which cannot be satisfied, abort imm
   - element: `cipher_key_len`
     - necessity: required if `cipher_alg` != `"null"`
     - type: integer
+    - values: at most the length of `cipher_key_data`
   - element: `cipher_iv_len`
     - necessity: optional
     - type: integer
@@ -269,6 +270,7 @@ memory allocation failures and name lookups which cannot be satisfied, abort imm
   - element: `auth_key_len`
     - necessity: required if `auth_alg` != `"null"`
     - type: integer
+    - values: at most the length of `auth_key_data`
   - element: `auth_iv_len`
     - necessity: optional
     - type: integer
