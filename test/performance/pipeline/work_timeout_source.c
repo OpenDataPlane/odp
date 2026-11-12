@@ -128,12 +128,15 @@ static void work_timeout_source_destroy(uintptr_t data)
 	odp_event_t ev;
 	int ret;
 
-	ret = odp_timer_cancel(priv->tmr, &ev);
+	if (priv->tmr != ODP_TIMER_INVALID) {
+		ret = odp_timer_cancel(priv->tmr, &ev);
 
-	if (ret == ODP_TIMER_SUCCESS)
-		odp_event_free(ev);
+		if (ret == ODP_TIMER_SUCCESS)
+			odp_event_free(ev);
 
-	(void)odp_timer_free(priv->tmr);
+		(void)odp_timer_free(priv->tmr);
+	}
+
 	free(priv);
 }
 
