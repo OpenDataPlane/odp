@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include <odp/helper/odph_api.h>
 #include <sys/queue.h>
@@ -40,12 +41,14 @@ static work_entries_t entries;
 
 work_t work_create_work(const odp_pl_work_param_t *param)
 {
-	work_priv_t *work = calloc(1U, sizeof(*work));
+	work_priv_t *work = aligned_alloc(ODP_CACHE_LINE_SIZE, sizeof(*work));
 	work_entry_t *entry;
 	odp_pl_work_init_t init;
 
 	if (work == NULL)
 		ODPH_ABORT("Error allocating memory, aborting\n");
+
+	memset(work, 0, sizeof(*work));
 
 	TAILQ_FOREACH(entry, &entries.w, w) {
 		if (strcmp(entry->name, param->type) != 0)

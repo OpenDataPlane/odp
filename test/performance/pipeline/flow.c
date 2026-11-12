@@ -4,6 +4,9 @@
 
 /** @cond _ODP_HIDE_FROM_DOXYGEN_ */
 
+#include <stdlib.h>
+#include <string.h>
+
 #include <odp/helper/odph_api.h>
 
 #include "flow.h"
@@ -21,11 +24,12 @@ typedef struct ODP_ALIGNED_CACHE {
 
 flow_t flow_create_flow(char *queue)
 {
-	flow_priv_t *flow = calloc(1U, sizeof(*flow));
+	flow_priv_t *flow = aligned_alloc(ODP_CACHE_LINE_SIZE, sizeof(*flow));
 
 	if (flow == NULL)
 		ODPH_ABORT("Error allocating memory, aborting\n");
 
+	memset(flow, 0, sizeof(*flow));
 	flow->queue = queue;
 
 	return (flow_t)flow;
