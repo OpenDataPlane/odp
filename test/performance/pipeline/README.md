@@ -743,6 +743,7 @@ in the destroy function.
     - type: string
   - index 1: pool resource name
     - type: string
+    - values: a timeout pool dedicated to this work, with `num` of `1` and `cache_size` of `0`
   - index 2: timeout in nanoseconds
     - type: integer
 
