@@ -126,7 +126,8 @@ int _odp_queue_init_global(void)
 	if (sched == NULL || !strcmp(sched, "default"))
 		sched = _ODP_SCHEDULE_DEFAULT;
 
-	if (!strcmp(sched, "basic") || !strcmp(sched, "sp")) {
+	if (!strcmp(sched, "basic") || !strcmp(sched, "sp") ||
+	    !strcmp(sched, "centralized")) {
 		_odp_queue_fn = &_odp_queue_basic_fn;
 		_odp_queue_api = &_odp_queue_basic_api;
 	} else {

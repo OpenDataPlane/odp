@@ -18,6 +18,11 @@ PATH=$(dirname $0):$PATH
 PATH=$(dirname $0)/../../../../../../test/validation/api/pktio:$PATH
 PATH=.:$PATH
 
+if [ "${ODP_SCHEDULER}" = "centralized" ]; then
+	echo "ODP_SCHEDULER=centralized is not supported. Skipping test."
+	exit 77
+fi
+
 pktio_main_path=$(which pktio_main${EXEEXT})
 if [ -x "$pktio_main_path" ] ; then
 	echo "running with $pktio_main_path"

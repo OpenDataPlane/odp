@@ -682,7 +682,7 @@ int _odp_crypto_init_global(void)
 		return 0;
 	}
 
-	const uint32_t max_pending = odp_thread_count_max() * MAX_BURST;
+	const uint32_t max_pending = _odp_thread_count_max() * MAX_BURST;
 
 	/* Calculate the memory size we need */
 	mem_size  = sizeof(odp_crypto_global_t);
