@@ -19,7 +19,7 @@ static int work_wait(uintptr_t data, odp_event_t ev[] ODP_UNUSED, int num ODP_UN
 		     odp_pl_work_stats_t *stats)
 {
 	odp_time_wait_ns((uint64_t)data);
-	stats->data1 = (uint64_t)data;
+	stats->data1 += (uint64_t)data;
 
 	return 0;
 }
