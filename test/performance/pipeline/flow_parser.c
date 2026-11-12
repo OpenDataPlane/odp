@@ -507,6 +507,7 @@ static odp_bool_t flow_parser_deploy(void)
 	odp_queue_t queue;
 	flow_t flow;
 	work_t *work;
+	odp_bool_t added;
 
 	printf("\n*** " ODP_PL_FLOW_DOMAIN " resources ***\n");
 
@@ -538,16 +539,12 @@ static odp_bool_t flow_parser_deploy(void)
 				return false;
 			}
 		} else {
-			if (parse->input != NULL && !flow_add_input(flow, work, parse->num)) {
-				ODPH_ERR("Error setting input flow\n");
+			added = parse->input != NULL ? flow_add_input(flow, work, parse->num) :
+						       flow_add_output(flow, work, parse->num);
 
-				for (uint32_t j = 0U; j < parse->num; ++j)
-					work_destroy_work(work[j]);
-
-				free(work);
-				return false;
-			} else if (!flow_add_output(flow, work, parse->num)) {
-				ODPH_ERR("Error setting output flow\n");
+			if (!added) {
+				ODPH_ERR("Error setting %s flow\n",
+					 parse->input != NULL ? "input" : "output");
 
 				for (uint32_t j = 0U; j < parse->num; ++j)
 					work_destroy_work(work[j]);
