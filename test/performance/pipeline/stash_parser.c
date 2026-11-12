@@ -188,7 +188,7 @@ static odp_bool_t stash_parser_deploy(void)
 		stash->stash = odp_stash_create(stash->name, &stash->param);
 
 		if (stash->stash == ODP_STASH_INVALID) {
-			ODPH_ERR("Error creating pool (%s)\n", stash->name);
+			ODPH_ERR("Error creating stash (%s)\n", stash->name);
 			return false;
 		}
 
