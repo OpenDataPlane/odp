@@ -1,0 +1,15 @@
+<map id="align.h" name="align.h">
+<area shape="rect" id="Node000001" title="ODP alignments." alt="" coords="232,5,299,31"/>
+<area shape="rect" id="Node000002" href="$arch_2arm32-linux_2odp_2api_2abi_2align_8h_source.html" title=" " alt="" coords="5,79,72,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="220,36,73,82,71,77,218,31"/>
+<area shape="rect" id="Node000003" href="$arch_2arm64-linux_2odp_2api_2abi_2align_8h_source.html" title=" " alt="" coords="96,79,163,104"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="233,39,153,81,150,76,230,34"/>
+<area shape="rect" id="Node000004" href="$arch_2default-linux_2odp_2api_2abi_2align_8h_source.html" title=" " alt="" coords="187,79,253,104"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="253,44,230,80,225,77,248,41"/>
+<area shape="rect" id="Node000005" href="$arch_2power64-linux_2odp_2api_2abi_2align_8h_source.html" title=" " alt="" coords="277,79,344,104"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="282,41,306,77,301,80,278,44"/>
+<area shape="rect" id="Node000006" href="$arch_2x86__32-linux_2odp_2api_2abi_2align_8h_source.html" title=" " alt="" coords="368,79,435,104"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="300,34,380,76,378,81,298,39"/>
+<area shape="rect" id="Node000007" href="$arch_2x86__64-linux_2odp_2api_2abi_2align_8h_source.html" title=" " alt="" coords="459,79,525,104"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="312,31,459,77,458,82,311,36"/>
+</map>

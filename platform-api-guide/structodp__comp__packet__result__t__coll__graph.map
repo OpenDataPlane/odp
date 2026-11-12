@@ -1,0 +1,7 @@
+<map id="odp_comp_packet_result_t" name="odp_comp_packet_result_t">
+<area shape="rect" id="Node000001" title="Compression packet operation result." alt="" coords="71,93,266,119"/>
+<area shape="rect" id="Node000002" href="$struct__odp__abi__packet__t.html" title=" " alt="" coords="5,5,148,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="101,38,158,91,154,95,97,42"/>
+<area shape="rect" id="Node000003" href="$structodp__packet__data__range.html" title="Packet API data range specifier." alt="" coords="173,5,349,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="240,42,183,95,180,91,236,38"/>
+</map>

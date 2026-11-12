@@ -1,0 +1,5 @@
+<map id="odp_system_info_t" name="odp_system_info_t">
+<area shape="rect" id="Node000001" title="System info." alt="" coords="7,108,153,133"/>
+<area shape="rect" id="Node000002" href="$unionodp__cpu__arch__isa__t.html" title="CPU ISA versions." alt="" coords="5,5,155,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="83,45,83,108,77,108,77,45"/>
+</map>

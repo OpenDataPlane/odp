@@ -1,0 +1,31 @@
+<map id="spinlock_recursive.h" name="spinlock_recursive.h">
+<area shape="rect" id="Node000001" title="ODP recursive spinlock." alt="" coords="122,5,277,31"/>
+<area shape="rect" id="Node000002" href="$api_2spinlock_8h.html" title="ODP spinlock." alt="" coords="68,225,208,251"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="196,32,178,80,158,151,145,212,140,211,153,150,173,78,192,30"/>
+<area shape="rect" id="Node000007" href="$api_2std__types_8h.html" title="Standard C language types and definitions for ODP." alt="" coords="187,79,337,104"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="212,29,245,66,241,70,208,33"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="5,299,169,324"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="132,253,106,289,101,286,127,249"/>
+<area shape="rect" id="Node000004" href="$api_2spec_2spinlock_8h.html" title="ODP spinlock." alt="" coords="193,299,368,324"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="162,248,246,290,244,295,160,253"/>
+<area shape="rect" id="Node000005" href="$visibility__begin_8h_source.html" title=" " alt="" coords="607,372,768,397"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="346,321,609,367,608,372,346,327"/>
+<area shape="rect" id="Node000006" href="$visibility__end_8h_source.html" title=" " alt="" coords="331,372,481,397"/>
+<area shape="poly" id="edge5_Node000004_Node000006" title=" " alt="" coords="302,322,375,363,372,367,299,326"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="175,152,349,177"/>
+<area shape="poly" id="edge7_Node000007_Node000008" title=" " alt="" coords="265,104,265,138,259,138,259,104"/>
+<area shape="rect" id="Node000009" href="$api_2spec_2std__types_8h.html" title="Common types and definitions for ODP API files." alt="" coords="373,152,556,177"/>
+<area shape="poly" id="edge8_Node000007_Node000009" title=" " alt="" coords="295,102,420,145,418,150,294,107"/>
+<area shape="poly" id="edge9_Node000009_Node000005" title=" " alt="" coords="555,175,613,190,675,213,732,248,757,271,778,297,782,308,782,319,772,338,753,355,730,368,727,364,750,350,768,335,777,318,777,309,773,300,753,275,729,253,673,218,612,195,553,180"/>
+<area shape="poly" id="edge16_Node000009_Node000006" title=" " alt="" coords="463,179,447,226,414,359,409,358,442,225,458,177"/>
+<area shape="rect" id="Node000010" title=" " alt="" coords="297,225,368,251"/>
+<area shape="poly" id="edge10_Node000009_Node000010" title=" " alt="" coords="445,180,367,221,365,216,442,175"/>
+<area shape="rect" id="Node000011" href="$api_2align_8h.html" title="ODP alignments." alt="" coords="456,225,575,251"/>
+<area shape="poly" id="edge11_Node000009_Node000011" title=" " alt="" coords="475,176,501,213,497,216,471,179"/>
+<area shape="rect" id="Node000012" title=" " alt="" coords="444,299,587,324"/>
+<area shape="poly" id="edge12_Node000011_Node000012" title=" " alt="" coords="518,251,518,285,513,285,513,251"/>
+<area shape="rect" id="Node000013" href="$api_2spec_2align_8h.html" title="ODP alignments." alt="" coords="611,299,763,324"/>
+<area shape="poly" id="edge13_Node000011_Node000013" title=" " alt="" coords="544,248,648,291,646,296,542,253"/>
+<area shape="poly" id="edge14_Node000013_Node000005" title=" " alt="" coords="690,324,690,358,685,358,685,324"/>
+<area shape="poly" id="edge15_Node000013_Node000006" title=" " alt="" coords="643,327,465,371,464,366,641,321"/>
+</map>

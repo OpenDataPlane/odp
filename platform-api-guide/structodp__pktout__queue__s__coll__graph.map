@@ -1,0 +1,5 @@
+<map id="odp_pktout_queue_s" name="odp_pktout_queue_s">
+<area shape="rect" id="Node000001" title=" " alt="" coords="5,93,161,119"/>
+<area shape="rect" id="Node000002" href="$struct__odp__abi__pktio__t.html" title=" " alt="" coords="17,5,149,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="86,45,86,93,81,93,81,45"/>
+</map>

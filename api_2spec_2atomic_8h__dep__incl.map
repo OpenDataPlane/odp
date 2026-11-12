@@ -1,0 +1,52 @@
+<map id="atomic.h" name="atomic.h">
+<area shape="rect" id="Node000001" title="ODP atomic operations." alt="" coords="685,5,764,31"/>
+<area shape="rect" id="Node000002" href="$api_2atomic_8h.html" title="ODP atomic operations." alt="" coords="685,79,764,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="727,44,727,79,722,79,722,44"/>
+<area shape="rect" id="Node000003" href="$api_2abi-default_2barrier_8h.html" title="ODP barrier." alt="" coords="305,152,381,177"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="672,105,382,159,381,154,672,100"/>
+<area shape="rect" id="Node000010" href="$api_2barrier_8h.html" title="ODP execution barriers." alt="" coords="611,152,687,177"/>
+<area shape="poly" id="edge9_Node000002_Node000010" title=" " alt="" coords="704,115,663,154,659,150,701,111"/>
+<area shape="rect" id="Node000011" href="$odp__api_8h.html" title="The OpenDataPlane API." alt="" coords="606,225,691,251"/>
+<area shape="poly" id="edge11_Node000002_Node000011" title=" " alt="" coords="722,118,714,148,700,179,682,205,663,227,659,223,678,202,696,176,709,146,717,117"/>
+<area shape="rect" id="Node000012" href="$api_2abi-default_2rwlock_8h.html" title="ODP rwlock." alt="" coords="918,152,995,177"/>
+<area shape="poly" id="edge12_Node000002_Node000012" title=" " alt="" coords="776,105,920,149,918,154,774,110"/>
+<area shape="rect" id="Node000019" href="$api_2abi-default_2ticketlock_8h.html" title="ODP ticketlock." alt="" coords="1567,152,1664,177"/>
+<area shape="poly" id="edge19_Node000002_Node000019" title=" " alt="" coords="778,94,1567,157,1566,162,777,100"/>
+<area shape="rect" id="Node000004" href="$arch_2arm32-linux_2odp_2api_2abi_2barrier_8h_source.html" title=" " alt="" coords="5,225,81,251"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="292,181,82,230,81,225,291,176"/>
+<area shape="rect" id="Node000005" href="$arch_2arm64-linux_2odp_2api_2abi_2barrier_8h_source.html" title=" " alt="" coords="105,225,181,251"/>
+<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="299,184,177,228,175,223,297,179"/>
+<area shape="rect" id="Node000006" href="$arch_2default-linux_2odp_2api_2abi_2barrier_8h_source.html" title=" " alt="" coords="205,225,281,251"/>
+<area shape="poly" id="edge5_Node000003_Node000006" title=" " alt="" coords="318,187,261,227,258,223,315,183"/>
+<area shape="rect" id="Node000007" href="$arch_2power64-linux_2odp_2api_2abi_2barrier_8h_source.html" title=" " alt="" coords="305,225,381,251"/>
+<area shape="poly" id="edge6_Node000003_Node000007" title=" " alt="" coords="346,191,346,225,341,225,341,191"/>
+<area shape="rect" id="Node000008" href="$arch_2x86__32-linux_2odp_2api_2abi_2barrier_8h_source.html" title=" " alt="" coords="405,225,481,251"/>
+<area shape="poly" id="edge7_Node000003_Node000008" title=" " alt="" coords="372,183,429,223,425,227,369,187"/>
+<area shape="rect" id="Node000009" href="$arch_2x86__64-linux_2odp_2api_2abi_2barrier_8h_source.html" title=" " alt="" coords="505,225,581,251"/>
+<area shape="poly" id="edge8_Node000003_Node000009" title=" " alt="" coords="389,179,512,223,510,228,388,184"/>
+<area shape="poly" id="edge10_Node000010_Node000011" title=" " alt="" coords="651,191,651,225,646,225,646,191"/>
+<area shape="rect" id="Node000013" href="$arch_2arm32-linux_2odp_2api_2abi_2rwlock_8h_source.html" title=" " alt="" coords="715,225,793,251"/>
+<area shape="poly" id="edge13_Node000012_Node000013" title=" " alt="" coords="912,184,788,228,786,223,911,179"/>
+<area shape="rect" id="Node000014" href="$arch_2arm64-linux_2odp_2api_2abi_2rwlock_8h_source.html" title=" " alt="" coords="817,225,894,251"/>
+<area shape="poly" id="edge14_Node000012_Node000014" title=" " alt="" coords="931,187,873,227,870,223,928,183"/>
+<area shape="rect" id="Node000015" href="$arch_2default-linux_2odp_2api_2abi_2rwlock_8h_source.html" title=" " alt="" coords="918,225,995,251"/>
+<area shape="poly" id="edge15_Node000012_Node000015" title=" " alt="" coords="959,191,959,225,954,225,954,191"/>
+<area shape="rect" id="Node000016" href="$arch_2power64-linux_2odp_2api_2abi_2rwlock_8h_source.html" title=" " alt="" coords="1019,225,1097,251"/>
+<area shape="poly" id="edge16_Node000012_Node000016" title=" " alt="" coords="986,183,1043,223,1040,227,983,187"/>
+<area shape="rect" id="Node000017" href="$arch_2x86__32-linux_2odp_2api_2abi_2rwlock_8h_source.html" title=" " alt="" coords="1121,225,1198,251"/>
+<area shape="poly" id="edge17_Node000012_Node000017" title=" " alt="" coords="1003,179,1127,223,1126,228,1001,184"/>
+<area shape="rect" id="Node000018" href="$arch_2x86__64-linux_2odp_2api_2abi_2rwlock_8h_source.html" title=" " alt="" coords="1222,225,1299,251"/>
+<area shape="poly" id="edge18_Node000012_Node000018" title=" " alt="" coords="1009,176,1222,225,1221,230,1008,181"/>
+<area shape="rect" id="Node000020" href="$arch_2arm32-linux_2odp_2api_2abi_2ticketlock_8h_source.html" title=" " alt="" coords="1324,225,1421,251"/>
+<area shape="poly" id="edge20_Node000019_Node000020" title=" " alt="" coords="1564,184,1413,228,1411,223,1563,179"/>
+<area shape="rect" id="Node000021" href="$arch_2arm64-linux_2odp_2api_2abi_2ticketlock_8h_source.html" title=" " alt="" coords="1445,225,1543,251"/>
+<area shape="poly" id="edge21_Node000019_Node000021" title=" " alt="" coords="1585,187,1515,227,1513,223,1582,182"/>
+<area shape="rect" id="Node000022" href="$arch_2default-linux_2odp_2api_2abi_2ticketlock_8h_source.html" title=" " alt="" coords="1567,225,1664,251"/>
+<area shape="poly" id="edge22_Node000019_Node000022" title=" " alt="" coords="1618,191,1618,225,1613,225,1613,191"/>
+<area shape="rect" id="Node000023" href="$arch_2power64-linux_2odp_2api_2abi_2ticketlock_8h_source.html" title=" " alt="" coords="1688,225,1785,251"/>
+<area shape="poly" id="edge23_Node000019_Node000023" title=" " alt="" coords="1648,182,1718,223,1715,227,1646,187"/>
+<area shape="rect" id="Node000024" href="$arch_2x86__32-linux_2odp_2api_2abi_2ticketlock_8h_source.html" title=" " alt="" coords="1809,225,1907,251"/>
+<area shape="poly" id="edge24_Node000019_Node000024" title=" " alt="" coords="1668,179,1819,223,1818,228,1666,184"/>
+<area shape="rect" id="Node000025" href="$arch_2x86__64-linux_2odp_2api_2abi_2ticketlock_8h_source.html" title=" " alt="" coords="1931,225,2028,251"/>
+<area shape="poly" id="edge25_Node000019_Node000025" title=" " alt="" coords="1678,175,1931,225,1930,230,1677,181"/>
+</map>
