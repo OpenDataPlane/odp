@@ -80,7 +80,6 @@ typedef struct {
 	char *pool;
 	char *def;
 	odp_cls_cos_param_t cos_param;
-	odp_queue_param_t q_param;
 	odp_cos_t cos;
 	odp_pktio_t def_pktio;
 } cos_parse_t;
@@ -160,7 +159,6 @@ static res_t parse_cos_entry(config_setting_t *cs, cos_parse_t *cos)
 	cos->def_pktio = ODP_PKTIO_INVALID;
 	odp_cls_cos_param_init(&cos->cos_param);
 	cos->cos_param.hash_proto.all_bits = 0U;
-	odp_queue_param_init(&cos->q_param);
 
 	if (config_setting_lookup_string(cs, CONF_STR_NAME, &val_str) == CONFIG_FALSE) {
 		ODPH_ERR("No \"" CONF_STR_NAME "\" found\n");
@@ -209,9 +207,9 @@ static res_t parse_cos_entry(config_setting_t *cs, cos_parse_t *cos)
 	} else {
 		if (config_setting_lookup_string(cs, CONF_STR_TYPE, &val_str) == CONFIG_TRUE) {
 			if (strcmp(val_str, PLAIN) == 0) {
-				cos->q_param.type = ODP_QUEUE_TYPE_PLAIN;
+				cos->cos_param.queue_param.type = ODP_QUEUE_TYPE_PLAIN;
 			} else if (strcmp(val_str, SCHEDULED) == 0) {
-				cos->q_param.type = ODP_QUEUE_TYPE_SCHED;
+				cos->cos_param.queue_param.type = ODP_QUEUE_TYPE_SCHED;
 			} else {
 				ODPH_ERR("No valid \"" CONF_STR_TYPE "\" found\n");
 				return PARSE_NOK;
@@ -383,7 +381,6 @@ static odp_bool_t parse_cos_entry_from_template(cos_parse_template_t *templ, cos
 	cos->def_pktio = ODP_PKTIO_INVALID;
 	odp_cls_cos_param_init(&cos->cos_param);
 	cos->cos_param.hash_proto.all_bits = 0U;
-	odp_queue_param_init(&cos->q_param);
 	(void)snprintf(cos_name, sizeof(cos_name), "%s%u", templ->name_prefix, templ->name_idx);
 	templ->name_idx += templ->name_inc;
 	cos->name = strdup(cos_name);
@@ -419,9 +416,9 @@ static odp_bool_t parse_cos_entry_from_template(cos_parse_template_t *templ, cos
 	} else {
 		if (templ->type != NULL) {
 			if (strcmp(templ->type, PLAIN) == 0) {
-				cos->q_param.type = ODP_QUEUE_TYPE_PLAIN;
+				cos->cos_param.queue_param.type = ODP_QUEUE_TYPE_PLAIN;
 			} else if (strcmp(templ->type, SCHEDULED) == 0) {
-				cos->q_param.type = ODP_QUEUE_TYPE_SCHED;
+				cos->cos_param.queue_param.type = ODP_QUEUE_TYPE_SCHED;
 			} else {
 				ODPH_ERR("No valid \"" CONF_STR_TYPE "\" found\n");
 				return false;
