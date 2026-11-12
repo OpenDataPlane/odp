@@ -238,6 +238,9 @@ static odp_bool_t parse_queue_entry_from_template(queue_parse_template_t *templ,
 		}
 	}
 
+	if (queue->param.type == ODP_QUEUE_TYPE_PLAIN)
+		return true;
+
 	if (templ->priority != -1)
 		queue->param.sched.prio = templ->priority;
 
