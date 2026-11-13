@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright (c) 2024-2025 Nokia
+ * Copyright (c) 2024-2026 Nokia
  */
 
 /**
@@ -50,10 +50,12 @@ typedef struct odp_event_aggr_config_t {
 	 * Maximum time in nanoseconds for an event aggregator to form an event
 	 * vector. This value should be in the range of
 	 * odp_event_aggr_capability_t::min_tmo_ns to
-	 * odp_event_aggr_capability_t::max_tmo_ns.
+	 * odp_event_aggr_capability_t::max_tmo_ns, or zero.
 	 *
-	 * Value of zero means there is no timeout. Events may wait aggregation
-	 * indefinitely in the aggregation queue.
+	 * Value of zero means that the aggregator waits for 'max_size' events
+	 * either indefinitely (odp_event_aggr_capability_t::wait_indef is
+	 * true) or at most odp_event_aggr_capability_t::max_tmo_ns
+	 * (odp_event_aggr_capability_t::wait_indef is false).
 	 */
 	uint64_t max_tmo_ns;
 
@@ -102,7 +104,10 @@ typedef struct odp_event_aggr_capability_t {
 	/** Minimum number of events that can be aggregated into an event vector */
 	uint32_t min_size;
 
-	/** Maximum allowed value of odp_event_aggr_config_t::max_tmo_ns */
+	/** Maximum allowed value of odp_event_aggr_config_t::max_tmo_ns
+	 *
+	 *  When 'wait_indef' is false, 'max_tmo_ns' is always greater than zero.
+	 */
 	uint64_t max_tmo_ns;
 
 	/** Minimum time in nanoseconds for an aggregator to form an event vector.
@@ -111,6 +116,14 @@ typedef struct odp_event_aggr_capability_t {
 	 *  value unless it is zero.
 	 */
 	uint64_t min_tmo_ns;
+
+	/** Wait indefinitely
+	 *
+	 *  When true, an event aggregator configured with
+	 *  odp_event_aggr_config_t::max_tmo_ns of zero waits indefinitely for
+	 *  odp_event_aggr_config_t::max_size events.
+	 */
+	odp_bool_t wait_indef;
 
 	/** Event aggregation support per event source
 	 *

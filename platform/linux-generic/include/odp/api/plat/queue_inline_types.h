@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2018 Linaro Limited
- * Copyright (c) 2023-2025 Nokia
+ * Copyright (c) 2023-2026 Nokia
  */
 
 #ifndef ODP_PLAT_QUEUE_INLINE_TYPES_H_
@@ -42,6 +42,7 @@ typedef struct {
 	int (*queue_context_set)(odp_queue_t queue, void *context,
 				 uint32_t len);
 	odp_queue_t (*queue_aggr)(odp_queue_t queue, uint32_t aggr_index);
+	int (*queue_aggr_flush)(odp_queue_t queue);
 	int (*queue_enq)(odp_queue_t queue, odp_event_t ev);
 	int (*queue_enq_multi)(odp_queue_t queue, const odp_event_t events[],
 			       int num);

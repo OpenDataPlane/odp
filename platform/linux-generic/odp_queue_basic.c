@@ -73,6 +73,7 @@ static int queue_capa(odp_queue_capability_t *capa, int sched ODP_UNUSED)
 	capa->plain.aggr.min_size = 2;
 	capa->plain.aggr.max_tmo_ns = 0;
 	capa->plain.aggr.min_tmo_ns = 0;
+	capa->plain.aggr.wait_indef = 1;
 	capa->plain.aggr.source.bit.queue = 1;
 	capa->plain.aggr.source.bit.pktin = 1;
 	capa->plain.aggr.source.bit.tx_compl = 1;
@@ -396,6 +397,8 @@ static void event_aggr_free(queue_entry_t *aggr_queue)
 
 	/* Free pending events */
 	if (aggr->num_events) {
+		_ODP_DBG("%" PRIu16 " pending events in aggregator when destroying queue\n",
+			 aggr->num_events);
 		odp_event_free_multi(aggr->event_tbl, aggr->num_events);
 		aggr->num_events = 0;
 	}
@@ -925,6 +928,40 @@ static int queue_api_enq_aggr(odp_queue_t handle, odp_event_t ev,
 	odp_ticketlock_unlock(&aggr->lock);
 
 	return 0;
+}
+
+static int queue_aggr_flush(odp_queue_t handle)
+{
+	queue_entry_t *queue = qentry_from_handle(handle);
+	event_aggr_t *aggr;
+	int ret = 1;
+
+	if (odp_unlikely(handle == ODP_QUEUE_INVALID)) {
+		_ODP_ERR("Invalid queue handle\n");
+		return -1;
+	}
+
+	if (queue->type != ODP_QUEUE_TYPE_AGGR) {
+		if (queue->param.num_aggr == 0)
+			return 1;
+
+		queue = queue->aggr_queue;
+	}
+
+	aggr = &queue->aggr;
+
+	/* Wait for order, so that events enqueued earlier by this thread are included in the flush
+	 * and the flushed events are not stashed. */
+	_odp_sched_fn->ord_stash_release(queue->handle);
+
+	odp_ticketlock_lock(&aggr->lock);
+
+	if (aggr->num_events)
+		ret = event_aggr_enq_pending(aggr);
+
+	odp_ticketlock_unlock(&aggr->lock);
+
+	return ret;
 }
 
 static int plain_queue_enq(odp_queue_t handle, _odp_event_hdr_t *event_hdr)
@@ -1775,6 +1812,7 @@ _odp_queue_api_fn_t _odp_queue_basic_api = {
 	.queue_capability = queue_capability,
 	.queue_context_set = queue_context_set,
 	.queue_aggr = queue_aggr,
+	.queue_aggr_flush = queue_aggr_flush,
 	.queue_enq = queue_api_enq,
 	.queue_enq_multi = queue_api_enq_multi,
 	.queue_enq_aggr = queue_api_enq_aggr,

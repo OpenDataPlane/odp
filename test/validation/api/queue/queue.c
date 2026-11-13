@@ -18,6 +18,7 @@
 #define ENQ_RETRIES             100
 
 #define MAX_NUM_AGGR_PER_QUEUE 100 /* max number tested if more supported */
+#define MAX_AGGR_FLUSH_RETRIES 100
 
 typedef struct {
 	odp_shm_t        shm;
@@ -1322,6 +1323,7 @@ static void queue_test_aggr_capa(const odp_event_aggr_capability_t *capa)
 	CU_ASSERT(capa->max_size >= capa->min_size);
 	CU_ASSERT(capa->min_size >= 2 || capa->max_num == 0);
 	CU_ASSERT(capa->max_tmo_ns >= capa->min_tmo_ns);
+	CU_ASSERT(capa->wait_indef || capa->max_tmo_ns > 0 || capa->max_num == 0);
 }
 
 static void queue_test_aggr_capa_plain(void)
@@ -1355,6 +1357,7 @@ static void queue_test_aggr_cfg_none(odp_queue_type_t queue_type)
 	queue = odp_queue_create("queue_test_aggr", &param);
 	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
 	CU_ASSERT(odp_queue_aggr(queue, 0) == ODP_QUEUE_INVALID);
+	CU_ASSERT(odp_queue_aggr_flush(queue) > 0);
 	CU_ASSERT(odp_queue_destroy(queue) == 0);
 }
 
@@ -1506,6 +1509,55 @@ static void verify_event_seq(odp_event_t event, odp_bool_t from_vector, uint32_t
 	}
 }
 
+static void aggr_queue_receive(odp_queue_t queue, odp_queue_type_t queue_type, uint64_t timeout,
+			       uint32_t vector_size, uint32_t uarea_size, odp_pool_t buf_pool,
+			       odp_pool_t evv_pool, uint32_t *num_from_queue,
+			       uint32_t *num_from_aggr)
+{
+	while (1) {
+		odp_queue_t src_queue;
+		odp_event_t event;
+
+		if (queue_type == ODP_QUEUE_TYPE_PLAIN) {
+			src_queue = queue;
+			event = odp_queue_deq(queue);
+		} else {
+			event = odp_schedule(&src_queue, odp_schedule_wait_time(timeout));
+		}
+
+		if (event == ODP_EVENT_INVALID)
+			break;
+
+		CU_ASSERT(src_queue == queue);
+
+		if (odp_event_type(event) == ODP_EVENT_VECTOR) {
+			odp_event_t *event_tbl;
+			odp_event_vector_t evv = odp_event_vector_from_event(event);
+			uint32_t num = odp_event_vector_tbl(evv, &event_tbl);
+
+			CU_ASSERT(odp_event_vector_size(evv) == num);
+			CU_ASSERT(num <= vector_size);
+			CU_ASSERT(odp_event_vector_type(evv) == ODP_EVENT_BUFFER);
+
+			if (uarea_size)
+				CU_ASSERT(odp_event_vector_user_area(evv) != NULL);
+			CU_ASSERT(odp_event_vector_user_flag(evv) == 0);
+			CU_ASSERT(odp_event_vector_pool(evv) == evv_pool);
+
+			for (uint32_t i = 0; i < num; i++) {
+				CU_ASSERT_FATAL(odp_event_is_valid(event_tbl[i]));
+				verify_event_seq(event_tbl[i], true, num_from_queue, num_from_aggr);
+			}
+		} else if (odp_event_type(event) == ODP_EVENT_BUFFER) {
+			CU_ASSERT(odp_event_pool(event) == buf_pool);
+			verify_event_seq(event, false, num_from_queue, num_from_aggr);
+		} else {
+			CU_FAIL("Invalid event type");
+		}
+		odp_event_free(event);
+	}
+}
+
 static void aggr_queue_test(const odp_event_aggr_capability_t *capa, odp_queue_type_t queue_type)
 {
 	odp_pool_t buf_pool, evv_pool;
@@ -1515,11 +1567,12 @@ static void aggr_queue_test(const odp_event_aggr_capability_t *capa, odp_queue_t
 	odp_queue_t queue, aggr_queue;
 	odp_event_aggr_config_t aggr;
 	uint32_t max_vectors = 64;
-	uint32_t vector_size = 2;
+	uint32_t vector_size = 5;
 	uint32_t uarea_size = 64;
 	uint32_t num_from_queue = 0, num_from_aggr = 0, seq_num = 0;
 	uint32_t num_events;
 	uint64_t timeout = ODP_TIME_MSEC_IN_NS;
+	int ret = 0;
 
 	if (!capa->source.bit.queue)
 		printf("\nWarning: queue event source not supported (source: 0x%" PRIx32 ")\n",
@@ -1531,17 +1584,13 @@ static void aggr_queue_test(const odp_event_aggr_capability_t *capa, odp_queue_t
 
 	CU_ASSERT(capa->max_size <= pool_capa.event_vector.max_size);
 
-	if (max_vectors > capa->max_num)
-		max_vectors = capa->max_num;
-
-	if (vector_size < capa->min_size)
-		vector_size = capa->min_size;
-
-	if (timeout > capa->max_tmo_ns)
-		timeout = capa->max_tmo_ns;
+	max_vectors = ODPH_MIN(max_vectors, capa->max_num);
+	vector_size = ODPH_MAX(vector_size, capa->min_size);
+	vector_size = ODPH_MIN(vector_size, capa->max_size);
+	timeout = ODPH_MIN(timeout, capa->max_tmo_ns);
 
 	/* Send events to both normal and aggregator queue */
-	num_events = 2 * (ODPH_MAX((max_vectors / vector_size), vector_size));
+	num_events = 2 * (ODPH_MAX((max_vectors / vector_size + 1), vector_size + 1));
 
 	odp_pool_param_init(&pool_param);
 	pool_param.buf.size = sizeof(aggr_test_event_t);
@@ -1609,49 +1658,9 @@ static void aggr_queue_test(const odp_event_aggr_capability_t *capa, odp_queue_t
 
 	odp_time_wait_ns(timeout);
 
-	while (1) {
-		odp_queue_t src_queue;
-		odp_event_t event;
+	aggr_queue_receive(queue, queue_type, timeout, vector_size, uarea_size, buf_pool, evv_pool,
+			   &num_from_queue, &num_from_aggr);
 
-		if (queue_type == ODP_QUEUE_TYPE_PLAIN) {
-			src_queue = queue;
-			event = odp_queue_deq(queue);
-		} else {
-			event = odp_schedule(&src_queue, odp_schedule_wait_time(timeout));
-		}
-
-		if (event == ODP_EVENT_INVALID)
-			break;
-
-		CU_ASSERT(src_queue == queue);
-
-		if (odp_event_type(event) == ODP_EVENT_VECTOR) {
-			odp_event_t *event_tbl;
-			odp_event_vector_t evv = odp_event_vector_from_event(event);
-			uint32_t num = odp_event_vector_tbl(evv, &event_tbl);
-
-			CU_ASSERT(odp_event_vector_size(evv) == num);
-			CU_ASSERT(num <= vector_size);
-			CU_ASSERT(odp_event_vector_type(evv) == ODP_EVENT_BUFFER);
-
-			if (uarea_size)
-				CU_ASSERT(odp_event_vector_user_area(evv) != NULL);
-			CU_ASSERT(odp_event_vector_user_flag(evv) == 0);
-			CU_ASSERT(odp_event_vector_pool(evv) == evv_pool);
-
-			for (uint32_t i = 0; i < num; i++) {
-				CU_ASSERT_FATAL(odp_event_is_valid(event_tbl[i]));
-				verify_event_seq(event_tbl[i], true, &num_from_queue,
-						 &num_from_aggr);
-			}
-		} else if (odp_event_type(event) == ODP_EVENT_BUFFER) {
-			CU_ASSERT(odp_event_pool(event) == buf_pool);
-			verify_event_seq(event, false, &num_from_queue, &num_from_aggr);
-		} else {
-			CU_FAIL("Invalid event type");
-		}
-		odp_event_free(event);
-	}
 	/* Assume at least one vector was generated */
 	CU_ASSERT(num_from_aggr >= vector_size);
 
@@ -1659,8 +1668,24 @@ static void aggr_queue_test(const odp_event_aggr_capability_t *capa, odp_queue_t
 	CU_ASSERT(num_from_queue + num_from_aggr >= num_events - vector_size);
 	CU_ASSERT(num_from_queue + num_from_aggr <= num_events);
 
-	/* Assuming the queue can be destroyed regardless of possibly pending events */
-	CU_ASSERT(odp_queue_len(queue) < vector_size);
+	/* Flush pending events and receive them */
+	for (uint32_t i = 0; i < MAX_AGGR_FLUSH_RETRIES; i++) {
+		ret = odp_queue_aggr_flush(aggr_queue);
+		if (ret != 0)
+			break;
+
+		aggr_queue_receive(queue, queue_type, timeout, vector_size, uarea_size, buf_pool,
+				   evv_pool, &num_from_queue, &num_from_aggr);
+	}
+	CU_ASSERT(ret > 0);
+
+	aggr_queue_receive(queue, queue_type, timeout, vector_size, uarea_size, buf_pool, evv_pool,
+			   &num_from_queue, &num_from_aggr);
+	CU_ASSERT(num_from_queue + num_from_aggr == num_events);
+
+	/* No events are waiting for aggregation anymore */
+	CU_ASSERT(odp_queue_aggr_flush(queue) > 0);
+
 	CU_ASSERT(odp_queue_destroy(queue) == 0);
 	CU_ASSERT(odp_pool_destroy(evv_pool) == 0);
 	CU_ASSERT(odp_pool_destroy(buf_pool) == 0);
