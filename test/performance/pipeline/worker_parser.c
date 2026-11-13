@@ -75,11 +75,23 @@ static odp_bool_t parse_worker_entry(config_setting_t *cs, worker_t *worker)
 		return false;
 	}
 
-	if (config_setting_lookup_int(cs, CONF_STR_BURST_SIZE, &val_i) == CONFIG_TRUE)
-		worker->burst_size = val_i;
+	if (config_setting_lookup_int(cs, CONF_STR_BURST_SIZE, &val_i) == CONFIG_TRUE) {
+		if (val_i <= 0) {
+			ODPH_ERR("No valid \"" CONF_STR_BURST_SIZE "\" found\n");
+			return false;
+		}
 
-	if (config_setting_lookup_int64(cs, CONF_STR_WAIT_NS, &val_ll) == CONFIG_TRUE)
+		worker->burst_size = val_i;
+	}
+
+	if (config_setting_lookup_int64(cs, CONF_STR_WAIT_NS, &val_ll) == CONFIG_TRUE) {
+		if (val_ll < (worker->type == WT_SCHED ? -1 : 0)) {
+			ODPH_ERR("No valid \"" CONF_STR_WAIT_NS "\" found\n");
+			return false;
+		}
+
 		worker->wait_ns = val_ll;
+	}
 
 	elem = config_setting_lookup(cs, CONF_STR_OUTPUTS);
 

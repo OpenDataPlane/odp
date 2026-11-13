@@ -211,22 +211,16 @@ static int parse_flow_entry_template(config_setting_t *cs, flow_parse_template_t
 	if (templ->name_prefix == NULL)
 		ODPH_ABORT("Error allocating memory, aborting\n");
 
-	val_i = config_setting_get_int_elem(elem, 1);
-
-	if (val_i == -1) {
+	if (!helper_get_uint_elem_checked(elem, 1, &templ->name_idx)) {
 		ODPH_ERR("No \"" CONF_STR_NAME "\" \"" CONF_STR_IDX "\" found\n");
 		return -1;
 	}
 
-	templ->name_idx = val_i;
-	val_i = config_setting_get_int_elem(elem, 2);
-
-	if (val_i == -1) {
+	if (!helper_get_uint_elem_checked(elem, 2, &templ->name_inc)) {
 		ODPH_ERR("No \"" CONF_STR_NAME "\" \"" CONF_STR_INC "\" found\n");
 		return -1;
 	}
 
-	templ->name_inc = val_i;
 	elem = config_setting_lookup(cs, CONF_STR_INPUT);
 
 	if (elem != NULL) {
@@ -242,22 +236,15 @@ static int parse_flow_entry_template(config_setting_t *cs, flow_parse_template_t
 		if (templ->input_prefix == NULL)
 			ODPH_ABORT("Error allocating memory, aborting\n");
 
-		val_i = config_setting_get_int_elem(elem, 1);
-
-		if (val_i == -1) {
+		if (!helper_get_uint_elem_checked(elem, 1, &templ->input_idx)) {
 			ODPH_ERR("No \"" CONF_STR_INPUT "\" \"" CONF_STR_IDX "\" found\n");
 			return -1;
 		}
 
-		templ->input_idx = val_i;
-		val_i = config_setting_get_int_elem(elem, 2);
-
-		if (val_i == -1) {
+		if (!helper_get_uint_elem_checked(elem, 2, &templ->input_inc)) {
 			ODPH_ERR("No \"" CONF_STR_INPUT "\" \"" CONF_STR_INC "\" found\n");
 			return -1;
 		}
-
-		templ->input_inc = val_i;
 	}
 
 	if (templ->input_prefix == NULL) {
@@ -280,22 +267,15 @@ static int parse_flow_entry_template(config_setting_t *cs, flow_parse_template_t
 		if (templ->output_prefix == NULL)
 			ODPH_ABORT("Error allocating memory, aborting\n");
 
-		val_i = config_setting_get_int_elem(elem, 1);
-
-		if (val_i == -1) {
+		if (!helper_get_uint_elem_checked(elem, 1, &templ->output_idx)) {
 			ODPH_ERR("No \"" CONF_STR_OUTPUT "\" \"" CONF_STR_IDX "\" found\n");
 			return -1;
 		}
 
-		templ->output_idx = val_i;
-		val_i = config_setting_get_int_elem(elem, 2);
-
-		if (val_i == -1) {
+		if (!helper_get_uint_elem_checked(elem, 2, &templ->output_inc)) {
 			ODPH_ERR("No \"" CONF_STR_OUTPUT "\" \"" CONF_STR_INC "\" found\n");
 			return -1;
 		}
-
-		templ->output_inc = val_i;
 	}
 
 	cs = config_setting_lookup(cs, CONF_STR_WORK);
@@ -507,6 +487,7 @@ static odp_bool_t flow_parser_deploy(void)
 	odp_queue_t queue;
 	flow_t flow;
 	work_t *work;
+	odp_bool_t added;
 
 	printf("\n*** " ODP_PL_FLOW_DOMAIN " resources ***\n");
 
@@ -538,16 +519,12 @@ static odp_bool_t flow_parser_deploy(void)
 				return false;
 			}
 		} else {
-			if (parse->input != NULL && !flow_add_input(flow, work, parse->num)) {
-				ODPH_ERR("Error setting input flow\n");
+			added = parse->input != NULL ? flow_add_input(flow, work, parse->num) :
+						       flow_add_output(flow, work, parse->num);
 
-				for (uint32_t j = 0U; j < parse->num; ++j)
-					work_destroy_work(work[j]);
-
-				free(work);
-				return false;
-			} else if (!flow_add_output(flow, work, parse->num)) {
-				ODPH_ERR("Error setting output flow\n");
+			if (!added) {
+				ODPH_ERR("Error setting %s flow\n",
+					 parse->input != NULL ? "input" : "output");
 
 				for (uint32_t j = 0U; j < parse->num; ++j)
 					work_destroy_work(work[j]);

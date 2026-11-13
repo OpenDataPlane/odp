@@ -80,7 +80,6 @@ typedef struct {
 	char *pool;
 	char *def;
 	odp_cls_cos_param_t cos_param;
-	odp_queue_param_t q_param;
 	odp_cos_t cos;
 	odp_pktio_t def_pktio;
 } cos_parse_t;
@@ -160,7 +159,6 @@ static res_t parse_cos_entry(config_setting_t *cs, cos_parse_t *cos)
 	cos->def_pktio = ODP_PKTIO_INVALID;
 	odp_cls_cos_param_init(&cos->cos_param);
 	cos->cos_param.hash_proto.all_bits = 0U;
-	odp_queue_param_init(&cos->q_param);
 
 	if (config_setting_lookup_string(cs, CONF_STR_NAME, &val_str) == CONFIG_FALSE) {
 		ODPH_ERR("No \"" CONF_STR_NAME "\" found\n");
@@ -209,9 +207,9 @@ static res_t parse_cos_entry(config_setting_t *cs, cos_parse_t *cos)
 	} else {
 		if (config_setting_lookup_string(cs, CONF_STR_TYPE, &val_str) == CONFIG_TRUE) {
 			if (strcmp(val_str, PLAIN) == 0) {
-				cos->q_param.type = ODP_QUEUE_TYPE_PLAIN;
+				cos->cos_param.queue_param.type = ODP_QUEUE_TYPE_PLAIN;
 			} else if (strcmp(val_str, SCHEDULED) == 0) {
-				cos->q_param.type = ODP_QUEUE_TYPE_SCHED;
+				cos->cos_param.queue_param.type = ODP_QUEUE_TYPE_SCHED;
 			} else {
 				ODPH_ERR("No valid \"" CONF_STR_TYPE "\" found\n");
 				return PARSE_NOK;
@@ -284,22 +282,15 @@ static int parse_cos_entry_template(config_setting_t *cs, cos_parse_template_t *
 	if (templ->name_prefix == NULL)
 		ODPH_ABORT("Error allocating memory, aborting\n");
 
-	val_i = config_setting_get_int_elem(elem, 1);
-
-	if (val_i == -1) {
+	if (!helper_get_uint_elem_checked(elem, 1, &templ->name_idx)) {
 		ODPH_ERR("No \"" CONF_STR_NAME "\" \"" CONF_STR_IDX "\" found\n");
 		return -1;
 	}
 
-	templ->name_idx = val_i;
-	val_i = config_setting_get_int_elem(elem, 2);
-
-	if (val_i == -1) {
+	if (!helper_get_uint_elem_checked(elem, 2, &templ->name_inc)) {
 		ODPH_ERR("No \"" CONF_STR_NAME "\" \"" CONF_STR_INC "\" found\n");
 		return -1;
 	}
-
-	templ->name_inc = val_i;
 
 	if (config_setting_lookup_string(cs, CONF_STR_ACTION, &val_str) == CONFIG_TRUE) {
 		templ->action = strdup(val_str);
@@ -333,22 +324,15 @@ static int parse_cos_entry_template(config_setting_t *cs, cos_parse_template_t *
 	if (templ->queue_prefix == NULL)
 		ODPH_ABORT("Error allocating memory, aborting\n");
 
-	val_i = config_setting_get_int_elem(elem, 1);
-
-	if (val_i == -1) {
+	if (!helper_get_uint_elem_checked(elem, 1, &templ->queue_idx)) {
 		ODPH_ERR("No \"" CONF_STR_QUEUE "\" \"" CONF_STR_IDX "\" found\n");
 		return -1;
 	}
 
-	templ->queue_idx = val_i;
-	val_i = config_setting_get_int_elem(elem, 2);
-
-	if (val_i == -1) {
+	if (!helper_get_uint_elem_checked(elem, 2, &templ->queue_inc)) {
 		ODPH_ERR("No \"" CONF_STR_QUEUE "\" \"" CONF_STR_INC "\" found\n");
 		return -1;
 	}
-
-	templ->queue_inc = val_i;
 
 	if (config_setting_lookup_string(cs, CONF_STR_TYPE, &val_str) == CONFIG_TRUE) {
 		templ->type = strdup(val_str);
@@ -397,7 +381,6 @@ static odp_bool_t parse_cos_entry_from_template(cos_parse_template_t *templ, cos
 	cos->def_pktio = ODP_PKTIO_INVALID;
 	odp_cls_cos_param_init(&cos->cos_param);
 	cos->cos_param.hash_proto.all_bits = 0U;
-	odp_queue_param_init(&cos->q_param);
 	(void)snprintf(cos_name, sizeof(cos_name), "%s%u", templ->name_prefix, templ->name_idx);
 	templ->name_idx += templ->name_inc;
 	cos->name = strdup(cos_name);
@@ -433,9 +416,9 @@ static odp_bool_t parse_cos_entry_from_template(cos_parse_template_t *templ, cos
 	} else {
 		if (templ->type != NULL) {
 			if (strcmp(templ->type, PLAIN) == 0) {
-				cos->q_param.type = ODP_QUEUE_TYPE_PLAIN;
+				cos->cos_param.queue_param.type = ODP_QUEUE_TYPE_PLAIN;
 			} else if (strcmp(templ->type, SCHEDULED) == 0) {
-				cos->q_param.type = ODP_QUEUE_TYPE_SCHED;
+				cos->cos_param.queue_param.type = ODP_QUEUE_TYPE_SCHED;
 			} else {
 				ODPH_ERR("No valid \"" CONF_STR_TYPE "\" found\n");
 				return false;
@@ -486,7 +469,7 @@ static void free_cos_template(cos_parse_template_t *templ)
 static res_t parse_pmr_entry(config_setting_t *cs, pmr_parse_t *pmr)
 {
 	const char *val_str;
-	int val_i, num;
+	int val_i, num, num_val;
 	config_setting_t *elem;
 
 	if (config_setting_lookup(cs, CONF_STR_PARSE_TEMPLATE) != NULL)
@@ -605,6 +588,7 @@ static res_t parse_pmr_entry(config_setting_t *cs, pmr_parse_t *pmr)
 		pmr->val_arr[i] = (uint8_t)config_setting_get_int_elem(elem, i);
 
 	pmr->param.match.value = pmr->val_arr;
+	num_val = num;
 	elem = config_setting_lookup(cs, CONF_STR_MATCH_MASK);
 
 	if (elem == NULL) {
@@ -634,6 +618,12 @@ static res_t parse_pmr_entry(config_setting_t *cs, pmr_parse_t *pmr)
 		return PARSE_NOK;
 	}
 
+	if (val_i <= 0 || val_i > num_val || val_i > num) {
+		ODPH_ERR("No valid \"" CONF_STR_VAL_SZ "\" found, must not exceed \""
+			 CONF_STR_MATCH_VALUE "\" or \"" CONF_STR_MATCH_MASK "\" length\n");
+		return PARSE_NOK;
+	}
+
 	pmr->param.val_sz = val_i;
 
 	if (pmr->param.term == ODP_PMR_CUSTOM_FRAME || pmr->param.term == ODP_PMR_CUSTOM_L3) {
@@ -650,7 +640,7 @@ static res_t parse_pmr_entry(config_setting_t *cs, pmr_parse_t *pmr)
 
 static int parse_pmr_entry_template(config_setting_t *cs, pmr_parse_template_t *templ)
 {
-	int val_i;
+	int val_i, num_val, num_mask;
 	uint32_t num;
 	config_setting_t *elem1, *elem2;
 	const char *val_str;
@@ -685,22 +675,16 @@ static int parse_pmr_entry_template(config_setting_t *cs, pmr_parse_template_t *
 	if (templ->name_prefix == NULL)
 		ODPH_ABORT("Error allocating memory, aborting\n");
 
-	val_i = config_setting_get_int_elem(elem1, 1);
-
-	if (val_i == -1) {
+	if (!helper_get_uint_elem_checked(elem1, 1, &templ->name_idx)) {
 		ODPH_ERR("No \"" CONF_STR_NAME "\" \"" CONF_STR_IDX "\" found\n");
 		return -1;
 	}
 
-	templ->name_idx = val_i;
-	val_i = config_setting_get_int_elem(elem1, 2);
-
-	if (val_i == -1) {
+	if (!helper_get_uint_elem_checked(elem1, 2, &templ->name_inc)) {
 		ODPH_ERR("No \"" CONF_STR_NAME "\" \"" CONF_STR_INC "\" found\n");
 		return -1;
 	}
 
-	templ->name_inc = val_i;
 	elem1 = config_setting_lookup(cs, CONF_STR_SRC_COS);
 
 	if (elem1 == NULL) {
@@ -720,22 +704,16 @@ static int parse_pmr_entry_template(config_setting_t *cs, pmr_parse_template_t *
 	if (templ->src_prefix == NULL)
 		ODPH_ABORT("Error allocating memory, aborting\n");
 
-	val_i = config_setting_get_int_elem(elem1, 1);
-
-	if (val_i == -1) {
+	if (!helper_get_uint_elem_checked(elem1, 1, &templ->src_idx)) {
 		ODPH_ERR("No \"" CONF_STR_SRC_COS "\" \"" CONF_STR_IDX "\" found\n");
 		return -1;
 	}
 
-	templ->src_idx = val_i;
-	val_i = config_setting_get_int_elem(elem1, 2);
-
-	if (val_i == -1) {
+	if (!helper_get_uint_elem_checked(elem1, 2, &templ->src_inc)) {
 		ODPH_ERR("No \"" CONF_STR_SRC_COS "\" \"" CONF_STR_INC "\" found\n");
 		return -1;
 	}
 
-	templ->src_inc = val_i;
 	elem1 = config_setting_lookup(cs, CONF_STR_DST_COS);
 
 	if (elem1 == NULL) {
@@ -755,22 +733,15 @@ static int parse_pmr_entry_template(config_setting_t *cs, pmr_parse_template_t *
 	if (templ->dst_prefix == NULL)
 		ODPH_ABORT("Error allocating memory, aborting\n");
 
-	val_i = config_setting_get_int_elem(elem1, 1);
-
-	if (val_i == -1) {
+	if (!helper_get_uint_elem_checked(elem1, 1, &templ->dst_idx)) {
 		ODPH_ERR("No \"" CONF_STR_DST_COS "\" \"" CONF_STR_IDX "\" found\n");
 		return -1;
 	}
 
-	templ->dst_idx = val_i;
-	val_i = config_setting_get_int_elem(elem1, 2);
-
-	if (val_i == -1) {
+	if (!helper_get_uint_elem_checked(elem1, 2, &templ->dst_inc)) {
 		ODPH_ERR("No \"" CONF_STR_DST_COS "\" \"" CONF_STR_INC "\" found\n");
 		return -1;
 	}
-
-	templ->dst_inc = val_i;
 
 	if (config_setting_lookup_string(cs, CONF_STR_TERM, &val_str) == CONFIG_FALSE) {
 		ODPH_ERR("No \"" CONF_STR_TERM "\" found\n");
@@ -811,14 +782,13 @@ static int parse_pmr_entry_template(config_setting_t *cs, pmr_parse_template_t *
 	for (int i = 0; i < val_i; ++i)
 		templ->val_arr[i] = (uint8_t)config_setting_get_int_elem(elem2, i);
 
-	val_i = config_setting_get_int_elem(elem1, 1);
+	num_val = val_i;
 
-	if (val_i == -1) {
+	if (!helper_get_uint_elem_checked(elem1, 1, &templ->val_arr_inc)) {
 		ODPH_ERR("No \"" CONF_STR_MATCH_VALUE "\" \"" CONF_STR_INC "\" found\n");
 		return -1;
 	}
 
-	templ->val_arr_inc = val_i;
 	elem1 = config_setting_lookup(cs, CONF_STR_MATCH_MASK);
 
 	if (elem1 == NULL) {
@@ -841,9 +811,17 @@ static int parse_pmr_entry_template(config_setting_t *cs, pmr_parse_template_t *
 	for (int i = 0; i < val_i; ++i)
 		templ->mask_arr[i] = (uint8_t)config_setting_get_int_elem(elem1, i);
 
+	num_mask = val_i;
+
 	if (config_setting_lookup_int(cs, CONF_STR_VAL_SZ, &val_i) == CONFIG_FALSE) {
 		ODPH_ERR("No \"" CONF_STR_VAL_SZ "\" found\n");
-		return PARSE_NOK;
+		return -1;
+	}
+
+	if (val_i <= 0 || val_i > num_val || val_i > num_mask) {
+		ODPH_ERR("No valid \"" CONF_STR_VAL_SZ "\" found, must not exceed \""
+			 CONF_STR_MATCH_VALUE "\" or \"" CONF_STR_MATCH_MASK "\" length\n");
+		return -1;
 	}
 
 	templ->val_sz = val_i;
@@ -851,7 +829,7 @@ static int parse_pmr_entry_template(config_setting_t *cs, pmr_parse_template_t *
 	if (strcmp(templ->term, CUSTOM_FRAME) == 0 || strcmp(templ->term, CUSTOM_L3) == 0) {
 		if (config_setting_lookup_int(cs, CONF_STR_OFFSET, &val_i) == CONFIG_FALSE) {
 			ODPH_ERR("No \"" CONF_STR_OFFSET "\" found\n");
-			return PARSE_NOK;
+			return -1;
 		}
 
 		templ->offset = val_i;

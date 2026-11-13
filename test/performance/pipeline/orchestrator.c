@@ -372,13 +372,36 @@ static void print_stats(void)
 	}
 }
 
-void orchestrator_deploy(void)
+static void free_workers(void)
+{
+	orchestrator_worker_t *worker;
+
+	for (uint32_t i = 0U; i < orchestrator.config->num_workers; ++i) {
+		worker = &orchestrator.config->worker[i];
+
+		if (worker->worker->type == WT_SCHED)
+			free(worker->inputs.g);
+		else
+			free(worker->inputs.q);
+
+		free(worker->outputs);
+	}
+
+	orchestrator.config->num_workers = 0U;
+}
+
+odp_bool_t orchestrator_deploy(void)
 {
 	cpumap_t *map = (cpumap_t *)odp_pl_config_parser_get(ODP_PL_CPUMAP_DOMAIN, NULL);
 	odph_thread_common_param_t common;
 	const int num = map->num;
-	odph_thread_param_t params[num], *param;
+	odph_thread_param_t params[MAX_WORKERS], *param;
 	orchestrator_worker_t *worker;
+
+	if (num == 0 || num > MAX_WORKERS) {
+		ODPH_ERR("Invalid number of workers: %d (max %d)\n", num, MAX_WORKERS);
+		return false;
+	}
 
 	odp_barrier_init(&orchestrator.config->init_barrier, num + 1);
 	odp_barrier_init(&orchestrator.config->term_barrier, num + 1);
@@ -412,25 +435,13 @@ void orchestrator_deploy(void)
 	printf("\n*** flushing queues and freeing inflight events ***\n");
 	(void)odph_thread_join(orchestrator.config->thrs, orchestrator.config->num_workers);
 	print_stats();
+	free_workers();
+
+	return true;
 }
 
 void orchestrator_destroy(void)
 {
-	orchestrator_worker_t *worker;
-
-	if (orchestrator.config != NULL) {
-		for (uint32_t i = 0U; i < orchestrator.config->num_workers; ++i) {
-			worker = &orchestrator.config->worker[i];
-
-			if (worker->worker->type == WT_SCHED)
-				free(worker->inputs.g);
-			else
-				free(worker->inputs.q);
-
-			free(orchestrator.config->worker[i].outputs);
-		}
-	}
-
 	if (orchestrator.shm != ODP_SHM_INVALID)
 		(void)odp_shm_free(orchestrator.shm);
 

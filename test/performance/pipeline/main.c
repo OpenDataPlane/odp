@@ -134,9 +134,8 @@ int main(int argc, char **argv)
 		return parse_res == PRS_NOK ? EXIT_FAILURE : EXIT_SUCCESS;
 	}
 
-	if (orchestrator_init() && config_parser_init(&opts) && config_parser_deploy()) {
-		orchestrator_deploy();
-	} else {
+	if (!orchestrator_init() || !config_parser_init(&opts) || !config_parser_deploy() ||
+	    !orchestrator_deploy()) {
 		ODPH_ERR("Error initializing pipeline\n");
 		ret = EXIT_FAILURE;
 	}

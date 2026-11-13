@@ -13,7 +13,7 @@
 
 odp_bool_t orchestrator_init(void);
 
-void orchestrator_deploy(void);
+odp_bool_t orchestrator_deploy(void);
 
 void orchestrator_destroy(void);
 

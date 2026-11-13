@@ -208,6 +208,7 @@ memory allocation failures and name lookups which cannot be satisfied, abort imm
   - element: `val_sz`
     - necessity: required
     - type: integer
+    - values: number of bytes to match, at most the length of `match_value` and `match_mask`
   - element: `offset`
     - necessity: required if `term` == `"custom_frame"` or `"custom_l3"`
     - type: integer
@@ -252,6 +253,7 @@ memory allocation failures and name lookups which cannot be satisfied, abort imm
   - element: `cipher_key_len`
     - necessity: required if `cipher_alg` != `"null"`
     - type: integer
+    - values: at most the length of `cipher_key_data`
   - element: `cipher_iv_len`
     - necessity: optional
     - type: integer
@@ -268,6 +270,7 @@ memory allocation failures and name lookups which cannot be satisfied, abort imm
   - element: `auth_key_len`
     - necessity: required if `auth_alg` != `"null"`
     - type: integer
+    - values: at most the length of `auth_key_data`
   - element: `auth_iv_len`
     - necessity: optional
     - type: integer
@@ -335,8 +338,8 @@ memory allocation failures and name lookups which cannot be satisfied, abort imm
   - element: `type`
     - necessity: required
     - type: string
-    - values: `"work_forward"`, `"work_global_forward"`, `"work_packet_copy"`,
-              `"work_packet_source"`, `"work_sink"`, `"work_timeout_source"`, `"work_wait"`
+    - values: `"forward"`, `"global_forward"`, `"packet_copy"`, `"packet_source"`, `"sink"`,
+              `"timeout_source"`, `"wait"`, or a name of work registered by a loaded library
   - element: `param`
     - necessity: optional
     - type: list
@@ -640,7 +643,8 @@ either sets up polling or scheduling of events from these queues. Once events ar
 queue, flows which has the queue set as "input" gets executed. The events that were received can be
 consumed by the work steps in a flow. The execution of the flow is stopped once all the events are
 consumed and tester moves to poll/schedule additional events. If events remain unconsumed after
-a flow has been fully executed, they are simply freed.
+a flow has been fully executed, they are simply freed. Events received from a queue without an
+input flow are freed as well.
 
 Tester also supports event generation or generic code execution through output flows, where a
 queue is marked as "output" flow, where again a set of events is passed to flow work steps but
@@ -692,7 +696,7 @@ in the destroy function.
 
 ### Forward
 
-- name in configuration file: `work_forward`
+- name in configuration file: `forward`
 - type: input
 - info: forward events to a queue, consumes successfully forwarded events
 - parameter list:
@@ -701,17 +705,18 @@ in the destroy function.
 
 ### Global forward
 
-- name in configuration file: `work_global_forward`
+- name in configuration file: `global_forward`
 - type: input
 - info: forward events to a set of queues based on worker thread ID, consumes successfully
-        forwarded events
+        forwarded events. The set of queues is shared by all global forward work, the set of the
+        first initialized work is used.
 - parameter list:
-  - index 0..N: queue resource names
-    - type: string
+  - index 0: queue resource names
+    - type: string list
 
 ### Packet copy
 
-- name in configuration file: `work_packet_copy`
+- name in configuration file: `packet_copy`
 - type: input
 - info: copies passed events in case of packet events, using given pool, no events consumed
 - parameter list:
@@ -719,7 +724,7 @@ in the destroy function.
 
 ### Packet source
 
-- name in configuration file: `work_packet_source`
+- name in configuration file: `packet_source`
 - type: output
 - info: produces events from given pool of given length
 - parameter list:
@@ -730,13 +735,13 @@ in the destroy function.
 
 ### Sink
 
-- name in configuration file: `work_sink`
+- name in configuration file: `sink`
 - type: input
 - info: frees all passed events, all events consumed
 
 ### Timeout source
 
-- name in configuration file: `work_timeout_source`
+- name in configuration file: `timeout_source`
 - type: output
 - info: produces timeouts from given timer with given timeout pool and timeout. Timer is rearmed
         once timeout is handled and freed to the pool
@@ -745,16 +750,18 @@ in the destroy function.
     - type: string
   - index 1: pool resource name
     - type: string
+    - values: a timeout pool dedicated to this work, with `num` of `1` and `cache_size` of `0`
   - index 2: timeout in nanoseconds
     - type: integer
 
 ### Wait
 
-- name in configuration file: `work_wait`
+- name in configuration file: `wait`
 - type: input
 - info: waits a given amount, no events consumed
 - parameter list:
   - index 0: time to wait in nanoseconds
+    - type: integer
 
 ### External work libraries
 

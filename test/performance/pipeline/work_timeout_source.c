@@ -77,6 +77,7 @@ static void work_timeout_source_init(const odp_pl_work_param_t *param, odp_pl_wo
 	work_timeout_source_data_t *data = calloc(1U, sizeof(*data));
 	const char *val_str;
 	long long val_ll;
+	odp_pool_info_t info;
 
 	if (data == NULL)
 		ODPH_ABORT("Error allocating memory, aborting\n");
@@ -99,10 +100,20 @@ static void work_timeout_source_init(const odp_pl_work_param_t *param, odp_pl_wo
 		ODPH_ABORT("No \"" CONF_STR_POOL "\" found\n");
 
 	data->tmo_pool = (odp_pool_t)odp_pl_config_parser_get(ODP_PL_POOL_DOMAIN, val_str);
+
+	if (odp_pool_info(data->tmo_pool, &info) < 0)
+		ODPH_ABORT("Error querying pool info (%s)\n", val_str);
+
+	/* Pool running out of timeouts signals that the timer is still active. */
+	if (info.params.type != ODP_POOL_TIMEOUT || info.params.tmo.num != 1U ||
+	    info.params.tmo.cache_size != 0U)
+		ODPH_ABORT("\"" CONF_STR_POOL "\" must be a timeout pool with one timeout and no "
+			   "cache (%s)\n", val_str);
+
 	val_ll = config_setting_get_int64_elem(param->param, 2);
 
-	if (val_ll == 0)
-		ODPH_ABORT("No \"" CONF_STR_TIMEOUT_NS "\" found\n");
+	if (val_ll <= 0)
+		ODPH_ABORT("No valid \"" CONF_STR_TIMEOUT_NS "\" found\n");
 
 	data->timeout_ns = val_ll;
 	init->fn = work_timeout_source;
@@ -128,12 +139,15 @@ static void work_timeout_source_destroy(uintptr_t data)
 	odp_event_t ev;
 	int ret;
 
-	ret = odp_timer_cancel(priv->tmr, &ev);
+	if (priv->tmr != ODP_TIMER_INVALID) {
+		ret = odp_timer_cancel(priv->tmr, &ev);
 
-	if (ret == ODP_TIMER_SUCCESS)
-		odp_event_free(ev);
+		if (ret == ODP_TIMER_SUCCESS)
+			odp_event_free(ev);
 
-	(void)odp_timer_free(priv->tmr);
+		(void)odp_timer_free(priv->tmr);
+	}
+
 	free(priv);
 }
 

@@ -8,8 +8,10 @@
 #define _GNU_SOURCE
 #endif
 
+#include <ctype.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include <libconfig.h>
@@ -253,11 +255,11 @@ static void free_pktio_entry(pktio_parse_t *pktio)
 		if (pktio->is_started) {
 			(void)odp_pktio_stop(pktio->pktio);
 			pktio->is_started = false;
-
-			if (pktio->mtu > 0U && pktio->mtu_orig_in > 0U && pktio->mtu_orig_out > 0U)
-				(void)odp_pktio_maxlen_set(pktio->pktio, pktio->mtu_orig_in,
-							   pktio->mtu_orig_out);
 		}
+
+		if (pktio->mtu > 0U && pktio->mtu_orig_in > 0U && pktio->mtu_orig_out > 0U)
+			(void)odp_pktio_maxlen_set(pktio->pktio, pktio->mtu_orig_in,
+						   pktio->mtu_orig_out);
 
 		(void)odp_pktio_close(pktio->pktio);
 	}
@@ -420,46 +422,56 @@ static void pktio_parser_undeploy(void)
 	}
 }
 
+static odp_bool_t get_queue_idx(const char *suffix, const char *qs_str, uint32_t *idx)
+{
+	const size_t len = strlen(qs_str);
+	unsigned long val;
+	char *end;
+
+	if (strncmp(suffix, qs_str, len) != 0 || suffix[len] != IDX_DELIM_CHAR ||
+	    !isdigit((unsigned char)suffix[len + 1]))
+		return false;
+
+	val = strtoul(&suffix[len + 1], &end, 10);
+
+	if (*end != '\0' || val > UINT32_MAX)
+		return false;
+
+	*idx = val;
+
+	return true;
+}
+
 static uintptr_t pktio_parser_get_resource(const char *resource)
 {
 	pktio_parse_t *parse;
-	const char *tmp1, *tmp2;
+	const char *suffix;
+	size_t len;
 	uint32_t idx;
 
 	for (uint32_t i = 0U; i < pktios.num; ++i) {
 		parse = &pktios.pktios[i];
+		len = strlen(parse->name);
 
-		if (strcmp(parse->name, resource) == 0)
+		if (strncmp(parse->name, resource, len) != 0)
+			continue;
+
+		suffix = &resource[len];
+
+		if (*suffix == '\0')
 			return (uintptr_t)parse->pktio;
 
-		tmp1 = strchr(resource, IDX_DELIM_CHAR);
-
-		if (tmp1 == NULL)
-			continue;
-
-		if (strncmp(parse->name, resource, tmp1 - resource) != 0)
-			continue;
-
-		tmp2 = strchr(tmp1 + 1, IDX_DELIM_CHAR);
-
-		if (tmp2 == NULL)
-			continue;
-
 		if (parse->param.in_mode != ODP_PKTIN_MODE_DIRECT &&
-		    strncmp(IN_QS_STR, tmp1, tmp2 - tmp1) == 0) {
-			idx = atoi(tmp2 + 1);
-
+		    get_queue_idx(suffix, IN_QS_STR, &idx)) {
 			if (idx >= parse->in_param.num_queues)
-				ODPH_ABORT("Invalid packet I/O input queue index (%s: %d)",
+				ODPH_ABORT("Invalid packet I/O input queue index (%s: %u)\n",
 					   parse->name, idx);
 
 			return (uintptr_t)parse->in_queues[idx];
 		} else if (parse->param.out_mode != ODP_PKTOUT_MODE_DIRECT &&
-			   strncmp(OUT_QS_STR, tmp1, tmp2 - tmp1) == 0) {
-			idx = atoi(tmp2 + 1);
-
+			   get_queue_idx(suffix, OUT_QS_STR, &idx)) {
 			if (idx >= parse->out_param.num_queues)
-				ODPH_ABORT("Invalid packet I/O output queue index (%s: %d)",
+				ODPH_ABORT("Invalid packet I/O output queue index (%s: %u)\n",
 					   parse->name, idx);
 
 			return (uintptr_t)parse->out_queues[idx];

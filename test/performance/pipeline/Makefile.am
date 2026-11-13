@@ -36,6 +36,7 @@ odp_pipeline_SOURCES = \
 	flow.c \
 	flow_parser.c \
 	helpers.h \
+	helpers.c \
 	main.c \
 	odp_pipeline_orchestrator.h \
 	orchestrator.h \

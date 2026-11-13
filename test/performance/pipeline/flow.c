@@ -4,6 +4,9 @@
 
 /** @cond _ODP_HIDE_FROM_DOXYGEN_ */
 
+#include <stdlib.h>
+#include <string.h>
+
 #include <odp/helper/odph_api.h>
 
 #include "flow.h"
@@ -21,11 +24,12 @@ typedef struct ODP_ALIGNED_CACHE {
 
 flow_t flow_create_flow(char *queue)
 {
-	flow_priv_t *flow = calloc(1U, sizeof(*flow));
+	flow_priv_t *flow = aligned_alloc(ODP_CACHE_LINE_SIZE, sizeof(*flow));
 
 	if (flow == NULL)
 		ODPH_ABORT("Error allocating memory, aborting\n");
 
+	memset(flow, 0, sizeof(*flow));
 	flow->queue = queue;
 
 	return (flow_t)flow;
@@ -66,8 +70,13 @@ odp_bool_t flow_add_output(flow_t flow,  work_t *work, uint32_t num)
 
 int flow_issue(flow_type_t type, flow_t flow, odp_event_t ev[], int num)
 {
-	flow_sub_t *sub = &((flow_priv_t *)flow)->sub[type];
+	flow_sub_t *sub;
 	int num_procd = 0;
+
+	if (odp_unlikely(flow == NULL))
+		return 0;
+
+	sub = &((flow_priv_t *)flow)->sub[type];
 
 	for (uint32_t i = 0U; i < sub->num; ++i) {
 		num_procd += work_issue(sub->work[i], &ev[num_procd], num - num_procd);
@@ -98,4 +107,8 @@ void flow_destroy_flow(flow_t flow)
 		work_print_work(work, priv->queue);
 		work_destroy_work(work);
 	}
+
+	free(priv->sub[F_IN].work);
+	free(priv->sub[F_OUT].work);
+	free(priv);
 }
