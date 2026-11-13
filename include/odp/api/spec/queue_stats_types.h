@@ -30,8 +30,11 @@ extern "C" {
 typedef union odp_queue_stats_opt_t {
 	/** Option flags */
 	struct {
-		/** Queue length */
+		/** Queue length returned by odp_queue_len() */
 		uint64_t len : 1;
+
+		/** See odp_queue_stats_t::cur_len */
+		uint64_t cur_len : 1;
 
 	} bit;
 
@@ -42,6 +45,19 @@ typedef union odp_queue_stats_opt_t {
 	uint64_t all;
 
 } odp_queue_stats_opt_t;
+
+/**
+ * Queue statistics counters
+ */
+typedef struct odp_queue_stats_t {
+	/** Current queue length
+	 *
+	 *  Number of events currently in the queue, or in case of an aggregator
+	 *  queue handle, the number of events currently waiting for vector
+	 *  generation. */
+	uint32_t cur_len;
+
+} odp_queue_stats_t;
 
 /**
  * @}

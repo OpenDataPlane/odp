@@ -2488,6 +2488,8 @@ static int schedule_capability(odp_schedule_capability_t *capa)
 	capa->max_prios = sched->config_if.max_prios;
 	capa->max_queues = sched->max_queues;
 	capa->max_queue_size = _odp_queue_glb->config.max_queue_size;
+	capa->queue_stats.bit.len = 1;
+	capa->queue_stats.bit.cur_len = 1;
 	capa->max_flow_id = BUF_HDR_MAX_FLOW_ID;
 	capa->order_wait = ODP_SUPPORT_YES;
 
@@ -2508,6 +2510,7 @@ static int schedule_capability(odp_schedule_capability_t *capa)
 	capa->aggr.source.bit.dma = 1;
 	capa->aggr.source.bit.ml = 1;
 	capa->aggr.stats.bit.len = 1;
+	capa->aggr.stats.bit.cur_len = 1;
 
 	return 0;
 }
