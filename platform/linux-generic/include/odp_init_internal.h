@@ -12,6 +12,20 @@ extern "C" {
 #include <odp/api/init.h>
 #include <odp/api/thread.h>
 
+/* Internal thread type. Extends the public odp_thread_type_t with thread types
+ * used only by the linux-generic implementation (e.g. service threads created
+ * by internal subsystems). Public values must match odp_thread_type_t. */
+typedef enum {
+	_ODP_THR_WORKER = ODP_THREAD_WORKER,
+	_ODP_THR_CONTROL = ODP_THREAD_CONTROL,
+	_ODP_THR_INTERNAL
+} _odp_thread_type_t;
+
+/* Internal variant of odp_init_local() that takes the extended internal
+ * thread type. Linux-generic implementation internal threads must use this
+ * directly with _ODP_THR_INTERNAL instead of odp_init_local(). */
+int _odp_init_local(odp_instance_t instance, _odp_thread_type_t thr_type);
+
 int _odp_cpumask_init_global(const odp_init_t *params);
 int _odp_cpumask_term_global(void);
 
@@ -19,7 +33,7 @@ int _odp_system_info_init(void);
 int _odp_system_info_term(void);
 
 int _odp_thread_init_global(void);
-int _odp_thread_init_local(odp_thread_type_t type);
+int _odp_thread_init_local(_odp_thread_type_t type);
 int _odp_thread_term_local(void);
 int _odp_thread_term_global(void);
 

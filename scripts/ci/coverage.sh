@@ -21,11 +21,12 @@ make -j $(nproc)
 # and systems might differ in performance.
 export CI="true"
 
-ODP_SCHEDULER=basic    make check
+ODP_SCHEDULER=basic       make check
 
-# Run only validation tests for SP scheduler
+# Run only validation tests for SP and centralized schedulers
 pushd ./test/validation/api/
-ODP_SCHEDULER=sp       make check
+ODP_SCHEDULER=sp          make check
+ODP_SCHEDULER=centralized make check
 popd
 
 # Convert gcno files into gcov (required by Codecov)

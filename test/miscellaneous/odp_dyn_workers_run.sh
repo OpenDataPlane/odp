@@ -12,6 +12,11 @@ TEST_DIR="${TEST_DIR:-$(dirname $0)}"
 BIN=odp_dyn_workers
 DEL=100000000
 
+if [ "${ODP_SCHEDULER}" = "centralized" ]; then
+	echo "ODP_SCHEDULER=centralized is not supported. Skipping test."
+	exit 77
+fi
+
 if [ ${MAX_CPUS} -lt ${REQ_CPUS} ]; then
 	echo "Not enough CPUs (requested ${REQ_CPUS}, available ${MAX_CPUS}). Skipping test."
 	exit 77

@@ -7,6 +7,11 @@
 PATH=$(dirname $0):$PATH
 PATH=.:$PATH
 
+if [ "${ODP_SCHEDULER}" = "centralized" ]; then
+	echo "ODP_SCHEDULER=centralized is not supported. Skipping test."
+	exit 77
+fi
+
 # The odpthreads test recognise the "--odph_proc" option to create
 # odp threads as linux processes:
 odpthreads${EXEEXT} --odph_proc

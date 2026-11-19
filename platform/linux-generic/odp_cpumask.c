@@ -223,6 +223,11 @@ int odp_cpumask_next(const odp_cpumask_t *mask, int cpu)
 /*
  * This function obtains system information specifying which cpus are
  * available at boot time.
+ *
+ * No CPUs are reserved for ODP-internal threads at this point. Internal
+ * subsystems that need dedicated CPUs add them later in global init via
+ * _odp_service_cpus_reserve(), which retroactively removes them from the
+ * application-visible all_cpus / worker_cpus / control_cpus masks.
  */
 static int get_available_cpus(void)
 {
@@ -230,6 +235,9 @@ static int get_available_cpus(void)
 	int cpu, ret;
 
 	odp_cpumask_zero(&odp_global_ro.all_cpus);
+	odp_cpumask_zero(&odp_global_ro.service_cpus);
+	odp_global_ro.num_cpus_installed = 0;
+	odp_global_ro.num_service_cpus = 0;
 
 	CPU_ZERO(&cpuset);
 	ret = sched_getaffinity(0, sizeof(cpuset), &cpuset);

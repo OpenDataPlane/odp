@@ -395,6 +395,16 @@ jobs:
       - if: ${{ failure() }}
         uses: ./.github/actions/run-failure-log
 
+  Run_scheduler_centralized:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+      - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}" -e ARCH="${ARCH}"
+               -e CONF="${CONF}" -e ODP_SCHEDULER=centralized $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/check.sh
+      - if: ${{ failure() }}
+        uses: ./.github/actions/run-failure-log
+
   Run_process_mode:
     runs-on: ubuntu-22.04
     timeout-minutes: 30

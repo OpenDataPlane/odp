@@ -17,7 +17,8 @@ extern "C" {
 
 typedef struct {
 	odp_log_func_t log_fn;
-	odp_thread_type_t type;
+	/* _odp_thread_type_t */
+	int type;
 	int thr;
 
 } _odp_thread_state_t;

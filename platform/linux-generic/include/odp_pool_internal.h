@@ -31,6 +31,8 @@ extern "C" {
 typedef struct ODP_ALIGNED_CACHE pool_cache_t {
 	/* Number of buffers in cache */
 	odp_atomic_u32_t cache_num;
+	uint32_t cache_size;
+	uint32_t burst_size;
 	/* Cached buffers */
 	_odp_event_hdr_t *event_hdr[CONFIG_POOL_CACHE_MAX_SIZE];
 
