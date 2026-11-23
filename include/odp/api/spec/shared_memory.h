@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2013-2018 Linaro Limited
- * Copyright (c) 2019-2021 Nokia
+ * Copyright (c) 2019-2026 Nokia
  */
 
 /**
@@ -97,6 +97,32 @@ extern "C" {
  * ODP_SHM_HP.
  */
 #define ODP_SHM_NO_HP		0x40
+
+/**
+ * Permanent memory
+ *
+ * When set, the application promises to never free the memory block. The block
+ * remains valid until odp_term_global() is called. An odp_shm_free() call on
+ * the block fails. An implementation may use this information to optimize
+ * memory usage, e.g. by packing multiple permanent blocks into the same memory
+ * pages. If permanent memory blocks are supported, they may be reserved at
+ * any time.
+ *
+ * This flag must not be combined with #ODP_SHM_PROC or #ODP_SHM_EXPORT.
+ */
+#define ODP_SHM_NO_FREE		0x80
+
+/**
+ * Cold memory
+ *
+ * When set, the application indicates that the memory block is not accessed
+ * in performance critical code paths, or is accessed only rarely. This flag
+ * is a hint, which an implementation may use e.g. to reserve the block from
+ * different pages than normal shared memory blocks.
+ *
+ * This flag is always supported and always set in the capability flags.
+ */
+#define ODP_SHM_COLD		0x100
 
 /**
  * Shared memory block info
@@ -208,11 +234,15 @@ int odp_shm_capability(odp_shm_capability_t *capa);
  * searched with odp_shm_lookup() or odp_shm_import(), a unique name is needed
  * for correct match.
  *
+ * Flags may be combined, with the following exceptions:
+ * - #ODP_SHM_HP and #ODP_SHM_NO_HP are mutually exclusive
+ * - #ODP_SHM_NO_FREE must not be combined with #ODP_SHM_PROC or #ODP_SHM_EXPORT
+ *
  * @param name   Name of the block or NULL. Maximum string length is ODP_SHM_NAME_LEN, including the
  *               null character.
  * @param size   Block size in bytes
  * @param align  Block alignment in bytes
- * @param flags  Shared memory parameter flags (ODP_SHM_*). Default value is 0.
+ * @param flags  Shared memory parameter flags (ODP_SHM_*). Set to 0 when no flags.
  *
  * @return Handle of the reserved block
  * @retval ODP_SHM_INVALID on failure
@@ -225,7 +255,8 @@ odp_shm_t odp_shm_reserve(const char *name, uint64_t size, uint64_t align, uint3
  * Free a contiguous block of shared memory
  *
  * Frees a previously reserved block of shared memory. Freeing memory that is
- * in use will result in UNDEFINED behavior
+ * in use will result in UNDEFINED behavior. Blocks reserved with #ODP_SHM_NO_FREE
+ * flag cannot be freed, and the call fails.
  *
  * @param shm    Block handle
  *
